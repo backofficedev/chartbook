@@ -23,7 +23,7 @@ linearmodels
 linkify-it-py
 matplotlib
 myst-nb
-myst-parser==2.0.0
+myst-parser>=2.0.0
 notebook
 numpy<2
 numpydoc
@@ -44,10 +44,10 @@ requests
 scikit-learn
 scipy
 seaborn
-sphinx-autodoc2==0.4.2
+sphinx-autodoc2>=0.4.2
 sphinx-book-theme==1.1.3
 sphinx-design
-sphinx==7.3.7
+sphinx>=7.3.7
 sphinxcontrib-applehelp==2.0.0
 sphinxcontrib-htmlhelp==2.1.0
 sphinxext-opengraph
@@ -57,4 +57,4 @@ wrds
 xbbg
 xlrd
 xlwings==0.33.3
-zstandard
+zstandarddocutils<0.21

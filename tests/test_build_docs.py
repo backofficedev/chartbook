@@ -141,124 +141,79 @@ class TestRetrieveCorrectDocsSrcDir:
 class TestGenerateDocsEndToEnd:
     """End-to-end integration tests for generate_docs.
 
-    Note: Full end-to-end tests require proper working directory setup.
-    The existing test_generate_command.py tests end-to-end with the
-    examples/fred_charts directory via CLI. These tests use the same approach
-    with monkeypatch.chdir().
+    Uses fixture-generated projects to test the full documentation pipeline.
     """
 
-    def test_generate_docs_with_example_project(self, monkeypatch):
-        """Test generate_docs with the example project."""
-        import shutil
+    def test_generate_docs_with_fixture_project(self, pipeline_project, monkeypatch):
+        """Test generate_docs with a fixture-generated project."""
+        output_dir = pipeline_project / "docs_test"
 
-        example_dir = Path("examples/fred_charts").resolve()
-        output_dir = example_dir / "docs_test"
+        # Change to project directory (required for template resolution)
+        monkeypatch.chdir(pipeline_project)
 
-        # Clean previous runs
-        if output_dir.exists():
-            shutil.rmtree(output_dir)
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            keep_build_dirs=False,
+        )
 
-        # Change to example directory (required for template resolution)
-        monkeypatch.chdir(example_dir)
+        # Verify HTML output created
+        assert output_dir.exists()
+        assert (output_dir / "index.html").exists()
+        assert (output_dir / ".nojekyll").exists()
 
-        try:
-            generate_docs(
-                output_dir=output_dir,
-                project_dir=Path("."),  # Use relative path since we chdir'd
-                keep_build_dirs=False,
-            )
-
-            # Verify HTML output created
-            assert output_dir.exists()
-            assert (output_dir / "index.html").exists()
-            assert (output_dir / ".nojekyll").exists()
-
-        finally:
-            # Cleanup
-            if output_dir.exists():
-                shutil.rmtree(output_dir)
-
-    def test_generate_docs_keeps_build_dirs(self, monkeypatch):
+    def test_generate_docs_keeps_build_dirs(self, pipeline_project, monkeypatch):
         """Test that keep_build_dirs=True preserves temp directories."""
-        import shutil
+        output_dir = pipeline_project / "docs_test"
+        docs_dir = pipeline_project / "_docs"
+        docs_src_dir = pipeline_project / "_docs_src"
 
-        example_dir = Path("examples/fred_charts").resolve()
-        output_dir = example_dir / "docs_test"
-        # Use default names for _docs and _docs_src since templates expect them
-        docs_dir = example_dir / "_docs"
-        docs_src_dir = example_dir / "_docs_src"
+        # Change to project directory
+        monkeypatch.chdir(pipeline_project)
 
-        # Clean previous runs
-        for d in [output_dir, docs_dir, docs_src_dir]:
-            if d.exists():
-                shutil.rmtree(d)
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            _docs_dir=docs_dir,
+            temp_docs_src_dir=docs_src_dir,
+            keep_build_dirs=True,
+        )
 
-        # Change to example directory
-        monkeypatch.chdir(example_dir)
+        # Verify HTML output created
+        assert output_dir.exists()
 
-        try:
-            generate_docs(
-                output_dir=output_dir,
-                project_dir=Path("."),
-                _docs_dir=docs_dir,
-                temp_docs_src_dir=docs_src_dir,
-                keep_build_dirs=True,
-            )
+        # Verify temp directories preserved
+        assert docs_dir.exists()
+        assert docs_src_dir.exists()
 
-            # Verify HTML output created
-            assert output_dir.exists()
+        # Verify conf.py updated with project title
+        conf_content = (docs_dir / "conf.py").read_text()
+        assert 'project = "Test Pipeline"' in conf_content
+        assert 'html_theme = "sphinx_book_theme"' in conf_content
 
-            # Verify temp directories preserved
-            assert docs_dir.exists()
-            assert docs_src_dir.exists()
-
-            # Verify conf.py updated with project title
-            conf_content = (docs_dir / "conf.py").read_text()
-            assert 'project = "Example Charts from FRED"' in conf_content
-            assert 'html_theme = "sphinx_book_theme"' in conf_content
-
-        finally:
-            # Cleanup
-            for d in [output_dir, docs_dir, docs_src_dir]:
-                if d.exists():
-                    shutil.rmtree(d)
-
-    def test_generate_docs_atomic_replacement(self, monkeypatch):
+    def test_generate_docs_atomic_replacement(self, pipeline_project, monkeypatch):
         """Test that should_remove_existing replaces output atomically."""
-        import shutil
+        output_dir = pipeline_project / "docs_test"
 
-        example_dir = Path("examples/fred_charts").resolve()
-        output_dir = example_dir / "docs_test"
+        # Change to project directory
+        monkeypatch.chdir(pipeline_project)
 
-        # Clean previous runs
-        if output_dir.exists():
-            shutil.rmtree(output_dir)
+        # Create existing output with marker file
+        output_dir.mkdir()
+        marker_file = output_dir / "old_marker.txt"
+        marker_file.write_text("old content")
 
-        # Change to example directory
-        monkeypatch.chdir(example_dir)
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            should_remove_existing=True,
+            keep_build_dirs=False,
+        )
 
-        try:
-            # Create existing output with marker file
-            output_dir.mkdir()
-            marker_file = output_dir / "old_marker.txt"
-            marker_file.write_text("old content")
+        # Verify new output created
+        assert output_dir.exists()
+        assert (output_dir / "index.html").exists()
+        assert (output_dir / ".nojekyll").exists()
 
-            generate_docs(
-                output_dir=output_dir,
-                project_dir=Path("."),
-                should_remove_existing=True,
-                keep_build_dirs=False,
-            )
-
-            # Verify new output created
-            assert output_dir.exists()
-            assert (output_dir / "index.html").exists()
-            assert (output_dir / ".nojekyll").exists()
-
-            # Verify old marker file is gone
-            assert not marker_file.exists()
-
-        finally:
-            # Cleanup
-            if output_dir.exists():
-                shutil.rmtree(output_dir)
+        # Verify old marker file is gone
+        assert not marker_file.exists()

@@ -1,4 +1,3 @@
-import shutil
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -6,22 +5,13 @@ from click.testing import CliRunner
 from chartbook.cli import main
 
 
-def test_build_command(tmp_path, monkeypatch):
-    """Test build command in example directory"""
+def test_build_command(pipeline_project, monkeypatch):
+    """Test build command with a fixture-generated project."""
     # Setup paths
-    example_dir = Path("examples/fred_charts")
-    output_dir = example_dir / "docs"
+    output_dir = pipeline_project / "docs"
 
-    # Clean previous runs
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-
-    # Change to example directory
-    monkeypatch.chdir(example_dir)
-    print(f"Current directory: {Path.cwd()}")  # Debug directory
-    print(
-        f"Directory contents: {[f.name for f in Path.cwd().iterdir()]}"
-    )  # Debug files
+    # Change to project directory
+    monkeypatch.chdir(pipeline_project)
 
     # Run the command
     runner = CliRunner()
@@ -35,6 +25,6 @@ def test_build_command(tmp_path, monkeypatch):
     assert result.exit_code == 0, f"Command failed with output: {result.output}"
 
     # Verify output file
-    html_file = Path("docs/index.html")
+    html_file = output_dir / "index.html"
     assert html_file.exists(), "HTML output not generated"
     assert html_file.stat().st_size > 0, "HTML file is empty"

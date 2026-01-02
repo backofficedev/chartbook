@@ -18,61 +18,49 @@ from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_man
 class TestManifestToGeneratorPipelineWorkflow:
     """End-to-end tests for pipeline documentation workflow.
 
-    Note: Full end-to-end tests with generated fixtures require matching
-    the exact template structure. These tests use the examples/fred_charts project.
+    Uses fixture-generated projects to test the complete workflow.
     """
 
-    def test_full_pipeline_workflow_with_example_project(self, monkeypatch):
-        """Test complete workflow: read manifest -> generate docs using example project."""
-        import shutil
-
-        project = Path("examples/fred_charts").resolve()
-        output_dir = project / "docs_integration_test"
-
-        # Clean previous runs
-        if output_dir.exists():
-            shutil.rmtree(output_dir)
+    def test_full_pipeline_workflow(self, pipeline_project, monkeypatch):
+        """Test complete workflow: read manifest -> generate docs."""
+        output_dir = pipeline_project / "docs_integration_test"
 
         # Change to project directory (required for template resolution)
-        monkeypatch.chdir(project)
+        monkeypatch.chdir(pipeline_project)
 
-        try:
-            # Step 1: Read and verify manifest
-            manifest = load_manifest(Path("."))
-            assert manifest["config"]["type"] == "pipeline"
-            assert "dataframes" in manifest
-            assert "charts" in manifest
+        # Step 1: Read and verify manifest
+        manifest = load_manifest(Path("."))
+        assert manifest["config"]["type"] == "pipeline"
+        assert "dataframes" in manifest
+        assert "charts" in manifest
 
-            # Verify chart-dataframe linking
-            for df_id in manifest["dataframes"]:
-                assert "linked_charts" in manifest["dataframes"][df_id]
+        # Verify chart-dataframe linking
+        for df_id in manifest["dataframes"]:
+            assert "linked_charts" in manifest["dataframes"][df_id]
 
-            # Verify pipeline ID list works
-            pipeline_ids = get_pipeline_ids(manifest)
-            assert len(pipeline_ids) == 1
+        # Verify pipeline ID list works
+        pipeline_ids = get_pipeline_ids(manifest)
+        assert len(pipeline_ids) == 1
 
-            # Verify get_pipeline_manifest works
-            pipeline_manifest = get_pipeline_manifest(manifest, pipeline_ids[0])
-            assert "dataframes" in pipeline_manifest
+        # Verify get_pipeline_manifest works
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_ids[0])
+        assert "dataframes" in pipeline_manifest
 
-            # Step 2: Generate documentation
-            generate_docs(
-                output_dir=output_dir,
-                project_dir=Path("."),
-                keep_build_dirs=False,
-            )
+        # Step 2: Generate documentation
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            keep_build_dirs=False,
+        )
 
-            # Step 3: Verify output structure
-            assert output_dir.exists()
-            assert (output_dir / "index.html").exists()
-            assert (output_dir / ".nojekyll").exists()
+        # Step 3: Verify output structure
+        assert output_dir.exists()
+        assert (output_dir / "index.html").exists()
+        assert (output_dir / ".nojekyll").exists()
 
-            # Verify HTML has content
-            html_content = (output_dir / "index.html").read_text()
-            assert len(html_content) > 0
-        finally:
-            if output_dir.exists():
-                shutil.rmtree(output_dir)
+        # Verify HTML has content
+        html_content = (output_dir / "index.html").read_text()
+        assert len(html_content) > 0
 
 
 class TestManifestToGeneratorCatalogWorkflow:
@@ -235,16 +223,48 @@ class TestExampleProjects:
         assert (example_path / "docs" / "index.html").exists()
 
     def test_catalog_example(self):
-        """Test that catalog example builds successfully."""
-        example_path = Path("examples/catalog").resolve()
+        """Test that catalog example builds successfully.
 
-        # Clean up before running
-        self._clean_example_dirs(example_path)
+        The catalog references fred_charts and yield_curve pipelines,
+        so we need to run those first to generate the required data files.
+        """
+        catalog_path = Path("examples/catalog").resolve()
+        fred_charts_path = Path("examples/fred_charts").resolve()
+        yield_curve_path = Path("examples/yield_curve").resolve()
 
-        # Run chartbook build -f with PYTHONPATH set to use local chartbook
+        # Clean up catalog before running
+        self._clean_example_dirs(catalog_path)
+
+        # Run doit -a on fred_charts first (if not already run by previous test)
+        if not (fred_charts_path / "_data" / "fred.parquet").exists():
+            self._clean_example_dirs(fred_charts_path)
+            result = subprocess.run(
+                ["doit", "-a"],
+                cwd=fred_charts_path,
+                capture_output=True,
+                text=True,
+                timeout=600,
+                env=self._get_env_with_pythonpath(),
+            )
+            assert result.returncode == 0, f"fred_charts doit failed: {result.stderr}"
+
+        # Run doit -a on yield_curve (if not already run by previous test)
+        if not (yield_curve_path / "_data" / "fed_yield_curve.parquet").exists():
+            self._clean_example_dirs(yield_curve_path)
+            result = subprocess.run(
+                ["doit", "-a"],
+                cwd=yield_curve_path,
+                capture_output=True,
+                text=True,
+                timeout=600,
+                env=self._get_env_with_pythonpath(),
+            )
+            assert result.returncode == 0, f"yield_curve doit failed: {result.stderr}"
+
+        # Now run chartbook build -f on catalog
         result = subprocess.run(
             ["chartbook", "build", "-f"],
-            cwd=example_path,
+            cwd=catalog_path,
             capture_output=True,
             text=True,
             timeout=300,
@@ -254,4 +274,4 @@ class TestExampleProjects:
         assert result.returncode == 0, f"chartbook build failed: {result.stderr}"
 
         # Verify outputs exist
-        assert (example_path / "docs" / "index.html").exists()
+        assert (catalog_path / "docs" / "index.html").exists()

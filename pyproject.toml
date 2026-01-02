@@ -4,7 +4,8 @@ dynamic = ["version"]
 description = "A tool for generating chart documentation websites"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "All Rights Reserved"}
+license = "MIT"
+license-files = ["LICENSE.md"]
 keywords = ["Dashboards", "Catalogs", "Data", "Analytics"]
 authors = [
     { name = "Jeremiah Bejarano", email = "Jeremiah.Bejarano@gmail.com" },
@@ -117,6 +118,7 @@ extra-dependencies = [
     "ipython",
     "jupytext",
     "matplotlib",
+    "nbconvert",
     "numpy",
     "openpyxl",
     "pandas-datareader>=0.10.0",
