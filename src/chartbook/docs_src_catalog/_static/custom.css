@@ -1,0 +1,99 @@
+/* Make blog post links match toctree styling */
+.ablog-post-title a.reference.internal {
+    font-weight: normal;
+    font-size: 0.9em;
+    color: #176de8;
+    text-decoration: underline;
+    font-family: inherit;
+}
+
+/* Custom CSS to make ONLY chart pages full width for pydata-sphinx-theme */
+
+/* Apply full-width styles to chart pages using JavaScript-added class */
+.chartbook-chart-page {
+    --pst-content-width: none !important;
+}
+
+/* Target main containers on chart pages */
+.chartbook-chart-page .bd-container,
+.chartbook-chart-page .bd-page-width,
+.chartbook-chart-page .bd-main,
+.chartbook-chart-page .bd-article,
+.chartbook-chart-page .bd-content,
+.chartbook-chart-page main,
+.chartbook-charts-listing .bd-container,
+.chartbook-charts-listing .bd-page-width,
+.chartbook-charts-listing .bd-main,
+.chartbook-charts-listing .bd-article,
+.chartbook-charts-listing .bd-content,
+.chartbook-charts-listing main {
+    max-width: none !important;
+    width: 100% !important;
+}
+
+/* Override container constraints for chart pages */
+.chartbook-chart-page .container,
+.chartbook-chart-page .container-fluid,
+.chartbook-chart-page .container-lg,
+.chartbook-chart-page .container-xl,
+.chartbook-charts-listing .container,
+.chartbook-charts-listing .container-fluid,
+.chartbook-charts-listing .container-lg,
+.chartbook-charts-listing .container-xl {
+    max-width: none !important;
+    width: 100% !important;
+}
+
+/* Make content wrapper full width for chart pages */
+.chartbook-chart-page .bd-content,
+.chartbook-charts-listing .bd-content {
+    max-width: none !important;
+    width: 100% !important;
+    flex: 1 1 auto !important;
+}
+
+/* Pydata theme specific overrides for chart pages */
+.chartbook-chart-page .col-md-9,
+.chartbook-chart-page .col-lg-9,
+.chartbook-chart-page .col-xl-7,
+.chartbook-charts-listing .col-md-9,
+.chartbook-charts-listing .col-lg-9,
+.chartbook-charts-listing .col-xl-7 {
+    max-width: none !important;
+    width: 100% !important;
+    flex: 1 1 auto !important;
+}
+
+/* Ensure sidebars maintain their width on chart pages */
+.chartbook-chart-page .col-md-3,
+.chartbook-chart-page .col-lg-3,
+.chartbook-charts-listing .col-md-3,
+.chartbook-charts-listing .col-lg-3 {
+    flex: 0 0 20rem !important;
+    max-width: 20rem !important;
+}
+
+/* Additional specific targeting for chart pages */
+.chartbook-chart-page .bd-content .bd-article-container,
+.chartbook-charts-listing .bd-content .bd-article-container {
+    max-width: none !important;
+}
+
+.chartbook-chart-page article.bd-article,
+.chartbook-charts-listing article.bd-article {
+    max-width: none !important;
+}
+
+.chartbook-chart-page section.bd-content,
+.chartbook-charts-listing section.bd-content {
+    max-width: none !important;
+}
+
+/* Also keep ablog selectors for actual blog posts if they exist */
+body:has(.ablog-post) .bd-container,
+body:has(.ablog-post) .bd-page-width,
+body:has(.postlist) .bd-container,
+body:has(.postlist) .bd-page-width {
+    max-width: none !important;
+    width: 100% !important;
+} 

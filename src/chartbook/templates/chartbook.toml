@@ -1,0 +1,8 @@
+[theme]
+logo_path = ""  # If empty, will use default logo
+favicon_path = ""  # If empty, will use default favicon
+
+[site]
+title = "chartbook"
+author = ""
+copyright = "" 

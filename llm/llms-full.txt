@@ -1,0 +1,674 @@
+# ChartBook
+
+> A developer platform for data science teams to discover, document, and share analytics work. Provides a centralized catalog for pipelines, charts, and dataframes with automatic documentation website generation.
+
+ChartBook organizes analytics work into **pipelines** (self-contained projects) or **catalogs** (multi-pipeline collections). All configuration uses TOML format (`chartbook.toml`).
+
+---
+
+## Installation
+
+### Prerequisites
+- Python 3.8 or higher
+- pip package manager
+
+### For Data Scientists (loading data)
+```bash
+pip install chartbook
+```
+
+```python
+from chartbook import data
+df = data.load(pipeline_id="EX", dataframe_id="repo_public")
+```
+
+### For CLI (Recommended - isolated installation)
+```bash
+pipx install chartbook
+
+# Or run without installing
+pipx run chartbook generate
+uvx chartbook generate
+```
+
+### Alternative CLI Installation
+```bash
+pip install chartbook[sphinx]
+```
+
+### Development Installation
+```bash
+pip install hatch
+git clone <repo-url>
+cd chartbook
+hatch shell
+pip install -e ".[dev]"
+```
+
+---
+
+## CLI Reference
+
+### Commands Overview
+
+| Command | Description |
+|---------|-------------|
+| `generate` | Generate HTML documentation website |
+| `publish` | Publish pipeline to a directory |
+| `create-data-glimpses` | Create data glimpse reports |
+
+### chartbook generate
+
+Generate HTML documentation in the specified output directory.
+
+```bash
+chartbook generate [OPTIONS] [OUTPUT_DIR]
+```
+
+**Arguments:**
+- `OUTPUT_DIR`: Directory where HTML will be generated (default: `./docs`)
+
+**Options:**
+- `-f, --force-write`: Overwrite existing output directory
+- `--project-dir PATH`: Path to project directory
+- `--publish-dir PATH`: Directory for published files (default: `./_output/to_be_published/`)
+- `--docs-build-dir PATH`: Build directory (default: `./_docs`)
+- `--temp-docs-src-dir PATH`: Temporary source directory (default: `./_docs_src`)
+- `--keep-build-dirs`: Keep temporary build directories after generation
+- `--size-threshold FLOAT`: File size threshold in MB (default: 50)
+
+**Examples:**
+```bash
+chartbook generate                    # Basic usage
+chartbook generate -f                 # Force overwrite
+chartbook generate ./my-docs -f       # Custom directory
+chartbook generate --keep-build-dirs  # Debug mode
+```
+
+### chartbook publish
+
+Publish the documentation to a specified directory.
+
+```bash
+chartbook publish [OPTIONS]
+```
+
+**Options:**
+- `--publish-dir PATH`: Directory where files will be published
+- `--project-dir PATH`: Path to project directory
+- `-v, --verbose`: Enable verbose output
+
+### chartbook create-data-glimpses
+
+Create a comprehensive data glimpse report from pipeline dataframes.
+
+```bash
+chartbook create-data-glimpses [OPTIONS]
+```
+
+**Options:**
+- `--no-samples`: Exclude sample values from report
+- `--no-stats`: Exclude numeric statistics from report
+- `-o, --output-dir PATH`: Directory to save output file
+- `--size-threshold FLOAT`: File size threshold in MB (default: 50)
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `OS_TYPE` | Operating system type (`windows` or `nix`) |
+| `BASE_DIR` | Base directory for the project |
+| `DATA_DIR` | Directory for data files |
+| `OUTPUT_DIR` | Directory for output files |
+
+### Exit Codes
+
+- `0`: Success
+- `1`: General error
+- `2`: Configuration error
+- `3`: File not found
+
+---
+
+## Configuration Guide
+
+ChartBook uses a TOML configuration file (`chartbook.toml`) to define your project structure.
+
+### Configuration File Structure
+
+```toml
+[config]           # Project type and version
+[site]             # Website metadata
+[pipeline]         # Pipeline information (for pipeline projects)
+[pipelines]        # Pipeline references (for catalog projects)
+[charts]           # Chart definitions
+[dataframes]       # Dataframe definitions
+[notes]            # Additional documentation notes
+[notebooks]        # Jupyter notebook references
+```
+
+### Project Types
+
+#### Pipeline Project
+A single analytics pipeline with its own charts and dataframes:
+
+```toml
+[config]
+type = "pipeline"
+chartbook_format_version = "0.0.1"
+```
+
+#### Catalog Project
+A collection of multiple pipelines aggregated into a unified catalog:
+
+```toml
+[config]
+type = "catalog"
+chartbook_format_version = "0.0.1"
+```
+
+### [config] - Project Configuration
+
+```toml
+[config]
+type = "pipeline"  # or "catalog"
+chartbook_format_version = "0.0.1"
+```
+
+### [site] - Website Metadata
+
+```toml
+[site]
+title = "My Analytics Project"
+author = "Data Team"
+copyright = "2025"
+logo_path = "./assets/logo.png"    # Optional
+favicon_path = "./assets/icon.png"  # Optional
+```
+
+### [pipeline] - Pipeline Information
+
+For pipeline projects only:
+
+```toml
+[pipeline]
+id = "MYPROJ"
+pipeline_name = "My Analytics Pipeline"
+pipeline_description = "Comprehensive analytics for business metrics"
+lead_pipeline_developer = "Jane Doe"
+contributors = ["Jane Doe", "John Smith", "Alice Johnson"]
+software_modules_command = "module load python/3.11"  # Optional
+runs_on_grid_or_windows_or_other = "Windows/Linux/MacOS"
+git_repo_URL = "https://github.com/org/repo"
+README_file_path = "./README.md"
+```
+
+### [pipelines] - Pipeline References
+
+For catalog projects only:
+
+```toml
+[pipelines]
+
+[pipelines.EX]
+path_to_pipeline = "../pipelines/example"
+
+[pipelines.ANALYTICS]
+path_to_pipeline = "../pipelines/analytics"
+
+# Platform-specific paths
+[pipelines.DATA.MONTHLY]
+Unix = "/data/pipelines/monthly"
+Windows = "T:/pipelines/monthly"
+```
+
+### [charts] - Chart Definitions
+
+```toml
+[charts.revenue_trend]
+chart_name = "Revenue Trend Analysis"
+date_cleared_by_iv_and_v = "2025-01-15"
+last_legal_clearance_date = "2025-01-15"
+last_cleared_by = "Legal Team"
+past_publications = [
+    "[Q4 Report 2024, p15](https://example.com/reports/q4-2024)",
+    "[Annual Report 2024, p45](https://example.com/reports/annual-2024)",
+]
+short_description_chart = "Monthly revenue trends with seasonal adjustments"
+dataframe_id = "revenue_data"
+topic_tags = ["Revenue", "Financial", "Monthly"]
+data_series_start_date = "1/1/2020"
+data_frequency = "Monthly"
+observation_period = "Month-end"
+lag_in_data_release = "15 days"
+data_release_timing = "Mid-month"
+seasonal_adjustment = "X-13ARIMA-SEATS"
+units = "USD Millions"
+data_series = ["Gross Revenue", "Net Revenue", "Revenue Growth Rate"]
+mnemonic = "REV_TREND"
+path_to_html_chart = "./_output/revenue_trend.html"
+path_to_excel_chart = "./excel/revenue_trend.xlsx"
+chart_docs_path = "./docs_src/charts/revenue_trend.md"
+```
+
+### [dataframes] - Dataframe Definitions
+
+```toml
+[dataframes.revenue_data]
+dataframe_name = "Revenue Dataset"
+short_description_df = "Comprehensive revenue data with geographic breakdowns"
+data_sources = ["Internal Sales System", "Finance Database"]
+data_providers = ["Sales Team", "Finance Team"]
+need_to_contact_provider = ["No", "No"]
+data_on_pre_approved_list = ["Yes", "Yes"]
+links_to_data_providers = [
+    "https://internal.company.com/sales",
+    "https://internal.company.com/finance"
+]
+topic_tags = ["Revenue", "Sales", "Financial"]
+type_of_data_access = ["Internal", "Internal"]
+data_license = "Internal Use Only"
+license_expiration_date = "2025-12-31"
+provider_contact_info = "data-team@company.com"
+restriction_on_use = "Internal analytics only"
+how_is_pulled = "SQL query via Python"
+path_to_parquet_data = "./_data/revenue_data.parquet"
+path_to_excel_data = "./_data/revenue_data.xlsx"
+date_col = "date"
+dataframe_docs_path = "./docs_src/dataframes/revenue_data.md"
+```
+
+### [notes] - Additional Documentation
+
+```toml
+[notes]
+
+[notes.methodology]
+path_to_markdown_file = "./docs_src/methodology.md"
+
+[notes.data_quality]
+path_to_markdown_file = "./docs_src/data_quality_notes.md"
+```
+
+### [notebooks] - Jupyter Notebooks
+
+```toml
+[notebooks]
+
+[notebooks.exploratory_analysis]
+notebook_name = "Exploratory Data Analysis"
+notebook_description = "Initial exploration of revenue patterns and anomalies"
+notebook_path = "_output/01_exploratory_analysis.ipynb"
+
+[notebooks.model_development]
+notebook_name = "Forecasting Model Development"
+notebook_description = "Time series models for revenue forecasting"
+notebook_path = "_output/02_model_development.ipynb"
+```
+
+---
+
+## Pipelines
+
+Pipelines are the core organizational unit in ChartBook. A pipeline represents a complete analytics workflow that produces charts and dataframes.
+
+### What is a Pipeline?
+
+A pipeline is:
+- A self-contained analytics project
+- A collection of related charts and dataframes
+- A reproducible workflow with documentation
+- A unit that can be published and shared
+
+### Pipeline Structure
+
+```
+my-pipeline/
+├── chartbook.toml          # Configuration file
+├── README.md               # Pipeline documentation
+├── dodo.py                 # Task automation (optional)
+├── _data/                  # Data files
+│   ├── raw/               # Raw input data
+│   └── processed/         # Processed data
+├── _output/               # Generated outputs
+│   ├── *.html            # Interactive charts
+│   └── *.ipynb           # Notebooks
+├── src/                   # Source code
+│   ├── data_processing.py
+│   └── create_charts.py
+├── docs_src/              # Documentation sources
+│   ├── charts/           # Chart documentation
+│   └── dataframes/       # Dataframe documentation
+└── excel/                 # Excel files (optional)
+```
+
+### Pipeline Configuration
+
+Required fields:
+```toml
+[pipeline]
+id = "UNIQUE_ID"              # Unique identifier (uppercase)
+pipeline_name = "Full Name"   # Human-readable name
+pipeline_description = "..."  # Detailed description
+lead_pipeline_developer = "Name"
+```
+
+Optional fields:
+```toml
+[pipeline]
+contributors = ["Name1", "Name2"]
+software_modules_command = "module load python/3.11"
+runs_on_grid_or_windows_or_other = "Windows/Linux"
+git_repo_URL = "https://..."
+README_file_path = "./README.md"
+```
+
+### Best Practices
+
+1. **Consistent Naming**: Use `UPPERCASE_WITH_UNDERSCORES` for IDs
+2. **Version Control**: Track all files in git
+3. **Data Management**: Store raw data separately from processed data
+4. **Reproducibility**: Set random seeds, document package versions
+5. **Documentation**: Document at multiple levels (README, chart docs, code comments)
+
+### Pipeline Automation with dodo.py
+
+```python
+from doit import task_params
+
+@task_params([{"name": "year", "default": 2024}])
+def task_process_data(year):
+    return {
+        'actions': [f'python src/process_data.py --year {year}'],
+        'file_dep': ['src/process_data.py'],
+        'targets': [f'_data/processed_{year}.parquet'],
+    }
+
+def task_create_charts():
+    return {
+        'actions': ['python src/create_all_charts.py'],
+        'file_dep': ['_data/processed_2024.parquet'],
+        'targets': ['_output/revenue_costs.html'],
+    }
+```
+
+Run with: `doit`
+
+---
+
+## Charts
+
+Charts are the primary output of ChartBook pipelines. Each chart combines data visualization with comprehensive metadata.
+
+### Chart Components
+
+- **Visualization**: Interactive HTML file (Plotly-based)
+- **Metadata**: Descriptive information in `chartbook.toml`
+- **Documentation**: Markdown file with insights and methodology
+- **Excel Export**: Optional Excel file with underlying data
+
+### Basic Chart Configuration
+
+```toml
+[charts.monthly_revenue]
+chart_name = "Monthly Revenue Analysis"
+short_description_chart = "Revenue trends with YoY comparison"
+dataframe_id = "revenue_data"
+path_to_html_chart = "./_output/monthly_revenue.html"
+chart_docs_path = "./docs_src/charts/monthly_revenue.md"
+```
+
+### Creating Charts
+
+```python
+import chartbook
+import pandas as pd
+from pathlib import Path
+
+df = pd.read_parquet("_data/revenue_data.parquet")
+
+chartbook.plotting.multiline(
+    df=df,
+    x_col="date",
+    y_cols=["actual", "forecast"],
+    title="Revenue Forecast Model",
+    subtitle="12-month forecast with 95% confidence interval",
+    y_axis_label="Revenue (USD Millions)",
+    output_file_path=Path("_output/revenue_forecast.html")
+)
+```
+
+### Chart Metadata Fields
+
+**Governance:**
+- `date_cleared_by_iv_and_v`: Internal validation date
+- `last_legal_clearance_date`: Legal review date
+- `last_cleared_by`: Approver name
+
+**Publication Tracking:**
+- `past_publications`: List of previous uses
+
+**Data Characteristics:**
+- `data_frequency`: Daily, Weekly, Monthly, Quarterly, Annual
+- `observation_period`: When measurement taken
+- `lag_in_data_release`: How long until available
+- `seasonal_adjustment`: None, X-13ARIMA-SEATS, etc.
+- `units`: Units of measurement
+
+---
+
+## Dataframes
+
+Dataframes are the foundation of ChartBook analytics, representing structured datasets with metadata for governance and discovery.
+
+### Dataframe Components
+
+- Stores data in efficient Parquet format
+- Includes detailed metadata about sources and licensing
+- Links to charts that use the data
+- Supports documentation and lineage tracking
+
+### Basic Dataframe Configuration
+
+```toml
+[dataframes.sales_data]
+dataframe_name = "Sales Transaction Data"
+short_description_df = "Daily sales transactions with customer details"
+data_sources = ["CRM System"]
+path_to_parquet_data = "./_data/sales_data.parquet"
+date_col = "transaction_date"
+```
+
+### Complete Dataframe Configuration
+
+```toml
+[dataframes.market_data]
+dataframe_name = "Financial Market Data"
+short_description_df = "Daily stock prices and trading volumes"
+data_sources = ["Bloomberg", "Reuters", "Yahoo Finance"]
+data_providers = ["Bloomberg LP", "Refinitiv", "Yahoo"]
+links_to_data_providers = [
+    "https://www.bloomberg.com/professional",
+    "https://www.refinitiv.com",
+    "https://finance.yahoo.com"
+]
+type_of_data_access = ["Subscription", "Subscription", "Public"]
+need_to_contact_provider = ["Yes", "Yes", "No"]
+data_on_pre_approved_list = ["Yes", "Yes", "N/A"]
+data_license = "Bloomberg Data License Agreement"
+license_expiration_date = "2025-12-31"
+provider_contact_info = "marketdata@bloomberg.com"
+restriction_on_use = "Internal use only, no redistribution"
+how_is_pulled = "Python API with daily scheduled job"
+topic_tags = ["Market Data", "Equities", "S&P 500"]
+date_col = "date"
+path_to_parquet_data = "./_data/market_data.parquet"
+path_to_excel_data = "./_data/market_data.xlsx"
+dataframe_docs_path = "./docs_src/dataframes/market_data.md"
+```
+
+### Loading Data
+
+From ChartBook:
+```python
+from chartbook import data
+
+# Load from current pipeline
+df = data.load(dataframe_id="market_data")
+
+# Load from specific pipeline
+df = data.load(pipeline_id="MARKETS", dataframe_id="market_data")
+```
+
+Direct loading:
+```python
+import pandas as pd
+
+df = pd.read_parquet("_data/market_data.parquet")
+
+# Load specific columns
+df = pd.read_parquet("_data/market_data.parquet", columns=['date', 'ticker', 'close'])
+
+# Load with filters
+df = pd.read_parquet("_data/market_data.parquet", filters=[('date', '>=', '2024-01-01')])
+```
+
+---
+
+## Catalog Projects
+
+A catalog project aggregates multiple pipelines into a unified documentation site.
+
+### Purpose
+
+- Combine multiple analytics pipelines
+- Create a centralized chart catalog
+- Maintain consistent documentation
+- Share analytics across teams
+
+### Configuration
+
+```toml
+[config]
+type = "catalog"
+chartbook_format_version = "0.0.1"
+
+[pipelines]
+
+[pipelines.SALES]
+path_to_pipeline = "../pipelines/sales"
+
+[pipelines.MARKETING]
+path_to_pipeline = "../pipelines/marketing"
+
+[pipelines.FINANCE]
+path_to_pipeline = "../pipelines/finance"
+```
+
+### Platform-Specific Paths
+
+```toml
+[pipelines.DATA.MONTHLY]
+Unix = "/data/pipelines/monthly"
+Windows = "T:/pipelines/monthly"
+```
+
+---
+
+## Complete Configuration Example
+
+```toml
+[config]
+type = "pipeline"
+chartbook_format_version = "0.0.1"
+
+[site]
+title = "Sales Analytics Pipeline"
+author = "Analytics Team"
+copyright = "2025, My Company"
+logo_path = "./assets/company_logo.png"
+favicon_path = "./assets/favicon.ico"
+
+[pipeline]
+id = "SALES"
+pipeline_name = "Sales Analytics Pipeline"
+pipeline_description = "End-to-end sales analytics and reporting"
+lead_pipeline_developer = "Jane Doe"
+contributors = ["Jane Doe", "John Smith"]
+runs_on_grid_or_windows_or_other = "Windows/Linux"
+git_repo_URL = "https://github.com/org/sales-analytics"
+README_file_path = "./README.md"
+
+[charts]
+
+[charts.monthly_sales]
+chart_name = "Monthly Sales Overview"
+short_description_chart = "Total sales by month with YoY comparison"
+dataframe_id = "sales_data"
+topic_tags = ["Sales", "Monthly", "Revenue"]
+data_frequency = "Monthly"
+units = "USD"
+path_to_html_chart = "./_output/monthly_sales.html"
+chart_docs_path = "./docs_src/charts/monthly_sales.md"
+
+[dataframes]
+
+[dataframes.sales_data]
+dataframe_name = "Sales Transactions"
+short_description_df = "Detailed sales transaction data"
+data_sources = ["CRM System"]
+path_to_parquet_data = "./_data/sales_data.parquet"
+date_col = "transaction_date"
+```
+
+---
+
+## Common Workflows
+
+### Documentation Generation Workflow
+
+```bash
+doit                    # Generate data using task automation
+chartbook generate -f  # Generate documentation
+chartbook publish      # Publish to production
+```
+
+### Development Workflow
+
+```bash
+chartbook create-data-glimpses -o ./docs/  # Create data summary
+chartbook generate --keep-build-dirs       # Generate with debug files
+python -m http.server -d ./docs             # Test locally
+```
+
+---
+
+## Best Practices
+
+1. **Version Control**: Always specify `chartbook_format_version`
+2. **File Paths**: Use relative paths from the project root
+3. **Metadata**: Provide comprehensive metadata for discoverability
+4. **Tags**: Use consistent topic tags across charts and dataframes
+5. **Documentation**: Link to markdown files for detailed documentation
+6. **Data Governance**: Include licensing and access information
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Module Not Found Error**: Ensure chartbook is installed in current environment
+2. **Permission Errors**: On Windows, run as administrator or adjust file permissions
+3. **Sphinx Build Errors**: Check that all required files exist
+4. **Missing dependencies**: Ensure all required packages are installed
+5. **Path errors**: Use relative paths in configuration
+6. **Data not found**: Check file paths and extensions
+
+### Debugging Tips
+
+- Use `--keep-build-dirs` to inspect intermediate files
+- Check logs in `_docs/_build/` directory
+- Validate TOML syntax with online validators
+- Test charts individually before full generation
+- Run `pip show chartbook` to verify installation

@@ -1,0 +1,141 @@
+[project]
+name = "chartbook"
+dynamic = ["version"]
+description = "A tool for generating chart documentation websites"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "All Rights Reserved"}
+keywords = ["Dashboards", "Catalogs", "Data", "Analytics"]
+authors = [
+    { name = "Jeremiah Bejarano", email = "Jeremiah.Bejarano@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+# Minimal base - just CLI framework
+dependencies = [
+    "click>=8.1.7",
+]
+
+[project.optional-dependencies]
+# Data loading
+data = [
+    "packaging",
+    "polars>=1.9.0",
+    "pyarrow",
+    "python-decouple>=3.8",
+    "tomli>=2.2.1",
+    "tomli-w>=1.1.0",
+]
+
+# Plotting libraries
+plotting = [
+    "matplotlib",
+    "plotly>=5.24.0",
+]
+
+# Sphinx ecosystem for documentation generation (generate/publish commands)
+sphinx = [
+    "ablog>=0.11.11",
+    "Jinja2>=3.1.4",
+    "linkify-it-py>=2.0.3",
+    "markdown-it-py>=3.0.0",
+    "myst-nb>=1.1.2",
+    "myst-parser>=2.0.0",
+    "pandas>=2.1.4",
+    "pydata-sphinx-theme>=0.15.4",
+    "Sphinx>=7.2.6",
+    "sphinx-autodoc2>=0.5.0",
+    "sphinx-book-theme>=1.1.3",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx_design>=0.6.1",
+    "sphinx_external_toc>=1.0.1",
+]
+
+# Full install - recommended for most users
+all = [
+    "chartbook[data,plotting,sphinx]",
+]
+
+# Development dependencies
+dev = [
+    "chartbook[all]",
+    "pytest",
+]
+
+[project.scripts]
+chartbook = "chartbook.cli:main"
+
+[project.urls]
+Documentation = "https://backofficedev.github.io/chartbook"
+Issues = "https://github.com/backofficedev/chartbook/issues"
+Source = "https://github.com/backofficedev/chartbook"
+
+[tool.hatch.version]
+path = "src/chartbook/__about__.py"
+
+[tool.coverage.run]
+source_pkgs = ["chartbook", "tests"]
+branch = true
+parallel = true
+data_file = ".coverage"
+omit = ["src/chartbook/__about__.py"]
+
+[tool.coverage.paths]
+chartbook = ["src/chartbook", "*/chartbook/src/chartbook"]
+tests = ["tests", "*/chartbook/tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+packages = ["src/chartbook"]
+include = ["src/chartbook/data/**"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chartbook"]
+
+[tool.hatch.build.targets.wheel.sources]
+src = ""
+
+[tool.hatch.envs.hatch-test]
+# Use dev-mode to install local chartbook from src/
+dev-mode = true
+extra-dependencies = [
+    "chartbook[all]",
+    # Dependencies for running example project integration tests
+    "colorama",
+    "doit>=0.36.0",
+    "ipython",
+    "jupytext",
+    "matplotlib",
+    "numpy",
+    "openpyxl",
+    "pandas-datareader>=0.10.0",
+    "plotly>=5.24.0",
+    "python-decouple",
+    "requests",
+    "seaborn",
+    "setuptools",  # provides distutils for pandas-datareader on Python 3.12+
+]
+
+[tool.hatch.envs.docs]
+dependencies = ["chartbook[all]"]
+
+[tool.hatch.envs.docs.scripts]
+build = "sphinx-build -b html docs_src docs && touch docs/.nojekyll"
+
+[tool.pytest.ini_options]
+filterwarnings = ["ignore::Warning"]
+addopts = "--doctest-modules --ignore=examples"
+pythonpath = ["."]
+testpaths = ["tests"]

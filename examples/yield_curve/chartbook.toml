@@ -1,0 +1,163 @@
+[config]
+type = "pipeline"
+chartbook_format_version = "0.0.2"
+
+[site]
+title = "Yield Curve"
+author = "Jeremy Bejarano"
+copyright = "2025"
+logo_path = ""
+favicon_path = ""
+
+[pipeline]
+id = "YI"
+pipeline_name = "Yield Curve"
+pipeline_description = "Analyze yield curve"
+lead_pipeline_developer = "Jeremy Bejarano"
+contributors = ["Jeremy Bejarano"]
+software_modules_command = "module load anaconda3/3.11.4 TeXLive/2023"
+runs_on_grid_or_windows_or_other = "Windows/Linux/MacOS"
+git_repo_URL = ""
+README_file_path = "./README.md"
+
+[notebooks]
+
+
+[notebooks.01_example_notebook_interactive]
+notebook_name = "Example Notebook Interactive"
+notebook_description = "Example notebook for demonstrating how to construct a Chartbook notebook."
+notebook_path = "_output/01_example_notebook_interactive.ipynb"
+
+
+[notebooks.02_example_with_dependencies]
+notebook_name = "Example Notebook with Dependencies"
+notebook_description = "Example notebook demonstrating dependencies on data pulls."
+notebook_path = "_output/02_example_with_dependencies.ipynb"
+
+
+
+[notebooks.03_public_repo_summary_charts]
+notebook_name = "Public Repo Summary Charts"
+notebook_description = "Summary charts using public repo data."
+notebook_path = "_output/03_public_repo_summary_charts.ipynb"
+
+
+[notebooks.04_term_premium_charts]
+notebook_name = "Term Premium Charts"
+notebook_description = "Analysis of term premium measures from the yield curve."
+notebook_path = "_output/04_term_premium_charts_ipynb.ipynb"
+
+
+[dataframes]
+
+
+[dataframes.repo_public]
+dataframe_name = "Public Repo Data"
+short_description_df = "Public repo series and related economic and financial aggregates."
+data_sources = ["FRED", "Office of Financial Research"]
+data_providers = ["FRED", "Office of Financial Research"]
+links_to_data_providers = ["https://fred.stlouisfed.org/", "https://www.financialresearch.gov/short-term-funding-monitor/api/"]
+topic_tags = ["Short Term Funding", "Repo"]
+how_is_pulled = "Web API via Python"
+path_to_parquet_data = "./_data/repo_public.parquet"
+date_col = "date"
+dataframe_docs_path = "./docs_src/dataframes/repo_public.md"
+
+
+[dataframes.fed_yield_curve]
+dataframe_name = "Fed Yield Curve"
+short_description_df = "Zero-coupon Treasury yield curve from the Federal Reserve."
+data_sources = ["Federal Reserve Board"]
+data_providers = ["Federal Reserve Board"]
+links_to_data_providers = ["https://www.federalreserve.gov/data/yield-curve-tables/feds200628.csv"]
+topic_tags = ["Yield Curve", "Treasury"]
+how_is_pulled = "Web API via Python"
+path_to_parquet_data = "./_data/fed_yield_curve.parquet"
+date_col = "date"
+dataframe_docs_path = "./docs_src/dataframes/fed_yield_curve.md"
+
+
+[dataframes.term_premium]
+dataframe_name = "Term Premium"
+short_description_df = "Term premium measures derived from the yield curve."
+data_sources = ["Federal Reserve Board"]
+data_providers = ["Federal Reserve Board"]
+links_to_data_providers = ["https://www.federalreserve.gov/data/yield-curve-tables/feds200628.csv"]
+topic_tags = ["Yield Curve", "Term Premium"]
+how_is_pulled = "Derived from Fed yield curve data"
+path_to_parquet_data = "./_data/term_premium.parquet"
+date_col = "date"
+dataframe_docs_path = "./docs_src/dataframes/term_premium.md"
+
+
+[charts]
+
+
+[charts.repo_rates]
+chart_name = "Repo Rates"
+short_description_chart = "SOFR, the Effective Funds Rate, and the Fed's Target Range"
+dataframe_id = "repo_public"
+topic_tags = ["Short Term Funding", "Repo"]
+data_frequency = "Daily"
+observation_period = "Weekday"
+lag_in_data_release = "One day"
+data_release_timing = "Weekday"
+units = "Percent"
+path_to_html_chart = "./_output/repo_rates.html"
+chart_docs_path = "./docs_src/charts/repo_rates.md"
+
+
+[charts.yield_curve_current]
+chart_name = "Current Yield Curve"
+short_description_chart = "Most recent U.S. Treasury zero-coupon yield curve"
+dataframe_id = "fed_yield_curve"
+topic_tags = ["Yield Curve", "Treasury"]
+data_frequency = "Daily"
+observation_period = "Weekday"
+lag_in_data_release = "One day"
+data_release_timing = "Weekday"
+units = "Percent"
+path_to_html_chart = "./_output/yield_curve_current.html"
+chart_docs_path = "./docs_src/charts/yield_curve_current.md"
+
+
+[charts.term_premium_10y_1y]
+chart_name = "Term Premium (10Y-1Y)"
+short_description_chart = "10-year minus 1-year Treasury yield spread over time"
+dataframe_id = "term_premium"
+topic_tags = ["Yield Curve", "Term Premium"]
+data_frequency = "Daily"
+observation_period = "Weekday"
+lag_in_data_release = "One day"
+data_release_timing = "Weekday"
+units = "Percentage Points"
+path_to_html_chart = "./_output/term_premium_10y_1y.html"
+chart_docs_path = "./docs_src/charts/term_premium.md"
+
+
+[charts.term_premium_10y_2y]
+chart_name = "Term Premium (10Y-2Y)"
+short_description_chart = "10-year minus 2-year Treasury yield spread over time"
+dataframe_id = "term_premium"
+topic_tags = ["Yield Curve", "Term Premium"]
+data_frequency = "Daily"
+observation_period = "Weekday"
+lag_in_data_release = "One day"
+data_release_timing = "Weekday"
+units = "Percentage Points"
+path_to_html_chart = "./_output/term_premium_10y_2y.html"
+chart_docs_path = "./docs_src/charts/term_premium.md"
+
+
+[charts.term_premium_10y_3y]
+chart_name = "Term Premium (10Y-3Y)"
+short_description_chart = "10-year minus 3-year Treasury yield spread over time"
+dataframe_id = "term_premium"
+topic_tags = ["Yield Curve", "Term Premium"]
+data_frequency = "Daily"
+observation_period = "Weekday"
+lag_in_data_release = "One day"
+data_release_timing = "Weekday"
+units = "Percentage Points"
+path_to_html_chart = "./_output/term_premium_10y_3y.html"
+chart_docs_path = "./docs_src/charts/term_premium.md"

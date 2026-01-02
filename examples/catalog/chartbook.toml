@@ -1,0 +1,18 @@
+[config]
+type = "catalog"
+chartbook_format_version = "0.0.1"
+
+[site]
+title = "ChartBook Catalog"
+author = "Jeremy Bejarano"
+copyright = "2025"
+logo_path = "./logo.png"
+favicon_path = ""
+
+[pipelines]
+
+[pipelines.fred_charts]
+path_to_pipeline = "../fred_charts"
+
+[pipelines.yield_curve]
+path_to_pipeline = "../yield_curve"

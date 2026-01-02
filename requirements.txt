@@ -1,0 +1,60 @@
+# $ conda create --name <env> --file <this file>
+# conda env export > environment.yml
+# Dependencies from this file can be installed with the following command:
+# I derived this file from the output of the following command and then edited it
+# in GitHub Actions. 
+# pip install -r requirements.txt
+# platform: win-64
+# Specific package versions are specified here to allow more consistent caching
+# This file may be used to create an environment using:
+# to match the appropriate syntax:
+ABlog==0.11.11
+colorama
+doit
+fabric
+holidays
+ipynb-py-convert
+ipython
+jaydebeapi
+jupyter
+jupyter-book
+jupyterlab
+linearmodels
+linkify-it-py
+matplotlib
+myst-nb
+myst-parser==2.0.0
+notebook
+numpy<2
+numpydoc
+openpyxl==3.1.5
+pandas
+pandas-datareader
+pandas-market-calendars
+paramiko
+plotly
+polars>=1.9.0
+pyarrow
+pydata-sphinx-theme==0.15.4
+pytest
+python-decouple
+python-dotenv
+pyxlsb==1.0.10
+requests
+scikit-learn
+scipy
+seaborn
+sphinx-autodoc2==0.4.2
+sphinx-book-theme==1.1.3
+sphinx-design
+sphinx==7.3.7
+sphinxcontrib-applehelp==2.0.0
+sphinxcontrib-htmlhelp==2.1.0
+sphinxext-opengraph
+sphinxext-rediraffe
+statsmodels
+wrds
+xbbg
+xlrd
+xlwings==0.33.3
+zstandard

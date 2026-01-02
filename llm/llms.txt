@@ -1,0 +1,86 @@
+# ChartBook
+
+> A developer platform for data science teams to discover, document, and share analytics work. Provides a centralized catalog for pipelines, charts, and dataframes with automatic documentation website generation.
+
+ChartBook organizes analytics work into **pipelines** (self-contained projects) or **catalogs** (multi-pipeline collections). All configuration uses TOML format (`chartbook.toml`).
+
+## Quick Start
+
+- [Installation](docs_src/getting-started.md): `pip install chartbook` for data loading, `pipx install chartbook` for CLI
+- [CLI Reference](docs_src/cli-reference.md): `chartbook generate`, `chartbook publish`, `chartbook create-data-glimpses`
+
+## Core Concepts
+
+- [Pipelines](docs_src/user-guide/pipelines.md): Self-contained analytics projects with charts, dataframes, and documentation
+- [Charts](docs_src/user-guide/charts.md): Interactive HTML visualizations with metadata and governance tracking
+- [Dataframes](docs_src/user-guide/dataframes.md): Data sources in Parquet format with licensing and lineage tracking
+- [Catalog Projects](docs_src/user-guide/catalog-projects.md): Aggregate multiple pipelines into unified documentation
+
+## Configuration
+
+- [Configuration Guide](docs_src/configuration.md): Complete `chartbook.toml` reference with all available fields
+
+## API
+
+- [Python API](docs_src/api/chartbook.md): `from chartbook import data; df = data.load(pipeline_id="ID", dataframe_id="df_id")`
+
+## Key Commands
+
+```bash
+chartbook generate           # Generate HTML documentation website
+chartbook generate -f        # Force overwrite existing docs
+chartbook publish            # Publish to directory
+chartbook create-data-glimpses  # Create data summary report
+```
+
+## Minimal Configuration Example
+
+```toml
+[config]
+type = "pipeline"
+chartbook_format_version = "0.0.1"
+
+[site]
+title = "My Analytics"
+author = "Your Name"
+copyright = "2025"
+
+[pipeline]
+id = "MYPROJ"
+pipeline_name = "My Pipeline"
+pipeline_description = "Analytics pipeline description"
+lead_pipeline_developer = "Your Name"
+
+[charts.my_chart]
+chart_name = "My Chart"
+short_description_chart = "Chart description"
+dataframe_id = "my_data"
+path_to_html_chart = "./_output/chart.html"
+chart_docs_path = "./docs_src/charts/chart.md"
+
+[dataframes.my_data]
+dataframe_name = "My Data"
+short_description_df = "Data description"
+data_sources = ["Source"]
+path_to_parquet_data = "./_data/data.parquet"
+date_col = "date"
+```
+
+## Directory Structure
+
+```
+my-pipeline/
+├── chartbook.toml      # Configuration
+├── _data/               # Parquet data files
+├── _output/             # Generated HTML charts
+├── docs_src/            # Markdown documentation
+│   ├── charts/
+│   └── dataframes/
+└── src/                 # Python source code
+```
+
+## Optional
+
+- [Examples](docs_src/examples/index.md): Real-world examples and best practices
+- [Contributing](docs_src/contributing.md): Development guidelines
+- [Changelog](docs_src/changelog.md): Version history

@@ -1,0 +1,24 @@
+{% if pagename in ablog %}
+<div class="prev-next-area article-header-prev-next">
+    {% if ablog[pagename].prev %}
+    <a class="left-prev" href="{{ pathto(ablog[pagename].prev.docname) }}{{ anchor(ablog[pagename].prev) }}"
+        title="{{ ablog[pagename].prev.title }}">
+        <i class="fa-solid fa-angle-left"></i>
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">Previous</p>
+            <p class="prev-next-title">{{ ablog[pagename].prev.title }}</p>
+        </div>
+    </a>
+    {% endif %}
+    {% if ablog[pagename].next %}
+    <a class="right-next" href="{{ pathto(ablog[pagename].next.docname) }}{{ anchor(ablog[pagename].next) }}"
+        title="{{ ablog[pagename].next.title }}">
+        <div class="prev-next-info">
+            <p class="prev-next-subtitle">Next</p>
+            <p class="prev-next-title">{{ ablog[pagename].next.title }}</p>
+        </div>
+        <i class="fa-solid fa-angle-right"></i>
+    </a>
+    {% endif %}
+</div>
+{% endif %}

@@ -1,0 +1,80 @@
+/* Make blog post links match toctree styling */
+.ablog-post-title a.reference.internal {
+    font-weight: normal;
+    font-size: 0.9em;
+    color: #176de8;
+    text-decoration: underline;
+    font-family: inherit;
+}
+
+/* Custom CSS to make documentation full width */
+
+/* Override pydata-sphinx-theme's max width constraint */
+:root {
+    --pst-body-max-width: none !important;
+    --pst-sidebar-primary-width: 20rem !important;
+    --pst-sidebar-secondary-width: 20rem !important;
+  }
+  
+  /* Additional overrides to ensure full width */
+  .bd-main .bd-content {
+    max-width: none !important;
+    width: 100% !important;
+    flex-grow: 1;
+  }
+  
+  /* Make the article container full width */
+  .bd-article-container {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* Override the main container constraints */
+  .bd-container {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* Ensure the main content area expands */
+  div#main-content, 
+  main.bd-main,
+  div.bd-content {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* Override any container with max-width */
+  .container, .container-fluid, .container-lg, .container-xl {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* Target the article itself */
+  article.bd-article {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* Override sphinx-book-theme specific constraints */
+  .bd-page-width {
+    max-width: none !important;
+  }
+  
+  /* Make sidebars wider to show more content */
+  .bd-sidebar-primary, .bd-sidebar-secondary {
+    flex: 0 0 20rem !important;
+    min-width: 20rem !important;
+    max-width: 20rem !important;
+  }
+  
+  /* Ensure content area takes remaining space */
+  .bd-content {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+  
+  /* Additional override for the content wrapper */
+  .bd-content-container {
+    max-width: none !important;
+    width: 100% !important;
+  } 

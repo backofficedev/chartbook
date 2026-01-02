@@ -1,0 +1,66 @@
+# Generated test projects
+/test_project/
+/my_*/
+/*.egg-info/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+.cache
+
+# IDE
+.vscode/
+.idea/
+*.sublime*
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Doit
+.doit-db.sqlite
+.doit.db.*
+
+# Generated documentation
+examples/*/docs/
+**/docs/_build/
+
+docs_src/_build/
+docs_src/apidocs/
+
+docs/
