@@ -19,7 +19,7 @@ pip install chartbook
 
 ```python
 from chartbook import data
-df = data.load(pipeline_id="EX", dataframe_id="repo_public")
+df = data.load(pipeline_id="fred_charts", dataframe_id="interest_rates")
 ```
 
 ### For CLI (Recommended - isolated installation)

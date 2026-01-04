@@ -67,7 +67,7 @@ def load(
 
     ```python
     import chartbook as cb
-    df_pandas = cb.data.load(pipeline_id="EX", dataframe_id="repo_public")
+    df_pandas = cb.data.load(pipeline_id="fred_charts", dataframe_id="interest_rates")
     print(df_pandas.head())
     ```
 
@@ -75,7 +75,7 @@ def load(
 
     ```python
     import chartbook as cb
-    df_polars = cb.data.load(pipeline_id="EX", dataframe_id="repo_public", format="polars")
+    df_polars = cb.data.load(pipeline_id="fred_charts", dataframe_id="interest_rates", format="polars")
     print(df_polars.head())
     ```
 
@@ -83,7 +83,7 @@ def load(
 
     ```python
     import chartbook as cb
-    df = cb.data.load(base_dir="/path/to/data", pipeline_id="EX", dataframe_id="repo_public")
+    df = cb.data.load(base_dir="/path/to/data", pipeline_id="fred_charts", dataframe_id="interest_rates")
     print(df.head())
     ```
     """

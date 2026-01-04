@@ -3,7 +3,7 @@
 A developer platform for data science teams.
 
 [![PyPI - Version](https://img.shields.io/badge/PyPI-v0.0.2-blue?logo=pypi)](https://pypi.org/project/chartbook)
-[![PyPI - Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?logo=python)](https://pypi.org/project/chartbook)
+[![PyPI - Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?logo=python)](https://pypi.org/project/chartbook)
 
 Discover, document, and share data science work across your organization. ChartBook provides a centralized catalog for data pipelines, charts, and documentation—making it easy to find, understand, and reuse analytics work.
 
@@ -53,7 +53,7 @@ pip install -e ".[dev]"
 ```python
 from chartbook import data
 
-df = data.load(pipeline_id="EX", dataframe_id="repo_public")
+df = data.load(pipeline_id="fred_charts", dataframe_id="interest_rates")
 ```
 
 ### Build documentation
