@@ -1,0 +1,1349 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chartbook.markdown_generator &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=f52f92e8"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/markdown_generator';</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../why-chartbook.html">Why ChartBook?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/concepts.html">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/pipelines.html">Pipelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/charts.html">Charts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/dataframes.html">Dataframes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/catalog-projects.html">Catalog Projects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/pipeline-example.html">Pipeline Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/chartbook-example.html">Catalog Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/data-pipeline.html">Data Pipeline</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for chartbook.markdown_generator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">NOTES:</span>
+
+<span class="sd">- Dataframe names must have no spaces, and must start with an alphabetic character.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">importlib.resources</span>  <span class="c1"># Add this at the top with other imports</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span> <span class="nn">jinja2</span>
+<span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+
+<span class="kn">from</span> <span class="nn">chartbook.manifest</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_file_modified_datetime</span><span class="p">,</span>
+    <span class="n">get_pipeline_ids</span><span class="p">,</span>
+    <span class="n">get_pipeline_manifest</span><span class="p">,</span>
+    <span class="n">load_manifest</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">chartbook.utils</span> <span class="kn">import</span> <span class="n">copy_according_to_plan</span><span class="p">,</span> <span class="n">get_dataframe_glimpse</span>
+
+<span class="n">BASE_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">DOCS_BUILD_DIR</span> <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;_docs&quot;</span><span class="p">)</span>
+<span class="n">DOCS_SRC_DIR</span> <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;_docs_src&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="get_sphinx_file_alignment_plan">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.get_sphinx_file_alignment_plan">[docs]</a>
+<span class="k">def</span> <span class="nf">get_sphinx_file_alignment_plan</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">BASE_DIR</span><span class="p">,</span> <span class="n">docs_build_dir</span><span class="o">=</span><span class="n">DOCS_BUILD_DIR</span><span class="p">):</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">base_dir</span><span class="p">)</span>
+    <span class="n">pipeline_ids</span> <span class="o">=</span> <span class="n">get_pipeline_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+
+    <span class="n">dataset_plan</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">chart_plan_download</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">chart_plan_static</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">notebook_plan</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">pipeline_ids</span><span class="p">:</span>
+        <span class="n">download_chart_dir_download</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">Path</span><span class="p">(</span><span class="n">docs_build_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;download_chart&quot;</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">download_chart_dir_static</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">docs_build_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;_static&quot;</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="n">download_dataframe_dir</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">Path</span><span class="p">(</span><span class="n">docs_build_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;download_dataframe&quot;</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">notebook_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">docs_build_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;notebooks&quot;</span> <span class="o">/</span> <span class="nb">str</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+
+        <span class="n">download_chart_dir_download</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">download_dataframe_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">download_chart_dir_static</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">notebook_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;pipeline_base_dir&quot;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">]:</span>
+            <span class="n">dataframe_manifest</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe_id</span><span class="p">]</span>
+
+            <span class="n">path_to_parquet_data</span> <span class="o">=</span> <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_parquet_data&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">path_to_parquet_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">path_to_parquet_data</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">file_path</span> <span class="o">=</span> <span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_to_parquet_data</span><span class="p">)</span>
+                <span class="n">dataset_plan</span><span class="p">[</span><span class="n">file_path</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">download_dataframe_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dataframe_id</span><span class="si">}</span><span class="s2">.parquet&quot;</span>
+                <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">chart_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">]:</span>
+            <span class="c1"># Plan for copying HTML chart to download folder</span>
+            <span class="n">chart_manifest</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">][</span><span class="n">chart_id</span><span class="p">]</span>
+            <span class="n">path_to_html_chart</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_html_chart&quot;</span><span class="p">])</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">path_to_html_chart</span>
+            <span class="n">chart_plan_download</span><span class="p">[</span><span class="n">file_path</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">download_chart_dir_download</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">.html&quot;</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Plan for copying HTML chart to _static folder for display</span>
+            <span class="n">chart_manifest</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">][</span><span class="n">chart_id</span><span class="p">]</span>
+            <span class="n">path_to_html_chart</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_html_chart&quot;</span><span class="p">])</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">path_to_html_chart</span>
+            <span class="n">chart_plan_static</span><span class="p">[</span><span class="n">file_path</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">download_chart_dir_static</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">.html&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">notebook_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;notebooks&quot;</span><span class="p">]:</span>
+            <span class="n">notebook_path</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;notebooks&quot;</span><span class="p">][</span><span class="n">notebook_id</span><span class="p">][</span><span class="s2">&quot;notebook_path&quot;</span><span class="p">]</span>
+            <span class="n">notebook_path</span> <span class="o">=</span> <span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="n">notebook_path</span><span class="p">)</span>
+            <span class="n">notebook_path</span> <span class="o">=</span> <span class="n">notebook_path</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+            <span class="n">notebook_name</span> <span class="o">=</span> <span class="n">notebook_path</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">notebook_plan</span><span class="p">[</span><span class="n">notebook_path</span><span class="p">]</span> <span class="o">=</span> <span class="n">notebook_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">notebook_name</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">dataset_plan</span><span class="p">,</span>
+        <span class="n">chart_plan_download</span><span class="p">,</span>
+        <span class="n">chart_plan_static</span><span class="p">,</span>
+        <span class="n">notebook_plan</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_all_pipeline_docs">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.generate_all_pipeline_docs">[docs]</a>
+<span class="k">def</span> <span class="nf">generate_all_pipeline_docs</span><span class="p">(</span>
+    <span class="n">manifest</span><span class="p">,</span>
+    <span class="n">docs_build_dir</span><span class="o">=</span><span class="n">DOCS_BUILD_DIR</span><span class="p">,</span>
+    <span class="n">base_dir</span><span class="o">=</span><span class="n">BASE_DIR</span><span class="p">,</span>
+    <span class="n">pipeline_theme</span><span class="o">=</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
+    <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">DOCS_SRC_DIR</span><span class="p">,</span>
+    <span class="n">size_threshold</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Params</span>
+<span class="sd">    ------</span>
+<span class="sd">    manifest: dict</span>
+<span class="sd">        This is a dict that contains manifest for all pipelines to be processed.</span>
+<span class="sd">    docs_build_dir: Path</span>
+<span class="sd">        This is the output directory, where all generated docs will be placed.</span>
+<span class="sd">    base_dir: Path</span>
+<span class="sd">        This is used to identify the inputs. It&#39;s the base directory of the current project.</span>
+<span class="sd">        This is used to tell</span>
+<span class="sd">        the docs builder where all templates are stored, since the pipeline requires</span>
+<span class="sd">        that they be stored in a consistent spot relative to the base directory</span>
+<span class="sd">        of the project.</span>
+<span class="sd">    docs_src_dir: Path</span>
+<span class="sd">        The directory containing documentation source files and templates.</span>
+<span class="sd">    size_threshold: float</span>
+<span class="sd">        File size threshold in MB above which to use memory-efficient loading.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">docs_src_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">docs_src_dir</span><span class="p">)</span>
+
+    <span class="n">pipeline_ids</span> <span class="o">=</span> <span class="n">get_pipeline_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">pipeline_ids</span><span class="p">:</span>
+        <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;pipeline_base_dir&quot;</span><span class="p">])</span>
+
+        <span class="n">generate_pipeline_docs</span><span class="p">(</span>
+            <span class="n">pipeline_id</span><span class="p">,</span>
+            <span class="n">pipeline_manifest</span><span class="p">,</span>
+            <span class="n">pipeline_base_dir</span><span class="o">=</span><span class="n">pipeline_base_dir</span><span class="p">,</span>
+            <span class="n">docs_build_dir</span><span class="o">=</span><span class="n">docs_build_dir</span><span class="p">,</span>
+            <span class="n">pipeline_theme</span><span class="o">=</span><span class="n">pipeline_theme</span><span class="p">,</span>
+            <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">docs_src_dir</span><span class="p">,</span>
+            <span class="n">size_threshold</span><span class="o">=</span><span class="n">size_threshold</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">pipeline_theme</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+            <span class="c1"># Copy pipeline README to pipelines directory</span>
+            <span class="n">pipeline_readme_dir</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;pipelines&quot;</span>
+            <span class="n">pipeline_readme_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="n">source_path</span> <span class="o">=</span> <span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="s2">&quot;README.md&quot;</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">readme_content</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+
+            <span class="c1"># Remove the first two lines, add line with link to pipeline GitHub repo and</span>
+            <span class="c1"># to index.html in html build dir, and then join the rest of the README.</span>
+            <span class="n">pipeline_name</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;pipeline_name&quot;</span><span class="p">]</span>
+            <span class="n">git_repo_URL</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;git_repo_URL&quot;</span><span class="p">]</span>
+            <span class="n">readme_text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;# `</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">` </span><span class="si">{</span><span class="n">pipeline_name</span><span class="si">}</span><span class="s2"> </span><span class="se">\n\n</span><span class="s2"> &quot;</span> <span class="o">+</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Pipeline GitHub Repo &lt;a href=&quot;</span><span class="si">{</span><span class="n">git_repo_URL</span><span class="si">}</span><span class="s1">&quot;&gt;</span><span class="si">{</span><span class="n">git_repo_URL</span><span class="si">}</span><span class="s1">.&lt;/a&gt;</span><span class="se">\n\n\n</span><span class="s1">&#39;</span>
+                <span class="o">+</span> <span class="sa">f</span><span class="s1">&#39;Pipeline Web Page &lt;a href=&quot;</span><span class="si">{</span><span class="n">git_repo_URL</span><span class="si">}</span><span class="s1">&quot;&gt;</span><span class="si">{</span><span class="n">git_repo_URL</span><span class="si">}</span><span class="s1">.&lt;/a&gt;</span><span class="se">\n\n\n</span><span class="s1">&#39;</span>
+                <span class="o">+</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">readme_content</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+            <span class="p">)</span>
+
+            <span class="n">readme_destination_filepath</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">pipeline_readme_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">_README.md&quot;</span>
+            <span class="p">)</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">readme_destination_filepath</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">readme_text</span><span class="p">)</span>
+
+    <span class="c1">## Dataframe and Pipeline List in index.md</span>
+    <span class="n">table_file_map</span> <span class="o">=</span> <span class="n">get_dataframes_and_dataframe_docs</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">base_dir</span><span class="p">)</span>
+    <span class="n">dataframe_file_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">table_file_map</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+    <span class="c1"># Get package templates directory</span>
+    <span class="n">package_templates_dir</span> <span class="o">=</span> <span class="n">get_package_templates_path</span><span class="p">()</span>
+
+    <span class="c1"># Get package-specific template directory based on pipeline theme</span>
+    <span class="n">package_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;chartbook&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Determine which template directory to use based on pipeline_theme</span>
+    <span class="n">pipeline_theme</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+        <span class="n">theme_template_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">package_path</span><span class="p">))</span> <span class="o">/</span> <span class="s2">&quot;docs_src_catalog&quot;</span>
+    <span class="k">elif</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="n">theme_template_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">package_path</span><span class="p">))</span> <span class="o">/</span> <span class="s2">&quot;docs_src_pipeline&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid pipeline theme: </span><span class="si">{</span><span class="n">pipeline_theme</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Modified environment setup to include appropriate template locations</span>
+    <span class="n">template_search_paths</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">base_dir</span><span class="p">,</span>
+        <span class="n">docs_src_dir</span><span class="p">,</span>
+        <span class="n">docs_src_dir</span> <span class="o">/</span> <span class="s2">&quot;_templates&quot;</span><span class="p">,</span>  <span class="c1"># Add explicit templates subdir</span>
+        <span class="n">package_templates_dir</span><span class="p">,</span>  <span class="c1"># Add package templates directory</span>
+        <span class="n">theme_template_dir</span><span class="p">,</span>  <span class="c1"># Add theme-specific directory</span>
+        <span class="n">theme_template_dir</span> <span class="o">/</span> <span class="s2">&quot;_templates&quot;</span><span class="p">,</span>  <span class="c1"># Add theme-specific templates subdir</span>
+    <span class="p">]</span>
+
+    <span class="n">environment</span> <span class="o">=</span> <span class="n">jinja2</span><span class="o">.</span><span class="n">Environment</span><span class="p">(</span>
+        <span class="n">loader</span><span class="o">=</span><span class="n">jinja2</span><span class="o">.</span><span class="n">FileSystemLoader</span><span class="p">(</span><span class="n">template_search_paths</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+        <span class="c1"># Render dataframe.md</span>
+        <span class="n">template_path</span> <span class="o">=</span> <span class="s2">&quot;dataframes.md&quot;</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="n">template_path</span><span class="p">)</span>
+        <span class="n">rendered_page</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+            <span class="n">dataframe_file_list</span><span class="o">=</span><span class="n">dataframe_file_list</span><span class="p">,</span>
+            <span class="c1"># docs_src_dir=docs_src_dir.relative_to(base_dir)  # Pass relative path</span>
+        <span class="p">)</span>
+        <span class="c1"># Copy to build directory</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;dataframes.md&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">rendered_page</span><span class="p">)</span>
+
+        <span class="c1"># Render pipelines.md</span>
+        <span class="n">template_path</span> <span class="o">=</span> <span class="s2">&quot;pipelines.md&quot;</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="n">template_path</span><span class="p">)</span>
+        <span class="n">rendered_page</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+            <span class="n">manifest</span><span class="o">=</span><span class="n">manifest</span><span class="p">,</span>
+            <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">&quot;..&quot;</span><span class="p">,</span>
+            <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">docs_src_dir</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">base_dir</span><span class="p">),</span>  <span class="c1"># Pass relative path</span>
+        <span class="p">)</span>
+        <span class="c1"># Copy to build directory</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;pipelines.md&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">rendered_page</span><span class="p">)</span>
+
+        <span class="c1"># Render diagnostics.md</span>
+        <span class="n">template_path</span> <span class="o">=</span> <span class="s2">&quot;diagnostics.md&quot;</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="n">template_path</span><span class="p">)</span>
+
+        <span class="c1"># Load diagnostics data from CSV</span>
+        <span class="n">diagnostics_csv_path</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">docs_build_dir</span>
+            <span class="o">/</span> <span class="s2">&quot;_static&quot;</span>
+            <span class="o">/</span> <span class="s2">&quot;diagnostics&quot;</span>
+            <span class="o">/</span> <span class="s2">&quot;chartbook_metadata_diagnostics.csv&quot;</span>
+        <span class="p">)</span>
+        <span class="n">diagnostics_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">diagnostics_summary</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">diagnostics_csv_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">diagnostics_csv_path</span><span class="p">)</span>
+
+            <span class="c1"># Convert Page Link from CSV format (../charts/...) to HTML format (./charts/...)</span>
+            <span class="c1"># for use in the diagnostics.html page</span>
+            <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Page Link (HTML)&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Page Link&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+                <span class="s2">&quot;../&quot;</span><span class="p">,</span> <span class="s2">&quot;./&quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span>
+
+            <span class="n">diagnostics_data</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Calculate summary statistics</span>
+            <span class="n">diagnostics_summary</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;total_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
+                <span class="s2">&quot;complete_count&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;Metadata Complete&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+                <span class="s2">&quot;incomplete_count&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Metadata Complete&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+                <span class="s2">&quot;complete_pct&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Metadata Complete&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="s2">&quot;incomplete_pct&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Metadata Complete&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()),</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="p">}</span>
+
+        <span class="c1"># Import field counts from diagnostics module</span>
+        <span class="kn">from</span> <span class="nn">chartbook.diagnostics</span> <span class="kn">import</span> <span class="p">(</span>
+            <span class="n">CHART_FIELDS</span><span class="p">,</span>
+            <span class="n">DATAFRAME_FIELDS</span><span class="p">,</span>
+            <span class="n">PIPELINE_FIELDS</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">rendered_page</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+            <span class="n">diagnostics_data</span><span class="o">=</span><span class="n">diagnostics_data</span><span class="p">,</span>
+            <span class="n">diagnostics_summary</span><span class="o">=</span><span class="n">diagnostics_summary</span><span class="p">,</span>
+            <span class="n">pipeline_field_count</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">PIPELINE_FIELDS</span><span class="p">),</span>
+            <span class="n">dataframe_field_count</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">DATAFRAME_FIELDS</span><span class="p">),</span>
+            <span class="n">chart_field_count</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">CHART_FIELDS</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;diagnostics.md&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">rendered_page</span><span class="p">)</span>
+
+        <span class="n">readme_text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="c1"># Render and copy index.md in chart haven theme</span>
+        <span class="n">template_path</span> <span class="o">=</span> <span class="s2">&quot;index.md&quot;</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="n">template_path</span><span class="p">)</span>
+        <span class="n">index_page</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+            <span class="n">manifest</span><span class="o">=</span><span class="n">manifest</span><span class="p">,</span>
+            <span class="n">dataframe_file_list</span><span class="o">=</span><span class="n">dataframe_file_list</span><span class="p">,</span>
+            <span class="n">pipeline_manifest</span><span class="o">=</span><span class="n">pipeline_manifest</span><span class="p">,</span>
+            <span class="n">readme_text</span><span class="o">=</span><span class="n">readme_text</span><span class="p">,</span>
+            <span class="n">pipeline_page_link</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;./pipelines/</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">_README.md&quot;</span><span class="p">,</span>
+            <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;index.md&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">index_page</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="n">source_path</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;README.md&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">source_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">readme_content</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+
+        <span class="c1"># Remove the first two lines and join the rest</span>
+        <span class="n">readme_text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">readme_content</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span>
+
+        <span class="n">notebook_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="sa">f</span><span class="s2">&quot;notebooks/</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">notebook</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">for</span> <span class="n">notebook</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;notebooks&quot;</span><span class="p">]</span>
+        <span class="p">]</span>
+
+        <span class="c1"># Handle markdown notes if they exist</span>
+        <span class="n">notes_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="s2">&quot;notes&quot;</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="p">:</span>
+            <span class="c1"># Copy markdown files to docs build directory</span>
+            <span class="k">for</span> <span class="n">note_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;notes&quot;</span><span class="p">]:</span>
+                <span class="n">note_manifest</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;notes&quot;</span><span class="p">][</span><span class="n">note_id</span><span class="p">]</span>
+                <span class="n">source_file</span> <span class="o">=</span> <span class="n">note_manifest</span><span class="p">[</span><span class="s2">&quot;full_path&quot;</span><span class="p">]</span>
+
+                <span class="c1"># Copy to root of docs build directory with note_id as filename</span>
+                <span class="n">dest_file</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">note_id</span><span class="si">}</span><span class="s2">.md&quot;</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">source_file</span><span class="p">,</span> <span class="n">dest_file</span><span class="p">)</span>
+
+                <span class="c1"># Add to notes list for template</span>
+                <span class="n">notes_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">note_id</span><span class="si">}</span><span class="s2">.md&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Render and copy index.md in pipeline themes</span>
+        <span class="n">template_path</span> <span class="o">=</span> <span class="s2">&quot;index.md&quot;</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="n">template_path</span><span class="p">)</span>
+        <span class="n">index_page</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+            <span class="n">manifest</span><span class="o">=</span><span class="n">manifest</span><span class="p">,</span>
+            <span class="n">dataframe_file_list</span><span class="o">=</span><span class="n">dataframe_file_list</span><span class="p">,</span>
+            <span class="n">pipeline_manifest</span><span class="o">=</span><span class="n">pipeline_manifest</span><span class="p">,</span>
+            <span class="n">readme_text</span><span class="o">=</span><span class="n">readme_text</span><span class="p">,</span>
+            <span class="n">pipeline_page_link</span><span class="o">=</span><span class="s2">&quot;./index.md&quot;</span><span class="p">,</span>
+            <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+            <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
+            <span class="n">notebook_list</span><span class="o">=</span><span class="n">notebook_list</span><span class="p">,</span>
+            <span class="n">notes_list</span><span class="o">=</span><span class="n">notes_list</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;index.md&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">index_page</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid Pipeline theme&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_pipeline_docs">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.generate_pipeline_docs">[docs]</a>
+<span class="k">def</span> <span class="nf">generate_pipeline_docs</span><span class="p">(</span>
+    <span class="n">pipeline_id</span><span class="p">,</span>
+    <span class="n">pipeline_manifest</span><span class="p">,</span>
+    <span class="n">pipeline_base_dir</span><span class="o">=</span><span class="n">BASE_DIR</span><span class="p">,</span>
+    <span class="n">docs_build_dir</span><span class="o">=</span><span class="n">DOCS_BUILD_DIR</span><span class="p">,</span>
+    <span class="n">pipeline_theme</span><span class="o">=</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
+    <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">DOCS_SRC_DIR</span><span class="p">,</span>
+    <span class="n">size_threshold</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="k">for</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">]:</span>
+        <span class="n">generate_dataframe_docs</span><span class="p">(</span>
+            <span class="n">dataframe_id</span><span class="p">,</span>
+            <span class="n">pipeline_id</span><span class="p">,</span>
+            <span class="n">pipeline_manifest</span><span class="p">,</span>
+            <span class="n">docs_build_dir</span><span class="p">,</span>
+            <span class="n">pipeline_base_dir</span><span class="o">=</span><span class="n">pipeline_base_dir</span><span class="p">,</span>
+            <span class="n">pipeline_theme</span><span class="o">=</span><span class="n">pipeline_theme</span><span class="p">,</span>
+            <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">docs_src_dir</span><span class="p">,</span>
+            <span class="n">size_threshold</span><span class="o">=</span><span class="n">size_threshold</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">chart_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">]:</span>
+        <span class="n">generate_chart_docs</span><span class="p">(</span>
+            <span class="n">chart_id</span><span class="p">,</span>
+            <span class="n">pipeline_id</span><span class="p">,</span>
+            <span class="n">pipeline_manifest</span><span class="p">,</span>
+            <span class="n">docs_build_dir</span><span class="p">,</span>
+            <span class="n">pipeline_base_dir</span><span class="o">=</span><span class="n">pipeline_base_dir</span><span class="p">,</span>
+            <span class="n">pipeline_theme</span><span class="o">=</span><span class="n">pipeline_theme</span><span class="p">,</span>
+            <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">docs_src_dir</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_package_templates_path">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.get_package_templates_path">[docs]</a>
+<span class="k">def</span> <span class="nf">get_package_templates_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get path to templates directory in the package&quot;&quot;&quot;</span>
+    <span class="n">package_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;chartbook&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">package_path</span><span class="p">))</span> <span class="o">/</span> <span class="s2">&quot;templates&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="generate_dataframe_docs">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.generate_dataframe_docs">[docs]</a>
+<span class="k">def</span> <span class="nf">generate_dataframe_docs</span><span class="p">(</span>
+    <span class="n">dataframe_id</span><span class="p">,</span>
+    <span class="n">pipeline_id</span><span class="p">,</span>
+    <span class="n">pipeline_manifest</span><span class="p">,</span>
+    <span class="n">docs_build_dir</span><span class="o">=</span><span class="n">DOCS_BUILD_DIR</span><span class="p">,</span>
+    <span class="n">pipeline_base_dir</span><span class="o">=</span><span class="n">BASE_DIR</span><span class="p">,</span>
+    <span class="n">pipeline_theme</span><span class="o">=</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
+    <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">DOCS_SRC_DIR</span><span class="p">,</span>
+    <span class="n">size_threshold</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates documentation for a specific dataframe, including the most recent data dates.</span>
+
+<span class="sd">    Params</span>
+<span class="sd">    ------</span>
+<span class="sd">    dataframe_id: str</span>
+<span class="sd">        The identifier for the dataframe.</span>
+<span class="sd">    pipeline_id: str</span>
+<span class="sd">        The identifier for the pipeline.</span>
+<span class="sd">    pipeline_manifest: dict</span>
+<span class="sd">        Manifest for the pipeline.</span>
+<span class="sd">    docs_build_dir: Path</span>
+<span class="sd">        The directory where the docs will be built.</span>
+<span class="sd">    base_dir: Path</span>
+<span class="sd">        The base directory of the pipeline project folder.</span>
+<span class="sd">    docs_src_dir: Path</span>
+<span class="sd">        The directory containing documentation source files and templates.</span>
+<span class="sd">    size_threshold: float</span>
+<span class="sd">        File size threshold in MB above which to use memory-efficient loading.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dataframe_manifest</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe_id</span><span class="p">]</span>
+
+    <span class="n">dataframe_docs_dir</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;dataframes&quot;</span> <span class="o">/</span> <span class="n">pipeline_id</span>
+    <span class="n">dataframe_docs_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Get package templates directory</span>
+    <span class="n">package_templates_dir</span> <span class="o">=</span> <span class="n">get_package_templates_path</span><span class="p">()</span>
+
+    <span class="c1"># Get package-specific template directory based on pipeline theme</span>
+    <span class="n">package_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;chartbook&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Determine which template directory to use based on pipeline_theme</span>
+    <span class="k">if</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+        <span class="n">theme_template_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">package_path</span><span class="p">))</span> <span class="o">/</span> <span class="s2">&quot;docs_src_catalog&quot;</span>
+    <span class="k">elif</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="n">theme_template_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">package_path</span><span class="p">))</span> <span class="o">/</span> <span class="s2">&quot;docs_src_pipeline&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid pipeline theme: </span><span class="si">{</span><span class="n">pipeline_theme</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Add package templates to the search paths</span>
+    <span class="n">template_search_paths</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">pipeline_base_dir</span><span class="p">,</span>
+        <span class="n">docs_src_dir</span><span class="p">,</span>
+        <span class="n">docs_src_dir</span> <span class="o">/</span> <span class="s2">&quot;_templates&quot;</span><span class="p">,</span>  <span class="c1"># Add explicit templates subdir</span>
+        <span class="n">package_templates_dir</span><span class="p">,</span>  <span class="c1"># Add package templates directory</span>
+        <span class="n">theme_template_dir</span><span class="p">,</span>  <span class="c1"># Add theme-specific directory</span>
+        <span class="n">theme_template_dir</span> <span class="o">/</span> <span class="s2">&quot;_templates&quot;</span><span class="p">,</span>  <span class="c1"># Add theme-specific templates subdir</span>
+    <span class="p">]</span>
+
+    <span class="n">environment</span> <span class="o">=</span> <span class="n">jinja2</span><span class="o">.</span><span class="n">Environment</span><span class="p">(</span>
+        <span class="n">loader</span><span class="o">=</span><span class="n">jinja2</span><span class="o">.</span><span class="n">FileSystemLoader</span><span class="p">(</span><span class="n">template_search_paths</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Load doc content based on mode (path or inline string)</span>
+    <span class="n">doc_mode</span> <span class="o">=</span> <span class="n">dataframe_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_doc_mode&quot;</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">doc_mode</span> <span class="o">==</span> <span class="s2">&quot;path&quot;</span><span class="p">:</span>
+        <span class="n">path_to_dataframe_doc</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span>
+            <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;dataframe_docs_path&quot;</span><span class="p">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">environment</span><span class="p">,</span> <span class="n">path_to_dataframe_doc</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># doc_mode == &quot;str&quot;</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;dataframe_docs_str&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Use filenames instead of paths for includes, so they can be found in any of our search locations</span>
+    <span class="n">modified_source</span> <span class="o">=</span> <span class="p">(</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;# Dataframe: `{{pipeline_id}}:{{dataframe_id}}` - {{dataframe_name}}\n\n&quot;&quot;&quot;</span>
+        <span class="o">+</span> <span class="n">source</span>
+        <span class="o">+</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n\n</span>
+<span class="s2">## DataFrame Glimpse</span>
+
+<span class="s2">```</span>
+<span class="s2">{{dataframe_glimpse}}</span>
+<span class="s2">```</span>
+
+<span class="s2">## Dataframe Manifest</span>
+
+<span class="s2">{</span><span class="si">% i</span><span class="s2">nclude &quot;dataframe_manifest.md&quot; %}</span>
+
+<span class="s2">## Pipeline Manifest</span>
+
+<span class="s2">{</span><span class="si">% i</span><span class="s2">nclude &quot;pipeline_manifest.md&quot; %}</span>
+
+<span class="s2">&quot;&quot;&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">modified_source</span><span class="p">)</span>
+
+    <span class="c1"># The name of the date column in the parquet file (default: &quot;date&quot;).</span>
+    <span class="n">date_col</span> <span class="o">=</span> <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;date_col&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="n">pipeline_page_link</span> <span class="o">=</span> <span class="s2">&quot;../index.md&quot;</span>
+        <span class="n">dataframe_path_prefix</span> <span class="o">=</span> <span class="s2">&quot;../dataframes/&quot;</span>
+    <span class="k">elif</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+        <span class="n">pipeline_page_link</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;../pipelines/</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">_README.md&quot;</span>
+        <span class="n">dataframe_path_prefix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid Pipeline theme&quot;</span><span class="p">)</span>
+    <span class="n">link_to_dataframe_docs</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">dataframe_path_prefix</span><span class="p">)</span> <span class="o">/</span> <span class="n">pipeline_id</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dataframe_id</span><span class="si">}</span><span class="s2">.md&quot;</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+    <span class="c1"># Compute the absolute path to the parquet file</span>
+    <span class="n">parquet_path</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_parquet_data&quot;</span><span class="p">]</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+    <span class="c1"># Process the parquet file and get the min and max dates</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">most_recent_data_min</span><span class="p">,</span> <span class="n">most_recent_data_max</span> <span class="o">=</span> <span class="n">find_most_recent_valid_datapoints</span><span class="p">(</span>
+            <span class="n">parquet_path</span><span class="p">,</span> <span class="n">date_col</span><span class="p">,</span> <span class="n">size_threshold_mb</span><span class="o">=</span><span class="n">size_threshold</span>
+        <span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">most_recent_data_min</span><span class="p">,</span> <span class="n">most_recent_data_max</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="c1"># Get the dataframe glimpse</span>
+    <span class="n">dataframe_glimpse</span> <span class="o">=</span> <span class="n">get_dataframe_glimpse</span><span class="p">(</span>
+        <span class="n">parquet_path</span><span class="p">,</span> <span class="n">size_threshold_mb</span><span class="o">=</span><span class="n">size_threshold</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Render the template with the new variables</span>
+    <span class="n">table_page</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+        <span class="n">dataframe_manifest</span><span class="p">,</span>
+        <span class="n">dataframe_manifest</span><span class="o">=</span><span class="n">dataframe_manifest</span><span class="p">,</span>
+        <span class="n">link_to_dataframe_docs</span><span class="o">=</span><span class="n">link_to_dataframe_docs</span><span class="p">,</span>
+        <span class="n">dataframe_id</span><span class="o">=</span><span class="n">dataframe_id</span><span class="p">,</span>
+        <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
+        <span class="n">pipeline_manifest</span><span class="o">=</span><span class="n">pipeline_manifest</span><span class="p">,</span>
+        <span class="n">pipeline_page_link</span><span class="o">=</span><span class="n">pipeline_page_link</span><span class="p">,</span>
+        <span class="n">most_recent_data_min</span><span class="o">=</span><span class="n">most_recent_data_min</span><span class="p">,</span>
+        <span class="n">most_recent_data_max</span><span class="o">=</span><span class="n">most_recent_data_max</span><span class="p">,</span>
+        <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">&quot;..&quot;</span><span class="p">,</span>
+        <span class="n">dataframe_glimpse</span><span class="o">=</span><span class="n">dataframe_glimpse</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># print(table_page)</span>
+
+    <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dataframe_id</span><span class="si">}</span><span class="s2">.md&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">dataframe_docs_dir</span> <span class="o">/</span> <span class="n">filename</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">table_page</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="find_most_recent_valid_datapoints">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.find_most_recent_valid_datapoints">[docs]</a>
+<span class="k">def</span> <span class="nf">find_most_recent_valid_datapoints</span><span class="p">(</span>
+    <span class="n">parquet_path</span><span class="p">,</span> <span class="n">date_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">size_threshold_mb</span><span class="o">=</span><span class="mi">50</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    date_col:</span>
+<span class="sd">        The name of the date column in the parquet file (default: &quot;date&quot;).</span>
+<span class="sd">    size_threshold_mb:</span>
+<span class="sd">        File size threshold in MB above which to skip this computation (default: 50).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">date_col</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">date_col</span> <span class="o">==</span> <span class="s2">&quot;NA&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">date_col</span> <span class="o">==</span> <span class="s2">&quot;N/A&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;N/A&quot;</span><span class="p">,</span> <span class="s2">&quot;N/A&quot;</span>
+
+    <span class="c1"># Check file size - skip for large files to avoid OOM</span>
+    <span class="n">file_size_mb</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="n">parquet_path</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">file_size_mb</span> <span class="o">&gt;</span> <span class="n">size_threshold_mb</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;N/A (large file)&quot;</span><span class="p">,</span> <span class="s2">&quot;N/A (large file)&quot;</span>
+
+    <span class="c1"># Read the parquet file using Polars</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">parquet_path</span><span class="p">)</span>
+
+    <span class="c1"># Ensure date_col is of datetime type for proper comparison</span>
+    <span class="k">if</span> <span class="n">df</span><span class="p">[</span><span class="n">date_col</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Datetime</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">date_col</span><span class="p">)</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Datetime</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+    <span class="c1"># Compute the most recent date where each column is not null</span>
+    <span class="n">most_recent_dates</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">date_col</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">col</span><span class="p">)</span><span class="o">.</span><span class="n">is_not_null</span><span class="p">())</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="o">!=</span> <span class="n">date_col</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Extract the dates and filter out None values</span>
+    <span class="n">dates_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">date</span> <span class="k">for</span> <span class="n">date</span> <span class="ow">in</span> <span class="n">most_recent_dates</span><span class="o">.</span><span class="n">row</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="k">if</span> <span class="n">date</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+
+    <span class="c1"># Compute min and max dates</span>
+    <span class="k">if</span> <span class="n">dates_list</span><span class="p">:</span>
+        <span class="n">most_recent_data_min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">dates_list</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span>
+        <span class="n">most_recent_data_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">dates_list</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">most_recent_data_min</span> <span class="o">=</span> <span class="s2">&quot;N/A&quot;</span>
+        <span class="n">most_recent_data_max</span> <span class="o">=</span> <span class="s2">&quot;N/A&quot;</span>
+
+    <span class="k">return</span> <span class="n">most_recent_data_min</span><span class="p">,</span> <span class="n">most_recent_data_max</span></div>
+
+
+
+<div class="viewcode-block" id="generate_chart_docs">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.generate_chart_docs">[docs]</a>
+<span class="k">def</span> <span class="nf">generate_chart_docs</span><span class="p">(</span>
+    <span class="n">chart_id</span><span class="p">,</span>
+    <span class="n">pipeline_id</span><span class="p">,</span>
+    <span class="n">pipeline_manifest</span><span class="p">,</span>
+    <span class="n">docs_build_dir</span><span class="o">=</span><span class="n">DOCS_BUILD_DIR</span><span class="p">,</span>
+    <span class="n">pipeline_base_dir</span><span class="o">=</span><span class="n">BASE_DIR</span><span class="p">,</span>
+    <span class="n">pipeline_theme</span><span class="o">=</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
+    <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">DOCS_SRC_DIR</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline_base_dir</span><span class="p">)</span>
+
+    <span class="c1"># Get all manifest related to the chart</span>
+    <span class="n">chart_manifest</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">][</span><span class="n">chart_id</span><span class="p">]</span>
+    <span class="n">dataframe_id</span> <span class="o">=</span> <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;dataframe_id&quot;</span><span class="p">]</span>
+    <span class="n">dataframe_manifest</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe_id</span><span class="p">]</span>
+
+    <span class="c1"># Get package templates directory</span>
+    <span class="n">package_templates_dir</span> <span class="o">=</span> <span class="n">get_package_templates_path</span><span class="p">()</span>
+
+    <span class="c1"># Get package-specific template directory based on pipeline theme</span>
+    <span class="n">package_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;chartbook&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Determine which template directory to use based on pipeline_theme</span>
+    <span class="k">if</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+        <span class="n">theme_template_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">package_path</span><span class="p">))</span> <span class="o">/</span> <span class="s2">&quot;docs_src_catalog&quot;</span>
+    <span class="k">elif</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="n">theme_template_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">package_path</span><span class="p">))</span> <span class="o">/</span> <span class="s2">&quot;docs_src_pipeline&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid pipeline theme: </span><span class="si">{</span><span class="n">pipeline_theme</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Add package templates to the search paths</span>
+    <span class="n">template_search_paths</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">pipeline_base_dir</span><span class="p">,</span>
+        <span class="n">docs_src_dir</span><span class="p">,</span>
+        <span class="n">docs_src_dir</span> <span class="o">/</span> <span class="s2">&quot;_templates&quot;</span><span class="p">,</span>  <span class="c1"># Add explicit templates subdir</span>
+        <span class="n">package_templates_dir</span><span class="p">,</span>  <span class="c1"># Add package templates directory</span>
+        <span class="n">theme_template_dir</span><span class="p">,</span>  <span class="c1"># Add theme-specific directory</span>
+        <span class="n">theme_template_dir</span> <span class="o">/</span> <span class="s2">&quot;_templates&quot;</span><span class="p">,</span>  <span class="c1"># Add theme-specific templates subdir</span>
+    <span class="p">]</span>
+
+    <span class="n">environment</span> <span class="o">=</span> <span class="n">jinja2</span><span class="o">.</span><span class="n">Environment</span><span class="p">(</span>
+        <span class="n">loader</span><span class="o">=</span><span class="n">jinja2</span><span class="o">.</span><span class="n">FileSystemLoader</span><span class="p">(</span><span class="n">template_search_paths</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Load doc content based on mode (path or inline string)</span>
+    <span class="n">doc_mode</span> <span class="o">=</span> <span class="n">chart_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_doc_mode&quot;</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">doc_mode</span> <span class="o">==</span> <span class="s2">&quot;path&quot;</span><span class="p">:</span>
+        <span class="n">path_to_chart_doc</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;chart_docs_path&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">environment</span><span class="p">,</span> <span class="n">path_to_chart_doc</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># doc_mode == &quot;str&quot;</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;chart_docs_str&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Use filenames instead of paths for includes</span>
+    <span class="n">modified_source</span> <span class="o">=</span> <span class="p">(</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;{% include &quot;chart_entry_top.md&quot; %}</span>
+<span class="sd">\n\n</span>
+<span class="sd">&quot;&quot;&quot;</span>
+        <span class="o">+</span> <span class="n">source</span>
+        <span class="o">+</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\n\n</span>
+<span class="s2">{</span><span class="si">% i</span><span class="s2">nclude &quot;chart_entry_bottom.md&quot; %}</span>
+<span class="s2">&quot;&quot;&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">template</span> <span class="o">=</span> <span class="n">environment</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">modified_source</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="n">pipeline_page_link</span> <span class="o">=</span> <span class="s2">&quot;../index.md&quot;</span>
+        <span class="n">dataframe_path_prefix</span> <span class="o">=</span> <span class="s2">&quot;../dataframes/&quot;</span>
+    <span class="k">elif</span> <span class="n">pipeline_theme</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+        <span class="n">pipeline_page_link</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;../pipelines/</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">_README.md&quot;</span>
+        <span class="n">dataframe_path_prefix</span> <span class="o">=</span> <span class="s2">&quot;../dataframes/&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid Pipeline theme&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Compute the absolute path to the parquet file</span>
+    <span class="n">parquet_path</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_parquet_data&quot;</span><span class="p">]</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+    <span class="c1"># Fetch the last modified datetime of the parquet file</span>
+    <span class="n">dataframe_last_updated</span> <span class="o">=</span> <span class="n">get_file_modified_datetime</span><span class="p">(</span><span class="n">parquet_path</span><span class="p">)</span>
+
+    <span class="c1"># Get and format paths to charts</span>
+    <span class="n">path_to_html_chart_unix</span> <span class="o">=</span> <span class="n">pipeline_base_dir</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span>
+        <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_html_chart&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="n">link_to_dataframe_docs</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">dataframe_path_prefix</span><span class="p">)</span> <span class="o">/</span> <span class="n">pipeline_id</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dataframe_id</span><span class="si">}</span><span class="s2">.md&quot;</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+
+    <span class="c1"># Render chart page</span>
+    <span class="n">chart_page</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span>
+        <span class="n">chart_manifest</span><span class="p">,</span>
+        <span class="n">chart_manifest</span><span class="o">=</span><span class="n">chart_manifest</span><span class="p">,</span>
+        <span class="n">chart_id</span><span class="o">=</span><span class="n">chart_id</span><span class="p">,</span>
+        <span class="n">dataframe_id</span><span class="o">=</span><span class="n">dataframe_id</span><span class="p">,</span>
+        <span class="n">dataframe_manifest</span><span class="o">=</span><span class="n">dataframe_manifest</span><span class="p">,</span>
+        <span class="n">link_to_dataframe_docs</span><span class="o">=</span><span class="n">link_to_dataframe_docs</span><span class="p">,</span>
+        <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
+        <span class="n">pipeline_manifest</span><span class="o">=</span><span class="n">pipeline_manifest</span><span class="p">,</span>
+        <span class="n">path_to_html_chart_unix</span><span class="o">=</span><span class="n">path_to_html_chart_unix</span><span class="p">,</span>
+        <span class="n">pipeline_page_link</span><span class="o">=</span><span class="n">pipeline_page_link</span><span class="p">,</span>
+        <span class="n">dataframe_last_updated</span><span class="o">=</span><span class="n">dataframe_last_updated</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">),</span>
+        <span class="n">dot_or_dotdot</span><span class="o">=</span><span class="s2">&quot;..&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># print(chart_page)</span>
+
+    <span class="p">(</span><span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;charts&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">.md&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;charts&quot;</span> <span class="o">/</span> <span class="n">filename</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chart_page</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_dataframes_and_dataframe_docs">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.get_dataframes_and_dataframe_docs">[docs]</a>
+<span class="k">def</span> <span class="nf">get_dataframes_and_dataframe_docs</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">BASE_DIR</span><span class="p">):</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">base_dir</span><span class="p">)</span>
+    <span class="n">pipeline_ids</span> <span class="o">=</span> <span class="n">get_pipeline_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+    <span class="n">table_file_map</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">pipeline_ids</span><span class="p">:</span>
+        <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">]:</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dataframe_id</span><span class="si">}</span><span class="s2">.md&quot;</span><span class="p">)</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="n">pipeline_id</span> <span class="o">/</span> <span class="n">filename</span>
+            <span class="n">pipeline_dataframe_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">dataframe_id</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">table_file_map</span><span class="p">[</span><span class="n">pipeline_dataframe_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">file_path</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">table_file_map</span></div>
+
+
+
+<div class="viewcode-block" id="copy_docs_src_to_build">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.copy_docs_src_to_build">[docs]</a>
+<span class="k">def</span> <span class="nf">copy_docs_src_to_build</span><span class="p">(</span><span class="n">docs_src_dir</span><span class="p">,</span> <span class="n">docs_build_dir</span><span class="p">,</span> <span class="n">exclude_list</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Copies files from docs_src to _docs directory while excluding specified paths.</span>
+<span class="sd">    Similar to: rsync -lr --exclude=... ./docs_src/ ./_docs/</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    docs_src_dir : Union[str, Path]</span>
+<span class="sd">        Source directory (docs_src)</span>
+<span class="sd">    docs_build_dir : Union[str, Path]</span>
+<span class="sd">        Destination directory (_docs)</span>
+<span class="sd">    exclude_list : list, optional</span>
+<span class="sd">        List of files and directories to exclude. Defaults to common exclusions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">exclude_list</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">exclude_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;charts&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dataframes&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;notebooks&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;index.md&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pipelines.md&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dataframes.md&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;diagnostics.md&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+    <span class="n">docs_src_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">docs_src_dir</span><span class="p">)</span>
+    <span class="n">docs_build_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">docs_build_dir</span><span class="p">)</span>
+
+    <span class="c1"># Create the destination directory if it doesn&#39;t exist</span>
+    <span class="n">docs_build_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">should_copy</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if the path should be copied based on exclusion rules&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">excluded</span> <span class="ow">in</span> <span class="n">exclude_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">excluded</span> <span class="ow">in</span> <span class="n">path</span><span class="o">.</span><span class="n">parts</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="c1"># Walk through the source directory</span>
+    <span class="k">for</span> <span class="n">src_path</span> <span class="ow">in</span> <span class="n">docs_src_dir</span><span class="o">.</span><span class="n">rglob</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">):</span>
+        <span class="c1"># Skip if path matches exclusion rules</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">should_copy</span><span class="p">(</span><span class="n">src_path</span><span class="p">):</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># Calculate relative path to maintain directory structure</span>
+        <span class="n">rel_path</span> <span class="o">=</span> <span class="n">src_path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">docs_src_dir</span><span class="p">)</span>
+        <span class="n">dst_path</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="n">rel_path</span>
+
+        <span class="k">if</span> <span class="n">src_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="c1"># Create parent directories if they don&#39;t exist</span>
+            <span class="n">dst_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Copy the file content only, without attempting to copy permissions</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">src_path</span><span class="p">,</span> <span class="n">dst_path</span><span class="p">)</span>
+
+            <span class="c1"># Try to set reasonable permissions after copying</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">chmod</span><span class="p">(</span><span class="n">dst_path</span><span class="p">,</span> <span class="mo">0o644</span><span class="p">)</span>  <span class="c1"># rw-r--r-- for files</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">PermissionError</span><span class="p">):</span>
+                <span class="c1"># If we can&#39;t set permissions, just continue</span>
+                <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="build_all">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.build_all">[docs]</a>
+<span class="k">def</span> <span class="nf">build_all</span><span class="p">(</span>
+    <span class="n">docs_build_dir</span><span class="o">=</span><span class="n">DOCS_BUILD_DIR</span><span class="p">,</span>
+    <span class="n">base_dir</span><span class="o">=</span><span class="n">BASE_DIR</span><span class="p">,</span>
+    <span class="n">pipeline_theme</span><span class="o">=</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
+    <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">DOCS_SRC_DIR</span><span class="p">,</span>
+    <span class="n">size_threshold</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Params</span>
+<span class="sd">    ------</span>
+<span class="sd">    docs_build_dir: Path</span>
+<span class="sd">        This is the output directory, where all generated docs will be placed. This is</span>
+<span class="sd">        usually the _docs directory</span>
+<span class="sd">    base_dir: Path</span>
+<span class="sd">        This is used to identify the inputs. It&#39;s the base directory of the current project.</span>
+<span class="sd">    pipeline_theme: str</span>
+<span class="sd">        This is the theme of the pipeline. It can be &quot;pipeline&quot; or &quot;catalog&quot;.</span>
+<span class="sd">    docs_src_dir: Path</span>
+<span class="sd">        This is the directory containing the documentation source files. This will</span>
+<span class="sd">        usually be the _docs_src directory.</span>
+<span class="sd">    size_threshold: float</span>
+<span class="sd">        File size threshold in MB above which to use memory-efficient loading.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">docs_build_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1">## Align files for use by Sphinx</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">base_dir</span><span class="p">)</span>
+
+    <span class="p">(</span>
+        <span class="n">dataset_plan</span><span class="p">,</span>
+        <span class="n">chart_plan_download</span><span class="p">,</span>
+        <span class="n">chart_plan_static</span><span class="p">,</span>
+        <span class="n">notebook_plan</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">=</span> <span class="n">get_sphinx_file_alignment_plan</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">docs_build_dir</span><span class="o">=</span><span class="n">docs_build_dir</span><span class="p">)</span>
+
+    <span class="n">copy_according_to_plan</span><span class="p">(</span><span class="n">dataset_plan</span><span class="p">)</span>
+    <span class="n">copy_according_to_plan</span><span class="p">(</span><span class="n">chart_plan_download</span><span class="p">)</span>
+    <span class="n">copy_according_to_plan</span><span class="p">(</span><span class="n">chart_plan_static</span><span class="p">)</span>
+    <span class="n">copy_according_to_plan</span><span class="p">(</span><span class="n">notebook_plan</span><span class="p">)</span>
+
+    <span class="n">generate_all_pipeline_docs</span><span class="p">(</span>
+        <span class="n">manifest</span><span class="p">,</span>
+        <span class="n">docs_build_dir</span><span class="o">=</span><span class="n">docs_build_dir</span><span class="p">,</span>
+        <span class="n">base_dir</span><span class="o">=</span><span class="n">base_dir</span><span class="p">,</span>
+        <span class="n">pipeline_theme</span><span class="o">=</span><span class="n">pipeline_theme</span><span class="p">,</span>
+        <span class="n">docs_src_dir</span><span class="o">=</span><span class="n">docs_src_dir</span><span class="p">,</span>
+        <span class="n">size_threshold</span><span class="o">=</span><span class="n">size_threshold</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Copy remaining docs_src files to build directory</span>
+    <span class="n">copy_docs_src_to_build</span><span class="p">(</span><span class="n">docs_src_dir</span><span class="p">,</span> <span class="n">docs_build_dir</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># def _demo():</span>
+<span class="c1">#     specs = read_specs(base_dir=BASE_DIR)</span>
+<span class="c1">#     len(specs[&quot;charts&quot;])</span>
+<span class="c1">#     len(specs[&quot;dataframes&quot;])</span>
+
+<span class="c1">#     # Used for injection into index.md</span>
+<span class="c1">#     table_file_map = get_dataframes_and_dataframe_docs(base_dir=BASE_DIR)</span>
+<span class="c1">#     table_file_map</span>
+
+<span class="c1">#     # Used for moving files into download folder. Dict shows where files will be copied from and to</span>
+<span class="c1">#     dataset_plan, chart_plan_download, chart_plan_static, notebook_plan = (</span>
+<span class="c1">#         get_sphinx_file_alignment_plan(base_dir=BASE_DIR, docs_build_dir=DOCS_BUILD_DIR)</span>
+<span class="c1">#     )</span>
+<span class="c1">#     publish_plan = (</span>
+<span class="c1">#         dataset_plan | chart_plan_download | chart_plan_static | notebook_plan</span>
+<span class="c1">#     )</span>
+<span class="c1">#     list(publish_plan.keys())</span>
+<span class="c1">#     list(publish_plan.values())</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">pass</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

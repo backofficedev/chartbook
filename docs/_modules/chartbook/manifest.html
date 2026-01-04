@@ -1,0 +1,1013 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chartbook.manifest &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=f52f92e8"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/manifest';</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../why-chartbook.html">Why ChartBook?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/concepts.html">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/pipelines.html">Pipelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/charts.html">Charts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/dataframes.html">Dataframes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/catalog-projects.html">Catalog Projects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/pipeline-example.html">Pipeline Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/chartbook-example.html">Catalog Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/data-pipeline.html">Data Pipeline</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for chartbook.manifest</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">importlib.resources</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">tomli</span>
+<span class="kn">from</span> <span class="nn">packaging</span> <span class="kn">import</span> <span class="n">version</span>  <span class="c1"># Add this import for proper version comparison</span>
+
+<span class="kn">from</span> <span class="nn">chartbook.__about__</span> <span class="kn">import</span> <span class="n">__version__</span>  <span class="c1"># Import the version</span>
+
+<span class="n">BASE_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">OUTPUT_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./_output&quot;</span><span class="p">)</span>
+<span class="n">PIPELINE_THEME</span> <span class="o">=</span> <span class="s2">&quot;pipeline&quot;</span>
+<span class="n">PUBLISH_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./_output/to_be_published&quot;</span><span class="p">)</span>
+<span class="n">DOCS_BUILD_DIR</span> <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;_docs&quot;</span><span class="p">)</span>
+<span class="n">DOCS_SRC_DIR</span> <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;_docs_src&quot;</span><span class="p">)</span>
+
+<span class="n">DEFAULT_CONFIG</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;chartbook_format_version&quot;</span><span class="p">:</span> <span class="n">__version__</span><span class="p">,</span>  <span class="c1"># Use imported version</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;site&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;chartbook&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;copyright&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;logo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;favicon_path&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;DEFAULT&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pipeline_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Default Pipeline&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pipeline_description&quot;</span><span class="p">:</span> <span class="s2">&quot;Default pipeline description&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;lead_pipeline_developer&quot;</span><span class="p">:</span> <span class="s2">&quot;Default lead pipeline developer&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;contributors&quot;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s2">&quot;build_commands&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;os_compatibility&quot;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s2">&quot;git_repo_URL&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;README_file_path&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="resolve_platform_path">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.resolve_platform_path">[docs]</a>
+<span class="k">def</span> <span class="nf">resolve_platform_path</span><span class="p">(</span><span class="n">path_input</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves a path that can be either a direct path string or a dictionary of platform-specific paths.</span>
+
+<span class="sd">    :param path_input: Either a string representing a direct path, or a dictionary containing platform-specific paths with &#39;Windows&#39; and/or &#39;Unix&#39; keys.</span>
+<span class="sd">    :type path_input: Union[str, dict]</span>
+<span class="sd">    :returns: The resolved path appropriate for the current platform.</span>
+<span class="sd">    :rtype: Path</span>
+<span class="sd">    :raises ValueError: If using a dict input and no valid path is found for the current platform.</span>
+
+<span class="sd">    **Examples**::</span>
+
+<span class="sd">        resolve_platform_path(&#39;/path/to/dir&#39;)</span>
+<span class="sd">        # Returns: PosixPath(&#39;/path/to/dir&#39;)</span>
+
+<span class="sd">        resolve_platform_path({&#39;Windows&#39;: &#39;C:/data&#39;, &#39;Unix&#39;: &#39;/home/data&#39;})</span>
+<span class="sd">        # Returns: WindowsPath(&#39;C:/data&#39;) on Windows, PosixPath(&#39;/home/data&#39;) on Unix/macOS</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">result_path</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path_input</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">result_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_input</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Handle dict case (platform-specific paths)</span>
+        <span class="kn">import</span> <span class="nn">platform</span>
+
+        <span class="n">is_windows</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;windows&quot;</span>
+
+        <span class="k">if</span> <span class="n">is_windows</span> <span class="ow">and</span> <span class="s2">&quot;Windows&quot;</span> <span class="ow">in</span> <span class="n">path_input</span><span class="p">:</span>
+            <span class="n">result_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_input</span><span class="p">[</span><span class="s2">&quot;Windows&quot;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">is_windows</span> <span class="ow">and</span> <span class="s2">&quot;Unix&quot;</span> <span class="ow">in</span> <span class="n">path_input</span><span class="p">:</span>
+            <span class="n">result_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_input</span><span class="p">[</span><span class="s2">&quot;Unix&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">result_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No valid path found for current platform (</span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span><span class="si">}</span><span class="s2">). &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Available paths: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">path_input</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result_path</span></div>
+
+
+
+<div class="viewcode-block" id="validate_config_file">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_config_file">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_config_file</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">BASE_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Validates that a chartbook.toml file exists in the specified directory.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">chartbook_toml</span> <span class="o">=</span> <span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">chartbook_toml</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No chartbook.toml found in directory: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># Test ability to load chartbook.toml</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">chartbook_toml</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">chartbook_toml</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">chartbook_toml</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="s2">&quot;catalog&quot;</span><span class="p">]</span>
+
+        <span class="n">current_version</span> <span class="o">=</span> <span class="n">__version__</span>  <span class="c1"># Use imported version</span>
+        <span class="n">expected_minor_version</span> <span class="o">=</span> <span class="n">version</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">current_version</span><span class="p">)</span><span class="o">.</span><span class="n">minor</span>
+        <span class="n">actual_version_str</span> <span class="o">=</span> <span class="n">chartbook_toml</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;chartbook_format_version&quot;</span><span class="p">,</span> <span class="s2">&quot;0.0.0&quot;</span>
+        <span class="p">)</span>  <span class="c1"># Handle missing key</span>
+        <span class="c1"># Check if the actual version string is parseable</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">actual_minor_version</span> <span class="o">=</span> <span class="n">version</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">actual_version_str</span><span class="p">)</span><span class="o">.</span><span class="n">minor</span>
+        <span class="k">except</span> <span class="n">version</span><span class="o">.</span><span class="n">InvalidVersion</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid version format in chartbook.toml: </span><span class="si">{</span><span class="n">actual_version_str</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">assert</span> <span class="n">actual_minor_version</span> <span class="o">&gt;=</span> <span class="n">expected_minor_version</span><span class="p">,</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;chartbook.toml version is too low. Expected version </span><span class="si">{</span><span class="n">current_version</span><span class="si">}</span><span class="s2"> or greater, found </span><span class="si">{</span><span class="n">actual_version_str</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="c1"># https://packaging.pypa.io/en/latest/version.html#packaging.version.Version.minor</span>
+    <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing key in chartbook.toml: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading chartbook.toml: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+
+<div class="viewcode-block" id="validate_os_compatibility">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_os_compatibility">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_os_compatibility</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that os_compatibility is either a string or a list of strings.</span>
+
+<span class="sd">    :param value: The os_compatibility value to validate.</span>
+<span class="sd">    :type value: Union[str, list]</span>
+<span class="sd">    :returns: The validated value (unchanged).</span>
+<span class="sd">    :rtype: Union[str, list]</span>
+<span class="sd">    :raises TypeError: If the value is neither a string nor a list of strings.</span>
+
+<span class="sd">    **Examples**::</span>
+
+<span class="sd">        validate_os_compatibility(&quot;Windows/Linux/macOS&quot;)</span>
+<span class="sd">        # Returns: &quot;Windows/Linux/macOS&quot;</span>
+
+<span class="sd">        validate_os_compatibility([&quot;Windows&quot;, &quot;Linux&quot;, &quot;macOS&quot;])</span>
+<span class="sd">        # Returns: [&quot;Windows&quot;, &quot;Linux&quot;, &quot;macOS&quot;]</span>
+
+<span class="sd">        validate_os_compatibility(123)</span>
+<span class="sd">        # Raises: TypeError</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;os_compatibility list must contain only strings, got: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;os_compatibility must be a string or list of strings, got: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="normalize_tags">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.normalize_tags">[docs]</a>
+<span class="k">def</span> <span class="nf">normalize_tags</span><span class="p">(</span><span class="n">tags</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize a list of tags to Title Case.</span>
+
+<span class="sd">    :param tags: List of tag strings to normalize</span>
+<span class="sd">    :type tags: list</span>
+<span class="sd">    :returns: List of tags in Title Case</span>
+<span class="sd">    :rtype: list</span>
+
+<span class="sd">    &gt;&gt;&gt; normalize_tags([&#39;short term funding&#39;, &#39;REPO&#39;, &#39;Monetary Policy&#39;])</span>
+<span class="sd">    [&#39;Short Term Funding&#39;, &#39;Repo&#39;, &#39;Monetary Policy&#39;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">tags</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tags</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">tag</span><span class="o">.</span><span class="n">title</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">tag</span> <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="validate_doc_fields">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_doc_fields">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_doc_fields</span><span class="p">(</span>
+    <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">path_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">str_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that exactly one of path or str doc fields is provided.</span>
+
+<span class="sd">    :param manifest: The manifest dictionary for the object (dataframe or chart).</span>
+<span class="sd">    :param path_key: The key for the path-based documentation field.</span>
+<span class="sd">    :param str_key: The key for the inline string documentation field.</span>
+<span class="sd">    :param object_type: The type of object (&#39;dataframe&#39; or &#39;chart&#39;) for error messages.</span>
+<span class="sd">    :param object_id: The ID of the object for error messages.</span>
+<span class="sd">    :returns: A tuple of (mode, value) where mode is &#39;path&#39; or &#39;str&#39;.</span>
+<span class="sd">    :raises ValueError: If both or neither fields are provided.</span>
+
+<span class="sd">    **Examples**::</span>
+
+<span class="sd">        validate_doc_fields(</span>
+<span class="sd">            {&#39;dataframe_docs_path&#39;: &#39;./docs/df.md&#39;},</span>
+<span class="sd">            &#39;dataframe_docs_path&#39;, &#39;dataframe_docs_str&#39;,</span>
+<span class="sd">            &#39;dataframe&#39;, &#39;my_df&#39;</span>
+<span class="sd">        )</span>
+<span class="sd">        # Returns: (&#39;path&#39;, &#39;./docs/df.md&#39;)</span>
+
+<span class="sd">        validate_doc_fields(</span>
+<span class="sd">            {&#39;dataframe_docs_str&#39;: &#39;Inline docs here&#39;},</span>
+<span class="sd">            &#39;dataframe_docs_path&#39;, &#39;dataframe_docs_str&#39;,</span>
+<span class="sd">            &#39;dataframe&#39;, &#39;my_df&#39;</span>
+<span class="sd">        )</span>
+<span class="sd">        # Returns: (&#39;str&#39;, &#39;Inline docs here&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">has_path</span> <span class="o">=</span> <span class="n">path_key</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="ow">and</span> <span class="n">manifest</span><span class="p">[</span><span class="n">path_key</span><span class="p">]</span>
+    <span class="n">has_str</span> <span class="o">=</span> <span class="n">str_key</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="ow">and</span> <span class="n">manifest</span><span class="p">[</span><span class="n">str_key</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">has_path</span> <span class="ow">and</span> <span class="n">has_str</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">object_type</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">object_id</span><span class="si">}</span><span class="s2">&#39; has both </span><span class="si">{</span><span class="n">path_key</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">str_key</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Only one is allowed.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_path</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">has_str</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">object_type</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">object_id</span><span class="si">}</span><span class="s2">&#39; must have either </span><span class="si">{</span><span class="n">path_key</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="n">str_key</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">has_path</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="n">path_key</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;str&quot;</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="n">str_key</span><span class="p">])</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_load_pipeline_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the pipeline manifest from a TOML file and process it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">]</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">raw_manifest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Validate os_compatibility if present</span>
+    <span class="k">if</span> <span class="s2">&quot;pipeline&quot;</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="ow">and</span> <span class="s2">&quot;os_compatibility&quot;</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">]:</span>
+        <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">][</span><span class="s2">&quot;os_compatibility&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_os_compatibility</span><span class="p">(</span>
+            <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">][</span><span class="s2">&quot;os_compatibility&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+    <span class="n">source_last_modified_date</span> <span class="o">=</span> <span class="n">find_latest_source_modification</span><span class="p">(</span>
+        <span class="n">base_dir</span>
+    <span class="p">)</span>  <span class="c1"># Get the last modified date</span>
+    <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;source_last_modified_date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_last_modified_date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span>
+        <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span>
+    <span class="p">)</span>  <span class="c1"># Format and store the last modified date</span>
+    <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline_base_dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">base_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+
+    <span class="n">candidate_webpage_url</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;webpage_URL&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">candidate_webpage_url</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">webpage_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;docs&quot;</span> <span class="o">/</span> <span class="s2">&quot;index.html&quot;</span>
+        <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;webpage_URL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;file://</span><span class="si">{</span><span class="n">webpage_path</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;webpage_URL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidate_webpage_url</span>
+
+    <span class="c1"># Process notes if they exist</span>
+    <span class="k">if</span> <span class="s2">&quot;notes&quot;</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">note_id</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;notes&quot;</span><span class="p">]:</span>
+            <span class="n">note_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;notes&quot;</span><span class="p">][</span><span class="n">note_id</span><span class="p">]</span>
+            <span class="c1"># Add the full path to the markdown file for easier access later</span>
+            <span class="n">note_manifest</span><span class="p">[</span><span class="s2">&quot;full_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">note_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_markdown_file&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Create a mapping of dataframe_id to linked chart_ids</span>
+    <span class="k">if</span> <span class="s2">&quot;dataframes&quot;</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">:</span>
+        <span class="n">dataframe_to_charts</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">dataframe_id</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">]</span>
+        <span class="p">}</span>  <span class="c1"># Initialize mapping</span>
+
+        <span class="k">for</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">]:</span>
+            <span class="n">dataframe_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe_id</span><span class="p">]</span>
+            <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;dataframe_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_parquet_data&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="c1"># Normalize topic_tags to Title Case</span>
+            <span class="k">if</span> <span class="s2">&quot;topic_tags&quot;</span> <span class="ow">in</span> <span class="n">dataframe_manifest</span><span class="p">:</span>
+                <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;topic_tags&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">normalize_tags</span><span class="p">(</span>
+                    <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;topic_tags&quot;</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="c1"># Validate and store doc field mode</span>
+            <span class="n">doc_mode</span><span class="p">,</span> <span class="n">doc_value</span> <span class="o">=</span> <span class="n">validate_doc_fields</span><span class="p">(</span>
+                <span class="n">dataframe_manifest</span><span class="p">,</span>
+                <span class="s2">&quot;dataframe_docs_path&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;dataframe_docs_str&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;dataframe&quot;</span><span class="p">,</span>
+                <span class="n">dataframe_id</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc_mode</span>
+            <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_value&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc_value</span>
+
+        <span class="k">if</span> <span class="s2">&quot;charts&quot;</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">chart_id</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">]:</span>
+                <span class="n">chart_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">][</span>
+                    <span class="n">chart_id</span>
+                <span class="p">]</span>  <span class="c1"># Get manifest for the current chart</span>
+                <span class="c1"># Normalize topic_tags to Title Case</span>
+                <span class="k">if</span> <span class="s2">&quot;topic_tags&quot;</span> <span class="ow">in</span> <span class="n">chart_manifest</span><span class="p">:</span>
+                    <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;topic_tags&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">normalize_tags</span><span class="p">(</span>
+                        <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;topic_tags&quot;</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="c1"># Validate and store doc field mode</span>
+                <span class="n">doc_mode</span><span class="p">,</span> <span class="n">doc_value</span> <span class="o">=</span> <span class="n">validate_doc_fields</span><span class="p">(</span>
+                    <span class="n">chart_manifest</span><span class="p">,</span>
+                    <span class="s2">&quot;chart_docs_path&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;chart_docs_str&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;chart&quot;</span><span class="p">,</span>
+                    <span class="n">chart_id</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc_mode</span>
+                <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_value&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc_value</span>
+
+                <span class="n">dataframe_id</span> <span class="o">=</span> <span class="n">chart_manifest</span><span class="p">[</span>
+                    <span class="s2">&quot;dataframe_id&quot;</span>
+                <span class="p">]</span>  <span class="c1"># Identify the linked dataframe</span>
+                <span class="k">if</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">dataframe_to_charts</span><span class="p">:</span>
+                    <span class="n">dataframe_to_charts</span><span class="p">[</span><span class="n">dataframe_id</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">chart_id</span>
+                    <span class="p">)</span>  <span class="c1"># Link chart_id to dataframe_id</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe_id</span><span class="si">}</span><span class="s2"> not found in dataframes section&quot;</span>
+                    <span class="p">)</span>
+
+            <span class="c1"># Update dataframe_manifest with the linked charts</span>
+            <span class="k">for</span> <span class="n">dataframe_id</span><span class="p">,</span> <span class="n">chart_ids</span> <span class="ow">in</span> <span class="n">dataframe_to_charts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe_id</span><span class="p">][</span><span class="s2">&quot;linked_charts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">chart_ids</span>  <span class="c1"># Add linked charts</span>
+                <span class="p">)</span>
+    <span class="k">return</span> <span class="n">manifest</span>
+
+
+<span class="k">def</span> <span class="nf">_load_catalog_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the catalog manifest from a TOML file and process it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">raw_manifest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">]</span>
+    <span class="n">all_pipelines</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">all_pipelines</span><span class="p">:</span>
+        <span class="n">path_to_pipeline</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_id</span><span class="p">][</span><span class="s2">&quot;path_to_pipeline&quot;</span><span class="p">]</span>
+        <span class="n">path_to_pipeline</span> <span class="o">=</span> <span class="n">resolve_platform_path</span><span class="p">(</span><span class="n">path_to_pipeline</span><span class="p">)</span>
+        <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">path_to_pipeline</span>
+        <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">pipeline_base_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+        <span class="k">assert</span> <span class="n">validate_config_file</span><span class="p">(</span><span class="n">pipeline_base_dir</span><span class="p">)</span>
+        <span class="n">sub_manifest</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">pipeline_base_dir</span><span class="p">)</span>
+        <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">sub_manifest</span>
+
+    <span class="k">return</span> <span class="n">manifest</span>  <span class="c1"># Return the complete manifest</span>
+
+
+<div class="viewcode-block" id="load_manifest">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.load_manifest">[docs]</a>
+<span class="k">def</span> <span class="nf">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">BASE_DIR</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load the pipeline manifest from a TOML file and process it.</span>
+
+<span class="sd">    This will also handle imported pipeline manifests. It</span>
+<span class="sd">    will also create a mapping of dataframe_id to linked chart_ids</span>
+<span class="sd">    and a mapping of data</span>
+
+<span class="sd">    :param base_dir: The base directory where the chartbook.toml file is located.</span>
+<span class="sd">    :type base_dir: Union[str, Path]</span>
+<span class="sd">    :returns: A dictionary containing the manifest for all pipelines, including linked charts for each dataframe and linked dataframes for each pipeline.</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>  <span class="c1"># Convert base_dir to a Path object</span>
+    <span class="n">chartbook_toml_path</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span>
+    <span class="k">assert</span> <span class="n">chartbook_toml_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span>
+    <span class="k">assert</span> <span class="n">validate_config_file</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+
+    <span class="c1"># Load the TOML manifest using tomli instead of json</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">chartbook_toml_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>  <span class="c1"># Note: tomli requires binary mode</span>
+        <span class="n">raw_manifest</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>  <span class="c1"># Load the TOML manifest</span>
+
+    <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">base_dir</span>
+
+    <span class="k">if</span> <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="n">manifest</span> <span class="o">=</span> <span class="n">_load_pipeline_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+        <span class="n">manifest</span> <span class="o">=</span> <span class="n">_load_catalog_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid config type: </span><span class="si">{</span><span class="n">raw_manifest</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. Must be &#39;pipeline&#39; or &#39;catalog&#39;.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">manifest</span></div>
+
+
+
+<div class="viewcode-block" id="find_latest_source_modification">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.find_latest_source_modification">[docs]</a>
+<span class="k">def</span> <span class="nf">find_latest_source_modification</span><span class="p">(</span>
+    <span class="n">base_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">],</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">datetime</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the most recent modification datetime across pipeline source files.</span>
+
+<span class="sd">    :param base_dir: The base directory of the pipeline.</span>
+<span class="sd">    :type base_dir: Union[str, Path]</span>
+<span class="sd">    :returns: The most recent modification datetime.</span>
+<span class="sd">    :rtype: datetime</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_latest_mod_time</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">datetime</span><span class="p">:</span>
+        <span class="n">latest_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">min</span>
+        <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">directory</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">file</span>
+                <span class="n">mod_time</span> <span class="o">=</span> <span class="n">get_file_modified_datetime</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">mod_time</span> <span class="o">&gt;</span> <span class="n">latest_time</span><span class="p">:</span>
+                    <span class="n">latest_time</span> <span class="o">=</span> <span class="n">mod_time</span>
+        <span class="k">return</span> <span class="n">latest_time</span>
+
+    <span class="c1"># Get the most recent modification time in src directory</span>
+    <span class="n">src_latest</span> <span class="o">=</span> <span class="n">get_latest_mod_time</span><span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;src&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Get modification times for dodo.py and chartbook.toml</span>
+    <span class="c1"># dodo_time = get_file_modified_datetime(base_dir / &quot;dodo.py&quot;)</span>
+    <span class="n">pipeline_time</span> <span class="o">=</span> <span class="n">get_file_modified_datetime</span><span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span>
+    <span class="n">docs_time</span> <span class="o">=</span> <span class="n">get_latest_mod_time</span><span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;docs_src&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Return the most recent of all these times</span>
+    <span class="n">latest</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">src_latest</span><span class="p">,</span> <span class="n">pipeline_time</span><span class="p">,</span> <span class="n">docs_time</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">latest</span></div>
+
+
+
+<div class="viewcode-block" id="get_file_modified_datetime">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_file_modified_datetime">[docs]</a>
+<span class="k">def</span> <span class="nf">get_file_modified_datetime</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">datetime</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the datetime that a file was last modified.</span>
+
+<span class="sd">    :param file_path: A pathlib.Path object or a string representing the file path.</span>
+<span class="sd">    :type file_path: Union[Path, str]</span>
+<span class="sd">    :returns: A datetime object representing the last modification time.</span>
+<span class="sd">    :rtype: datetime</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="c1"># Get the last modified time in seconds since the epoch</span>
+    <span class="n">mtime</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="c1"># Convert the time to a datetime object</span>
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">mtime</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_default_asset_path">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_default_asset_path">[docs]</a>
+<span class="k">def</span> <span class="nf">get_default_asset_path</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get path to default asset from package resources&quot;&quot;&quot;</span>
+    <span class="n">package_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;chartbook&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># First try to get the asset directly using importlib.resources</span>
+        <span class="k">with</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">as_file</span><span class="p">(</span>
+            <span class="n">package_path</span> <span class="o">/</span> <span class="s2">&quot;assets&quot;</span> <span class="o">/</span> <span class="n">filename</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">asset_path</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">asset_path</span><span class="p">))</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">):</span>
+        <span class="c1"># Fallback for development mode</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">package_path</span><span class="p">))</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;assets&quot;</span> <span class="o">/</span> <span class="n">filename</span></div>
+
+
+
+<div class="viewcode-block" id="get_pipeline_ids">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_pipeline_ids">[docs]</a>
+<span class="k">def</span> <span class="nf">get_pipeline_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get a list of pipeline IDs from the manifest.</span>
+
+<span class="sd">    :param manifest: The manifest dictionary.</span>
+<span class="sd">    :type manifest: dict</span>
+<span class="sd">    :returns: A list of pipeline IDs.</span>
+<span class="sd">    :rtype: list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+        <span class="n">pipelines</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="k">elif</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="n">pipelines</span> <span class="o">=</span> <span class="p">[</span><span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">][</span><span class="s2">&quot;id&quot;</span><span class="p">]]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid config type: </span><span class="si">{</span><span class="n">manifest</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. Must be &#39;pipeline&#39; or &#39;catalog&#39;.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">pipelines</span></div>
+
+
+
+<div class="viewcode-block" id="get_logo_path">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_logo_path">[docs]</a>
+<span class="k">def</span> <span class="nf">get_logo_path</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get logo path from config or return default&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">][</span><span class="s2">&quot;logo_path&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">project_dir</span> <span class="o">/</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">][</span><span class="s2">&quot;logo_path&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">get_default_asset_path</span><span class="p">(</span><span class="s2">&quot;logo.png&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_favicon_path">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_favicon_path">[docs]</a>
+<span class="k">def</span> <span class="nf">get_favicon_path</span><span class="p">(</span><span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">project_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get favicon path from config or return default&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">][</span><span class="s2">&quot;favicon_path&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">project_dir</span> <span class="o">/</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">][</span><span class="s2">&quot;favicon_path&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">get_default_asset_path</span><span class="p">(</span><span class="s2">&quot;favicon.ico&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_pipeline_manifest">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_pipeline_manifest">[docs]</a>
+<span class="k">def</span> <span class="nf">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the manifest for a specific pipeline.</span>
+
+<span class="sd">    :param manifest: The full manifest dictionary.</span>
+<span class="sd">    :type manifest: dict</span>
+<span class="sd">    :param pipeline_id: The ID of the pipeline to retrieve.</span>
+<span class="sd">    :type pipeline_id: str</span>
+<span class="sd">    :returns: The manifest dictionary for the specified pipeline.</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+        <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_id</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid config type: </span><span class="si">{</span><span class="n">manifest</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. Must be &#39;pipeline&#39; or &#39;catalog&#39;.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">pipeline_manifest</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_demo</span><span class="p">():</span>
+    <span class="c1"># Find date modified</span>
+    <span class="n">dt_modified</span> <span class="o">=</span> <span class="n">get_file_modified_datetime</span><span class="p">(</span><span class="s2">&quot;mydata.parquet&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Last modified: </span><span class="si">{</span><span class="n">dt_modified</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">pass</span>
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

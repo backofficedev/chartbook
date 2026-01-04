@@ -1,0 +1,979 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>chartbook.manifest &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=f52f92e8"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'apidocs/chartbook/chartbook.manifest';</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="chartbook.markdown_generator" href="chartbook.markdown_generator.html" />
+    <link rel="prev" title="chartbook.errors" href="chartbook.errors.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../why-chartbook.html">Why ChartBook?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/concepts.html">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/pipelines.html">Pipelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/charts.html">Charts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/dataframes.html">Dataframes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/catalog-projects.html">Catalog Projects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/pipeline-example.html">Pipeline Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/chartbook-example.html">Catalog Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/data-pipeline.html">Data Pipeline</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/apidocs/chartbook/chartbook.manifest.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>chartbook.manifest</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.BASE_DIR"><code class="docutils literal notranslate"><span class="pre">BASE_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DEFAULT_CONFIG"><code class="docutils literal notranslate"><span class="pre">DEFAULT_CONFIG</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DOCS_BUILD_DIR"><code class="docutils literal notranslate"><span class="pre">DOCS_BUILD_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DOCS_SRC_DIR"><code class="docutils literal notranslate"><span class="pre">DOCS_SRC_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.OUTPUT_DIR"><code class="docutils literal notranslate"><span class="pre">OUTPUT_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PIPELINE_THEME"><code class="docutils literal notranslate"><span class="pre">PIPELINE_THEME</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PUBLISH_DIR"><code class="docutils literal notranslate"><span class="pre">PUBLISH_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.find_latest_source_modification"><code class="docutils literal notranslate"><span class="pre">find_latest_source_modification()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_default_asset_path"><code class="docutils literal notranslate"><span class="pre">get_default_asset_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_favicon_path"><code class="docutils literal notranslate"><span class="pre">get_favicon_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_file_modified_datetime"><code class="docutils literal notranslate"><span class="pre">get_file_modified_datetime()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_logo_path"><code class="docutils literal notranslate"><span class="pre">get_logo_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_pipeline_ids"><code class="docutils literal notranslate"><span class="pre">get_pipeline_ids()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_pipeline_manifest"><code class="docutils literal notranslate"><span class="pre">get_pipeline_manifest()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.load_manifest"><code class="docutils literal notranslate"><span class="pre">load_manifest()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.normalize_tags"><code class="docutils literal notranslate"><span class="pre">normalize_tags()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.resolve_platform_path"><code class="docutils literal notranslate"><span class="pre">resolve_platform_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_config_file"><code class="docutils literal notranslate"><span class="pre">validate_config_file()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_doc_fields"><code class="docutils literal notranslate"><span class="pre">validate_doc_fields()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_os_compatibility"><code class="docutils literal notranslate"><span class="pre">validate_os_compatibility()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="module-chartbook.manifest">
+<span id="chartbook-manifest"></span><h1><a class="reference internal" href="#module-chartbook.manifest" title="chartbook.manifest"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a><a class="headerlink" href="#module-chartbook.manifest" title="Link to this heading">#</a></h1>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">#</a></h2>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.find_latest_source_modification" title="chartbook.manifest.find_latest_source_modification"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_latest_source_modification</span></code></a></p></td>
+<td><p>Find the most recent modification datetime across pipeline source files.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.get_default_asset_path" title="chartbook.manifest.get_default_asset_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_default_asset_path</span></code></a></p></td>
+<td><p>Get path to default asset from package resources</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.get_favicon_path" title="chartbook.manifest.get_favicon_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_favicon_path</span></code></a></p></td>
+<td><p>Get favicon path from config or return default</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.get_file_modified_datetime" title="chartbook.manifest.get_file_modified_datetime"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_file_modified_datetime</span></code></a></p></td>
+<td><p>Returns the datetime that a file was last modified.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.get_logo_path" title="chartbook.manifest.get_logo_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_logo_path</span></code></a></p></td>
+<td><p>Get logo path from config or return default</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.get_pipeline_ids" title="chartbook.manifest.get_pipeline_ids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pipeline_ids</span></code></a></p></td>
+<td><p>Get a list of pipeline IDs from the manifest.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.get_pipeline_manifest" title="chartbook.manifest.get_pipeline_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pipeline_manifest</span></code></a></p></td>
+<td><p>Get the manifest for a specific pipeline.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.load_manifest" title="chartbook.manifest.load_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_manifest</span></code></a></p></td>
+<td><p>Load the pipeline manifest from a TOML file and process it.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.normalize_tags" title="chartbook.manifest.normalize_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalize_tags</span></code></a></p></td>
+<td><p>Normalize a list of tags to Title Case.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.resolve_platform_path" title="chartbook.manifest.resolve_platform_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_platform_path</span></code></a></p></td>
+<td><p>Resolves a path that can be either a direct path string or a dictionary of platform-specific paths.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.validate_config_file" title="chartbook.manifest.validate_config_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_config_file</span></code></a></p></td>
+<td><p>Validates that a chartbook.toml file exists in the specified directory.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.validate_doc_fields" title="chartbook.manifest.validate_doc_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_doc_fields</span></code></a></p></td>
+<td><p>Validate that exactly one of path or str doc fields is provided.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.validate_os_compatibility" title="chartbook.manifest.validate_os_compatibility"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_os_compatibility</span></code></a></p></td>
+<td><p>Validate that os_compatibility is either a string or a list of strings.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="data">
+<h3>Data<a class="headerlink" href="#data" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.BASE_DIR" title="chartbook.manifest.BASE_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BASE_DIR</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.DEFAULT_CONFIG" title="chartbook.manifest.DEFAULT_CONFIG"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_CONFIG</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.DOCS_BUILD_DIR" title="chartbook.manifest.DOCS_BUILD_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DOCS_BUILD_DIR</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.DOCS_SRC_DIR" title="chartbook.manifest.DOCS_SRC_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DOCS_SRC_DIR</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.OUTPUT_DIR" title="chartbook.manifest.OUTPUT_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OUTPUT_DIR</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.PIPELINE_THEME" title="chartbook.manifest.PIPELINE_THEME"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PIPELINE_THEME</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.PUBLISH_DIR" title="chartbook.manifest.PUBLISH_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PUBLISH_DIR</span></code></a></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="api">
+<h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.BASE_DIR">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">BASE_DIR</span></span><a class="headerlink" href="#chartbook.manifest.BASE_DIR" title="Link to this definition">#</a></dt>
+<dd><p>‘resolve(…)’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.DEFAULT_CONFIG">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_CONFIG</span></span><a class="headerlink" href="#chartbook.manifest.DEFAULT_CONFIG" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.DOCS_BUILD_DIR">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">DOCS_BUILD_DIR</span></span><a class="headerlink" href="#chartbook.manifest.DOCS_BUILD_DIR" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.DOCS_SRC_DIR">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">DOCS_SRC_DIR</span></span><a class="headerlink" href="#chartbook.manifest.DOCS_SRC_DIR" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.OUTPUT_DIR">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">OUTPUT_DIR</span></span><a class="headerlink" href="#chartbook.manifest.OUTPUT_DIR" title="Link to this definition">#</a></dt>
+<dd><p>‘Path(…)’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.PIPELINE_THEME">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">PIPELINE_THEME</span></span><a class="headerlink" href="#chartbook.manifest.PIPELINE_THEME" title="Link to this definition">#</a></dt>
+<dd><p>‘pipeline’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.PUBLISH_DIR">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">PUBLISH_DIR</span></span><a class="headerlink" href="#chartbook.manifest.PUBLISH_DIR" title="Link to this definition">#</a></dt>
+<dd><p>‘Path(…)’</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.find_latest_source_modification">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">find_latest_source_modification</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.14)"><span class="pre">datetime.datetime</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#find_latest_source_modification"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.find_latest_source_modification" title="Link to this definition">#</a></dt>
+<dd><p>Find the most recent modification datetime across pipeline source files.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>base_dir</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>Path</em><em>]</em>) – The base directory of the pipeline.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The most recent modification datetime.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>datetime</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.get_default_asset_path">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">get_default_asset_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#get_default_asset_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.get_default_asset_path" title="Link to this definition">#</a></dt>
+<dd><p>Get path to default asset from package resources</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.get_favicon_path">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">get_favicon_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#get_favicon_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.get_favicon_path" title="Link to this definition">#</a></dt>
+<dd><p>Get favicon path from config or return default</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.get_file_modified_datetime">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">get_file_modified_datetime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.14)"><span class="pre">datetime.datetime</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#get_file_modified_datetime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.get_file_modified_datetime" title="Link to this definition">#</a></dt>
+<dd><p>Returns the datetime that a file was last modified.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file_path</strong> (<em>Union</em><em>[</em><em>Path</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>) – A pathlib.Path object or a string representing the file path.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A datetime object representing the last modification time.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>datetime</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.get_logo_path">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">get_logo_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#get_logo_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.get_logo_path" title="Link to this definition">#</a></dt>
+<dd><p>Get logo path from config or return default</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.get_pipeline_ids">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">get_pipeline_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/manifest.html#get_pipeline_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.get_pipeline_ids" title="Link to this definition">#</a></dt>
+<dd><p>Get a list of pipeline IDs from the manifest.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>manifest</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The manifest dictionary.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of pipeline IDs.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.get_pipeline_manifest">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">get_pipeline_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">pipeline_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#get_pipeline_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.get_pipeline_manifest" title="Link to this definition">#</a></dt>
+<dd><p>Get the manifest for a specific pipeline.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>manifest</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The full manifest dictionary.</p></li>
+<li><p><strong>pipeline_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The ID of the pipeline to retrieve.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The manifest dictionary for the specified pipeline.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.load_manifest">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">load_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">BASE_DIR</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/manifest.html#load_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.load_manifest" title="Link to this definition">#</a></dt>
+<dd><p>Load the pipeline manifest from a TOML file and process it.</p>
+<p>This will also handle imported pipeline manifests. It
+will also create a mapping of dataframe_id to linked chart_ids
+and a mapping of data</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>base_dir</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>Path</em><em>]</em>) – The base directory where the chartbook.toml file is located.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A dictionary containing the manifest for all pipelines, including linked charts for each dataframe and linked dataframes for each pipeline.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.normalize_tags">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">normalize_tags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#normalize_tags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.normalize_tags" title="Link to this definition">#</a></dt>
+<dd><p>Normalize a list of tags to Title Case.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>tags</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – List of tag strings to normalize</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of tags in Title Case</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+</dl>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>normalize_tags([‘short term funding’, ‘REPO’, ‘Monetary Policy’])
+[‘Short Term Funding’, ‘Repo’, ‘Monetary Policy’]</p>
+</div></blockquote>
+</div></blockquote>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.resolve_platform_path">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">resolve_platform_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#resolve_platform_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.resolve_platform_path" title="Link to this definition">#</a></dt>
+<dd><p>Resolves a path that can be either a direct path string or a dictionary of platform-specific paths.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path_input</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>]</em>) – Either a string representing a direct path, or a dictionary containing platform-specific paths with ‘Windows’ and/or ‘Unix’ keys.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The resolved path appropriate for the current platform.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If using a dict input and no valid path is found for the current platform.</p>
+</dd>
+</dl>
+<p><strong>Examples</strong>::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>resolve_platform_path(&#39;/path/to/dir&#39;)
+# Returns: PosixPath(&#39;/path/to/dir&#39;)
+
+resolve_platform_path({&#39;Windows&#39;: &#39;C:/data&#39;, &#39;Unix&#39;: &#39;/home/data&#39;})
+# Returns: WindowsPath(&#39;C:/data&#39;) on Windows, PosixPath(&#39;/home/data&#39;) on Unix/macOS
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.validate_config_file">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">validate_config_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">BASE_DIR</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#validate_config_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.validate_config_file" title="Link to this definition">#</a></dt>
+<dd><p>Validates that a chartbook.toml file exists in the specified directory.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.validate_doc_fields">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">validate_doc_fields</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">str_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#validate_doc_fields"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.validate_doc_fields" title="Link to this definition">#</a></dt>
+<dd><p>Validate that exactly one of path or str doc fields is provided.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>manifest</strong> – The manifest dictionary for the object (dataframe or chart).</p></li>
+<li><p><strong>path_key</strong> – The key for the path-based documentation field.</p></li>
+<li><p><strong>str_key</strong> – The key for the inline string documentation field.</p></li>
+<li><p><strong>object_type</strong> – The type of object (‘dataframe’ or ‘chart’) for error messages.</p></li>
+<li><p><strong>object_id</strong> – The ID of the object for error messages.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A tuple of (mode, value) where mode is ‘path’ or ‘str’.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If both or neither fields are provided.</p>
+</dd>
+</dl>
+<p><strong>Examples</strong>::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>validate_doc_fields(
+    {&#39;dataframe_docs_path&#39;: &#39;./docs/df.md&#39;},
+    &#39;dataframe_docs_path&#39;, &#39;dataframe_docs_str&#39;,
+    &#39;dataframe&#39;, &#39;my_df&#39;
+)
+# Returns: (&#39;path&#39;, &#39;./docs/df.md&#39;)
+
+validate_doc_fields(
+    {&#39;dataframe_docs_str&#39;: &#39;Inline docs here&#39;},
+    &#39;dataframe_docs_path&#39;, &#39;dataframe_docs_str&#39;,
+    &#39;dataframe&#39;, &#39;my_df&#39;
+)
+# Returns: (&#39;str&#39;, &#39;Inline docs here&#39;)
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.validate_os_compatibility">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">validate_os_compatibility</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#validate_os_compatibility"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.validate_os_compatibility" title="Link to this definition">#</a></dt>
+<dd><p>Validate that os_compatibility is either a string or a list of strings.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>]</em>) – The os_compatibility value to validate.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The validated value (unchanged).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Union[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If the value is neither a string nor a list of strings.</p>
+</dd>
+</dl>
+<p><strong>Examples</strong>::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>validate_os_compatibility(&quot;Windows/Linux/macOS&quot;)
+# Returns: &quot;Windows/Linux/macOS&quot;
+
+validate_os_compatibility([&quot;Windows&quot;, &quot;Linux&quot;, &quot;macOS&quot;])
+# Returns: [&quot;Windows&quot;, &quot;Linux&quot;, &quot;macOS&quot;]
+
+validate_os_compatibility(123)
+# Raises: TypeError
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="chartbook.errors.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="chartbook.markdown_generator.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-contents">Module Contents</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.BASE_DIR"><code class="docutils literal notranslate"><span class="pre">BASE_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DEFAULT_CONFIG"><code class="docutils literal notranslate"><span class="pre">DEFAULT_CONFIG</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DOCS_BUILD_DIR"><code class="docutils literal notranslate"><span class="pre">DOCS_BUILD_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DOCS_SRC_DIR"><code class="docutils literal notranslate"><span class="pre">DOCS_SRC_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.OUTPUT_DIR"><code class="docutils literal notranslate"><span class="pre">OUTPUT_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PIPELINE_THEME"><code class="docutils literal notranslate"><span class="pre">PIPELINE_THEME</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PUBLISH_DIR"><code class="docutils literal notranslate"><span class="pre">PUBLISH_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.find_latest_source_modification"><code class="docutils literal notranslate"><span class="pre">find_latest_source_modification()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_default_asset_path"><code class="docutils literal notranslate"><span class="pre">get_default_asset_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_favicon_path"><code class="docutils literal notranslate"><span class="pre">get_favicon_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_file_modified_datetime"><code class="docutils literal notranslate"><span class="pre">get_file_modified_datetime()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_logo_path"><code class="docutils literal notranslate"><span class="pre">get_logo_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_pipeline_ids"><code class="docutils literal notranslate"><span class="pre">get_pipeline_ids()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_pipeline_manifest"><code class="docutils literal notranslate"><span class="pre">get_pipeline_manifest()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.load_manifest"><code class="docutils literal notranslate"><span class="pre">load_manifest()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.normalize_tags"><code class="docutils literal notranslate"><span class="pre">normalize_tags()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.resolve_platform_path"><code class="docutils literal notranslate"><span class="pre">resolve_platform_path()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_config_file"><code class="docutils literal notranslate"><span class="pre">validate_config_file()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_doc_fields"><code class="docutils literal notranslate"><span class="pre">validate_doc_fields()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_os_compatibility"><code class="docutils literal notranslate"><span class="pre">validate_os_compatibility()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

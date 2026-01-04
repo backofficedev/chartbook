@@ -1,0 +1,991 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chartbook.plotting._api &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../../_static/documentation_options.js?v=f52f92e8"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/plotting/_api';</script>
+    <link rel="icon" href="../../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../why-chartbook.html">Why ChartBook?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../user-guide/concepts.html">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../user-guide/pipelines.html">Pipelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../user-guide/charts.html">Charts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../user-guide/dataframes.html">Dataframes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../user-guide/catalog-projects.html">Catalog Projects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../user-guide/plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../user-guide/notebooks.html">Notebooks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cli-reference.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/pipeline-example.html">Pipeline Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/chartbook-example.html">Catalog Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/data-pipeline.html">Data Pipeline</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../llms-txt.html">LLMs.txt</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for chartbook.plotting._api</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Core chart API functions for chartbook.plotting.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Sequence</span>
+
+<span class="kn">from</span> <span class="nn">chartbook.plotting._config</span> <span class="kn">import</span> <span class="n">get_config</span>
+<span class="kn">from</span> <span class="nn">chartbook.plotting._output</span> <span class="kn">import</span> <span class="n">create_chart_result</span>
+<span class="kn">from</span> <span class="nn">chartbook.plotting._types</span> <span class="kn">import</span> <span class="n">ChartConfig</span><span class="p">,</span> <span class="n">ChartResult</span><span class="p">,</span> <span class="n">OverlayConfig</span>
+<span class="kn">from</span> <span class="nn">chartbook.plotting._validation</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">validate_columns_exist</span><span class="p">,</span>
+    <span class="n">validate_dataframe</span><span class="p">,</span>
+    <span class="n">validate_overlay_bands</span><span class="p">,</span>
+    <span class="n">validate_overlay_hlines</span><span class="p">,</span>
+    <span class="n">validate_overlay_shaded_regions</span><span class="p">,</span>
+    <span class="n">validate_overlay_vlines</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+
+<span class="k">def</span> <span class="nf">_normalize_y</span><span class="p">(</span><span class="n">y</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize y parameter to a list.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">y</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_build_overlay_config</span><span class="p">(</span>
+    <span class="n">nber_recessions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">hlines</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">vlines</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">shaded_regions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">bands</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">regression_line</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OverlayConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build OverlayConfig from parameters.&quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">get_config</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">OverlayConfig</span><span class="p">(</span>
+        <span class="n">nber_recessions</span><span class="o">=</span><span class="n">nber_recessions</span>
+        <span class="k">if</span> <span class="n">nber_recessions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">else</span> <span class="n">config</span><span class="o">.</span><span class="n">nber_recessions</span><span class="p">,</span>
+        <span class="n">hlines</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">hlines</span><span class="p">)</span> <span class="k">if</span> <span class="n">hlines</span> <span class="k">else</span> <span class="p">[],</span>
+        <span class="n">vlines</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">vlines</span><span class="p">)</span> <span class="k">if</span> <span class="n">vlines</span> <span class="k">else</span> <span class="p">[],</span>
+        <span class="n">shaded_regions</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">shaded_regions</span><span class="p">)</span> <span class="k">if</span> <span class="n">shaded_regions</span> <span class="k">else</span> <span class="p">[],</span>
+        <span class="n">bands</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">bands</span><span class="p">)</span> <span class="k">if</span> <span class="n">bands</span> <span class="k">else</span> <span class="p">[],</span>
+        <span class="n">regression_line</span><span class="o">=</span><span class="n">regression_line</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="line">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._api.html#chartbook.plotting._api.line">[docs]</a>
+<span class="k">def</span> <span class="nf">line</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="c1"># Annotations</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">caption</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">note</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Series customization</span>
+    <span class="n">color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">labels</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Axis configuration</span>
+    <span class="n">x_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">x_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">x_tickformat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_tickformat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Overlays</span>
+    <span class="n">nber_recessions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">hlines</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">vlines</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">shaded_regions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">bands</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">regression_line</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="c1"># Advanced</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChartResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a line chart.</span>
+
+<span class="sd">    Returns a ChartResult with the figure. Call `.show()` to display inline,</span>
+<span class="sd">    or `.save(chart_id)` to export to multiple formats.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : DataFrame</span>
+<span class="sd">        Data to plot.</span>
+<span class="sd">    x : str</span>
+<span class="sd">        Column name for x-axis.</span>
+<span class="sd">    y : str | Sequence[str]</span>
+<span class="sd">        Column name(s) for y-axis. Multiple columns create multiple series.</span>
+<span class="sd">    title : str, optional</span>
+<span class="sd">        Chart title.</span>
+<span class="sd">    caption : str, optional</span>
+<span class="sd">        Caption text displayed above the chart.</span>
+<span class="sd">    note : str, optional</span>
+<span class="sd">        Note text displayed below the chart.</span>
+<span class="sd">    source : str, optional</span>
+<span class="sd">        Source attribution text.</span>
+<span class="sd">    color : str | Sequence[str], optional</span>
+<span class="sd">        Color(s) for the series.</span>
+<span class="sd">    labels : dict, optional</span>
+<span class="sd">        Mapping of column names to display labels.</span>
+<span class="sd">    x_title, y_title : str, optional</span>
+<span class="sd">        Axis titles.</span>
+<span class="sd">    x_range, y_range : tuple, optional</span>
+<span class="sd">        Axis ranges as (min, max).</span>
+<span class="sd">    x_tickformat, y_tickformat : str, optional</span>
+<span class="sd">        Tick format strings.</span>
+<span class="sd">    nber_recessions : bool, optional</span>
+<span class="sd">        Show NBER recession shading. None uses global config.</span>
+<span class="sd">    hlines : Sequence[dict], optional</span>
+<span class="sd">        Horizontal reference lines. Each dict: {&quot;y&quot;: value, &quot;color&quot;: &quot;gray&quot;, &quot;dash&quot;: &quot;solid&quot;, &quot;label&quot;: &quot;...&quot;}.</span>
+<span class="sd">    vlines : Sequence[dict], optional</span>
+<span class="sd">        Vertical reference lines. Each dict: {&quot;x&quot;: value, &quot;color&quot;: &quot;gray&quot;, &quot;dash&quot;: &quot;solid&quot;, &quot;label&quot;: &quot;...&quot;}.</span>
+<span class="sd">    shaded_regions : Sequence[dict], optional</span>
+<span class="sd">        Shaded vertical regions. Each dict: {&quot;x0&quot;: start, &quot;x1&quot;: end, &quot;color&quot;: &quot;gray&quot;, &quot;alpha&quot;: 0.3, &quot;label&quot;: &quot;...&quot;}.</span>
+<span class="sd">    bands : Sequence[dict], optional</span>
+<span class="sd">        Fill between y-columns. Each dict: {&quot;y_upper&quot;: col, &quot;y_lower&quot;: col, &quot;color&quot;: &quot;blue&quot;, &quot;alpha&quot;: 0.3}.</span>
+<span class="sd">    regression_line : bool</span>
+<span class="sd">        If True, add a linear regression trend line. Default: False</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ChartResult</span>
+<span class="sd">        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import chartbook</span>
+<span class="sd">    &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">    &gt;&gt;&gt; df = pd.DataFrame({&quot;date&quot;: pd.date_range(&quot;2020&quot;, periods=12, freq=&quot;M&quot;), &quot;gdp&quot;: range(12)})</span>
+
+<span class="sd">    &gt;&gt;&gt; # Display inline</span>
+<span class="sd">    &gt;&gt;&gt; chartbook.plotting.line(df, x=&quot;date&quot;, y=&quot;gdp&quot;).show()</span>
+
+<span class="sd">    &gt;&gt;&gt; # Save to files</span>
+<span class="sd">    &gt;&gt;&gt; result = chartbook.plotting.line(df, x=&quot;date&quot;, y=&quot;gdp&quot;, title=&quot;GDP Growth&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; result.save(chart_id=&quot;gdp&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; print(result.html_path)</span>
+<span class="sd">    ./_output/gdp.html</span>
+
+<span class="sd">    &gt;&gt;&gt; # Multiple series with NBER recessions</span>
+<span class="sd">    &gt;&gt;&gt; chartbook.plotting.line(</span>
+<span class="sd">    ...     df, x=&quot;date&quot;, y=[&quot;gdp&quot;, &quot;cpi&quot;],</span>
+<span class="sd">    ...     title=&quot;Economic Indicators&quot;, nber_recessions=True</span>
+<span class="sd">    ... ).save(&quot;indicators&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Validation</span>
+    <span class="n">validate_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">y_cols</span> <span class="o">=</span> <span class="n">_normalize_y</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">validate_columns_exist</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">+</span> <span class="n">y_cols</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">hlines</span><span class="p">:</span>
+        <span class="n">validate_overlay_hlines</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">hlines</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">vlines</span><span class="p">:</span>
+        <span class="n">validate_overlay_vlines</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">vlines</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">shaded_regions</span><span class="p">:</span>
+        <span class="n">validate_overlay_shaded_regions</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">shaded_regions</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">bands</span><span class="p">:</span>
+        <span class="n">validate_overlay_bands</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">bands</span><span class="p">))</span>
+
+    <span class="c1"># Build configs</span>
+    <span class="n">chart_config</span> <span class="o">=</span> <span class="n">ChartConfig</span><span class="p">(</span>
+        <span class="n">chart_type</span><span class="o">=</span><span class="s2">&quot;line&quot;</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">y_cols</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">caption</span><span class="o">=</span><span class="n">caption</span><span class="p">,</span>
+        <span class="n">note</span><span class="o">=</span><span class="n">note</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+        <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+        <span class="n">x_title</span><span class="o">=</span><span class="n">x_title</span><span class="p">,</span>
+        <span class="n">y_title</span><span class="o">=</span><span class="n">y_title</span><span class="p">,</span>
+        <span class="n">x_range</span><span class="o">=</span><span class="n">x_range</span><span class="p">,</span>
+        <span class="n">y_range</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+        <span class="n">x_tickformat</span><span class="o">=</span><span class="n">x_tickformat</span><span class="p">,</span>
+        <span class="n">y_tickformat</span><span class="o">=</span><span class="n">y_tickformat</span><span class="p">,</span>
+        <span class="n">extra_kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">overlay_config</span> <span class="o">=</span> <span class="n">_build_overlay_config</span><span class="p">(</span>
+        <span class="n">nber_recessions</span><span class="p">,</span> <span class="n">hlines</span><span class="p">,</span> <span class="n">vlines</span><span class="p">,</span> <span class="n">shaded_regions</span><span class="p">,</span> <span class="n">bands</span><span class="p">,</span> <span class="n">regression_line</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">create_chart_result</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">chart_config</span><span class="p">,</span> <span class="n">overlay_config</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="bar">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._api.html#chartbook.plotting._api.bar">[docs]</a>
+<span class="k">def</span> <span class="nf">bar</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">stacked</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="c1"># Annotations</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">caption</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">note</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Series customization</span>
+    <span class="n">color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">labels</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Axis configuration</span>
+    <span class="n">x_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">x_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_tickformat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Overlays</span>
+    <span class="n">nber_recessions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">hlines</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">shaded_regions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Advanced</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChartResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a bar chart.</span>
+
+<span class="sd">    Returns a ChartResult with the figure. Call `.show()` to display inline,</span>
+<span class="sd">    or `.save(chart_id)` to export to multiple formats.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : DataFrame</span>
+<span class="sd">        Data to plot.</span>
+<span class="sd">    x : str</span>
+<span class="sd">        Column name for x-axis (categories).</span>
+<span class="sd">    y : str | Sequence[str]</span>
+<span class="sd">        Column name(s) for y-axis values.</span>
+<span class="sd">    stacked : bool</span>
+<span class="sd">        If True, stack bars instead of grouping. Default: False</span>
+<span class="sd">    (other parameters same as line())</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ChartResult</span>
+<span class="sd">        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">validate_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">y_cols</span> <span class="o">=</span> <span class="n">_normalize_y</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">validate_columns_exist</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">+</span> <span class="n">y_cols</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">hlines</span><span class="p">:</span>
+        <span class="n">validate_overlay_hlines</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">hlines</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">shaded_regions</span><span class="p">:</span>
+        <span class="n">validate_overlay_shaded_regions</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">shaded_regions</span><span class="p">))</span>
+
+    <span class="n">chart_config</span> <span class="o">=</span> <span class="n">ChartConfig</span><span class="p">(</span>
+        <span class="n">chart_type</span><span class="o">=</span><span class="s2">&quot;bar&quot;</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">y_cols</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">caption</span><span class="o">=</span><span class="n">caption</span><span class="p">,</span>
+        <span class="n">note</span><span class="o">=</span><span class="n">note</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+        <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+        <span class="n">x_title</span><span class="o">=</span><span class="n">x_title</span><span class="p">,</span>
+        <span class="n">y_title</span><span class="o">=</span><span class="n">y_title</span><span class="p">,</span>
+        <span class="n">x_range</span><span class="o">=</span><span class="n">x_range</span><span class="p">,</span>
+        <span class="n">y_range</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+        <span class="n">y_tickformat</span><span class="o">=</span><span class="n">y_tickformat</span><span class="p">,</span>
+        <span class="n">stacked</span><span class="o">=</span><span class="n">stacked</span><span class="p">,</span>
+        <span class="n">extra_kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">overlay_config</span> <span class="o">=</span> <span class="n">_build_overlay_config</span><span class="p">(</span>
+        <span class="n">nber_recessions</span><span class="p">,</span> <span class="n">hlines</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">shaded_regions</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">create_chart_result</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">chart_config</span><span class="p">,</span> <span class="n">overlay_config</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="scatter">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._api.html#chartbook.plotting._api.scatter">[docs]</a>
+<span class="k">def</span> <span class="nf">scatter</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="c1"># Scatter-specific</span>
+    <span class="n">size</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">color_by</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Annotations</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">caption</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">note</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Series customization</span>
+    <span class="n">color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Axis configuration</span>
+    <span class="n">x_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">x_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">x_tickformat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_tickformat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Overlays</span>
+    <span class="n">hlines</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">vlines</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">regression_line</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="c1"># Advanced</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChartResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a scatter chart.</span>
+
+<span class="sd">    Returns a ChartResult with the figure. Call `.show()` to display inline,</span>
+<span class="sd">    or `.save(chart_id)` to export to multiple formats.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : DataFrame</span>
+<span class="sd">        Data to plot.</span>
+<span class="sd">    x : str</span>
+<span class="sd">        Column name for x-axis.</span>
+<span class="sd">    y : str</span>
+<span class="sd">        Column name for y-axis.</span>
+<span class="sd">    size : str, optional</span>
+<span class="sd">        Column name for marker size.</span>
+<span class="sd">    color_by : str, optional</span>
+<span class="sd">        Column name for categorical coloring.</span>
+<span class="sd">    regression_line : bool</span>
+<span class="sd">        If True, add a linear regression trend line. Default: False</span>
+<span class="sd">    (other parameters same as line())</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ChartResult</span>
+<span class="sd">        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">validate_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">cols_to_check</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">size</span><span class="p">:</span>
+        <span class="n">cols_to_check</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">color_by</span><span class="p">:</span>
+        <span class="n">cols_to_check</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">color_by</span><span class="p">)</span>
+    <span class="n">validate_columns_exist</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">cols_to_check</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">hlines</span><span class="p">:</span>
+        <span class="n">validate_overlay_hlines</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">hlines</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">vlines</span><span class="p">:</span>
+        <span class="n">validate_overlay_vlines</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">vlines</span><span class="p">))</span>
+
+    <span class="n">chart_config</span> <span class="o">=</span> <span class="n">ChartConfig</span><span class="p">(</span>
+        <span class="n">chart_type</span><span class="o">=</span><span class="s2">&quot;scatter&quot;</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="p">[</span><span class="n">y</span><span class="p">],</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">caption</span><span class="o">=</span><span class="n">caption</span><span class="p">,</span>
+        <span class="n">note</span><span class="o">=</span><span class="n">note</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+        <span class="n">x_title</span><span class="o">=</span><span class="n">x_title</span><span class="p">,</span>
+        <span class="n">y_title</span><span class="o">=</span><span class="n">y_title</span><span class="p">,</span>
+        <span class="n">x_range</span><span class="o">=</span><span class="n">x_range</span><span class="p">,</span>
+        <span class="n">y_range</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+        <span class="n">x_tickformat</span><span class="o">=</span><span class="n">x_tickformat</span><span class="p">,</span>
+        <span class="n">y_tickformat</span><span class="o">=</span><span class="n">y_tickformat</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">,</span>
+        <span class="n">color_by</span><span class="o">=</span><span class="n">color_by</span><span class="p">,</span>
+        <span class="n">extra_kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">overlay_config</span> <span class="o">=</span> <span class="n">_build_overlay_config</span><span class="p">(</span>
+        <span class="kc">False</span><span class="p">,</span> <span class="n">hlines</span><span class="p">,</span> <span class="n">vlines</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">regression_line</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">create_chart_result</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">chart_config</span><span class="p">,</span> <span class="n">overlay_config</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="pie">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._api.html#chartbook.plotting._api.pie">[docs]</a>
+<span class="k">def</span> <span class="nf">pie</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">names</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">values</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="c1"># Annotations</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">caption</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">note</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Advanced</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChartResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a pie chart.</span>
+
+<span class="sd">    Returns a ChartResult with the figure. Call `.show()` to display inline,</span>
+<span class="sd">    or `.save(chart_id)` to export to multiple formats.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : DataFrame</span>
+<span class="sd">        Data to plot.</span>
+<span class="sd">    names : str</span>
+<span class="sd">        Column name for category labels.</span>
+<span class="sd">    values : str</span>
+<span class="sd">        Column name for slice values.</span>
+<span class="sd">    (other parameters same as line())</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ChartResult</span>
+<span class="sd">        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">validate_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">validate_columns_exist</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="n">names</span><span class="p">,</span> <span class="n">values</span><span class="p">])</span>
+
+    <span class="n">chart_config</span> <span class="o">=</span> <span class="n">ChartConfig</span><span class="p">(</span>
+        <span class="n">chart_type</span><span class="o">=</span><span class="s2">&quot;pie&quot;</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">names</span><span class="p">,</span>  <span class="c1"># Use x for names</span>
+        <span class="n">y</span><span class="o">=</span><span class="p">[</span><span class="n">values</span><span class="p">],</span>  <span class="c1"># Use y for values</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">caption</span><span class="o">=</span><span class="n">caption</span><span class="p">,</span>
+        <span class="n">note</span><span class="o">=</span><span class="n">note</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+        <span class="n">names</span><span class="o">=</span><span class="n">names</span><span class="p">,</span>
+        <span class="n">values</span><span class="o">=</span><span class="n">values</span><span class="p">,</span>
+        <span class="n">extra_kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Pie charts don&#39;t use overlays</span>
+    <span class="n">overlay_config</span> <span class="o">=</span> <span class="n">OverlayConfig</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">create_chart_result</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">chart_config</span><span class="p">,</span> <span class="n">overlay_config</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="area">
+<a class="viewcode-back" href="../../../apidocs/chartbook/chartbook.plotting._api.html#chartbook.plotting._api.area">[docs]</a>
+<span class="k">def</span> <span class="nf">area</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="s2">&quot;pd.DataFrame&quot;</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">stacked</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="c1"># Annotations</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">caption</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">note</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Series customization</span>
+    <span class="n">color</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">labels</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Axis configuration</span>
+    <span class="n">x_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">x_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">x_tickformat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">y_tickformat</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Overlays</span>
+    <span class="n">nber_recessions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">hlines</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">shaded_regions</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="c1"># Advanced</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ChartResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an area chart.</span>
+
+<span class="sd">    Returns a ChartResult with the figure. Call `.show()` to display inline,</span>
+<span class="sd">    or `.save(chart_id)` to export to multiple formats.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : DataFrame</span>
+<span class="sd">        Data to plot.</span>
+<span class="sd">    x : str</span>
+<span class="sd">        Column name for x-axis.</span>
+<span class="sd">    y : str | Sequence[str]</span>
+<span class="sd">        Column name(s) for y-axis values.</span>
+<span class="sd">    stacked : bool</span>
+<span class="sd">        If True, stack areas. Default: True</span>
+<span class="sd">    (other parameters same as line())</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ChartResult</span>
+<span class="sd">        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">validate_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">y_cols</span> <span class="o">=</span> <span class="n">_normalize_y</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">validate_columns_exist</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">+</span> <span class="n">y_cols</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">hlines</span><span class="p">:</span>
+        <span class="n">validate_overlay_hlines</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">hlines</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">shaded_regions</span><span class="p">:</span>
+        <span class="n">validate_overlay_shaded_regions</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">shaded_regions</span><span class="p">))</span>
+
+    <span class="n">chart_config</span> <span class="o">=</span> <span class="n">ChartConfig</span><span class="p">(</span>
+        <span class="n">chart_type</span><span class="o">=</span><span class="s2">&quot;area&quot;</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">y_cols</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">caption</span><span class="o">=</span><span class="n">caption</span><span class="p">,</span>
+        <span class="n">note</span><span class="o">=</span><span class="n">note</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span>
+        <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+        <span class="n">x_title</span><span class="o">=</span><span class="n">x_title</span><span class="p">,</span>
+        <span class="n">y_title</span><span class="o">=</span><span class="n">y_title</span><span class="p">,</span>
+        <span class="n">x_range</span><span class="o">=</span><span class="n">x_range</span><span class="p">,</span>
+        <span class="n">y_range</span><span class="o">=</span><span class="n">y_range</span><span class="p">,</span>
+        <span class="n">x_tickformat</span><span class="o">=</span><span class="n">x_tickformat</span><span class="p">,</span>
+        <span class="n">y_tickformat</span><span class="o">=</span><span class="n">y_tickformat</span><span class="p">,</span>
+        <span class="n">stacked</span><span class="o">=</span><span class="n">stacked</span><span class="p">,</span>
+        <span class="n">extra_kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">overlay_config</span> <span class="o">=</span> <span class="n">_build_overlay_config</span><span class="p">(</span>
+        <span class="n">nber_recessions</span><span class="p">,</span> <span class="n">hlines</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">shaded_regions</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">create_chart_result</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">chart_config</span><span class="p">,</span> <span class="n">overlay_config</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

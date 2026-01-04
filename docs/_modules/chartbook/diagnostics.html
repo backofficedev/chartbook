@@ -1,0 +1,739 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chartbook.diagnostics &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../../_static/documentation_options.js?v=f52f92e8"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/chartbook/diagnostics';</script>
+    <link rel="icon" href="../../_static/logo.png"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../why-chartbook.html">Why ChartBook?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/concepts.html">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/pipelines.html">Pipelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/charts.html">Charts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/dataframes.html">Dataframes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/catalog-projects.html">Catalog Projects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/pipeline-example.html">Pipeline Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/chartbook-example.html">Catalog Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/data-pipeline.html">Data Pipeline</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for chartbook.diagnostics</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Utilities for generating metadata diagnostics reports.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">from</span> <span class="nn">collections.abc</span> <span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">from</span> <span class="nn">chartbook.manifest</span> <span class="kn">import</span> <span class="n">get_pipeline_ids</span><span class="p">,</span> <span class="n">get_pipeline_manifest</span>
+
+<span class="n">PIPELINE_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;id&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pipeline_name&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pipeline_description&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;lead_pipeline_developer&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;contributors&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;build_commands&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;os_compatibility&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;git_repo_URL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;README_file_path&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">DATAFRAME_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;dataframe_name&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;short_description_df&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data_sources&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data_providers&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;links_to_data_providers&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;topic_tags&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;how_is_pulled&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path_to_parquet_data&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;date_col&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># Mutually exclusive doc fields for dataframes (exactly one required)</span>
+<span class="n">DATAFRAME_DOCS_FIELDS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;dataframe_docs_path&quot;</span><span class="p">,</span> <span class="s2">&quot;dataframe_docs_str&quot;</span><span class="p">)</span>
+
+<span class="n">CHART_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;chart_name&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;short_description_chart&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dataframe_id&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;topic_tags&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data_frequency&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;observation_period&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;lag_in_data_release&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data_release_timing&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;units&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path_to_html_chart&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># Mutually exclusive doc fields for charts (exactly one required)</span>
+<span class="n">CHART_DOCS_FIELDS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;chart_docs_path&quot;</span><span class="p">,</span> <span class="s2">&quot;chart_docs_str&quot;</span><span class="p">)</span>
+
+<span class="c1"># Optional chart fields (not required for diagnostics)</span>
+<span class="n">OPTIONAL_CHART_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;data_series&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<div class="viewcode-block" id="DiagnosticRow">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">DiagnosticRow</span><span class="p">:</span>
+    <span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">object_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">metadata_complete</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">missing_fields</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">page_link</span><span class="p">:</span> <span class="nb">str</span>
+
+<div class="viewcode-block" id="DiagnosticRow.to_dict">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow.to_dict">[docs]</a>
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">object_name</span><span class="p">,</span>
+            <span class="s2">&quot;Metadata Complete&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata_complete</span><span class="p">,</span>
+            <span class="s2">&quot;Object Type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">object_type</span><span class="p">,</span>
+            <span class="s2">&quot;Identifier&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">identifier</span><span class="p">,</span>
+            <span class="s2">&quot;Pipeline&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_id</span><span class="p">,</span>
+            <span class="s2">&quot;Missing Fields&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">missing_fields</span><span class="p">,</span>
+            <span class="s2">&quot;Page Link&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">page_link</span><span class="p">,</span>
+        <span class="p">}</span></div>
+</div>
+
+
+
+<span class="k">def</span> <span class="nf">_value_is_missing</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True if a metadata value should be treated as missing.&quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">_value_is_missing</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+
+    <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">_collect_missing_fields</span><span class="p">(</span>
+    <span class="n">spec</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">required_fields</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="n">missing</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">required_fields</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">field</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spec</span> <span class="ow">or</span> <span class="n">_value_is_missing</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="n">field</span><span class="p">]):</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">missing</span>
+
+
+<span class="k">def</span> <span class="nf">_check_mutually_exclusive_doc_fields</span><span class="p">(</span>
+    <span class="n">spec</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">doc_fields</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check mutually exclusive doc fields (exactly one must be provided).</span>
+
+<span class="sd">    :param spec: The object specification dict.</span>
+<span class="sd">    :param doc_fields: Tuple of (path_field, str_field) names.</span>
+<span class="sd">    :returns: List of missing field descriptors (empty if valid).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path_key</span><span class="p">,</span> <span class="n">str_key</span> <span class="o">=</span> <span class="n">doc_fields</span>
+    <span class="n">has_path</span> <span class="o">=</span> <span class="n">path_key</span> <span class="ow">in</span> <span class="n">spec</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_value_is_missing</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="n">path_key</span><span class="p">])</span>
+    <span class="n">has_str</span> <span class="o">=</span> <span class="n">str_key</span> <span class="ow">in</span> <span class="n">spec</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_value_is_missing</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="n">str_key</span><span class="p">])</span>
+
+    <span class="c1"># Exactly one must be present</span>
+    <span class="k">if</span> <span class="n">has_path</span> <span class="ow">or</span> <span class="n">has_str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>  <span class="c1"># Valid - one is provided</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path_key</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="n">str_key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>  <span class="c1"># Neither provided</span>
+
+
+<span class="k">def</span> <span class="nf">_build_page_link</span><span class="p">(</span><span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build relative page link for manual concatenation with homepage URL.</span>
+
+<span class="sd">    Returns paths relative to homepage (index.html) like:</span>
+<span class="sd">    - ../charts/{pipeline_id}.{chart_id}.html</span>
+<span class="sd">    - ../dataframes/{pipeline_id}/{dataframe_id}.html</span>
+<span class="sd">    - ../index.html (for pipelines)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">object_type</span> <span class="o">==</span> <span class="s2">&quot;chart&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;../charts/</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">.html&quot;</span>
+    <span class="k">elif</span> <span class="n">object_type</span> <span class="o">==</span> <span class="s2">&quot;dataframe&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;../dataframes/</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">.html&quot;</span>
+    <span class="k">elif</span> <span class="n">object_type</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;../index.html&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="build_diagnostics">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.build_diagnostics">[docs]</a>
+<span class="k">def</span> <span class="nf">build_diagnostics</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DiagnosticRow</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate diagnostics rows for all pipelines, dataframes, and charts.&quot;&quot;&quot;</span>
+
+    <span class="n">diagnostics</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DiagnosticRow</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">pipeline_ids</span> <span class="o">=</span> <span class="n">get_pipeline_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">pipeline_ids</span><span class="p">:</span>
+        <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="n">pipeline_meta</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="n">pipeline_missing</span> <span class="o">=</span> <span class="n">_collect_missing_fields</span><span class="p">(</span><span class="n">pipeline_meta</span><span class="p">,</span> <span class="n">PIPELINE_FIELDS</span><span class="p">)</span>
+        <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">DiagnosticRow</span><span class="p">(</span>
+                <span class="n">object_type</span><span class="o">=</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
+                <span class="n">object_name</span><span class="o">=</span><span class="n">pipeline_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline_name&quot;</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">),</span>
+                <span class="n">metadata_complete</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">pipeline_missing</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="n">identifier</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
+                <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
+                <span class="n">missing_fields</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pipeline_missing</span><span class="p">),</span>
+                <span class="n">page_link</span><span class="o">=</span><span class="n">_build_page_link</span><span class="p">(</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">dataframes</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">for</span> <span class="n">dataframe_id</span><span class="p">,</span> <span class="n">dataframe_meta</span> <span class="ow">in</span> <span class="n">dataframes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">dataframe_missing</span> <span class="o">=</span> <span class="n">_collect_missing_fields</span><span class="p">(</span>
+                <span class="n">dataframe_meta</span><span class="p">,</span> <span class="n">DATAFRAME_FIELDS</span>
+            <span class="p">)</span>
+            <span class="c1"># Check mutually exclusive doc fields</span>
+            <span class="n">dataframe_missing</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                <span class="n">_check_mutually_exclusive_doc_fields</span><span class="p">(</span>
+                    <span class="n">dataframe_meta</span><span class="p">,</span> <span class="n">DATAFRAME_DOCS_FIELDS</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">DiagnosticRow</span><span class="p">(</span>
+                    <span class="n">object_type</span><span class="o">=</span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span>
+                    <span class="n">object_name</span><span class="o">=</span><span class="n">dataframe_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframe_name&quot;</span><span class="p">,</span> <span class="n">dataframe_id</span><span class="p">),</span>
+                    <span class="n">metadata_complete</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">dataframe_missing</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="n">identifier</span><span class="o">=</span><span class="n">dataframe_id</span><span class="p">,</span>
+                    <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
+                    <span class="n">missing_fields</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataframe_missing</span><span class="p">),</span>
+                    <span class="n">page_link</span><span class="o">=</span><span class="n">_build_page_link</span><span class="p">(</span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span> <span class="n">dataframe_id</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">charts</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;charts&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">for</span> <span class="n">chart_id</span><span class="p">,</span> <span class="n">chart_meta</span> <span class="ow">in</span> <span class="n">charts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">chart_missing</span> <span class="o">=</span> <span class="n">_collect_missing_fields</span><span class="p">(</span><span class="n">chart_meta</span><span class="p">,</span> <span class="n">CHART_FIELDS</span><span class="p">)</span>
+            <span class="c1"># Check mutually exclusive doc fields</span>
+            <span class="n">chart_missing</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                <span class="n">_check_mutually_exclusive_doc_fields</span><span class="p">(</span><span class="n">chart_meta</span><span class="p">,</span> <span class="n">CHART_DOCS_FIELDS</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">DiagnosticRow</span><span class="p">(</span>
+                    <span class="n">object_type</span><span class="o">=</span><span class="s2">&quot;chart&quot;</span><span class="p">,</span>
+                    <span class="n">object_name</span><span class="o">=</span><span class="n">chart_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;chart_name&quot;</span><span class="p">,</span> <span class="n">chart_id</span><span class="p">),</span>
+                    <span class="n">metadata_complete</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">chart_missing</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="n">identifier</span><span class="o">=</span><span class="n">chart_id</span><span class="p">,</span>
+                    <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
+                    <span class="n">missing_fields</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chart_missing</span><span class="p">),</span>
+                    <span class="n">page_link</span><span class="o">=</span><span class="n">_build_page_link</span><span class="p">(</span><span class="s2">&quot;chart&quot;</span><span class="p">,</span> <span class="n">chart_id</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">diagnostics</span></div>
+
+
+
+<div class="viewcode-block" id="write_diagnostics_csv">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.write_diagnostics_csv">[docs]</a>
+<span class="k">def</span> <span class="nf">write_diagnostics_csv</span><span class="p">(</span><span class="n">diagnostics</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DiagnosticRow</span><span class="p">],</span> <span class="n">output_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write diagnostics rows to a CSV file.&quot;&quot;&quot;</span>
+
+    <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">diagnostics</span><span class="p">:</span>
+        <span class="c1"># Write empty file with headers only</span>
+        <span class="n">fieldnames</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Metadata Complete&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Object Type&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Identifier&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Pipeline&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Missing Fields&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Page Link&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writeheader</span><span class="p">()</span>
+        <span class="k">return</span>
+
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">diagnostics</span><span class="p">]</span>
+    <span class="n">fieldnames</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">fieldnames</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writeheader</span><span class="p">()</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">writerows</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_metadata_diagnostics">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.generate_metadata_diagnostics">[docs]</a>
+<span class="k">def</span> <span class="nf">generate_metadata_diagnostics</span><span class="p">(</span>
+    <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">docs_build_dir</span><span class="p">:</span> <span class="n">Path</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create the metadata diagnostics CSV file inside the docs build directory.&quot;&quot;&quot;</span>
+
+    <span class="n">diagnostics</span> <span class="o">=</span> <span class="n">build_diagnostics</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+    <span class="n">diagnostics_dir</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;_static&quot;</span> <span class="o">/</span> <span class="s2">&quot;diagnostics&quot;</span>
+    <span class="n">diagnostics_path</span> <span class="o">=</span> <span class="n">diagnostics_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook_metadata_diagnostics.csv&quot;</span>
+    <span class="n">write_diagnostics_csv</span><span class="p">(</span><span class="n">diagnostics</span><span class="p">,</span> <span class="n">diagnostics_path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">diagnostics_path</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

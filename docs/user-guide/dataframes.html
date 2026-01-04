@@ -1,0 +1,1001 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Dataframes &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=f52f92e8"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user-guide/dataframes';</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Catalog Projects" href="catalog-projects.html" />
+    <link rel="prev" title="Charts" href="charts.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../why-chartbook.html">Why ChartBook?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="concepts.html">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pipelines.html">Pipelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="charts.html">Charts</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Dataframes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="catalog-projects.html">Catalog Projects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks.html">Notebooks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="myst-markdown.html">Writing with MyST Markdown</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-reference.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/pipeline-example.html">Pipeline Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/chartbook-example.html">Catalog Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/data-pipeline.html">Data Pipeline</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../llms-txt.html">LLMs.txt</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/user-guide/dataframes.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Dataframes</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overview">Overview</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#defining-dataframes">Defining Dataframes</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#basic-configuration">Basic Configuration</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#complete-configuration">Complete Configuration</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-dataframes">Creating Dataframes</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-data-collection">Step 1: Data Collection</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-data-processing">Step 2: Data Processing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-save-to-parquet">Step 3: Save to Parquet</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-documentation">Step 4: Documentation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-management">Data Management</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-governance">Data Governance</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-quality">Data Quality</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-versioning">Data Versioning</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#best-practices">Best Practices</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#file-organization">1. File Organization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#efficient-storage">2. Efficient Storage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-standards">3. Documentation Standards</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#access-patterns">4. Access Patterns</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-data">Loading Data</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#from-chartbook">From chartbook</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#direct-loading">Direct Loading</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#integration-with-trino">Integration with Trino</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#next-steps">Next Steps</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="dataframes">
+<h1>Dataframes<a class="headerlink" href="#dataframes" title="Link to this heading">#</a></h1>
+<p>Dataframes are the foundation of chartbook analytics. They represent structured datasets with comprehensive metadata for governance, lineage tracking, and discovery.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">#</a></h2>
+<p>A dataframe in chartbook:</p>
+<ul class="simple">
+<li><p>Stores data in efficient Parquet format</p></li>
+<li><p>Includes detailed metadata about sources and licensing</p></li>
+<li><p>Links to charts that use the data</p></li>
+<li><p>Supports documentation and lineage tracking</p></li>
+</ul>
+</section>
+<section id="defining-dataframes">
+<h2>Defining Dataframes<a class="headerlink" href="#defining-dataframes" title="Link to this heading">#</a></h2>
+<section id="basic-configuration">
+<h3>Basic Configuration<a class="headerlink" href="#basic-configuration" title="Link to this heading">#</a></h3>
+<p>In <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dataframes.sales_data]</span>
+<span class="n">dataframe_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Sales Transaction Data&quot;</span>
+<span class="n">short_description_df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Daily sales transactions with customer details&quot;</span>
+<span class="n">data_sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;CRM System&quot;</span><span class="p">]</span>
+<span class="n">path_to_parquet_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/sales_data.parquet&quot;</span>
+<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;transaction_date&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="complete-configuration">
+<h3>Complete Configuration<a class="headerlink" href="#complete-configuration" title="Link to this heading">#</a></h3>
+<p>All available fields:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dataframes.market_data]</span>
+<span class="c1"># Basic Information</span>
+<span class="n">dataframe_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Financial Market Data&quot;</span>
+<span class="n">short_description_df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Daily stock prices and trading volumes for S&amp;P 500&quot;</span>
+
+<span class="c1"># Data Sources</span>
+<span class="n">data_sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Bloomberg&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Reuters&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Yahoo Finance&quot;</span><span class="p">]</span>
+<span class="n">data_providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Bloomberg LP&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Refinitiv&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Yahoo&quot;</span><span class="p">]</span>
+<span class="n">links_to_data_providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;https://www.bloomberg.com/professional&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;https://www.refinitiv.com&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;https://finance.yahoo.com&quot;</span>
+<span class="p">]</span>
+
+<span class="c1"># Access and Licensing</span>
+<span class="n">type_of_data_access</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Subscription&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Subscription&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Public&quot;</span><span class="p">]</span>
+<span class="n">need_to_contact_provider</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Yes&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Yes&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;No&quot;</span><span class="p">]</span>
+<span class="n">data_on_pre_approved_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Yes&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Yes&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;N/A&quot;</span><span class="p">]</span>
+<span class="n">data_license</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Bloomberg Data License Agreement&quot;</span>
+<span class="n">license_expiration_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-12-31&quot;</span>
+<span class="n">provider_contact_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;marketdata@bloomberg.com&quot;</span>
+<span class="n">restriction_on_use</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Internal use only, no redistribution&quot;</span>
+
+<span class="c1"># Technical Details</span>
+<span class="n">how_is_pulled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Python API with daily scheduled job&quot;</span>
+<span class="n">topic_tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Market Data&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Equities&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;S&amp;P 500&quot;</span><span class="p">]</span>
+<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;date&quot;</span>
+
+<span class="c1"># File Paths</span>
+<span class="n">path_to_parquet_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/market_data.parquet&quot;</span>
+<span class="n">path_to_excel_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/market_data.xlsx&quot;</span>
+<span class="n">dataframe_docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/dataframes/market_data.md&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="creating-dataframes">
+<h2>Creating Dataframes<a class="headerlink" href="#creating-dataframes" title="Link to this heading">#</a></h2>
+<section id="step-1-data-collection">
+<h3>Step 1: Data Collection<a class="headerlink" href="#step-1-data-collection" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">chartbook</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="c1"># Example: Load from multiple sources</span>
+<span class="k">def</span> <span class="nf">collect_market_data</span><span class="p">():</span>
+    <span class="c1"># Bloomberg data</span>
+    <span class="n">bloomberg_df</span> <span class="o">=</span> <span class="n">fetch_bloomberg_data</span><span class="p">()</span>
+    
+    <span class="c1"># Yahoo Finance data</span>
+    <span class="n">yahoo_df</span> <span class="o">=</span> <span class="n">fetch_yahoo_data</span><span class="p">()</span>
+    
+    <span class="c1"># Merge and clean</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+        <span class="n">bloomberg_df</span><span class="p">,</span>
+        <span class="n">yahoo_df</span><span class="p">,</span>
+        <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;ticker&#39;</span><span class="p">],</span>
+        <span class="n">how</span><span class="o">=</span><span class="s1">&#39;outer&#39;</span>
+    <span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">df</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">collect_market_data</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-data-processing">
+<h3>Step 2: Data Processing<a class="headerlink" href="#step-2-data-processing" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Standardize and clean data</span>
+<span class="k">def</span> <span class="nf">process_market_data</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="c1"># Ensure date column is datetime</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">])</span>
+    
+    <span class="c1"># Remove duplicates</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">([</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;ticker&#39;</span><span class="p">])</span>
+    
+    <span class="c1"># Sort by date</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;ticker&#39;</span><span class="p">])</span>
+    
+    <span class="c1"># Add calculated fields</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;returns&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;ticker&#39;</span><span class="p">)[</span><span class="s1">&#39;close&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pct_change</span><span class="p">()</span>
+    
+    <span class="c1"># Handle missing values</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s1">&#39;ffill&#39;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">df</span>
+
+<span class="n">df_processed</span> <span class="o">=</span> <span class="n">process_market_data</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-3-save-to-parquet">
+<h3>Step 3: Save to Parquet<a class="headerlink" href="#step-3-save-to-parquet" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Save with optimization</span>
+<span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;_data/market_data.parquet&quot;</span><span class="p">)</span>
+<span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">df_processed</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span>
+    <span class="n">output_path</span><span class="p">,</span>
+    <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;pyarrow&#39;</span><span class="p">,</span>
+    <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;snappy&#39;</span><span class="p">,</span>
+    <span class="n">index</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+
+<span class="c1"># Also save Excel for non-technical users</span>
+<span class="n">df_processed</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span>
+    <span class="s2">&quot;_data/market_data.xlsx&quot;</span><span class="p">,</span>
+    <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">freeze_panes</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-4-documentation">
+<h3>Step 4: Documentation<a class="headerlink" href="#step-4-documentation" title="Link to this heading">#</a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">docs_src/dataframes/market_data.md</span></code>:</p>
+<div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span><span class="gh"># Financial Market Data</span>
+
+<span class="gu">## Overview</span>
+Daily stock prices and trading volumes for all S&amp;P 500 constituents.
+
+<span class="gu">## Data Dictionary</span>
+
+| Column | Type | Description |
+|--------|------|-------------|
+| date | datetime | Trading date |
+| ticker | string | Stock symbol |
+| open | float | Opening price |
+| high | float | Daily high |
+| low | float | Daily low |
+| close | float | Closing price |
+| volume | int | Shares traded |
+| returns | float | Daily returns |
+
+<span class="gu">## Data Sources</span>
+<span class="k">-</span><span class="w"> </span><span class="gs">**Bloomberg**</span>: Primary source for pricing data
+<span class="k">-</span><span class="w"> </span><span class="gs">**Yahoo Finance**</span>: Backup and validation source
+
+<span class="gu">## Update Schedule</span>
+<span class="k">-</span><span class="w"> </span>Frequency: Daily at 6 PM ET
+<span class="k">-</span><span class="w"> </span>Lag: T+0 (same day)
+<span class="k">-</span><span class="w"> </span>History: January 2010 - present
+
+<span class="gu">## Quality Checks</span>
+<span class="k">-</span><span class="w"> </span>Missing data: Forward-filled for holidays
+<span class="k">-</span><span class="w"> </span>Outliers: Flagged if daily move &gt; 20%
+<span class="k">-</span><span class="w"> </span>Validation: Cross-checked between sources
+
+<span class="gu">## Usage Notes</span>
+<span class="k">-</span><span class="w"> </span>Prices are adjusted for splits and dividends
+<span class="k">-</span><span class="w"> </span>Volume is unadjusted
+<span class="k">-</span><span class="w"> </span>Returns calculated as simple returns
+</pre></div>
+</div>
+</section>
+</section>
+<section id="data-management">
+<h2>Data Management<a class="headerlink" href="#data-management" title="Link to this heading">#</a></h2>
+<section id="data-governance">
+<h3>Data Governance<a class="headerlink" href="#data-governance" title="Link to this heading">#</a></h3>
+<p>Track data lineage and compliance:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># Licensing information</span>
+<span class="n">data_license</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Bloomberg Data License&quot;</span>
+<span class="n">license_expiration_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-12-31&quot;</span>
+<span class="n">restriction_on_use</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Internal analytics only&quot;</span>
+
+<span class="c1"># Access control</span>
+<span class="n">need_to_contact_provider</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Yes&quot;</span><span class="p">]</span>
+<span class="n">data_on_pre_approved_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Yes&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="data-quality">
+<h3>Data Quality<a class="headerlink" href="#data-quality" title="Link to this heading">#</a></h3>
+<p>Implement quality checks:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">validate_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate dataframe meets quality standards.&quot;&quot;&quot;</span>
+    
+    <span class="c1"># Check required columns exist</span>
+    <span class="n">date_col</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;date_col&#39;</span><span class="p">]</span>
+    <span class="k">assert</span> <span class="n">date_col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Missing date column: </span><span class="si">{</span><span class="n">date_col</span><span class="si">}</span><span class="s2">&quot;</span>
+    
+    <span class="c1"># Check data types</span>
+    <span class="k">assert</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_datetime64_any_dtype</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">date_col</span><span class="p">]),</span> \
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">date_col</span><span class="si">}</span><span class="s2"> must be datetime&quot;</span>
+    
+    <span class="c1"># Check for duplicates</span>
+    <span class="n">dup_count</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">dup_count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: </span><span class="si">{</span><span class="n">dup_count</span><span class="si">}</span><span class="s2"> duplicate rows found&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Check date range</span>
+    <span class="n">date_range</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">date_col</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="n">date_col</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Date range: </span><span class="si">{</span><span class="n">date_range</span><span class="o">.</span><span class="n">days</span><span class="si">}</span><span class="s2"> days&quot;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="kc">True</span>
+</pre></div>
+</div>
+</section>
+<section id="data-versioning">
+<h3>Data Versioning<a class="headerlink" href="#data-versioning" title="Link to this heading">#</a></h3>
+<p>Track data changes:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Add version metadata</span>
+<span class="k">def</span> <span class="nf">add_version_info</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;1.2.0&#39;</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;created_date&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;created_by&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;analytics_pipeline&#39;</span>
+    <span class="k">return</span> <span class="n">df</span>
+
+<span class="c1"># Save with metadata</span>
+<span class="n">df_versioned</span> <span class="o">=</span> <span class="n">add_version_info</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+<span class="n">df_versioned</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="s1">&#39;_data/market_data_v1.2.0.parquet&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading">#</a></h2>
+<section id="file-organization">
+<h3>1. File Organization<a class="headerlink" href="#file-organization" title="Link to this heading">#</a></h3>
+<p>Structure your data files:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>_data/
+├── raw/              # Original data files
+│   ├── bloomberg_20240115.csv
+│   └── yahoo_20240115.csv
+├── processed/        # Cleaned data
+│   └── market_data_clean.parquet
+├── market_data.parquet  # Final output
+└── archive/          # Historical versions
+    └── market_data_v1.1.0.parquet
+</pre></div>
+</div>
+</section>
+<section id="efficient-storage">
+<h3>2. Efficient Storage<a class="headerlink" href="#efficient-storage" title="Link to this heading">#</a></h3>
+<p>Optimize Parquet files:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use appropriate data types</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;ticker&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;ticker&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;category&#39;</span><span class="p">)</span>
+<span class="n">df</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">])</span>
+
+<span class="c1"># Partition large datasets</span>
+<span class="n">df</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span>
+    <span class="s1">&#39;_data/market_data&#39;</span><span class="p">,</span>
+    <span class="n">partition_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;year&#39;</span><span class="p">,</span> <span class="s1">&#39;month&#39;</span><span class="p">],</span>
+    <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;pyarrow&#39;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="documentation-standards">
+<h3>3. Documentation Standards<a class="headerlink" href="#documentation-standards" title="Link to this heading">#</a></h3>
+<p>Every dataframe should document:</p>
+<ul class="simple">
+<li><p><strong>Purpose</strong>: Why this data exists</p></li>
+<li><p><strong>Sources</strong>: Where data comes from</p></li>
+<li><p><strong>Schema</strong>: Column definitions</p></li>
+<li><p><strong>Quality</strong>: Known issues or limitations</p></li>
+<li><p><strong>Updates</strong>: How often refreshed</p></li>
+</ul>
+</section>
+<section id="access-patterns">
+<h3>4. Access Patterns<a class="headerlink" href="#access-patterns" title="Link to this heading">#</a></h3>
+<p>Design for common queries:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Index for fast lookups</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">([</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;ticker&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+
+<span class="c1"># Create summary tables</span>
+<span class="n">daily_summary</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;date&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">({</span>
+    <span class="s1">&#39;volume&#39;</span><span class="p">:</span> <span class="s1">&#39;sum&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;returns&#39;</span><span class="p">:</span> <span class="s1">&#39;mean&#39;</span>
+<span class="p">})</span>
+<span class="n">daily_summary</span><span class="o">.</span><span class="n">to_parquet</span><span class="p">(</span><span class="s1">&#39;_data/daily_summary.parquet&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="loading-data">
+<h2>Loading Data<a class="headerlink" href="#loading-data" title="Link to this heading">#</a></h2>
+<section id="from-chartbook">
+<h3>From chartbook<a class="headerlink" href="#from-chartbook" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">chartbook</span>
+
+<span class="c1"># Load from current pipeline</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">dataframe_id</span><span class="o">=</span><span class="s2">&quot;market_data&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load from specific pipeline</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+    <span class="n">pipeline_id</span><span class="o">=</span><span class="s2">&quot;MARKETS&quot;</span><span class="p">,</span>
+    <span class="n">dataframe_id</span><span class="o">=</span><span class="s2">&quot;market_data&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># Load from different chartbook</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+    <span class="n">chartbook</span><span class="o">=</span><span class="s2">&quot;analytics_book&quot;</span><span class="p">,</span>
+    <span class="n">pipeline_id</span><span class="o">=</span><span class="s2">&quot;MARKETS&quot;</span><span class="p">,</span>
+    <span class="n">dataframe_id</span><span class="o">=</span><span class="s2">&quot;market_data&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="direct-loading">
+<h3>Direct Loading<a class="headerlink" href="#direct-loading" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load Parquet file</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">&quot;_data/market_data.parquet&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load specific columns</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span>
+    <span class="s2">&quot;_data/market_data.parquet&quot;</span><span class="p">,</span>
+    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;ticker&#39;</span><span class="p">,</span> <span class="s1">&#39;close&#39;</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># Load with filters</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span>
+    <span class="s2">&quot;_data/market_data.parquet&quot;</span><span class="p">,</span>
+    <span class="n">filters</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;&gt;=&#39;</span><span class="p">,</span> <span class="s1">&#39;2024-01-01&#39;</span><span class="p">)]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="integration-with-trino">
+<h2>Integration with Trino<a class="headerlink" href="#integration-with-trino" title="Link to this heading">#</a></h2>
+<p>Upload dataframes to Trino:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>chartbook<span class="w"> </span>upload-to-trino<span class="w"> </span>--database-name<span class="w"> </span>analytics_db
+</pre></div>
+</div>
+<p>Query from Trino:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">chartbook</span>
+
+<span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">SELECT date, ticker, close</span>
+<span class="s2">FROM analytics_db.market_data</span>
+<span class="s2">WHERE date &gt;= DATE &#39;2024-01-01&#39;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">chartbook</span><span class="o">.</span><span class="n">trino</span><span class="o">.</span><span class="n">submit_query</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Explore <a class="reference internal" href="charts.html"><span class="doc">Charts</span></a> to visualize your data</p></li>
+<li><p>See <a class="reference internal" href="../examples/data-pipeline.html"><span class="doc">Data Pipeline</span></a> for complete examples</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="charts.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Charts</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="catalog-projects.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Catalog Projects</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#overview">Overview</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#defining-dataframes">Defining Dataframes</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#basic-configuration">Basic Configuration</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#complete-configuration">Complete Configuration</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-dataframes">Creating Dataframes</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-data-collection">Step 1: Data Collection</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-data-processing">Step 2: Data Processing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-save-to-parquet">Step 3: Save to Parquet</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-documentation">Step 4: Documentation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#data-management">Data Management</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-governance">Data Governance</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-quality">Data Quality</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-versioning">Data Versioning</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#best-practices">Best Practices</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#file-organization">1. File Organization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#efficient-storage">2. Efficient Storage</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-standards">3. Documentation Standards</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#access-patterns">4. Access Patterns</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-data">Loading Data</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#from-chartbook">From chartbook</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#direct-loading">Direct Loading</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#integration-with-trino">Integration with Trino</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#next-steps">Next Steps</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

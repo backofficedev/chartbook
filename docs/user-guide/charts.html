@@ -1,0 +1,936 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Charts &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=f52f92e8"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user-guide/charts';</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Dataframes" href="dataframes.html" />
+    <link rel="prev" title="Pipelines" href="pipelines.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../why-chartbook.html">Why ChartBook?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="concepts.html">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pipelines.html">Pipelines</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Charts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dataframes.html">Dataframes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="catalog-projects.html">Catalog Projects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks.html">Notebooks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="myst-markdown.html">Writing with MyST Markdown</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli-reference.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/pipeline-example.html">Pipeline Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/chartbook-example.html">Catalog Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/data-pipeline.html">Data Pipeline</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../llms-txt.html">LLMs.txt</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/user-guide/charts.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Charts</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-concepts">Chart Concepts</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#defining-charts">Defining Charts</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#basic-configuration">Basic Configuration</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#complete-configuration">Complete Configuration</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-charts">Creating Charts</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-generate-the-visualization">Step 1: Generate the Visualization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-write-documentation">Step 2: Write Documentation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-excel-export-optional">Step 3: Excel Export (Optional)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-metadata">Chart Metadata</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#governance-fields">Governance Fields</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#publication-tracking">Publication Tracking</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-characteristics">Data Characteristics</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#best-practices">Best Practices</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#consistent-naming">1. Consistent Naming</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#version-control">2. Version Control</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-standards">3. Documentation Standards</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#quality-checks">4. Quality Checks</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#accessibility">5. Accessibility</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-templates">Chart Templates</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#time-series-template">Time Series Template</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#comparison-template">Comparison Template</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#troubleshooting">Troubleshooting</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#common-issues">Common Issues</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#validation">Validation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#next-steps">Next Steps</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="charts">
+<h1>Charts<a class="headerlink" href="#charts" title="Link to this heading">#</a></h1>
+<p>Charts are the primary output of chartbook pipelines. Each chart combines data visualization with comprehensive metadata for governance and discovery.</p>
+<section id="chart-concepts">
+<h2>Chart Concepts<a class="headerlink" href="#chart-concepts" title="Link to this heading">#</a></h2>
+<p>A chart in chartbook consists of:</p>
+<ul class="simple">
+<li><p><strong>Visualization</strong>: Interactive HTML file (Plotly-based)</p></li>
+<li><p><strong>Metadata</strong>: Descriptive information in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code></p></li>
+<li><p><strong>Documentation</strong>: Markdown file with insights and methodology</p></li>
+<li><p><strong>Excel Export</strong>: Optional Excel file with underlying data</p></li>
+</ul>
+</section>
+<section id="defining-charts">
+<h2>Defining Charts<a class="headerlink" href="#defining-charts" title="Link to this heading">#</a></h2>
+<section id="basic-configuration">
+<h3>Basic Configuration<a class="headerlink" href="#basic-configuration" title="Link to this heading">#</a></h3>
+<p>Add charts to your <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[charts.monthly_revenue]</span>
+<span class="n">chart_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly Revenue Analysis&quot;</span>
+<span class="n">short_description_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue trends with YoY comparison&quot;</span>
+<span class="n">dataframe_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;revenue_data&quot;</span><span class="w">  </span><span class="c1"># Links to dataframe</span>
+<span class="n">path_to_html_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/monthly_revenue.html&quot;</span>
+<span class="n">chart_docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/monthly_revenue.md&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="complete-configuration">
+<h3>Complete Configuration<a class="headerlink" href="#complete-configuration" title="Link to this heading">#</a></h3>
+<p>All available fields:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[charts.revenue_forecast]</span>
+<span class="c1"># Basic Information</span>
+<span class="n">chart_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue Forecast Model&quot;</span>
+<span class="n">short_description_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;12-month revenue forecast with confidence intervals&quot;</span>
+
+<span class="c1"># Clearance and Governance</span>
+<span class="n">date_cleared_by_iv_and_v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-01-15&quot;</span>
+<span class="n">last_legal_clearance_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-01-10&quot;</span>
+<span class="n">last_cleared_by</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Legal Team&quot;</span>
+
+<span class="c1"># Publication History</span>
+<span class="n">past_publications</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;[Q4 Report 2024, Figure 3](https://example.com/q4-2024)&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;[Board Presentation, Slide 15](https://example.com/board-2024)&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># Data Characteristics</span>
+<span class="n">dataframe_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;revenue_forecast_data&quot;</span>
+<span class="n">topic_tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Forecast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Financial Planning&quot;</span><span class="p">]</span>
+<span class="n">data_series_start_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1/1/2020&quot;</span>
+<span class="n">data_frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span>
+<span class="n">observation_period</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Month-end&quot;</span>
+<span class="n">lag_in_data_release</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;5 business days&quot;</span>
+<span class="n">data_release_timing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;First week of month&quot;</span>
+<span class="n">seasonal_adjustment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;X-13ARIMA-SEATS&quot;</span>
+<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;USD (Millions)&quot;</span>
+<span class="n">data_series</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Historical Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Forecast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Upper Bound&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Lower Bound&quot;</span><span class="p">]</span>
+<span class="n">mnemonic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;REV_FCST&quot;</span>
+
+<span class="c1"># File Paths</span>
+<span class="n">path_to_html_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/revenue_forecast.html&quot;</span>
+<span class="n">path_to_excel_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./excel/revenue_forecast.xlsx&quot;</span>
+<span class="n">chart_docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/revenue_forecast.md&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="creating-charts">
+<h2>Creating Charts<a class="headerlink" href="#creating-charts" title="Link to this heading">#</a></h2>
+<section id="step-1-generate-the-visualization">
+<h3>Step 1: Generate the Visualization<a class="headerlink" href="#step-1-generate-the-visualization" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">chartbook</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="c1"># Load data</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="s2">&quot;_data/revenue_forecast_data.parquet&quot;</span><span class="p">)</span>
+
+<span class="c1"># Create chart with confidence bands</span>
+<span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">,</span>
+    <span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+    <span class="n">y</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;actual&quot;</span><span class="p">,</span> <span class="s2">&quot;forecast&quot;</span><span class="p">],</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Revenue Forecast Model&quot;</span><span class="p">,</span>
+    <span class="n">caption</span><span class="o">=</span><span class="s2">&quot;12-month forecast with 95</span><span class="si">% c</span><span class="s2">onfidence interval&quot;</span><span class="p">,</span>
+    <span class="n">y_title</span><span class="o">=</span><span class="s2">&quot;Revenue (USD Millions)&quot;</span><span class="p">,</span>
+    <span class="n">bands</span><span class="o">=</span><span class="p">[{</span>
+        <span class="s2">&quot;y_upper&quot;</span><span class="p">:</span> <span class="s2">&quot;upper_bound&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;y_lower&quot;</span><span class="p">:</span> <span class="s2">&quot;lower_bound&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="p">}],</span>
+<span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="s2">&quot;revenue_forecast&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="step-2-write-documentation">
+<h3>Step 2: Write Documentation<a class="headerlink" href="#step-2-write-documentation" title="Link to this heading">#</a></h3>
+<p>Create <code class="docutils literal notranslate"><span class="pre">docs_src/charts/revenue_forecast.md</span></code>:</p>
+<div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span><span class="gh"># Revenue Forecast Model</span>
+
+<span class="gu">## Overview</span>
+This chart presents a 12-month revenue forecast using an ARIMA model with seasonal adjustments.
+
+<span class="gu">## Key Insights</span>
+<span class="k">-</span><span class="w"> </span>Revenue expected to grow 15% YoY
+<span class="k">-</span><span class="w"> </span>Strong seasonal pattern in Q4
+<span class="k">-</span><span class="w"> </span>Confidence interval widens after month 6
+
+<span class="gu">## Methodology</span>
+<span class="k">-</span><span class="w"> </span>Model: ARIMA(2,1,2)(1,1,1)[12]
+<span class="k">-</span><span class="w"> </span>Training period: 2020-2024
+<span class="k">-</span><span class="w"> </span>Validation: Time series cross-validation
+<span class="k">-</span><span class="w"> </span>Seasonal adjustment: X-13ARIMA-SEATS
+
+<span class="gu">## Data Sources</span>
+<span class="k">-</span><span class="w"> </span>Historical revenue from financial system
+<span class="k">-</span><span class="w"> </span>Economic indicators from Federal Reserve
+
+<span class="gu">## Updates</span>
+<span class="k">-</span><span class="w"> </span>Updated monthly with latest actuals
+<span class="k">-</span><span class="w"> </span>Model retrained quarterly
+<span class="k">-</span><span class="w"> </span>Annual methodology review
+
+<span class="gu">## Contact</span>
+Analytics Team - analytics@company.com
+</pre></div>
+</div>
+</section>
+<section id="step-3-excel-export-optional">
+<h3>Step 3: Excel Export (Optional)<a class="headerlink" href="#step-3-excel-export-optional" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create Excel file with chart and data</span>
+<span class="kn">from</span> <span class="nn">chartbook.excel</span> <span class="kn">import</span> <span class="n">create_excel_chart</span>
+
+<span class="n">create_excel_chart</span><span class="p">(</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+    <span class="n">chart_type</span><span class="o">=</span><span class="s2">&quot;line&quot;</span><span class="p">,</span>
+    <span class="n">x_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+    <span class="n">y_cols</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;actual&quot;</span><span class="p">,</span> <span class="s2">&quot;forecast&quot;</span><span class="p">],</span>
+    <span class="n">output_path</span><span class="o">=</span><span class="s2">&quot;excel/revenue_forecast.xlsx&quot;</span><span class="p">,</span>
+    <span class="n">chart_title</span><span class="o">=</span><span class="s2">&quot;Revenue Forecast&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="chart-metadata">
+<h2>Chart Metadata<a class="headerlink" href="#chart-metadata" title="Link to this heading">#</a></h2>
+<section id="governance-fields">
+<h3>Governance Fields<a class="headerlink" href="#governance-fields" title="Link to this heading">#</a></h3>
+<p>Track approvals and clearances:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">date_cleared_by_iv_and_v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-01-15&quot;</span><span class="w">  </span><span class="c1"># Internal validation</span>
+<span class="n">last_legal_clearance_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-01-10&quot;</span><span class="w">  </span><span class="c1"># Legal review</span>
+<span class="n">last_cleared_by</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;John Doe, Legal Team&quot;</span><span class="w">  </span><span class="c1"># Approver</span>
+</pre></div>
+</div>
+</section>
+<section id="publication-tracking">
+<h3>Publication Tracking<a class="headerlink" href="#publication-tracking" title="Link to this heading">#</a></h3>
+<p>Document where charts have been used:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">past_publications</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;[Annual Report 2024, p.45](https://link-to-report)&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;[Board Meeting Q4 2024](https://internal-link)&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;Investor Presentation, March 2024&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1"># No link available</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="data-characteristics">
+<h3>Data Characteristics<a class="headerlink" href="#data-characteristics" title="Link to this heading">#</a></h3>
+<p>Describe the underlying data:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">data_frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Daily&quot;</span><span class="w">        </span><span class="c1"># Daily, Weekly, Monthly, Quarterly, Annual</span>
+<span class="n">observation_period</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Close&quot;</span><span class="w">    </span><span class="c1"># When measurement taken</span>
+<span class="n">lag_in_data_release</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;T+1&quot;</span><span class="w">     </span><span class="c1"># How long until available</span>
+<span class="n">seasonal_adjustment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;None&quot;</span><span class="w">    </span><span class="c1"># None, X-13ARIMA-SEATS, etc.</span>
+<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Percent&quot;</span><span class="w">              </span><span class="c1"># Units of measurement</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading">#</a></h2>
+<section id="consistent-naming">
+<h3>1. Consistent Naming<a class="headerlink" href="#consistent-naming" title="Link to this heading">#</a></h3>
+<p>Use descriptive, consistent names:</p>
+<ul class="simple">
+<li><p>Chart ID: <code class="docutils literal notranslate"><span class="pre">metric_timeperiod_type</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">revenue_monthly_trend</span></code>)</p></li>
+<li><p>File names: Match the chart ID</p></li>
+<li><p>Titles: Clear and professional</p></li>
+</ul>
+</section>
+<section id="version-control">
+<h3>2. Version Control<a class="headerlink" href="#version-control" title="Link to this heading">#</a></h3>
+<p>Track chart changes:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good commit messages</span>
+git<span class="w"> </span>add<span class="w"> </span>_output/revenue_forecast.html
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Update revenue forecast with Q4 actuals&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="documentation-standards">
+<h3>3. Documentation Standards<a class="headerlink" href="#documentation-standards" title="Link to this heading">#</a></h3>
+<p>Every chart should document:</p>
+<ul class="simple">
+<li><p><strong>Purpose</strong>: Why this chart exists</p></li>
+<li><p><strong>Methodology</strong>: How it’s calculated</p></li>
+<li><p><strong>Interpretation</strong>: What it means</p></li>
+<li><p><strong>Limitations</strong>: Known issues or caveats</p></li>
+<li><p><strong>Updates</strong>: Frequency and process</p></li>
+</ul>
+</section>
+<section id="quality-checks">
+<h3>4. Quality Checks<a class="headerlink" href="#quality-checks" title="Link to this heading">#</a></h3>
+<p>Before publishing:</p>
+<ol class="arabic simple">
+<li><p>Verify data accuracy</p></li>
+<li><p>Check axis labels and units</p></li>
+<li><p>Ensure title is descriptive</p></li>
+<li><p>Test interactivity</p></li>
+<li><p>Review documentation</p></li>
+</ol>
+</section>
+<section id="accessibility">
+<h3>5. Accessibility<a class="headerlink" href="#accessibility" title="Link to this heading">#</a></h3>
+<p>Make charts accessible:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Include descriptive titles</span>
+<span class="n">title</span> <span class="o">=</span> <span class="s2">&quot;Monthly Revenue Trend from Jan 2020 to Dec 2024&quot;</span>
+
+<span class="c1"># Add alt text in documentation</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">![Revenue trend chart showing steady growth with seasonal peaks]</span>
+<span class="sd">(_output/revenue_trend.html)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Use colorblind-friendly palettes</span>
+<span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;#1f77b4&quot;</span><span class="p">,</span> <span class="s2">&quot;#ff7f0e&quot;</span><span class="p">,</span> <span class="s2">&quot;#2ca02c&quot;</span><span class="p">]</span>  <span class="c1"># Blue, Orange, Green</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="chart-templates">
+<h2>Chart Templates<a class="headerlink" href="#chart-templates" title="Link to this heading">#</a></h2>
+<section id="time-series-template">
+<h3>Time Series Template<a class="headerlink" href="#time-series-template" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">create_time_series_chart</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">metric_name</span><span class="p">,</span> <span class="n">chart_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Standard time series chart template.&quot;&quot;&quot;</span>
+    <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">line</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">metric_name</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">metric_name</span><span class="si">}</span><span class="s2"> Over Time&quot;</span><span class="p">,</span>
+        <span class="n">caption</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Monthly data from </span><span class="si">{</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;date&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">y_title</span><span class="o">=</span><span class="n">get_units</span><span class="p">(</span><span class="n">metric_name</span><span class="p">),</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="n">chart_id</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="comparison-template">
+<h3>Comparison Template<a class="headerlink" href="#comparison-template" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">create_comparison_chart</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">chart_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Standard comparison chart template.&quot;&quot;&quot;</span>
+    <span class="n">chartbook</span><span class="o">.</span><span class="n">plotting</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span>
+        <span class="n">df</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="s2">&quot;category&quot;</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">metrics</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Metric Comparison by Category&quot;</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">chart_id</span><span class="o">=</span><span class="n">chart_id</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading">#</a></h2>
+<section id="common-issues">
+<h3>Common Issues<a class="headerlink" href="#common-issues" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p><strong>Chart not found</strong>: Check file paths in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code></p></li>
+<li><p><strong>Broken links</strong>: Ensure documentation paths are correct</p></li>
+<li><p><strong>Missing data</strong>: Verify dataframe_id matches</p></li>
+<li><p><strong>Display issues</strong>: Check browser compatibility</p></li>
+</ol>
+</section>
+<section id="validation">
+<h3>Validation<a class="headerlink" href="#validation" title="Link to this heading">#</a></h3>
+<p>Validate your charts:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check all charts exist</span>
+<span class="kn">from</span> <span class="nn">chartbook.spec_reader</span> <span class="kn">import</span> <span class="n">read_specs</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">specs</span> <span class="o">=</span> <span class="n">read_specs</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">chart_id</span><span class="p">,</span> <span class="n">chart_config</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">chart_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">chart_config</span><span class="p">[</span><span class="s2">&quot;path_to_html_chart&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">chart_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing chart: </span><span class="si">{</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Learn about <a class="reference internal" href="dataframes.html"><span class="doc">Dataframes</span></a> that power your charts</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="pipelines.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Pipelines</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="dataframes.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Dataframes</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-concepts">Chart Concepts</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#defining-charts">Defining Charts</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#basic-configuration">Basic Configuration</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#complete-configuration">Complete Configuration</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#creating-charts">Creating Charts</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-generate-the-visualization">Step 1: Generate the Visualization</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-write-documentation">Step 2: Write Documentation</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-excel-export-optional">Step 3: Excel Export (Optional)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-metadata">Chart Metadata</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#governance-fields">Governance Fields</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#publication-tracking">Publication Tracking</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data-characteristics">Data Characteristics</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#best-practices">Best Practices</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#consistent-naming">1. Consistent Naming</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#version-control">2. Version Control</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-standards">3. Documentation Standards</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#quality-checks">4. Quality Checks</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#accessibility">5. Accessibility</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-templates">Chart Templates</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#time-series-template">Time Series Template</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#comparison-template">Comparison Template</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#troubleshooting">Troubleshooting</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#common-issues">Common Issues</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#validation">Validation</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#next-steps">Next Steps</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
