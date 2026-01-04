@@ -22,7 +22,7 @@ Where Backstage helps software engineers discover microservices and APIs, ChartB
 
 ### Discovery
 
-Find existing work before starting new analysis. ChartBook generates searchable documentation sites where team members can browse pipelines, charts, and datasets.
+Find existing work before starting new analysis. chartbook builds searchable documentation sites where team members can browse pipelines, charts, and datasets.
 
 ### Documentation
 

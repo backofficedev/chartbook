@@ -42,6 +42,20 @@ Organize and document your data sources with comprehensive metadata.
 Combine multiple pipelines into a unified catalog.
 :::
 
+:::{grid-item-card} 📊 Plotting
+:link: plotting
+:link-type: doc
+
+Create charts with automatic multi-format export.
+:::
+
+:::{grid-item-card} 🎨 Chart Gallery
+:link: gallery
+:link-type: doc
+
+Interactive examples of all chart types using FRED economic data.
+:::
+
 ::::
 
 ## Additional Topics
@@ -99,6 +113,8 @@ pipelines
 charts
 dataframes
 catalog-projects
+plotting
+gallery
 notebooks
 myst-markdown
 ```

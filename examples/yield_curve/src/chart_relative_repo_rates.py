@@ -8,10 +8,9 @@ from datetime import datetime
 
 import pandas as pd
 import plotly.graph_objects as go
+import pull_public_repo_data
 from matplotlib import pyplot as plt
 from plotly.subplots import make_subplots
-
-import pull_public_repo_data
 
 pull_public_repo_data.series_descriptions
 

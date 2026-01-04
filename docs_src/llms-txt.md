@@ -55,7 +55,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ## Quick Start
 
 - [Installation](docs_src/getting-started.md): `pip install chartbook` for data loading, `pipx install chartbook` for CLI
-- [CLI Reference](docs_src/cli-reference.md): `chartbook generate`, `chartbook publish`, `chartbook create-data-glimpses`
+- [CLI Reference](docs_src/cli-reference.md): `chartbook build`, `chartbook publish`, `chartbook create-data-glimpses`
 
 ## Core Concepts
 
@@ -74,8 +74,8 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 ## Key Commands
 
-chartbook generate           # Generate HTML documentation website
-chartbook generate -f        # Force overwrite existing docs
+chartbook build           # Generate HTML documentation website
+chartbook build -f        # Force overwrite existing docs
 chartbook publish            # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 
@@ -83,7 +83,7 @@ chartbook create-data-glimpses  # Create data summary report
 
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [site]
 title = "My Analytics"

@@ -23,9 +23,8 @@
 from pathlib import Path
 
 import pandas as pd
-from matplotlib import pyplot as plt
-
 import pull_public_repo_data
+from matplotlib import pyplot as plt
 from settings import config
 
 OUTPUT_DIR = Path(config("OUTPUT_DIR"))

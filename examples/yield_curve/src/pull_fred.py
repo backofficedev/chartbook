@@ -3,7 +3,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pandas_datareader.data as web
-
 from settings import config
 
 DATA_DIR = Path(config("DATA_DIR"))

@@ -28,7 +28,7 @@ A single analytics pipeline with its own charts and dataframes:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 ```
 
 ### Catalog Project
@@ -38,7 +38,7 @@ A collection of multiple pipelines aggregated into a unified catalog:
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 ```
 
 ## Configuration Sections
@@ -50,7 +50,7 @@ Required fields for all projects:
 ```toml
 [config]
 type = "pipeline"  # or "catalog"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 ```
 
 ### `[site]` - Website Metadata
@@ -201,7 +201,7 @@ Here's a complete example for a pipeline project:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [site]
 title = "Sales Analytics Pipeline"
@@ -260,4 +260,4 @@ chartbook validates your configuration file when running commands. Common valida
 - Mismatched dataframe references
 - Invalid date formats
 
-Run `chartbook generate` to validate your configuration. 
+Run `chartbook build` to validate your configuration. 

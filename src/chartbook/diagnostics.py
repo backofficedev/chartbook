@@ -179,7 +179,9 @@ def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
             )
             # Check mutually exclusive doc fields
             dataframe_missing.extend(
-                _check_mutually_exclusive_doc_fields(dataframe_meta, DATAFRAME_DOCS_FIELDS)
+                _check_mutually_exclusive_doc_fields(
+                    dataframe_meta, DATAFRAME_DOCS_FIELDS
+                )
             )
             diagnostics.append(
                 DiagnosticRow(
@@ -245,7 +247,9 @@ def write_diagnostics_csv(diagnostics: list[DiagnosticRow], output_path: Path) -
         writer.writerows(rows)
 
 
-def generate_metadata_diagnostics(manifest: dict[str, Any], docs_build_dir: Path) -> Path:
+def generate_metadata_diagnostics(
+    manifest: dict[str, Any], docs_build_dir: Path
+) -> Path:
     """Create the metadata diagnostics CSV file inside the docs build directory."""
 
     diagnostics = build_diagnostics(manifest)

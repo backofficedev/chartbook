@@ -61,15 +61,25 @@ Python API documentation.
 - **Pipeline Support** — Build reproducible analytics pipelines with dependency management
 - **Documentation Generation** — Generate static websites to share analytics work
 - **Database Integration** — Upload dataframes to Trino for enterprise-wide access
-- **Plotting Utilities** — Built-in tools for creating interactive visualizations
+- **Plotting Module** — Simple API for creating charts with automatic HTML, PNG, and PDF export
 
 ## Quick Example
 
 ```python
-from chartbook import data
+from chartbook import data, plotting
 
 # Load data from a pipeline
 df = data.load(pipeline_id="EX", dataframe_id="repo_public")
+
+# Create a chart with automatic multi-format export
+plotting.line(
+    df,
+    chart_id="repo_rates",
+    x="date",
+    y=["SOFR", "EFFR"],
+    title="Repo Rates",
+    nber_recessions=True,
+)
 ```
 
 ```bash

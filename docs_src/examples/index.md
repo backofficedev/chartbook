@@ -42,7 +42,7 @@ df = chartbook.data.load(
 
 ```console
 # Generate documentation website
-chartbook generate ./docs --force-write
+chartbook build ./docs --force-write
 
 # View locally
 python -m http.server -d ./docs

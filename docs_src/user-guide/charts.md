@@ -72,21 +72,25 @@ chart_docs_path = "./docs_src/charts/revenue_forecast.md"
 ```python
 import chartbook
 import pandas as pd
-from pathlib import Path
 
 # Load data
 df = pd.read_parquet("_data/revenue_forecast_data.parquet")
 
-# Create chart
-chartbook.plotting.multiline(
-    df=df,
-    x_col="date",
-    y_cols=["actual", "forecast", "upper_bound", "lower_bound"],
+# Create chart with confidence bands
+chartbook.plotting.line(
+    df,
+    x="date",
+    y=["actual", "forecast"],
     title="Revenue Forecast Model",
-    subtitle="12-month forecast with 95% confidence interval",
-    y_axis_label="Revenue (USD Millions)",
-    output_file_path=Path("_output/revenue_forecast.html")
-)
+    caption="12-month forecast with 95% confidence interval",
+    y_title="Revenue (USD Millions)",
+    bands=[{
+        "y_upper": "upper_bound",
+        "y_lower": "lower_bound",
+        "color": "blue",
+        "alpha": 0.2,
+    }],
+).save(chart_id="revenue_forecast")
 ```
 
 ### Step 2: Write Documentation
@@ -233,32 +237,29 @@ colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]  # Blue, Orange, Green
 ### Time Series Template
 
 ```python
-def create_time_series_chart(df, metric_name, output_path):
+def create_time_series_chart(df, metric_name, chart_id):
     """Standard time series chart template."""
-    chartbook.plotting.multiline(
-        df=df,
-        x_col="date",
-        y_cols=[metric_name],
+    chartbook.plotting.line(
+        df,
+        x="date",
+        y=metric_name,
         title=f"{metric_name} Over Time",
-        subtitle=f"Monthly data from {df['date'].min()} to {df['date'].max()}",
-        y_axis_label=get_units(metric_name),
-        output_file_path=output_path
-    )
+        caption=f"Monthly data from {df['date'].min()} to {df['date'].max()}",
+        y_title=get_units(metric_name),
+    ).save(chart_id=chart_id)
 ```
 
 ### Comparison Template
 
 ```python
-def create_comparison_chart(df, metrics, output_path):
+def create_comparison_chart(df, metrics, chart_id):
     """Standard comparison chart template."""
     chartbook.plotting.bar(
-        df=df,
-        x_col="category",
-        y_cols=metrics,
+        df,
+        x="category",
+        y=metrics,
         title="Metric Comparison by Category",
-        orientation="h",
-        output_file_path=output_path
-    )
+    ).save(chart_id=chart_id)
 ```
 
 ## Troubleshooting

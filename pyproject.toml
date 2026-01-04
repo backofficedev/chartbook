@@ -38,8 +38,11 @@ data = [
 
 # Plotting libraries
 plotting = [
-    "matplotlib",
+    "matplotlib>=3.7.0",
     "plotly>=5.24.0",
+    "kaleido>=0.2.1",
+    "pluggy>=1.3.0",
+    "fredapi>=0.5.0",
 ]
 
 # Sphinx ecosystem for documentation generation (generate/publish commands)
@@ -69,6 +72,14 @@ all = [
 dev = [
     "chartbook[all]",
     "pytest",
+    # Build automation
+    "colorama",
+    "doit>=0.36.0",
+    "jupytext>=1.16.0",
+    "nbconvert>=7.0.0",
+    # For gallery notebook FRED data
+    "pandas-datareader>=0.10.0",
+    "setuptools",  # provides distutils for pandas-datareader on Python 3.12+
 ]
 
 [project.scripts]
@@ -128,6 +139,10 @@ extra-dependencies = [
     "seaborn",
     "setuptools",  # provides distutils for pandas-datareader on Python 3.12+
 ]
+
+[tool.hatch.envs.default]
+# Default environment includes dev dependencies
+features = ["dev"]
 
 [tool.hatch.envs.docs]
 dependencies = ["chartbook[all]"]

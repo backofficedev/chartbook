@@ -23,8 +23,8 @@ ChartBook is a developer platform for data science teams to discover, document, 
 ## Key CLI Commands
 
 ```bash
-chartbook generate           # Generate HTML documentation website
-chartbook generate -f        # Force overwrite existing docs
+chartbook build           # Generate HTML documentation website
+chartbook build -f        # Force overwrite existing docs
 chartbook publish            # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 ```
@@ -71,7 +71,7 @@ my-pipeline/
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [site]
 title = "My Analytics"

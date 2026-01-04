@@ -43,7 +43,7 @@ Create a `chartbook.toml` file:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [site]
 title = "My Analytics Pipeline"
@@ -90,13 +90,12 @@ output_dir = Path("_output")
 output_dir.mkdir(exist_ok=True)
 
 # Generate chart
-chartbook.plotting.multiline(
-    df=df,
-    x_col="date",
-    y_cols=["revenue", "costs"],
+chartbook.plotting.line(
+    df,
+    x="date",
+    y=["revenue", "costs"],
     title="Revenue vs Costs",
-    output_file_path=output_dir / "revenue_costs.html"
-)
+).save(chart_id="revenue_costs", output_dir=output_dir)
 ```
 
 ### Step 4: Document Everything
@@ -181,7 +180,7 @@ np.random.seed(42)
 # requirements.txt
 pandas==2.0.0
 numpy==1.24.0
-chartbook==0.0.1
+chartbook==0.0.2
 ```
 
 ### 5. Documentation
@@ -234,7 +233,7 @@ Prepare your pipeline for publication:
 
 2. **Validate configuration**:
    ```bash
-   chartbook generate --project-dir .
+   chartbook build --project-dir .
    ```
 
 3. **Publish to staging**:

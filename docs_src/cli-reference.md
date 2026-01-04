@@ -13,8 +13,8 @@ The CLI commands require Sphinx dependencies. Choose one of these installation m
 pipx install chartbook
 
 # Or run without installing
-pipx run chartbook generate
-uvx chartbook generate
+pipx run chartbook build
+uvx chartbook build
 ```
 
 **Alternative** (installs dependencies in current environment):
@@ -41,12 +41,12 @@ chartbook [OPTIONS] COMMAND [ARGS]...
 
 ## Command Reference
 
-### `chartbook generate`
+### `chartbook build`
 
 Generate HTML documentation in the specified output directory.
 
 ```console
-chartbook generate [OPTIONS] [OUTPUT_DIR]
+chartbook build [OPTIONS] [OUTPUT_DIR]
 ```
 
 **Arguments:**
@@ -65,16 +65,16 @@ chartbook generate [OPTIONS] [OUTPUT_DIR]
 
 ```console
 # Basic usage
-chartbook generate
+chartbook build
 
 # Force overwrite existing docs
-chartbook generate -f
+chartbook build -f
 
 # Generate in custom directory
-chartbook generate ./my-docs --force-write
+chartbook build ./my-docs --force-write
 
 # Keep build directories for debugging
-chartbook generate --keep-build-dirs
+chartbook build --keep-build-dirs
 ```
 
 ### `chartbook publish`
@@ -179,7 +179,7 @@ chartbook looks for a `chartbook.toml` file in the project directory. See the {d
 doit
 
 # 2. Generate documentation
-chartbook generate -f
+chartbook build -f
 
 # 3. Publish to production
 chartbook publish
@@ -192,7 +192,7 @@ chartbook publish
 chartbook create-data-glimpses -o ./docs/
 
 # 2. Generate docs with build dirs kept
-chartbook generate --keep-build-dirs
+chartbook build --keep-build-dirs
 
 # 3. Test locally
 python -m http.server -d ./docs

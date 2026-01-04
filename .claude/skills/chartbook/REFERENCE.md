@@ -23,7 +23,7 @@ pip install -e ".[dev]"
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [site]
 title = "Sales Analytics Pipeline"
@@ -102,7 +102,7 @@ path_to_markdown_file = "./docs_src/methodology.md"
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [site]
 title = "Company Analytics Catalog"
@@ -123,10 +123,10 @@ Windows = "T:/pipelines/finance"
 
 ## CLI Reference
 
-### chartbook generate
+### chartbook build
 
 ```bash
-chartbook generate [OPTIONS] [OUTPUT_DIR]
+chartbook build [OPTIONS] [OUTPUT_DIR]
 
 Options:
   -f, --force-write        Overwrite existing output directory
@@ -237,7 +237,7 @@ path = data.get_path(pipeline_id="SALES", dataframe_id="sales_data")
 
 ```bash
 doit                    # Run task automation
-chartbook generate -f  # Generate documentation
+chartbook build -f  # Generate documentation
 chartbook publish      # Publish to production
 ```
 
@@ -245,7 +245,7 @@ chartbook publish      # Publish to production
 
 ```bash
 chartbook create-data-glimpses -o ./docs/
-chartbook generate --keep-build-dirs
+chartbook build --keep-build-dirs
 python -m http.server -d ./docs
 ```
 

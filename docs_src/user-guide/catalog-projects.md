@@ -15,7 +15,7 @@ Catalog projects allow you to:
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [pipelines]
 

@@ -10,10 +10,9 @@ from settings import config
 OUTPUT_DIR = config("OUTPUT_DIR")
 DATA_DIR = config("DATA_DIR")
 
+import load_fed_yield_curve
 import pandas as pd
 import plotly.graph_objects as go
-
-import load_fed_yield_curve
 
 ##################################
 ## Load and prepare data
@@ -30,10 +29,7 @@ maturities = list(range(1, 31))
 yields = latest_curve.values
 
 # Create a dataframe for export
-df_current = pd.DataFrame({
-    "maturity_years": maturities,
-    "yield_percent": yields
-})
+df_current = pd.DataFrame({"maturity_years": maturities, "yield_percent": yields})
 df_current["date"] = latest_date
 
 ##################################

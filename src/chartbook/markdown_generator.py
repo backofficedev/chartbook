@@ -453,7 +453,9 @@ def generate_dataframe_docs(
     # Load doc content based on mode (path or inline string)
     doc_mode = dataframe_manifest.get("_doc_mode", "path")
     if doc_mode == "path":
-        path_to_dataframe_doc = Path(dataframe_manifest["dataframe_docs_path"]).as_posix()
+        path_to_dataframe_doc = Path(
+            dataframe_manifest["dataframe_docs_path"]
+        ).as_posix()
         source = environment.loader.get_source(environment, path_to_dataframe_doc)[0]
     else:  # doc_mode == "str"
         source = dataframe_manifest["dataframe_docs_str"]

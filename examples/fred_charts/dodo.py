@@ -25,7 +25,6 @@ from colorama import Fore, Style, init
 # to easily see the task lines printed by PyDoit. I want them to stand out
 # from among all the other lines printed to the console.
 from doit.reporter import ConsoleReporter
-
 from settings import config
 
 try:
@@ -70,6 +69,7 @@ USER = config("USER")
 
 ## Helpers for handling Jupyter Notebook tasks
 environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
+
 
 # fmt: off
 ## Helper functions for automatic execution of Jupyter notebooks
@@ -209,8 +209,7 @@ sphinx_targets = [
 def task_compile_sphinx_docs():
     """Compile Sphinx Docs"""
     notebook_scripts = [
-        Path(notebook_tasks[notebook]["path"])
-        for notebook in notebook_tasks.keys()
+        Path(notebook_tasks[notebook]["path"]) for notebook in notebook_tasks.keys()
     ]
     file_dep = [
         "./README.md",

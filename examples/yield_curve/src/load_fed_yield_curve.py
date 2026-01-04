@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-
 from settings import config
 
 DATA_DIR = config("DATA_DIR")

@@ -87,9 +87,7 @@ class TestManifestToGeneratorCatalogWorkflow:
             assert "dataframes" in pipeline_manifest
             assert "charts" in pipeline_manifest
 
-    def test_catalog_platform_paths_resolution(
-        self, catalog_project_platform_paths
-    ):
+    def test_catalog_platform_paths_resolution(self, catalog_project_platform_paths):
         """Test catalog with platform-specific path dictionaries."""
         manifest = load_manifest(catalog_project_platform_paths)
         assert manifest["config"]["type"] == "catalog"

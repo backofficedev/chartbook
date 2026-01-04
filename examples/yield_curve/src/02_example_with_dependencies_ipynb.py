@@ -28,7 +28,6 @@
 from pathlib import Path
 
 from matplotlib import pyplot as plt
-
 from settings import config
 
 OUTPUT_DIR = Path(config("OUTPUT_DIR"))

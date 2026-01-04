@@ -125,7 +125,9 @@ def get_pipeline_publishing_plan(manifest, publish_dir=PUBLISH_DIR):
             _add_file_to_plan(pipeline_base_dir, chart_manifest["path_to_html_chart"])
             # Only copy doc file if using path mode (not inline string)
             if chart_manifest.get("_doc_mode") == "path":
-                _add_file_to_plan(pipeline_base_dir, chart_manifest.get("chart_docs_path"))
+                _add_file_to_plan(
+                    pipeline_base_dir, chart_manifest.get("chart_docs_path")
+                )
 
         # Process notebooks
         for notebook_id in pipeline_manifest["notebooks"]:
@@ -154,9 +156,7 @@ def copy_publishable_pipeline_files(manifest, base_dir, publish_dir, verbose=Fal
     )
     copy_according_to_plan(pipeline_publishing_plan, mkdir=True, verbose=verbose)
 
-    src_modification_date = find_latest_source_modification(
-        base_dir=base_dir
-    )
+    src_modification_date = find_latest_source_modification(base_dir=base_dir)
     create_dodo_file_with_mod_date(
         src_modification_date,
         dodo_path=base_dir / "dodo.py",

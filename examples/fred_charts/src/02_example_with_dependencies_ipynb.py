@@ -27,9 +27,8 @@
 from pathlib import Path
 
 import plotly.express as px
-
-from settings import config
 import pull_fred
+from settings import config
 
 OUTPUT_DIR = Path(config("OUTPUT_DIR"))
 

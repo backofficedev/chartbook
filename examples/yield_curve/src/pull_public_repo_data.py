@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pandas as pd
-
 import pull_fred
 import pull_ofr_api_data
 from settings import config

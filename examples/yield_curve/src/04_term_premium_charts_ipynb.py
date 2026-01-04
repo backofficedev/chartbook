@@ -29,10 +29,9 @@ from settings import config
 OUTPUT_DIR = config("OUTPUT_DIR")
 DATA_DIR = config("DATA_DIR")
 
+import load_fed_yield_curve
 import pandas as pd
 import plotly.graph_objects as go
-
-import load_fed_yield_curve
 
 # %% [markdown]
 # ## Load Data

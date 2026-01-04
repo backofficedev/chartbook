@@ -35,8 +35,8 @@ df = data.load(pipeline_id="EX", dataframe_id="repo_public")
 pipx install chartbook
 
 # Or run without installing
-pipx run chartbook generate
-uvx chartbook generate
+pipx run chartbook build
+uvx chartbook build
 ```
 
 **Alternative** (if you prefer pip, installs Sphinx dependencies):
@@ -90,7 +90,7 @@ Create a `chartbook.toml` file to configure your project:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [site]
 title = "My Analytics Project"
@@ -143,20 +143,20 @@ Create a chart using chartbook's plotting utilities:
 ```python
 import chartbook
 import pandas as pd
-from pathlib import Path
 
 # Load the data
 df = pd.read_parquet('_data/sample_data.parquet')
 
-# Create an interactive plot
-chartbook.plotting.multiline(
-    df=df,
-    x_col='date',
-    y_cols=['value1', 'value2'],
+# Create an interactive plot and save to files
+result = chartbook.plotting.line(
+    df,
+    x='date',
+    y=['value1', 'value2'],
     title='My First Chart',
-    output_file_path=Path('_output/my_first_chart.html')
 )
+result.save(chart_id="my_first_chart", output_dir="./_output")
 print("Chart created!")
+print(result.paths)
 ```
 
 ### 5. Add Chart Documentation
@@ -208,7 +208,7 @@ date_col = "date"
 Now generate your documentation website:
 
 ```console
-chartbook generate -f ./docs
+chartbook build -f ./docs
 ```
 
 Open `docs/index.html` in your browser to see your generated site!

@@ -27,8 +27,8 @@ df = data.load(pipeline_id="EX", dataframe_id="repo_public")
 pipx install chartbook
 
 # Or run without installing
-pipx run chartbook generate
-uvx chartbook generate
+pipx run chartbook build
+uvx chartbook build
 ```
 
 ### Alternative CLI Installation
@@ -57,12 +57,12 @@ pip install -e ".[dev]"
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
 
-### chartbook generate
+### chartbook build
 
 Generate HTML documentation in the specified output directory.
 
 ```bash
-chartbook generate [OPTIONS] [OUTPUT_DIR]
+chartbook build [OPTIONS] [OUTPUT_DIR]
 ```
 
 **Arguments:**
@@ -79,10 +79,10 @@ chartbook generate [OPTIONS] [OUTPUT_DIR]
 
 **Examples:**
 ```bash
-chartbook generate                    # Basic usage
-chartbook generate -f                 # Force overwrite
-chartbook generate ./my-docs -f       # Custom directory
-chartbook generate --keep-build-dirs  # Debug mode
+chartbook build                    # Basic usage
+chartbook build -f                 # Force overwrite
+chartbook build ./my-docs -f       # Custom directory
+chartbook build --keep-build-dirs  # Debug mode
 ```
 
 ### chartbook publish
@@ -155,7 +155,7 @@ A single analytics pipeline with its own charts and dataframes:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 ```
 
 #### Catalog Project
@@ -164,7 +164,7 @@ A collection of multiple pipelines aggregated into a unified catalog:
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 ```
 
 ### [config] - Project Configuration
@@ -172,7 +172,7 @@ chartbook_format_version = "0.0.1"
 ```toml
 [config]
 type = "pipeline"  # or "catalog"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 ```
 
 ### [site] - Website Metadata
@@ -551,7 +551,7 @@ A catalog project aggregates multiple pipelines into a unified documentation sit
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [pipelines]
 
@@ -580,7 +580,7 @@ Windows = "T:/pipelines/monthly"
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.1"
+chartbook_format_version = "0.0.2"
 
 [site]
 title = "Sales Analytics Pipeline"
@@ -629,7 +629,7 @@ date_col = "transaction_date"
 
 ```bash
 doit                    # Generate data using task automation
-chartbook generate -f  # Generate documentation
+chartbook build -f  # Generate documentation
 chartbook publish      # Publish to production
 ```
 
@@ -637,7 +637,7 @@ chartbook publish      # Publish to production
 
 ```bash
 chartbook create-data-glimpses -o ./docs/  # Create data summary
-chartbook generate --keep-build-dirs       # Generate with debug files
+chartbook build --keep-build-dirs       # Generate with debug files
 python -m http.server -d ./docs             # Test locally
 ```
 

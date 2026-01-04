@@ -1,7 +1,6 @@
 import pandas as pd
-import pytest
-
 import pull_fred
+import pytest
 from settings import config
 
 DATA_DIR = config("DATA_DIR")

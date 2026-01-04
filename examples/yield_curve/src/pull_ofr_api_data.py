@@ -7,7 +7,6 @@ https://www.financialresearch.gov/short-term-funding-monitor/api/
 from pathlib import Path
 
 import pandas as pd
-
 from settings import config
 
 

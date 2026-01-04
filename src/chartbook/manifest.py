@@ -374,7 +374,9 @@ def load_manifest(base_dir=BASE_DIR):
     elif raw_manifest["config"]["type"] == "catalog":
         manifest = _load_catalog_manifest(raw_manifest)
     else:
-        raise ValueError(f"Invalid config type: {raw_manifest['config']['type']}. Must be 'pipeline' or 'catalog'.")
+        raise ValueError(
+            f"Invalid config type: {raw_manifest['config']['type']}. Must be 'pipeline' or 'catalog'."
+        )
 
     return manifest
 
@@ -456,7 +458,9 @@ def get_pipeline_ids(manifest):
     elif manifest["config"]["type"] == "pipeline":
         pipelines = [manifest["pipeline"]["id"]]
     else:
-        raise ValueError(f"Invalid config type: {manifest['config']['type']}. Must be 'pipeline' or 'catalog'.")
+        raise ValueError(
+            f"Invalid config type: {manifest['config']['type']}. Must be 'pipeline' or 'catalog'."
+        )
     return pipelines
 
 
@@ -489,7 +493,9 @@ def get_pipeline_manifest(manifest: dict, pipeline_id: str) -> dict:
     elif manifest["config"]["type"] == "pipeline":
         pipeline_manifest = manifest.copy()
     else:
-        raise ValueError(f"Invalid config type: {manifest['config']['type']}. Must be 'pipeline' or 'catalog'.")
+        raise ValueError(
+            f"Invalid config type: {manifest['config']['type']}. Must be 'pipeline' or 'catalog'."
+        )
     return pipeline_manifest
 
 

@@ -1,5 +1,4 @@
 import pandas as pd
-
 from misc_tools import (
     get_most_recent_quarter_end,
     get_next_quarter_start,

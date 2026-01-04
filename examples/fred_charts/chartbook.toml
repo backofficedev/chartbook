@@ -79,3 +79,104 @@ data_release_timing = "Monthly"
 units = "Percent"
 path_to_html_chart = "./_output/02_unemployment_chart.html"
 chart_docs_path = "./docs_src/charts/unemployment_chart.md"
+
+[charts.cpi_inflation_chart]
+chart_name = "CPI Inflation"
+short_description_chart = "Line chart showing Consumer Price Index inflation with NBER recession shading and 2% target line."
+dataframe_id = "fred"
+topic_tags = ["Macroeconomic", "Inflation", "CPI"]
+data_frequency = "Monthly"
+observation_period = "Month"
+lag_in_data_release = "Two weeks"
+data_release_timing = "Monthly"
+units = "Percent (Year-over-Year)"
+path_to_html_chart = "./_output/cpi_inflation_chart.html"
+chart_docs_str = """
+**Description:** This chart displays the Consumer Price Index (CPI) year-over-year inflation rate, a key measure of price changes in the economy. The chart includes NBER recession shading and a 2% inflation target reference line.
+
+**Relevance for Economic Analysis:** CPI inflation is the primary measure of consumer price changes and is closely watched by the Federal Reserve for monetary policy decisions. The 2% target represents the Fed's inflation goal.
+
+**Direction of Risk:** Persistently high inflation erodes purchasing power and may lead to tighter monetary policy. Very low or negative inflation (deflation) can indicate weak demand and economic stagnation.
+
+**Formulas Used:** Year-over-Year % Change = ((CPI_t - CPI_{t-12}) / CPI_{t-12}) * 100
+
+**Data Cleaning Information:** Data is sourced directly from FRED (CPIAUCSL series) and transformed to year-over-year percentage change.
+
+**What does this add that other charts might not?** Provides context for inflation trends relative to the Fed's target and historical recession periods.
+"""
+
+[charts.fedfunds_chart]
+chart_name = "Federal Funds Rate"
+short_description_chart = "Area chart showing the Federal Funds Effective Rate over time with NBER recession shading."
+dataframe_id = "fred"
+topic_tags = ["Macroeconomic", "Monetary Policy", "Interest Rates"]
+data_frequency = "Monthly"
+observation_period = "Month"
+lag_in_data_release = "One day"
+data_release_timing = "Daily"
+units = "Percent"
+path_to_html_chart = "./_output/fedfunds_chart.html"
+chart_docs_str = """
+**Description:** This chart shows the Federal Funds Effective Rate, the interest rate at which depository institutions lend reserve balances to other depository institutions overnight. NBER recession shading is included for context.
+
+**Relevance for Economic Analysis:** The Federal Funds Rate is the primary tool of US monetary policy. Changes in this rate affect borrowing costs throughout the economy and signal the Fed's stance on economic conditions.
+
+**Direction of Risk:** Rising rates indicate tightening monetary policy to combat inflation, which can slow economic growth. Falling rates indicate easing policy to stimulate the economy.
+
+**Formulas Used:** N/A - Direct observation of the effective rate.
+
+**Data Cleaning Information:** Data is sourced directly from FRED (FEDFUNDS series) without additional transformations.
+
+**What does this add that other charts might not?** Shows the Fed's policy stance over time and its relationship to economic recessions.
+"""
+
+[charts.gdp_unemployment_dual_chart]
+chart_name = "GDP and Unemployment Rate"
+short_description_chart = "Dual-axis chart with GDP as bars (left axis) and Unemployment Rate as a line (right axis)."
+dataframe_id = "fred"
+topic_tags = ["Macroeconomic", "GDP", "Unemployment"]
+data_frequency = "Quarterly/Monthly"
+observation_period = "Quarter/Month"
+lag_in_data_release = "One month"
+data_release_timing = "Quarterly/Monthly"
+units = "Billions of Dollars / Percent"
+path_to_html_chart = "./_output/gdp_unemployment_dual_chart.html"
+chart_docs_str = """
+**Description:** This dual-axis chart combines GDP (shown as bars on the left axis) with the Unemployment Rate (shown as a line on the right axis), allowing visualization of their inverse relationship.
+
+**Relevance for Economic Analysis:** GDP and unemployment are two of the most important macroeconomic indicators. They typically move inversely - when GDP grows, unemployment tends to fall (Okun's Law).
+
+**Direction of Risk:** Falling GDP combined with rising unemployment signals recession risk. Strong GDP growth with low unemployment indicates a healthy economy but may also signal inflation pressures.
+
+**Formulas Used:** N/A - Direct observations of both series.
+
+**Data Cleaning Information:** GDP is quarterly data; Unemployment is monthly data averaged to quarterly for alignment.
+
+**What does this add that other charts might not?** Visualizes the classic inverse relationship between economic output and unemployment in a single view.
+"""
+
+[charts.inflation_gdp_scatter]
+chart_name = "Inflation vs GDP Growth"
+short_description_chart = "Scatter plot showing the relationship between GDP growth and CPI inflation with regression line."
+dataframe_id = "fred"
+topic_tags = ["Macroeconomic", "GDP", "Inflation"]
+data_frequency = "Quarterly/Monthly"
+observation_period = "Year"
+lag_in_data_release = "One month"
+data_release_timing = "Quarterly"
+units = "Percent"
+path_to_html_chart = "./_output/inflation_gdp_scatter.html"
+chart_docs_str = """
+**Description:** This scatter plot examines the relationship between GDP growth and CPI inflation, with a regression line to show the correlation. Each point represents a time period.
+
+**Relevance for Economic Analysis:** Understanding the relationship between growth and inflation is central to macroeconomic policy. The Phillips Curve suggests a trade-off, though this relationship has evolved over time.
+
+**Direction of Risk:** High growth with high inflation may require contractionary policy. Low growth with high inflation (stagflation) is particularly challenging for policymakers.
+
+**Formulas Used:** GDP Growth = ((GDP_t - GDP_{t-4}) / GDP_{t-4}) * 100; Inflation as YoY CPI change.
+
+**Data Cleaning Information:** Both series transformed to year-over-year percentage changes and aligned by date.
+
+**What does this add that other charts might not?** Explores the growth-inflation trade-off directly, which is not visible in time series charts of individual indicators.
+"""
+

@@ -181,9 +181,7 @@ class TestLoadManifestCatalogWorkflow:
             assert "dataframes" in pipeline_manifest
             assert "charts" in pipeline_manifest
 
-    def test_load_manifest_catalog_platform_paths(
-        self, catalog_project_platform_paths
-    ):
+    def test_load_manifest_catalog_platform_paths(self, catalog_project_platform_paths):
         """Test catalog with platform-specific path dictionaries."""
         manifest = load_manifest(catalog_project_platform_paths)
 
@@ -242,7 +240,9 @@ class TestLoadManifestValidationErrors:
         with pytest.raises(ValueError):
             load_manifest(invalid_project_invalid_type)
 
-    def test_load_manifest_invalid_version_format(self, invalid_project_invalid_version):
+    def test_load_manifest_invalid_version_format(
+        self, invalid_project_invalid_version
+    ):
         """Test that invalid version format raises ValueError."""
         with pytest.raises(ValueError, match="Invalid version format"):
             load_manifest(invalid_project_invalid_version)
