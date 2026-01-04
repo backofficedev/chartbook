@@ -78,4 +78,4 @@ Contributions are welcome. See [CONTRIBUTING](https://backofficedev.github.io/ch
 
 ## License
 
-All rights reserved.
+Modified BSD License

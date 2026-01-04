@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "A tool for generating chart documentation websites"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = "BSD-3-Clause"
 license-files = ["LICENSE.md"]
 keywords = ["Dashboards", "Catalogs", "Data", "Analytics"]
 authors = [
