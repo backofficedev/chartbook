@@ -7,12 +7,17 @@ documentation generation, verifying that the full pipeline works correctly.
 
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from chartbook.build_docs import generate_docs
 from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_manifest
+
+# Path to mock data fixtures for example projects
+MOCK_DATA_DIR = Path(__file__).parent / "fixtures" / "mock_fred_data"
 
 
 class TestManifestToGeneratorPipelineWorkflow:
@@ -144,6 +149,10 @@ class TestExampleProjects:
 
     These tests execute the full doit pipeline for each example to verify
     the complete workflow works end-to-end.
+
+    Note: These tests use pre-generated mock data files to avoid network
+    dependencies on external APIs (FRED, OFR, Federal Reserve). The mock
+    data is copied to the example _data directories before running doit.
     """
 
     @staticmethod
@@ -172,12 +181,72 @@ class TestExampleProjects:
             env["PYTHONPATH"] = str(src_path)
         return env
 
+    @staticmethod
+    def _setup_mock_data_fred_charts(example_path: Path):
+        """Copy mock FRED data to fred_charts example _data directory.
+
+        This pre-populates the data directory so doit skips the pull:fred task,
+        avoiding network calls to the FRED API during tests.
+        """
+        data_dir = example_path / "_data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+
+        # Copy mock FRED data
+        mock_fred = MOCK_DATA_DIR / "fred_charts_mock.parquet"
+        target_fred = data_dir / "fred.parquet"
+        shutil.copy2(mock_fred, target_fred)
+
+        # Also create CSV version (some scripts expect it)
+        df = pd.read_parquet(mock_fred)
+        df.to_csv(data_dir / "fred.csv")
+
+        # Touch files to ensure they're newer than source files
+        time.sleep(0.1)
+        target_fred.touch()
+
+    @staticmethod
+    def _setup_mock_data_yield_curve(example_path: Path):
+        """Copy mock data to yield_curve example _data directory.
+
+        This pre-populates the data directory so doit skips the pull tasks,
+        avoiding network calls to FRED, OFR, and Federal Reserve APIs during tests.
+        """
+        data_dir = example_path / "_data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+
+        # Copy mock FRED data (yield_curve uses the larger series set)
+        mock_fred = MOCK_DATA_DIR / "yield_curve_mock.parquet"
+        target_fred = data_dir / "fred.parquet"
+        shutil.copy2(mock_fred, target_fred)
+
+        # Also create CSV version
+        df_fred = pd.read_parquet(mock_fred)
+        df_fred.to_csv(data_dir / "fred.csv")
+
+        # Copy mock OFR data
+        mock_ofr = MOCK_DATA_DIR / "ofr_mock.parquet"
+        target_ofr = data_dir / "ofr_public_repo_data.parquet"
+        shutil.copy2(mock_ofr, target_ofr)
+
+        # Copy mock Fed yield curve data
+        mock_yc = MOCK_DATA_DIR / "fed_yield_curve_mock.parquet"
+        target_yc = data_dir / "fed_yield_curve.parquet"
+        shutil.copy2(mock_yc, target_yc)
+
+        # Touch files to ensure they're newer than source files
+        time.sleep(0.1)
+        for f in [target_fred, target_ofr, target_yc]:
+            f.touch()
+
     def test_fred_charts_example(self):
         """Test that fred_charts example runs successfully with doit -a."""
         example_path = Path("examples/fred_charts").resolve()
 
         # Clean up before running
         self._clean_example_dirs(example_path)
+
+        # Setup mock data to avoid network calls
+        self._setup_mock_data_fred_charts(example_path)
 
         # Run doit -a with PYTHONPATH set to use local chartbook
         result = subprocess.run(
@@ -189,7 +258,7 @@ class TestExampleProjects:
             env=self._get_env_with_pythonpath(),
         )
 
-        assert result.returncode == 0, f"doit failed: {result.stderr}"
+        assert result.returncode == 0, f"doit failed: {result.stderr}\n{result.stdout}"
 
         # Verify outputs exist
         assert (example_path / "_data" / "fred.parquet").exists()
@@ -203,6 +272,9 @@ class TestExampleProjects:
         # Clean up before running
         self._clean_example_dirs(example_path)
 
+        # Setup mock data to avoid network calls
+        self._setup_mock_data_yield_curve(example_path)
+
         # Run doit -a with PYTHONPATH set to use local chartbook
         result = subprocess.run(
             ["doit", "-a"],
@@ -213,7 +285,7 @@ class TestExampleProjects:
             env=self._get_env_with_pythonpath(),
         )
 
-        assert result.returncode == 0, f"doit failed: {result.stderr}"
+        assert result.returncode == 0, f"doit failed: {result.stderr}\n{result.stdout}"
 
         # Verify outputs exist
         assert (example_path / "_data" / "fed_yield_curve.parquet").exists()
@@ -236,6 +308,7 @@ class TestExampleProjects:
         # Run doit -a on fred_charts first (if not already run by previous test)
         if not (fred_charts_path / "_data" / "fred.parquet").exists():
             self._clean_example_dirs(fred_charts_path)
+            self._setup_mock_data_fred_charts(fred_charts_path)
             result = subprocess.run(
                 ["doit", "-a"],
                 cwd=fred_charts_path,
@@ -249,6 +322,7 @@ class TestExampleProjects:
         # Run doit -a on yield_curve (if not already run by previous test)
         if not (yield_curve_path / "_data" / "fed_yield_curve.parquet").exists():
             self._clean_example_dirs(yield_curve_path)
+            self._setup_mock_data_yield_curve(yield_curve_path)
             result = subprocess.run(
                 ["doit", "-a"],
                 cwd=yield_curve_path,
