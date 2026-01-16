@@ -72,6 +72,37 @@ pip install -e ".[dev]"       # Everything (all + pytest)
 
 **Tip:** Use `pip install -e ".[all]"` for development when you want all features but don't need testing tools. This is ideal for contributors working on documentation or CLI features.
 
+## Working with Project Paths
+
+chartbook provides the `chartbook.env` module for consistent path handling across your project. This is especially useful when your scripts run from different directories or in Jupyter notebooks.
+
+### Finding the Project Root
+
+The `get_project_root()` function automatically locates your project root by searching for marker files like `.git`, `pyproject.toml`, or `.env`:
+
+```python
+import chartbook
+
+# Works from any subdirectory in your project
+BASE_DIR = chartbook.env.get_project_root()
+DATA_DIR = BASE_DIR / "_data"
+OUTPUT_DIR = BASE_DIR / "_output"
+```
+
+### Reading Environment Variables
+
+Use `chartbook.env.get()` to read configuration from `.env` files, environment variables, or command line arguments:
+
+```python
+import chartbook
+
+# Read from .env file or environment
+username = chartbook.env.get("WRDS_USERNAME")
+api_key = chartbook.env.get("FRED_API_KEY", default="")
+```
+
+See the {doc}`apidocs/chartbook/chartbook.env` documentation for full details.
+
 ## Quick Start Tutorial
 
 ### 1. Create Your First Pipeline Project
@@ -81,6 +112,7 @@ Create a new directory for your project and navigate to it:
 ```console
 mkdir my-analytics-project
 cd my-analytics-project
+git init  # Initialize git so chartbook can find project root
 ```
 
 ### 2. Create a Configuration File
@@ -120,7 +152,11 @@ Create a simple Python script to generate data (`generate_data.py`):
 ```python
 import pandas as pd
 import numpy as np
-from pathlib import Path
+import chartbook
+
+# Get project root - works from any subdirectory
+BASE_DIR = chartbook.env.get_project_root()
+DATA_DIR = BASE_DIR / "_data"
 
 # Generate sample data
 dates = pd.date_range('2023-01-01', '2024-01-01', freq='D')
@@ -132,7 +168,7 @@ data = {
 df = pd.DataFrame(data)
 
 # Save to parquet
-df.to_parquet('_data/sample_data.parquet')
+df.to_parquet(DATA_DIR / 'sample_data.parquet')
 print("Sample data generated!")
 ```
 
@@ -144,8 +180,13 @@ Create a chart using chartbook's plotting utilities:
 import chartbook
 import pandas as pd
 
+# Get project paths
+BASE_DIR = chartbook.env.get_project_root()
+DATA_DIR = BASE_DIR / "_data"
+OUTPUT_DIR = BASE_DIR / "_output"
+
 # Load the data
-df = pd.read_parquet('_data/sample_data.parquet')
+df = pd.read_parquet(DATA_DIR / 'sample_data.parquet')
 
 # Create an interactive plot and save to files
 result = chartbook.plotting.line(
@@ -154,7 +195,7 @@ result = chartbook.plotting.line(
     y=['value1', 'value2'],
     title='My First Chart',
 )
-result.save(chart_id="my_first_chart", output_dir="./_output")
+result.save(chart_id="my_first_chart", output_dir=str(OUTPUT_DIR))
 print("Chart created!")
 print(result.paths)
 ```

@@ -24,9 +24,9 @@ from pathlib import Path
 
 import plotly.express as px
 import pull_fred
-from settings import config
+from chartbook.env import get_project_root
 
-OUTPUT_DIR = Path(config("OUTPUT_DIR"))
+OUTPUT_DIR = get_project_root() / "_output"
 
 # %%
 # Load the FRED data

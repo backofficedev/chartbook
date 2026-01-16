@@ -8,12 +8,13 @@ configuration, enabling automatic discovery and documentation.
 from pathlib import Path
 
 import pull_fred
-from settings import config
+from chartbook.env import get_project_root
 
 import chartbook.plotting
 
-DATA_DIR = Path(config("DATA_DIR"))
-OUTPUT_DIR = Path(config("OUTPUT_DIR"))
+BASE_DIR = get_project_root()
+DATA_DIR = BASE_DIR / "_data"
+OUTPUT_DIR = BASE_DIR / "_output"
 
 # Configure chartbook.plotting
 chartbook.plotting.configure(

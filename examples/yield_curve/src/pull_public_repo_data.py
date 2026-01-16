@@ -3,10 +3,11 @@ from pathlib import Path
 import pandas as pd
 import pull_fred
 import pull_ofr_api_data
-from settings import config
+from chartbook.env import get_project_root
 
-OUTPUT_DIR = config("OUTPUT_DIR")
-DATA_DIR = config("DATA_DIR")
+BASE_DIR = get_project_root()
+OUTPUT_DIR = BASE_DIR / "_output"
+DATA_DIR = BASE_DIR / "_data"
 
 
 def load_all(data_dir=DATA_DIR, normalize_timing=True):

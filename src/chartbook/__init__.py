@@ -16,7 +16,7 @@ For CLI (install via pipx):
 
 import importlib
 
-from . import data
+from . import data, env
 from .__about__ import __version__
 
 # Lazy import for plotting to avoid requiring plotting dependencies
@@ -36,5 +36,6 @@ def __getattr__(name: str):
 __all__ = [
     "__version__",
     "data",
+    "env",
     "plotting",
 ]

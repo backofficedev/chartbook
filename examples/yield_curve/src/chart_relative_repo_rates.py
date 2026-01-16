@@ -1,8 +1,9 @@
-from settings import config
+from chartbook.env import get, get_project_root
 
-OUTPUT_DIR = config("OUTPUT_DIR")
-DATA_DIR = config("DATA_DIR")
-START_DATE = config("START_DATE")
+BASE_DIR = get_project_root()
+OUTPUT_DIR = BASE_DIR / "_output"
+DATA_DIR = BASE_DIR / "_data"
+START_DATE = get("START_DATE", default="2000-01-01")
 
 from datetime import datetime
 

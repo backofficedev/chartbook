@@ -10,11 +10,11 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-from settings import config
+from chartbook.env import get, get_project_root
 
-DATA_DIR = config("DATA_DIR")
-START_DATE = config("START_DATE")
-END_DATE = config("END_DATE")
+DATA_DIR = get_project_root() / "_data"
+START_DATE = get("START_DATE", default="1990-01-01")
+END_DATE = get("END_DATE", default="2025-12-31")
 
 
 def pull_fed_yield_curve():

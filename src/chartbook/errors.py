@@ -105,6 +105,34 @@ class ValidationError(Exception):
         )
 
 
+class ProjectRootNotFoundError(Exception):
+    """Raised when the project root directory cannot be found.
+
+    This exception is raised by `get_project_root()` when no marker file
+    (e.g., .git, pyproject.toml, .env) can be found within the search limit.
+
+    Attributes:
+        start_path: The directory from which the search started.
+        markers: The marker files/directories that were searched for.
+        max_levels: The maximum number of parent directories searched.
+    """
+
+    def __init__(
+        self,
+        start_path: Path,
+        markers: tuple[str, ...],
+        max_levels: int,
+    ):
+        self.start_path = start_path
+        self.markers = markers
+        self.max_levels = max_levels
+        super().__init__(
+            f"Could not find project root from {start_path}. "
+            f"Searched {max_levels} levels for markers: {list(markers)}. "
+            f"Set the BASE_DIR environment variable or ensure one of these markers exists."
+        )
+
+
 def handle_validation_error(error: ValidationError, config_path: Path) -> None:
     """Handle validation error with user-friendly output.
 

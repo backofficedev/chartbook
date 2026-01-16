@@ -25,10 +25,11 @@ from pathlib import Path
 import pandas as pd
 import pull_public_repo_data
 from matplotlib import pyplot as plt
-from settings import config
+from chartbook.env import get_project_root
 
-OUTPUT_DIR = Path(config("OUTPUT_DIR"))
-DATA_DIR = Path(config("DATA_DIR"))
+BASE_DIR = get_project_root()
+OUTPUT_DIR = BASE_DIR / "_output"
+DATA_DIR = BASE_DIR / "_data"
 
 # %%
 pull_public_repo_data.series_descriptions

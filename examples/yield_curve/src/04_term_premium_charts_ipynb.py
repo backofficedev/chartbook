@@ -24,10 +24,11 @@
 # yield and shorter maturities (1-year, 2-year, and 3-year).
 
 # %%
-from settings import config
+from chartbook.env import get_project_root
 
-OUTPUT_DIR = config("OUTPUT_DIR")
-DATA_DIR = config("DATA_DIR")
+BASE_DIR = get_project_root()
+OUTPUT_DIR = BASE_DIR / "_output"
+DATA_DIR = BASE_DIR / "_data"
 
 import load_fed_yield_curve
 import pandas as pd

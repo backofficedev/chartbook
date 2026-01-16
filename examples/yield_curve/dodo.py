@@ -25,7 +25,7 @@ from colorama import Fore, Style, init
 # to easily see the task lines printed by PyDoit. I want them to stand out
 # from among all the other lines printed to the console.
 from doit.reporter import ConsoleReporter
-from settings import config
+from chartbook.env import get, get_os_type, get_project_root
 
 try:
     in_slurm = environ["SLURM_JOB_ID"] is not None
@@ -60,12 +60,12 @@ else:
 init(autoreset=True)
 
 
-BASE_DIR = config("BASE_DIR")
-DATA_DIR = config("DATA_DIR")
-MANUAL_DATA_DIR = config("MANUAL_DATA_DIR")
-OUTPUT_DIR = config("OUTPUT_DIR")
-OS_TYPE = config("OS_TYPE")
-USER = config("USER")
+BASE_DIR = get_project_root()
+DATA_DIR = BASE_DIR / "_data"
+MANUAL_DATA_DIR = BASE_DIR / "data_manual"
+OUTPUT_DIR = BASE_DIR / "_output"
+OS_TYPE = get_os_type()
+USER = get("USER", default="")
 
 ## Helpers for handling Jupyter Notebook tasks
 environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
@@ -119,9 +119,9 @@ def copy_file(origin_path, destination_path, mkdir=True):
 def task_config():
     """Create empty directories for data and output if they don't exist"""
     return {
-        "actions": ["ipython ./src/settings.py"],
+        "actions": [f"mkdir -p {DATA_DIR} {OUTPUT_DIR}"],
         "targets": [DATA_DIR, OUTPUT_DIR],
-        "file_dep": ["./src/settings.py"],
+        "file_dep": [],
         "clean": [],
     }
 
@@ -132,33 +132,30 @@ def task_pull():
         "name": "fred",
         "doc": "Pull data from FRED",
         "actions": [
-            "ipython ./src/settings.py",
             "ipython ./src/pull_fred.py",
         ],
         "targets": [DATA_DIR / "fred.parquet"],
-        "file_dep": ["./src/settings.py", "./src/pull_fred.py"],
+        "file_dep": ["./src/pull_fred.py"],
         "clean": [],
     }
     yield {
         "name": "ofr",
         "doc": "Pull data from OFR API",
         "actions": [
-            "ipython ./src/settings.py",
             "ipython ./src/pull_ofr_api_data.py",
         ],
         "targets": [DATA_DIR / "ofr_public_repo_data.parquet"],
-        "file_dep": ["./src/settings.py", "./src/pull_ofr_api_data.py"],
+        "file_dep": ["./src/pull_ofr_api_data.py"],
         "clean": [],
     }
     yield {
         "name": "fed_yield_curve",
         "doc": "Pull Fed yield curve data",
         "actions": [
-            "ipython ./src/settings.py",
             "ipython ./src/load_fed_yield_curve.py",
         ],
         "targets": [DATA_DIR / "fed_yield_curve.parquet"],
-        "file_dep": ["./src/settings.py", "./src/load_fed_yield_curve.py"],
+        "file_dep": ["./src/load_fed_yield_curve.py"],
         "clean": [],
     }
 

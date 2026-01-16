@@ -1,9 +1,9 @@
 import pandas as pd
 import pull_fred
 import pytest
-from settings import config
+from chartbook.env import get_project_root
 
-DATA_DIR = config("DATA_DIR")
+DATA_DIR = get_project_root() / "_data"
 
 
 def test_pull_fred_functionality():

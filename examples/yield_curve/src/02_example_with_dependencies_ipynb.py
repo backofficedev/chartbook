@@ -28,9 +28,9 @@
 from pathlib import Path
 
 from matplotlib import pyplot as plt
-from settings import config
+from chartbook.env import get_project_root
 
-OUTPUT_DIR = Path(config("OUTPUT_DIR"))
+OUTPUT_DIR = get_project_root() / "_output"
 
 import pull_fred
 

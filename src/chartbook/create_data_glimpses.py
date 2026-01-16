@@ -16,11 +16,11 @@ from xml.sax import saxutils
 
 import polars as pl
 
-from chartbook.settings import config
+from chartbook.env import get
 
-DATA_DIR = Path(config("DATA_DIR"))
-OUTPUT_DIR = Path(config("OUTPUT_DIR"))
-BASE_DIR = Path(config("BASE_DIR"))
+DATA_DIR = Path(get("DATA_DIR"))
+OUTPUT_DIR = Path(get("OUTPUT_DIR"))
+BASE_DIR = Path(get("BASE_DIR"))
 
 # Default file size threshold (in MB) above which to use memory-efficient loading
 DEFAULT_SIZE_THRESHOLD_MB = 50

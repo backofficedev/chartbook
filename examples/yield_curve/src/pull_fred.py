@@ -3,11 +3,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pandas_datareader.data as web
-from settings import config
+from chartbook.env import get, get_project_root
 
-DATA_DIR = Path(config("DATA_DIR"))
-START_DATE = config("START_DATE")
-END_DATE = config("END_DATE")
+DATA_DIR = get_project_root() / "_data"
+START_DATE = get("START_DATE", default="1913-01-01")
+END_DATE = get("END_DATE", default="2025-12-31")
 
 
 series_to_pull = {

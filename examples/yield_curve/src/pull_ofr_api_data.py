@@ -7,7 +7,7 @@ https://www.financialresearch.gov/short-term-funding-monitor/api/
 from pathlib import Path
 
 import pandas as pd
-from settings import config
+from chartbook.env import get_project_root
 
 
 def pull_series_from_ofr_api(mnemonic=None):
@@ -55,7 +55,6 @@ def pull_series_list(series_list=list(series_descriptions.keys())):
 if __name__ == "__main__":
     df = pull_series_list(series_list=list(series_descriptions.keys()))
 
-    DATA_DIR = config("DATA_DIR")
-    filedir = Path(DATA_DIR)
-    filedir.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(filedir / "ofr_public_repo_data.parquet")
+    DATA_DIR = get_project_root() / "_data"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(DATA_DIR / "ofr_public_repo_data.parquet")

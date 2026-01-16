@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Union
 
-from chartbook.settings import config
+from chartbook.env import get
 
 
 def get_path(
@@ -13,7 +13,7 @@ def get_path(
     """Get the path to a dataframe file.
 
     :param base_dir: The base directory where pipeline data is stored.
-        If None, uses the DATA_DIR from settings.
+        If None, uses the DATA_DIR from env.
     :type base_dir: Union[str, Path, None]
     :param pipeline_id: The identifier of the pipeline.
     :type pipeline_id: str
@@ -25,7 +25,7 @@ def get_path(
     :rtype: Path
     """
     if base_dir is None:
-        base_dir = config("DATA_DIR")
+        base_dir = get("DATA_DIR")
     base_dir = Path(base_dir)
 
     filename = f"{dataframe_id}.parquet"
@@ -47,7 +47,7 @@ def load(
     It can return the data as either a pandas or a polars DataFrame.
 
     :param base_dir: The base directory where pipeline data is stored.
-        If None, uses the DATA_DIR from settings.
+        If None, uses the DATA_DIR from env.
     :type base_dir: Union[str, Path, None]
     :param pipeline_id: The identifier of the pipeline that generated the dataframe.
     :type pipeline_id: str

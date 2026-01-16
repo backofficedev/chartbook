@@ -5,10 +5,11 @@ This script creates an interactive Plotly chart showing the U.S. Treasury
 zero-coupon yield curve based on the Gurkaynak, Sack, and Wright (2007) model.
 """
 
-from settings import config
+from chartbook.env import get_project_root
 
-OUTPUT_DIR = config("OUTPUT_DIR")
-DATA_DIR = config("DATA_DIR")
+BASE_DIR = get_project_root()
+OUTPUT_DIR = BASE_DIR / "_output"
+DATA_DIR = BASE_DIR / "_data"
 
 import load_fed_yield_curve
 import pandas as pd
