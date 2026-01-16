@@ -71,7 +71,7 @@ my-pipeline/
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.2"
+chartbook_format_version = "0.0.3"
 
 [site]
 title = "My Analytics"
