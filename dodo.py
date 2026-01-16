@@ -137,6 +137,8 @@ def task_sphinx():
     return {
         "actions": [
             f"sphinx-build -b html {DOCS_SRC} {DOCS_OUTPUT}",
+            copy_file(PROJECT_ROOT / "llm" / "llms.txt", DOCS_OUTPUT / "llms.txt"),
+            copy_file(PROJECT_ROOT / "llm" / "llms-full.txt", DOCS_OUTPUT / "llms-full.txt"),
         ],
         "file_dep": notebook_scripts,
         "targets": sphinx_targets,
