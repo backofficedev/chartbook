@@ -20,7 +20,7 @@ uvx chartbook build
 **Alternative** (installs dependencies in current environment):
 
 ```console
-pip install chartbook[sphinx]
+pip install "chartbook[sphinx]"
 ```
 
 If you run CLI commands without Sphinx dependencies installed, you'll see a helpful error message with installation instructions.

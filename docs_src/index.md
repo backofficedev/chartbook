@@ -92,7 +92,7 @@ chartbook build
 **Recommended for most users:**
 
 ```console
-pip install chartbook[all]
+pip install "chartbook[all]"
 ```
 
 This installs everything you need to load data, create visualizations, and build documentation sites.
@@ -102,12 +102,12 @@ This installs everything you need to load data, create visualizations, and build
 
 **Minimal install (data loading only):**
 ```console
-pip install chartbook[data]
+pip install "chartbook[data]"
 ```
 
 **Using pipx (isolated environment):**
 ```console
-pipx install chartbook[all]
+pipx install "chartbook[all]"
 ```
 
 **Development:**

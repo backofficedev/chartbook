@@ -393,7 +393,7 @@ See the API reference for details on implementing custom backends.
 The plotting module requires additional dependencies:
 
 ```console
-pip install chartbook[plotting]
+pip install "chartbook[plotting]"
 ```
 
 This installs:

@@ -42,7 +42,7 @@ uvx chartbook build
 **Alternative** (if you prefer pip, installs Sphinx dependencies):
 
 ```console
-pip install chartbook[sphinx]
+pip install "chartbook[sphinx]"
 ```
 
 ### Development Installation
