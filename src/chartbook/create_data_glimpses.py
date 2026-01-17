@@ -32,18 +32,22 @@ def fix_glimpse_row_count(glimpse_text: str, actual_row_count: int) -> str:
     Polars glimpse output starts with "Rows: X" where X is the number of rows in the
     sampled DataFrame. This function replaces that with the actual total row count.
 
-    Args:
-        glimpse_text: The glimpse output text from Polars.
-        actual_row_count: The actual total number of rows in the dataset.
-
-    Returns:
-        The glimpse text with the corrected row count.
+    :param glimpse_text: The glimpse output text from Polars.
+    :type glimpse_text: str
+    :param actual_row_count: The actual total number of rows in the dataset.
+    :type actual_row_count: int
+    :returns: The glimpse text with the corrected row count.
+    :rtype: str
     """
     return re.sub(r"^Rows: \d+", f"Rows: {actual_row_count}", glimpse_text)
 
 
 def parse_dodo_tasks():
-    """Use doit's internal API to get all tasks and their associated data files."""
+    """Use doit's internal API to get all tasks and their associated data files.
+
+    :returns: A dictionary mapping task names to lists of associated data files.
+    :rtype: dict
+    """
     import sys
     from pathlib import Path
 
@@ -94,7 +98,15 @@ def parse_dodo_tasks():
 
 
 def process_task_dict(task_dict, base_name, task_files):
-    """Process a single task dictionary to extract files."""
+    """Process a single task dictionary to extract files.
+
+    :param task_dict: A doit task dictionary containing targets and file_dep.
+    :type task_dict: dict
+    :param base_name: The base name of the task function.
+    :type base_name: str
+    :param task_files: Dictionary to populate with task names and their files.
+    :type task_files: dict
+    """
     # Get the task name
     if "name" in task_dict:
         # For subtasks, combine base name with task name
@@ -134,13 +146,14 @@ def get_dataset_report(
     For files larger than size_threshold_mb, uses memory-efficient loading by only
     collecting sampled data and correcting the row count in glimpse output.
 
-    Args:
-        filepath: Path to the CSV or Parquet file.
-        include_stats: If True, include numeric column statistics.
-        size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
-
-    Returns:
-        A dict containing file metadata, shape, columns, sample values, numeric stats, and glimpse.
+    :param filepath: Path to the CSV or Parquet file.
+    :type filepath: str or Path
+    :param include_stats: If True, include numeric column statistics.
+    :type include_stats: bool
+    :param size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold_mb: float
+    :returns: A dict containing file metadata, shape, columns, sample values, numeric stats, and glimpse.
+    :rtype: dict
     """
     report = {}
     try:
@@ -268,7 +281,13 @@ def get_dataset_report(
 
 
 def format_task_name(task_name):
-    """Format task name for display."""
+    """Format task name for display.
+
+    :param task_name: The task name to format.
+    :type task_name: str
+    :returns: The formatted task name.
+    :rtype: str
+    """
     # Handle subtask names like "pull:cds_bond_basis"
     if ":" in task_name:
         main_task, sub_task = task_name.split(":", 1)
@@ -283,7 +302,13 @@ def format_task_name(task_name):
 
 
 def get_task_category(task_name):
-    """Extract the main task category from a task name."""
+    """Extract the main task category from a task name.
+
+    :param task_name: The task name to extract the category from.
+    :type task_name: str
+    :returns: The main task category.
+    :rtype: str
+    """
     if ":" in task_name:
         return task_name.split(":", 1)[0]
     else:
@@ -291,7 +316,13 @@ def get_task_category(task_name):
 
 
 def format_file_size(size_bytes):
-    """Format file size in human-readable format."""
+    """Format file size in human-readable format.
+
+    :param size_bytes: The file size in bytes.
+    :type size_bytes: int
+    :returns: The formatted file size string.
+    :rtype: str
+    """
     size_mb = size_bytes / (1024 * 1024)
     if size_mb < 1:
         return f"{size_bytes} bytes"
@@ -302,7 +333,13 @@ def format_file_size(size_bytes):
 
 
 def filename_to_anchor(filename):
-    """Convert a filename to a markdown anchor link format."""
+    """Convert a filename to a markdown anchor link format.
+
+    :param filename: The filename to convert.
+    :type filename: str
+    :returns: The markdown anchor link.
+    :rtype: str
+    """
     # Convert to lowercase and replace non-alphanumeric characters with hyphens
     # Keep the full filename including extension since section headers include it
     anchor = filename.lower()
@@ -320,7 +357,19 @@ def create_txt_report(
     include_stats=True,
     size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB,
 ):
-    """Create a human-readable TXT format Data Glimpses Report."""
+    """Create a human-readable TXT format Data Glimpses Report.
+
+    :param existing_files: Set of file paths that exist and should be included.
+    :type existing_files: set
+    :param include_samples: If True, include sample values sections.
+    :type include_samples: bool
+    :param include_stats: If True, include numeric column statistics sections.
+    :type include_stats: bool
+    :param size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold_mb: float
+    :returns: The report content as a string.
+    :rtype: str
+    """
     output_lines = []
 
     # Parse dodo tasks to group files
@@ -451,7 +500,17 @@ def create_txt_report(
 def create_xml_report(
     existing_files, include_stats=True, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB
 ):
-    """Create a machine-readable XML format Data Glimpses Report."""
+    """Create a machine-readable XML format Data Glimpses Report.
+
+    :param existing_files: Set of file paths that exist and should be included.
+    :type existing_files: set
+    :param include_stats: If True, include numeric column statistics.
+    :type include_stats: bool
+    :param size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold_mb: float
+    :returns: The XML report content as a string.
+    :rtype: str
+    """
     output_lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         "<data_glimpses_report>",
@@ -542,11 +601,14 @@ def main(
 ):
     """Main function to create the data glimpses files in both XML and TXT formats.
 
-    Args:
-        output_dir: Directory to save the output file. If None, saves to current directory.
-        no_samples: If True, exclude sample values sections from the report.
-        no_stats: If True, exclude numeric column statistics sections from the report.
-        size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :param output_dir: Directory to save the output file. If None, saves to current directory.
+    :type output_dir: str or Path, optional
+    :param no_samples: If True, exclude sample values sections from the report.
+    :type no_samples: bool
+    :param no_stats: If True, exclude numeric column statistics sections from the report.
+    :type no_stats: bool
+    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold: float
     """
     print("Parsing dodo.py for tasks and data files...")
 

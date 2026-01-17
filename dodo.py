@@ -18,6 +18,7 @@ SCRIPTS_DIR = PROJECT_ROOT / "scripts"
 OUTPUT_DIR = PROJECT_ROOT / "_build"
 DOCS_SRC = PROJECT_ROOT / "docs_src"
 DOCS_OUTPUT = PROJECT_ROOT / "docs"
+SRC_DIR = PROJECT_ROOT / "src"
 
 # Ensure build directories exist
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -133,6 +134,7 @@ sphinx_targets = [
 def task_sphinx():
     """Build Sphinx documentation."""
     notebook_scripts = [Path(config["path"]) for config in notebook_tasks.values()]
+    src_files = list(SRC_DIR.rglob("*.py"))
 
     return {
         "actions": [
@@ -140,7 +142,7 @@ def task_sphinx():
             copy_file(PROJECT_ROOT / "llm" / "llms.txt", DOCS_OUTPUT / "llms.txt"),
             copy_file(PROJECT_ROOT / "llm" / "llms-full.txt", DOCS_OUTPUT / "llms-full.txt"),
         ],
-        "file_dep": notebook_scripts,
+        "file_dep": notebook_scripts + src_files,
         "targets": sphinx_targets,
         "task_dep": ["run_notebooks"],
         "clean": True,

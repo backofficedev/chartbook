@@ -27,6 +27,15 @@ DOCS_SRC_DIR = BASE_DIR / Path("_docs_src")
 
 
 def get_sphinx_file_alignment_plan(base_dir=BASE_DIR, docs_build_dir=DOCS_BUILD_DIR):
+    """Get file alignment plans for copying files to the Sphinx build directory.
+
+    :param base_dir: The base directory of the project.
+    :type base_dir: Path
+    :param docs_build_dir: The directory where documentation will be built.
+    :type docs_build_dir: Path
+    :returns: A tuple of (dataset_plan, chart_plan_download, chart_plan_static, notebook_plan).
+    :rtype: tuple[dict, dict, dict, dict]
+    """
     manifest = load_manifest(base_dir=base_dir)
     pipeline_ids = get_pipeline_ids(manifest)
 
@@ -104,23 +113,21 @@ def generate_all_pipeline_docs(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
 ):
-    """
-    Params
-    ------
-    manifest: dict
-        This is a dict that contains manifest for all pipelines to be processed.
-    docs_build_dir: Path
-        This is the output directory, where all generated docs will be placed.
-    base_dir: Path
-        This is used to identify the inputs. It's the base directory of the current project.
-        This is used to tell
-        the docs builder where all templates are stored, since the pipeline requires
-        that they be stored in a consistent spot relative to the base directory
-        of the project.
-    docs_src_dir: Path
-        The directory containing documentation source files and templates.
-    size_threshold: float
-        File size threshold in MB above which to use memory-efficient loading.
+    """Generate documentation for all pipelines in the manifest.
+
+    :param manifest: A dict that contains manifest for all pipelines to be processed.
+    :type manifest: dict
+    :param docs_build_dir: The output directory, where all generated docs will be placed.
+    :type docs_build_dir: Path
+    :param base_dir: The base directory of the current project. This is used to tell
+        the docs builder where all templates are stored.
+    :type base_dir: Path
+    :param pipeline_theme: The theme of the pipeline ("pipeline" or "catalog").
+    :type pipeline_theme: str
+    :param docs_src_dir: The directory containing documentation source files and templates.
+    :type docs_src_dir: Path
+    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold: float
     """
     base_dir = Path(base_dir).resolve()
     docs_src_dir = Path(docs_src_dir)
@@ -357,6 +364,23 @@ def generate_pipeline_docs(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
 ):
+    """Generate documentation for a single pipeline.
+
+    :param pipeline_id: The identifier for the pipeline.
+    :type pipeline_id: str
+    :param pipeline_manifest: Manifest for the pipeline.
+    :type pipeline_manifest: dict
+    :param pipeline_base_dir: The base directory of the pipeline project folder.
+    :type pipeline_base_dir: Path
+    :param docs_build_dir: The directory where the docs will be built.
+    :type docs_build_dir: Path
+    :param pipeline_theme: The theme of the pipeline ("pipeline" or "catalog").
+    :type pipeline_theme: str
+    :param docs_src_dir: The directory containing documentation source files and templates.
+    :type docs_src_dir: Path
+    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold: float
+    """
     for dataframe_id in pipeline_manifest["dataframes"]:
         generate_dataframe_docs(
             dataframe_id,
@@ -382,7 +406,11 @@ def generate_pipeline_docs(
 
 
 def get_package_templates_path() -> Path:
-    """Get path to templates directory in the package"""
+    """Get path to templates directory in the package.
+
+    :returns: Path to the templates directory.
+    :rtype: Path
+    """
     package_path = importlib.resources.files("chartbook")
     return Path(str(package_path)) / "templates"
 
@@ -397,25 +425,24 @@ def generate_dataframe_docs(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
 ):
-    """
-    Generates documentation for a specific dataframe, including the most recent data dates.
+    """Generate documentation for a specific dataframe, including the most recent data dates.
 
-    Params
-    ------
-    dataframe_id: str
-        The identifier for the dataframe.
-    pipeline_id: str
-        The identifier for the pipeline.
-    pipeline_manifest: dict
-        Manifest for the pipeline.
-    docs_build_dir: Path
-        The directory where the docs will be built.
-    base_dir: Path
-        The base directory of the pipeline project folder.
-    docs_src_dir: Path
-        The directory containing documentation source files and templates.
-    size_threshold: float
-        File size threshold in MB above which to use memory-efficient loading.
+    :param dataframe_id: The identifier for the dataframe.
+    :type dataframe_id: str
+    :param pipeline_id: The identifier for the pipeline.
+    :type pipeline_id: str
+    :param pipeline_manifest: Manifest for the pipeline.
+    :type pipeline_manifest: dict
+    :param docs_build_dir: The directory where the docs will be built.
+    :type docs_build_dir: Path
+    :param pipeline_base_dir: The base directory of the pipeline project folder.
+    :type pipeline_base_dir: Path
+    :param pipeline_theme: The theme of the pipeline ("pipeline" or "catalog").
+    :type pipeline_theme: str
+    :param docs_src_dir: The directory containing documentation source files and templates.
+    :type docs_src_dir: Path
+    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold: float
     """
     dataframe_manifest = pipeline_manifest["dataframes"][dataframe_id]
 
@@ -541,11 +568,16 @@ def generate_dataframe_docs(
 def find_most_recent_valid_datapoints(
     parquet_path, date_col="date", size_threshold_mb=50
 ):
-    """
-    date_col:
-        The name of the date column in the parquet file (default: "date").
-    size_threshold_mb:
-        File size threshold in MB above which to skip this computation (default: 50).
+    """Find the most recent valid datapoints in a parquet file.
+
+    :param parquet_path: Path to the parquet file.
+    :type parquet_path: Path
+    :param date_col: The name of the date column in the parquet file.
+    :type date_col: str
+    :param size_threshold_mb: File size threshold in MB above which to skip this computation.
+    :type size_threshold_mb: float
+    :returns: A tuple of (min_date, max_date) formatted as strings.
+    :rtype: tuple[str, str]
     """
     if (date_col == "") or (date_col == "NA") or (date_col == "N/A"):
         return "N/A", "N/A"
@@ -594,6 +626,23 @@ def generate_chart_docs(
     pipeline_theme="pipeline",
     docs_src_dir=DOCS_SRC_DIR,
 ):
+    """Generate documentation for a specific chart.
+
+    :param chart_id: The identifier for the chart.
+    :type chart_id: str
+    :param pipeline_id: The identifier for the pipeline.
+    :type pipeline_id: str
+    :param pipeline_manifest: Manifest for the pipeline.
+    :type pipeline_manifest: dict
+    :param docs_build_dir: The directory where the docs will be built.
+    :type docs_build_dir: Path
+    :param pipeline_base_dir: The base directory of the pipeline project folder.
+    :type pipeline_base_dir: Path
+    :param pipeline_theme: The theme of the pipeline ("pipeline" or "catalog").
+    :type pipeline_theme: str
+    :param docs_src_dir: The directory containing documentation source files and templates.
+    :type docs_src_dir: Path
+    """
     pipeline_base_dir = Path(pipeline_base_dir)
 
     # Get all manifest related to the chart
@@ -701,6 +750,13 @@ def generate_chart_docs(
 
 
 def get_dataframes_and_dataframe_docs(base_dir=BASE_DIR):
+    """Get a mapping of dataframe IDs to their documentation file paths.
+
+    :param base_dir: The base directory of the project.
+    :type base_dir: Path
+    :returns: A dictionary mapping pipeline:dataframe IDs to file paths.
+    :rtype: dict
+    """
     manifest = load_manifest(base_dir=base_dir)
     pipeline_ids = get_pipeline_ids(manifest)
     table_file_map = {}
@@ -715,18 +771,16 @@ def get_dataframes_and_dataframe_docs(base_dir=BASE_DIR):
 
 
 def copy_docs_src_to_build(docs_src_dir, docs_build_dir, exclude_list=None):
-    """
-    Copies files from docs_src to _docs directory while excluding specified paths.
+    """Copy files from docs_src to _docs directory while excluding specified paths.
+
     Similar to: rsync -lr --exclude=... ./docs_src/ ./_docs/
 
-    Parameters
-    ----------
-    docs_src_dir : Union[str, Path]
-        Source directory (docs_src)
-    docs_build_dir : Union[str, Path]
-        Destination directory (_docs)
-    exclude_list : list, optional
-        List of files and directories to exclude. Defaults to common exclusions.
+    :param docs_src_dir: Source directory (docs_src).
+    :type docs_src_dir: str or Path
+    :param docs_build_dir: Destination directory (_docs).
+    :type docs_build_dir: str or Path
+    :param exclude_list: List of files and directories to exclude. Defaults to common exclusions.
+    :type exclude_list: list, optional
     """
     if exclude_list is None:
         exclude_list = [
@@ -784,21 +838,20 @@ def build_all(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
 ):
-    """
-    Params
-    ------
-    docs_build_dir: Path
-        This is the output directory, where all generated docs will be placed. This is
-        usually the _docs directory
-    base_dir: Path
-        This is used to identify the inputs. It's the base directory of the current project.
-    pipeline_theme: str
-        This is the theme of the pipeline. It can be "pipeline" or "catalog".
-    docs_src_dir: Path
-        This is the directory containing the documentation source files. This will
-        usually be the _docs_src directory.
-    size_threshold: float
-        File size threshold in MB above which to use memory-efficient loading.
+    """Build all documentation.
+
+    :param docs_build_dir: The output directory, where all generated docs will be placed.
+        This is usually the _docs directory.
+    :type docs_build_dir: Path
+    :param base_dir: The base directory of the current project.
+    :type base_dir: Path
+    :param pipeline_theme: The theme of the pipeline ("pipeline" or "catalog").
+    :type pipeline_theme: str
+    :param docs_src_dir: The directory containing the documentation source files.
+        This will usually be the _docs_src directory.
+    :type docs_src_dir: Path
+    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold: float
     """
     docs_build_dir.mkdir(parents=True, exist_ok=True)
 

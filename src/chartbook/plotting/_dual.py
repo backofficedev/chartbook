@@ -19,7 +19,13 @@ if TYPE_CHECKING:
 
 
 def _normalize_y(y: str | Sequence[str]) -> list[str]:
-    """Normalize y parameter to a list."""
+    """Normalize y parameter to a list.
+
+    :param y: Y column name(s).
+    :type y: str or Sequence[str]
+    :returns: List of y column names.
+    :rtype: list[str]
+    """
     if isinstance(y, str):
         return [y]
     return list(y)
@@ -66,93 +72,91 @@ def dual(
     Combines two different chart types on left and right y-axes sharing
     a common x-axis.
 
-    Parameters
-    ----------
-    df : DataFrame
-        Data to plot.
-    x : str
-        Column name for shared x-axis.
-    left_y : str | Sequence[str]
-        Column name(s) for left y-axis.
-    right_y : str | Sequence[str]
-        Column name(s) for right y-axis.
-    left_type : str
-        Chart type for left axis: "line", "bar", "scatter", "area". Default: "line"
-    right_type : str
-        Chart type for right axis: "line", "bar", "scatter", "area". Default: "line"
-    title : str, optional
-        Chart title.
-    caption : str, optional
-        Caption text displayed above the chart.
-    note : str, optional
-        Note text displayed below the chart.
-    source : str, optional
-        Source attribution text.
-    x_title : str, optional
-        X-axis title.
-    left_y_title : str, optional
-        Left y-axis title.
-    right_y_title : str, optional
-        Right y-axis title.
-    left_y_range : tuple, optional
-        Left y-axis range as (min, max).
-    right_y_range : tuple, optional
-        Right y-axis range as (min, max).
-    left_y_tickformat : str, optional
-        Left y-axis tick format string.
-    right_y_tickformat : str, optional
-        Right y-axis tick format string.
-    left_colors : Sequence[str], optional
-        Colors for left axis series.
-    right_colors : Sequence[str], optional
-        Colors for right axis series.
-    nber_recessions : bool, optional
-        Show NBER recession shading. None uses global config.
-    hlines : Sequence[dict], optional
-        Horizontal reference lines (applied to left axis).
-    shaded_regions : Sequence[dict], optional
-        Shaded vertical regions.
-
-    Returns
-    -------
-    ChartResult
-        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :param df: Data to plot.
+    :type df: DataFrame
+    :param x: Column name for shared x-axis.
+    :type x: str
+    :param left_y: Column name(s) for left y-axis.
+    :type left_y: str or Sequence[str]
+    :param right_y: Column name(s) for right y-axis.
+    :type right_y: str or Sequence[str]
+    :param left_type: Chart type for left axis: "line", "bar", "scatter", "area". Default: "line"
+    :type left_type: str
+    :param right_type: Chart type for right axis: "line", "bar", "scatter", "area". Default: "line"
+    :type right_type: str
+    :param title: Chart title.
+    :type title: str, optional
+    :param caption: Caption text displayed above the chart.
+    :type caption: str, optional
+    :param note: Note text displayed below the chart.
+    :type note: str, optional
+    :param source: Source attribution text.
+    :type source: str, optional
+    :param x_title: X-axis title.
+    :type x_title: str, optional
+    :param left_y_title: Left y-axis title.
+    :type left_y_title: str, optional
+    :param right_y_title: Right y-axis title.
+    :type right_y_title: str, optional
+    :param left_y_range: Left y-axis range as (min, max).
+    :type left_y_range: tuple, optional
+    :param right_y_range: Right y-axis range as (min, max).
+    :type right_y_range: tuple, optional
+    :param left_y_tickformat: Left y-axis tick format string.
+    :type left_y_tickformat: str, optional
+    :param right_y_tickformat: Right y-axis tick format string.
+    :type right_y_tickformat: str, optional
+    :param left_colors: Colors for left axis series.
+    :type left_colors: Sequence[str], optional
+    :param right_colors: Colors for right axis series.
+    :type right_colors: Sequence[str], optional
+    :param nber_recessions: Show NBER recession shading. None uses global config.
+    :type nber_recessions: bool, optional
+    :param hlines: Horizontal reference lines (applied to left axis).
+    :type hlines: Sequence[dict], optional
+    :param shaded_regions: Shaded vertical regions.
+    :type shaded_regions: Sequence[dict], optional
+    :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :rtype: ChartResult
 
     Examples
     --------
-    >>> import chartbook
-    >>> import pandas as pd
 
-    >>> df = pd.DataFrame({
-    ...     "date": pd.date_range("2020", periods=12, freq="M"),
-    ...     "gdp": range(100, 112),
-    ...     "growth_rate": [0.01, 0.02, 0.015, 0.025, 0.03, 0.02, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035]
-    ... })
+    ```python
+    import chartbook
+    import pandas as pd
 
-    >>> # Display inline
-    >>> chartbook.plotting.dual(
-    ...     df, x="date", left_y="gdp", right_y="growth_rate",
-    ...     left_type="bar", right_type="line"
-    ... ).show()
+    df = pd.DataFrame({
+        "date": pd.date_range("2020", periods=12, freq="M"),
+        "gdp": range(100, 112),
+        "growth_rate": [0.01, 0.02, 0.015, 0.025, 0.03, 0.02, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035]
+    })
 
-    >>> # Save to files
-    >>> result = chartbook.plotting.dual(
-    ...     df, x="date", left_y="gdp", right_y="growth_rate",
-    ...     left_type="bar", right_type="line",
-    ...     left_y_title="GDP (Billions)",
-    ...     right_y_title="Growth Rate (%)",
-    ...     right_y_tickformat=".1%",
-    ... )
-    >>> result.save(chart_id="gdp_growth")
-    >>> print(result.html_path)
-    ./_output/gdp_growth.html
+    # Display inline
+    chartbook.plotting.dual(
+        df, x="date", left_y="gdp", right_y="growth_rate",
+        left_type="bar", right_type="line"
+    ).show()
 
-    >>> # With NBER recessions
-    >>> chartbook.plotting.dual(
-    ...     df, x="date", left_y="price", right_y="volume",
-    ...     left_type="line", right_type="area",
-    ...     nber_recessions=True
-    ... ).save("price_volume")
+    # Save to files
+    result = chartbook.plotting.dual(
+        df, x="date", left_y="gdp", right_y="growth_rate",
+        left_type="bar", right_type="line",
+        left_y_title="GDP (Billions)",
+        right_y_title="Growth Rate (%)",
+        right_y_tickformat=".1%",
+    )
+    result.save(chart_id="gdp_growth")
+    print(result.html_path)
+    # Output: ./_output/gdp_growth.html
+
+    # With NBER recessions
+    chartbook.plotting.dual(
+        df, x="date", left_y="price", right_y="volume",
+        left_type="line", right_type="area",
+        nber_recessions=True
+    ).save("price_volume")
+    ```
     """
     # Validation
     validate_dataframe(df)

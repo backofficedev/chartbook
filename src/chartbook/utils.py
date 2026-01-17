@@ -17,22 +17,28 @@ def fix_glimpse_row_count(glimpse_text: str, actual_row_count: int) -> str:
     Polars glimpse output starts with "Rows: X" where X is the number of rows in the
     sampled DataFrame. This function replaces that with the actual total row count.
 
-    Args:
-        glimpse_text: The glimpse output text from Polars.
-        actual_row_count: The actual total number of rows in the dataset.
-
-    Returns:
-        The glimpse text with the corrected row count.
+    :param glimpse_text: The glimpse output text from Polars.
+    :type glimpse_text: str
+    :param actual_row_count: The actual total number of rows in the dataset.
+    :type actual_row_count: int
+    :returns: The glimpse text with the corrected row count.
+    :rtype: str
     """
     return re.sub(r"^Rows: \d+", f"Rows: {actual_row_count}", glimpse_text)
 
 
 # --------------------------------------------------------------------
-#  SAFER FILE-COPY PATCHES  – drop these near the top of generator.py
+#  SAFER FILE-COPY PATCHES  - drop these near the top of generator.py
 # --------------------------------------------------------------------
 # This patch allows for safer copying on shared directories.
 def _noop(*_a, **_k):
-    """Do nothing – used to replace chmod/chown/timestamp operations."""
+    """Do nothing - used to replace chmod/chown/timestamp operations.
+
+    :param _a: Positional arguments (ignored).
+    :type _a: Any
+    :param _k: Keyword arguments (ignored).
+    :type _k: Any
+    """
 
 
 # 1. Disable metadata copying that needs chmod/chown
@@ -54,32 +60,35 @@ def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
     :param verbose: If True, prints each copy operation to standard output. Defaults to False.
     :type verbose: bool
 
-    **Examples**
+    Examples
+    --------
 
     ```python
-    >>> from pathlib import Path
-    >>> # Create dummy source files and directories
-    >>> Path("./source").mkdir(exist_ok=True)
-    >>> Path("./source/subdir").mkdir(exist_ok=True)
-    >>> Path("./source/data.csv").touch()
-    >>> Path("./source/subdir/image.png").touch()
-    >>>
-    >>> plan = {
-    ...     Path("./source/data.csv"): Path("./destination/data_files/data.csv"),
-    ...     Path("./source/subdir/image.png"): Path("./destination/images/image.png"),
-    ... }
-    >>>
-    >>> # Copy silently (default)
-    >>> copy_according_to_plan(plan, mkdir=True)
-    >>>
-    >>> # Copy verbosely
-    >>> copy_according_to_plan(plan, mkdir=True, verbose=True)
-    Copied source/data.csv to destination/data_files/data.csv
-    Copied source/subdir/image.png to destination/images/image.png
-    >>>
-    >>> # Clean up dummy files/dirs
-    >>> shutil.rmtree("./source")
-    >>> shutil.rmtree("./destination")
+    from pathlib import Path
+
+    # Create dummy source files and directories
+    Path("./source").mkdir(exist_ok=True)
+    Path("./source/subdir").mkdir(exist_ok=True)
+    Path("./source/data.csv").touch()
+    Path("./source/subdir/image.png").touch()
+
+    plan = {
+        Path("./source/data.csv"): Path("./destination/data_files/data.csv"),
+        Path("./source/subdir/image.png"): Path("./destination/images/image.png"),
+    }
+
+    # Copy silently (default)
+    copy_according_to_plan(plan, mkdir=True)
+
+    # Copy verbosely
+    copy_according_to_plan(plan, mkdir=True, verbose=True)
+    # Output:
+    # Copied source/data.csv to destination/data_files/data.csv
+    # Copied source/subdir/image.png to destination/images/image.png
+
+    # Clean up dummy files/dirs
+    shutil.rmtree("./source")
+    shutil.rmtree("./destination")
     ```
     """
     for source, destination in publish_plan.items():

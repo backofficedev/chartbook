@@ -13,7 +13,13 @@ from chartbook.validation import validate_conf_py_values
 
 
 def get_docs_src_path(pipeline_theme: str = "pipeline"):
-    """Get the path to the docs_src directory included in the package."""
+    """Get the path to the docs_src directory included in the package.
+
+    :param pipeline_theme: Theme to use for pipeline documentation.
+    :type pipeline_theme: str
+    :returns: Path to the docs_src directory.
+    :rtype: Path
+    """
     package_path = importlib.resources.files("chartbook")
     if pipeline_theme == "pipeline":
         return Path(str(package_path)) / "docs_src_pipeline"
@@ -33,13 +39,18 @@ def run_build_markdown(
 ):
     """Run the pipeline publish script to generate markdown files.
 
-    Args:
-        docs_dir: Directory containing documentation source files
-        project_dir: Root directory of the project
-        pipeline_theme: Theme to use for pipeline documentation
-        publish_dir: Directory where files will be published
-        _docs_dir: Directory where documentation will be built
-        size_threshold: File size threshold in MB above which to use memory-efficient loading
+    :param project_dir: Root directory of the project.
+    :type project_dir: Path
+    :param pipeline_theme: Theme to use for pipeline documentation.
+    :type pipeline_theme: str
+    :param publish_dir: Directory where files will be published.
+    :type publish_dir: Path
+    :param _docs_dir: Directory where documentation will be built.
+    :type _docs_dir: Path
+    :param docs_src_dir: Directory containing documentation source files.
+    :type docs_src_dir: Path
+    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold: float
     """
     project_dir = Path(project_dir).resolve()
     publish_dir = Path(publish_dir).resolve()
@@ -56,7 +67,12 @@ def run_build_markdown(
 
 
 def run_sphinx_build(_docs_dir: Path):
-    """Run sphinx-build to generate HTML files."""
+    """Run sphinx-build to generate HTML files.
+
+    :param _docs_dir: Directory where documentation is built.
+    :type _docs_dir: Path
+    :raises RuntimeError: If the sphinx-build command fails.
+    """
     build_cmd = [
         "sphinx-build",
         "-M",
@@ -82,14 +98,22 @@ def generate_docs(
 ):
     """Generate documentation by running both pipeline publish and sphinx build.
 
-    Args:
-        output_dir: Directory where output will be generated
-        project_dir: Root directory of the project
-        publish_dir: Directory where files will be published
-        _docs_dir: Directory where documentation will be built
-        keep_build_dirs: If True, keeps temporary build directory after generation
-        should_remove_existing: If True, removes existing output directory after successful generation
-        size_threshold: File size threshold in MB above which to use memory-efficient loading
+    :param output_dir: Directory where output will be generated.
+    :type output_dir: Path
+    :param project_dir: Root directory of the project.
+    :type project_dir: Path
+    :param publish_dir: Directory where files will be published.
+    :type publish_dir: Path
+    :param _docs_dir: Directory where documentation will be built.
+    :type _docs_dir: Path
+    :param keep_build_dirs: If True, keeps temporary build directory after generation.
+    :type keep_build_dirs: bool
+    :param temp_docs_src_dir: Temporary directory for documentation source files.
+    :type temp_docs_src_dir: Path
+    :param should_remove_existing: If True, removes existing output directory after successful generation.
+    :type should_remove_existing: bool
+    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold: float
     """
 
     output_dir = Path(output_dir).resolve()
@@ -196,7 +220,17 @@ def _retrieve_correct_docs_src_dir(
     project_dir: Path,
     pipeline_theme: str = "pipeline",
 ):
-    """Copy documentation source files and setup directory structure."""
+    """Copy documentation source files and setup directory structure.
+
+    :param temp_docs_src_dir: Temporary directory for documentation source files.
+    :type temp_docs_src_dir: Path
+    :param manifest: The loaded manifest dictionary.
+    :type manifest: dict
+    :param project_dir: Root directory of the project.
+    :type project_dir: Path
+    :param pipeline_theme: Theme to use for pipeline documentation.
+    :type pipeline_theme: str
+    """
     docs_src_path = get_docs_src_path(pipeline_theme)
     for item in docs_src_path.glob("*"):
         dest = temp_docs_src_dir / item.name

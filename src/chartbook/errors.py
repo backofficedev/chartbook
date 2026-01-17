@@ -32,8 +32,8 @@ class ChartBookError:
     def format_message(self) -> str:
         """Format error for CLI display with colors and structure.
 
-        Returns:
-            A formatted string ready for CLI output.
+        :returns: A formatted string ready for CLI output.
+        :rtype: str
         """
         lines = [click.style("Error: ", fg="red", bold=True) + self.message]
 
@@ -58,7 +58,10 @@ class ChartBookError:
         return "\n".join(lines)
 
     def exit_with_message(self) -> None:
-        """Print formatted message to stderr and exit with code 1."""
+        """Print formatted message to stderr and exit with code 1.
+
+        :raises SystemExit: Always exits with code 1.
+        """
         click.echo(self.format_message(), err=True)
         raise SystemExit(1)
 
@@ -82,6 +85,17 @@ class ValidationError(Exception):
         invalid_value: Optional[str] = None,
         hint: Optional[str] = None,
     ):
+        """Initialize a ValidationError.
+
+        :param message: The error message.
+        :type message: str
+        :param field_name: Name of the field that failed validation.
+        :type field_name: str, optional
+        :param invalid_value: The value that failed validation.
+        :type invalid_value: str, optional
+        :param hint: A helpful hint about how to fix the error.
+        :type hint: str, optional
+        """
         super().__init__(message)
         self.field_name = field_name
         self.invalid_value = invalid_value
@@ -90,11 +104,10 @@ class ValidationError(Exception):
     def to_chartbook_error(self, file_path: Optional[Path] = None) -> ChartBookError:
         """Convert to ChartBookError for CLI display.
 
-        Args:
-            file_path: Path to the file where the error occurred.
-
-        Returns:
-            A ChartBookError instance ready for CLI display.
+        :param file_path: Path to the file where the error occurred.
+        :type file_path: Path, optional
+        :returns: A ChartBookError instance ready for CLI display.
+        :rtype: ChartBookError
         """
         return ChartBookError(
             message=str(self),
@@ -139,9 +152,10 @@ def handle_validation_error(error: ValidationError, config_path: Path) -> None:
     This function converts a ValidationError to a ChartBookError and
     displays it to the user before exiting.
 
-    Args:
-        error: The validation error to handle.
-        config_path: Path to the configuration file that caused the error.
+    :param error: The validation error to handle.
+    :type error: ValidationError
+    :param config_path: Path to the configuration file that caused the error.
+    :type config_path: Path
     """
     chartbook_error = error.to_chartbook_error(file_path=config_path)
     chartbook_error.exit_with_message()

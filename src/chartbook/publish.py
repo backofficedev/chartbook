@@ -53,11 +53,12 @@ def create_dodo_file_with_mod_date(date, dodo_path, publish_dir=PUBLISH_DIR):
     .. note::
        The function creates the specified directory if it does not exist. The content of the file will include a reference to the original file at `dodo_path`.
 
-    **Examples**
+    Examples
+    --------
 
     ```python
-    >>> mod_date = datetime.datetime(2023, 11, 20, 14, 0)  # Example date
-    >>> create_dodo_file_with_mod_date(mod_date, "path/to/original/dodo.py")
+    mod_date = datetime.datetime(2023, 11, 20, 14, 0)  # Example date
+    create_dodo_file_with_mod_date(mod_date, "path/to/original/dodo.py")
     ```
     """
 
@@ -83,6 +84,15 @@ def create_dodo_file_with_mod_date(date, dodo_path, publish_dir=PUBLISH_DIR):
 
 
 def get_pipeline_publishing_plan(manifest, publish_dir=PUBLISH_DIR):
+    """Generate a publishing plan mapping source files to destination paths.
+
+    :param manifest: The manifest dictionary containing pipeline configuration.
+    :type manifest: dict
+    :param publish_dir: The directory where files will be published.
+    :type publish_dir: Path
+    :returns: A dictionary mapping source paths to destination paths.
+    :rtype: dict
+    """
     pipeline_ids = get_pipeline_ids(manifest)
     publishing_plan = {}
 

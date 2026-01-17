@@ -84,8 +84,13 @@ def resolve_platform_path(path_input: Union[str, dict]) -> Path:
 
 
 def validate_config_file(path: Path = BASE_DIR) -> bool:
-    """
-    Validates that a chartbook.toml file exists in the specified directory.
+    """Validates that a chartbook.toml file exists in the specified directory.
+
+    :param path: The directory path to check for chartbook.toml.
+    :type path: Path
+    :returns: True if validation succeeds.
+    :rtype: bool
+    :raises ValueError: If the chartbook.toml file is missing or invalid.
     """
     chartbook_toml = path / "chartbook.toml"
     if not chartbook_toml.is_file():
@@ -162,8 +167,13 @@ def normalize_tags(tags: list) -> list:
     :returns: List of tags in Title Case
     :rtype: list
 
-    >>> normalize_tags(['short term funding', 'REPO', 'Monetary Policy'])
-    ['Short Term Funding', 'Repo', 'Monetary Policy']
+    Examples
+    --------
+
+    ```python
+    normalize_tags(['short term funding', 'REPO', 'Monetary Policy'])
+    # Output: ['Short Term Funding', 'Repo', 'Monetary Policy']
+    ```
     """
     if not tags:
         return tags
@@ -222,8 +232,12 @@ def validate_doc_fields(
 
 
 def _load_pipeline_manifest(raw_manifest):
-    """
-    Load the pipeline manifest from a TOML file and process it.
+    """Load the pipeline manifest from a TOML file and process it.
+
+    :param raw_manifest: The raw manifest dictionary loaded from chartbook.toml.
+    :type raw_manifest: dict
+    :returns: The processed manifest dictionary with additional metadata.
+    :rtype: dict
     """
     assert raw_manifest["config"]["type"] == "pipeline"
     base_dir = raw_manifest["base_dir"]
@@ -328,8 +342,12 @@ def _load_pipeline_manifest(raw_manifest):
 
 
 def _load_catalog_manifest(raw_manifest):
-    """
-    Load the catalog manifest from a TOML file and process it.
+    """Load the catalog manifest from a TOML file and process it.
+
+    :param raw_manifest: The raw manifest dictionary loaded from chartbook.toml.
+    :type raw_manifest: dict
+    :returns: The processed catalog manifest dictionary.
+    :rtype: dict
     """
     manifest = raw_manifest.copy()
     base_dir = manifest["base_dir"]
@@ -432,7 +450,13 @@ def get_file_modified_datetime(file_path: Union[Path, str]) -> datetime:
 
 
 def get_default_asset_path(filename: str) -> Path:
-    """Get path to default asset from package resources"""
+    """Get path to default asset from package resources.
+
+    :param filename: The name of the asset file.
+    :type filename: str
+    :returns: The path to the asset file.
+    :rtype: Path
+    """
     package_path = importlib.resources.files("chartbook")
     try:
         # First try to get the asset directly using importlib.resources
@@ -465,14 +489,30 @@ def get_pipeline_ids(manifest):
 
 
 def get_logo_path(config: dict, project_dir: Path) -> Path:
-    """Get logo path from config or return default"""
+    """Get logo path from config or return default.
+
+    :param config: The configuration dictionary.
+    :type config: dict
+    :param project_dir: The project directory path.
+    :type project_dir: Path
+    :returns: The path to the logo file.
+    :rtype: Path
+    """
     if config["site"]["logo_path"]:
         return project_dir / config["site"]["logo_path"]
     return get_default_asset_path("logo.png")
 
 
 def get_favicon_path(config: dict, project_dir: Path) -> Path:
-    """Get favicon path from config or return default"""
+    """Get favicon path from config or return default.
+
+    :param config: The configuration dictionary.
+    :type config: dict
+    :param project_dir: The project directory path.
+    :type project_dir: Path
+    :returns: The path to the favicon file.
+    :rtype: Path
+    """
     if config["site"]["favicon_path"]:
         return project_dir / config["site"]["favicon_path"]
     return get_default_asset_path("favicon.ico")

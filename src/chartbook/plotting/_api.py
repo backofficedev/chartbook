@@ -21,7 +21,13 @@ if TYPE_CHECKING:
 
 
 def _normalize_y(y: str | Sequence[str]) -> list[str]:
-    """Normalize y parameter to a list."""
+    """Normalize y parameter to a list.
+
+    :param y: Y column name(s).
+    :type y: str or Sequence[str]
+    :returns: List of y column names.
+    :rtype: list[str]
+    """
     if isinstance(y, str):
         return [y]
     return list(y)
@@ -35,7 +41,23 @@ def _build_overlay_config(
     bands: Sequence[dict[str, Any]] | None,
     regression_line: bool,
 ) -> OverlayConfig:
-    """Build OverlayConfig from parameters."""
+    """Build OverlayConfig from parameters.
+
+    :param nber_recessions: Whether to show NBER recession shading.
+    :type nber_recessions: bool, optional
+    :param hlines: Horizontal reference lines.
+    :type hlines: Sequence[dict[str, Any]], optional
+    :param vlines: Vertical reference lines.
+    :type vlines: Sequence[dict[str, Any]], optional
+    :param shaded_regions: Shaded vertical regions.
+    :type shaded_regions: Sequence[dict[str, Any]], optional
+    :param bands: Fill between y-columns.
+    :type bands: Sequence[dict[str, Any]], optional
+    :param regression_line: Whether to add a regression line.
+    :type regression_line: bool
+    :returns: The overlay configuration.
+    :rtype: OverlayConfig
+    """
     config = get_config()
 
     return OverlayConfig(
@@ -85,70 +107,74 @@ def line(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    Parameters
-    ----------
-    df : DataFrame
-        Data to plot.
-    x : str
-        Column name for x-axis.
-    y : str | Sequence[str]
-        Column name(s) for y-axis. Multiple columns create multiple series.
-    title : str, optional
-        Chart title.
-    caption : str, optional
-        Caption text displayed above the chart.
-    note : str, optional
-        Note text displayed below the chart.
-    source : str, optional
-        Source attribution text.
-    color : str | Sequence[str], optional
-        Color(s) for the series.
-    labels : dict, optional
-        Mapping of column names to display labels.
-    x_title, y_title : str, optional
-        Axis titles.
-    x_range, y_range : tuple, optional
-        Axis ranges as (min, max).
-    x_tickformat, y_tickformat : str, optional
-        Tick format strings.
-    nber_recessions : bool, optional
-        Show NBER recession shading. None uses global config.
-    hlines : Sequence[dict], optional
-        Horizontal reference lines. Each dict: {"y": value, "color": "gray", "dash": "solid", "label": "..."}.
-    vlines : Sequence[dict], optional
-        Vertical reference lines. Each dict: {"x": value, "color": "gray", "dash": "solid", "label": "..."}.
-    shaded_regions : Sequence[dict], optional
-        Shaded vertical regions. Each dict: {"x0": start, "x1": end, "color": "gray", "alpha": 0.3, "label": "..."}.
-    bands : Sequence[dict], optional
-        Fill between y-columns. Each dict: {"y_upper": col, "y_lower": col, "color": "blue", "alpha": 0.3}.
-    regression_line : bool
-        If True, add a linear regression trend line. Default: False
-
-    Returns
-    -------
-    ChartResult
-        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :param df: Data to plot.
+    :type df: DataFrame
+    :param x: Column name for x-axis.
+    :type x: str
+    :param y: Column name(s) for y-axis. Multiple columns create multiple series.
+    :type y: str or Sequence[str]
+    :param title: Chart title.
+    :type title: str, optional
+    :param caption: Caption text displayed above the chart.
+    :type caption: str, optional
+    :param note: Note text displayed below the chart.
+    :type note: str, optional
+    :param source: Source attribution text.
+    :type source: str, optional
+    :param color: Color(s) for the series.
+    :type color: str or Sequence[str], optional
+    :param labels: Mapping of column names to display labels.
+    :type labels: dict, optional
+    :param x_title: X-axis title.
+    :type x_title: str, optional
+    :param y_title: Y-axis title.
+    :type y_title: str, optional
+    :param x_range: X-axis range as (min, max).
+    :type x_range: tuple, optional
+    :param y_range: Y-axis range as (min, max).
+    :type y_range: tuple, optional
+    :param x_tickformat: X-axis tick format string.
+    :type x_tickformat: str, optional
+    :param y_tickformat: Y-axis tick format string.
+    :type y_tickformat: str, optional
+    :param nber_recessions: Show NBER recession shading. None uses global config.
+    :type nber_recessions: bool, optional
+    :param hlines: Horizontal reference lines. Each dict: {"y": value, "color": "gray", "dash": "solid", "label": "..."}.
+    :type hlines: Sequence[dict], optional
+    :param vlines: Vertical reference lines. Each dict: {"x": value, "color": "gray", "dash": "solid", "label": "..."}.
+    :type vlines: Sequence[dict], optional
+    :param shaded_regions: Shaded vertical regions. Each dict: {"x0": start, "x1": end, "color": "gray", "alpha": 0.3, "label": "..."}.
+    :type shaded_regions: Sequence[dict], optional
+    :param bands: Fill between y-columns. Each dict: {"y_upper": col, "y_lower": col, "color": "blue", "alpha": 0.3}.
+    :type bands: Sequence[dict], optional
+    :param regression_line: If True, add a linear regression trend line. Default: False
+    :type regression_line: bool
+    :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :rtype: ChartResult
 
     Examples
     --------
-    >>> import chartbook
-    >>> import pandas as pd
-    >>> df = pd.DataFrame({"date": pd.date_range("2020", periods=12, freq="M"), "gdp": range(12)})
 
-    >>> # Display inline
-    >>> chartbook.plotting.line(df, x="date", y="gdp").show()
+    ```python
+    import chartbook
+    import pandas as pd
+    df = pd.DataFrame({"date": pd.date_range("2020", periods=12, freq="M"), "gdp": range(12)})
 
-    >>> # Save to files
-    >>> result = chartbook.plotting.line(df, x="date", y="gdp", title="GDP Growth")
-    >>> result.save(chart_id="gdp")
-    >>> print(result.html_path)
-    ./_output/gdp.html
+    # Display inline
+    chartbook.plotting.line(df, x="date", y="gdp").show()
 
-    >>> # Multiple series with NBER recessions
-    >>> chartbook.plotting.line(
-    ...     df, x="date", y=["gdp", "cpi"],
-    ...     title="Economic Indicators", nber_recessions=True
-    ... ).save("indicators")
+    # Save to files
+    result = chartbook.plotting.line(df, x="date", y="gdp", title="GDP Growth")
+    result.save(chart_id="gdp")
+    print(result.html_path)
+    # Output: ./_output/gdp.html
+
+    # Multiple series with NBER recessions
+    chartbook.plotting.line(
+        df, x="date", y=["gdp", "cpi"],
+        title="Economic Indicators", nber_recessions=True
+    ).save("indicators")
+    ```
     """
     # Validation
     validate_dataframe(df)
@@ -223,22 +249,44 @@ def bar(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    Parameters
-    ----------
-    df : DataFrame
-        Data to plot.
-    x : str
-        Column name for x-axis (categories).
-    y : str | Sequence[str]
-        Column name(s) for y-axis values.
-    stacked : bool
-        If True, stack bars instead of grouping. Default: False
-    (other parameters same as line())
-
-    Returns
-    -------
-    ChartResult
-        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :param df: Data to plot.
+    :type df: DataFrame
+    :param x: Column name for x-axis (categories).
+    :type x: str
+    :param y: Column name(s) for y-axis values.
+    :type y: str or Sequence[str]
+    :param stacked: If True, stack bars instead of grouping. Default: False
+    :type stacked: bool
+    :param title: Chart title.
+    :type title: str, optional
+    :param caption: Caption text displayed above the chart.
+    :type caption: str, optional
+    :param note: Note text displayed below the chart.
+    :type note: str, optional
+    :param source: Source attribution text.
+    :type source: str, optional
+    :param color: Color(s) for the series.
+    :type color: str or Sequence[str], optional
+    :param labels: Mapping of column names to display labels.
+    :type labels: dict, optional
+    :param x_title: X-axis title.
+    :type x_title: str, optional
+    :param y_title: Y-axis title.
+    :type y_title: str, optional
+    :param x_range: X-axis range as (min, max).
+    :type x_range: tuple, optional
+    :param y_range: Y-axis range as (min, max).
+    :type y_range: tuple, optional
+    :param y_tickformat: Y-axis tick format string.
+    :type y_tickformat: str, optional
+    :param nber_recessions: Show NBER recession shading. None uses global config.
+    :type nber_recessions: bool, optional
+    :param hlines: Horizontal reference lines.
+    :type hlines: Sequence[dict], optional
+    :param shaded_regions: Shaded vertical regions.
+    :type shaded_regions: Sequence[dict], optional
+    :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :rtype: ChartResult
     """
     validate_dataframe(df)
     y_cols = _normalize_y(y)
@@ -309,26 +357,46 @@ def scatter(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    Parameters
-    ----------
-    df : DataFrame
-        Data to plot.
-    x : str
-        Column name for x-axis.
-    y : str
-        Column name for y-axis.
-    size : str, optional
-        Column name for marker size.
-    color_by : str, optional
-        Column name for categorical coloring.
-    regression_line : bool
-        If True, add a linear regression trend line. Default: False
-    (other parameters same as line())
-
-    Returns
-    -------
-    ChartResult
-        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :param df: Data to plot.
+    :type df: DataFrame
+    :param x: Column name for x-axis.
+    :type x: str
+    :param y: Column name for y-axis.
+    :type y: str
+    :param size: Column name for marker size.
+    :type size: str, optional
+    :param color_by: Column name for categorical coloring.
+    :type color_by: str, optional
+    :param title: Chart title.
+    :type title: str, optional
+    :param caption: Caption text displayed above the chart.
+    :type caption: str, optional
+    :param note: Note text displayed below the chart.
+    :type note: str, optional
+    :param source: Source attribution text.
+    :type source: str, optional
+    :param color: Color for the markers.
+    :type color: str, optional
+    :param x_title: X-axis title.
+    :type x_title: str, optional
+    :param y_title: Y-axis title.
+    :type y_title: str, optional
+    :param x_range: X-axis range as (min, max).
+    :type x_range: tuple, optional
+    :param y_range: Y-axis range as (min, max).
+    :type y_range: tuple, optional
+    :param x_tickformat: X-axis tick format string.
+    :type x_tickformat: str, optional
+    :param y_tickformat: Y-axis tick format string.
+    :type y_tickformat: str, optional
+    :param hlines: Horizontal reference lines.
+    :type hlines: Sequence[dict], optional
+    :param vlines: Vertical reference lines.
+    :type vlines: Sequence[dict], optional
+    :param regression_line: If True, add a linear regression trend line. Default: False
+    :type regression_line: bool
+    :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :rtype: ChartResult
     """
     validate_dataframe(df)
     cols_to_check = [x, y]
@@ -388,20 +456,22 @@ def pie(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    Parameters
-    ----------
-    df : DataFrame
-        Data to plot.
-    names : str
-        Column name for category labels.
-    values : str
-        Column name for slice values.
-    (other parameters same as line())
-
-    Returns
-    -------
-    ChartResult
-        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :param df: Data to plot.
+    :type df: DataFrame
+    :param names: Column name for category labels.
+    :type names: str
+    :param values: Column name for slice values.
+    :type values: str
+    :param title: Chart title.
+    :type title: str, optional
+    :param caption: Caption text displayed above the chart.
+    :type caption: str, optional
+    :param note: Note text displayed below the chart.
+    :type note: str, optional
+    :param source: Source attribution text.
+    :type source: str, optional
+    :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :rtype: ChartResult
     """
     validate_dataframe(df)
     validate_columns_exist(df, [names, values])
@@ -458,22 +528,46 @@ def area(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    Parameters
-    ----------
-    df : DataFrame
-        Data to plot.
-    x : str
-        Column name for x-axis.
-    y : str | Sequence[str]
-        Column name(s) for y-axis values.
-    stacked : bool
-        If True, stack areas. Default: True
-    (other parameters same as line())
-
-    Returns
-    -------
-    ChartResult
-        Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :param df: Data to plot.
+    :type df: DataFrame
+    :param x: Column name for x-axis.
+    :type x: str
+    :param y: Column name(s) for y-axis values.
+    :type y: str or Sequence[str]
+    :param stacked: If True, stack areas. Default: True
+    :type stacked: bool
+    :param title: Chart title.
+    :type title: str, optional
+    :param caption: Caption text displayed above the chart.
+    :type caption: str, optional
+    :param note: Note text displayed below the chart.
+    :type note: str, optional
+    :param source: Source attribution text.
+    :type source: str, optional
+    :param color: Color(s) for the series.
+    :type color: str or Sequence[str], optional
+    :param labels: Mapping of column names to display labels.
+    :type labels: dict, optional
+    :param x_title: X-axis title.
+    :type x_title: str, optional
+    :param y_title: Y-axis title.
+    :type y_title: str, optional
+    :param x_range: X-axis range as (min, max).
+    :type x_range: tuple, optional
+    :param y_range: Y-axis range as (min, max).
+    :type y_range: tuple, optional
+    :param x_tickformat: X-axis tick format string.
+    :type x_tickformat: str, optional
+    :param y_tickformat: Y-axis tick format string.
+    :type y_tickformat: str, optional
+    :param nber_recessions: Show NBER recession shading. None uses global config.
+    :type nber_recessions: bool, optional
+    :param hlines: Horizontal reference lines.
+    :type hlines: Sequence[dict], optional
+    :param shaded_regions: Shaded vertical regions.
+    :type shaded_regions: Sequence[dict], optional
+    :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
+    :rtype: ChartResult
     """
     validate_dataframe(df)
     y_cols = _normalize_y(y)

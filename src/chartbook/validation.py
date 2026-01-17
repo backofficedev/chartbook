@@ -67,13 +67,13 @@ class SiteConfig:
     ) -> None:
         """Validate a text field for security.
 
-        Args:
-            field_name: Name of the field (for error messages).
-            value: The value to validate.
-            allow_empty: Whether empty strings are allowed.
-
-        Raises:
-            ValidationError: If validation fails.
+        :param field_name: Name of the field (for error messages).
+        :type field_name: str
+        :param value: The value to validate.
+        :type value: str
+        :param allow_empty: Whether empty strings are allowed.
+        :type allow_empty: bool
+        :raises ValidationError: If validation fails.
         """
         if not isinstance(value, str):
             raise ValidationError(
@@ -118,11 +118,9 @@ class SiteConfig:
     def _validate_theme(self, theme: str) -> None:
         """Validate the sphinx theme is from allowed list.
 
-        Args:
-            theme: Theme name to validate.
-
-        Raises:
-            ValidationError: If theme is not in allowed list.
+        :param theme: Theme name to validate.
+        :type theme: str
+        :raises ValidationError: If theme is not in allowed list.
         """
         if theme not in self.ALLOWED_THEMES:
             raise ValidationError(
@@ -136,15 +134,13 @@ class SiteConfig:
     def from_manifest(cls, manifest: dict, pipeline_theme: str) -> SiteConfig:
         """Create a validated SiteConfig from manifest dictionary.
 
-        Args:
-            manifest: The manifest dictionary from chartbook.toml.
-            pipeline_theme: Either "catalog" or "pipeline".
-
-        Returns:
-            Validated SiteConfig instance.
-
-        Raises:
-            ValidationError: If any value fails validation.
+        :param manifest: The manifest dictionary from chartbook.toml.
+        :type manifest: dict
+        :param pipeline_theme: Either "catalog" or "pipeline".
+        :type pipeline_theme: str
+        :returns: Validated SiteConfig instance.
+        :rtype: SiteConfig
+        :raises ValidationError: If any value fails validation.
         """
         theme_mapping = {
             "catalog": "pydata_sphinx_theme",
@@ -176,14 +172,12 @@ def validate_conf_py_values(manifest: dict, pipeline_theme: str) -> SiteConfig:
     This is the main entry point for validation. It ensures all values
     that will be inserted into conf.py are safe from code injection.
 
-    Args:
-        manifest: The manifest dictionary from chartbook.toml.
-        pipeline_theme: Either "catalog" or "pipeline".
-
-    Returns:
-        Validated SiteConfig instance with all values safe for templating.
-
-    Raises:
-        ValidationError: If any value fails security validation.
+    :param manifest: The manifest dictionary from chartbook.toml.
+    :type manifest: dict
+    :param pipeline_theme: Either "catalog" or "pipeline".
+    :type pipeline_theme: str
+    :returns: Validated SiteConfig instance with all values safe for templating.
+    :rtype: SiteConfig
+    :raises ValidationError: If any value fails security validation.
     """
     return SiteConfig.from_manifest(manifest, pipeline_theme)

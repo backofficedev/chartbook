@@ -65,35 +65,36 @@ def configure(
 ) -> None:
     """Configure global plotting defaults.
 
-    Parameters
-    ----------
-    default_output_dir : str | Path, optional
-        Default directory for saving charts.
-    default_interactive : bool, optional
-        Whether to generate interactive HTML by default.
-    default_backend : str, optional
-        Default backend: "plotly" or "matplotlib".
-    nber_recessions : bool, optional
-        Whether to show NBER recession shading by default.
-    matplotlib_style : str | Path, optional
-        Matplotlib style name or path to .mplstyle file.
-    plotly_template : str, optional
-        Plotly template name (e.g., "plotly_white", "ggplot2").
-    figure_size_single : tuple, optional
-        Default figure size for single format (width, height) in inches.
-    figure_size_wide : tuple, optional
-        Default figure size for wide format (width, height) in inches.
-    color_palette : list[str], optional
-        List of hex colors for the default color cycle.
+    :param default_output_dir: Default directory for saving charts.
+    :type default_output_dir: str or Path, optional
+    :param default_interactive: Whether to generate interactive HTML by default.
+    :type default_interactive: bool, optional
+    :param default_backend: Default backend: "plotly" or "matplotlib".
+    :type default_backend: str, optional
+    :param nber_recessions: Whether to show NBER recession shading by default.
+    :type nber_recessions: bool, optional
+    :param matplotlib_style: Matplotlib style name or path to .mplstyle file.
+    :type matplotlib_style: str or Path, optional
+    :param plotly_template: Plotly template name (e.g., "plotly_white", "ggplot2").
+    :type plotly_template: str, optional
+    :param figure_size_single: Default figure size for single format (width, height) in inches.
+    :type figure_size_single: tuple, optional
+    :param figure_size_wide: Default figure size for wide format (width, height) in inches.
+    :type figure_size_wide: tuple, optional
+    :param color_palette: List of hex colors for the default color cycle.
+    :type color_palette: list[str], optional
 
     Examples
     --------
-    >>> import chartbook
-    >>> chartbook.plotting.configure(
-    ...     default_output_dir="./_charts",
-    ...     nber_recessions=True,
-    ...     matplotlib_style="seaborn-v0_8-whitegrid",
-    ... )
+
+    ```python
+    import chartbook
+    chartbook.plotting.configure(
+        default_output_dir="./_charts",
+        nber_recessions=True,
+        matplotlib_style="seaborn-v0_8-whitegrid",
+    )
+    ```
     """
     global _config
 
@@ -118,24 +119,29 @@ def configure(
 
 
 def get_config() -> PlottingConfig:
-    """Get current global plotting configuration."""
+    """Get current global plotting configuration.
+
+    :returns: The current plotting configuration.
+    :rtype: PlottingConfig
+    """
     return _config
 
 
 def set_style(style: str | Path) -> None:
     """Set the matplotlib stylesheet.
 
-    Parameters
-    ----------
-    style : str | Path
-        Either a built-in style name (e.g., "seaborn-v0_8-whitegrid"),
+    :param style: Either a built-in style name (e.g., "seaborn-v0_8-whitegrid"),
         "chartbook" for the bundled style, or path to a .mplstyle file.
+    :type style: str or Path
 
     Examples
     --------
-    >>> chartbook.plotting.set_style("chartbook")
-    >>> chartbook.plotting.set_style("seaborn-v0_8-whitegrid")
-    >>> chartbook.plotting.set_style("./my_custom_style.mplstyle")
+
+    ```python
+    chartbook.plotting.set_style("chartbook")
+    chartbook.plotting.set_style("seaborn-v0_8-whitegrid")
+    chartbook.plotting.set_style("./my_custom_style.mplstyle")
+    ```
     """
     global _config
     _config.matplotlib_style = style
@@ -158,13 +164,20 @@ def set_style(style: str | Path) -> None:
 
 
 def get_bundled_style_path() -> Path:
-    """Get path to bundled chartbook.mplstyle."""
+    """Get path to bundled chartbook.mplstyle.
+
+    :returns: Path to the bundled chartbook.mplstyle file.
+    :rtype: Path
+    """
     package_files = importlib.resources.files("chartbook")
     return Path(str(package_files)) / "plotting" / "styles" / "chartbook.mplstyle"
 
 
 def apply_matplotlib_style() -> None:
-    """Apply the configured matplotlib style."""
+    """Apply the configured matplotlib style.
+
+    This function applies the matplotlib style configured in the global config.
+    """
     import matplotlib.pyplot as plt
 
     style = _config.matplotlib_style

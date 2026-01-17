@@ -6,7 +6,10 @@ import click
 
 
 def _check_sphinx_installed():
-    """Check if Sphinx dependencies are installed."""
+    """Check if Sphinx dependencies are installed.
+
+    :raises SystemExit: If Sphinx dependencies are not installed.
+    """
     try:
         import jinja2  # noqa: F401
         import sphinx  # noqa: F401
@@ -77,7 +80,25 @@ def build(
     force_write,
     size_threshold,
 ):
-    """Generate HTML documentation in the specified output directory."""
+    """Generate HTML documentation in the specified output directory.
+
+    :param output_dir: Directory where output will be generated.
+    :type output_dir: str
+    :param project_dir: Root directory of the project.
+    :type project_dir: str
+    :param publish_dir: Directory where files will be published.
+    :type publish_dir: str
+    :param docs_build_dir: Directory where documentation will be built.
+    :type docs_build_dir: str
+    :param temp_docs_src_dir: Temporary directory for documentation source files.
+    :type temp_docs_src_dir: str
+    :param keep_build_dirs: If True, keeps temporary build directory after generation.
+    :type keep_build_dirs: bool
+    :param force_write: If True, overwrites existing output directory.
+    :type force_write: bool
+    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold: float
+    """
     # Check for Sphinx dependencies
     _check_sphinx_installed()
 
@@ -145,6 +166,13 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     """Publish the documentation to the specified output directory.
 
     If no publish directory is provided, a default local directory will be used.
+
+    :param publish_dir: Directory where files will be published.
+    :type publish_dir: Path or str, optional
+    :param project_dir: Root directory of the project.
+    :type project_dir: Path or str
+    :param verbose: If True, enables verbose output.
+    :type verbose: bool
     """
     # Check for Sphinx dependencies
     _check_sphinx_installed()
@@ -170,6 +198,13 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
 
 
 def resolve_project_dir(project_dir: Path | None):
+    """Resolve the project directory to an absolute path.
+
+    :param project_dir: The project directory path, or None to use cwd.
+    :type project_dir: Path, optional
+    :returns: The resolved absolute path to the project directory.
+    :rtype: Path
+    """
     if project_dir is None:
         project_dir = Path.cwd()
     else:
@@ -208,6 +243,15 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold):
 
     This command parses the dodo.py file in the current directory to find all
     CSV/Parquet files and creates a comprehensive data glimpse report in Markdown format.
+
+    :param no_samples: If True, exclude sample values sections from the report.
+    :type no_samples: bool
+    :param no_stats: If True, exclude numeric column statistics sections from the report.
+    :type no_stats: bool
+    :param output_dir: Directory to save the output file.
+    :type output_dir: str, optional
+    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :type size_threshold: float
 
     Example usage:
         chartbook create-data-glimpses

@@ -130,10 +130,13 @@ class ChartResult:
 
     Examples
     --------
-    >>> result = chartbook.plotting.line(df, x="date", y="gdp")
-    >>> result.show()  # Display inline
-    >>> result.save(chart_id="gdp_chart")  # Save to files
-    >>> print(result.html_path)  # Access saved file path
+
+    ```python
+    result = chartbook.plotting.line(df, x="date", y="gdp")
+    result.show()  # Display inline
+    result.save(chart_id="gdp_chart")  # Save to files
+    print(result.html_path)  # Access saved file path
+    ```
     """
 
     figure: "go.Figure"
@@ -164,17 +167,18 @@ class ChartResult:
         The matplotlib figure is lazily created on first access. You can
         customize it and then call `.save()` to export with your changes.
 
-        Returns
-        -------
-        matplotlib.figure.Figure
-            The matplotlib Figure object.
+        :returns: The matplotlib Figure object.
+        :rtype: matplotlib.figure.Figure
 
         Examples
         --------
-        >>> result = chartbook.plotting.line(df, x="date", y="gdp")
-        >>> fig = result.mpl_figure
-        >>> fig.suptitle("Custom Title", fontsize=16)
-        >>> result.save(chart_id="custom_chart")
+
+        ```python
+        result = chartbook.plotting.line(df, x="date", y="gdp")
+        fig = result.mpl_figure
+        fig.suptitle("Custom Title", fontsize=16)
+        result.save(chart_id="custom_chart")
+        ```
         """
         if self._mpl_figure is None:
             self._create_mpl_objects()
@@ -187,25 +191,30 @@ class ChartResult:
         The matplotlib axes is lazily created on first access. You can
         customize it and then call `.save()` to export with your changes.
 
-        Returns
-        -------
-        matplotlib.axes.Axes
-            The matplotlib Axes object.
+        :returns: The matplotlib Axes object.
+        :rtype: matplotlib.axes.Axes
 
         Examples
         --------
-        >>> result = chartbook.plotting.line(df, x="date", y="gdp")
-        >>> ax = result.mpl_axes
-        >>> ax.axhline(y=100, color='red', linestyle='--', label='Target')
-        >>> ax.legend()
-        >>> result.save(chart_id="annotated_chart")
+
+        ```python
+        result = chartbook.plotting.line(df, x="date", y="gdp")
+        ax = result.mpl_axes
+        ax.axhline(y=100, color='red', linestyle='--', label='Target')
+        ax.legend()
+        result.save(chart_id="annotated_chart")
+        ```
         """
         if self._mpl_axes is None:
             self._create_mpl_objects()
         return self._mpl_axes  # type: ignore[return-value]
 
     def _create_mpl_objects(self) -> None:
-        """Lazily create matplotlib figure and axes."""
+        """Lazily create matplotlib figure and axes.
+
+        This method is called internally when accessing mpl_figure or mpl_axes
+        for the first time.
+        """
         from chartbook.plotting.backends import get_backend
 
         backend = get_backend("matplotlib")
@@ -219,15 +228,16 @@ class ChartResult:
         Uses Plotly's interactive display. In Jupyter notebooks, this will
         render the chart directly in the output cell.
 
-        Returns
-        -------
-        ChartResult
-            Self, for method chaining and Jupyter display.
+        :returns: Self, for method chaining and Jupyter display.
+        :rtype: ChartResult
 
         Examples
         --------
-        >>> result = chartbook.plotting.line(df, x="date", y="gdp")
-        >>> result.show()
+
+        ```python
+        result = chartbook.plotting.line(df, x="date", y="gdp")
+        result.show()
+        ```
         """
         self.figure.show()
         return self
@@ -237,6 +247,9 @@ class ChartResult:
 
         This method is called automatically by Jupyter when displaying
         the object, enabling inline rendering of the Plotly figure.
+
+        :returns: HTML representation of the Plotly figure.
+        :rtype: str
         """
         return self.figure.to_html(include_plotlyjs="cdn", full_html=False)
 
@@ -255,30 +268,28 @@ class ChartResult:
         - `{chart_id}.pdf` - Static PDF (8×6")
         - `{chart_id}_wide.pdf` - Static PDF wide format (12×6")
 
-        Parameters
-        ----------
-        chart_id : str
-            Unique identifier for the chart. Used in filenames and for
+        :param chart_id: Unique identifier for the chart. Used in filenames and for
             linking to chartbook.toml.
-        output_dir : str | Path, optional
-            Directory to save files. Default: global config default_output_dir.
-        interactive : bool, default True
-            Whether to generate interactive HTML file.
-
-        Returns
-        -------
-        ChartResult
-            Self, for method chaining.
+        :type chart_id: str
+        :param output_dir: Directory to save files. Default: global config default_output_dir.
+        :type output_dir: str or Path, optional
+        :param interactive: Whether to generate interactive HTML file.
+        :type interactive: bool
+        :returns: Self, for method chaining.
+        :rtype: ChartResult
 
         Examples
         --------
-        >>> result = chartbook.plotting.line(df, x="date", y="gdp")
-        >>> result.save(chart_id="gdp_chart")
-        >>> print(result.html_path)
-        ./_output/gdp_chart.html
 
-        >>> # Method chaining
-        >>> paths = chartbook.plotting.line(df, x="date", y="gdp").save("gdp").paths
+        ```python
+        result = chartbook.plotting.line(df, x="date", y="gdp")
+        result.save(chart_id="gdp_chart")
+        print(result.html_path)
+        # Output: ./_output/gdp_chart.html
+
+        # Method chaining
+        paths = chartbook.plotting.line(df, x="date", y="gdp").save("gdp").paths
+        ```
         """
         from chartbook.plotting._output import save_chart_from_result
         from chartbook.plotting._validation import validate_chart_id
@@ -295,20 +306,21 @@ class ChartResult:
 
         Returns an empty dict if `.save()` has not been called yet.
 
-        Returns
-        -------
-        dict[str, Path]
-            Mapping of format name to file path.
+        :returns: Mapping of format name to file path.
             Keys: 'html', 'png', 'png_wide', 'pdf', 'pdf_wide'
+        :rtype: dict[str, Path]
 
         Examples
         --------
-        >>> result = chartbook.plotting.line(df, x="date", y="gdp")
-        >>> result.paths  # Empty before save
-        {}
-        >>> result.save(chart_id="gdp")
-        >>> result.paths
-        {'html': Path('./_output/gdp.html'), 'png': Path('./_output/gdp.png'), ...}
+
+        ```python
+        result = chartbook.plotting.line(df, x="date", y="gdp")
+        result.paths  # Empty before save
+        # Output: {}
+        result.save(chart_id="gdp")
+        result.paths
+        # Output: {'html': Path('./_output/gdp.html'), 'png': Path('./_output/gdp.png'), ...}
+        ```
         """
         if self.chart_id is None:
             return {}

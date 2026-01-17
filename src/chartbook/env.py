@@ -33,15 +33,18 @@ api_key = chartbook.env.get("FRED_API_KEY")
 ```
 
 You can also run scripts with command line overrides:
+
+```bash
+python myexample.py --DATA_DIR=/path/to/data
+# Output: /path/to/data
 ```
->>> python myexample.py --DATA_DIR=/path/to/data
-/path/to/data
-```
+
 or with environment variables:
-```
->>> export DATA_DIR=/path/to/other
->>> python myexample.py
-/path/to/other
+
+```bash
+export DATA_DIR=/path/to/other
+python myexample.py
+# Output: /path/to/other
 ```
 
 """
@@ -92,41 +95,35 @@ def get_project_root(
        (or current working directory) for marker files/directories.
     3. The first directory containing any marker is returned as the project root.
 
-    Parameters
-    ----------
-    start : str | Path | None
-        Directory to start searching from. Defaults to Path.cwd().
-    markers : Sequence[str] | None
-        Marker files/directories to search for, in priority order.
+    :param start: Directory to start searching from. Defaults to Path.cwd().
+    :type start: str or Path, optional
+    :param markers: Marker files/directories to search for, in priority order.
         Defaults to: (".git", "pyproject.toml", ".env", ".env.example", "requirements.txt")
-    max_levels : int
-        Maximum number of parent directories to search. Default 10.
-    use_cache : bool
-        Whether to cache the result. Default True. The cache key is based on
+    :type markers: Sequence[str], optional
+    :param max_levels: Maximum number of parent directories to search. Default 10.
+    :type max_levels: int
+    :param use_cache: Whether to cache the result. Default True. The cache key is based on
         the resolved start path and markers tuple.
-
-    Returns
-    -------
-    Path
-        Absolute path to the project root.
-
-    Raises
-    ------
-    ProjectRootNotFoundError
-        If no marker is found within max_levels.
+    :type use_cache: bool
+    :returns: Absolute path to the project root.
+    :rtype: Path
+    :raises ProjectRootNotFoundError: If no marker is found within max_levels.
 
     Examples
     --------
-    >>> import chartbook
-    >>> BASE_DIR = chartbook.env.get_project_root()
-    >>> DATA_DIR = BASE_DIR / "_data"
 
-    >>> # Custom search from a specific directory
-    >>> root = chartbook.env.get_project_root(
-    ...     start="/some/nested/path",
-    ...     markers=["Cargo.toml", "pyproject.toml"],
-    ...     max_levels=5
-    ... )
+    ```python
+    import chartbook
+    BASE_DIR = chartbook.env.get_project_root()
+    DATA_DIR = BASE_DIR / "_data"
+
+    # Custom search from a specific directory
+    root = chartbook.env.get_project_root(
+        start="/some/nested/path",
+        markers=["Cargo.toml", "pyproject.toml"],
+        max_levels=5
+    )
+    ```
     """
     # 1. Check for BASE_DIR environment variable (highest priority)
     base_dir_env = os.environ.get("BASE_DIR")
@@ -194,20 +191,21 @@ def clear_cache() -> None:
 def get_os_type() -> str:
     """Get the operating system type.
 
-    Returns
-    -------
-    str
-        "nix" for Unix-like systems (macOS, Linux), "windows" for Windows,
+    :returns: "nix" for Unix-like systems (macOS, Linux), "windows" for Windows,
         or "unknown" for unrecognized systems.
+    :rtype: str
 
     Examples
     --------
-    >>> import chartbook
-    >>> os_type = chartbook.env.get_os_type()
-    >>> if os_type == "nix":
-    ...     cmd = "ls"
-    ... else:
-    ...     cmd = "dir"
+
+    ```python
+    import chartbook
+    os_type = chartbook.env.get_os_type()
+    if os_type == "nix":
+        cmd = "ls"
+    else:
+        cmd = "dir"
+    ```
     """
     os_name = system()
     if os_name == "Windows":
@@ -224,6 +222,11 @@ def _find_all_caps_cli_vars(argv: list[str] | None = None) -> dict[str, str]:
     Find all command line arguments that are all caps and defined
     with a long option, for example, --DATA_DIR or --MANUAL_DATA_DIR.
     When that option is found, the value of the option is returned.
+
+    :param argv: List of command line arguments. Defaults to sys.argv.
+    :type argv: list[str], optional
+    :returns: Dictionary mapping variable names to their values.
+    :rtype: dict[str, str]
 
     For example, if the command line is:
     ```
@@ -257,7 +260,11 @@ def _find_all_caps_cli_vars(argv: list[str] | None = None) -> dict[str, str]:
 
 
 def _load_config() -> Config:
-    """Load configuration from .env file if available."""
+    """Load configuration from .env file if available.
+
+    :returns: A decouple Config object.
+    :rtype: Config
+    """
     try:
         estimated_project_root = get_project_root()
     except ProjectRootNotFoundError:
@@ -275,7 +282,15 @@ def _load_config() -> Config:
 
 
 def _if_relative_make_abs(path: str | Path, base_dir: Path) -> Path:
-    """If a relative path is given, make it absolute relative to base_dir."""
+    """If a relative path is given, make it absolute relative to base_dir.
+
+    :param path: The path to potentially convert.
+    :type path: str or Path
+    :param base_dir: The base directory for relative paths.
+    :type base_dir: Path
+    :returns: The absolute path.
+    :rtype: Path
+    """
     path = Path(path)
     if path.is_absolute():
         return path.resolve()
@@ -283,7 +298,11 @@ def _if_relative_make_abs(path: str | Path, base_dir: Path) -> Path:
 
 
 def _get_os() -> str:
-    """Get the operating system type."""
+    """Get the operating system type.
+
+    :returns: "windows", "nix", or "unknown".
+    :rtype: str
+    """
     os_name = system()
     if os_name == "Windows":
         return "windows"
@@ -301,7 +320,11 @@ _decouple_config = _load_config()
 
 
 def _build_defaults() -> dict[str, Any]:
-    """Build the defaults dictionary."""
+    """Build the defaults dictionary.
+
+    :returns: A dictionary of default configuration values.
+    :rtype: dict[str, Any]
+    """
     defaults: dict[str, Any] = {}
 
     # OS type
@@ -355,27 +378,26 @@ def get(
     4. Provided default value
     5. Error if not found
 
-    Parameters
-    ----------
-    var_name : str
-        The name of the variable to retrieve.
-    default : Any
-        Default value if the variable is not found anywhere.
-    cast : Any
-        A callable to cast/convert the value (e.g., int, bool).
-    convert_dir_vars_to_abs_path : bool
-        If True and "DIR" is in var_name, convert relative paths to absolute.
-
-    Returns
-    -------
-    Any
-        The configuration value.
+    :param var_name: The name of the variable to retrieve.
+    :type var_name: str
+    :param default: Default value if the variable is not found anywhere.
+    :type default: Any
+    :param cast: A callable to cast/convert the value (e.g., int, bool).
+    :type cast: Any
+    :param convert_dir_vars_to_abs_path: If True and "DIR" is in var_name, convert relative paths to absolute.
+    :type convert_dir_vars_to_abs_path: bool
+    :returns: The configuration value.
+    :rtype: Any
 
     Examples
     --------
-    >>> import chartbook
-    >>> username = chartbook.env.get("WRDS_USERNAME")
-    >>> port = chartbook.env.get("PORT", default=8080, cast=int)
+
+    ```python
+    import chartbook
+    username = chartbook.env.get("WRDS_USERNAME")
+    port = chartbook.env.get("PORT", default=8080, cast=int)
+    ```
+
     """
     base_dir = _defaults.get("BASE_DIR", Path.cwd())
 
