@@ -5,6 +5,7 @@ These tests exercise the complete workflow from manifest reading through
 documentation generation, verifying that the full pipeline works correctly.
 """
 
+import os
 import shutil
 import subprocess
 import time
@@ -168,10 +169,19 @@ class TestExampleProjects:
             doit_db.unlink()
 
     @staticmethod
+    def _touch_newer_than(target: Path, source: Path):
+        """Set target's mtime to be 1 second newer than source.
+
+        This ensures doit considers the target up-to-date and won't re-run
+        the task that produces it.
+        """
+        src_mtime = source.stat().st_mtime
+        new_mtime = src_mtime + 1
+        os.utime(target, (new_mtime, new_mtime))
+
+    @staticmethod
     def _get_env_with_pythonpath():
         """Get environment with PYTHONPATH set to use local src."""
-        import os
-
         env = os.environ.copy()
         src_path = Path(__file__).parent.parent / "src"
         existing_pythonpath = env.get("PYTHONPATH", "")
@@ -198,11 +208,14 @@ class TestExampleProjects:
 
         # Also create CSV version (some scripts expect it)
         df = pd.read_parquet(mock_fred)
-        df.to_csv(data_dir / "fred.csv")
+        csv_file = data_dir / "fred.csv"
+        df.to_csv(csv_file)
 
-        # Touch files to ensure they're newer than source files
-        time.sleep(0.1)
-        target_fred.touch()
+        # Set mtime of target files to be newer than source files
+        # This ensures doit considers the pull:fred task up-to-date
+        source_file = example_path / "src" / "pull_fred.py"
+        TestExampleProjects._touch_newer_than(target_fred, source_file)
+        TestExampleProjects._touch_newer_than(csv_file, source_file)
 
     @staticmethod
     def _setup_mock_data_yield_curve(example_path: Path):
@@ -221,7 +234,8 @@ class TestExampleProjects:
 
         # Also create CSV version
         df_fred = pd.read_parquet(mock_fred)
-        df_fred.to_csv(data_dir / "fred.csv")
+        csv_fred = data_dir / "fred.csv"
+        df_fred.to_csv(csv_fred)
 
         # Copy mock OFR data
         mock_ofr = MOCK_DATA_DIR / "ofr_mock.parquet"
@@ -233,10 +247,13 @@ class TestExampleProjects:
         target_yc = data_dir / "fed_yield_curve.parquet"
         shutil.copy2(mock_yc, target_yc)
 
-        # Touch files to ensure they're newer than source files
-        time.sleep(0.1)
-        for f in [target_fred, target_ofr, target_yc]:
-            f.touch()
+        # Set mtime of target files to be newer than their respective source files
+        # This ensures doit considers the pull tasks up-to-date
+        src_dir = example_path / "src"
+        TestExampleProjects._touch_newer_than(target_fred, src_dir / "pull_fred.py")
+        TestExampleProjects._touch_newer_than(csv_fred, src_dir / "pull_fred.py")
+        TestExampleProjects._touch_newer_than(target_ofr, src_dir / "pull_ofr_api_data.py")
+        TestExampleProjects._touch_newer_than(target_yc, src_dir / "load_fed_yield_curve.py")
 
     def test_fred_charts_example(self):
         """Test that fred_charts example runs successfully with doit -a."""
