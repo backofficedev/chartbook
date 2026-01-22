@@ -159,3 +159,101 @@ def handle_validation_error(error: ValidationError, config_path: Path) -> None:
     """
     chartbook_error = error.to_chartbook_error(file_path=config_path)
     chartbook_error.exit_with_message()
+
+
+@dataclass
+class MissingFile:
+    """Information about a missing source file.
+
+    Attributes:
+        file_path: The path to the missing file.
+        file_type: The type of file (e.g., "notebook", "chart", "dataframe").
+        item_id: The ID of the item in chartbook.toml that references this file.
+        pipeline_id: The pipeline ID that contains this item.
+    """
+
+    file_path: Path
+    file_type: str
+    item_id: str
+    pipeline_id: str
+
+
+class MissingSourceFilesError(Exception):
+    """Raised when source files referenced in chartbook.toml are not found.
+
+    This exception carries a list of missing files that can be used to generate
+    user-friendly error messages for the CLI.
+
+    Attributes:
+        missing_files: List of MissingFile objects describing each missing file.
+    """
+
+    def __init__(self, missing_files: list[MissingFile]):
+        """Initialize a MissingSourceFilesError.
+
+        :param missing_files: List of MissingFile objects.
+        :type missing_files: list[MissingFile]
+        """
+        self.missing_files = missing_files
+        super().__init__(self._format_message())
+
+    def _format_message(self) -> str:
+        """Format a simple message listing the count of missing files.
+
+        :returns: A formatted string describing the error.
+        :rtype: str
+        """
+        return f"Found {len(self.missing_files)} missing source file(s) referenced in chartbook.toml"
+
+    def format_cli_message(self) -> str:
+        """Format a detailed, user-friendly message for CLI output.
+
+        :returns: A formatted string ready for CLI display with colors.
+        :rtype: str
+        """
+        lines = [
+            click.style("Error: ", fg="red", bold=True)
+            + "Missing source files referenced in chartbook.toml",
+            "",
+            "The following files were not found:",
+        ]
+
+        for mf in self.missing_files:
+            lines.append(
+                f"  - {mf.file_type.capitalize()}: {click.style(str(mf.file_path), fg='cyan')}"
+            )
+            lines.append(
+                f"    Referenced by: {click.style(f'{mf.file_type}s.{mf.item_id}', fg='yellow')} "
+                f"in pipeline {click.style(mf.pipeline_id, fg='yellow')}"
+            )
+
+        lines.append("")
+        lines.append(
+            click.style("Hint: ", fg="green")
+            + "Ensure these files exist or update the paths in chartbook.toml."
+        )
+        lines.append("      Use --warn-missing to continue with warnings instead of errors.")
+
+        return "\n".join(lines)
+
+    def format_warnings(self) -> list[str]:
+        """Format individual warning messages for each missing file.
+
+        :returns: A list of warning message strings.
+        :rtype: list[str]
+        """
+        warnings = []
+        for mf in self.missing_files:
+            warnings.append(
+                f"Warning: Missing {mf.file_type} file: {mf.file_path} "
+                f"(referenced by {mf.file_type}s.{mf.item_id} in pipeline {mf.pipeline_id})"
+            )
+        return warnings
+
+    def exit_with_message(self) -> None:
+        """Print formatted message to stderr and exit with code 1.
+
+        :raises SystemExit: Always exits with code 1.
+        """
+        click.echo(self.format_cli_message(), err=True)
+        raise SystemExit(1)

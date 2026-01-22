@@ -17,11 +17,11 @@ def _check_sphinx_installed():
         click.echo("Error: Sphinx dependencies not installed.", err=True)
         click.echo("", err=True)
         click.echo("Install the full package:", err=True)
-        click.echo("    pip install chartbook[all]", err=True)
+        click.echo('    pip install "chartbook[all]"', err=True)
         click.echo("", err=True)
         click.echo("Or use pipx for isolated installation:", err=True)
-        click.echo("    pipx install chartbook[all]", err=True)
-        click.echo("    pipx run chartbook[all] build", err=True)
+        click.echo('    pipx install "chartbook[all]"', err=True)
+        click.echo('    pipx run "chartbook[all]" build', err=True)
         raise SystemExit(1)
 
 
@@ -70,6 +70,12 @@ def main():
     default=50,
     help="File size threshold in MB above which to use memory-efficient loading (default: 50)",
 )
+@click.option(
+    "--warn-missing",
+    is_flag=True,
+    default=False,
+    help="Warn instead of error when source files (charts, notebooks, dataframes) are missing",
+)
 def build(
     output_dir,
     project_dir,
@@ -79,6 +85,7 @@ def build(
     keep_build_dirs,
     force_write,
     size_threshold,
+    warn_missing,
 ):
     """Generate HTML documentation in the specified output directory.
 
@@ -98,6 +105,8 @@ def build(
     :type force_write: bool
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param warn_missing: If True, warn instead of error when source files are missing.
+    :type warn_missing: bool
     """
     # Check for Sphinx dependencies
     _check_sphinx_installed()
@@ -143,6 +152,7 @@ def build(
         keep_build_dirs=keep_build_dirs,
         should_remove_existing=should_remove_existing,
         size_threshold=size_threshold,
+        warn_missing=warn_missing,
     )
     click.echo(f"Successfully generated documentation in {output_dir}")
 

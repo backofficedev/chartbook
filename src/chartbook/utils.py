@@ -96,7 +96,7 @@ def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
         source_path = Path(source)
         destination_path = Path(destination)
 
-        # Skip if source file doesn't exist
+        # Skip if source file doesn't exist (validation happens upfront in build_docs.py)
         if not source_path.exists():
             if verbose:
                 print(f"Skipping {source_path} - file does not exist")

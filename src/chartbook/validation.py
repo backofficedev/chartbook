@@ -181,3 +181,80 @@ def validate_conf_py_values(manifest: dict, pipeline_theme: str) -> SiteConfig:
     :raises ValidationError: If any value fails security validation.
     """
     return SiteConfig.from_manifest(manifest, pipeline_theme)
+
+
+def validate_source_files(manifest: dict, base_dir) -> list:
+    """Validate that all source files referenced in the manifest exist.
+
+    Checks for the existence of:
+    - Dataframe parquet files (path_to_parquet_data)
+    - Chart HTML files (path_to_html_chart)
+    - Notebook files (notebook_path)
+
+    :param manifest: The manifest dictionary from chartbook.toml.
+    :type manifest: dict
+    :param base_dir: The base directory of the project.
+    :type base_dir: Path
+    :returns: List of MissingFile objects for any files that don't exist.
+    :rtype: list[MissingFile]
+    """
+    from pathlib import Path
+
+    from chartbook.errors import MissingFile
+    from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest
+
+    base_dir = Path(base_dir).resolve()
+    missing_files = []
+
+    pipeline_ids = get_pipeline_ids(manifest)
+
+    for pipeline_id in pipeline_ids:
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        pipeline_base_dir = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
+
+        # Check dataframe files
+        for dataframe_id, dataframe_config in pipeline_manifest.get("dataframes", {}).items():
+            parquet_path = dataframe_config.get("path_to_parquet_data")
+            if parquet_path and parquet_path.strip():
+                full_path = (pipeline_base_dir / parquet_path).resolve()
+                if not full_path.exists():
+                    missing_files.append(
+                        MissingFile(
+                            file_path=full_path,
+                            file_type="dataframe",
+                            item_id=dataframe_id,
+                            pipeline_id=pipeline_id,
+                        )
+                    )
+
+        # Check chart files
+        for chart_id, chart_config in pipeline_manifest.get("charts", {}).items():
+            chart_path = chart_config.get("path_to_html_chart")
+            if chart_path and chart_path.strip():
+                full_path = (pipeline_base_dir / chart_path).resolve()
+                if not full_path.exists():
+                    missing_files.append(
+                        MissingFile(
+                            file_path=full_path,
+                            file_type="chart",
+                            item_id=chart_id,
+                            pipeline_id=pipeline_id,
+                        )
+                    )
+
+        # Check notebook files
+        for notebook_id, notebook_config in pipeline_manifest.get("notebooks", {}).items():
+            notebook_path = notebook_config.get("notebook_path")
+            if notebook_path and notebook_path.strip():
+                full_path = (pipeline_base_dir / notebook_path).resolve()
+                if not full_path.exists():
+                    missing_files.append(
+                        MissingFile(
+                            file_path=full_path,
+                            file_type="notebook",
+                            item_id=notebook_id,
+                            pipeline_id=pipeline_id,
+                        )
+                    )
+
+    return missing_files

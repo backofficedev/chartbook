@@ -6,10 +6,10 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from chartbook import markdown_generator
 from chartbook.diagnostics import generate_metadata_diagnostics
-from chartbook.errors import ValidationError, handle_validation_error
+from chartbook.errors import MissingSourceFilesError, ValidationError, handle_validation_error
 from chartbook.manifest import get_favicon_path, get_logo_path, load_manifest
 from chartbook.utils import shutil
-from chartbook.validation import validate_conf_py_values
+from chartbook.validation import validate_conf_py_values, validate_source_files
 
 
 def get_docs_src_path(pipeline_theme: str = "pipeline"):
@@ -95,6 +95,7 @@ def generate_docs(
     temp_docs_src_dir: Path = Path("_docs_src"),
     should_remove_existing: bool = False,
     size_threshold: float = 50,
+    warn_missing: bool = False,
 ):
     """Generate documentation by running both pipeline publish and sphinx build.
 
@@ -114,6 +115,8 @@ def generate_docs(
     :type should_remove_existing: bool
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param warn_missing: If True, warn instead of error when source files are missing.
+    :type warn_missing: bool
     """
 
     output_dir = Path(output_dir).resolve()
@@ -124,6 +127,19 @@ def generate_docs(
     # Load configuration
     manifest = load_manifest(project_dir)
     pipeline_theme = manifest["config"]["type"]
+
+    # Validate that all source files exist
+    missing_files = validate_source_files(manifest, project_dir)
+    if missing_files:
+        error = MissingSourceFilesError(missing_files)
+        if warn_missing:
+            # Print warnings and continue
+            import click
+            for warning in error.format_warnings():
+                click.echo(click.style(warning, fg="yellow"), err=True)
+        else:
+            # Raise error and exit
+            error.exit_with_message()
 
     # FULLY clean temp_docs_src_dir first
     if temp_docs_src_dir.exists():

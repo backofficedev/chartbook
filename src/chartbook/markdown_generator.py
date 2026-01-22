@@ -314,8 +314,8 @@ def generate_all_pipeline_docs(
         readme_text = "".join(readme_content[2:])
 
         notebook_list = [
-            f"notebooks/{pipeline_id}/{Path(notebook).name}"
-            for notebook in pipeline_manifest["notebooks"]
+            f"notebooks/{pipeline_id}/{Path(pipeline_manifest['notebooks'][notebook_id]['notebook_path']).name}"
+            for notebook_id in pipeline_manifest["notebooks"]
         ]
 
         # Handle markdown notes if they exist
