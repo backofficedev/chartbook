@@ -26,13 +26,13 @@ README_file_path = "./README.md"
 [notebooks.01_example_notebook_interactive]
 notebook_name = "GDP Over Time"
 notebook_description = "Interactive Plotly chart showing US GDP over time."
-notebook_path = "_output/01_example_notebook_interactive.ipynb"
+notebook_path = "_output/01_example_notebook_interactive_ipynb.ipynb"
 
 
 [notebooks.02_example_with_dependencies]
 notebook_name = "Unemployment Rate Over Time"
 notebook_description = "Interactive Plotly chart showing US unemployment rate over time."
-notebook_path = "_output/02_example_with_dependencies.ipynb"
+notebook_path = "_output/02_example_with_dependencies_ipynb.ipynb"
 
 
 

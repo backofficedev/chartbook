@@ -111,6 +111,17 @@ def copy_file(origin_path, destination_path, mkdir=True):
     return _copy_file
 
 
+def delete_file(file_path):
+    """Create a Python action for deleting a file."""
+
+    def _delete_file():
+        path = Path(file_path)
+        if path.exists():
+            path.unlink()
+
+    return _delete_file
+
+
 ##################################
 ## Begin rest of PyDoit tasks here
 ##################################
@@ -185,7 +196,8 @@ def task_run_notebooks():
                 f"jupytext --to notebook --output {notebook_path} {pyfile_path}",
                 jupyter_execute_notebook(notebook_path),
                 jupyter_to_html(notebook_path),
-                mv(notebook_path, OUTPUT_DIR / "_notebook_build"),
+                copy_file(notebook_path, OUTPUT_DIR / notebook_path.name),
+                delete_file(notebook_path),
                 """python -c "import sys; from datetime import datetime; print(f'End """ + notebook + """: {datetime.now()}', file=sys.stderr)" """,
             ],
             "file_dep": [
@@ -194,11 +206,33 @@ def task_run_notebooks():
             ],
             "targets": [
                 OUTPUT_DIR / f"{notebook}.html",
+                OUTPUT_DIR / notebook_path.name,
                 *notebook_tasks[notebook]["targets"],
             ],
             "clean": True,
         }
 # fmt: on
+
+def task_plot_charts():
+    """Generate additional charts from plotting_charts.py"""
+    return {
+        "actions": [
+            "ipython ./src/plotting_charts.py",
+        ],
+        "targets": [
+            OUTPUT_DIR / "cpi_inflation_chart.html",
+            OUTPUT_DIR / "fedfunds_chart.html",
+            OUTPUT_DIR / "gdp_unemployment_dual_chart.html",
+            OUTPUT_DIR / "inflation_gdp_scatter.html",
+        ],
+        "file_dep": [
+            "./src/plotting_charts.py",
+            "./src/pull_fred.py",
+        ],
+        "task_dep": ["pull:fred"],
+        "clean": True,
+    }
+
 
 sphinx_targets = [
     "./docs/index.html",
@@ -224,6 +258,7 @@ def task_compile_sphinx_docs():
         "file_dep": file_dep,
         "task_dep": [
             "run_notebooks",
+            "plot_charts",
         ],
         "clean": True,
     }

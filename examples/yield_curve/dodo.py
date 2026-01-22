@@ -111,6 +111,17 @@ def copy_file(origin_path, destination_path, mkdir=True):
     return _copy_file
 
 
+def delete_file(file_path):
+    """Create a Python action for deleting a file."""
+
+    def _delete_file():
+        path = Path(file_path)
+        if path.exists():
+            path.unlink()
+
+    return _delete_file
+
+
 ##################################
 ## Begin rest of PyDoit tasks here
 ##################################
@@ -236,6 +247,11 @@ notebook_tasks = {
         "file_dep": ["./src/pull_fred.py"],
         "targets": [OUTPUT_DIR / "GDP_graph.png"],
     },
+    "03_public_repo_summary_charts_ipynb": {
+        "path": "./src/03_public_repo_summary_charts_ipynb.py",
+        "file_dep": ["./src/pull_ofr_api_data.py"],
+        "targets": [],
+    },
     "04_term_premium_charts_ipynb": {
         "path": "./src/04_term_premium_charts_ipynb.py",
         "file_dep": ["./src/load_fed_yield_curve.py"],
@@ -266,7 +282,8 @@ def task_run_notebooks():
                 f"jupytext --to notebook --output {notebook_path} {pyfile_path}",
                 jupyter_execute_notebook(notebook_path),
                 jupyter_to_html(notebook_path),
-                mv(notebook_path, OUTPUT_DIR / "_notebook_build"),
+                copy_file(notebook_path, OUTPUT_DIR / notebook_path.name),
+                delete_file(notebook_path),
                 """python -c "import sys; from datetime import datetime; print(f'End """ + notebook + """: {datetime.now()}', file=sys.stderr)" """,
             ],
             "file_dep": [
@@ -275,6 +292,7 @@ def task_run_notebooks():
             ],
             "targets": [
                 OUTPUT_DIR / f"{notebook}.html",
+                OUTPUT_DIR / notebook_path.name,
                 *notebook_tasks[notebook]["targets"],
             ],
             "clean": True,

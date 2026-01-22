@@ -26,20 +26,20 @@ README_file_path = "./README.md"
 [notebooks.01_example_notebook_interactive]
 notebook_name = "Example Notebook Interactive"
 notebook_description = "Example notebook for demonstrating how to construct a Chartbook notebook."
-notebook_path = "_output/01_example_notebook_interactive.ipynb"
+notebook_path = "_output/01_example_notebook_interactive_ipynb.ipynb"
 
 
 [notebooks.02_example_with_dependencies]
 notebook_name = "Example Notebook with Dependencies"
 notebook_description = "Example notebook demonstrating dependencies on data pulls."
-notebook_path = "_output/02_example_with_dependencies.ipynb"
+notebook_path = "_output/02_example_with_dependencies_ipynb.ipynb"
 
 
 
 [notebooks.03_public_repo_summary_charts]
 notebook_name = "Public Repo Summary Charts"
 notebook_description = "Summary charts using public repo data."
-notebook_path = "_output/03_public_repo_summary_charts.ipynb"
+notebook_path = "_output/03_public_repo_summary_charts_ipynb.ipynb"
 
 
 [notebooks.04_term_premium_charts]
