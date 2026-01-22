@@ -155,7 +155,7 @@ A single analytics pipeline with its own charts and dataframes:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.3"
+chartbook_format_version = "0.0.4"
 ```
 
 #### Catalog Project
@@ -164,7 +164,7 @@ A collection of multiple pipelines aggregated into a unified catalog:
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.3"
+chartbook_format_version = "0.0.4"
 ```
 
 ### [config] - Project Configuration
@@ -172,7 +172,7 @@ chartbook_format_version = "0.0.3"
 ```toml
 [config]
 type = "pipeline"  # or "catalog"
-chartbook_format_version = "0.0.3"
+chartbook_format_version = "0.0.4"
 ```
 
 ### [site] - Website Metadata
@@ -551,7 +551,7 @@ A catalog project aggregates multiple pipelines into a unified documentation sit
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.3"
+chartbook_format_version = "0.0.4"
 
 [pipelines]
 
@@ -580,7 +580,7 @@ Windows = "T:/pipelines/monthly"
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.3"
+chartbook_format_version = "0.0.4"
 
 [site]
 title = "Sales Analytics Pipeline"

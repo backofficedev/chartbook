@@ -2,7 +2,7 @@
 
 A developer platform for data science teams.
 
-[![PyPI - Version](https://img.shields.io/badge/PyPI-v0.0.3-blue?logo=pypi)](https://pypi.org/project/chartbook)
+[![PyPI - Version](https://img.shields.io/badge/PyPI-v0.0.4-blue?logo=pypi)](https://pypi.org/project/chartbook)
 [![PyPI - Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?logo=python)](https://pypi.org/project/chartbook)
 [![GitHub Stars](https://img.shields.io/github/stars/backofficedev/chartbook?style=flat&logo=github)](https://github.com/backofficedev/chartbook)
 [![Documentation](https://img.shields.io/badge/docs-backofficedev.github.io%2Fchartbook-blue)](https://backofficedev.github.io/chartbook/)
@@ -31,7 +31,7 @@ See the [Concepts](https://backofficedev.github.io/chartbook/user-guide/concepts
 **Recommended:**
 
 ```bash
-pip install chartbook[all]
+pip install "chartbook[all]"
 ```
 
 This gives you everything: data loading, plotting utilities, and the CLI for building documentation.
@@ -39,7 +39,7 @@ This gives you everything: data loading, plotting utilities, and the CLI for bui
 **Minimal install** (data loading only):
 
 ```bash
-pip install chartbook[data]
+pip install "chartbook[data]"
 ```
 
 **Development:**
