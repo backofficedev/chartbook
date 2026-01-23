@@ -39,6 +39,14 @@ def load_fed_yield_curve(data_dir=DATA_DIR):
 
 
 if __name__ == "__main__":
-    df = pull_fed_yield_curve()
-    path = Path(DATA_DIR) / "fed_yield_curve.parquet"
-    df.to_parquet(path)
+    target_file = Path(DATA_DIR) / "fed_yield_curve.parquet"
+    source_file = Path(__file__)
+
+    # Check if target exists and is newer than source (for test mock data)
+    if target_file.exists() and target_file.stat().st_mtime > source_file.stat().st_mtime:
+        print(f"Data file {target_file} is up to date, skipping pull")
+    else:
+        df = pull_fed_yield_curve()
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(target_file)
+        print(f"Saved Fed yield curve data to {target_file}")

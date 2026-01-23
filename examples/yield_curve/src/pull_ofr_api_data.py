@@ -53,8 +53,15 @@ def pull_series_list(series_list=list(series_descriptions.keys())):
 
 
 if __name__ == "__main__":
-    df = pull_series_list(series_list=list(series_descriptions.keys()))
-
     DATA_DIR = get_project_root() / "_data"
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(DATA_DIR / "ofr_public_repo_data.parquet")
+    target_file = DATA_DIR / "ofr_public_repo_data.parquet"
+    source_file = Path(__file__)
+
+    # Check if target exists and is newer than source (for test mock data)
+    if target_file.exists() and target_file.stat().st_mtime > source_file.stat().st_mtime:
+        print(f"Data file {target_file} is up to date, skipping pull")
+    else:
+        df = pull_series_list(series_list=list(series_descriptions.keys()))
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(target_file)
+        print(f"Saved OFR data to {target_file}")

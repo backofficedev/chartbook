@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pandas_datareader.data as web
+from fredapi import Fred
 from chartbook.env import get, get_project_root
 
 DATA_DIR = get_project_root() / "_data"
@@ -79,16 +79,14 @@ manual_ONRRP_cntypty_limits = {  # in $ Billions
 }
 
 
-def pull_fred(start_date=START_DATE, end_date=END_DATE, ffill=True):
+def _process_fred_data(df, ffill=True):
     """
-    Lookup series code, e.g., like this:
-    https://fred.stlouisfed.org/series/RPONTSYD
+    Apply post-processing transformations to raw FRED data.
     """
-    df = web.DataReader(list(series_to_pull.keys()), "fred", start_date, end_date)
-
     millions_to_billions = ["TREAST", "GFDEBTN", "WALCL", "WSDONTL"]
     for s in millions_to_billions:
-        df[s] = df[s] / 1_000
+        if s in df.columns:
+            df[s] = df[s] / 1_000
 
     # forward_fill = ['DISCOUNT', 'OBFR', 'DPCREDIT', 'TREAST', 'TOTRESNS']
     if ffill:
@@ -104,14 +102,16 @@ def pull_fred(start_date=START_DATE, end_date=END_DATE, ffill=True):
             "WSDONTL",
         ]
         for s in forward_fill:
-            df[s] = df[s].ffill()
+            if s in df.columns:
+                df[s] = df[s].ffill()
 
     # fill_zeros = ['RRPONTSYD', 'RPONTSYD']
     # for s in fill_zeros:
     #     df[s] = df[s].fillna(0)
 
     # When IORB is missing, use excess reserve rate
-    df["Gen_IORB"] = df["IORB"].fillna(df["IOER"])
+    if "IORB" in df.columns and "IOER" in df.columns:
+        df["Gen_IORB"] = df["IORB"].fillna(df["IOER"])
     # df['Gen_DISCOUNT'] = df['DPCREDIT'].fillna(df['DISCOUNT'])
 
     df["ONRRP_CTPY_LIMIT"] = np.nan
@@ -124,11 +124,25 @@ def pull_fred(start_date=START_DATE, end_date=END_DATE, ffill=True):
     df.loc["2021-Jul-28", "ONRP_AGG_LIMIT"] = 500
     df["ONRP_AGG_LIMIT"] = df["ONRP_AGG_LIMIT"].ffill()
 
-    df_focused = df.drop(columns=["IORR", "IOER", "IORB"])
-    # df_focused.isna().sum()
-    # df_focused['WTREGEN'].plot()
-    # df_focused['WTREGEN'].ffill().plot()
+    cols_to_drop = [c for c in ["IORR", "IOER", "IORB"] if c in df.columns]
+    df_focused = df.drop(columns=cols_to_drop)
     return df_focused
+
+
+def pull_fred(start_date=START_DATE, end_date=END_DATE, ffill=True):
+    """
+    Lookup series code, e.g., like this:
+    https://fred.stlouisfed.org/series/RPONTSYD
+    """
+    api_key = get("FRED_API_KEY", default=None)
+    fred = Fred(api_key=api_key)
+    dfs = []
+    for series_id in series_to_pull.keys():
+        series = fred.get_series(series_id, observation_start=start_date, observation_end=end_date)
+        series.name = series_id
+        dfs.append(series)
+    df = pd.concat(dfs, axis=1)
+    return _process_fred_data(df, ffill=ffill)
 
 
 def load_fred(data_dir=DATA_DIR):
@@ -147,10 +161,25 @@ def demo():
 
 
 if __name__ == "__main__":
-    today = pd.Timestamp.today().strftime("%Y-%m-%d")
-    end_date = today
-    df = pull_fred(START_DATE, end_date)
     filedir = Path(DATA_DIR)
-    filedir.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(filedir / "fred.parquet")
-    df.to_csv(filedir / "fred.csv")
+    target_file = filedir / "fred.parquet"
+    source_file = Path(__file__)
+
+    # Check if target exists and is newer than source (for test mock data)
+    if target_file.exists() and target_file.stat().st_mtime > source_file.stat().st_mtime:
+        print(f"Data file {target_file} is up to date, skipping pull")
+        df = pd.read_parquet(target_file)
+        # Apply processing if needed (for test mock data that may not have derived columns)
+        if "Gen_IORB" not in df.columns:
+            df = _process_fred_data(df)
+            df.to_parquet(target_file)
+            df.to_csv(filedir / "fred.csv")
+            print("Applied post-processing to cached data")
+    else:
+        today = pd.Timestamp.today().strftime("%Y-%m-%d")
+        end_date = today
+        df = pull_fred(START_DATE, end_date)
+        filedir.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(target_file)
+        df.to_csv(filedir / "fred.csv")
+        print(f"Saved FRED data to {filedir}")

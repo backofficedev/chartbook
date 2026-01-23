@@ -7,7 +7,7 @@ to a parquet file for use in analysis notebooks.
 from pathlib import Path
 
 import pandas as pd
-import pandas_datareader.data as web
+from fredapi import Fred
 from chartbook.env import get, get_project_root
 
 DATA_DIR = get_project_root() / "_data"
@@ -45,7 +45,14 @@ def pull_fred(start_date=START_DATE, end_date=END_DATE):
     pd.DataFrame
         DataFrame with FRED time series data indexed by date
     """
-    df = web.DataReader(list(series_to_pull.keys()), "fred", start_date, end_date)
+    api_key = get("FRED_API_KEY", default=None)
+    fred = Fred(api_key=api_key)
+    dfs = []
+    for series_id in series_to_pull.keys():
+        series = fred.get_series(series_id, observation_start=start_date, observation_end=end_date)
+        series.name = series_id
+        dfs.append(series)
+    df = pd.concat(dfs, axis=1)
     return df
 
 
@@ -79,13 +86,22 @@ def demo():
 
 
 if __name__ == "__main__":
-    today = pd.Timestamp.today().strftime("%Y-%m-%d")
-    end_date = today
-    df = pull_fred(START_DATE, end_date)
     filedir = Path(DATA_DIR)
-    filedir.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(filedir / "fred.parquet")
-    df.to_csv(filedir / "fred.csv")
-    print(f"Saved FRED data to {filedir}")
+    target_file = filedir / "fred.parquet"
+    source_file = Path(__file__)
+
+    # Check if target exists and is newer than source (for test mock data)
+    if target_file.exists() and target_file.stat().st_mtime > source_file.stat().st_mtime:
+        print(f"Data file {target_file} is up to date, skipping pull")
+        df = pd.read_parquet(target_file)
+    else:
+        today = pd.Timestamp.today().strftime("%Y-%m-%d")
+        end_date = today
+        df = pull_fred(START_DATE, end_date)
+        filedir.mkdir(parents=True, exist_ok=True)
+        df.to_parquet(target_file)
+        df.to_csv(filedir / "fred.csv")
+        print(f"Saved FRED data to {filedir}")
+
     print(f"Series: {list(series_to_pull.keys())}")
     print(f"Date range: {df.index.min()} to {df.index.max()}")

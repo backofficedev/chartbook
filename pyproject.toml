@@ -47,7 +47,7 @@ plotting = [
 
 # Sphinx ecosystem for documentation generation (generate/publish commands)
 sphinx = [
-    "ablog>=0.11.13",
+    "ablog>=0.11.11",
     "Jinja2>=3.1.4",
     "linkify-it-py>=2.0.3",
     "markdown-it-py>=3.0.0",
@@ -77,9 +77,6 @@ dev = [
     "doit>=0.36.0",
     "jupytext>=1.16.0",
     "nbconvert>=7.0.0",
-    # For gallery notebook FRED data
-    "pandas-datareader>=0.10.0",
-    "setuptools",  # provides distutils for pandas-datareader on Python 3.12+
 ]
 
 [project.scripts]
@@ -132,13 +129,14 @@ extra-dependencies = [
     "nbconvert",
     "numpy",
     "openpyxl",
-    "pandas-datareader>=0.10.0",
     "plotly>=5.24.0",
     "python-decouple",
     "requests",
     "seaborn",
-    "setuptools",  # provides distutils for pandas-datareader on Python 3.12+
 ]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13"]
 
 [tool.hatch.envs.default]
 # Default environment includes dev dependencies

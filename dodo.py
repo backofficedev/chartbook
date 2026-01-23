@@ -198,3 +198,19 @@ def task_clean_all():
         "uptodate": [True],
         "verbosity": 2,
     }
+
+
+def task_test():
+    """Run tests on default Python version."""
+    return {
+        "actions": ["hatch test -v"],
+        "verbosity": 2,
+    }
+
+
+def task_test_all():
+    """Run tests on all Python versions (matrix: 3.10-3.13)."""
+    return {
+        "actions": ["hatch test --all -v"],
+        "verbosity": 2,
+    }
