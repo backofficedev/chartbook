@@ -43,7 +43,7 @@ Load any cataloged dataset directly into your analysis:
 ```python
 from chartbook import data
 
-df = data.load(pipeline_id="sales", dataframe_id="quarterly_summary")
+df = data.load(pipeline="sales", dataframe="quarterly_summary")
 ```
 
 ## Who It's For

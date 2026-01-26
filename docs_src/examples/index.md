@@ -28,14 +28,14 @@ df.to_parquet('_data/financial_data.parquet')
 ### Loading Data
 
 ```python
-import chartbook
+from chartbook import data
 
-# Load from a specific directory
-df = chartbook.data.load(
-    base_dir="_data",
-    pipeline_id="EX",
-    dataframe_id="repo_public"
-)
+# Load from a catalog pipeline
+df = data.load(pipeline="EX", dataframe="repo_public")
+
+# With explicit catalog path
+df = data.load(pipeline="EX", dataframe="repo_public",
+               catalog_path="/path/to/catalog")
 ```
 
 ### Generating Documentation

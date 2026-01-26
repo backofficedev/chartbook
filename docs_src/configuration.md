@@ -242,6 +242,38 @@ path_to_parquet_data = "./_data/sales_data.parquet"
 date_col = "transaction_date"
 ```
 
+## Global Configuration
+
+In addition to per-project `chartbook.toml` files, chartbook supports user-level configuration stored in `~/.chartbook/settings.toml`. This file is managed by the `chartbook config` command and currently stores the default catalog path for data loading.
+
+### Settings File
+
+Location: `~/.chartbook/settings.toml`
+
+```toml
+[catalog]
+path = "/absolute/path/to/catalog/chartbook.toml"
+```
+
+When a default catalog is configured, `data.load()` and `data.get_path()` can be called without an explicit `catalog_path` argument:
+
+```python
+from chartbook import data
+df = data.load(pipeline="yield_curve", dataframe="repo_public")
+```
+
+An explicit `catalog_path` argument always takes priority over the global setting.
+
+### Setting Up
+
+Run `chartbook config` to set (or update) the default catalog path:
+
+```console
+chartbook config
+```
+
+See the {doc}`cli-reference` for details.
+
 ## Best Practices
 
 1. **Version Control**: Always specify the `chartbook_format_version`

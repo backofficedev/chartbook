@@ -291,5 +291,46 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold):
         sys.exit(1)
 
 
+@main.command()
+def config():
+    """Configure the default catalog path for data loading.
+
+    Sets the path to a catalog's ``chartbook.toml`` in
+    ``~/.chartbook/settings.toml`` so that ``data.load()`` can find
+    pipelines without an explicit ``catalog_path`` argument.
+    """
+    from chartbook.config import (
+        get_default_catalog_path,
+        set_default_catalog_path,
+    )
+
+    current = get_default_catalog_path()
+    if current is not None:
+        click.echo(f"Current catalog path: {current}")
+        click.echo("")
+
+    raw_path = click.prompt(
+        "Path to catalog chartbook.toml (or its parent directory)",
+        type=str,
+    )
+    catalog_path = Path(raw_path).expanduser()
+
+    try:
+        set_default_catalog_path(catalog_path)
+    except FileNotFoundError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1)
+    except ValueError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1)
+
+    resolved = get_default_catalog_path()
+    click.echo(f"Catalog path set to: {resolved}")
+    click.echo("")
+    click.echo("You can now load data with:")
+    click.echo('  from chartbook import data')
+    click.echo('  df = data.load(pipeline="my_pipeline", dataframe="my_df")')
+
+
 if __name__ == "__main__":
     main()

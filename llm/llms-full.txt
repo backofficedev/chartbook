@@ -19,7 +19,7 @@ pip install chartbook
 
 ```python
 from chartbook import data
-df = data.load(pipeline_id="fred_charts", dataframe_id="interest_rates")
+df = data.load(pipeline="fred_charts", dataframe="interest_rates")
 ```
 
 ### For CLI (Recommended - isolated installation)
@@ -53,9 +53,10 @@ pip install -e ".[dev]"
 
 | Command | Description |
 |---------|-------------|
-| `generate` | Generate HTML documentation website |
+| `build` | Generate HTML documentation website |
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
+| `config` | Configure the default catalog path for data loading |
 
 ### chartbook build
 
@@ -111,6 +112,33 @@ chartbook create-data-glimpses [OPTIONS]
 - `--no-stats`: Exclude numeric statistics from report
 - `-o, --output-dir PATH`: Directory to save output file
 - `--size-threshold FLOAT`: File size threshold in MB (default: 50)
+
+### chartbook config
+
+Configure the default catalog path for data loading. Sets the path to a
+catalog's `chartbook.toml` in `~/.chartbook/settings.toml` so that
+`data.load()` can locate pipelines without an explicit `catalog_path` argument.
+
+```bash
+chartbook config
+```
+
+The command will:
+1. Show the current catalog path if one is already configured
+2. Prompt for the path to a catalog `chartbook.toml` (or its parent directory)
+3. Validate the path exists and is a catalog-type manifest
+4. Write the setting to `~/.chartbook/settings.toml`
+
+**Example session:**
+```
+$ chartbook config
+Path to catalog chartbook.toml (or its parent directory): /data/my-catalog
+Catalog path set to: /data/my-catalog/chartbook.toml
+
+You can now load data with:
+  from chartbook import data
+  df = data.load(pipeline="my_pipeline", dataframe="my_df")
+```
 
 ### Environment Variables
 
@@ -509,15 +537,25 @@ dataframe_docs_path = "./docs_src/dataframes/market_data.md"
 
 ### Loading Data
 
-From ChartBook:
+From a catalog (requires a configured catalog via `chartbook config` or an explicit path):
 ```python
 from chartbook import data
 
-# Load from current pipeline
-df = data.load(dataframe_id="market_data")
+# Load as pandas DataFrame (default)
+df = data.load(pipeline="MARKETS", dataframe="market_data")
 
-# Load from specific pipeline
-df = data.load(pipeline_id="MARKETS", dataframe_id="market_data")
+# Load as polars DataFrame
+df = data.load(pipeline="MARKETS", dataframe="market_data", format="polars")
+
+# Load as polars LazyFrame (deferred execution)
+lf = data.load(pipeline="MARKETS", dataframe="market_data", format="polars-lazyframe")
+
+# Explicit catalog path (no global config needed)
+df = data.load(pipeline="MARKETS", dataframe="market_data",
+               catalog_path="/path/to/catalog")
+
+# Get just the resolved file path
+path = data.get_path(pipeline="MARKETS", dataframe="market_data")
 ```
 
 Direct loading:
@@ -572,6 +610,33 @@ path_to_pipeline = "../pipelines/finance"
 Unix = "/data/pipelines/monthly"
 Windows = "T:/pipelines/monthly"
 ```
+
+---
+
+## Global Configuration
+
+ChartBook supports user-level configuration stored in `~/.chartbook/settings.toml`.
+This file is managed by the `chartbook config` command and currently stores the
+default catalog path for data loading.
+
+### Settings File
+
+Location: `~/.chartbook/settings.toml`
+
+```toml
+[catalog]
+path = "/absolute/path/to/catalog/chartbook.toml"
+```
+
+When a default catalog is configured, `data.load()` and `data.get_path()` can
+be called without an explicit `catalog_path` argument:
+
+```python
+from chartbook import data
+df = data.load(pipeline="yield_curve", dataframe="repo_public")
+```
+
+An explicit `catalog_path` argument always takes priority over the global setting.
 
 ---
 

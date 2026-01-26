@@ -5,6 +5,20 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2026-01-26
+
+### Added
+- Catalog-aware data loading: `data.load(pipeline="yield_curve", dataframe="repo_public")` loads dataframes from registered pipelines in a catalog
+- `data.get_path()` returns the resolved parquet path for a pipeline's dataframe
+- `polars-lazyframe` format option for `data.load()` (returns `pl.scan_parquet`)
+- New `chartbook config` CLI command to set the default catalog path in `~/.chartbook/settings.toml`
+- New `chartbook.config` module for reading/writing global settings
+- `CatalogNotConfiguredError` exception with actionable message when no catalog is configured
+
+### Changed
+- `data.load()` and `data.get_path()` now use `pipeline` and `dataframe` parameters (replaces `pipeline_id`, `dataframe_id`, `base_dir`)
+- `tomli` and `tomli_w` moved from the `[data]` optional dependency group to base dependencies
+
 ## [0.0.4] - 2026-01-22
 
 ### Added

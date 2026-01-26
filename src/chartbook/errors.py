@@ -146,6 +146,24 @@ class ProjectRootNotFoundError(Exception):
         )
 
 
+class CatalogNotConfiguredError(Exception):
+    """Raised when no catalog path is configured and none was provided.
+
+    This exception is raised by data loading functions when no catalog_path
+    argument is given and no default catalog is set in ~/.chartbook/settings.toml.
+
+    Attributes:
+        settings_path: Path to the settings file that should be configured.
+    """
+
+    def __init__(self, settings_path: Path):
+        self.settings_path = settings_path
+        super().__init__(
+            f"No catalog configured. Either pass catalog_path= to data.load() "
+            f"or run 'chartbook config' to set a default catalog in {settings_path}"
+        )
+
+
 def handle_validation_error(error: ValidationError, config_path: Path) -> None:
     """Handle validation error with user-friendly output.
 

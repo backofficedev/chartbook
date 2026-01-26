@@ -35,9 +35,10 @@ chartbook [OPTIONS] COMMAND [ARGS]...
 
 | Command | Description |
 |---------|-------------|
-| `generate` | Generate HTML documentation website |
+| `build` | Generate HTML documentation website |
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
+| `config` | Configure the default catalog path for data loading |
 
 ## Command Reference
 
@@ -147,6 +148,32 @@ The report includes:
 - Numeric column statistics (min, max, mean, median)
 
 For large files (above the size threshold), the command uses memory-efficient loading by only collecting sampled data while still reporting the correct total row count.
+
+### `chartbook config`
+
+Configure the default catalog path for data loading. Sets the path to a catalog's `chartbook.toml` in `~/.chartbook/settings.toml` so that `data.load()` can locate pipelines without an explicit `catalog_path` argument.
+
+```console
+chartbook config
+```
+
+The command will:
+1. Show the current catalog path if one is already configured
+2. Prompt for the path to a catalog `chartbook.toml` (or its parent directory)
+3. Validate the path exists and is a catalog-type manifest
+4. Write the setting to `~/.chartbook/settings.toml`
+
+**Example session:**
+
+```console
+$ chartbook config
+Path to catalog chartbook.toml (or its parent directory): /data/my-catalog
+Catalog path set to: /data/my-catalog/chartbook.toml
+
+You can now load data with:
+  from chartbook import data
+  df = data.load(pipeline="my_pipeline", dataframe="my_df")
+```
 
 ## Environment Variables
 

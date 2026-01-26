@@ -1,101 +1,177 @@
-from pathlib import Path
-from typing import Union
+"""Catalog-aware data loading for chartbook.
 
-from chartbook.env import get
+Load dataframes from registered pipelines in a catalog::
+
+    from chartbook import data
+
+    df = data.load(pipeline="yield_curve", dataframe="repo_public")
+
+    # Specify format
+    df_pl = data.load(pipeline="yield_curve", dataframe="repo_public", format="polars")
+
+    # Get just the path
+    path = data.get_path(pipeline="yield_curve", dataframe="repo_public")
+"""
+
+from pathlib import Path
+from typing import Optional, Union
+
+from chartbook.config import get_default_catalog_path, get_global_settings_path
+from chartbook.errors import CatalogNotConfiguredError
+
+
+def _resolve_catalog_path(
+    catalog_path: Optional[Union[str, Path]] = None,
+) -> Path:
+    """Resolve the catalog path from an explicit argument or global settings.
+
+    Priority:
+    1. Explicit *catalog_path* argument
+    2. Global settings (``~/.chartbook/settings.toml``)
+    3. Raise :class:`CatalogNotConfiguredError`
+
+    :param catalog_path: Explicit path to a catalog ``chartbook.toml`` or its parent directory.
+    :type catalog_path: Optional[Union[str, Path]]
+    :returns: Resolved path to the catalog's ``chartbook.toml``.
+    :rtype: Path
+    :raises CatalogNotConfiguredError: If no catalog is configured.
+    """
+    if catalog_path is not None:
+        catalog_path = Path(catalog_path)
+        if catalog_path.is_dir():
+            catalog_path = catalog_path / "chartbook.toml"
+        return catalog_path.resolve()
+
+    default_path = get_default_catalog_path()
+    if default_path is not None:
+        return default_path
+
+    raise CatalogNotConfiguredError(get_global_settings_path())
+
+
+def _get_dataframe_path_from_catalog(
+    catalog_path: Path,
+    pipeline: str,
+    dataframe: str,
+) -> Path:
+    """Look up the parquet path for a dataframe inside a catalog manifest.
+
+    :param catalog_path: Path to the catalog's ``chartbook.toml``.
+    :type catalog_path: Path
+    :param pipeline: The pipeline identifier within the catalog.
+    :type pipeline: str
+    :param dataframe: The dataframe identifier within the pipeline.
+    :type dataframe: str
+    :returns: Resolved path to the parquet file.
+    :rtype: Path
+    :raises KeyError: If the pipeline or dataframe is not found.
+    """
+    from chartbook.manifest import load_manifest
+
+    manifest = load_manifest(base_dir=catalog_path.parent)
+
+    available_pipelines = list(manifest.get("pipelines", {}).keys())
+    if pipeline not in manifest.get("pipelines", {}):
+        raise KeyError(
+            f"Pipeline {pipeline!r} not found in catalog. "
+            f"Available pipelines: {available_pipelines}"
+        )
+
+    pipeline_manifest = manifest["pipelines"][pipeline]
+    available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())
+    if dataframe not in pipeline_manifest.get("dataframes", {}):
+        raise KeyError(
+            f"Dataframe {dataframe!r} not found in pipeline {pipeline!r}. "
+            f"Available dataframes: {available_dataframes}"
+        )
+
+    return Path(pipeline_manifest["dataframes"][dataframe]["dataframe_path"])
 
 
 def get_path(
-    base_dir: Union[str, Path, None] = None,
-    pipeline_id: str = "EX",
-    dataframe_id: str = "repo_public",
-    data_dir_name: str = "_data",
+    pipeline: str,
+    dataframe: str,
+    catalog_path: Optional[Union[str, Path]] = None,
 ) -> Path:
-    """Get the path to a dataframe file.
+    """Get the resolved path to a dataframe's parquet file.
 
-    :param base_dir: The base directory where pipeline data is stored.
-        If None, uses the DATA_DIR from env.
-    :type base_dir: Union[str, Path, None]
-    :param pipeline_id: The identifier of the pipeline.
-    :type pipeline_id: str
-    :param dataframe_id: The identifier of the dataframe.
-    :type dataframe_id: str
-    :param data_dir_name: The name of the data directory within the pipeline.
-    :type data_dir_name: str
-    :returns: The path to the parquet file.
+    :param pipeline: The pipeline identifier within the catalog.
+    :type pipeline: str
+    :param dataframe: The dataframe identifier within the pipeline.
+    :type dataframe: str
+    :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent
+        directory.  If ``None``, the global default from
+        ``~/.chartbook/settings.toml`` is used.
+    :type catalog_path: Optional[Union[str, Path]]
+    :returns: The resolved path to the parquet file.
     :rtype: Path
+    :raises CatalogNotConfiguredError: If no catalog is configured.
+    :raises KeyError: If the pipeline or dataframe is not found.
     """
-    if base_dir is None:
-        base_dir = get("DATA_DIR")
-    base_dir = Path(base_dir)
-
-    filename = f"{dataframe_id}.parquet"
-    file_path = base_dir / pipeline_id / data_dir_name / filename
-    return file_path
+    resolved_catalog = _resolve_catalog_path(catalog_path)
+    return _get_dataframe_path_from_catalog(resolved_catalog, pipeline, dataframe)
 
 
 def load(
-    base_dir: Union[str, Path, None] = None,
-    pipeline_id: str = "EX",
-    dataframe_id: str = "repo_public",
-    data_dir_name: str = "_data",
+    pipeline: str,
+    dataframe: str,
     format: str = "pandas",
+    catalog_path: Optional[Union[str, Path]] = None,
 ):
-    """Load a specific dataframe generated by a pipeline.
+    """Load a dataframe from a registered pipeline in a catalog.
 
-    This function reads a Parquet file corresponding to the given pipeline and dataframe IDs
-    from the specified base directory (or the default DATA_DIR configured in settings).
-    It can return the data as either a pandas or a polars DataFrame.
-
-    :param base_dir: The base directory where pipeline data is stored.
-        If None, uses the DATA_DIR from env.
-    :type base_dir: Union[str, Path, None]
-    :param pipeline_id: The identifier of the pipeline that generated the dataframe.
-    :type pipeline_id: str
-    :param dataframe_id: The identifier of the specific dataframe within the pipeline.
-    :type dataframe_id: str
-    :param data_dir_name: The name of the data directory.
-    :type data_dir_name: str
-    :param format: The desired format of the returned DataFrame. Options are "pandas" or "polars". Default is "pandas".
+    :param pipeline: The pipeline identifier within the catalog.
+    :type pipeline: str
+    :param dataframe: The dataframe identifier within the pipeline.
+    :type dataframe: str
+    :param format: Output format — ``"pandas"`` (default), ``"polars"``,
+        or ``"polars-lazyframe"``.
     :type format: str
-
-    :returns: The loaded dataframe in the specified format.
-    :rtype: pandas.DataFrame or polars.DataFrame
+    :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent
+        directory.  If ``None``, the global default from
+        ``~/.chartbook/settings.toml`` is used.
+    :type catalog_path: Optional[Union[str, Path]]
+    :returns: The loaded dataframe in the requested format.
+    :rtype: pandas.DataFrame or polars.DataFrame or polars.LazyFrame
+    :raises CatalogNotConfiguredError: If no catalog is configured.
+    :raises KeyError: If the pipeline or dataframe is not found.
+    :raises ValueError: If *format* is not one of the supported values.
 
     **Examples**
 
-    Load the 'repo_public' dataframe from the 'EX' pipeline as a pandas DataFrame:
+    Load as a pandas DataFrame (default):
 
-    ```python
-    import chartbook as cb
-    df_pandas = cb.data.load(pipeline_id="fred_charts", dataframe_id="interest_rates")
-    print(df_pandas.head())
-    ```
+    >>> from chartbook import data
+    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
+    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
 
-    Load the same dataframe as a polars DataFrame:
+    Load as a polars DataFrame:
 
-    ```python
-    import chartbook as cb
-    df_polars = cb.data.load(pipeline_id="fred_charts", dataframe_id="interest_rates", format="polars")
-    print(df_polars.head())
-    ```
+    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
+    ...               format="polars",
+    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
 
-    Load from a specific directory:
+    Load as a polars LazyFrame:
 
-    ```python
-    import chartbook as cb
-    df = cb.data.load(base_dir="/path/to/data", pipeline_id="fred_charts", dataframe_id="interest_rates")
-    print(df.head())
-    ```
+    >>> lf = data.load(pipeline="yield_curve", dataframe="repo_public",
+    ...               format="polars-lazyframe",
+    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
     """
-    file_path = get_path(base_dir, pipeline_id, dataframe_id, data_dir_name)
+    file_path = get_path(pipeline, dataframe, catalog_path)
+
     if format == "pandas":
         import pandas as pd
 
-        df = pd.read_parquet(file_path)
+        return pd.read_parquet(file_path)
     elif format == "polars":
         import polars as pl
 
-        df = pl.read_parquet(file_path)
+        return pl.read_parquet(file_path)
+    elif format == "polars-lazyframe":
+        import polars as pl
+
+        return pl.scan_parquet(file_path)
     else:
-        raise ValueError(f"Invalid format: {format}")
-    return df
+        raise ValueError(
+            f"Invalid format: {format!r}. Must be 'pandas', 'polars', or 'polars-lazyframe'."
+        )

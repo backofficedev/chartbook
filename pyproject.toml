@@ -20,9 +20,11 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
-# Minimal base - just CLI framework
+# Minimal base - CLI framework + TOML support for config/manifest
 dependencies = [
     "click>=8.1.7",
+    "tomli>=2.2.1",
+    "tomli-w>=1.1.0",
 ]
 
 [project.optional-dependencies]
@@ -32,8 +34,6 @@ data = [
     "polars>=1.9.0",
     "pyarrow",
     "python-decouple>=3.8",
-    "tomli>=2.2.1",
-    "tomli-w>=1.1.0",
 ]
 
 # Plotting libraries

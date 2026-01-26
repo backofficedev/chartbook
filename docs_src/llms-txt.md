@@ -70,7 +70,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 ## API
 
-- [Python API](docs_src/api/chartbook.md): `from chartbook import data; df = data.load(pipeline_id="ID", dataframe_id="df_id")`
+- [Python API](docs_src/api/chartbook.md): `from chartbook import data; df = data.load(pipeline="ID", dataframe="df_id")`
 
 ## Key Commands
 
@@ -78,6 +78,7 @@ chartbook build           # Generate HTML documentation website
 chartbook build -f        # Force overwrite existing docs
 chartbook publish            # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
+chartbook config             # Configure default catalog path
 
 ## Minimal Configuration Example
 

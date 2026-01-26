@@ -115,8 +115,8 @@ One of the key benefits of a Catalog is the ability to load data from any pipeli
 from chartbook import data
 
 # Load data from any pipeline in your catalog
-quarterly_df = data.load(pipeline_id="QUARTERLY", dataframe_id="summary")
-monthly_df = data.load(pipeline_id="MONTHLY", dataframe_id="metrics")
+quarterly_df = data.load(pipeline="QUARTERLY", dataframe="summary")
+monthly_df = data.load(pipeline="MONTHLY", dataframe="metrics")
 ```
 
 ## ChartBook (Future Feature)

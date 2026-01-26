@@ -305,26 +305,26 @@ daily_summary.to_parquet('_data/daily_summary.parquet')
 
 ## Loading Data
 
-### From chartbook
+### From a Catalog
 
 ```python
-import chartbook
+from chartbook import data
 
-# Load from current pipeline
-df = chartbook.data.load(dataframe_id="market_data")
+# Load as pandas DataFrame (default)
+df = data.load(pipeline="MARKETS", dataframe="market_data")
 
-# Load from specific pipeline
-df = chartbook.data.load(
-    pipeline_id="MARKETS",
-    dataframe_id="market_data"
-)
+# Load as polars DataFrame
+df = data.load(pipeline="MARKETS", dataframe="market_data", format="polars")
 
-# Load from different chartbook
-df = chartbook.data.load(
-    chartbook="analytics_book",
-    pipeline_id="MARKETS",
-    dataframe_id="market_data"
-)
+# Load as polars LazyFrame (deferred execution)
+lf = data.load(pipeline="MARKETS", dataframe="market_data", format="polars-lazyframe")
+
+# Explicit catalog path (no global config needed)
+df = data.load(pipeline="MARKETS", dataframe="market_data",
+               catalog_path="/path/to/catalog")
+
+# Get just the resolved file path
+path = data.get_path(pipeline="MARKETS", dataframe="market_data")
 ```
 
 ### Direct Loading

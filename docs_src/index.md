@@ -69,7 +69,7 @@ Python API documentation.
 from chartbook import data, plotting
 
 # Load data from a pipeline
-df = data.load(pipeline_id="fred_charts", dataframe_id="interest_rates")
+df = data.load(pipeline="fred_charts", dataframe="interest_rates")
 
 # Create a chart with automatic multi-format export
 plotting.line(

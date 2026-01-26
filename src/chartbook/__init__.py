@@ -3,7 +3,7 @@ chartbook - Data catalog and documentation generator.
 
 For data loading:
     from chartbook import data
-    df = data.load(pipeline_id="EX", dataframe_id="my_data")
+    df = data.load(pipeline="yield_curve", dataframe="repo_public")
 
 For plotting:
     from chartbook import plotting
