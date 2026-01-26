@@ -183,7 +183,7 @@ A single analytics pipeline with its own charts and dataframes:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.4"
+chartbook_format_version = "0.0.5"
 ```
 
 #### Catalog Project
@@ -192,7 +192,7 @@ A collection of multiple pipelines aggregated into a unified catalog:
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.4"
+chartbook_format_version = "0.0.5"
 ```
 
 ### [config] - Project Configuration
@@ -200,7 +200,7 @@ chartbook_format_version = "0.0.4"
 ```toml
 [config]
 type = "pipeline"  # or "catalog"
-chartbook_format_version = "0.0.4"
+chartbook_format_version = "0.0.5"
 ```
 
 ### [site] - Website Metadata
@@ -589,7 +589,7 @@ A catalog project aggregates multiple pipelines into a unified documentation sit
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.4"
+chartbook_format_version = "0.0.5"
 
 [pipelines]
 
@@ -645,7 +645,7 @@ An explicit `catalog_path` argument always takes priority over the global settin
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.4"
+chartbook_format_version = "0.0.5"
 
 [site]
 title = "Sales Analytics Pipeline"
