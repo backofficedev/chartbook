@@ -1,0 +1,62 @@
+/* Custom CSS for chartbook documentation */
+
+/* Improve code block styling */
+.highlight pre {
+    padding: 1rem;
+    border-radius: 0.25rem;
+}
+
+/* Better spacing for cards */
+.sd-card {
+    margin-bottom: 1rem;
+}
+
+/* Improve table styling */
+table.docutils {
+    width: 100%;
+    margin: 1rem 0;
+}
+
+table.docutils th {
+    background-color: var(--pst-color-primary);
+    color: white;
+    padding: 0.5rem;
+}
+
+table.docutils td {
+    padding: 0.5rem;
+}
+
+/* Logo styling */
+img[alt="chartbook logo"] {
+    display: block;
+    margin: 0 auto;
+}
+
+/* Improve admonition styling */
+.admonition {
+    border-radius: 0.25rem;
+    margin: 1rem 0;
+}
+
+/* Better inline code styling */
+code.literal {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.2rem;
+}
+
+/* Dark mode adjustments */
+html[data-theme="dark"] code.literal {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Improve navigation */
+.toc-tree li {
+    margin: 0.25rem 0;
+}
+
+/* Better spacing for sections */
+section {
+    margin-bottom: 2rem;
+} 

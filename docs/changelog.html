@@ -1,0 +1,736 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Changelog &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'changelog';</script>
+    <link rel="icon" href="_static/logo.png"/>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Contributing" href="contributing.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="why-chartbook.html">Why ChartBook?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/concepts.html">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/pipelines.html">Pipelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/charts.html">Charts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/dataframes.html">Dataframes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/catalog-projects.html">Catalog Projects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/notebooks.html">Notebooks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="cli-reference.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/pipeline-example.html">Pipeline Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/chartbook-example.html">Catalog Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/data-pipeline.html">Data Pipeline</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="llms-txt.html">LLMs.txt</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Changelog</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="_sources/changelog.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Changelog</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">[0.0.6] - 2026-02-01</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#changed">Changed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed">Fixed</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">[0.0.5] - 2026-01-26</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Changed</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">[0.0.4] - 2026-01-22</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Fixed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Changed</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">[0.0.3] - 2026-01-16</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Added</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">[0.0.2] - 2026-01-03</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">Added</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="changelog">
+<h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">#</a></h1>
+<p>All notable changes to chartbook will be documented in this file.</p>
+<p>The format is based on <a class="reference external" href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
+and this project adheres to <a class="reference external" href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<section id="id1">
+<h2>[0.0.6] - 2026-02-01<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<section id="added">
+<h3>Added<a class="headerlink" href="#added" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">data.get_docs(pipeline,</span> <span class="pre">dataframe)</span></code> returns the documentation content for a dataframe as a string (works with both <code class="docutils literal notranslate"><span class="pre">dataframe_docs_path</span></code> and <code class="docutils literal notranslate"><span class="pre">dataframe_docs_str</span></code> modes)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">data.get_docs_path(pipeline,</span> <span class="pre">dataframe)</span></code> returns the path to the documentation source file (<code class="docutils literal notranslate"><span class="pre">.md</span></code> file for path mode, <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> for inline mode)</p></li>
+<li><p>New <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code> CLI command to list catalog objects:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code> lists all pipelines, dataframes, and charts in a tree format</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span> <span class="pre">pipelines</span></code> lists pipelines only</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span> <span class="pre">dataframes</span></code> lists all dataframes across pipelines</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span> <span class="pre">charts</span></code> lists all charts across pipelines</p></li>
+<li><p>Supports <code class="docutils literal notranslate"><span class="pre">--catalog</span></code> option to override the default catalog</p></li>
+</ul>
+</li>
+<li><p>New <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span></code> CLI command group for data operations:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path</span> <span class="pre">--pipeline</span> <span class="pre">&lt;id&gt;</span> <span class="pre">--dataframe</span> <span class="pre">&lt;id&gt;</span></code> prints the parquet file path</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-docs</span> <span class="pre">--pipeline</span> <span class="pre">&lt;id&gt;</span> <span class="pre">--dataframe</span> <span class="pre">&lt;id&gt;</span></code> prints the documentation content</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-docs-path</span> <span class="pre">--pipeline</span> <span class="pre">&lt;id&gt;</span> <span class="pre">--dataframe</span> <span class="pre">&lt;id&gt;</span></code> prints the documentation source path</p></li>
+<li><p>All commands support <code class="docutils literal notranslate"><span class="pre">--catalog</span></code> option to override the default catalog</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="changed">
+<h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">data.get_path()</span></code> renamed to <code class="docutils literal notranslate"><span class="pre">data.get_data_path()</span></code> for clarity</p></li>
+<li><p>Data download links (Parquet/Excel) are now disabled by default in generated documentation. Set <code class="docutils literal notranslate"><span class="pre">enable_data_download</span> <span class="pre">=</span> <span class="pre">true</span></code> in the <code class="docutils literal notranslate"><span class="pre">[site]</span></code> section of <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> to enable them.</p></li>
+</ul>
+</section>
+<section id="fixed">
+<h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Fixed “Linked Charts” not rendering correctly in dataframe documentation pages. The linked charts are now displayed as a bulleted list below the metadata table instead of inside a table cell.</p></li>
+<li><p>Extended full-width page layout to dataframe, pipeline, and diagnostics pages (previously only chart pages had full-width styling).</p></li>
+<li><p>Fixed Git Repo URL in pipeline manifest displaying a broken icon (box character) by converting it to a proper markdown link.</p></li>
+</ul>
+</section>
+</section>
+<section id="id2">
+<h2>[0.0.5] - 2026-01-26<a class="headerlink" href="#id2" title="Link to this heading">#</a></h2>
+<section id="id3">
+<h3>Added<a class="headerlink" href="#id3" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Catalog-aware data loading: <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=&quot;yield_curve&quot;,</span> <span class="pre">dataframe=&quot;repo_public&quot;)</span></code> loads dataframes from registered pipelines in a catalog</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">data.get_path()</span></code> returns the resolved parquet path for a pipeline’s dataframe</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">polars-lazyframe</span></code> format option for <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> (returns <code class="docutils literal notranslate"><span class="pre">pl.scan_parquet</span></code>)</p></li>
+<li><p>New <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code> CLI command to set the default catalog path in <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code></p></li>
+<li><p>New <code class="docutils literal notranslate"><span class="pre">chartbook.config</span></code> module for reading/writing global settings</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CatalogNotConfiguredError</span></code> exception with actionable message when no catalog is configured</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Changed<a class="headerlink" href="#id4" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">data.load()</span></code> and <code class="docutils literal notranslate"><span class="pre">data.get_path()</span></code> now use <code class="docutils literal notranslate"><span class="pre">pipeline</span></code> and <code class="docutils literal notranslate"><span class="pre">dataframe</span></code> parameters (replaces <code class="docutils literal notranslate"><span class="pre">pipeline_id</span></code>, <code class="docutils literal notranslate"><span class="pre">dataframe_id</span></code>, <code class="docutils literal notranslate"><span class="pre">base_dir</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tomli</span></code> and <code class="docutils literal notranslate"><span class="pre">tomli_w</span></code> moved from the <code class="docutils literal notranslate"><span class="pre">[data]</span></code> optional dependency group to base dependencies</p></li>
+</ul>
+</section>
+</section>
+<section id="id5">
+<h2>[0.0.4] - 2026-01-22<a class="headerlink" href="#id5" title="Link to this heading">#</a></h2>
+<section id="id6">
+<h3>Added<a class="headerlink" href="#id6" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>New <code class="docutils literal notranslate"><span class="pre">--warn-missing</span></code> CLI flag for <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> to warn instead of error when source files are missing.</p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>Fixed<a class="headerlink" href="#id7" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Fixed notebook rendering in Sphinx documentation where notebooks were not appearing in the generated docs. The <code class="docutils literal notranslate"><span class="pre">notebook_list</span></code> was incorrectly using dictionary keys instead of the actual notebook paths, resulting in toctree entries missing the <code class="docutils literal notranslate"><span class="pre">.ipynb</span></code> extension.</p></li>
+<li><p>Build process now validates that all source files (notebooks, charts, dataframes) specified in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> exist before starting the build. Missing files now produce a clear error message with the file path and the <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> entry that references it. Use <code class="docutils literal notranslate"><span class="pre">--warn-missing</span></code> to continue with warnings instead.</p></li>
+</ul>
+</section>
+<section id="id8">
+<h3>Changed<a class="headerlink" href="#id8" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Standardized all docstrings across the codebase to use Sphinx-style format with <code class="docutils literal notranslate"><span class="pre">:param</span></code>, <code class="docutils literal notranslate"><span class="pre">:type</span></code>, <code class="docutils literal notranslate"><span class="pre">:returns</span></code>, and <code class="docutils literal notranslate"><span class="pre">:rtype</span></code> tags for improved API documentation rendering</p></li>
+</ul>
+</section>
+</section>
+<section id="id9">
+<h2>[0.0.3] - 2026-01-16<a class="headerlink" href="#id9" title="Link to this heading">#</a></h2>
+<section id="id10">
+<h3>Added<a class="headerlink" href="#id10" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>New <code class="docutils literal notranslate"><span class="pre">chartbook.env</span></code> module (renamed from <code class="docutils literal notranslate"><span class="pre">chartbook.settings</span></code>) for project path management</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_project_root()</span></code> function with configurable <code class="docutils literal notranslate"><span class="pre">start</span></code>, <code class="docutils literal notranslate"><span class="pre">markers</span></code>, <code class="docutils literal notranslate"><span class="pre">max_levels</span></code>, and <code class="docutils literal notranslate"><span class="pre">use_cache</span></code> parameters</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_os_type()</span></code> function for cross-platform scripts (returns “nix”, “windows”, or “unknown”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get()</span></code> function (renamed from <code class="docutils literal notranslate"><span class="pre">config()</span></code>) for reading environment variables and <code class="docutils literal notranslate"><span class="pre">.env</span></code> files</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clear_cache()</span></code> function to reset cached project root lookups</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ProjectRootNotFoundError</span></code> exception with helpful error messages</p></li>
+<li><p>Backwards compatibility alias: <code class="docutils literal notranslate"><span class="pre">config</span> <span class="pre">=</span> <span class="pre">get</span></code></p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<section id="id11">
+<h2>[0.0.2] - 2026-01-03<a class="headerlink" href="#id11" title="Link to this heading">#</a></h2>
+<section id="id12">
+<h3>Added<a class="headerlink" href="#id12" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>New <code class="docutils literal notranslate"><span class="pre">chartbook.plotting</span></code> submodule for creating charts directly from DataFrames</p>
+<ul>
+<li><p>Simple, consistent API for common chart types: <code class="docutils literal notranslate"><span class="pre">line()</span></code>, <code class="docutils literal notranslate"><span class="pre">bar()</span></code>, <code class="docutils literal notranslate"><span class="pre">scatter()</span></code>, <code class="docutils literal notranslate"><span class="pre">pie()</span></code>, and <code class="docutils literal notranslate"><span class="pre">area()</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dual()</span></code> function for dual-axis charts combining different chart types on left and right y-axes</p></li>
+<li><p>Built-in support for chart overlays: NBER recession shading, horizontal/vertical reference lines, shaded regions, confidence bands, and regression lines</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ChartResult</span></code> object with <code class="docutils literal notranslate"><span class="pre">.show()</span></code> for inline display and <code class="docutils literal notranslate"><span class="pre">.save(chart_id)</span></code> for multi-format export (HTML, PNG, SVG)</p></li>
+<li><p>Global configuration via <code class="docutils literal notranslate"><span class="pre">configure()</span></code> for default output directory, backends, NBER recessions, and styling</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">set_style()</span></code> for applying matplotlib styles, including a bundled “chartbook” style</p></li>
+<li><p>Support for both Plotly (interactive) and Matplotlib backends</p></li>
+<li><p>Rich annotation support: titles, captions, notes, and source attribution</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="id13">
+<h3>Added<a class="headerlink" href="#id13" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Initial release</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="contributing.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Contributing</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">[0.0.6] - 2026-02-01</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#changed">Changed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed">Fixed</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">[0.0.5] - 2026-01-26</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Changed</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">[0.0.4] - 2026-01-22</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Fixed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Changed</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">[0.0.3] - 2026-01-16</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Added</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">[0.0.2] - 2026-01-03</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">Added</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
