@@ -161,19 +161,75 @@ Options:
   --size-threshold FLOAT File size threshold in MB (default: 50)
 ```
 
+### chartbook ls
+
+List catalog objects (pipelines, dataframes, charts).
+
+```bash
+chartbook ls [OPTIONS] [COMMAND]
+
+Commands:
+  pipelines    List all pipelines
+  dataframes   List all dataframes across pipelines
+  charts       List all charts across pipelines
+
+Options:
+  --catalog PATH   Path to catalog chartbook.toml (overrides default)
+```
+
+**Examples:**
+```bash
+chartbook ls                    # List all objects in tree format
+chartbook ls pipelines          # List pipelines only
+chartbook ls dataframes         # List all dataframes
+chartbook ls charts             # List all charts
+chartbook ls --catalog /path/to/catalog/chartbook.toml
+```
+
+### chartbook data
+
+Data operations for accessing dataframe paths and documentation.
+
+```bash
+chartbook data COMMAND [OPTIONS]
+
+Commands:
+  get-path       Get the path to a dataframe's parquet file
+  get-docs       Print documentation content for a dataframe
+  get-docs-path  Get the path to a dataframe's documentation source
+
+Options (for all commands):
+  --pipeline PIPELINE    Pipeline ID (required)
+  --dataframe DATAFRAME  Dataframe ID (required)
+  --catalog PATH         Path to catalog chartbook.toml (optional)
+```
+
+**Examples:**
+```bash
+chartbook data get-path --pipeline sales --dataframe transactions
+chartbook data get-docs --pipeline sales --dataframe transactions
+chartbook data get-docs-path --pipeline sales --dataframe transactions
+```
+
 ## Data Loading Examples
 
 ```python
 from chartbook import data
 
 # Basic loading
-df = data.load(pipeline_id="SALES", dataframe_id="sales_data")
+df = data.load(pipeline="SALES", dataframe="sales_data")
 
 # With format specification
-df = data.load(pipeline_id="SALES", dataframe_id="sales_data", format="polars")
+df = data.load(pipeline="SALES", dataframe="sales_data", format="polars")
 
-# Get file path only
-path = data.get_path(pipeline_id="SALES", dataframe_id="sales_data")
+# Get data file path
+path = data.get_data_path(pipeline="SALES", dataframe="sales_data")
+
+# Get documentation content as a string
+docs = data.get_docs(pipeline="SALES", dataframe="sales_data")
+
+# Get path to documentation source file
+docs_path = data.get_docs_path(pipeline="SALES", dataframe="sales_data")
 ```
 
 ## Chart Field Reference

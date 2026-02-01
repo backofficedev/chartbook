@@ -323,8 +323,14 @@ lf = data.load(pipeline="MARKETS", dataframe="market_data", format="polars-lazyf
 df = data.load(pipeline="MARKETS", dataframe="market_data",
                catalog_path="/path/to/catalog")
 
-# Get just the resolved file path
-path = data.get_path(pipeline="MARKETS", dataframe="market_data")
+# Get just the resolved data file path
+path = data.get_data_path(pipeline="MARKETS", dataframe="market_data")
+
+# Get documentation content as a string
+docs = data.get_docs(pipeline="MARKETS", dataframe="market_data")
+
+# Get path to documentation source file
+docs_path = data.get_docs_path(pipeline="MARKETS", dataframe="market_data")
 ```
 
 ### Direct Loading

@@ -96,6 +96,7 @@ def create_pipeline_project(
     include_notebooks: bool = False,
     dataframe_count: int = 1,
     charts_per_dataframe: int = 1,
+    use_inline_docs: bool = False,
 ) -> Path:
     """Creates a complete pipeline project structure.
 
@@ -123,6 +124,7 @@ def create_pipeline_project(
         include_notebooks: Whether to include notebooks section
         dataframe_count: Number of dataframes to create
         charts_per_dataframe: Number of charts per dataframe
+        use_inline_docs: If True, uses dataframe_docs_str instead of dataframe_docs_path
 
     Returns:
         Path to the project directory
@@ -194,17 +196,25 @@ def create_pipeline_project(
                 f"# Dataframe {i}\n\nDocumentation for dataframe {i}.\n"
             )
 
-            config["dataframes"][df_id] = {
+            df_config = {
                 "dataframe_name": f"Dataframe {i}",
                 "short_description_df": f"Description for dataframe {i}",
                 "path_to_parquet_data": parquet_path,
                 "path_to_excel_data": "",  # Required by build_markdown
-                "dataframe_docs_path": dataframe_docs_path,
                 "date_col": "date",
                 "topic_tags": ["test tag", "UPPERCASE TAG"],
                 "data_sources": ["Test Source"],
                 "data_providers": ["Test Provider"],
             }
+
+            if use_inline_docs:
+                df_config["dataframe_docs_str"] = (
+                    f"# Dataframe {i}\n\nInline documentation for dataframe {i}.\n"
+                )
+            else:
+                df_config["dataframe_docs_path"] = dataframe_docs_path
+
+            config["dataframes"][df_id] = df_config
 
             if include_charts:
                 if "charts" not in config:
@@ -257,6 +267,7 @@ def create_catalog_project(
     base_dir: Path,
     pipeline_ids: list = None,
     use_platform_paths: bool = False,
+    use_inline_docs: bool = False,
 ) -> Path:
     """Creates a catalog project with multiple sub-pipelines.
 
@@ -273,6 +284,7 @@ def create_catalog_project(
         base_dir: Root directory for the catalog
         pipeline_ids: List of pipeline IDs to create. Defaults to ["pipeline_a", "pipeline_b"]
         use_platform_paths: If True, uses platform-specific path dicts
+        use_inline_docs: If True, uses dataframe_docs_str instead of dataframe_docs_path
 
     Returns:
         Path to the catalog directory
@@ -296,6 +308,7 @@ def create_catalog_project(
             pipeline_name=f"Pipeline {pid.upper()}",
             include_dataframes=True,
             include_charts=True,
+            use_inline_docs=use_inline_docs,
         )
 
         if use_platform_paths:

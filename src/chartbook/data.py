@@ -9,8 +9,14 @@ Load dataframes from registered pipelines in a catalog::
     # Specify format
     df_pl = data.load(pipeline="yield_curve", dataframe="repo_public", format="polars")
 
-    # Get just the path
-    path = data.get_path(pipeline="yield_curve", dataframe="repo_public")
+    # Get just the data path
+    path = data.get_data_path(pipeline="yield_curve", dataframe="repo_public")
+
+    # Get documentation content
+    docs = data.get_docs(pipeline="yield_curve", dataframe="repo_public")
+
+    # Get path to documentation source
+    docs_path = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public")
 """
 
 from pathlib import Path
@@ -88,7 +94,53 @@ def _get_dataframe_path_from_catalog(
     return Path(pipeline_manifest["dataframes"][dataframe]["dataframe_path"])
 
 
-def get_path(
+def _get_dataframe_docs_info_from_catalog(
+    catalog_path: Path,
+    pipeline: str,
+    dataframe: str,
+) -> tuple:
+    """Look up docs info for a dataframe inside a catalog manifest.
+
+    :param catalog_path: Path to the catalog's ``chartbook.toml``.
+    :type catalog_path: Path
+    :param pipeline: The pipeline identifier within the catalog.
+    :type pipeline: str
+    :param dataframe: The dataframe identifier within the pipeline.
+    :type dataframe: str
+    :returns: Tuple of (doc_mode, doc_value, pipeline_base_dir) where doc_mode
+        is ``"path"`` or ``"str"``, doc_value is the path string or inline
+        content, and pipeline_base_dir is the base directory of the pipeline.
+    :rtype: tuple[str, str, Path]
+    :raises KeyError: If the pipeline or dataframe is not found.
+    """
+    from chartbook.manifest import load_manifest
+
+    manifest = load_manifest(base_dir=catalog_path.parent)
+
+    available_pipelines = list(manifest.get("pipelines", {}).keys())
+    if pipeline not in manifest.get("pipelines", {}):
+        raise KeyError(
+            f"Pipeline {pipeline!r} not found in catalog. "
+            f"Available pipelines: {available_pipelines}"
+        )
+
+    pipeline_manifest = manifest["pipelines"][pipeline]
+    available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())
+    if dataframe not in pipeline_manifest.get("dataframes", {}):
+        raise KeyError(
+            f"Dataframe {dataframe!r} not found in pipeline {pipeline!r}. "
+            f"Available dataframes: {available_dataframes}"
+        )
+
+    df_manifest = pipeline_manifest["dataframes"][dataframe]
+    doc_mode = df_manifest["_doc_mode"]
+    doc_value = df_manifest["_doc_value"]
+    pipeline_base_dir = Path(pipeline_manifest["base_dir"])
+
+    return doc_mode, doc_value, pipeline_base_dir
+
+
+def get_data_path(
     pipeline: str,
     dataframe: str,
     catalog_path: Optional[Union[str, Path]] = None,
@@ -110,6 +162,78 @@ def get_path(
     """
     resolved_catalog = _resolve_catalog_path(catalog_path)
     return _get_dataframe_path_from_catalog(resolved_catalog, pipeline, dataframe)
+
+
+def get_docs_path(
+    pipeline: str,
+    dataframe: str,
+    catalog_path: Optional[Union[str, Path]] = None,
+) -> Path:
+    """Get the path to a dataframe's documentation source.
+
+    For dataframes using ``dataframe_docs_path``, returns the path to the
+    ``.md`` file. For dataframes using ``dataframe_docs_str`` (inline docs),
+    returns the path to the ``chartbook.toml`` file where the docs are defined.
+
+    :param pipeline: The pipeline identifier within the catalog.
+    :type pipeline: str
+    :param dataframe: The dataframe identifier within the pipeline.
+    :type dataframe: str
+    :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent
+        directory.  If ``None``, the global default from
+        ``~/.chartbook/settings.toml`` is used.
+    :type catalog_path: Optional[Union[str, Path]]
+    :returns: The resolved path to the documentation source file.
+    :rtype: Path
+    :raises CatalogNotConfiguredError: If no catalog is configured.
+    :raises KeyError: If the pipeline or dataframe is not found.
+    """
+    resolved_catalog = _resolve_catalog_path(catalog_path)
+    doc_mode, doc_value, pipeline_base_dir = _get_dataframe_docs_info_from_catalog(
+        resolved_catalog, pipeline, dataframe
+    )
+    if doc_mode == "path":
+        return (pipeline_base_dir / doc_value).resolve()
+    else:  # doc_mode == "str"
+        return (pipeline_base_dir / "chartbook.toml").resolve()
+
+
+def get_docs(
+    pipeline: str,
+    dataframe: str,
+    catalog_path: Optional[Union[str, Path]] = None,
+) -> str:
+    """Get the documentation content for a dataframe as a string.
+
+    Works with both documentation modes:
+
+    - If the dataframe uses ``dataframe_docs_path``, reads and returns the
+      content of the ``.md`` file.
+    - If the dataframe uses ``dataframe_docs_str``, returns the inline string
+      directly.
+
+    :param pipeline: The pipeline identifier within the catalog.
+    :type pipeline: str
+    :param dataframe: The dataframe identifier within the pipeline.
+    :type dataframe: str
+    :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent
+        directory.  If ``None``, the global default from
+        ``~/.chartbook/settings.toml`` is used.
+    :type catalog_path: Optional[Union[str, Path]]
+    :returns: The documentation content as a string.
+    :rtype: str
+    :raises CatalogNotConfiguredError: If no catalog is configured.
+    :raises KeyError: If the pipeline or dataframe is not found.
+    """
+    resolved_catalog = _resolve_catalog_path(catalog_path)
+    doc_mode, doc_value, pipeline_base_dir = _get_dataframe_docs_info_from_catalog(
+        resolved_catalog, pipeline, dataframe
+    )
+    if doc_mode == "path":
+        doc_path = (pipeline_base_dir / doc_value).resolve()
+        return doc_path.read_text()
+    else:  # doc_mode == "str"
+        return doc_value
 
 
 def load(
@@ -157,7 +281,7 @@ def load(
     ...               format="polars-lazyframe",
     ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
     """
-    file_path = get_path(pipeline, dataframe, catalog_path)
+    file_path = get_data_path(pipeline, dataframe, catalog_path)
 
     if format == "pandas":
         import pandas as pd

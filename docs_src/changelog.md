@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `data.get_docs(pipeline, dataframe)` returns the documentation content for a dataframe as a string (works with both `dataframe_docs_path` and `dataframe_docs_str` modes)
+- `data.get_docs_path(pipeline, dataframe)` returns the path to the documentation source file (`.md` file for path mode, `chartbook.toml` for inline mode)
+- New `chartbook ls` CLI command to list catalog objects:
+  - `chartbook ls` lists all pipelines, dataframes, and charts in a tree format
+  - `chartbook ls pipelines` lists pipelines only
+  - `chartbook ls dataframes` lists all dataframes across pipelines
+  - `chartbook ls charts` lists all charts across pipelines
+  - Supports `--catalog` option to override the default catalog
+- New `chartbook data` CLI command group for data operations:
+  - `chartbook data get-path --pipeline <id> --dataframe <id>` prints the parquet file path
+  - `chartbook data get-docs --pipeline <id> --dataframe <id>` prints the documentation content
+  - `chartbook data get-docs-path --pipeline <id> --dataframe <id>` prints the documentation source path
+  - All commands support `--catalog` option to override the default catalog
+
 ### Changed
+- `data.get_path()` renamed to `data.get_data_path()` for clarity
 - Data download links (Parquet/Excel) are now disabled by default in generated documentation. Set `enable_data_download = true` in the `[site]` section of `chartbook.toml` to enable them.
 
 ### Fixed

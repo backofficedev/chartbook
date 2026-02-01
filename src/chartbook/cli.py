@@ -291,6 +291,274 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold):
         sys.exit(1)
 
 
+# =============================================================================
+# ls command group - List catalog objects
+# =============================================================================
+
+
+def _load_catalog_for_cli(catalog_path=None):
+    """Load manifest from catalog path or default settings.
+
+    :param catalog_path: Optional path to catalog chartbook.toml.
+    :type catalog_path: str or Path, optional
+    :returns: Tuple of (manifest, resolved_catalog_path).
+    :rtype: tuple
+    :raises SystemExit: If no catalog is configured.
+    """
+    from chartbook.data import _resolve_catalog_path
+    from chartbook.errors import CatalogNotConfiguredError
+    from chartbook.manifest import load_manifest
+
+    try:
+        resolved = _resolve_catalog_path(catalog_path)
+    except CatalogNotConfiguredError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
+        raise SystemExit(1)
+
+    manifest = load_manifest(base_dir=resolved.parent)
+    return manifest, resolved
+
+
+def _get_pipeline_name(pipeline_manifest):
+    """Extract pipeline name from manifest.
+
+    :param pipeline_manifest: The pipeline manifest dict.
+    :type pipeline_manifest: dict
+    :returns: The pipeline name or 'Unknown'.
+    :rtype: str
+    """
+    if "pipeline" in pipeline_manifest:
+        return pipeline_manifest["pipeline"].get("pipeline_name", "Unknown")
+    return "Unknown"
+
+
+@main.group(invoke_without_command=True)
+@click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
+@click.pass_context
+def ls(ctx, catalog):
+    """List catalog objects (pipelines, dataframes, charts).
+
+    Without a subcommand, lists all objects in a tree format.
+    Use subcommands to list specific object types.
+
+    Examples:
+        chartbook ls
+        chartbook ls pipelines
+        chartbook ls dataframes
+        chartbook ls charts
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["catalog"] = catalog
+
+    if ctx.invoked_subcommand is None:
+        # List everything in tree format
+        manifest, catalog_path = _load_catalog_for_cli(catalog)
+        click.echo(f"Catalog: {catalog_path}")
+        click.echo("")
+
+        if manifest["config"]["type"] == "catalog":
+            # Catalog with multiple pipelines
+            for pipeline_id in sorted(manifest["pipelines"].keys()):
+                pipeline_manifest = manifest["pipelines"][pipeline_id]
+                pipeline_name = _get_pipeline_name(pipeline_manifest)
+                click.echo(f"[pipeline] {pipeline_id}: {pipeline_name}")
+
+                # List dataframes under this pipeline
+                if "dataframes" in pipeline_manifest:
+                    for df_id in sorted(pipeline_manifest["dataframes"].keys()):
+                        df_name = pipeline_manifest["dataframes"][df_id].get(
+                            "dataframe_name", "Unknown"
+                        )
+                        click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
+
+                # List charts under this pipeline
+                if "charts" in pipeline_manifest:
+                    for chart_id in sorted(pipeline_manifest["charts"].keys()):
+                        chart_name = pipeline_manifest["charts"][chart_id].get(
+                            "chart_name", "Unknown"
+                        )
+                        click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
+        else:
+            # Single pipeline
+            pipeline_id = manifest["pipeline"]["id"]
+            pipeline_name = _get_pipeline_name(manifest)
+            click.echo(f"[pipeline] {pipeline_id}: {pipeline_name}")
+
+            if "dataframes" in manifest:
+                for df_id in sorted(manifest["dataframes"].keys()):
+                    df_name = manifest["dataframes"][df_id].get(
+                        "dataframe_name", "Unknown"
+                    )
+                    click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
+
+            if "charts" in manifest:
+                for chart_id in sorted(manifest["charts"].keys()):
+                    chart_name = manifest["charts"][chart_id].get(
+                        "chart_name", "Unknown"
+                    )
+                    click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
+
+
+@ls.command("pipelines")
+@click.pass_context
+def ls_pipelines(ctx):
+    """List all pipelines."""
+    catalog = ctx.obj.get("catalog")
+    manifest, _ = _load_catalog_for_cli(catalog)
+
+    if manifest["config"]["type"] == "catalog":
+        for pipeline_id in sorted(manifest["pipelines"].keys()):
+            pipeline_manifest = manifest["pipelines"][pipeline_id]
+            pipeline_name = _get_pipeline_name(pipeline_manifest)
+            click.echo(f"{pipeline_id}: {pipeline_name}")
+    else:
+        pipeline_id = manifest["pipeline"]["id"]
+        pipeline_name = _get_pipeline_name(manifest)
+        click.echo(f"{pipeline_id}: {pipeline_name}")
+
+
+@ls.command("dataframes")
+@click.pass_context
+def ls_dataframes(ctx):
+    """List all dataframes across pipelines."""
+    catalog = ctx.obj.get("catalog")
+    manifest, _ = _load_catalog_for_cli(catalog)
+
+    if manifest["config"]["type"] == "catalog":
+        for pipeline_id in sorted(manifest["pipelines"].keys()):
+            pipeline_manifest = manifest["pipelines"][pipeline_id]
+            if "dataframes" in pipeline_manifest:
+                for df_id in sorted(pipeline_manifest["dataframes"].keys()):
+                    df_name = pipeline_manifest["dataframes"][df_id].get(
+                        "dataframe_name", "Unknown"
+                    )
+                    click.echo(f"{pipeline_id}/{df_id}: {df_name}")
+    else:
+        pipeline_id = manifest["pipeline"]["id"]
+        if "dataframes" in manifest:
+            for df_id in sorted(manifest["dataframes"].keys()):
+                df_name = manifest["dataframes"][df_id].get("dataframe_name", "Unknown")
+                click.echo(f"{pipeline_id}/{df_id}: {df_name}")
+
+
+@ls.command("charts")
+@click.pass_context
+def ls_charts(ctx):
+    """List all charts across pipelines."""
+    catalog = ctx.obj.get("catalog")
+    manifest, _ = _load_catalog_for_cli(catalog)
+
+    if manifest["config"]["type"] == "catalog":
+        for pipeline_id in sorted(manifest["pipelines"].keys()):
+            pipeline_manifest = manifest["pipelines"][pipeline_id]
+            if "charts" in pipeline_manifest:
+                for chart_id in sorted(pipeline_manifest["charts"].keys()):
+                    chart_name = pipeline_manifest["charts"][chart_id].get(
+                        "chart_name", "Unknown"
+                    )
+                    click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
+    else:
+        pipeline_id = manifest["pipeline"]["id"]
+        if "charts" in manifest:
+            for chart_id in sorted(manifest["charts"].keys()):
+                chart_name = manifest["charts"][chart_id].get("chart_name", "Unknown")
+                click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
+
+
+# =============================================================================
+# data command group - Data operations
+# =============================================================================
+
+
+@main.group()
+def data():
+    """Data operations (get paths, docs)."""
+    pass
+
+
+@data.command("get-path")
+@click.option("--pipeline", required=True, help="Pipeline ID")
+@click.option("--dataframe", required=True, help="Dataframe ID")
+@click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
+def data_get_path(pipeline, dataframe, catalog):
+    """Get the path to a dataframe's parquet file.
+
+    Examples:
+        chartbook data get-path --pipeline yield_curve --dataframe repo_public
+    """
+    from chartbook.data import get_data_path
+    from chartbook.errors import CatalogNotConfiguredError
+
+    try:
+        path = get_data_path(pipeline, dataframe, catalog_path=catalog)
+        click.echo(str(path))
+    except CatalogNotConfiguredError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
+        raise SystemExit(1)
+    except KeyError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
+@data.command("get-docs")
+@click.option("--pipeline", required=True, help="Pipeline ID")
+@click.option("--dataframe", required=True, help="Dataframe ID")
+@click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
+def data_get_docs(pipeline, dataframe, catalog):
+    """Print documentation content for a dataframe.
+
+    Examples:
+        chartbook data get-docs --pipeline yield_curve --dataframe repo_public
+    """
+    from chartbook.data import get_docs
+    from chartbook.errors import CatalogNotConfiguredError
+
+    try:
+        docs = get_docs(pipeline, dataframe, catalog_path=catalog)
+        click.echo(docs)
+    except CatalogNotConfiguredError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
+        raise SystemExit(1)
+    except KeyError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+    except FileNotFoundError as e:
+        click.echo(f"Error: Documentation file not found: {e}", err=True)
+        raise SystemExit(1)
+
+
+@data.command("get-docs-path")
+@click.option("--pipeline", required=True, help="Pipeline ID")
+@click.option("--dataframe", required=True, help="Dataframe ID")
+@click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
+def data_get_docs_path(pipeline, dataframe, catalog):
+    """Get the path to a dataframe's documentation source.
+
+    Examples:
+        chartbook data get-docs-path --pipeline yield_curve --dataframe repo_public
+    """
+    from chartbook.data import get_docs_path
+    from chartbook.errors import CatalogNotConfiguredError
+
+    try:
+        path = get_docs_path(pipeline, dataframe, catalog_path=catalog)
+        click.echo(str(path))
+    except CatalogNotConfiguredError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
+        raise SystemExit(1)
+    except KeyError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1)
+
+
 @main.command()
 def config():
     """Configure the default catalog path for data loading.

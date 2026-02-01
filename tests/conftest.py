@@ -78,6 +78,16 @@ def catalog_project_platform_paths(tmp_path):
 
 
 @pytest.fixture
+def catalog_project_inline_docs(tmp_path):
+    """Creates a catalog project with inline docs (dataframe_docs_str)."""
+    return create_catalog_project(
+        tmp_path / "catalog_inline_docs",
+        pipeline_ids=["pipeline_inline"],
+        use_inline_docs=True,
+    )
+
+
+@pytest.fixture
 def invalid_project_missing_file(tmp_path):
     """Creates a project without chartbook.toml."""
     return create_invalid_toml_project(tmp_path / "missing_file", "missing_file")

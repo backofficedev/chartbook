@@ -57,6 +57,8 @@ pip install -e ".[dev]"
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
 | `config` | Configure the default catalog path for data loading |
+| `ls` | List catalog objects (pipelines, dataframes, charts) |
+| `data` | Data operations (get paths, docs) |
 
 ### chartbook build
 
@@ -138,6 +140,96 @@ Catalog path set to: /data/my-catalog/chartbook.toml
 You can now load data with:
   from chartbook import data
   df = data.load(pipeline="my_pipeline", dataframe="my_df")
+```
+
+### chartbook ls
+
+List catalog objects (pipelines, dataframes, charts).
+
+```bash
+chartbook ls [OPTIONS] [COMMAND]
+```
+
+**Subcommands:**
+- `chartbook ls` - List all objects in a tree format
+- `chartbook ls pipelines` - List pipelines only
+- `chartbook ls dataframes` - List all dataframes across pipelines
+- `chartbook ls charts` - List all charts across pipelines
+
+**Options:**
+- `--catalog PATH`: Path to catalog chartbook.toml (overrides default)
+
+**Examples:**
+```bash
+$ chartbook ls
+Catalog: /data/my-catalog/chartbook.toml
+
+[pipeline] sales: Sales Analytics
+  [dataframe] sales/transactions: Sales Transactions
+  [chart] sales/monthly_revenue: Monthly Revenue
+[pipeline] marketing: Marketing Analytics
+  [dataframe] marketing/campaigns: Campaign Data
+
+$ chartbook ls pipelines
+sales: Sales Analytics
+marketing: Marketing Analytics
+
+$ chartbook ls dataframes
+sales/transactions: Sales Transactions
+marketing/campaigns: Campaign Data
+
+$ chartbook ls --catalog /path/to/other/catalog
+```
+
+### chartbook data
+
+Data operations for accessing dataframe paths and documentation.
+
+```bash
+chartbook data COMMAND [OPTIONS]
+```
+
+**Subcommands:**
+
+#### chartbook data get-path
+Get the path to a dataframe's parquet file.
+
+```bash
+chartbook data get-path --pipeline <id> --dataframe <id> [--catalog PATH]
+```
+
+**Example:**
+```bash
+$ chartbook data get-path --pipeline sales --dataframe transactions
+/data/pipelines/sales/_data/transactions.parquet
+```
+
+#### chartbook data get-docs
+Print documentation content for a dataframe.
+
+```bash
+chartbook data get-docs --pipeline <id> --dataframe <id> [--catalog PATH]
+```
+
+**Example:**
+```bash
+$ chartbook data get-docs --pipeline sales --dataframe transactions
+# Sales Transactions
+
+This dataframe contains daily sales transaction records...
+```
+
+#### chartbook data get-docs-path
+Get the path to a dataframe's documentation source file.
+
+```bash
+chartbook data get-docs-path --pipeline <id> --dataframe <id> [--catalog PATH]
+```
+
+**Example:**
+```bash
+$ chartbook data get-docs-path --pipeline sales --dataframe transactions
+/data/pipelines/sales/docs_src/dataframes/transactions.md
 ```
 
 ### Environment Variables
@@ -554,8 +646,14 @@ lf = data.load(pipeline="MARKETS", dataframe="market_data", format="polars-lazyf
 df = data.load(pipeline="MARKETS", dataframe="market_data",
                catalog_path="/path/to/catalog")
 
-# Get just the resolved file path
-path = data.get_path(pipeline="MARKETS", dataframe="market_data")
+# Get just the resolved data file path
+path = data.get_data_path(pipeline="MARKETS", dataframe="market_data")
+
+# Get documentation content as a string
+docs = data.get_docs(pipeline="MARKETS", dataframe="market_data")
+
+# Get path to documentation source file
+docs_path = data.get_docs_path(pipeline="MARKETS", dataframe="market_data")
 ```
 
 Direct loading:
@@ -628,8 +726,9 @@ Location: `~/.chartbook/settings.toml`
 path = "/absolute/path/to/catalog/chartbook.toml"
 ```
 
-When a default catalog is configured, `data.load()` and `data.get_path()` can
-be called without an explicit `catalog_path` argument:
+When a default catalog is configured, `data.load()`, `data.get_data_path()`,
+`data.get_docs()`, and `data.get_docs_path()` can be called without an explicit
+`catalog_path` argument:
 
 ```python
 from chartbook import data

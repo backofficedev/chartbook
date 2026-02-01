@@ -153,12 +153,12 @@ def test_load_via_global_config(fake_config_dir, catalog_project):
     assert len(df) > 0
 
 
-# --- get_path ---
+# --- get_data_path ---
 
 
-def test_get_path_returns_resolved_path(catalog_project):
-    """get_path returns an absolute Path to the parquet file."""
-    path = data.get_path(
+def test_get_data_path_returns_resolved_path(catalog_project):
+    """get_data_path returns an absolute Path to the parquet file."""
+    path = data.get_data_path(
         pipeline="pipeline_a",
         dataframe="dataframe_0",
         catalog_path=catalog_project,
@@ -167,3 +167,62 @@ def test_get_path_returns_resolved_path(catalog_project):
     assert path.is_absolute()
     assert path.suffix == ".parquet"
     assert path.exists()
+
+
+# --- get_docs_path ---
+
+
+def test_get_docs_path_returns_md_file(catalog_project):
+    """get_docs_path returns an absolute Path to the markdown file."""
+    path = data.get_docs_path(
+        pipeline="pipeline_a",
+        dataframe="dataframe_0",
+        catalog_path=catalog_project,
+    )
+    assert isinstance(path, Path)
+    assert path.is_absolute()
+    assert path.suffix == ".md"
+    assert path.exists()
+
+
+# --- get_docs ---
+
+
+def test_get_docs_returns_markdown_content(catalog_project):
+    """get_docs returns the markdown content as a string."""
+    docs = data.get_docs(
+        pipeline="pipeline_a",
+        dataframe="dataframe_0",
+        catalog_path=catalog_project,
+    )
+    assert isinstance(docs, str)
+    assert "Dataframe 0" in docs
+    assert "Documentation for dataframe 0" in docs
+
+
+# --- Inline docs (dataframe_docs_str) ---
+
+
+def test_get_docs_path_returns_toml_for_inline(catalog_project_inline_docs):
+    """get_docs_path returns path to chartbook.toml for inline docs."""
+    path = data.get_docs_path(
+        pipeline="pipeline_inline",
+        dataframe="dataframe_0",
+        catalog_path=catalog_project_inline_docs,
+    )
+    assert isinstance(path, Path)
+    assert path.is_absolute()
+    assert path.name == "chartbook.toml"
+    assert path.exists()
+
+
+def test_get_docs_returns_inline_content(catalog_project_inline_docs):
+    """get_docs returns the inline string content directly."""
+    docs = data.get_docs(
+        pipeline="pipeline_inline",
+        dataframe="dataframe_0",
+        catalog_path=catalog_project_inline_docs,
+    )
+    assert isinstance(docs, str)
+    assert "Dataframe 0" in docs
+    assert "Inline documentation for dataframe 0" in docs

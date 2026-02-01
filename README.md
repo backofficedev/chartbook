@@ -55,7 +55,7 @@ pip install -e ".[dev]"
 ```python
 from chartbook import data
 
-df = data.load(pipeline_id="fred_charts", dataframe_id="interest_rates")
+df = data.load(pipeline="fred_charts", dataframe="interest_rates")
 ```
 
 ### Build documentation

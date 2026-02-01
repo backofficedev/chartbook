@@ -27,6 +27,14 @@ chartbook build           # Generate HTML documentation website
 chartbook build -f        # Force overwrite existing docs
 chartbook publish            # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
+chartbook config             # Configure default catalog path
+chartbook ls                 # List all pipelines, dataframes, charts
+chartbook ls pipelines       # List pipelines only
+chartbook ls dataframes      # List dataframes only
+chartbook ls charts          # List charts only
+chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
+chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
+chartbook data get-docs-path --pipeline <id> --dataframe <id>  # Get docs path
 ```
 
 ## Configuration File
@@ -47,10 +55,19 @@ Projects use `chartbook.toml` with these sections:
 from chartbook import data
 
 # Load a dataframe
-df = data.load(pipeline_id="PROJ", dataframe_id="my_data")
+df = data.load(pipeline="PROJ", dataframe="my_data")
 
 # Load with format specification
-df = data.load(pipeline_id="PROJ", dataframe_id="my_data", format="polars")
+df = data.load(pipeline="PROJ", dataframe="my_data", format="polars")
+
+# Get data file path
+path = data.get_data_path(pipeline="PROJ", dataframe="my_data")
+
+# Get documentation content as a string
+docs = data.get_docs(pipeline="PROJ", dataframe="my_data")
+
+# Get path to documentation source file
+docs_path = data.get_docs_path(pipeline="PROJ", dataframe="my_data")
 ```
 
 ## Directory Structure

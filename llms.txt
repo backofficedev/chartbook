@@ -4,67 +4,156 @@
 
 ChartBook organizes analytics work into **pipelines** (self-contained projects) or **catalogs** (multi-pipeline collections). All configuration uses TOML format (`chartbook.toml`).
 
-## Quick Start
-
-- [Installation](docs_src/getting-started.md): `pip install chartbook` for data loading, `pipx install chartbook` for CLI
-- [CLI Reference](docs_src/cli-reference.md): `chartbook build`, `chartbook publish`, `chartbook create-data-glimpses`, `chartbook config`
-
-## Core Concepts
-
-- [Pipelines](docs_src/user-guide/pipelines.md): Self-contained analytics projects with charts, dataframes, and documentation
-- [Charts](docs_src/user-guide/charts.md): Interactive HTML visualizations with metadata and governance tracking
-- [Dataframes](docs_src/user-guide/dataframes.md): Data sources in Parquet format with licensing and lineage tracking
-- [Catalog Projects](docs_src/user-guide/catalog-projects.md): Aggregate multiple pipelines into unified documentation
-
-## Configuration
-
-- [Configuration Guide](docs_src/configuration.md): Complete `chartbook.toml` reference with all available fields
-
-## API
-
-- [Python API](docs_src/api/chartbook.md): `from chartbook import data; df = data.load(pipeline="ID", dataframe="df_id")`
-
-## Key Commands
+## Installation
 
 ```bash
-chartbook build           # Generate HTML documentation website
-chartbook build -f        # Force overwrite existing docs
+# For data loading
+pip install chartbook
+
+# For CLI (recommended: isolated installation)
+pipx install chartbook
+```
+
+## Python API
+
+```python
+from chartbook import data
+
+# Load dataframe (requires configured catalog or explicit path)
+df = data.load(pipeline="MARKETS", dataframe="market_data")
+
+# Load as polars DataFrame
+df = data.load(pipeline="MARKETS", dataframe="market_data", format="polars")
+
+# Load as polars LazyFrame
+lf = data.load(pipeline="MARKETS", dataframe="market_data", format="polars-lazyframe")
+
+# Explicit catalog path (no global config needed)
+df = data.load(pipeline="MARKETS", dataframe="market_data",
+               catalog_path="/path/to/catalog")
+
+# Get resolved data file path
+path = data.get_data_path(pipeline="MARKETS", dataframe="market_data")
+
+# Get documentation content as string
+docs = data.get_docs(pipeline="MARKETS", dataframe="market_data")
+
+# Get path to documentation source file
+docs_path = data.get_docs_path(pipeline="MARKETS", dataframe="market_data")
+```
+
+## CLI Commands
+
+```bash
+chartbook build              # Generate HTML documentation
+chartbook build -f           # Force overwrite existing docs
+chartbook build --keep-build-dirs  # Keep temp files for debugging
 chartbook publish            # Publish to directory
-chartbook create-data-glimpses  # Create data summary report
+chartbook create-data-glimpses     # Create data summary report
 chartbook config             # Configure default catalog path
 ```
 
-## Minimal Configuration Example
+## Global Configuration
 
+User settings stored in `~/.chartbook/settings.toml`:
+
+```toml
+[catalog]
+path = "/absolute/path/to/catalog/chartbook.toml"
+```
+
+Set via `chartbook config` command. When configured, `data.load()` works without explicit `catalog_path`.
+
+## Project Types
+
+### Pipeline Project
 ```toml
 [config]
 type = "pipeline"
 chartbook_format_version = "0.0.5"
+```
 
+### Catalog Project (aggregates multiple pipelines)
+```toml
+[config]
+type = "catalog"
+chartbook_format_version = "0.0.5"
+
+[pipelines.SALES]
+path_to_pipeline = "../pipelines/sales"
+
+[pipelines.DATA.MONTHLY]
+Unix = "/data/pipelines/monthly"
+Windows = "T:/pipelines/monthly"
+```
+
+## Configuration Reference
+
+### [site] - Website Metadata
+```toml
 [site]
 title = "My Analytics"
 author = "Your Name"
 copyright = "2025"
+logo_path = "./assets/logo.png"      # Optional
+favicon_path = "./assets/icon.png"   # Optional
+```
 
+### [pipeline] - Pipeline Information
+```toml
 [pipeline]
-id = "MYPROJ"
+id = "MYPROJ"                        # Unique ID (uppercase)
 pipeline_name = "My Pipeline"
-pipeline_description = "Analytics pipeline description"
+pipeline_description = "Description"
 lead_pipeline_developer = "Your Name"
+contributors = ["Name1", "Name2"]    # Optional
+git_repo_URL = "https://..."         # Optional
+README_file_path = "./README.md"     # Optional
+```
 
-[charts.my_chart]
-chart_name = "My Chart"
-short_description_chart = "Chart description"
-dataframe_id = "my_data"
-path_to_html_chart = "./_output/chart.html"
-chart_docs_path = "./docs_src/charts/chart.md"
+### [charts.chart_id] - Chart Definitions
+```toml
+[charts.revenue_trend]
+chart_name = "Revenue Trend"
+short_description_chart = "Monthly revenue trends"
+dataframe_id = "revenue_data"
+path_to_html_chart = "./_output/revenue_trend.html"
+chart_docs_path = "./docs_src/charts/revenue_trend.md"
+topic_tags = ["Revenue", "Monthly"]           # Optional
+data_frequency = "Monthly"                    # Optional
+units = "USD Millions"                        # Optional
+date_cleared_by_iv_and_v = "2025-01-15"       # Optional: governance
+last_legal_clearance_date = "2025-01-15"      # Optional: governance
+```
 
-[dataframes.my_data]
-dataframe_name = "My Data"
-short_description_df = "Data description"
-data_sources = ["Source"]
-path_to_parquet_data = "./_data/data.parquet"
+### [dataframes.df_id] - Dataframe Definitions
+```toml
+[dataframes.market_data]
+dataframe_name = "Market Data"
+short_description_df = "Daily stock prices"
+data_sources = ["Bloomberg", "Reuters"]
+path_to_parquet_data = "./_data/market_data.parquet"
 date_col = "date"
+dataframe_docs_path = "./docs_src/dataframes/market_data.md"  # Optional
+topic_tags = ["Market Data", "Equities"]                       # Optional
+data_providers = ["Bloomberg LP", "Refinitiv"]                 # Optional
+type_of_data_access = ["Subscription", "Subscription"]         # Optional
+data_license = "Bloomberg Data License"                        # Optional
+license_expiration_date = "2025-12-31"                         # Optional
+```
+
+### [notes] - Additional Documentation
+```toml
+[notes.methodology]
+path_to_markdown_file = "./docs_src/methodology.md"
+```
+
+### [notebooks] - Jupyter Notebooks
+```toml
+[notebooks.analysis]
+notebook_name = "Exploratory Analysis"
+notebook_description = "Initial data exploration"
+notebook_path = "_output/analysis.ipynb"
 ```
 
 ## Directory Structure
@@ -72,16 +161,15 @@ date_col = "date"
 ```
 my-pipeline/
 ├── chartbook.toml      # Configuration
-├── _data/               # Parquet data files
-├── _output/             # Generated HTML charts
-├── docs_src/            # Markdown documentation
+├── _data/              # Parquet data files
+├── _output/            # Generated HTML charts
+├── docs_src/           # Markdown documentation
 │   ├── charts/
 │   └── dataframes/
-└── src/                 # Python source code
+└── src/                # Python source code
 ```
 
-## Optional
+## More Information
 
-- [Examples](docs_src/examples/index.md): Real-world examples and best practices
-- [Contributing](docs_src/contributing.md): Development guidelines
+- [Full Documentation](llm/llms-full.txt): Complete reference with all fields and examples
 - [Changelog](docs_src/changelog.md): Version history
