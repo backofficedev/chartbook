@@ -10,7 +10,8 @@
 /* Custom CSS to make ONLY chart pages full width for pydata-sphinx-theme */
 
 /* Apply full-width styles to chart pages using JavaScript-added class */
-.chartbook-chart-page {
+.chartbook-chart-page,
+.chartbook-full-width-page {
     --pst-content-width: none !important;
 }
 
@@ -26,7 +27,13 @@
 .chartbook-charts-listing .bd-main,
 .chartbook-charts-listing .bd-article,
 .chartbook-charts-listing .bd-content,
-.chartbook-charts-listing main {
+.chartbook-charts-listing main,
+.chartbook-full-width-page .bd-container,
+.chartbook-full-width-page .bd-page-width,
+.chartbook-full-width-page .bd-main,
+.chartbook-full-width-page .bd-article,
+.chartbook-full-width-page .bd-content,
+.chartbook-full-width-page main {
     max-width: none !important;
     width: 100% !important;
 }
@@ -39,14 +46,19 @@
 .chartbook-charts-listing .container,
 .chartbook-charts-listing .container-fluid,
 .chartbook-charts-listing .container-lg,
-.chartbook-charts-listing .container-xl {
+.chartbook-charts-listing .container-xl,
+.chartbook-full-width-page .container,
+.chartbook-full-width-page .container-fluid,
+.chartbook-full-width-page .container-lg,
+.chartbook-full-width-page .container-xl {
     max-width: none !important;
     width: 100% !important;
 }
 
 /* Make content wrapper full width for chart pages */
 .chartbook-chart-page .bd-content,
-.chartbook-charts-listing .bd-content {
+.chartbook-charts-listing .bd-content,
+.chartbook-full-width-page .bd-content {
     max-width: none !important;
     width: 100% !important;
     flex: 1 1 auto !important;
@@ -58,7 +70,10 @@
 .chartbook-chart-page .col-xl-7,
 .chartbook-charts-listing .col-md-9,
 .chartbook-charts-listing .col-lg-9,
-.chartbook-charts-listing .col-xl-7 {
+.chartbook-charts-listing .col-xl-7,
+.chartbook-full-width-page .col-md-9,
+.chartbook-full-width-page .col-lg-9,
+.chartbook-full-width-page .col-xl-7 {
     max-width: none !important;
     width: 100% !important;
     flex: 1 1 auto !important;
@@ -68,24 +83,29 @@
 .chartbook-chart-page .col-md-3,
 .chartbook-chart-page .col-lg-3,
 .chartbook-charts-listing .col-md-3,
-.chartbook-charts-listing .col-lg-3 {
+.chartbook-charts-listing .col-lg-3,
+.chartbook-full-width-page .col-md-3,
+.chartbook-full-width-page .col-lg-3 {
     flex: 0 0 20rem !important;
     max-width: 20rem !important;
 }
 
 /* Additional specific targeting for chart pages */
 .chartbook-chart-page .bd-content .bd-article-container,
-.chartbook-charts-listing .bd-content .bd-article-container {
+.chartbook-charts-listing .bd-content .bd-article-container,
+.chartbook-full-width-page .bd-content .bd-article-container {
     max-width: none !important;
 }
 
 .chartbook-chart-page article.bd-article,
-.chartbook-charts-listing article.bd-article {
+.chartbook-charts-listing article.bd-article,
+.chartbook-full-width-page article.bd-article {
     max-width: none !important;
 }
 
 .chartbook-chart-page section.bd-content,
-.chartbook-charts-listing section.bd-content {
+.chartbook-charts-listing section.bd-content,
+.chartbook-full-width-page section.bd-content {
     max-width: none !important;
 }
 
