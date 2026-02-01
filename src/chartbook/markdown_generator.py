@@ -26,13 +26,17 @@ DOCS_BUILD_DIR = BASE_DIR / Path("_docs")
 DOCS_SRC_DIR = BASE_DIR / Path("_docs_src")
 
 
-def get_sphinx_file_alignment_plan(base_dir=BASE_DIR, docs_build_dir=DOCS_BUILD_DIR):
+def get_sphinx_file_alignment_plan(
+    base_dir=BASE_DIR, docs_build_dir=DOCS_BUILD_DIR, enable_data_download=False
+):
     """Get file alignment plans for copying files to the Sphinx build directory.
 
     :param base_dir: The base directory of the project.
     :type base_dir: Path
     :param docs_build_dir: The directory where documentation will be built.
     :type docs_build_dir: Path
+    :param enable_data_download: Whether to enable copying parquet data files.
+    :type enable_data_download: bool
     :returns: A tuple of (dataset_plan, chart_plan_download, chart_plan_static, notebook_plan).
     :rtype: tuple[dict, dict, dict, dict]
     """
@@ -49,29 +53,35 @@ def get_sphinx_file_alignment_plan(base_dir=BASE_DIR, docs_build_dir=DOCS_BUILD_
             Path(docs_build_dir) / "download_chart" / str(pipeline_id)
         )
         download_chart_dir_static = Path(docs_build_dir) / "_static" / str(pipeline_id)
-        download_dataframe_dir = (
-            Path(docs_build_dir) / "download_dataframe" / str(pipeline_id)
-        )
         notebook_dir = Path(docs_build_dir) / "notebooks" / str(pipeline_id)
 
         download_chart_dir_download.mkdir(parents=True, exist_ok=True)
-        download_dataframe_dir.mkdir(parents=True, exist_ok=True)
         download_chart_dir_static.mkdir(parents=True, exist_ok=True)
         notebook_dir.mkdir(parents=True, exist_ok=True)
 
+        # Only create download_dataframe directory when data downloads are enabled
+        if enable_data_download:
+            download_dataframe_dir = (
+                Path(docs_build_dir) / "download_dataframe" / str(pipeline_id)
+            )
+            download_dataframe_dir.mkdir(parents=True, exist_ok=True)
+
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         pipeline_base_dir = Path(pipeline_manifest["pipeline_base_dir"])
-        for dataframe_id in pipeline_manifest["dataframes"]:
-            dataframe_manifest = pipeline_manifest["dataframes"][dataframe_id]
 
-            path_to_parquet_data = dataframe_manifest["path_to_parquet_data"]
-            if (path_to_parquet_data is None) or (path_to_parquet_data == ""):
-                pass
-            else:
-                file_path = pipeline_base_dir / Path(path_to_parquet_data)
-                dataset_plan[file_path] = (
-                    download_dataframe_dir / f"{dataframe_id}.parquet"
-                )
+        # Only populate dataset_plan when data downloads are enabled
+        if enable_data_download:
+            for dataframe_id in pipeline_manifest["dataframes"]:
+                dataframe_manifest = pipeline_manifest["dataframes"][dataframe_id]
+
+                path_to_parquet_data = dataframe_manifest["path_to_parquet_data"]
+                if (path_to_parquet_data is None) or (path_to_parquet_data == ""):
+                    pass
+                else:
+                    file_path = pipeline_base_dir / Path(path_to_parquet_data)
+                    dataset_plan[file_path] = (
+                        download_dataframe_dir / f"{dataframe_id}.parquet"
+                    )
 
         for chart_id in pipeline_manifest["charts"]:
             # Plan for copying HTML chart to download folder
@@ -112,6 +122,7 @@ def generate_all_pipeline_docs(
     pipeline_theme="pipeline",
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
+    enable_data_download=False,
 ):
     """Generate documentation for all pipelines in the manifest.
 
@@ -128,6 +139,8 @@ def generate_all_pipeline_docs(
     :type docs_src_dir: Path
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param enable_data_download: Whether to enable data download links in documentation.
+    :type enable_data_download: bool
     """
     base_dir = Path(base_dir).resolve()
     docs_src_dir = Path(docs_src_dir)
@@ -146,6 +159,7 @@ def generate_all_pipeline_docs(
             pipeline_theme=pipeline_theme,
             docs_src_dir=docs_src_dir,
             size_threshold=size_threshold,
+            enable_data_download=enable_data_download,
         )
         pipeline_theme = pipeline_manifest["config"]["type"]
         if pipeline_theme == "catalog":
@@ -363,6 +377,7 @@ def generate_pipeline_docs(
     pipeline_theme="pipeline",
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
+    enable_data_download=False,
 ):
     """Generate documentation for a single pipeline.
 
@@ -380,6 +395,8 @@ def generate_pipeline_docs(
     :type docs_src_dir: Path
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param enable_data_download: Whether to enable data download links in documentation.
+    :type enable_data_download: bool
     """
     for dataframe_id in pipeline_manifest["dataframes"]:
         generate_dataframe_docs(
@@ -391,6 +408,7 @@ def generate_pipeline_docs(
             pipeline_theme=pipeline_theme,
             docs_src_dir=docs_src_dir,
             size_threshold=size_threshold,
+            enable_data_download=enable_data_download,
         )
 
     for chart_id in pipeline_manifest["charts"]:
@@ -402,6 +420,7 @@ def generate_pipeline_docs(
             pipeline_base_dir=pipeline_base_dir,
             pipeline_theme=pipeline_theme,
             docs_src_dir=docs_src_dir,
+            enable_data_download=enable_data_download,
         )
 
 
@@ -424,6 +443,7 @@ def generate_dataframe_docs(
     pipeline_theme="pipeline",
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
+    enable_data_download=False,
 ):
     """Generate documentation for a specific dataframe, including the most recent data dates.
 
@@ -443,6 +463,8 @@ def generate_dataframe_docs(
     :type docs_src_dir: Path
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param enable_data_download: Whether to enable data download links in documentation.
+    :type enable_data_download: bool
     """
     dataframe_manifest = pipeline_manifest["dataframes"][dataframe_id]
 
@@ -556,6 +578,7 @@ def generate_dataframe_docs(
         most_recent_data_max=most_recent_data_max,
         dot_or_dotdot="..",
         dataframe_glimpse=dataframe_glimpse,
+        enable_data_download=enable_data_download,
     )
     # print(table_page)
 
@@ -625,6 +648,7 @@ def generate_chart_docs(
     pipeline_base_dir=BASE_DIR,
     pipeline_theme="pipeline",
     docs_src_dir=DOCS_SRC_DIR,
+    enable_data_download=False,
 ):
     """Generate documentation for a specific chart.
 
@@ -642,6 +666,8 @@ def generate_chart_docs(
     :type pipeline_theme: str
     :param docs_src_dir: The directory containing documentation source files and templates.
     :type docs_src_dir: Path
+    :param enable_data_download: Whether to enable data download links in documentation.
+    :type enable_data_download: bool
     """
     pipeline_base_dir = Path(pipeline_base_dir)
 
@@ -739,6 +765,7 @@ def generate_chart_docs(
         pipeline_page_link=pipeline_page_link,
         dataframe_last_updated=dataframe_last_updated.strftime("%Y-%m-%d %H:%M:%S"),
         dot_or_dotdot="..",
+        enable_data_download=enable_data_download,
     )
     # print(chart_page)
 
@@ -858,12 +885,19 @@ def build_all(
     ## Align files for use by Sphinx
     manifest = load_manifest(base_dir=base_dir)
 
+    # Extract enable_data_download setting (defaults to False)
+    enable_data_download = manifest.get("site", {}).get("enable_data_download", False)
+
     (
         dataset_plan,
         chart_plan_download,
         chart_plan_static,
         notebook_plan,
-    ) = get_sphinx_file_alignment_plan(base_dir=base_dir, docs_build_dir=docs_build_dir)
+    ) = get_sphinx_file_alignment_plan(
+        base_dir=base_dir,
+        docs_build_dir=docs_build_dir,
+        enable_data_download=enable_data_download,
+    )
 
     copy_according_to_plan(dataset_plan)
     copy_according_to_plan(chart_plan_download)
@@ -877,6 +911,7 @@ def build_all(
         pipeline_theme=pipeline_theme,
         docs_src_dir=docs_src_dir,
         size_threshold=size_threshold,
+        enable_data_download=enable_data_download,
     )
 
     # Copy remaining docs_src files to build directory
