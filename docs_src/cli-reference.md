@@ -39,6 +39,8 @@ chartbook [OPTIONS] COMMAND [ARGS]...
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
 | `config` | Configure the default catalog path for data loading |
+| `ls` | List catalog objects (pipelines, dataframes, charts) |
+| `data` | Data operations (get paths, docs) |
 
 ## Command Reference
 
@@ -173,6 +175,122 @@ Catalog path set to: /data/my-catalog/chartbook.toml
 You can now load data with:
   from chartbook import data
   df = data.load(pipeline="my_pipeline", dataframe="my_df")
+```
+
+### `chartbook ls`
+
+List catalog objects (pipelines, dataframes, charts). Without a subcommand, displays all objects in a tree format.
+
+```console
+chartbook ls [OPTIONS] [COMMAND]
+```
+
+**Options:**
+- `--catalog PATH`: Path to catalog `chartbook.toml` (uses configured default if not specified)
+
+**Subcommands:**
+- `pipelines`: List pipelines only
+- `dataframes`: List all dataframes across pipelines
+- `charts`: List all charts across pipelines
+
+**Examples:**
+
+```console
+# List all objects in tree format
+chartbook ls
+
+# List pipelines only
+chartbook ls pipelines
+
+# List all dataframes
+chartbook ls dataframes
+
+# List all charts
+chartbook ls charts
+
+# Use a specific catalog
+chartbook ls --catalog /path/to/chartbook.toml
+```
+
+**Example output:**
+
+```console
+$ chartbook ls
+Catalog: /data/my-catalog/chartbook.toml
+
+[pipeline] yield_curve: Yield Curve Analysis
+  [dataframe] yield_curve/repo_public: Repo Public Data
+  [dataframe] yield_curve/treasury_rates: Treasury Rates
+  [chart] yield_curve/yield_spread: Yield Spread Chart
+[pipeline] macro_data: Macro Economic Data
+  [dataframe] macro_data/gdp_quarterly: GDP Quarterly
+```
+
+### `chartbook data`
+
+Data operations for retrieving paths and documentation for dataframes.
+
+```console
+chartbook data COMMAND [OPTIONS]
+```
+
+**Subcommands:**
+
+#### `chartbook data get-path`
+
+Get the path to a dataframe's parquet file.
+
+```console
+chartbook data get-path --pipeline PIPELINE --dataframe DATAFRAME [--catalog PATH]
+```
+
+**Options:**
+- `--pipeline`: Pipeline ID (required)
+- `--dataframe`: Dataframe ID (required)
+- `--catalog PATH`: Path to catalog `chartbook.toml`
+
+#### `chartbook data get-docs`
+
+Print documentation content for a dataframe.
+
+```console
+chartbook data get-docs --pipeline PIPELINE --dataframe DATAFRAME [--catalog PATH]
+```
+
+**Options:**
+- `--pipeline`: Pipeline ID (required)
+- `--dataframe`: Dataframe ID (required)
+- `--catalog PATH`: Path to catalog `chartbook.toml`
+
+#### `chartbook data get-docs-path`
+
+Get the path to a dataframe's documentation source file.
+
+```console
+chartbook data get-docs-path --pipeline PIPELINE --dataframe DATAFRAME [--catalog PATH]
+```
+
+**Options:**
+- `--pipeline`: Pipeline ID (required)
+- `--dataframe`: Dataframe ID (required)
+- `--catalog PATH`: Path to catalog `chartbook.toml`
+
+**Examples:**
+
+```console
+# Get path to a dataframe's parquet file
+chartbook data get-path --pipeline yield_curve --dataframe repo_public
+# Output: /data/my-catalog/yield_curve/_output/repo_public.parquet
+
+# Print documentation for a dataframe
+chartbook data get-docs --pipeline yield_curve --dataframe repo_public
+
+# Get path to documentation source
+chartbook data get-docs-path --pipeline yield_curve --dataframe repo_public
+# Output: /data/my-catalog/yield_curve/docs_src/dataframes/repo_public.md
+
+# Use a specific catalog
+chartbook data get-path --pipeline macro_data --dataframe gdp_quarterly --catalog /path/to/chartbook.toml
 ```
 
 ## Environment Variables

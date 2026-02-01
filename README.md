@@ -64,6 +64,19 @@ df = data.load(pipeline="fred_charts", dataframe="interest_rates")
 chartbook build
 ```
 
+### Browse your catalog
+
+```bash
+# List all pipelines, dataframes, and charts
+chartbook ls
+
+# List dataframes only
+chartbook ls dataframes
+
+# Get path to a dataframe's parquet file
+chartbook data get-path --pipeline fred_charts --dataframe interest_rates
+```
+
 See the [documentation](https://backofficedev.github.io/chartbook) for configuration options and detailed guides.
 
 ## Documentation

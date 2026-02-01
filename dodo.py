@@ -135,6 +135,8 @@ def task_sphinx():
     """Build Sphinx documentation."""
     notebook_scripts = [Path(config["path"]) for config in notebook_tasks.values()]
     src_files = list(SRC_DIR.rglob("*.py"))
+    docs_src_files = list(DOCS_SRC.rglob("*"))
+    docs_src_files = [f for f in docs_src_files if f.is_file()]
 
     return {
         "actions": [
@@ -142,7 +144,7 @@ def task_sphinx():
             copy_file(PROJECT_ROOT / "llm" / "llms.txt", DOCS_OUTPUT / "llms.txt"),
             copy_file(PROJECT_ROOT / "llm" / "llms-full.txt", DOCS_OUTPUT / "llms-full.txt"),
         ],
-        "file_dep": notebook_scripts + src_files,
+        "file_dep": notebook_scripts + src_files + docs_src_files,
         "targets": sphinx_targets,
         "task_dep": ["run_notebooks"],
         "clean": True,
