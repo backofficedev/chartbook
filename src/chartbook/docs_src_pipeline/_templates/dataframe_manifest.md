@@ -10,6 +10,16 @@
 | Data available up to (min)     | {{most_recent_data_min}}                                                             |
 | Data available up to (max)     | {{most_recent_data_max}}                                                             |
 | Dataframe Path                 | {{dataframe_manifest.dataframe_path}}                                                   |
+{% if enable_data_download %}
 | Download Data as Parquet       | [Parquet](../../download_dataframe/{{pipeline_id}}/{{dataframe_id}}.parquet)         |
 | Download Data as Excel         | [Excel](../../download_dataframe/{{pipeline_id}}/{{dataframe_id}}.xlsx)              |
-| Linked Charts                  | {% if dataframe_manifest.linked_charts %} {% for chart_id in dataframe_manifest.linked_charts %} [{{pipeline_id}}:{{chart_id}}](../../charts/{{pipeline_id}}.{{chart_id}}.md)<br> {% endfor %} {% else %} None {% endif %} |
+{% endif %}
+
+**Linked Charts:**
+{% if dataframe_manifest.linked_charts %}
+{% for chart_id in dataframe_manifest.linked_charts %}
+- [{{pipeline_id}}:{{chart_id}}](../../charts/{{pipeline_id}}.{{chart_id}}.md)
+{% endfor %}
+{% else %}
+- None
+{% endif %}

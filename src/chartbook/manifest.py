@@ -27,6 +27,7 @@ DEFAULT_CONFIG = {
         "copyright": "",
         "logo_path": "",
         "favicon_path": "",
+        "enable_data_download": False,
     },
     "pipeline": {
         "id": "DEFAULT",
