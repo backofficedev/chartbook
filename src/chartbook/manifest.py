@@ -105,8 +105,8 @@ def validate_config_file(path: Path = BASE_DIR) -> bool:
         current_version = __version__  # Use imported version
         expected_minor_version = version.parse(current_version).minor
         actual_version_str = chartbook_toml["config"].get(
-            "chartbook_format_version", "0.0.0"
-        )  # Handle missing key
+            "chartbook_format_version", __version__
+        )  # Default to current version if missing
         # Check if the actual version string is parseable
         try:
             actual_minor_version = version.parse(actual_version_str).minor
@@ -243,6 +243,11 @@ def _load_pipeline_manifest(raw_manifest):
     assert raw_manifest["config"]["type"] == "pipeline"
     base_dir = raw_manifest["base_dir"]
     manifest = raw_manifest.copy()
+
+    # Ensure optional sections have defaults
+    manifest.setdefault("charts", {})
+    manifest.setdefault("dataframes", {})
+    manifest.setdefault("notebooks", {})
 
     # Validate os_compatibility if present
     if "pipeline" in manifest and "os_compatibility" in manifest["pipeline"]:
@@ -499,7 +504,7 @@ def get_logo_path(config: dict, project_dir: Path) -> Path:
     :returns: The path to the logo file.
     :rtype: Path
     """
-    if config["site"]["logo_path"]:
+    if config.get("site", {}).get("logo_path", ""):
         return project_dir / config["site"]["logo_path"]
     return get_default_asset_path("logo.png")
 
@@ -514,7 +519,7 @@ def get_favicon_path(config: dict, project_dir: Path) -> Path:
     :returns: The path to the favicon file.
     :rtype: Path
     """
-    if config["site"]["favicon_path"]:
+    if config.get("site", {}).get("favicon_path", ""):
         return project_dir / config["site"]["favicon_path"]
     return get_default_asset_path("favicon.ico")
 

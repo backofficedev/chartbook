@@ -5,6 +5,16 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2026-02-02
+
+### Changed
+- Configuration fields in `chartbook.toml` are now more forgiving with sensible defaults:
+  - `logo_path` and `favicon_path` are now optional; missing values use default assets
+  - `chartbook_format_version` defaults to current version instead of failing validation
+  - `copyright` auto-generates current year when the key is missing (explicit empty string `""` still respected)
+  - `charts`, `dataframes`, and `notebooks` sections are now optional (default to empty)
+- Minimal `chartbook.toml` now only requires `[config]` section with `type = "pipeline"`
+
 ## [0.0.6] - 2026-02-01
 
 ### Added

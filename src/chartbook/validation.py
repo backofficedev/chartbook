@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from typing import ClassVar
 
 from chartbook.errors import ValidationError
@@ -161,7 +162,7 @@ class SiteConfig:
         return cls(
             title=site.get("title", "chartbook"),
             author=site.get("author", ""),
-            copyright=site.get("copyright", ""),
+            copyright=site.get("copyright") if "copyright" in site else str(datetime.now().year),
             sphinx_theme=sphinx_theme,
         )
 

@@ -312,3 +312,53 @@ python -m http.server -d ./docs
 - **Sphinx Build Errors**: Check all required files exist
 - **Path Errors**: Use relative paths from project root
 - **TOML Syntax**: Validate with online TOML validators
+
+## Required Fields
+
+### Site
+The `[site]` section requires a `logo_path` field (can be empty string if no logo):
+
+```toml
+[site]
+title = "My Project"
+author = "Author Name"
+copyright = "2025"
+logo_path = ""  # Required, use empty string if no logo
+```
+
+### Dataframes
+Dataframes have specific required fields that will cause build errors if missing:
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `path_to_parquet_data` | Yes | Path to the parquet file (not `path`) |
+| `dataframe_docs_path` OR `dataframe_docs_str` | Yes (one of) | Documentation is required - use `dataframe_docs_path` for external markdown file or `dataframe_docs_str` for inline documentation |
+
+**Minimal dataframe example:**
+```toml
+[dataframes.my_data]
+id = "my_data"
+name = "My Dataset"
+description = "Brief description"
+path_to_parquet_data = "_data/my_data.parquet"
+dataframe_docs_str = "Detailed documentation about this dataset, its columns, and usage."
+```
+
+### Charts
+Charts also require documentation:
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `path_to_html_chart` | Yes | Path to the HTML chart file |
+| `chart_docs_path` OR `chart_docs_str` | Yes (one of) | Documentation is required |
+
+### Notebooks
+Notebooks have a simpler structure:
+
+```toml
+[notebooks.my_notebook]
+id = "my_notebook"
+name = "My Notebook Title"
+description = "What this notebook does"
+path = "_output/my_notebook.html"
+```

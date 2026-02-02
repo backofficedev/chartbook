@@ -286,14 +286,18 @@ class TestSiteConfigFromManifest:
 
     def test_from_manifest_missing_site_uses_defaults(self):
         """Test that missing site section uses defaults."""
+        from datetime import datetime
+
         manifest = {}
         config = SiteConfig.from_manifest(manifest, "catalog")
         assert config.title == "chartbook"
         assert config.author == ""
-        assert config.copyright == ""
+        assert config.copyright == str(datetime.now().year)  # Auto-generated year when key missing
 
     def test_from_manifest_partial_site_uses_defaults(self):
         """Test that partial site section uses defaults for missing fields."""
+        from datetime import datetime
+
         manifest = {
             "site": {
                 "title": "Custom Title",
@@ -302,7 +306,7 @@ class TestSiteConfigFromManifest:
         config = SiteConfig.from_manifest(manifest, "pipeline")
         assert config.title == "Custom Title"
         assert config.author == ""
-        assert config.copyright == ""
+        assert config.copyright == str(datetime.now().year)  # Auto-generated year when key missing
 
 
 class TestValidateConfPyValues:
