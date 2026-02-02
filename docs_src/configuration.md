@@ -28,7 +28,7 @@ A single analytics pipeline with its own charts and dataframes:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.6"
+chartbook_format_version = "0.0.7"
 ```
 
 ### Catalog Project
@@ -38,7 +38,7 @@ A collection of multiple pipelines aggregated into a unified catalog:
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.6"
+chartbook_format_version = "0.0.7"
 ```
 
 ## Configuration Sections
@@ -50,7 +50,7 @@ Required fields for all projects:
 ```toml
 [config]
 type = "pipeline"  # or "catalog"
-chartbook_format_version = "0.0.6"
+chartbook_format_version = "0.0.7"
 ```
 
 ### `[site]` - Website Metadata
@@ -201,7 +201,7 @@ Here's a complete example for a pipeline project:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.6"
+chartbook_format_version = "0.0.7"
 
 [site]
 title = "Sales Analytics Pipeline"
