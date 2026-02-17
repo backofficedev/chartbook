@@ -76,6 +76,11 @@ def main():
     default=False,
     help="Warn instead of error when source files (charts, notebooks, dataframes) are missing",
 )
+@click.option(
+    "--strip-mathjax2/--no-strip-mathjax2",
+    default=True,
+    help="Strip Plotly's MathJax 2 scripts from notebook outputs to prevent conflicts with Sphinx's MathJax 3 (default: enabled)",
+)
 def build(
     output_dir,
     project_dir,
@@ -86,6 +91,7 @@ def build(
     force_write,
     size_threshold,
     warn_missing,
+    strip_mathjax2,
 ):
     """Generate HTML documentation in the specified output directory.
 
@@ -107,6 +113,8 @@ def build(
     :type size_threshold: float
     :param warn_missing: If True, warn instead of error when source files are missing.
     :type warn_missing: bool
+    :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
+    :type strip_mathjax2: bool
     """
     # Check for Sphinx dependencies
     _check_sphinx_installed()
@@ -153,6 +161,7 @@ def build(
         should_remove_existing=should_remove_existing,
         size_threshold=size_threshold,
         warn_missing=warn_missing,
+        strip_mathjax2=strip_mathjax2,
     )
     click.echo(f"Successfully generated documentation in {output_dir}")
 

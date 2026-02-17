@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -169,3 +170,59 @@ def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB)
 
     except Exception as e:
         return f"Error reading file: {e!s}"
+
+
+# Regex to match MathJax 2 script tags injected by Plotly's NotebookRenderer.
+# Plotly hardcodes include_mathjax="cdn" which embeds a MathJax 2.7.x CDN script
+# and an optional SVG font config script into every Plotly cell output. When Sphinx
+# (via myst-nb) copies these into HTML, MathJax 2 conflicts with Sphinx's MathJax 3
+# and crashes all math rendering on the page.
+MATHJAX2_PATTERN = re.compile(
+    r'<script src="https://cdnjs\.cloudflare\.com/ajax/libs/mathjax/2\.[^"]*">[^<]*</script>'
+    r'(?:\s*<script type="text/javascript">if \(window\.MathJax && window\.MathJax\.Hub'
+    r" && window\.MathJax\.Hub\.Config\) \{window\.MathJax\.Hub\.Config\(\{SVG:"
+    r' \{font: "STIX-Web"\}\}\);\}</script>)?'
+)
+
+
+def strip_mathjax2_from_notebook(notebook_path):
+    """Strip MathJax 2 script tags injected by Plotly from notebook cell outputs.
+
+    Plotly's NotebookRenderer injects MathJax 2 CDN scripts into every Plotly cell
+    output. These conflict with Sphinx's MathJax 3, crashing all math rendering.
+    This function removes those script tags from the notebook's saved outputs.
+
+    :param notebook_path: Path to the .ipynb file to sanitize (modified in-place).
+    :type notebook_path: str or Path
+    :returns: True if the notebook was modified, False otherwise.
+    :rtype: bool
+    """
+    notebook_path = Path(notebook_path)
+    with open(notebook_path, "r", encoding="utf-8") as f:
+        nb = json.load(f)
+
+    modified = False
+    for cell in nb.get("cells", []):
+        for output in cell.get("outputs", []):
+            if "data" in output and "text/html" in output["data"]:
+                html_parts = output["data"]["text/html"]
+                if isinstance(html_parts, list):
+                    new_parts = []
+                    for part in html_parts:
+                        cleaned = MATHJAX2_PATTERN.sub("", part)
+                        if cleaned != part:
+                            modified = True
+                        new_parts.append(cleaned)
+                    output["data"]["text/html"] = new_parts
+                elif isinstance(html_parts, str):
+                    cleaned = MATHJAX2_PATTERN.sub("", html_parts)
+                    if cleaned != html_parts:
+                        modified = True
+                        output["data"]["text/html"] = cleaned
+
+    if modified:
+        with open(notebook_path, "w", encoding="utf-8") as f:
+            json.dump(nb, f, indent=1, ensure_ascii=False)
+            f.write("\n")
+
+    return modified

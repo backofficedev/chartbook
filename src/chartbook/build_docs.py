@@ -86,6 +86,18 @@ def run_sphinx_build(_docs_dir: Path):
         raise RuntimeError(f"Sphinx build failed:\n{result.stderr}")
 
 
+def _strip_mathjax2_from_notebooks(docs_dir: Path):
+    """Strip MathJax 2 script tags from all notebooks in the build directory.
+
+    :param docs_dir: The documentation build directory containing .ipynb files.
+    :type docs_dir: Path
+    """
+    from chartbook.utils import strip_mathjax2_from_notebook
+
+    for nb_path in docs_dir.rglob("*.ipynb"):
+        strip_mathjax2_from_notebook(nb_path)
+
+
 def generate_docs(
     output_dir: Path,
     project_dir: Path,
@@ -96,6 +108,7 @@ def generate_docs(
     should_remove_existing: bool = False,
     size_threshold: float = 50,
     warn_missing: bool = False,
+    strip_mathjax2: bool = True,
 ):
     """Generate documentation by running both pipeline publish and sphinx build.
 
@@ -117,6 +130,9 @@ def generate_docs(
     :type size_threshold: float
     :param warn_missing: If True, warn instead of error when source files are missing.
     :type warn_missing: bool
+    :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs
+        to prevent conflicts with Sphinx's MathJax 3. Defaults to True.
+    :type strip_mathjax2: bool
     """
 
     output_dir = Path(output_dir).resolve()
@@ -167,6 +183,10 @@ def generate_docs(
             docs_src_dir=temp_docs_src_dir,
             size_threshold=size_threshold,
         )
+
+        # Strip MathJax 2 from notebook outputs (prevents Plotly/Sphinx conflict)
+        if strip_mathjax2:
+            _strip_mathjax2_from_notebooks(_docs_dir)
 
         # Validate configuration values for conf.py
         try:

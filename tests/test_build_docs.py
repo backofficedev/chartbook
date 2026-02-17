@@ -6,6 +6,7 @@ generate_docs() -> load_manifest() -> _retrieve_correct_docs_src_dir() ->
 run_build_markdown() -> run_sphinx_build()
 """
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,11 +14,13 @@ import pytest
 
 from chartbook.build_docs import (
     _retrieve_correct_docs_src_dir,
+    _strip_mathjax2_from_notebooks,
     generate_docs,
     get_docs_src_path,
     run_sphinx_build,
 )
 from chartbook.manifest import load_manifest
+from chartbook.utils import MATHJAX2_PATTERN, strip_mathjax2_from_notebook
 
 
 class TestGetDocsSrcPath:
@@ -217,3 +220,193 @@ class TestGenerateDocsEndToEnd:
 
         # Verify old marker file is gone
         assert not marker_file.exists()
+
+
+# Sample MathJax 2 script tags as injected by Plotly's NotebookRenderer
+PLOTLY_MATHJAX2_SCRIPT = (
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/'
+    'MathJax.js?config=TeX-AMS-MML_SVG"></script>'
+)
+PLOTLY_MATHJAX2_SCRIPT_WITH_CONFIG = (
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/'
+    'MathJax.js?config=TeX-AMS-MML_SVG"></script>'
+    '<script type="text/javascript">if (window.MathJax && window.MathJax.Hub'
+    " && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG:"
+    ' {font: "STIX-Web"}});}</script>'
+)
+
+
+def _make_notebook(cells):
+    """Create a minimal notebook dict with the given cells."""
+    return {
+        "nbformat": 4,
+        "nbformat_minor": 5,
+        "metadata": {},
+        "cells": cells,
+    }
+
+
+def _make_plotly_cell(mathjax_script=PLOTLY_MATHJAX2_SCRIPT_WITH_CONFIG):
+    """Create a notebook cell that mimics Plotly output with MathJax 2 injection."""
+    return {
+        "cell_type": "code",
+        "source": ["import plotly"],
+        "outputs": [
+            {
+                "output_type": "display_data",
+                "data": {
+                    "text/html": [
+                        "<div>",
+                        mathjax_script,
+                        '<div id="plotly-graph"></div>',
+                        "</div>",
+                    ]
+                },
+                "metadata": {},
+            }
+        ],
+        "metadata": {},
+    }
+
+
+class TestStripMathjax2FromNotebook:
+    """Tests for strip_mathjax2_from_notebook function."""
+
+    def test_strips_mathjax2_from_plotly_output(self, tmp_path):
+        """Test that MathJax 2 scripts are removed from notebook outputs."""
+        nb = _make_notebook([_make_plotly_cell()])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        result = strip_mathjax2_from_notebook(nb_path)
+
+        assert result is True
+        cleaned = json.loads(nb_path.read_text())
+        html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+        for part in html_parts:
+            assert "mathjax/2" not in part
+            assert "MathJax.Hub.Config" not in part
+
+    def test_preserves_non_mathjax_content(self, tmp_path):
+        """Test that non-MathJax HTML content is preserved."""
+        nb = _make_notebook([_make_plotly_cell()])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        strip_mathjax2_from_notebook(nb_path)
+
+        cleaned = json.loads(nb_path.read_text())
+        html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+        assert "<div>" in html_parts
+        assert '<div id="plotly-graph"></div>' in html_parts
+
+    def test_no_modification_when_no_mathjax2(self, tmp_path):
+        """Test that notebooks without MathJax 2 are not modified."""
+        cell = {
+            "cell_type": "code",
+            "source": ["print('hello')"],
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {"text/html": ["<div>No mathjax here</div>"]},
+                    "metadata": {},
+                }
+            ],
+            "metadata": {},
+        }
+        nb = _make_notebook([cell])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        result = strip_mathjax2_from_notebook(nb_path)
+
+        assert result is False
+
+    def test_strips_mathjax2_cdn_script_only(self, tmp_path):
+        """Test that only the CDN script is stripped (without the config script)."""
+        nb = _make_notebook([_make_plotly_cell(PLOTLY_MATHJAX2_SCRIPT)])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        result = strip_mathjax2_from_notebook(nb_path)
+
+        assert result is True
+        cleaned = json.loads(nb_path.read_text())
+        html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+        for part in html_parts:
+            assert "mathjax/2" not in part
+
+    def test_handles_string_html_output(self, tmp_path):
+        """Test handling of text/html as a single string instead of list."""
+        cell = {
+            "cell_type": "code",
+            "source": [],
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": f"<div>{PLOTLY_MATHJAX2_SCRIPT}</div>"
+                    },
+                    "metadata": {},
+                }
+            ],
+            "metadata": {},
+        }
+        nb = _make_notebook([cell])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        result = strip_mathjax2_from_notebook(nb_path)
+
+        assert result is True
+        cleaned = json.loads(nb_path.read_text())
+        html = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+        assert isinstance(html, str)
+        assert "mathjax/2" not in html
+
+
+class TestStripMathjax2FromNotebooks:
+    """Tests for _strip_mathjax2_from_notebooks helper."""
+
+    def test_processes_all_notebooks_in_directory(self, tmp_path):
+        """Test that all .ipynb files in subdirectories are processed."""
+        nb = _make_notebook([_make_plotly_cell()])
+
+        # Create notebooks in nested directories
+        (tmp_path / "notebooks" / "pipeline_a").mkdir(parents=True)
+        (tmp_path / "notebooks" / "pipeline_b").mkdir(parents=True)
+
+        for subdir in ["pipeline_a", "pipeline_b"]:
+            nb_path = tmp_path / "notebooks" / subdir / "test.ipynb"
+            nb_path.write_text(json.dumps(nb))
+
+        _strip_mathjax2_from_notebooks(tmp_path)
+
+        for subdir in ["pipeline_a", "pipeline_b"]:
+            nb_path = tmp_path / "notebooks" / subdir / "test.ipynb"
+            cleaned = json.loads(nb_path.read_text())
+            html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+            for part in html_parts:
+                assert "mathjax/2" not in part
+
+
+class TestMathjax2Pattern:
+    """Tests for the MATHJAX2_PATTERN regex."""
+
+    def test_matches_plotly_mathjax2_cdn_script(self):
+        """Test that pattern matches the Plotly MathJax 2 CDN script."""
+        assert MATHJAX2_PATTERN.search(PLOTLY_MATHJAX2_SCRIPT)
+
+    def test_matches_plotly_mathjax2_with_config(self):
+        """Test that pattern matches MathJax 2 script + SVG config script."""
+        assert MATHJAX2_PATTERN.search(PLOTLY_MATHJAX2_SCRIPT_WITH_CONFIG)
+
+    def test_does_not_match_mathjax3(self):
+        """Test that pattern does not match MathJax 3 scripts."""
+        mathjax3 = '<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>'
+        assert not MATHJAX2_PATTERN.search(mathjax3)
+
+    def test_does_not_match_unrelated_scripts(self):
+        """Test that pattern does not match other script tags."""
+        other_script = '<script src="https://cdn.example.com/plotly.min.js"></script>'
+        assert not MATHJAX2_PATTERN.search(other_script)
