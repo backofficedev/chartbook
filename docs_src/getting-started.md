@@ -122,7 +122,7 @@ Create a `chartbook.toml` file to configure your project:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.7"
+chartbook_format_version = "0.0.8"
 
 [site]
 title = "My Analytics Project"
