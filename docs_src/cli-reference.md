@@ -35,6 +35,7 @@ chartbook [OPTIONS] COMMAND [ARGS]...
 
 | Command | Description |
 |---------|-------------|
+| `init` | Scaffold a new chartbook project from a template |
 | `build` | Generate HTML documentation website |
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
@@ -43,6 +44,28 @@ chartbook [OPTIONS] COMMAND [ARGS]...
 | `data` | Data operations (get paths, docs) |
 
 ## Command Reference
+
+### `chartbook init`
+
+Scaffold a new chartbook project from the [cookiecutter template](https://github.com/backofficedev/cookiecutter_chartbook) using [cruft](https://cruft.github.io/cruft/). Because the project is created with cruft, you can later pull upstream template updates with `cruft update`.
+
+```console
+chartbook init
+```
+
+This command requires `cruft`, which is included in the `all` extra:
+
+```console
+pip install "chartbook[all]"
+```
+
+**Example session:**
+
+```console
+$ chartbook init
+# Cruft will prompt you to fill in the template variables
+# (project name, author, etc.) and then create the project directory.
+```
 
 ### `chartbook build`
 

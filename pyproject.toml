@@ -66,6 +66,7 @@ sphinx = [
 # Full install - recommended for most users
 all = [
     "chartbook[data,plotting,sphinx]",
+    "cruft",
 ]
 
 # Development dependencies

@@ -569,6 +569,26 @@ def data_get_docs_path(pipeline, dataframe, catalog):
 
 
 @main.command()
+def init():
+    """Initialize a new chartbook project from the cookiecutter template."""
+    try:
+        import cruft  # noqa: F401
+    except ImportError:
+        click.echo("Error: cruft is not installed.", err=True)
+        click.echo("", err=True)
+        click.echo("Install it with:", err=True)
+        click.echo('    pip install "chartbook[all]"', err=True)
+        raise SystemExit(1)
+
+    import subprocess
+
+    subprocess.run(
+        ["cruft", "create", "https://github.com/backofficedev/cookiecutter_chartbook"],
+        check=True,
+    )
+
+
+@main.command()
 def config():
     """Configure the default catalog path for data loading.
 
