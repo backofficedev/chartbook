@@ -23,6 +23,7 @@ ChartBook is a developer platform for data science teams to discover, document, 
 ## Key CLI Commands
 
 ```bash
+chartbook init              # Scaffold new project (requires chartbook[all])
 chartbook build           # Generate HTML documentation website
 chartbook build -f        # Force overwrite existing docs
 chartbook publish            # Publish to directory
@@ -42,7 +43,7 @@ chartbook data get-docs-path --pipeline <id> --dataframe <id>  # Get docs path
 Projects use `chartbook.toml` with these sections:
 
 - `[config]`: Project type (pipeline/catalog) and version
-- `[site]`: Title, author, copyright, logo
+- `[site]`: Title, author, copyright, logo, `enable_data_download`
 - `[pipeline]`: ID, name, description, developer info
 - `[charts]`: Chart definitions with metadata
 - `[dataframes]`: Data source definitions with governance info
@@ -59,6 +60,12 @@ df = data.load(pipeline="PROJ", dataframe="my_data")
 
 # Load with format specification
 df = data.load(pipeline="PROJ", dataframe="my_data", format="polars")
+
+# Load as Polars LazyFrame
+lf = data.load(pipeline="PROJ", dataframe="my_data", format="polars-lazyframe")
+
+# Load with explicit catalog path
+df = data.load(pipeline="PROJ", dataframe="my_data", catalog_path="/path/to/catalog")
 
 # Get data file path
 path = data.get_data_path(pipeline="PROJ", dataframe="my_data")
@@ -93,7 +100,7 @@ chartbook_format_version = "0.0.9"
 [site]
 title = "My Analytics"
 author = "Your Name"
-copyright = "2025"
+copyright = "2026"
 
 [pipeline]
 id = "MYPROJ"

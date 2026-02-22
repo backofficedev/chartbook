@@ -14,6 +14,9 @@ pipx install chartbook
 # CLI with pip
 pip install chartbook[sphinx]
 
+# Full install (recommended — includes data, plotting, sphinx, and cruft)
+pip install "chartbook[all]"
+
 # Development
 pip install -e ".[dev]"
 ```
@@ -28,7 +31,7 @@ chartbook_format_version = "0.0.9"
 [site]
 title = "Sales Analytics Pipeline"
 author = "Analytics Team"
-copyright = "2025, My Company"
+copyright = "2026, My Company"
 logo_path = "./assets/logo.png"
 favicon_path = "./assets/favicon.ico"
 
@@ -107,7 +110,7 @@ chartbook_format_version = "0.0.9"
 [site]
 title = "Company Analytics Catalog"
 author = "Data Team"
-copyright = "2025"
+copyright = "2026"
 
 [pipelines.SALES]
 path_to_pipeline = "../pipelines/sales"
@@ -123,6 +126,12 @@ Windows = "T:/pipelines/finance"
 
 ## CLI Reference
 
+### chartbook init
+
+Initialize a new chartbook project from the cookiecutter template. Wraps `cruft create` so projects can later pull upstream template updates.
+
+Requires `pip install "chartbook[all]"` (includes `cruft`).
+
 ### chartbook build
 
 ```bash
@@ -136,6 +145,9 @@ Options:
   --temp-docs-src-dir PATH Temporary source directory
   --keep-build-dirs        Keep temporary build directories
   --size-threshold FLOAT   File size threshold in MB (default: 50)
+  --warn-missing           Warn instead of error when source files are missing
+  --strip-mathjax2 / --no-strip-mathjax2
+                           Strip Plotly MathJax 2 from notebooks (default: enabled)
 ```
 
 ### chartbook publish
@@ -211,6 +223,12 @@ chartbook data get-docs --pipeline sales --dataframe transactions
 chartbook data get-docs-path --pipeline sales --dataframe transactions
 ```
 
+### chartbook config
+
+Configure the default catalog path for data loading. Sets the path to a catalog's `chartbook.toml` in `~/.chartbook/settings.toml` so that `data.load()` can find pipelines without an explicit `catalog_path` argument.
+
+Prompts interactively for the catalog path.
+
 ## Data Loading Examples
 
 ```python
@@ -221,6 +239,13 @@ df = data.load(pipeline="SALES", dataframe="sales_data")
 
 # With format specification
 df = data.load(pipeline="SALES", dataframe="sales_data", format="polars")
+
+# Load as Polars LazyFrame
+lf = data.load(pipeline="SALES", dataframe="sales_data", format="polars-lazyframe")
+
+# Load with explicit catalog path
+df = data.load(pipeline="SALES", dataframe="sales_data",
+               catalog_path="/path/to/catalog/chartbook.toml")
 
 # Get data file path
 path = data.get_data_path(pipeline="SALES", dataframe="sales_data")
@@ -243,9 +268,11 @@ docs_path = data.get_docs_path(pipeline="SALES", dataframe="sales_data")
 | `data_frequency` | Daily, Weekly, Monthly, Quarterly, Annual |
 | `observation_period` | When measurement taken |
 | `lag_in_data_release` | Delay until data available |
+| `data_release_timing` | When data is typically released |
 | `seasonal_adjustment` | None, X-13ARIMA-SEATS, etc. |
 | `units` | Units of measurement |
 | `data_series` | List of data series names |
+| `data_series_start_date` | Start date of the data series |
 | `mnemonic` | Short identifier |
 | `date_cleared_by_iv_and_v` | Internal validation date |
 | `last_legal_clearance_date` | Legal review date |
@@ -278,14 +305,46 @@ docs_path = data.get_docs_path(pipeline="SALES", dataframe="sales_data")
 | `path_to_excel_data` | Path to Excel file |
 | `dataframe_docs_path` | Path to documentation (mutually exclusive with `dataframe_docs_str`) |
 
-## Environment Variables
+## Environment & Path Utilities (`chartbook.env`)
 
-| Variable | Description |
-|----------|-------------|
-| `OS_TYPE` | Operating system (`windows` or `nix`) |
-| `BASE_DIR` | Base directory for project |
-| `DATA_DIR` | Data files directory |
-| `OUTPUT_DIR` | Output files directory |
+```python
+import chartbook
+
+# Find project root (searches for .git, pyproject.toml, .env)
+BASE_DIR = chartbook.env.get_project_root()
+DATA_DIR = BASE_DIR / "_data"
+OUTPUT_DIR = BASE_DIR / "_output"
+
+# Read from CLI args, environment variables, or .env file
+username = chartbook.env.get("WRDS_USERNAME")
+api_key = chartbook.env.get("FRED_API_KEY", default="")
+
+# Get OS type ("nix", "windows", or "unknown")
+os_type = chartbook.env.get_os_type()
+```
+
+## Plotting (`chartbook.plotting`)
+
+```python
+import chartbook
+
+# Basic charts — returns ChartResult with .show() and .save(chart_id)
+chartbook.plotting.line(df, x="date", y="value", title="GDP")
+chartbook.plotting.bar(df, x="category", y="amount")
+chartbook.plotting.scatter(df, x="x", y="y")
+chartbook.plotting.pie(df, names="category", values="amount")
+chartbook.plotting.area(df, x="date", y="value")
+
+# Dual-axis chart
+chartbook.plotting.dual(df, x="date", left_y="gdp", right_y="rate",
+                         left_type="bar", right_type="line")
+
+# Configuration
+chartbook.plotting.configure(nber_recessions=True, default_output_dir="./_output")
+chartbook.plotting.set_style("chartbook")
+```
+
+Requires `pip install "chartbook[plotting]"` or `pip install "chartbook[all]"`.
 
 ## Common Workflows
 
@@ -316,14 +375,14 @@ python -m http.server -d ./docs
 ## Required Fields
 
 ### Site
-The `[site]` section requires a `logo_path` field (can be empty string if no logo):
+The `[site]` section configures website metadata. Since v0.0.7, `logo_path` and `favicon_path` are optional (default assets are used when omitted):
 
 ```toml
 [site]
 title = "My Project"
 author = "Author Name"
-copyright = "2025"
-logo_path = ""  # Required, use empty string if no logo
+copyright = "2026"
+# logo_path and favicon_path are optional (defaults provided)
 ```
 
 ### Dataframes
@@ -337,9 +396,8 @@ Dataframes have specific required fields that will cause build errors if missing
 **Minimal dataframe example:**
 ```toml
 [dataframes.my_data]
-id = "my_data"
-name = "My Dataset"
-description = "Brief description"
+dataframe_name = "My Dataset"
+short_description_df = "Brief description"
 path_to_parquet_data = "_data/my_data.parquet"
 dataframe_docs_str = "Detailed documentation about this dataset, its columns, and usage."
 ```
@@ -357,8 +415,7 @@ Notebooks have a simpler structure:
 
 ```toml
 [notebooks.my_notebook]
-id = "my_notebook"
-name = "My Notebook Title"
-description = "What this notebook does"
-path = "_output/my_notebook.html"
+notebook_name = "My Notebook Title"
+notebook_description = "What this notebook does"
+notebook_path = "_output/my_notebook.html"
 ```
