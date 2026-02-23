@@ -1,6 +1,6 @@
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.9"
+chartbook_format_version = "0.0.10"
 
 [site]
 title = "ChartBook Catalog"

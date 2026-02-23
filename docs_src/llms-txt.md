@@ -84,7 +84,7 @@ chartbook config             # Configure default catalog path
 
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.9"
+chartbook_format_version = "0.0.10"
 
 [site]
 title = "My Analytics"
