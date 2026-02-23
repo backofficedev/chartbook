@@ -19,7 +19,7 @@ from chartbook.manifest import (
     get_pipeline_manifest,
     load_manifest,
 )
-from chartbook.utils import copy_according_to_plan, get_dataframe_glimpse
+from chartbook.utils import copy_according_to_plan, get_dataframe_glimpse, is_glob_pattern
 
 BASE_DIR = Path(".").resolve()
 DOCS_BUILD_DIR = BASE_DIR / Path("_docs")
@@ -76,6 +76,9 @@ def get_sphinx_file_alignment_plan(
 
                 path_to_parquet_data = dataframe_manifest["path_to_parquet_data"]
                 if (path_to_parquet_data is None) or (path_to_parquet_data == ""):
+                    pass
+                elif is_glob_pattern(path_to_parquet_data):
+                    # Skip file copy for glob/hive-partitioned datasets
                     pass
                 else:
                     file_path = pipeline_base_dir / Path(path_to_parquet_data)
@@ -548,9 +551,13 @@ def generate_dataframe_docs(
         Path(dataframe_path_prefix) / pipeline_id / f"{dataframe_id}.md"
     ).as_posix()
     # Compute the absolute path to the parquet file
-    parquet_path = (
-        pipeline_base_dir / dataframe_manifest["path_to_parquet_data"]
-    ).resolve()
+    raw_parquet_path = dataframe_manifest["path_to_parquet_data"]
+    if is_glob_pattern(raw_parquet_path):
+        parquet_path = pipeline_base_dir / raw_parquet_path
+    else:
+        parquet_path = (
+            pipeline_base_dir / raw_parquet_path
+        ).resolve()
 
     # Process the parquet file and get the min and max dates
     try:
@@ -603,6 +610,10 @@ def find_most_recent_valid_datapoints(
     :rtype: tuple[str, str]
     """
     if (date_col == "") or (date_col == "NA") or (date_col == "N/A"):
+        return "N/A", "N/A"
+
+    # Glob/hive-partitioned paths cannot use os.path.getsize
+    if is_glob_pattern(str(parquet_path)):
         return "N/A", "N/A"
 
     # Check file size - skip for large files to avoid OOM
@@ -735,12 +746,21 @@ def generate_chart_docs(
         raise ValueError("Invalid Pipeline theme")
 
     # Compute the absolute path to the parquet file
-    parquet_path = (
-        pipeline_base_dir / dataframe_manifest["path_to_parquet_data"]
-    ).resolve()
+    raw_parquet_path = dataframe_manifest["path_to_parquet_data"]
+    if is_glob_pattern(raw_parquet_path):
+        parquet_path = pipeline_base_dir / raw_parquet_path
+    else:
+        parquet_path = (
+            pipeline_base_dir / raw_parquet_path
+        ).resolve()
 
     # Fetch the last modified datetime of the parquet file
-    dataframe_last_updated = get_file_modified_datetime(parquet_path)
+    if is_glob_pattern(str(parquet_path)):
+        from datetime import datetime
+
+        dataframe_last_updated = datetime.now()
+    else:
+        dataframe_last_updated = get_file_modified_datetime(parquet_path)
 
     # Get and format paths to charts
     path_to_html_chart_unix = pipeline_base_dir / Path(

@@ -217,16 +217,37 @@ def validate_source_files(manifest: dict, base_dir) -> list:
         for dataframe_id, dataframe_config in pipeline_manifest.get("dataframes", {}).items():
             parquet_path = dataframe_config.get("path_to_parquet_data")
             if parquet_path and parquet_path.strip():
-                full_path = (pipeline_base_dir / parquet_path).resolve()
-                if not full_path.exists():
-                    missing_files.append(
-                        MissingFile(
-                            file_path=full_path,
-                            file_type="dataframe",
-                            item_id=dataframe_id,
-                            pipeline_id=pipeline_id,
-                        )
+                from chartbook.utils import is_glob_pattern
+
+                if is_glob_pattern(parquet_path):
+                    import glob as glob_module
+
+                    full_pattern = str(
+                        (pipeline_base_dir / parquet_path).as_posix()
                     )
+                    matching_files = glob_module.glob(
+                        full_pattern, recursive=True
+                    )
+                    if not matching_files:
+                        missing_files.append(
+                            MissingFile(
+                                file_path=Path(full_pattern),
+                                file_type="dataframe",
+                                item_id=dataframe_id,
+                                pipeline_id=pipeline_id,
+                            )
+                        )
+                else:
+                    full_path = (pipeline_base_dir / parquet_path).resolve()
+                    if not full_path.exists():
+                        missing_files.append(
+                            MissingFile(
+                                file_path=full_path,
+                                file_type="dataframe",
+                                item_id=dataframe_id,
+                                pipeline_id=pipeline_id,
+                            )
+                        )
 
         # Check chart files
         for chart_id, chart_config in pipeline_manifest.get("charts", {}).items():

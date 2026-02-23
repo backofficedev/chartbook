@@ -4,10 +4,14 @@ Load dataframes from registered pipelines in a catalog::
 
     from chartbook import data
 
-    df = data.load(pipeline="yield_curve", dataframe="repo_public")
+    # Load as Polars LazyFrame (default)
+    lf = data.load(pipeline="yield_curve", dataframe="repo_public")
 
-    # Specify format
-    df_pl = data.load(pipeline="yield_curve", dataframe="repo_public", format="polars")
+    # Load as Polars eager DataFrame
+    df = data.load(pipeline="yield_curve", dataframe="repo_public", format="polars_eager")
+
+    # Load as pandas DataFrame
+    df = data.load(pipeline="yield_curve", dataframe="repo_public", format="pandas")
 
     # Get just the data path
     path = data.get_data_path(pipeline="yield_curve", dataframe="repo_public")
@@ -24,6 +28,7 @@ from typing import Optional, Union
 
 from chartbook.config import get_default_catalog_path, get_global_settings_path
 from chartbook.errors import CatalogNotConfiguredError
+from chartbook.utils import is_glob_pattern
 
 
 def _resolve_catalog_path(
@@ -147,6 +152,9 @@ def get_data_path(
 ) -> Path:
     """Get the resolved path to a dataframe's parquet file.
 
+    For glob patterns (e.g., ``**/*.parquet``), returns a ``Path`` containing
+    the glob pattern characters.
+
     :param pipeline: The pipeline identifier within the catalog.
     :type pipeline: str
     :param dataframe: The dataframe identifier within the pipeline.
@@ -155,7 +163,7 @@ def get_data_path(
         directory.  If ``None``, the global default from
         ``~/.chartbook/settings.toml`` is used.
     :type catalog_path: Optional[Union[str, Path]]
-    :returns: The resolved path to the parquet file.
+    :returns: The resolved path to the parquet file (may contain glob characters).
     :rtype: Path
     :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
@@ -239,7 +247,7 @@ def get_docs(
 def load(
     pipeline: str,
     dataframe: str,
-    format: str = "pandas",
+    format: str = "polars",
     catalog_path: Optional[Union[str, Path]] = None,
 ):
     """Load a dataframe from a registered pipeline in a catalog.
@@ -248,8 +256,10 @@ def load(
     :type pipeline: str
     :param dataframe: The dataframe identifier within the pipeline.
     :type dataframe: str
-    :param format: Output format — ``"pandas"`` (default), ``"polars"``,
-        or ``"polars-lazyframe"``.
+    :param format: Output format — ``"polars"`` (default, returns LazyFrame),
+        ``"polars_eager"``, ``"pandas"``, or ``"polars-lazyframe"`` (deprecated
+        alias for ``"polars"``).  Glob patterns in ``path_to_parquet_data`` only
+        support ``"polars"`` (LazyFrame).
     :type format: str
     :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent
         directory.  If ``None``, the global default from
@@ -259,43 +269,70 @@ def load(
     :rtype: pandas.DataFrame or polars.DataFrame or polars.LazyFrame
     :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
-    :raises ValueError: If *format* is not one of the supported values.
+    :raises ValueError: If *format* is not one of the supported values, or if
+        a glob path is used with a non-LazyFrame format.
 
     **Examples**
 
-    Load as a pandas DataFrame (default):
+    Load as a Polars LazyFrame (default):
 
     >>> from chartbook import data
-    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
-    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
-
-    Load as a polars DataFrame:
-
-    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
-    ...               format="polars",
-    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
-
-    Load as a polars LazyFrame:
-
     >>> lf = data.load(pipeline="yield_curve", dataframe="repo_public",
-    ...               format="polars-lazyframe",
+    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
+
+    Load as a Polars eager DataFrame:
+
+    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
+    ...               format="polars_eager",
+    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
+
+    Load as a pandas DataFrame:
+
+    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
+    ...               format="pandas",
     ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
     """
     file_path = get_data_path(pipeline, dataframe, catalog_path)
+    _is_glob = is_glob_pattern(file_path)
 
     if format == "pandas":
+        if _is_glob:
+            raise ValueError(
+                "Glob patterns in path_to_parquet_data only support format='polars' "
+                "(LazyFrame). Use data.load(..., format='polars') and call .collect() "
+                "to materialize, then .to_pandas() if needed."
+            )
         import pandas as pd
 
         return pd.read_parquet(file_path)
     elif format == "polars":
         import polars as pl
 
-        return pl.read_parquet(file_path)
-    elif format == "polars-lazyframe":
+        return pl.scan_parquet(file_path, hive_partitioning=True)
+    elif format == "polars_eager":
+        if _is_glob:
+            raise ValueError(
+                "Glob patterns in path_to_parquet_data only support format='polars' "
+                "(LazyFrame). Use data.load(..., format='polars') and call .collect() "
+                "to materialize."
+            )
         import polars as pl
 
-        return pl.scan_parquet(file_path)
+        return pl.read_parquet(file_path, hive_partitioning=True)
+    elif format == "polars-lazyframe":
+        import warnings
+
+        import polars as pl
+
+        warnings.warn(
+            "format='polars-lazyframe' is deprecated. Use format='polars' instead "
+            "(polars format now returns LazyFrame by default).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return pl.scan_parquet(file_path, hive_partitioning=True)
     else:
         raise ValueError(
-            f"Invalid format: {format!r}. Must be 'pandas', 'polars', or 'polars-lazyframe'."
+            f"Invalid format: {format!r}. Must be 'polars', 'polars_eager', "
+            f"'pandas', or 'polars-lazyframe'."
         )

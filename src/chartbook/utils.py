@@ -8,6 +8,17 @@ from pathlib import Path
 
 import polars as pl
 
+
+def is_glob_pattern(path_str) -> bool:
+    """Check if a path string contains glob pattern characters.
+
+    :param path_str: The path string to check.
+    :type path_str: str or Path
+    :returns: True if the path contains glob characters (``*``, ``?``, ``[``).
+    :rtype: bool
+    """
+    return any(c in str(path_str) for c in ("*", "?", "["))
+
 # Default file size threshold (in MB) above which to use memory-efficient loading
 DEFAULT_SIZE_THRESHOLD_MB = 50
 
@@ -136,17 +147,22 @@ def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB)
     try:
         filepath = Path(filepath)
 
-        # Check file size to determine loading strategy
-        file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
-        is_large_file = file_size_mb > size_threshold_mb
-
-        # Load data lazily
-        if filepath.suffix.lower() == ".csv":
-            lf = pl.scan_csv(filepath)
-        elif filepath.suffix.lower() == ".parquet":
-            lf = pl.scan_parquet(filepath)
+        if is_glob_pattern(str(filepath)):
+            # Glob/hive-partitioned paths: use scan_parquet directly
+            lf = pl.scan_parquet(filepath, hive_partitioning=True)
+            is_large_file = False
         else:
-            return f"Unsupported file type: {filepath.suffix}"
+            # Check file size to determine loading strategy
+            file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
+            is_large_file = file_size_mb > size_threshold_mb
+
+            # Load data lazily
+            if filepath.suffix.lower() == ".csv":
+                lf = pl.scan_csv(filepath)
+            elif filepath.suffix.lower() == ".parquet":
+                lf = pl.scan_parquet(filepath)
+            else:
+                return f"Unsupported file type: {filepath.suffix}"
 
         # Get actual row count efficiently (works for both small and large files)
         row_count_df = lf.select(pl.len().alias("count")).collect()

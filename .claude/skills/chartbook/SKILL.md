@@ -55,17 +55,17 @@ Projects use `chartbook.toml` with these sections:
 ```python
 from chartbook import data
 
-# Load a dataframe
-df = data.load(pipeline="PROJ", dataframe="my_data")
+# Load a dataframe (returns Polars LazyFrame by default)
+lf = data.load(pipeline="PROJ", dataframe="my_data")
 
-# Load with format specification
-df = data.load(pipeline="PROJ", dataframe="my_data", format="polars")
+# Load as Polars eager DataFrame
+df = data.load(pipeline="PROJ", dataframe="my_data", format="polars_eager")
 
-# Load as Polars LazyFrame
-lf = data.load(pipeline="PROJ", dataframe="my_data", format="polars-lazyframe")
+# Load as pandas DataFrame
+df = data.load(pipeline="PROJ", dataframe="my_data", format="pandas")
 
 # Load with explicit catalog path
-df = data.load(pipeline="PROJ", dataframe="my_data", catalog_path="/path/to/catalog")
+lf = data.load(pipeline="PROJ", dataframe="my_data", catalog_path="/path/to/catalog")
 
 # Get data file path
 path = data.get_data_path(pipeline="PROJ", dataframe="my_data")
@@ -76,6 +76,17 @@ docs = data.get_docs(pipeline="PROJ", dataframe="my_data")
 # Get path to documentation source file
 docs_path = data.get_docs_path(pipeline="PROJ", dataframe="my_data")
 ```
+
+### Hive-Partitioned Data
+
+Use glob patterns in `path_to_parquet_data` for hive-partitioned datasets:
+
+```toml
+[dataframes.my_data]
+path_to_parquet_data = "./_data/hive_dataset/**/*.parquet"
+```
+
+Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Glob paths only support `format="polars"` (LazyFrame).
 
 ## Directory Structure
 
@@ -95,7 +106,7 @@ my-pipeline/
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.9"
+chartbook_format_version = "0.0.10"
 
 [site]
 title = "My Analytics"

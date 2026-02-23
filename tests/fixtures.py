@@ -61,6 +61,53 @@ def create_sample_parquet(path: Path, columns: dict = None, rows: int = 10) -> P
     return path
 
 
+def create_hive_partitioned_parquet(
+    base_dir: Path,
+    partition_col: str = "category",
+    partitions: list = None,
+    rows_per_partition: int = 5,
+) -> Path:
+    """Creates a hive-style partitioned parquet dataset.
+
+    Creates:
+        base_dir/
+        ├── {partition_col}={partitions[0]}/
+        │   └── data.parquet
+        └── {partition_col}={partitions[1]}/
+            └── data.parquet
+
+    Args:
+        base_dir: Root directory for the partitioned dataset
+        partition_col: Name of the partition column
+        partitions: List of partition values. Defaults to ["A", "B"]
+        rows_per_partition: Number of rows per partition file
+
+    Returns:
+        Path to the base directory containing the partitioned data
+    """
+    if partitions is None:
+        partitions = ["A", "B"]
+
+    base_dir = Path(base_dir)
+
+    for partition_value in partitions:
+        partition_dir = base_dir / f"{partition_col}={partition_value}"
+        partition_dir.mkdir(parents=True, exist_ok=True)
+
+        df = pl.DataFrame(
+            {
+                "date": pl.date_range(
+                    pl.date(2020, 1, 1), pl.date(2020, 1, 1), eager=True
+                ).extend_constant(pl.date(2020, 1, 1), rows_per_partition - 1),
+                "value": list(range(rows_per_partition)),
+                "amount": [float(i) * 1.5 for i in range(rows_per_partition)],
+            }
+        )
+        df.write_parquet(partition_dir / "data.parquet")
+
+    return base_dir
+
+
 def create_sample_html_chart(path: Path, chart_id: str = "chart") -> Path:
     """Creates a simple HTML chart file.
 
@@ -97,6 +144,7 @@ def create_pipeline_project(
     dataframe_count: int = 1,
     charts_per_dataframe: int = 1,
     use_inline_docs: bool = False,
+    use_glob_paths: bool = False,
 ) -> Path:
     """Creates a complete pipeline project structure.
 
@@ -185,11 +233,17 @@ def create_pipeline_project(
         config["dataframes"] = {}
         for i in range(dataframe_count):
             df_id = f"dataframe_{i}"
-            parquet_path = f"_data/{pipeline_id}/{df_id}.parquet"
             dataframe_docs_path = f"docs_src/dataframes/{df_id}.md"
 
-            # Create the actual parquet file
-            create_sample_parquet(base_dir / parquet_path)
+            if use_glob_paths:
+                # Create hive-partitioned data
+                hive_dir = base_dir / "_data" / pipeline_id / f"{df_id}_hive"
+                create_hive_partitioned_parquet(hive_dir)
+                parquet_path = f"_data/{pipeline_id}/{df_id}_hive/**/*.parquet"
+            else:
+                parquet_path = f"_data/{pipeline_id}/{df_id}.parquet"
+                # Create the actual parquet file
+                create_sample_parquet(base_dir / parquet_path)
 
             # Create the dataframe documentation file
             (base_dir / dataframe_docs_path).write_text(
@@ -268,6 +322,7 @@ def create_catalog_project(
     pipeline_ids: list = None,
     use_platform_paths: bool = False,
     use_inline_docs: bool = False,
+    use_glob_paths: bool = False,
 ) -> Path:
     """Creates a catalog project with multiple sub-pipelines.
 
@@ -309,6 +364,7 @@ def create_catalog_project(
             include_dataframes=True,
             include_charts=True,
             use_inline_docs=use_inline_docs,
+            use_glob_paths=use_glob_paths,
         )
 
         if use_platform_paths:
@@ -412,7 +468,7 @@ def create_invalid_toml_project(base_dir: Path, error_type: str) -> Path:
         config = {
             "config": {
                 "type": "pipeline",
-                "chartbook_format_version": "0.0.9",
+                "chartbook_format_version": "0.0.10",
             },
             "site": {
                 "title": "Test",

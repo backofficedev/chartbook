@@ -303,6 +303,46 @@ daily_summary = df.groupby('date').agg({
 daily_summary.to_parquet('_data/daily_summary.parquet')
 ```
 
+## Hive-Partitioned Data
+
+For large datasets stored in hive-style partitioned format, use glob patterns in `path_to_parquet_data`:
+
+```toml
+[dataframes.market_data]
+dataframe_name = "Market Data (Partitioned)"
+short_description_df = "Market data partitioned by year and month"
+path_to_parquet_data = "./_data/market_data/**/*.parquet"
+date_col = "date"
+dataframe_docs_path = "./docs_src/dataframes/market_data.md"
+```
+
+This expects a directory structure like:
+
+```
+_data/market_data/
+├── year=2023/
+│   ├── month=11/
+│   │   └── data.parquet
+│   └── month=12/
+│       └── data.parquet
+└── year=2024/
+    ├── month=01/
+    │   └── data.parquet
+    └── month=02/
+        └── data.parquet
+```
+
+Polars `scan_parquet` automatically detects hive partition columns — the `year` and `month` columns will be added to the resulting LazyFrame.
+
+Glob paths only support `format="polars"` (the default LazyFrame format). To materialize the data, call `.collect()`:
+
+```python
+from chartbook import data
+
+lf = data.load(pipeline="MARKETS", dataframe="market_data")
+df = lf.collect()  # materialize into a DataFrame
+```
+
 ## Loading Data
 
 ### From a Catalog
@@ -310,17 +350,17 @@ daily_summary.to_parquet('_data/daily_summary.parquet')
 ```python
 from chartbook import data
 
-# Load as pandas DataFrame (default)
-df = data.load(pipeline="MARKETS", dataframe="market_data")
+# Load as Polars LazyFrame (default)
+lf = data.load(pipeline="MARKETS", dataframe="market_data")
 
-# Load as polars DataFrame
-df = data.load(pipeline="MARKETS", dataframe="market_data", format="polars")
+# Load as Polars eager DataFrame
+df = data.load(pipeline="MARKETS", dataframe="market_data", format="polars_eager")
 
-# Load as polars LazyFrame (deferred execution)
-lf = data.load(pipeline="MARKETS", dataframe="market_data", format="polars-lazyframe")
+# Load as pandas DataFrame
+df = data.load(pipeline="MARKETS", dataframe="market_data", format="pandas")
 
 # Explicit catalog path (no global config needed)
-df = data.load(pipeline="MARKETS", dataframe="market_data",
+lf = data.load(pipeline="MARKETS", dataframe="market_data",
                catalog_path="/path/to/catalog")
 
 # Get just the resolved data file path

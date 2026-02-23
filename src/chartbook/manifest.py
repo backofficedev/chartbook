@@ -8,6 +8,7 @@ import tomli
 from packaging import version  # Add this import for proper version comparison
 
 from chartbook.__about__ import __version__  # Import the version
+from chartbook.utils import is_glob_pattern
 
 BASE_DIR = Path(".").resolve()
 OUTPUT_DIR = Path("./_output")
@@ -287,8 +288,10 @@ def _load_pipeline_manifest(raw_manifest):
 
         for dataframe_id in manifest["dataframes"]:
             dataframe_manifest = manifest["dataframes"][dataframe_id]
+            raw_parquet_path = dataframe_manifest["path_to_parquet_data"]
+            dataframe_manifest["_is_glob"] = is_glob_pattern(raw_parquet_path)
             dataframe_manifest["dataframe_path"] = (
-                Path(base_dir) / dataframe_manifest["path_to_parquet_data"]
+                Path(base_dir) / raw_parquet_path
             )
             # Normalize topic_tags to Title Case
             if "topic_tags" in dataframe_manifest:

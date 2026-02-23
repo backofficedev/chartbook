@@ -26,7 +26,7 @@ pip install -e ".[dev]"
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.9"
+chartbook_format_version = "0.0.10"
 
 [site]
 title = "Sales Analytics Pipeline"
@@ -105,7 +105,7 @@ path_to_markdown_file = "./docs_src/methodology.md"
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.9"
+chartbook_format_version = "0.0.10"
 
 [site]
 title = "Company Analytics Catalog"
@@ -234,17 +234,17 @@ Prompts interactively for the catalog path.
 ```python
 from chartbook import data
 
-# Basic loading
-df = data.load(pipeline="SALES", dataframe="sales_data")
+# Basic loading (returns Polars LazyFrame by default)
+lf = data.load(pipeline="SALES", dataframe="sales_data")
 
-# With format specification
-df = data.load(pipeline="SALES", dataframe="sales_data", format="polars")
+# Load as Polars eager DataFrame
+df = data.load(pipeline="SALES", dataframe="sales_data", format="polars_eager")
 
-# Load as Polars LazyFrame
-lf = data.load(pipeline="SALES", dataframe="sales_data", format="polars-lazyframe")
+# Load as pandas DataFrame
+df = data.load(pipeline="SALES", dataframe="sales_data", format="pandas")
 
 # Load with explicit catalog path
-df = data.load(pipeline="SALES", dataframe="sales_data",
+lf = data.load(pipeline="SALES", dataframe="sales_data",
                catalog_path="/path/to/catalog/chartbook.toml")
 
 # Get data file path
@@ -256,6 +256,21 @@ docs = data.get_docs(pipeline="SALES", dataframe="sales_data")
 # Get path to documentation source file
 docs_path = data.get_docs_path(pipeline="SALES", dataframe="sales_data")
 ```
+
+### Hive-Partitioned Data (Glob Patterns)
+
+Use glob patterns in `path_to_parquet_data` for hive-style partitioned datasets:
+
+```toml
+[dataframes.partitioned_data]
+dataframe_name = "Partitioned Dataset"
+short_description_df = "Data partitioned by year and month"
+path_to_parquet_data = "./_data/partitioned/**/*.parquet"
+date_col = "date"
+dataframe_docs_str = "Hive-partitioned dataset with year/month partitions."
+```
+
+Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. Glob paths only support `format="polars"` (LazyFrame) — using `"pandas"` or `"polars_eager"` with a glob path raises a `ValueError`.
 
 ## Chart Field Reference
 
@@ -301,7 +316,7 @@ docs_path = data.get_docs_path(pipeline="SALES", dataframe="sales_data")
 | `how_is_pulled` | Data collection method |
 | `topic_tags` | List of topic tags |
 | `date_col` | Date column name |
-| `path_to_parquet_data` | Path to Parquet file |
+| `path_to_parquet_data` | Path to Parquet file or glob pattern (e.g., `_data/**/*.parquet` for hive-partitioned data) |
 | `path_to_excel_data` | Path to Excel file |
 | `dataframe_docs_path` | Path to documentation (mutually exclusive with `dataframe_docs_str`) |
 
@@ -390,7 +405,7 @@ Dataframes have specific required fields that will cause build errors if missing
 
 | Field | Required | Notes |
 |-------|----------|-------|
-| `path_to_parquet_data` | Yes | Path to the parquet file (not `path`) |
+| `path_to_parquet_data` | Yes | Path to the parquet file or glob pattern for hive-partitioned data (e.g., `_data/**/*.parquet`) |
 | `dataframe_docs_path` OR `dataframe_docs_str` | Yes (one of) | Documentation is required - use `dataframe_docs_path` for external markdown file or `dataframe_docs_str` for inline documentation |
 
 **Minimal dataframe example:**

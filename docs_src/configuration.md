@@ -28,7 +28,7 @@ A single analytics pipeline with its own charts and dataframes:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.9"
+chartbook_format_version = "0.0.10"
 ```
 
 ### Catalog Project
@@ -38,7 +38,7 @@ A collection of multiple pipelines aggregated into a unified catalog:
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.9"
+chartbook_format_version = "0.0.10"
 ```
 
 ## Configuration Sections
@@ -50,7 +50,7 @@ Required fields for all projects:
 ```toml
 [config]
 type = "pipeline"  # or "catalog"
-chartbook_format_version = "0.0.9"
+chartbook_format_version = "0.0.10"
 ```
 
 ### `[site]` - Website Metadata
@@ -135,7 +135,17 @@ chart_docs_path = "./docs_src/charts/revenue_trend.md"
 
 ### `[dataframes]` - Dataframe Definitions
 
-Define data sources:
+Define data sources. Data paths can be single files or glob patterns for hive-partitioned data:
+
+```toml
+# Single file
+path_to_parquet_data = "./_data/revenue_data.parquet"
+
+# Hive-partitioned (glob pattern)
+path_to_parquet_data = "./_data/revenue_data/**/*.parquet"
+```
+
+Full example:
 
 ```toml
 [dataframes.revenue_data]
@@ -201,7 +211,7 @@ Here's a complete example for a pipeline project:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.9"
+chartbook_format_version = "0.0.10"
 
 [site]
 title = "Sales Analytics Pipeline"
