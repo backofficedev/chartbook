@@ -537,7 +537,7 @@ def generate_dataframe_docs(
     template = environment.from_string(modified_source)
 
     # The name of the date column in the parquet file (default: "date").
-    date_col = dataframe_manifest["date_col"]
+    date_col = dataframe_manifest.get("date_col", "")
 
     if pipeline_theme == "pipeline":
         pipeline_page_link = "../index.md"

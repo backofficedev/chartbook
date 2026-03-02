@@ -31,7 +31,6 @@ DATAFRAME_FIELDS: list[str] = [
     "topic_tags",
     "how_is_pulled",
     "path_to_parquet_data",
-    "date_col",
 ]
 
 # Mutually exclusive doc fields for dataframes (exactly one required)
