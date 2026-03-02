@@ -43,7 +43,7 @@ Create a `chartbook.toml` file:
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.10"
+chartbook_format_version = "0.0.11"
 
 [site]
 title = "My Analytics Pipeline"
@@ -180,7 +180,7 @@ np.random.seed(42)
 # requirements.txt
 pandas==2.0.0
 numpy==1.24.0
-chartbook==0.0.10
+chartbook==0.0.11
 ```
 
 ### 5. Documentation
