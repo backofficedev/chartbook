@@ -141,6 +141,8 @@ def create_pipeline_project(
     include_charts: bool = True,
     include_notes: bool = False,
     include_notebooks: bool = False,
+    include_site_dir: bool = False,
+    site_dir_in_docs_src: bool = True,
     dataframe_count: int = 1,
     charts_per_dataframe: int = 1,
     use_inline_docs: bool = False,
@@ -173,6 +175,8 @@ def create_pipeline_project(
         dataframe_count: Number of dataframes to create
         charts_per_dataframe: Number of charts per dataframe
         use_inline_docs: If True, uses dataframe_docs_str instead of dataframe_docs_path
+        include_site_dir: Whether to create a site directory with sample pages
+        site_dir_in_docs_src: If True, creates site dir inside docs_src/; otherwise top-level
 
     Returns:
         Path to the project directory
@@ -309,6 +313,22 @@ def create_pipeline_project(
                 "path_to_markdown_file": "docs_src/note1.md",
             }
         }
+
+    if include_site_dir:
+        if site_dir_in_docs_src:
+            site_dir = base_dir / "docs_src" / "site"
+            config["pipeline"]["site_dir"] = "./docs_src/site/"
+        else:
+            site_dir = base_dir / "site"
+            config["pipeline"]["site_dir"] = "./site/"
+
+        site_dir.mkdir(parents=True, exist_ok=True)
+        (site_dir / "index_toc.md").write_text(
+            "```{toctree}\n:maxdepth: 2\n:caption: Site Pages\nsample_page.md\n```\n"
+        )
+        (site_dir / "sample_page.md").write_text(
+            "# Sample Page\n\nThis is a sample site page.\n"
+        )
 
     # Write chartbook.toml
     with open(base_dir / "chartbook.toml", "wb") as f:

@@ -98,6 +98,30 @@ def catalog_project_glob(tmp_path):
 
 
 @pytest.fixture
+def pipeline_project_with_site_dir(tmp_path):
+    """Pipeline project with site_dir inside docs_src/."""
+    return create_pipeline_project(
+        tmp_path / "pipeline_site",
+        pipeline_id="site_test",
+        pipeline_name="Site Dir Test",
+        include_site_dir=True,
+        site_dir_in_docs_src=True,
+    )
+
+
+@pytest.fixture
+def pipeline_project_with_site_dir_top_level(tmp_path):
+    """Pipeline project with site_dir at top level (backward compat)."""
+    return create_pipeline_project(
+        tmp_path / "pipeline_site_top",
+        pipeline_id="site_top_test",
+        pipeline_name="Site Dir Top Level Test",
+        include_site_dir=True,
+        site_dir_in_docs_src=False,
+    )
+
+
+@pytest.fixture
 def invalid_project_missing_file(tmp_path):
     """Creates a project without chartbook.toml."""
     return create_invalid_toml_project(tmp_path / "missing_file", "missing_file")

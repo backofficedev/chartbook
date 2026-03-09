@@ -222,6 +222,49 @@ class TestLoadManifestCatalogWorkflow:
         assert pipeline_b_manifest["pipeline"]["id"] == "pipeline_b"
 
 
+class TestSiteDirResolution:
+    """Tests for site_dir resolution in pipeline manifest."""
+
+    def test_site_dir_in_docs_src_resolves(self, pipeline_project_with_site_dir):
+        """site_dir = './docs_src/site/' should resolve correctly."""
+        manifest = load_manifest(pipeline_project_with_site_dir)
+        resolved = manifest["pipeline"]["_resolved_site_dir"]
+
+        assert resolved is not None
+        resolved_path = Path(resolved)
+        assert resolved_path.is_dir()
+        assert resolved_path.name == "site"
+        assert (resolved_path / "index_toc.md").exists()
+        assert (resolved_path / "sample_page.md").exists()
+
+    def test_site_dir_top_level_still_works(self, pipeline_project_with_site_dir_top_level):
+        """Backward compat: site_dir = './site/' at top level still works."""
+        manifest = load_manifest(pipeline_project_with_site_dir_top_level)
+        resolved = manifest["pipeline"]["_resolved_site_dir"]
+
+        assert resolved is not None
+        resolved_path = Path(resolved)
+        assert resolved_path.is_dir()
+        assert resolved_path.name == "site"
+        assert (resolved_path / "index_toc.md").exists()
+
+    def test_site_dir_cb_conflict_in_docs_src(self, pipeline_project_with_site_dir):
+        """site_dir containing cb/ subdirectory should raise ValueError."""
+        resolved = Path(
+            load_manifest(pipeline_project_with_site_dir)["pipeline"]["_resolved_site_dir"]
+        )
+        # Create a cb/ directory inside the site dir to trigger the conflict
+        (resolved / "cb").mkdir()
+
+        with pytest.raises(ValueError, match="cb/"):
+            load_manifest(pipeline_project_with_site_dir)
+
+    def test_no_site_dir_resolves_to_none(self, pipeline_project):
+        """When no site_dir is configured, _resolved_site_dir should be None."""
+        manifest = load_manifest(pipeline_project)
+        assert manifest["pipeline"]["_resolved_site_dir"] is None
+
+
 class TestLoadManifestValidationErrors:
     """Integration tests for manifest validation error handling."""
 
