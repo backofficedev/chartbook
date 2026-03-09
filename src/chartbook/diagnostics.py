@@ -131,17 +131,17 @@ def _check_mutually_exclusive_doc_fields(
 
 
 def _build_page_link(object_type: str, identifier: str, pipeline_id: str) -> str:
-    """Build relative page link for manual concatenation with homepage URL.
+    """Build relative page link for the diagnostics page.
 
-    Returns paths relative to homepage (index.html) like:
-    - ../charts/{pipeline_id}.{chart_id}.html
-    - ../dataframes/{pipeline_id}/{dataframe_id}.html
-    - ../index.html (for pipelines)
+    Returns paths relative to the cb/ directory (where diagnostics.md lives):
+    - ./charts/{pipeline_id}.{chart_id}.html
+    - ./dataframes/{pipeline_id}/{dataframe_id}.html
+    - ../index.html (for pipelines, from cb/ up to root)
     """
     if object_type == "chart":
-        return f"../charts/{pipeline_id}.{identifier}.html"
+        return f"./charts/{pipeline_id}.{identifier}.html"
     elif object_type == "dataframe":
-        return f"../dataframes/{pipeline_id}/{identifier}.html"
+        return f"./dataframes/{pipeline_id}/{identifier}.html"
     elif object_type == "pipeline":
         return "../index.html"
     else:

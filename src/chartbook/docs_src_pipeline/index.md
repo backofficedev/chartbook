@@ -1,7 +1,16 @@
 # {{pipeline_manifest.pipeline.pipeline_name}}
 
-Last updated: {sub-ref}`today` 
+Last updated: {sub-ref}`today`
 
+{% if index_toc_content %}
+{{ index_toc_content }}
+{% elif site_pages_list %}
+```{toctree}
+:maxdepth: 2
+:caption: Site Pages
+{{ site_pages_list | join("\n")}}
+```
+{% endif %}
 
 ## Table of Contents
 
@@ -22,7 +31,7 @@ Last updated: {sub-ref}`today`
 ```{toctree}
 :maxdepth: 1
 :caption: Pipeline Charts 📈
-charts.md
+cb/charts.md
 ```
 
 ```{postlist}
@@ -47,6 +56,5 @@ apidocs/index
 
 ## Pipeline Specs
 {% include "_docs_src/_templates/pipeline_manifest.md" with context %}
-
 
 {{readme_text}}

@@ -40,6 +40,7 @@ DEFAULT_CONFIG = {
         "os_compatibility": [],
         "git_repo_URL": "",
         "README_file_path": "",
+        "site_dir": "",
     },
 }
 
@@ -347,6 +348,24 @@ def _load_pipeline_manifest(raw_manifest):
                 manifest["dataframes"][dataframe_id]["linked_charts"] = (
                     chart_ids  # Add linked charts
                 )
+
+    # Process site_dir if present
+    site_dir_raw = manifest.get("pipeline", {}).get("site_dir", "")
+    if site_dir_raw:
+        site_dir_path = Path(base_dir) / site_dir_raw
+        if not site_dir_path.is_dir():
+            raise ValueError(
+                f"site_dir '{site_dir_raw}' does not exist at {site_dir_path}"
+            )
+        if (site_dir_path / "cb").exists():
+            raise ValueError(
+                f"site_dir contains a 'cb/' subdirectory which conflicts with "
+                f"the reserved chartbook namespace. Please rename or remove it."
+            )
+        manifest["pipeline"]["_resolved_site_dir"] = str(site_dir_path.resolve())
+    else:
+        manifest["pipeline"]["_resolved_site_dir"] = None
+
     return manifest
 
 

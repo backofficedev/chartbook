@@ -4,7 +4,7 @@ This page provides metadata quality diagnostics for all pipelines, dataframes, a
 
 ## Download Report
 
-[Download CSV Report](_static/diagnostics/chartbook_metadata_diagnostics.csv)
+[Download CSV Report](../_static/diagnostics/chartbook_metadata_diagnostics.csv)
 
 ## Metadata Completeness Report
 

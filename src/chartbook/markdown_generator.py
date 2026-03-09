@@ -50,10 +50,10 @@ def get_sphinx_file_alignment_plan(
 
     for pipeline_id in pipeline_ids:
         download_chart_dir_download = (
-            Path(docs_build_dir) / "download_chart" / str(pipeline_id)
+            Path(docs_build_dir) / "cb" / "download_chart" / str(pipeline_id)
         )
         download_chart_dir_static = Path(docs_build_dir) / "_static" / str(pipeline_id)
-        notebook_dir = Path(docs_build_dir) / "notebooks" / str(pipeline_id)
+        notebook_dir = Path(docs_build_dir) / "cb" / "notebooks" / str(pipeline_id)
 
         download_chart_dir_download.mkdir(parents=True, exist_ok=True)
         download_chart_dir_static.mkdir(parents=True, exist_ok=True)
@@ -62,7 +62,7 @@ def get_sphinx_file_alignment_plan(
         # Only create download_dataframe directory when data downloads are enabled
         if enable_data_download:
             download_dataframe_dir = (
-                Path(docs_build_dir) / "download_dataframe" / str(pipeline_id)
+                Path(docs_build_dir) / "cb" / "download_dataframe" / str(pipeline_id)
             )
             download_dataframe_dir.mkdir(parents=True, exist_ok=True)
 
@@ -167,7 +167,7 @@ def generate_all_pipeline_docs(
         pipeline_theme = pipeline_manifest["config"]["type"]
         if pipeline_theme == "catalog":
             # Copy pipeline README to pipelines directory
-            pipeline_readme_dir = docs_build_dir / "pipelines"
+            pipeline_readme_dir = docs_build_dir / "cb" / "pipelines"
             pipeline_readme_dir.mkdir(parents=True, exist_ok=True)
 
             source_path = pipeline_base_dir / "README.md"
@@ -233,7 +233,8 @@ def generate_all_pipeline_docs(
             # docs_src_dir=docs_src_dir.relative_to(base_dir)  # Pass relative path
         )
         # Copy to build directory
-        file_path = docs_build_dir / "dataframes.md"
+        (docs_build_dir / "cb").mkdir(parents=True, exist_ok=True)
+        file_path = docs_build_dir / "cb" / "dataframes.md"
         with open(file_path, mode="w", encoding="utf-8") as file:
             file.write(rendered_page)
 
@@ -242,11 +243,11 @@ def generate_all_pipeline_docs(
         template = environment.get_template(template_path)
         rendered_page = template.render(
             manifest=manifest,
-            dot_or_dotdot="..",
+            dot_or_dotdot=".",
             docs_src_dir=docs_src_dir.relative_to(base_dir),  # Pass relative path
         )
         # Copy to build directory
-        file_path = docs_build_dir / "pipelines.md"
+        file_path = docs_build_dir / "cb" / "pipelines.md"
         with open(file_path, mode="w", encoding="utf-8") as file:
             file.write(rendered_page)
 
@@ -269,11 +270,8 @@ def generate_all_pipeline_docs(
 
             df = pd.read_csv(diagnostics_csv_path)
 
-            # Convert Page Link from CSV format (../charts/...) to HTML format (./charts/...)
-            # for use in the diagnostics.html page
-            df["Page Link (HTML)"] = df["Page Link"].str.replace(
-                "../", "./", regex=False
-            )
+            # Page links are already relative to the cb/ directory
+            df["Page Link (HTML)"] = df["Page Link"]
 
             diagnostics_data = df.to_dict("records")
 
@@ -301,7 +299,7 @@ def generate_all_pipeline_docs(
             chart_field_count=len(CHART_FIELDS),
         )
 
-        file_path = docs_build_dir / "diagnostics.md"
+        file_path = docs_build_dir / "cb" / "diagnostics.md"
         with open(file_path, mode="w", encoding="utf-8") as file:
             file.write(rendered_page)
 
@@ -315,8 +313,8 @@ def generate_all_pipeline_docs(
             dataframe_file_list=dataframe_file_list,
             pipeline_manifest=pipeline_manifest,
             readme_text=readme_text,
-            pipeline_page_link=f"./pipelines/{pipeline_id}_README.md",
-            dot_or_dotdot=".",
+            pipeline_page_link=f"cb/pipelines/{pipeline_id}_README.md",
+            dot_or_dotdot="cb",
         )
         file_path = docs_build_dir / "index.md"
         with open(file_path, mode="w", encoding="utf-8") as file:
@@ -331,7 +329,7 @@ def generate_all_pipeline_docs(
         readme_text = "".join(readme_content[2:])
 
         notebook_list = [
-            f"notebooks/{pipeline_id}/{Path(pipeline_manifest['notebooks'][notebook_id]['notebook_path']).name}"
+            f"cb/notebooks/{pipeline_id}/{Path(pipeline_manifest['notebooks'][notebook_id]['notebook_path']).name}"
             for notebook_id in pipeline_manifest["notebooks"]
         ]
 
@@ -343,12 +341,25 @@ def generate_all_pipeline_docs(
                 note_manifest = pipeline_manifest["notes"][note_id]
                 source_file = note_manifest["full_path"]
 
-                # Copy to root of docs build directory with note_id as filename
-                dest_file = docs_build_dir / f"{note_id}.md"
+                # Copy to cb/ directory with note_id as filename
+                cb_dir = docs_build_dir / "cb"
+                cb_dir.mkdir(parents=True, exist_ok=True)
+                dest_file = cb_dir / f"{note_id}.md"
                 shutil.copy(source_file, dest_file)
 
                 # Add to notes list for template
-                notes_list.append(f"{note_id}.md")
+                notes_list.append(f"cb/{note_id}.md")
+
+        # Load site_dir content for index template merge
+        site_dir = pipeline_manifest.get("pipeline", {}).get("_resolved_site_dir")
+        index_toc_content = ""
+        site_pages_list = []
+        if site_dir:
+            index_toc_path = Path(site_dir) / "index_toc.md"
+            if index_toc_path.exists():
+                with open(index_toc_path) as f:
+                    index_toc_content = f.read()
+            site_pages_list = discover_site_pages(site_dir)
 
         # Render and copy index.md in pipeline themes
         template_path = "index.md"
@@ -359,10 +370,12 @@ def generate_all_pipeline_docs(
             pipeline_manifest=pipeline_manifest,
             readme_text=readme_text,
             pipeline_page_link="./index.md",
-            dot_or_dotdot=".",
+            dot_or_dotdot="cb",
             pipeline_id=pipeline_id,
             notebook_list=notebook_list,
             notes_list=notes_list,
+            site_pages_list=site_pages_list,
+            index_toc_content=index_toc_content,
         )
         file_path = docs_build_dir / "index.md"
         with open(file_path, mode="w", encoding="utf-8") as file:
@@ -471,7 +484,7 @@ def generate_dataframe_docs(
     """
     dataframe_manifest = pipeline_manifest["dataframes"][dataframe_id]
 
-    dataframe_docs_dir = docs_build_dir / "dataframes" / pipeline_id
+    dataframe_docs_dir = docs_build_dir / "cb" / "dataframes" / pipeline_id
     dataframe_docs_dir.mkdir(parents=True, exist_ok=True)
 
     # Get package templates directory
@@ -540,7 +553,7 @@ def generate_dataframe_docs(
     date_col = dataframe_manifest.get("date_col", "")
 
     if pipeline_theme == "pipeline":
-        pipeline_page_link = "../index.md"
+        pipeline_page_link = "../../../index.md"
         dataframe_path_prefix = "../dataframes/"
     elif pipeline_theme == "catalog":
         pipeline_page_link = f"../pipelines/{pipeline_id}_README.md"
@@ -583,7 +596,7 @@ def generate_dataframe_docs(
         pipeline_page_link=pipeline_page_link,
         most_recent_data_min=most_recent_data_min,
         most_recent_data_max=most_recent_data_max,
-        dot_or_dotdot="..",
+        dot_or_dotdot="../..",
         dataframe_glimpse=dataframe_glimpse,
         enable_data_download=enable_data_download,
     )
@@ -737,7 +750,7 @@ def generate_chart_docs(
     template = environment.from_string(modified_source)
 
     if pipeline_theme == "pipeline":
-        pipeline_page_link = "../index.md"
+        pipeline_page_link = "../../index.md"
         dataframe_path_prefix = "../dataframes/"
     elif pipeline_theme == "catalog":
         pipeline_page_link = f"../pipelines/{pipeline_id}_README.md"
@@ -789,9 +802,9 @@ def generate_chart_docs(
     )
     # print(chart_page)
 
-    (docs_build_dir / "charts").mkdir(parents=True, exist_ok=True)
+    (docs_build_dir / "cb" / "charts").mkdir(parents=True, exist_ok=True)
     filename = f"{pipeline_id}.{chart_id}.md"
-    file_path = docs_build_dir / "charts" / filename
+    file_path = docs_build_dir / "cb" / "charts" / filename
     with open(file_path, mode="w", encoding="utf-8") as file:
         file.write(chart_page)
 
@@ -811,7 +824,7 @@ def get_dataframes_and_dataframe_docs(base_dir=BASE_DIR):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         for dataframe_id in pipeline_manifest["dataframes"]:
             filename = Path(f"{dataframe_id}.md")
-            file_path = Path("dataframes") / pipeline_id / filename
+            file_path = Path("cb/dataframes") / pipeline_id / filename
             pipeline_dataframe_id = f"{pipeline_id}:{dataframe_id}"
             table_file_map[pipeline_dataframe_id] = file_path.as_posix()
     return table_file_map
@@ -838,6 +851,8 @@ def copy_docs_src_to_build(docs_src_dir, docs_build_dir, exclude_list=None):
             "pipelines.md",
             "dataframes.md",
             "diagnostics.md",
+            "charts.md",
+            "site",
         ]
 
     docs_src_dir = Path(docs_src_dir)
@@ -876,6 +891,80 @@ def copy_docs_src_to_build(docs_src_dir, docs_build_dir, exclude_list=None):
             except (OSError, PermissionError):
                 # If we can't set permissions, just continue
                 pass
+
+
+def discover_site_pages(site_dir):
+    """Discover .md files in site_dir for auto-toctree generation.
+
+    Returns a sorted list of relative paths (posix format) suitable for
+    toctree entries, excluding index_toc.md and index.md at the root.
+
+    :param site_dir: Path to the user's site directory.
+    :type site_dir: str or Path
+    :returns: Sorted list of relative .md file paths.
+    :rtype: list[str]
+    """
+    site_dir = Path(site_dir)
+    pages = []
+
+    for md_file in sorted(site_dir.rglob("*.md")):
+        rel_path = md_file.relative_to(site_dir)
+
+        # Skip special files at the root of site_dir
+        if rel_path.parent == Path(".") and rel_path.name in ("index_toc.md", "index.md"):
+            continue
+
+        pages.append(rel_path.as_posix())
+
+    return pages
+
+
+def copy_site_dir_to_build(site_dir, docs_build_dir):
+    """Copy user's custom site pages to the docs build root.
+
+    Files from site_dir are copied to the root of docs_build_dir,
+    alongside the auto-generated content under cb/.
+
+    :param site_dir: Path to the user's site directory.
+    :type site_dir: str or Path
+    :param docs_build_dir: Path to the docs build directory (_docs/).
+    :type docs_build_dir: str or Path
+    """
+    import warnings
+
+    site_dir = Path(site_dir)
+    docs_build_dir = Path(docs_build_dir)
+
+    # Validate: site_dir must not contain a 'cb/' subdirectory
+    cb_conflict = site_dir / "cb"
+    if cb_conflict.exists():
+        raise ValueError(
+            f"site_dir '{site_dir}' contains a 'cb/' subdirectory which "
+            f"conflicts with the reserved chartbook namespace. "
+            f"Please rename or remove this directory."
+        )
+
+    # Copy all files from site_dir to docs_build_dir root
+    for src_path in site_dir.rglob("*"):
+        if src_path.is_file():
+            rel_path = src_path.relative_to(site_dir)
+
+            # Skip index_toc.md at root (handled separately for index merge)
+            if rel_path.name == "index_toc.md" and rel_path.parent == Path("."):
+                continue
+
+            # Skip index.md at root (would conflict with generated index)
+            if rel_path.name == "index.md" and rel_path.parent == Path("."):
+                warnings.warn(
+                    f"Ignoring '{src_path}': root index.md in site_dir "
+                    f"would conflict with auto-generated index. Use "
+                    f"index_toc.md to inject content into the index page."
+                )
+                continue
+
+            dst_path = docs_build_dir / rel_path
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src_path, dst_path)
 
 
 def build_all(
@@ -936,6 +1025,21 @@ def build_all(
 
     # Copy remaining docs_src files to build directory
     copy_docs_src_to_build(docs_src_dir, docs_build_dir)
+
+    # Copy charts.md to cb/ (excluded from general copy to avoid root placement)
+    charts_md_src = docs_src_dir / "charts.md"
+    if charts_md_src.exists():
+        cb_dir = docs_build_dir / "cb"
+        cb_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(charts_md_src, cb_dir / "charts.md")
+
+    # Copy user site_dir files if configured
+    pipeline_ids = get_pipeline_ids(manifest)
+    if pipeline_ids:
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_ids[0])
+        site_dir = pipeline_manifest.get("pipeline", {}).get("_resolved_site_dir")
+        if site_dir:
+            copy_site_dir_to_build(site_dir, docs_build_dir)
 
 
 # def _demo():
