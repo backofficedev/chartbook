@@ -26,7 +26,7 @@ pip install -e ".[dev]"
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.11"
+chartbook_format_version = "0.0.12"
 
 [site]
 title = "Sales Analytics Pipeline"
@@ -106,7 +106,7 @@ path_to_markdown_file = "./docs_src/methodology.md"
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.11"
+chartbook_format_version = "0.0.12"
 
 [site]
 title = "Company Analytics Catalog"
