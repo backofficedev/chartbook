@@ -84,7 +84,7 @@ chartbook build [OPTIONS] [OUTPUT_DIR]
 - `--publish-dir PATH`: Directory for published files (default: `./_output/to_be_published/`)
 - `--docs-build-dir PATH`: Build directory (default: `./_docs`)
 - `--temp-docs-src-dir PATH`: Temporary source directory (default: `./_docs_src`)
-- `--keep-build-dirs`: Keep temporary build directories after generation
+- `--keep-build-dirs`: Keep temporary build directories after generation. See {doc}`user-guide/build-pipeline` for details on what these directories contain
 - `--size-threshold FLOAT`: File size threshold in MB above which to use memory-efficient loading (default: 50)
 
 **Examples:**

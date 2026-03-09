@@ -44,7 +44,7 @@ Projects use `chartbook.toml` with these sections:
 
 - `[config]`: Project type (pipeline/catalog) and version
 - `[site]`: Title, author, copyright, logo, `enable_data_download`
-- `[pipeline]`: ID, name, description, developer info
+- `[pipeline]`: ID, name, description, developer info, `site_dir` (optional path to custom site pages)
 - `[charts]`: Chart definitions with metadata
 - `[dataframes]`: Data source definitions with governance info
 - `[notebooks]`: Jupyter notebook references
@@ -92,12 +92,15 @@ Polars `scan_parquet` handles glob patterns natively with automatic hive partiti
 
 ```
 my-pipeline/
-├── chartbook.toml      # Configuration
+├── chartbook.toml       # Configuration
 ├── _data/               # Parquet data files
 ├── _output/             # Generated HTML charts
 ├── docs_src/            # Markdown documentation
 │   ├── charts/
-│   └── dataframes/
+│   ├── dataframes/
+│   └── site/            # (Optional) Custom site pages (site_dir)
+│       ├── index_toc.md # Controls toctree injection into index page
+│       └── *.md         # Custom markdown pages
 └── src/                 # Python source code
 ```
 
@@ -118,6 +121,7 @@ id = "MYPROJ"
 pipeline_name = "My Pipeline"
 pipeline_description = "Description"
 lead_pipeline_developer = "Your Name"
+# site_dir = "./docs_src/site/"  # Optional: custom site pages directory
 ```
 
 See REFERENCE.md for complete configuration examples and all available fields.

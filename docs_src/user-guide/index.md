@@ -77,6 +77,13 @@ Integrate Jupyter notebooks into your documentation.
 Learn MyST Markdown syntax for writing documentation.
 :::
 
+:::{grid-item-card} Build Pipeline Internals
+:link: build-pipeline
+:link-type: doc
+
+Understand the two-stage build process, inspect intermediate files, and customize templates.
+:::
+
 ::::
 
 ## What You'll Learn
@@ -117,4 +124,5 @@ plotting
 gallery
 notebooks
 myst-markdown
+build-pipeline
 ```

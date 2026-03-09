@@ -19,6 +19,7 @@ software_modules_command = "module load anaconda3/3.11.4 TeXLive/2023"
 runs_on_grid_or_windows_or_other = "Windows/Linux/MacOS"
 git_repo_URL = ""
 README_file_path = "./README.md"
+site_dir = "./docs_src/site/"
 
 [notebooks]
 

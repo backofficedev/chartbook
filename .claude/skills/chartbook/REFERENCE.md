@@ -45,6 +45,7 @@ software_modules_command = "module load python/3.11"
 runs_on_grid_or_windows_or_other = "Windows/Linux"
 git_repo_URL = "https://github.com/org/sales-analytics"
 README_file_path = "./README.md"
+site_dir = "./docs_src/site/"
 
 [charts.monthly_sales]
 chart_name = "Monthly Sales Overview"
@@ -272,6 +273,69 @@ dataframe_docs_str = "Hive-partitioned dataset with year/month partitions."
 
 Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Partition columns (e.g., `year`, `month`) are automatically added to the LazyFrame. Glob paths only support `format="polars"` (LazyFrame) — using `"pandas"` or `"polars_eager"` with a glob path raises a `ValueError`.
 
+## Site Directory (Custom Pages)
+
+The `site_dir` field in `[pipeline]` lets you add custom markdown pages alongside the auto-generated ChartBook documentation. Useful for methodology notes, FAQs, guides, or any project-specific content.
+
+### Configuration
+
+```toml
+[pipeline]
+id = "MYPROJ"
+pipeline_name = "My Pipeline"
+site_dir = "./docs_src/site/"
+```
+
+### Directory Layout
+
+```
+docs_src/site/
+├── index_toc.md           # Controls how pages appear in the index toctree
+├── methodology.md         # Custom page
+├── data-sources.md        # Custom page
+├── guides_toc.md          # Sub-toctree for nested pages
+└── guides/
+    ├── getting-started.md
+    └── faq.md
+```
+
+### How It Works
+
+1. **`index_toc.md`**: If present, its content is injected into the generated index page as a toctree block. Example:
+
+   ````markdown
+   ```{toctree}
+   :maxdepth: 1
+   :caption: Project Documentation
+
+   methodology
+   data-sources
+   guides_toc.md
+   ```
+   ````
+
+2. **Auto-discovery fallback**: If `index_toc.md` is absent, ChartBook auto-discovers all `.md` files in the site directory and generates a toctree automatically.
+
+3. **Reserved namespace**: The site directory must not contain a `cb/` subdirectory, as `cb/` is reserved for auto-generated ChartBook content (charts, dataframes, pipelines, notebooks, diagnostics).
+
+4. **File placement**: Site pages are copied to the root of the built docs directory, alongside the `cb/` directory containing auto-generated content.
+
+### `cb/` Namespace
+
+All auto-generated ChartBook content is placed under a `cb/` subdirectory in the built documentation. This separation ensures custom site pages never conflict with auto-generated content.
+
+```
+docs/                        # Built output
+├── cb/                      # ChartBook auto-generated content
+│   ├── charts/              # Individual chart pages
+│   ├── dataframes/          # Dataframe documentation
+│   ├── pipelines/           # Pipeline README pages
+│   ├── notebooks/           # Rendered notebooks
+│   └── diagnostics.md       # Metadata diagnostics
+├── methodology.md           # Custom site pages (from site_dir)
+└── index.md                 # Landing page
+```
+
 ## Chart Field Reference
 
 | Field | Description |
@@ -386,6 +450,7 @@ python -m http.server -d ./docs
 - **Sphinx Build Errors**: Check all required files exist
 - **Path Errors**: Use relative paths from project root
 - **TOML Syntax**: Validate with online TOML validators
+- **site_dir errors**: Ensure the directory exists and does not contain a `cb/` subdirectory (reserved namespace)
 
 ## Required Fields
 
