@@ -4,6 +4,8 @@ from pathlib import Path
 
 import click
 
+from chartbook.__about__ import __version__
+
 
 def _check_sphinx_installed():
     """Check if Sphinx dependencies are installed.
@@ -26,6 +28,7 @@ def _check_sphinx_installed():
 
 
 @click.group()
+@click.version_option(version=__version__)
 def main():
     """chartbook CLI tool for generating documentation websites."""
 
