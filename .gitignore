@@ -66,3 +66,5 @@ docs_src/apidocs/
 docs/
 
 _build/
+.claude/*
+!.claude/skills/chartbook
