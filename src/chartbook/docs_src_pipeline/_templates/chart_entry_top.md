@@ -1,7 +1,7 @@
 ---
-date: {{pipeline_manifest.source_last_modified_date}}
-tags: {{dataframe_manifest.data_sources | join(', ')}}
-category: {{topic_tags | join(', ')}}
+date: "{{pipeline_manifest.source_last_modified_date | yaml_escape}}"
+tags: "{{dataframe_manifest.data_sources | join(', ') | yaml_escape}}"
+category: "{{topic_tags | join(', ') | yaml_escape}}"
 ---
 
 # Chart: {{chart_name}}

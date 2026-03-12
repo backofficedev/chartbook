@@ -12,7 +12,9 @@ from pathlib import Path
 
 import jinja2
 import polars as pl
+import yaml
 
+from chartbook.errors import ChartBookError
 from chartbook.manifest import (
     get_file_modified_datetime,
     get_pipeline_ids,
@@ -24,6 +26,11 @@ from chartbook.utils import copy_according_to_plan, get_dataframe_glimpse, is_gl
 BASE_DIR = Path(".").resolve()
 DOCS_BUILD_DIR = BASE_DIR / Path("_docs")
 DOCS_SRC_DIR = BASE_DIR / Path("_docs_src")
+
+
+def _yaml_escape_filter(value):
+    """Escape double quotes in a string for safe use inside YAML double-quoted scalars."""
+    return str(value).replace("\\", "\\\\").replace('"', '\\"')
 
 
 def get_sphinx_file_alignment_plan(
@@ -727,6 +734,7 @@ def generate_chart_docs(
     environment = jinja2.Environment(
         loader=jinja2.FileSystemLoader(template_search_paths)
     )
+    environment.filters["yaml_escape"] = _yaml_escape_filter
 
     # Load doc content based on mode (path or inline string)
     doc_mode = chart_manifest.get("_doc_mode", "path")
@@ -807,6 +815,41 @@ def generate_chart_docs(
     file_path = docs_build_dir / "cb" / "charts" / filename
     with open(file_path, mode="w", encoding="utf-8") as file:
         file.write(chart_page)
+
+    _validate_generated_frontmatter(file_path, pipeline_id, chart_id)
+
+
+def _validate_generated_frontmatter(md_path, pipeline_id, chart_id):
+    """Validate that generated markdown has parseable YAML frontmatter.
+
+    :param md_path: Path to the generated markdown file.
+    :type md_path: Path
+    :param pipeline_id: The pipeline identifier (for error messages).
+    :type pipeline_id: str
+    :param chart_id: The chart identifier (for error messages).
+    :type chart_id: str
+    :raises ChartBookError: If the YAML frontmatter is malformed.
+    """
+    content = Path(md_path).read_text(encoding="utf-8")
+    if not content.startswith("---"):
+        return
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        return
+    try:
+        yaml.safe_load(parts[1])
+    except yaml.YAMLError as e:
+        error = ChartBookError(
+            message="Generated chart has malformed YAML frontmatter",
+            file_path=Path(md_path),
+            hint=(
+                f"Chart '{pipeline_id}:{chart_id}' produced invalid YAML frontmatter. "
+                f"This usually means a field in chartbook.toml (e.g. data_sources, "
+                f"topic_tags, chart_name) contains characters that are unsafe in YAML "
+                f"(colons, brackets, etc.).\nYAML error: {e}"
+            ),
+        )
+        error.exit_with_message()
 
 
 def get_dataframes_and_dataframe_docs(base_dir=BASE_DIR):
