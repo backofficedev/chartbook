@@ -170,7 +170,7 @@ A typical debugging workflow:
 
 ```console
 # 1. Build with intermediate files preserved
-chartbook build --keep-build-dirs --warn-missing
+chartbook build --keep-build-dirs
 
 # 2. Inspect the generated Markdown
 cat _docs/charts/YI.repo_rates.md

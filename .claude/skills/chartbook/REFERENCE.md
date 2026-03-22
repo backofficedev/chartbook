@@ -119,10 +119,45 @@ path_to_pipeline = "../pipelines/sales"
 [pipelines.MARKETING]
 path_to_pipeline = "../pipelines/marketing"
 
+# Disabled pipeline — skipped during builds
+[pipelines.BROKEN_PIPELINE]
+path_to_pipeline = "../pipelines/broken"
+disabled = true
+
 # Platform-specific paths
 [pipelines.FINANCE]
 Unix = "/data/pipelines/finance"
 Windows = "T:/pipelines/finance"
+```
+
+### Global Catalog
+
+The default global catalog lives at `~/.chartbook/chartbook.toml`. Create it with:
+
+```bash
+chartbook catalog init                    # Interactive — prompts for title
+chartbook catalog init --title "My Catalog"  # Non-interactive
+```
+
+The global config directory structure:
+
+```
+~/.chartbook/
+├── settings.toml        # User settings (catalog path override)
+├── chartbook.toml       # Default global catalog
+├── artifacts/           # Auxiliary files (e.g. cached data)
+└── docs/                # Rendered catalog HTML
+```
+
+**Catalog path resolution** (in order):
+1. Explicit `--catalog` flag on CLI commands
+2. `catalog.path` from `~/.chartbook/settings.toml`
+3. `~/.chartbook/chartbook.toml` if it exists
+4. Auto-prompt to create (interactive TTY only)
+
+When no catalog is found and stdin is a TTY, commands that need a catalog will prompt:
+```
+No catalog found. Create a new global catalog now? [y/N]
 ```
 
 ## CLI Reference
@@ -146,7 +181,7 @@ Options:
   --temp-docs-src-dir PATH Temporary source directory
   --keep-build-dirs        Keep temporary build directories
   --size-threshold FLOAT   File size threshold in MB (default: 50)
-  --warn-missing           Warn instead of error when source files are missing
+  --strict                 Error and exit on missing source files instead of skipping affected pipelines
   --strip-mathjax2 / --no-strip-mathjax2
                            Strip Plotly MathJax 2 from notebooks (default: enabled)
 ```
@@ -226,14 +261,30 @@ chartbook data get-docs-path --pipeline sales --dataframe transactions
 
 ### chartbook catalog
 
-Manage the chartbook catalog (add, remove, list pipelines).
+Manage the chartbook catalog.
 
 ```bash
 chartbook catalog COMMAND
 
 Commands:
-  add    Add pipeline directory(ies) to the catalog
+  init     Initialize the global catalog at ~/.chartbook/chartbook.toml
+  add      Add pipeline directory(ies) to the catalog
+  disable  Disable a pipeline (skip during builds)
+  enable   Re-enable a disabled pipeline
+  build    Build HTML docs for the global catalog
+  browse   Open global catalog docs in browser
 ```
+
+#### chartbook catalog init
+
+```bash
+chartbook catalog init [OPTIONS]
+
+Options:
+  --title TEXT   Title for the catalog site (prompts if omitted)
+```
+
+Creates `~/.chartbook/chartbook.toml` with a minimal catalog skeleton and the `~/.chartbook/artifacts/` directory. If the catalog already exists, reports its path and exits.
 
 #### chartbook catalog add
 
@@ -260,11 +311,42 @@ chartbook catalog add /path/to/projects/* -y
 chartbook catalog add ./my-pipeline --catalog /path/to/catalog/chartbook.toml
 ```
 
+Re-adding a disabled pipeline automatically re-enables it.
+
+#### chartbook catalog disable / enable
+
+```bash
+chartbook catalog disable PIPELINE_ID [--catalog PATH]
+chartbook catalog enable PIPELINE_ID [--catalog PATH]
+```
+
+Sets or clears `disabled = true` on a pipeline entry in the catalog TOML. Disabled pipelines are kept in the file but skipped during builds.
+
+#### chartbook catalog build
+
+```bash
+chartbook catalog build [OPTIONS]
+
+Options:
+  -f, --force-write  Overwrite existing docs without prompting
+  --strict           Error and exit on missing source files instead of skipping affected pipelines
+```
+
+Builds HTML documentation for the global catalog at `~/.chartbook/chartbook.toml`. Output is written to `~/.chartbook/docs/`. Temp build artifacts use `~/.chartbook/_docs/` and `~/.chartbook/_docs_src/`.
+
+#### chartbook catalog browse
+
+```bash
+chartbook catalog browse
+```
+
+Opens `~/.chartbook/docs/index.html` in the default browser using Python's `webbrowser` module. Errors if docs haven't been built yet.
+
 ### chartbook config
 
 Configure the default catalog path for data loading. Sets the path to a catalog's `chartbook.toml` in `~/.chartbook/settings.toml` so that `data.load()` can find pipelines without an explicit `catalog_path` argument.
 
-Prompts interactively for the catalog path.
+Prompts interactively for the catalog path. Use this to point to an **existing** catalog. To create a new global catalog, use `chartbook catalog init` instead.
 
 ## Data Loading Examples
 

@@ -24,21 +24,44 @@ ChartBook is a developer platform for data science teams to discover, document, 
 
 ```bash
 chartbook init              # Scaffold new project (requires chartbook[all])
-chartbook build           # Generate HTML documentation website
-chartbook build -f        # Force overwrite existing docs
-chartbook publish            # Publish to directory
+chartbook build             # Generate HTML documentation website
+chartbook build -f          # Force overwrite existing docs
+chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
-chartbook config             # Configure default catalog path
+chartbook config            # Configure default catalog path (interactive)
+chartbook catalog init      # Create global catalog at ~/.chartbook/chartbook.toml
 chartbook catalog add <path>     # Add pipeline(s) to catalog
 chartbook catalog add <glob> -y  # Add multiple pipelines without prompt
-chartbook ls                 # List all pipelines, dataframes, charts
-chartbook ls pipelines       # List pipelines only
-chartbook ls dataframes      # List dataframes only
-chartbook ls charts          # List charts only
+chartbook catalog disable <id>   # Disable a pipeline (skip during builds)
+chartbook catalog enable <id>    # Re-enable a disabled pipeline
+chartbook catalog build     # Build HTML docs for the global catalog
+chartbook catalog browse    # Open global catalog docs in browser
+chartbook ls                # List all pipelines, dataframes, charts
+chartbook ls pipelines      # List pipelines only
+chartbook ls dataframes     # List dataframes only
+chartbook ls charts         # List charts only
 chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
 chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
 chartbook data get-docs-path --pipeline <id> --dataframe <id>  # Get docs path
 ```
+
+## Global Config Directory (`~/.chartbook/`)
+
+```
+~/.chartbook/
+├── settings.toml        # User settings (catalog path override, etc.)
+├── chartbook.toml       # Default global catalog
+├── artifacts/           # Auxiliary files (e.g. cached data)
+├── docs/                # Rendered catalog HTML (from `catalog build`)
+├── _docs/               # Temp Sphinx build dir (auto-cleaned)
+└── _docs_src/           # Temp source dir (auto-cleaned)
+```
+
+**Catalog path resolution order:**
+1. Explicit `--catalog` flag on CLI commands
+2. `catalog.path` from `~/.chartbook/settings.toml`
+3. `~/.chartbook/chartbook.toml` if it exists
+4. Auto-prompt to create one (interactive TTY only)
 
 ## Configuration File
 
@@ -51,6 +74,18 @@ Projects use `chartbook.toml` with these sections:
 - `[dataframes]`: Data source definitions with governance info
 - `[notebooks]`: Jupyter notebook references
 - `[notes]`: Additional documentation
+
+### Pipeline disable/enable
+
+Pipelines in a catalog can be temporarily disabled by adding `disabled = true`:
+
+```toml
+[pipelines.sovereign_bonds]
+path_to_pipeline = "../sovereign_bonds"
+disabled = true
+```
+
+Disabled pipelines are skipped during builds. Use `chartbook catalog disable <id>` / `chartbook catalog enable <id>` to toggle. Re-adding a disabled pipeline with `chartbook catalog add` automatically re-enables it.
 
 ## Data Loading API
 
