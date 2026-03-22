@@ -34,7 +34,8 @@ def _yaml_escape_filter(value):
 
 
 def get_sphinx_file_alignment_plan(
-    base_dir=BASE_DIR, docs_build_dir=DOCS_BUILD_DIR, enable_data_download=False
+    base_dir=BASE_DIR, docs_build_dir=DOCS_BUILD_DIR, enable_data_download=False,
+    skip_pipelines=None,
 ):
     """Get file alignment plans for copying files to the Sphinx build directory.
 
@@ -44,6 +45,8 @@ def get_sphinx_file_alignment_plan(
     :type docs_build_dir: Path
     :param enable_data_download: Whether to enable copying parquet data files.
     :type enable_data_download: bool
+    :param skip_pipelines: Set of pipeline IDs to skip.
+    :type skip_pipelines: set[str] | None
     :returns: A tuple of (dataset_plan, chart_plan_download, chart_plan_static, notebook_plan).
     :rtype: tuple[dict, dict, dict, dict]
     """
@@ -56,6 +59,8 @@ def get_sphinx_file_alignment_plan(
     notebook_plan = {}
 
     for pipeline_id in pipeline_ids:
+        if skip_pipelines and pipeline_id in skip_pipelines:
+            continue
         download_chart_dir_download = (
             Path(docs_build_dir) / "cb" / "download_chart" / str(pipeline_id)
         )
@@ -133,6 +138,7 @@ def generate_all_pipeline_docs(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
     enable_data_download=False,
+    skip_pipelines=None,
 ):
     """Generate documentation for all pipelines in the manifest.
 
@@ -151,6 +157,8 @@ def generate_all_pipeline_docs(
     :type size_threshold: float
     :param enable_data_download: Whether to enable data download links in documentation.
     :type enable_data_download: bool
+    :param skip_pipelines: Set of pipeline IDs to skip.
+    :type skip_pipelines: set[str] | None
     """
     base_dir = Path(base_dir).resolve()
     docs_src_dir = Path(docs_src_dir)
@@ -158,6 +166,8 @@ def generate_all_pipeline_docs(
     pipeline_ids = get_pipeline_ids(manifest)
 
     for pipeline_id in pipeline_ids:
+        if skip_pipelines and pipeline_id in skip_pipelines:
+            continue
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         pipeline_base_dir = Path(pipeline_manifest["pipeline_base_dir"])
 
@@ -236,8 +246,7 @@ def generate_all_pipeline_docs(
         template_path = "dataframes.md"
         template = environment.get_template(template_path)
         rendered_page = template.render(
-            dataframe_file_list=dataframe_file_list,
-            # docs_src_dir=docs_src_dir.relative_to(base_dir)  # Pass relative path
+            dataframe_file_list=[p.removeprefix("cb/") for p in dataframe_file_list],
         )
         # Copy to build directory
         (docs_build_dir / "cb").mkdir(parents=True, exist_ok=True)
@@ -1016,6 +1025,7 @@ def build_all(
     pipeline_theme="pipeline",
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
+    skip_pipelines=None,
 ):
     """Build all documentation.
 
@@ -1031,6 +1041,8 @@ def build_all(
     :type docs_src_dir: Path
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param skip_pipelines: Set of pipeline IDs to skip.
+    :type skip_pipelines: set[str] | None
     """
     docs_build_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1049,6 +1061,7 @@ def build_all(
         base_dir=base_dir,
         docs_build_dir=docs_build_dir,
         enable_data_download=enable_data_download,
+        skip_pipelines=skip_pipelines,
     )
 
     copy_according_to_plan(dataset_plan)
@@ -1064,6 +1077,7 @@ def build_all(
         docs_src_dir=docs_src_dir,
         size_threshold=size_threshold,
         enable_data_download=enable_data_download,
+        skip_pipelines=skip_pipelines,
     )
 
     # Copy remaining docs_src files to build directory

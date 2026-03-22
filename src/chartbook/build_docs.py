@@ -36,6 +36,7 @@ def run_build_markdown(
     _docs_dir: Path = Path("./_docs"),
     docs_src_dir: Path = Path("_docs_src"),
     size_threshold: float = 50,
+    skip_pipelines: set[str] | None = None,
 ):
     """Run the pipeline publish script to generate markdown files.
 
@@ -51,6 +52,8 @@ def run_build_markdown(
     :type docs_src_dir: Path
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param skip_pipelines: Set of pipeline IDs to skip due to missing files.
+    :type skip_pipelines: set[str] | None
     """
     project_dir = Path(project_dir).resolve()
     publish_dir = Path(publish_dir).resolve()
@@ -63,6 +66,7 @@ def run_build_markdown(
         pipeline_theme=pipeline_theme,
         docs_src_dir=docs_src_dir,
         size_threshold=size_threshold,
+        skip_pipelines=skip_pipelines,
     )
 
 
@@ -107,7 +111,7 @@ def generate_docs(
     temp_docs_src_dir: Path = Path("_docs_src"),
     should_remove_existing: bool = False,
     size_threshold: float = 50,
-    warn_missing: bool = False,
+    strict: bool = False,
     strip_mathjax2: bool = True,
 ):
     """Generate documentation by running both pipeline publish and sphinx build.
@@ -128,8 +132,9 @@ def generate_docs(
     :type should_remove_existing: bool
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
-    :param warn_missing: If True, warn instead of error when source files are missing.
-    :type warn_missing: bool
+    :param strict: If True, error and exit when source files are missing.
+        When False (default), affected pipelines are skipped with warnings.
+    :type strict: bool
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs
         to prevent conflicts with Sphinx's MathJax 3. Defaults to True.
     :type strip_mathjax2: bool
@@ -146,16 +151,18 @@ def generate_docs(
 
     # Validate that all source files exist
     missing_files = validate_source_files(manifest, project_dir)
+    skip_pipelines: set[str] = set()
     if missing_files:
         error = MissingSourceFilesError(missing_files)
-        if warn_missing:
-            # Print warnings and continue
-            import click
-            for warning in error.format_warnings():
-                click.echo(click.style(warning, fg="yellow"), err=True)
-        else:
+        if strict:
             # Raise error and exit
             error.exit_with_message()
+        else:
+            # Skip affected pipelines and continue
+            skip_pipelines = error.get_pipelines_to_skip()
+            import click
+            for warning in error.format_skip_warnings():
+                click.echo(click.style(warning, fg="yellow"), err=True)
 
     # FULLY clean temp_docs_src_dir first
     if temp_docs_src_dir.exists():
@@ -182,6 +189,7 @@ def generate_docs(
             _docs_dir=_docs_dir,
             docs_src_dir=temp_docs_src_dir,
             size_threshold=size_threshold,
+            skip_pipelines=skip_pipelines,
         )
 
         # Strip MathJax 2 from notebook outputs (prevents Plotly/Sphinx conflict)
