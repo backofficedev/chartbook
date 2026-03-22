@@ -224,6 +224,42 @@ chartbook data get-docs --pipeline sales --dataframe transactions
 chartbook data get-docs-path --pipeline sales --dataframe transactions
 ```
 
+### chartbook catalog
+
+Manage the chartbook catalog (add, remove, list pipelines).
+
+```bash
+chartbook catalog COMMAND
+
+Commands:
+  add    Add pipeline directory(ies) to the catalog
+```
+
+#### chartbook catalog add
+
+```bash
+chartbook catalog add [OPTIONS] PATHS...
+
+Options:
+  --catalog PATH   Path to catalog chartbook.toml (uses default if omitted)
+  -y, --yes        Skip confirmation prompt for multiple pipelines
+```
+
+**Examples:**
+```bash
+# Add a single pipeline
+chartbook catalog add /path/to/pipeline
+
+# Add all pipelines under a directory
+chartbook catalog add /path/to/projects/*
+
+# Add without confirmation prompt
+chartbook catalog add /path/to/projects/* -y
+
+# Add to a specific catalog
+chartbook catalog add ./my-pipeline --catalog /path/to/catalog/chartbook.toml
+```
+
 ### chartbook config
 
 Configure the default catalog path for data loading. Sets the path to a catalog's `chartbook.toml` in `~/.chartbook/settings.toml` so that `data.load()` can find pipelines without an explicit `catalog_path` argument.

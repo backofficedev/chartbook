@@ -40,6 +40,7 @@ chartbook [OPTIONS] COMMAND [ARGS]...
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
 | `config` | Configure the default catalog path for data loading |
+| `catalog` | Manage the catalog (add pipelines) |
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
 | `data` | Data operations (get paths, docs) |
 
@@ -198,6 +199,75 @@ Catalog path set to: /data/my-catalog/chartbook.toml
 You can now load data with:
   from chartbook import data
   df = data.load(pipeline="my_pipeline", dataframe="my_df")
+```
+
+### `chartbook catalog`
+
+Manage the chartbook catalog. Currently supports adding pipelines.
+
+```console
+chartbook catalog COMMAND [OPTIONS]
+```
+
+**Subcommands:**
+- `add`: Add pipeline directory(ies) to the catalog
+
+#### `chartbook catalog add`
+
+Add one or more pipeline directories to the catalog. Each directory must contain a valid `chartbook.toml` with `type = "pipeline"`. Paths are stored relative to the catalog directory.
+
+```console
+chartbook catalog add [OPTIONS] PATHS...
+```
+
+**Arguments:**
+- `PATHS`: One or more directories (or glob patterns) containing pipeline `chartbook.toml` files
+
+**Options:**
+- `--catalog PATH`: Path to catalog `chartbook.toml` (uses configured default if not specified)
+- `-y, --yes`: Skip confirmation prompt when adding multiple pipelines
+
+The command will:
+1. Verify each path contains a valid pipeline `chartbook.toml`
+2. Check for duplicates against existing catalog entries (comparing resolved absolute paths)
+3. Prompt for confirmation when adding multiple pipelines (unless `-y` is used)
+4. Store paths relative to the catalog directory
+
+**Examples:**
+
+```console
+# Add a single pipeline
+chartbook catalog add /path/to/my-pipeline
+
+# Add all pipelines in a directory using a glob pattern
+chartbook catalog add /path/to/projects/*
+
+# Add multiple pipelines without confirmation prompt
+chartbook catalog add /path/to/projects/* -y
+
+# Add to a specific catalog (instead of the default)
+chartbook catalog add /path/to/pipeline --catalog /path/to/catalog/chartbook.toml
+
+# Add multiple specific directories
+chartbook catalog add ./proj1 ./proj2 ./proj3
+```
+
+**Example output:**
+
+```console
+$ chartbook catalog add /data/projects/*
+  Skipping assets/ (no chartbook.toml)
+  Already in catalog as 'yield_curve': yield_curve/
+
+Pipelines to add:
+  fred_charts: FRED Charts (/data/projects/fred_charts)
+  macro_data: Macro Economic Data (/data/projects/macro_data)
+
+Add 2 pipeline(s)? [y/N]: y
+  Added 'fred_charts': FRED Charts (../projects/fred_charts)
+  Added 'macro_data': Macro Economic Data (../projects/macro_data)
+
+Added 2 pipeline(s) to /data/catalog/chartbook.toml
 ```
 
 ### `chartbook ls`

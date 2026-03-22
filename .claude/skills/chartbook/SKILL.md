@@ -29,6 +29,8 @@ chartbook build -f        # Force overwrite existing docs
 chartbook publish            # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook config             # Configure default catalog path
+chartbook catalog add <path>     # Add pipeline(s) to catalog
+chartbook catalog add <glob> -y  # Add multiple pipelines without prompt
 chartbook ls                 # List all pipelines, dataframes, charts
 chartbook ls pipelines       # List pipelines only
 chartbook ls dataframes      # List dataframes only
