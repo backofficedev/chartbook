@@ -480,6 +480,271 @@ def ls_charts(ctx):
 
 
 # =============================================================================
+# catalog command group - Manage the catalog
+# =============================================================================
+
+
+def _sanitize_pipeline_key(dirname):
+    """Convert a directory name to a valid TOML key for the pipelines table.
+
+    :param dirname: The directory name to sanitize.
+    :type dirname: str
+    :returns: A sanitized key suitable for use in TOML.
+    :rtype: str
+    """
+    import re
+
+    key = dirname.lower().replace("-", "_").replace(" ", "_")
+    key = re.sub(r"[^a-z0-9_]", "_", key)
+    key = re.sub(r"_+", "_", key)
+    key = key.strip("_")
+    return key
+
+
+def _ensure_unique_key(key, existing_keys):
+    """Append a numeric suffix if key already exists in the set.
+
+    :param key: The candidate key.
+    :type key: str
+    :param existing_keys: Set of keys already in use.
+    :type existing_keys: set
+    :returns: A unique key.
+    :rtype: str
+    """
+    if key not in existing_keys:
+        return key
+    i = 2
+    while f"{key}_{i}" in existing_keys:
+        i += 1
+    return f"{key}_{i}"
+
+
+def _load_raw_catalog(catalog_toml_path):
+    """Load a catalog TOML file without full manifest processing.
+
+    :param catalog_toml_path: Path to the catalog's chartbook.toml.
+    :type catalog_toml_path: Path
+    :returns: The raw catalog dictionary.
+    :rtype: dict
+    :raises click.UsageError: If the file is not a catalog-type manifest.
+    """
+    import tomli
+
+    with open(catalog_toml_path, "rb") as f:
+        data = tomli.load(f)
+    config_type = data.get("config", {}).get("type")
+    if config_type != "catalog":
+        raise click.UsageError(
+            f"{catalog_toml_path} is not a catalog (type={config_type!r})"
+        )
+    data.setdefault("pipelines", {})
+    return data
+
+
+def _get_existing_absolute_paths(raw_catalog, catalog_dir):
+    """Resolve all existing pipeline paths in the catalog to absolute paths.
+
+    :param raw_catalog: The raw catalog dictionary.
+    :type raw_catalog: dict
+    :param catalog_dir: The directory containing the catalog TOML.
+    :type catalog_dir: Path
+    :returns: A dict mapping absolute paths to their catalog keys.
+    :rtype: dict
+    """
+    from chartbook.manifest import resolve_platform_path
+
+    result = {}
+    for key, entry in raw_catalog.get("pipelines", {}).items():
+        path_to_pipeline = entry.get("path_to_pipeline")
+        if path_to_pipeline is None:
+            continue
+        try:
+            resolved = resolve_platform_path(path_to_pipeline)
+        except (ValueError, TypeError):
+            continue
+        abs_path = (catalog_dir / resolved).resolve()
+        result[abs_path] = key
+    return result
+
+
+def _resolve_catalog_toml_path(catalog_path):
+    """Resolve the catalog TOML path from an option or global settings.
+
+    :param catalog_path: Optional explicit path to catalog chartbook.toml.
+    :type catalog_path: str or Path, optional
+    :returns: The resolved path to the catalog's chartbook.toml.
+    :rtype: Path
+    :raises SystemExit: If no catalog is configured.
+    """
+    from chartbook.data import _resolve_catalog_path
+    from chartbook.errors import CatalogNotConfiguredError
+
+    try:
+        return _resolve_catalog_path(catalog_path)
+    except CatalogNotConfiguredError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
+        raise SystemExit(1)
+
+
+@main.group()
+def catalog():
+    """Manage the chartbook catalog."""
+    pass
+
+
+@catalog.command("add")
+@click.argument("paths", type=str, nargs=-1, required=True)
+@click.option(
+    "--catalog",
+    "catalog_path",
+    type=click.Path(),
+    default=None,
+    help="Path to catalog chartbook.toml (uses default from settings if omitted)",
+)
+@click.option(
+    "-y",
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Skip confirmation prompt when adding multiple pipelines",
+)
+def catalog_add(paths, catalog_path, yes):
+    """Add pipeline directory(ies) to the catalog.
+
+    PATHS can be one or more directories containing a chartbook.toml file,
+    or glob patterns that expand to such directories.
+
+    Examples::
+
+        chartbook catalog add /path/to/pipeline
+        chartbook catalog add /path/to/parent/*
+        chartbook catalog add /path/to/parent/* -y
+        chartbook catalog add ./proj1 ./proj2 ./proj3
+    """
+    import glob as glob_mod
+    import os
+
+    import tomli
+    import tomli_w
+
+    # Resolve catalog
+    catalog_toml = _resolve_catalog_toml_path(catalog_path)
+    catalog_dir = catalog_toml.parent
+    raw_catalog = _load_raw_catalog(catalog_toml)
+
+    # Get existing absolute paths for duplicate detection
+    existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_dir)
+    existing_keys = set(raw_catalog.get("pipelines", {}).keys())
+
+    # Expand all path arguments (handles globs)
+    candidate_dirs = []
+    for p in paths:
+        expanded = glob_mod.glob(p)
+        if not expanded:
+            # Not a glob, treat as literal path
+            expanded = [p]
+        for entry in expanded:
+            entry_path = Path(entry).resolve()
+            if entry_path.is_dir():
+                candidate_dirs.append(entry_path)
+
+    if not candidate_dirs:
+        click.echo("No matching directories found.", err=True)
+        raise SystemExit(1)
+
+    # Validate each candidate
+    is_multi = len(candidate_dirs) > 1
+    valid_pipelines = []  # list of (abs_path, pipeline_name)
+
+    for d in candidate_dirs:
+        toml_path = d / "chartbook.toml"
+        if not toml_path.is_file():
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ (no chartbook.toml)")
+                continue
+            else:
+                click.echo(f"Error: No chartbook.toml found in {d}", err=True)
+                raise SystemExit(1)
+
+        try:
+            with open(toml_path, "rb") as f:
+                pipeline_toml = tomli.load(f)
+        except Exception as e:
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ (invalid TOML: {e})")
+                continue
+            else:
+                click.echo(f"Error: Invalid TOML in {toml_path}: {e}", err=True)
+                raise SystemExit(1)
+
+        config_type = pipeline_toml.get("config", {}).get("type")
+        if config_type != "pipeline":
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ (type={config_type!r}, not pipeline)")
+                continue
+            else:
+                click.echo(
+                    f"Error: {toml_path} is not a pipeline (type={config_type!r})",
+                    err=True,
+                )
+                raise SystemExit(1)
+
+        # Check for duplicates
+        if d in existing_abs:
+            click.echo(
+                f"  Already in catalog as '{existing_abs[d]}': {d.name}/"
+            )
+            continue
+
+        pipeline_name = (
+            pipeline_toml.get("pipeline", {}).get("pipeline_name", d.name)
+        )
+        valid_pipelines.append((d, pipeline_name))
+
+    if not valid_pipelines:
+        click.echo("No new pipelines to add.")
+        return
+
+    # Prompt for confirmation if multiple
+    if len(valid_pipelines) > 1 and not yes:
+        click.echo("")
+        click.echo("Pipelines to add:")
+        for d, name in valid_pipelines:
+            key = _sanitize_pipeline_key(d.name)
+            key = _ensure_unique_key(key, existing_keys)
+            click.echo(f"  {key}: {name} ({d})")
+        click.echo("")
+        if not click.confirm(f"Add {len(valid_pipelines)} pipeline(s)?"):
+            raise SystemExit(0)
+
+    # Add each pipeline
+    added = 0
+    for d, name in valid_pipelines:
+        key = _sanitize_pipeline_key(d.name)
+        key = _ensure_unique_key(key, existing_keys)
+        existing_keys.add(key)
+
+        try:
+            rel_path = os.path.relpath(d, catalog_dir)
+        except ValueError:
+            # Cross-drive on Windows
+            rel_path = str(d)
+
+        raw_catalog["pipelines"][key] = {"path_to_pipeline": rel_path}
+        click.echo(f"  Added '{key}': {name} ({rel_path})")
+        added += 1
+
+    # Write back
+    with open(catalog_toml, "wb") as f:
+        tomli_w.dump(raw_catalog, f)
+
+    click.echo("")
+    click.echo(f"Added {added} pipeline(s) to {catalog_toml}")
+
+
+# =============================================================================
 # data command group - Data operations
 # =============================================================================
 
