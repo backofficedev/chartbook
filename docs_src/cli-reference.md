@@ -37,6 +37,7 @@ chartbook [OPTIONS] COMMAND [ARGS]...
 |---------|-------------|
 | `init` | Scaffold a new chartbook project from a template |
 | `build` | Generate HTML documentation website |
+| `browse` | Open project documentation in your default browser |
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
 | `config` | Configure the default catalog path for data loading |
@@ -102,6 +103,33 @@ chartbook build ./my-docs --force-write
 
 # Keep build directories for debugging
 chartbook build --keep-build-dirs
+```
+
+### `chartbook browse`
+
+Open the project documentation in your default web browser. Works on macOS, Windows, and Linux.
+
+```console
+chartbook browse [OUTPUT_DIR] [OPTIONS]
+```
+
+**Arguments:**
+- `OUTPUT_DIR`: Directory containing the generated HTML (default: `./docs`)
+
+**Options:**
+- `--project-dir PATH`: Path to project directory
+
+**Examples:**
+
+```console
+# Open docs from default location
+chartbook browse
+
+# Open docs from a custom output directory
+chartbook browse ./my-docs
+
+# Open docs for a project in another directory
+chartbook browse --project-dir /path/to/project
 ```
 
 ### `chartbook publish`
@@ -432,6 +460,6 @@ chartbook create-data-glimpses -o ./docs/
 # 2. Generate docs with build dirs kept
 chartbook build --keep-build-dirs
 
-# 3. Test locally
-python -m http.server -d ./docs
+# 3. Open in browser
+chartbook browse
 ```

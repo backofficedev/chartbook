@@ -170,6 +170,38 @@ def build(
 
 
 @main.command()
+@click.argument("output_dir", type=click.Path(), default="./docs", required=False)
+@click.option("--project-dir", type=click.Path(), help="Path to project directory")
+def browse(output_dir, project_dir):
+    """Open the project documentation in your default browser.
+
+    Looks for index.html in the OUTPUT_DIR (default: ./docs) and opens it
+    using the system's default web browser. Works on macOS, Windows, and Linux.
+
+    Examples:
+        chartbook browse
+        chartbook browse ./my-docs
+        chartbook browse --project-dir /path/to/project
+    """
+    project_dir = resolve_project_dir(project_dir)
+    index_path = (project_dir / Path(output_dir) / "index.html").resolve()
+
+    if not index_path.is_file():
+        click.echo("Error: Documentation not found.", err=True)
+        click.echo(f"  Expected: {index_path}", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook build' first.", err=True)
+        raise SystemExit(1)
+
+    import webbrowser
+
+    url = index_path.as_uri()
+    click.echo(f"Opening {index_path}")
+    if not webbrowser.open(url):
+        click.echo(f"Could not open browser. Open this URL manually: {url}")
+
+
+@main.command()
 @click.option(
     "--publish-dir",
     type=click.Path(),
