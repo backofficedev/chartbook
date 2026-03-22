@@ -5,10 +5,15 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.14] - 2026-03-22
+## [0.0.15] - 2026-03-22
 
 ### Added
 - New `chartbook browse` command to open project documentation in your default browser. Works cross-platform (macOS, Windows, Linux). Accepts an optional output directory argument (default: `./docs`).
+
+## [0.0.14] - 2026-03-22
+
+### Added
+- New `chartbook catalog browse` command to open global catalog documentation in your default browser.
 - New `chartbook catalog add` CLI command for adding pipeline directories to the global catalog. Supports single paths, glob patterns (e.g., `/path/to/projects/*`), duplicate detection, and a `-y` flag to skip confirmation prompts.
 
 ### Changed

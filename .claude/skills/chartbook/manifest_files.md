@@ -26,7 +26,7 @@ pip install -e ".[dev]"
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.14"
+chartbook_format_version = "0.0.15"
 
 [site]
 title = "Sales Analytics Pipeline"
@@ -108,7 +108,7 @@ A catalog aggregates multiple pipelines into unified documentation.
 ```toml
 [config]
 type = "catalog"
-chartbook_format_version = "0.0.14"
+chartbook_format_version = "0.0.15"
 
 [site]
 title = "Company Analytics Catalog"
