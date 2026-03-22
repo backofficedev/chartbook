@@ -221,6 +221,166 @@ class TestGenerateDocsEndToEnd:
         # Verify old marker file is gone
         assert not marker_file.exists()
 
+    def test_catalog_dataframes_toctree_uses_relative_paths(
+        self, catalog_project, monkeypatch
+    ):
+        """Test that catalog dataframes.md toctree entries are relative to cb/.
+
+        Regression test: the dataframes.md file lives at cb/dataframes.md,
+        so toctree entries must NOT have a cb/ prefix (Sphinx resolves them
+        relative to the document location). A cb/ prefix would cause Sphinx
+        to look for cb/cb/dataframes/... which doesn't exist, resulting in
+        an empty Dataframes page.
+        """
+        output_dir = catalog_project / "docs_test"
+        docs_dir = catalog_project / "_docs"
+
+        monkeypatch.chdir(catalog_project)
+
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            _docs_dir=docs_dir,
+            keep_build_dirs=True,
+        )
+
+        # Read the rendered dataframes.md from the build directory
+        dataframes_md = docs_dir / "cb" / "dataframes.md"
+        assert dataframes_md.exists(), "cb/dataframes.md not generated"
+        content = dataframes_md.read_text()
+
+        # Toctree entries should start with "dataframes/", not "cb/dataframes/"
+        lines = content.strip().splitlines()
+        toctree_entries = [
+            line.strip()
+            for line in lines
+            if line.strip() and line.strip().endswith(".md") and not line.startswith("#")
+        ]
+        assert len(toctree_entries) > 0, "No dataframe entries found in toctree"
+        for entry in toctree_entries:
+            assert not entry.startswith("cb/"), (
+                f"Toctree entry '{entry}' has cb/ prefix — paths in cb/dataframes.md "
+                f"must be relative to cb/, not the project root"
+            )
+
+
+class TestStrictFlag:
+    """Tests for --strict flag behavior in generate_docs."""
+
+    def test_default_skips_pipelines_with_missing_files(
+        self, catalog_project, monkeypatch, capsys
+    ):
+        """Test that without --strict, pipelines with missing files are skipped."""
+        output_dir = catalog_project / "docs_test"
+        monkeypatch.chdir(catalog_project)
+
+        # Delete a chart file from pipeline_a to trigger missing file detection
+        chart_files = list(
+            (catalog_project / "pipelines" / "pipeline_a" / "_output" / "charts").glob("*.html")
+        )
+        assert len(chart_files) > 0, "Fixture should create chart HTML files"
+        chart_files[0].unlink()
+
+        # Default (strict=False) should succeed, skipping pipeline_a
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            keep_build_dirs=False,
+        )
+
+        # Build should succeed
+        assert output_dir.exists()
+        assert (output_dir / "index.html").exists()
+
+        # Warning about skipping should appear on stderr
+        captured = capsys.readouterr()
+        assert "Skipping pipeline 'pipeline_a'" in captured.err
+
+    def test_strict_errors_on_missing_files(
+        self, catalog_project, monkeypatch
+    ):
+        """Test that --strict causes exit on missing files."""
+        output_dir = catalog_project / "docs_test"
+        monkeypatch.chdir(catalog_project)
+
+        # Delete a chart file from pipeline_a
+        chart_files = list(
+            (catalog_project / "pipelines" / "pipeline_a" / "_output" / "charts").glob("*.html")
+        )
+        assert len(chart_files) > 0, "Fixture should create chart HTML files"
+        chart_files[0].unlink()
+
+        with pytest.raises(SystemExit) as exc_info:
+            generate_docs(
+                output_dir=output_dir,
+                project_dir=Path("."),
+                keep_build_dirs=False,
+                strict=True,
+            )
+        assert exc_info.value.code == 1
+
+    def test_no_missing_files_builds_all_pipelines(
+        self, catalog_project, monkeypatch
+    ):
+        """Test that when no files are missing, all pipelines are built."""
+        output_dir = catalog_project / "docs_test"
+        docs_dir = catalog_project / "_docs"
+        monkeypatch.chdir(catalog_project)
+
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            _docs_dir=docs_dir,
+            keep_build_dirs=True,
+        )
+
+        assert output_dir.exists()
+        assert (output_dir / "index.html").exists()
+
+
+class TestMissingSourceFilesError:
+    """Tests for MissingSourceFilesError helper methods."""
+
+    def test_get_pipelines_to_skip(self):
+        """Test that get_pipelines_to_skip returns correct pipeline IDs."""
+        from chartbook.errors import MissingFile, MissingSourceFilesError
+
+        missing = [
+            MissingFile(Path("/a.parquet"), "dataframe", "df1", "pipeline_a"),
+            MissingFile(Path("/b.html"), "chart", "chart1", "pipeline_a"),
+            MissingFile(Path("/c.parquet"), "dataframe", "df2", "pipeline_b"),
+        ]
+        error = MissingSourceFilesError(missing)
+        assert error.get_pipelines_to_skip() == {"pipeline_a", "pipeline_b"}
+
+    def test_format_skip_warnings_groups_by_pipeline(self):
+        """Test that format_skip_warnings groups messages by pipeline."""
+        from chartbook.errors import MissingFile, MissingSourceFilesError
+
+        missing = [
+            MissingFile(Path("/a.parquet"), "dataframe", "df1", "pipeline_a"),
+            MissingFile(Path("/b.html"), "chart", "chart1", "pipeline_a"),
+            MissingFile(Path("/c.parquet"), "dataframe", "df2", "pipeline_b"),
+        ]
+        error = MissingSourceFilesError(missing)
+        warnings = error.format_skip_warnings()
+
+        # Should have header + 2 files for pipeline_a, then header + 1 file for pipeline_b
+        assert any("pipeline_a" in w and "2 missing" in w for w in warnings)
+        assert any("pipeline_b" in w and "1 missing" in w for w in warnings)
+
+    def test_format_cli_message_mentions_strict(self):
+        """Test that the CLI error message references --strict."""
+        from chartbook.errors import MissingFile, MissingSourceFilesError
+
+        missing = [
+            MissingFile(Path("/a.parquet"), "dataframe", "df1", "pipeline_a"),
+        ]
+        error = MissingSourceFilesError(missing)
+        message = error.format_cli_message()
+        assert "--strict" in message
+        assert "--warn-missing" not in message
+
 
 # Sample MathJax 2 script tags as injected by Plotly's NotebookRenderer
 PLOTLY_MATHJAX2_SCRIPT = (
