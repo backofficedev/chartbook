@@ -381,7 +381,11 @@ def _load_catalog_manifest(raw_manifest):
     base_dir = manifest["base_dir"]
     all_pipelines = list(manifest["pipelines"].keys())
     for pipeline_id in all_pipelines:
-        path_to_pipeline = manifest["pipelines"][pipeline_id]["path_to_pipeline"]
+        pipeline_entry = manifest["pipelines"][pipeline_id]
+        if pipeline_entry.get("disabled", False):
+            del manifest["pipelines"][pipeline_id]
+            continue
+        path_to_pipeline = pipeline_entry["path_to_pipeline"]
         path_to_pipeline = resolve_platform_path(path_to_pipeline)
         pipeline_base_dir = Path(base_dir) / path_to_pipeline
         pipeline_base_dir = pipeline_base_dir.resolve()

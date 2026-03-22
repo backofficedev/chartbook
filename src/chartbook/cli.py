@@ -74,10 +74,10 @@ def main():
     help="File size threshold in MB above which to use memory-efficient loading (default: 50)",
 )
 @click.option(
-    "--warn-missing",
+    "--strict",
     is_flag=True,
     default=False,
-    help="Warn instead of error when source files (charts, notebooks, dataframes) are missing",
+    help="Error and exit on missing source files instead of skipping affected pipelines",
 )
 @click.option(
     "--strip-mathjax2/--no-strip-mathjax2",
@@ -93,7 +93,7 @@ def build(
     keep_build_dirs,
     force_write,
     size_threshold,
-    warn_missing,
+    strict,
     strip_mathjax2,
 ):
     """Generate HTML documentation in the specified output directory.
@@ -114,8 +114,8 @@ def build(
     :type force_write: bool
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
-    :param warn_missing: If True, warn instead of error when source files are missing.
-    :type warn_missing: bool
+    :param strict: If True, error and exit on missing source files.
+    :type strict: bool
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
     :type strip_mathjax2: bool
     """
@@ -163,7 +163,7 @@ def build(
         keep_build_dirs=keep_build_dirs,
         should_remove_existing=should_remove_existing,
         size_threshold=size_threshold,
-        warn_missing=warn_missing,
+        strict=strict,
         strip_mathjax2=strip_mathjax2,
     )
     click.echo(f"Successfully generated documentation in {output_dir}")
@@ -323,11 +323,8 @@ def _load_catalog_for_cli(catalog_path=None):
 
     try:
         resolved = _resolve_catalog_path(catalog_path)
-    except CatalogNotConfiguredError as e:
-        click.echo(f"Error: {e}", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
-        raise SystemExit(1)
+    except CatalogNotConfiguredError:
+        resolved = _prompt_catalog_init()
 
     manifest = load_manifest(base_dir=resolved.parent)
     return manifest, resolved
@@ -567,6 +564,42 @@ def _get_existing_absolute_paths(raw_catalog, catalog_dir):
     return result
 
 
+def _prompt_catalog_init():
+    """Prompt the user to create a global catalog if running interactively.
+
+    :returns: The resolved catalog path if created, otherwise raises SystemExit.
+    :rtype: Path
+    :raises SystemExit: If the user declines or stdin is not a TTY.
+    """
+    import sys
+
+    from chartbook.config import create_global_catalog, get_global_catalog_path
+
+    if not sys.stdin.isatty():
+        click.echo(
+            "Run 'chartbook catalog init' to create a new catalog, "
+            "or 'chartbook config' to point to an existing one.",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    click.echo("No catalog found.", err=True)
+    if click.confirm("Create a new global catalog now?", default=False):
+        title = click.prompt("Catalog title", default="My Catalog")
+        catalog_path = create_global_catalog(title=title)
+        click.echo(f"Created global catalog: {catalog_path}")
+        click.echo("")
+        return get_global_catalog_path()
+
+    click.echo("", err=True)
+    click.echo(
+        "Run 'chartbook catalog init' to create a new catalog, "
+        "or 'chartbook config' to point to an existing one.",
+        err=True,
+    )
+    raise SystemExit(1)
+
+
 def _resolve_catalog_toml_path(catalog_path):
     """Resolve the catalog TOML path from an option or global settings.
 
@@ -581,17 +614,41 @@ def _resolve_catalog_toml_path(catalog_path):
 
     try:
         return _resolve_catalog_path(catalog_path)
-    except CatalogNotConfiguredError as e:
-        click.echo(f"Error: {e}", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
-        raise SystemExit(1)
+    except CatalogNotConfiguredError:
+        return _prompt_catalog_init()
 
 
 @main.group()
 def catalog():
     """Manage the chartbook catalog."""
     pass
+
+
+@catalog.command("init")
+@click.option("--title", default=None, help="Title for the catalog site")
+def catalog_init(title):
+    """Initialize the global catalog at ~/.chartbook/chartbook.toml.
+
+    Creates a minimal catalog with an empty pipelines section.
+    Use ``chartbook catalog add`` to add pipelines afterwards.
+    """
+    from chartbook.config import create_global_catalog, get_global_catalog_path
+
+    catalog_path = get_global_catalog_path()
+    if catalog_path.is_file():
+        click.echo(f"Global catalog already exists: {catalog_path}")
+        return
+
+    if title is None:
+        title = click.prompt("Catalog title", default="My Catalog")
+
+    catalog_path = create_global_catalog(title=title)
+    click.echo(f"Created global catalog: {catalog_path}")
+    click.echo("")
+    click.echo("Next steps:")
+    click.echo("  chartbook catalog add /path/to/pipeline   # add a pipeline")
+    click.echo("  chartbook catalog build                   # build HTML docs")
+    click.echo("  chartbook catalog browse                  # open in browser")
 
 
 @catalog.command("add")
@@ -637,6 +694,7 @@ def catalog_add(paths, catalog_path, yes):
     # Get existing absolute paths for duplicate detection
     existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_dir)
     existing_keys = set(raw_catalog.get("pipelines", {}).keys())
+    reenabled = 0
 
     # Expand all path arguments (handles globs)
     candidate_dirs = []
@@ -691,11 +749,18 @@ def catalog_add(paths, catalog_path, yes):
                 )
                 raise SystemExit(1)
 
-        # Check for duplicates
+        # Check for duplicates — re-enable if disabled
         if d in existing_abs:
-            click.echo(
-                f"  Already in catalog as '{existing_abs[d]}': {d.name}/"
-            )
+            key = existing_abs[d]
+            entry = raw_catalog["pipelines"][key]
+            if entry.get("disabled", False):
+                entry.pop("disabled")
+                reenabled += 1
+                click.echo(f"  Re-enabled '{key}': {d.name}/")
+            else:
+                click.echo(
+                    f"  Already in catalog as '{key}': {d.name}/"
+                )
             continue
 
         pipeline_name = (
@@ -703,8 +768,16 @@ def catalog_add(paths, catalog_path, yes):
         )
         valid_pipelines.append((d, pipeline_name))
 
-    if not valid_pipelines:
+    if not valid_pipelines and not reenabled:
         click.echo("No new pipelines to add.")
+        return
+
+    if not valid_pipelines and reenabled:
+        # Only re-enables, no new additions — still need to write
+        with open(catalog_toml, "wb") as f:
+            tomli_w.dump(raw_catalog, f)
+        click.echo("")
+        click.echo(f"Re-enabled {reenabled} pipeline(s) in {catalog_toml}")
         return
 
     # Prompt for confirmation if multiple
@@ -741,7 +814,153 @@ def catalog_add(paths, catalog_path, yes):
         tomli_w.dump(raw_catalog, f)
 
     click.echo("")
-    click.echo(f"Added {added} pipeline(s) to {catalog_toml}")
+    parts = [f"Added {added} pipeline(s)"]
+    if reenabled:
+        parts.append(f"re-enabled {reenabled}")
+    click.echo(f"{', '.join(parts)} in {catalog_toml}")
+
+
+def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
+    """Set or clear the disabled flag on a pipeline in the catalog.
+
+    :param pipeline_id: The pipeline key in the catalog.
+    :type pipeline_id: str
+    :param catalog_path: Optional explicit path to catalog chartbook.toml.
+    :type catalog_path: str or Path, optional
+    :param disabled: Whether to disable (True) or enable (False) the pipeline.
+    :type disabled: bool
+    """
+    import tomli
+    import tomli_w
+
+    catalog_toml = _resolve_catalog_toml_path(catalog_path)
+    raw_catalog = _load_raw_catalog(catalog_toml)
+
+    pipelines = raw_catalog.get("pipelines", {})
+    if pipeline_id not in pipelines:
+        click.echo(f"Error: Pipeline '{pipeline_id}' not found in catalog.", err=True)
+        click.echo("", err=True)
+        available = ", ".join(sorted(pipelines.keys())) or "(none)"
+        click.echo(f"Available pipelines: {available}", err=True)
+        raise SystemExit(1)
+
+    if disabled:
+        pipelines[pipeline_id]["disabled"] = True
+    else:
+        pipelines[pipeline_id].pop("disabled", None)
+
+    with open(catalog_toml, "wb") as f:
+        tomli_w.dump(raw_catalog, f)
+
+    state = "disabled" if disabled else "enabled"
+    click.echo(f"Pipeline '{pipeline_id}' {state} in {catalog_toml}")
+
+
+@catalog.command("disable")
+@click.argument("pipeline_id")
+@click.option(
+    "--catalog",
+    "catalog_path",
+    type=click.Path(),
+    default=None,
+    help="Path to catalog chartbook.toml (uses default from settings if omitted)",
+)
+def catalog_disable(pipeline_id, catalog_path):
+    """Disable a pipeline in the catalog.
+
+    The pipeline entry is kept but skipped during builds.
+    Re-enable with ``chartbook catalog enable``.
+    """
+    _set_pipeline_disabled(pipeline_id, catalog_path, disabled=True)
+
+
+@catalog.command("enable")
+@click.argument("pipeline_id")
+@click.option(
+    "--catalog",
+    "catalog_path",
+    type=click.Path(),
+    default=None,
+    help="Path to catalog chartbook.toml (uses default from settings if omitted)",
+)
+def catalog_enable(pipeline_id, catalog_path):
+    """Re-enable a previously disabled pipeline in the catalog."""
+    _set_pipeline_disabled(pipeline_id, catalog_path, disabled=False)
+
+
+@catalog.command("build")
+@click.option(
+    "-f",
+    "--force-write",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing docs without prompting",
+)
+@click.option(
+    "--strict",
+    is_flag=True,
+    default=False,
+    help="Error and exit on missing source files instead of skipping affected pipelines",
+)
+def catalog_build(force_write, strict):
+    """Build HTML documentation for the global catalog.
+
+    Renders the catalog at ``~/.chartbook/chartbook.toml`` and writes
+    the output to ``~/.chartbook/docs/``.
+    """
+    _check_sphinx_installed()
+
+    from chartbook.build_docs import generate_docs
+    from chartbook.config import get_global_catalog_path, get_global_config_dir, get_global_docs_dir
+
+    catalog_path = get_global_catalog_path()
+    if not catalog_path.is_file():
+        click.echo("Error: No global catalog found.", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook catalog init' to create one.", err=True)
+        raise SystemExit(1)
+
+    project_dir = catalog_path.parent
+    output_dir = get_global_docs_dir()
+    config_dir = get_global_config_dir()
+    _docs_dir = config_dir / "_docs"
+    temp_docs_src_dir = config_dir / "_docs_src"
+
+    click.echo(f"Building catalog from: {catalog_path}")
+    click.echo(f"Output directory: {output_dir}")
+
+    generate_docs(
+        output_dir=output_dir,
+        project_dir=project_dir,
+        _docs_dir=_docs_dir,
+        temp_docs_src_dir=temp_docs_src_dir,
+        should_remove_existing=force_write,
+        strict=strict,
+    )
+
+    click.echo("")
+    click.echo(f"Catalog built successfully: {output_dir / 'index.html'}")
+    click.echo("Run 'chartbook catalog browse' to open in your browser.")
+
+
+@catalog.command("browse")
+def catalog_browse():
+    """Open the global catalog documentation in your default browser."""
+    from chartbook.config import get_global_docs_dir
+
+    index_path = get_global_docs_dir() / "index.html"
+    if not index_path.is_file():
+        click.echo("Error: Catalog docs not found.", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook catalog build' first.", err=True)
+        raise SystemExit(1)
+
+    import webbrowser
+
+    url = index_path.as_uri()
+    click.echo(f"Opening {index_path}")
+    if not webbrowser.open(url):
+        click.echo(f"Could not open browser. Open this URL manually: {url}")
 
 
 # =============================================================================
