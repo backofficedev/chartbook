@@ -26,6 +26,7 @@ ChartBook is a developer platform for data science teams to discover, document, 
 chartbook init              # Scaffold new project (requires chartbook[all])
 chartbook build             # Generate HTML documentation website
 chartbook build -f          # Force overwrite existing docs
+chartbook browse            # Open project docs in default browser
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook config            # Configure default catalog path (interactive)
@@ -44,6 +45,8 @@ chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
 chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
 chartbook data get-docs-path --pipeline <id> --dataframe <id>  # Get docs path
 ```
+
+For detailed catalog management commands, browsing, and data access workflows, see **catalog_system.md**.
 
 ## Global Config Directory (`~/.chartbook/`)
 
@@ -74,6 +77,8 @@ Projects use `chartbook.toml` with these sections:
 - `[dataframes]`: Data source definitions with governance info
 - `[notebooks]`: Jupyter notebook references
 - `[notes]`: Additional documentation
+
+For complete TOML field references, required fields, and full configuration examples, see **manifest_files.md**.
 
 ### Pipeline disable/enable
 
@@ -114,6 +119,8 @@ docs = data.get_docs(pipeline="PROJ", dataframe="my_data")
 docs_path = data.get_docs_path(pipeline="PROJ", dataframe="my_data")
 ```
 
+For advanced loading options, format details, and catalog setup, see **catalog_system.md**.
+
 ### Hive-Partitioned Data
 
 Use glob patterns in `path_to_parquet_data` for hive-partitioned datasets:
@@ -141,12 +148,35 @@ my-pipeline/
 └── src/                 # Python source code
 ```
 
+## Plotting API
+
+```python
+import chartbook
+
+# Basic charts — returns ChartResult with .show() and .save(chart_id)
+chartbook.plotting.line(df, x="date", y="value", title="GDP")
+chartbook.plotting.bar(df, x="category", y="amount")
+chartbook.plotting.scatter(df, x="x", y="y")
+chartbook.plotting.pie(df, names="category", values="amount")
+chartbook.plotting.area(df, x="date", y="value")
+
+# Dual-axis chart
+chartbook.plotting.dual(df, x="date", left_y="gdp", right_y="rate",
+                         left_type="bar", right_type="line")
+
+# Configuration
+chartbook.plotting.configure(nber_recessions=True, default_output_dir="./_output")
+chartbook.plotting.set_style("chartbook")
+```
+
+Requires `pip install "chartbook[plotting]"` or `pip install "chartbook[all]"`.
+
 ## Quick Start Configuration
 
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.12"
+chartbook_format_version = "0.0.14"
 
 [site]
 title = "My Analytics"
@@ -161,4 +191,11 @@ lead_pipeline_developer = "Your Name"
 # site_dir = "./docs_src/site/"  # Optional: custom site pages directory
 ```
 
-See REFERENCE.md for complete configuration examples and all available fields.
+## Troubleshooting
+
+- **Module Not Found**: Run `pip show chartbook` to verify installation
+- **Permission Errors**: On Windows, run as administrator
+- **Sphinx Build Errors**: Check all required files exist
+- **Path Errors**: Use relative paths from project root
+- **TOML Syntax**: Validate with online TOML validators
+- **site_dir errors**: Ensure the directory exists and does not contain a `cb/` subdirectory (reserved namespace)
