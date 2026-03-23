@@ -441,3 +441,45 @@ class TestCatalogAddWithFixtures:
         assert "pipeline_a" in data["pipelines"]
         # New pipeline added
         assert "new_pipeline" in data["pipelines"]
+
+
+class TestCatalogAddPathValidation:
+    """Tests for path validation in catalog add."""
+
+    def test_windows_path_in_mingw_shows_warning(self, tmp_path, monkeypatch):
+        """Windows-style path in MINGW env should show a warning."""
+        catalog_dir = _make_minimal_catalog(tmp_path / "catalog")
+
+        # Simulate MINGW environment
+        monkeypatch.setenv("MSYSTEM", "MINGW64")
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [
+                "catalog", "add", r"C:\Users\student\pipeline",
+                "--catalog", str(catalog_dir / "chartbook.toml"),
+            ],
+        )
+        # Should show warning about Windows path in Git Bash
+        assert "Warning" in result.output or "Warning" in (result.stderr or "")
+
+    def test_normal_path_no_warning(self, tmp_path, monkeypatch):
+        """Normal POSIX path should not trigger warnings."""
+        catalog_dir = _make_minimal_catalog(tmp_path / "catalog")
+        pipeline_dir = _make_minimal_pipeline(tmp_path / "my_pipeline")
+
+        # Ensure no MINGW/WSL env vars
+        monkeypatch.delenv("MSYSTEM", raising=False)
+        monkeypatch.delenv("WSL_DISTRO_NAME", raising=False)
+
+        runner = CliRunner()
+        result = runner.invoke(
+            main,
+            [
+                "catalog", "add", str(pipeline_dir),
+                "--catalog", str(catalog_dir / "chartbook.toml"),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Warning" not in result.output

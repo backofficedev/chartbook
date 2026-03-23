@@ -119,6 +119,14 @@ def build(
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
     :type strip_mathjax2: bool
     """
+    # Validate paths for shell/platform mismatches
+    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
+
+    shell_env = detect_shell_environment()
+    path_args = [p for p in [output_dir, project_dir, publish_dir, docs_build_dir, temp_docs_src_dir] if p is not None]
+    if path_args:
+        validate_cli_paths(path_args, shell_env, auto_confirm=True)
+
     # Check for Sphinx dependencies
     _check_sphinx_installed()
 
@@ -183,6 +191,14 @@ def browse(output_dir, project_dir):
         chartbook browse ./my-docs
         chartbook browse --project-dir /path/to/project
     """
+    # Validate paths for shell/platform mismatches
+    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
+
+    shell_env = detect_shell_environment()
+    path_args = [p for p in [output_dir, project_dir] if p is not None]
+    if path_args:
+        validate_cli_paths(path_args, shell_env, auto_confirm=True)
+
     project_dir = resolve_project_dir(project_dir)
     index_path = (project_dir / Path(output_dir) / "index.html").resolve()
 
@@ -228,6 +244,14 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     :param verbose: If True, enables verbose output.
     :type verbose: bool
     """
+    # Validate paths for shell/platform mismatches
+    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
+
+    shell_env = detect_shell_environment()
+    path_args = [p for p in [publish_dir, project_dir] if p is not None]
+    if path_args:
+        validate_cli_paths(path_args, shell_env, auto_confirm=True)
+
     # Check for Sphinx dependencies
     _check_sphinx_installed()
 
@@ -718,6 +742,12 @@ def catalog_add(paths, catalog_path, yes):
     import tomli
     import tomli_w
 
+    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
+
+    # Validate paths for shell/platform mismatches before processing
+    shell_env = detect_shell_environment()
+    paths = validate_cli_paths(paths, shell_env, auto_confirm=yes)
+
     # Resolve catalog
     catalog_toml = _resolve_catalog_toml_path(catalog_path)
     catalog_dir = catalog_toml.parent
@@ -741,7 +771,12 @@ def catalog_add(paths, catalog_path, yes):
                 candidate_dirs.append(entry_path)
 
     if not candidate_dirs:
-        click.echo("No matching directories found.", err=True)
+        tried = ", ".join(paths)
+        click.echo(
+            f"No matching directories found for: {tried}\n"
+            f"Check that the path(s) exist and are spelled correctly.",
+            err=True,
+        )
         raise SystemExit(1)
 
     # Validate each candidate

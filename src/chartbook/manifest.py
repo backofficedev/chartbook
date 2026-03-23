@@ -62,10 +62,21 @@ def resolve_platform_path(path_input: Union[str, dict]) -> Path:
         resolve_platform_path({'Windows': 'C:/data', 'Unix': '/home/data'})
         # Returns: WindowsPath('C:/data') on Windows, PosixPath('/home/data') on Unix/macOS
     """
+    from chartbook.path_validation import (
+        _print_diagnostic,
+        check_toml_path,
+        detect_shell_environment,
+    )
+
     result_path = None
 
     if isinstance(path_input, str):
         result_path = Path(path_input)
+        # Warn about potential shell/platform path mismatches
+        env = detect_shell_environment()
+        diags = check_toml_path(path_input, env, "path_to_pipeline", "chartbook.toml")
+        for d in diags:
+            _print_diagnostic(d)
     else:
         # Handle dict case (platform-specific paths)
         import platform
