@@ -9,7 +9,7 @@ from chartbook.diagnostics import generate_metadata_diagnostics
 from chartbook.errors import MissingSourceFilesError, ValidationError, handle_validation_error
 from chartbook.manifest import get_favicon_path, get_logo_path, load_manifest
 from chartbook.utils import shutil
-from chartbook.validation import validate_conf_py_values, validate_source_files
+from chartbook.conf_validation import validate_conf_py_values, validate_source_files
 
 
 def get_docs_src_path(pipeline_theme: str = "pipeline"):

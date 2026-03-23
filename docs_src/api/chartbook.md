@@ -18,5 +18,5 @@ chartbook
 ../apidocs/chartbook/chartbook.errors
 ../apidocs/chartbook/chartbook.manifest
 ../apidocs/chartbook/chartbook.markdown_generator
-../apidocs/chartbook/chartbook.validation
+../apidocs/chartbook/chartbook.conf_validation
 ```

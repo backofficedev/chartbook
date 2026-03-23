@@ -3,7 +3,7 @@
 import pytest
 
 from chartbook.errors import ValidationError
-from chartbook.validation import SiteConfig, validate_conf_py_values
+from chartbook.conf_validation import SiteConfig, validate_conf_py_values
 
 
 class TestSiteConfig:
