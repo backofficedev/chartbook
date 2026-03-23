@@ -5,6 +5,16 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.16] - 2026-03-23
+
+### Added
+- New `path_validation` module for detecting shell/platform path mismatches. Detects MINGW/Git Bash, Cygwin, and WSL environments and warns when Windows-style paths (e.g., `C:\Users\...`) are used in POSIX-like shells. Provides actionable suggestions with corrected paths (e.g., `/c/Users/...` for Git Bash, `/mnt/c/Users/...` for WSL).
+- Path validation integrated into `catalog add`, `build`, `browse`, and `publish` commands, as well as TOML path resolution in `manifest.py`.
+
+### Changed
+- Renamed `validation.py` to `conf_validation.py` for clarity — it contains conf.py security validation, not general validation.
+- Improved "No matching directories found" error in `catalog add` to show which paths were tried.
+
 ## [0.0.15] - 2026-03-22
 
 ### Added
