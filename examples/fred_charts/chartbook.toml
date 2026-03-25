@@ -1,6 +1,6 @@
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.16"
+chartbook_format_version = "0.0.17"
 
 [site]
 title = "Example Charts from FRED"

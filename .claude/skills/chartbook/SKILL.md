@@ -176,7 +176,7 @@ Requires `pip install "chartbook[plotting]"` or `pip install "chartbook[all]"`.
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.16"
+chartbook_format_version = "0.0.17"
 
 [site]
 title = "My Analytics"
