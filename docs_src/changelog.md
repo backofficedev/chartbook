@@ -5,6 +5,11 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.18] - Upcoming
+
+### Fixed
+- Notebooks silently fail to appear in the sidebar and toctree when they lack a top-level markdown heading (e.g., jupytext-generated notebooks whose first cell is code). Chartbook now injects a title cell using `notebook_name` from the manifest before Sphinx rendering, and toctree entries use explicit titles so links are always generated.
+
 ## [0.0.17] - 2026-03-25
 
 ### Changed

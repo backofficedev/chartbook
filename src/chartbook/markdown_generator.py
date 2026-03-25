@@ -6,6 +6,7 @@ NOTES:
 """
 
 import importlib.resources  # Add this at the top with other imports
+import json
 import os
 import shutil
 from pathlib import Path
@@ -344,10 +345,13 @@ def generate_all_pipeline_docs(
         # Remove the first two lines and join the rest
         readme_text = "".join(readme_content[2:])
 
-        notebook_list = [
-            f"cb/notebooks/{pipeline_id}/{Path(pipeline_manifest['notebooks'][notebook_id]['notebook_path']).name}"
-            for notebook_id in pipeline_manifest["notebooks"]
-        ]
+        notebook_list = []
+        for notebook_id in pipeline_manifest["notebooks"]:
+            nb_manifest = pipeline_manifest["notebooks"][notebook_id]
+            nb_filename = Path(nb_manifest["notebook_path"]).stem
+            nb_path = f"cb/notebooks/{pipeline_id}/{nb_filename}"
+            nb_title = nb_manifest.get("notebook_name", notebook_id)
+            notebook_list.append(f"{nb_title} <{nb_path}>")
 
         # Handle markdown notes if they exist
         notes_list = []
@@ -1019,6 +1023,63 @@ def copy_site_dir_to_build(site_dir, docs_build_dir):
             shutil.copyfile(src_path, dst_path)
 
 
+def ensure_notebook_titles(manifest, docs_build_dir, skip_pipelines=None):
+    """Ensure all copied notebooks have a title cell for Sphinx rendering.
+
+    Sphinx requires every document to have a title (top-level heading). Notebooks
+    that start with a code cell instead of a markdown heading will cause Sphinx to
+    skip them silently. This function injects a markdown title cell at the top of
+    any notebook that lacks one, using the notebook_name from the manifest.
+
+    :param manifest: The loaded manifest dictionary.
+    :type manifest: dict
+    :param docs_build_dir: The docs build directory where notebooks have been copied.
+    :type docs_build_dir: Path
+    :param skip_pipelines: Set of pipeline IDs to skip.
+    :type skip_pipelines: set[str] | None
+    """
+    pipeline_ids = get_pipeline_ids(manifest)
+
+    for pipeline_id in pipeline_ids:
+        if skip_pipelines and pipeline_id in skip_pipelines:
+            continue
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        notebook_dir = Path(docs_build_dir) / "cb" / "notebooks" / str(pipeline_id)
+
+        for notebook_id in pipeline_manifest.get("notebooks", {}):
+            nb_manifest = pipeline_manifest["notebooks"][notebook_id]
+            nb_filename = Path(nb_manifest["notebook_path"]).name
+            nb_path = notebook_dir / nb_filename
+
+            if not nb_path.exists():
+                continue
+
+            with open(nb_path, "r", encoding="utf-8") as f:
+                nb = json.load(f)
+
+            cells = nb.get("cells", [])
+
+            # Check if first cell is a markdown cell with a heading
+            has_title = False
+            if cells and cells[0].get("cell_type") == "markdown":
+                source = "".join(cells[0].get("source", []))
+                if source.lstrip().startswith("#"):
+                    has_title = True
+
+            if not has_title:
+                title = nb_manifest.get("notebook_name", notebook_id)
+                title_cell = {
+                    "cell_type": "markdown",
+                    "metadata": {},
+                    "source": [f"# {title}\n"],
+                }
+                nb["cells"].insert(0, title_cell)
+
+                with open(nb_path, "w", encoding="utf-8") as f:
+                    json.dump(nb, f, indent=1, ensure_ascii=False)
+                    f.write("\n")
+
+
 def build_all(
     docs_build_dir=DOCS_BUILD_DIR,
     base_dir=BASE_DIR,
@@ -1068,6 +1129,10 @@ def build_all(
     copy_according_to_plan(chart_plan_download)
     copy_according_to_plan(chart_plan_static)
     copy_according_to_plan(notebook_plan)
+
+    # Inject title cells into notebooks that lack top-level headings
+    # (Sphinx requires every document to have a title for toctree links)
+    ensure_notebook_titles(manifest, docs_build_dir, skip_pipelines=skip_pipelines)
 
     generate_all_pipeline_docs(
         manifest,
