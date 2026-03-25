@@ -1,9 +1,12 @@
 """Tests for the validation module."""
 
+from pathlib import Path
+
 import pytest
 
 from chartbook.errors import ValidationError
-from chartbook.conf_validation import SiteConfig, validate_conf_py_values
+from chartbook.conf_validation import SiteConfig, validate_conf_py_values, validate_source_files
+from chartbook.manifest import load_manifest
 
 
 class TestSiteConfig:
@@ -415,3 +418,75 @@ class TestSecurityPatterns:
                     copyright="2024",
                     sphinx_theme="pydata_sphinx_theme",
                 )
+
+
+class TestValidateSourceFiles:
+    """Tests for validate_source_files with expanded resource validation."""
+
+    def test_no_missing_files_returns_empty(self, pipeline_project):
+        """Test that a valid project has no missing files."""
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert missing == []
+
+    def test_missing_parquet_detected(self, pipeline_project):
+        """Test that a missing parquet file is detected."""
+        parquet_files = list((pipeline_project / "_data").rglob("*.parquet"))
+        assert len(parquet_files) > 0
+        parquet_files[0].unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "dataframe" for mf in missing)
+
+    def test_missing_dataframe_docs_detected(self, pipeline_project):
+        """Test that a missing dataframe docs file is detected."""
+        docs_files = list((pipeline_project / "docs_src" / "dataframes").glob("*.md"))
+        assert len(docs_files) > 0
+        docs_files[0].unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "dataframe_docs" for mf in missing)
+
+    def test_missing_chart_html_detected(self, pipeline_project):
+        """Test that a missing chart HTML file is detected."""
+        chart_files = list((pipeline_project / "_output" / "charts").glob("*.html"))
+        assert len(chart_files) > 0
+        chart_files[0].unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "chart" for mf in missing)
+
+    def test_missing_chart_docs_detected(self, pipeline_project):
+        """Test that a missing chart docs file is detected."""
+        chart_docs = list((pipeline_project / "docs_src" / "charts").glob("*.md"))
+        assert len(chart_docs) > 0
+        chart_docs[0].unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "chart_docs" for mf in missing)
+
+    def test_missing_readme_detected(self, pipeline_project):
+        """Test that a missing README.md is detected."""
+        (pipeline_project / "README.md").unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "readme" for mf in missing)
+
+    def test_missing_note_markdown_detected(self, pipeline_project_with_notes):
+        """Test that a missing note markdown file is detected."""
+        (pipeline_project_with_notes / "docs_src" / "note1.md").unlink()
+
+        manifest = load_manifest(pipeline_project_with_notes)
+        missing = validate_source_files(manifest, pipeline_project_with_notes)
+        assert any(mf.file_type == "note" for mf in missing)
+
+    def test_inline_docs_not_checked_for_path(self, catalog_project_inline_docs):
+        """Test that inline docs (dataframe_docs_str) don't trigger path checks."""
+        manifest = load_manifest(catalog_project_inline_docs)
+        missing = validate_source_files(manifest, catalog_project_inline_docs)
+        assert not any(mf.file_type == "dataframe_docs" for mf in missing)

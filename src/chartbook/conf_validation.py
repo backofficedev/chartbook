@@ -189,8 +189,13 @@ def validate_source_files(manifest: dict, base_dir) -> list:
 
     Checks for the existence of:
     - Dataframe parquet files (path_to_parquet_data)
+    - Dataframe documentation files (dataframe_docs_path, when mode="path")
     - Chart HTML files (path_to_html_chart)
+    - Chart documentation files (chart_docs_path, when mode="path")
     - Notebook files (notebook_path)
+    - Note markdown files (path_to_markdown_file)
+    - README.md per pipeline
+    - User-specified logo and favicon files
 
     :param manifest: The manifest dictionary from chartbook.toml.
     :type manifest: dict
@@ -249,6 +254,22 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                             )
                         )
 
+            # Check dataframe documentation files (path mode only)
+            doc_mode = dataframe_config.get("_doc_mode", "path")
+            if doc_mode == "path":
+                docs_path = dataframe_config.get("dataframe_docs_path")
+                if docs_path and docs_path.strip():
+                    full_path = (pipeline_base_dir / docs_path).resolve()
+                    if not full_path.exists():
+                        missing_files.append(
+                            MissingFile(
+                                file_path=full_path,
+                                file_type="dataframe_docs",
+                                item_id=dataframe_id,
+                                pipeline_id=pipeline_id,
+                            )
+                        )
+
         # Check chart files
         for chart_id, chart_config in pipeline_manifest.get("charts", {}).items():
             chart_path = chart_config.get("path_to_html_chart")
@@ -264,6 +285,22 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                         )
                     )
 
+            # Check chart documentation files (path mode only)
+            doc_mode = chart_config.get("_doc_mode", "path")
+            if doc_mode == "path":
+                docs_path = chart_config.get("chart_docs_path")
+                if docs_path and docs_path.strip():
+                    full_path = (pipeline_base_dir / docs_path).resolve()
+                    if not full_path.exists():
+                        missing_files.append(
+                            MissingFile(
+                                file_path=full_path,
+                                file_type="chart_docs",
+                                item_id=chart_id,
+                                pipeline_id=pipeline_id,
+                            )
+                        )
+
         # Check notebook files
         for notebook_id, notebook_config in pipeline_manifest.get("notebooks", {}).items():
             notebook_path = notebook_config.get("notebook_path")
@@ -278,5 +315,59 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                             pipeline_id=pipeline_id,
                         )
                     )
+
+        # Check note markdown files
+        for note_id, note_config in pipeline_manifest.get("notes", {}).items():
+            md_path = note_config.get("path_to_markdown_file")
+            if md_path and md_path.strip():
+                full_path = (pipeline_base_dir / md_path).resolve()
+                if not full_path.exists():
+                    missing_files.append(
+                        MissingFile(
+                            file_path=full_path,
+                            file_type="note",
+                            item_id=note_id,
+                            pipeline_id=pipeline_id,
+                        )
+                    )
+
+        # Check README.md
+        readme_path = (pipeline_base_dir / "README.md").resolve()
+        if not readme_path.exists():
+            missing_files.append(
+                MissingFile(
+                    file_path=readme_path,
+                    file_type="readme",
+                    item_id="README.md",
+                    pipeline_id=pipeline_id,
+                )
+            )
+
+    # Check user-specified logo and favicon (site-level, outside pipeline loop)
+    logo_path = manifest.get("site", {}).get("logo_path", "")
+    if logo_path:
+        full_logo = (base_dir / logo_path).resolve()
+        if not full_logo.exists():
+            missing_files.append(
+                MissingFile(
+                    file_path=full_logo,
+                    file_type="logo",
+                    item_id="site.logo_path",
+                    pipeline_id="(site)",
+                )
+            )
+
+    favicon_path = manifest.get("site", {}).get("favicon_path", "")
+    if favicon_path:
+        full_favicon = (base_dir / favicon_path).resolve()
+        if not full_favicon.exists():
+            missing_files.append(
+                MissingFile(
+                    file_path=full_favicon,
+                    file_type="favicon",
+                    item_id="site.favicon_path",
+                    pipeline_id="(site)",
+                )
+            )
 
     return missing_files
