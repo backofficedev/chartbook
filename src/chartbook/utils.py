@@ -108,10 +108,15 @@ def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
         source_path = Path(source)
         destination_path = Path(destination)
 
-        # Skip if source file doesn't exist (validation happens upfront in build_docs.py)
+        # Warn if source file doesn't exist (should have been caught by validation)
         if not source_path.exists():
-            if verbose:
-                print(f"Skipping {source_path} - file does not exist")
+            import warnings
+
+            warnings.warn(
+                f"Skipping {source_path} - file does not exist "
+                f"(should have been caught by validation)",
+                stacklevel=2,
+            )
             continue
 
         # Create parent directories if needed

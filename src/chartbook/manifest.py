@@ -456,6 +456,8 @@ def find_latest_source_modification(
 
     def get_latest_mod_time(directory: Path) -> datetime:
         latest_time = datetime.min
+        if not directory.exists():
+            return latest_time
         for root, _, files in os.walk(directory):
             for file in files:
                 file_path = Path(root) / file
