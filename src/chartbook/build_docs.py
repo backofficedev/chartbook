@@ -111,7 +111,7 @@ def generate_docs(
     temp_docs_src_dir: Path = Path("_docs_src"),
     should_remove_existing: bool = False,
     size_threshold: float = 50,
-    strict: bool = False,
+    strict: bool = True,
     strip_mathjax2: bool = True,
 ):
     """Generate documentation by running both pipeline publish and sphinx build.
@@ -132,8 +132,8 @@ def generate_docs(
     :type should_remove_existing: bool
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
-    :param strict: If True, error and exit when source files are missing.
-        When False (default), affected pipelines are skipped with warnings.
+    :param strict: If True (default), error and exit when source files are missing.
+        When False, affected pipelines are skipped with warnings.
     :type strict: bool
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs
         to prevent conflicts with Sphinx's MathJax 3. Defaults to True.

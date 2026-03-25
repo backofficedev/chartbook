@@ -267,10 +267,10 @@ class TestGenerateDocsEndToEnd:
 class TestStrictFlag:
     """Tests for --strict flag behavior in generate_docs."""
 
-    def test_default_skips_pipelines_with_missing_files(
+    def test_no_strict_skips_pipelines_with_missing_files(
         self, catalog_project, monkeypatch, capsys
     ):
-        """Test that without --strict, pipelines with missing files are skipped."""
+        """Test that with --no-strict, pipelines with missing files are skipped."""
         output_dir = catalog_project / "docs_test"
         monkeypatch.chdir(catalog_project)
 
@@ -281,11 +281,12 @@ class TestStrictFlag:
         assert len(chart_files) > 0, "Fixture should create chart HTML files"
         chart_files[0].unlink()
 
-        # Default (strict=False) should succeed, skipping pipeline_a
+        # Explicit strict=False should succeed, skipping pipeline_a
         generate_docs(
             output_dir=output_dir,
             project_dir=Path("."),
             keep_build_dirs=False,
+            strict=False,
         )
 
         # Build should succeed
@@ -295,6 +296,28 @@ class TestStrictFlag:
         # Warning about skipping should appear on stderr
         captured = capsys.readouterr()
         assert "Skipping pipeline 'pipeline_a'" in captured.err
+
+    def test_default_strict_errors_on_missing_files(
+        self, catalog_project, monkeypatch
+    ):
+        """Test that the default (strict=True) causes exit on missing files."""
+        output_dir = catalog_project / "docs_test"
+        monkeypatch.chdir(catalog_project)
+
+        # Delete a chart file from pipeline_a
+        chart_files = list(
+            (catalog_project / "pipelines" / "pipeline_a" / "_output" / "charts").glob("*.html")
+        )
+        assert len(chart_files) > 0, "Fixture should create chart HTML files"
+        chart_files[0].unlink()
+
+        with pytest.raises(SystemExit) as exc_info:
+            generate_docs(
+                output_dir=output_dir,
+                project_dir=Path("."),
+                keep_build_dirs=False,
+            )
+        assert exc_info.value.code == 1
 
     def test_strict_errors_on_missing_files(
         self, catalog_project, monkeypatch
@@ -369,8 +392,8 @@ class TestMissingSourceFilesError:
         assert any("pipeline_a" in w and "2 missing" in w for w in warnings)
         assert any("pipeline_b" in w and "1 missing" in w for w in warnings)
 
-    def test_format_cli_message_mentions_strict(self):
-        """Test that the CLI error message references --strict."""
+    def test_format_cli_message_mentions_no_strict(self):
+        """Test that the CLI error message references --no-strict."""
         from chartbook.errors import MissingFile, MissingSourceFilesError
 
         missing = [
@@ -378,8 +401,7 @@ class TestMissingSourceFilesError:
         ]
         error = MissingSourceFilesError(missing)
         message = error.format_cli_message()
-        assert "--strict" in message
-        assert "--warn-missing" not in message
+        assert "--no-strict" in message
 
 
 # Sample MathJax 2 script tags as injected by Plotly's NotebookRenderer

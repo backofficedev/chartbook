@@ -74,10 +74,9 @@ def main():
     help="File size threshold in MB above which to use memory-efficient loading (default: 50)",
 )
 @click.option(
-    "--strict",
-    is_flag=True,
-    default=False,
-    help="Error and exit on missing source files instead of skipping affected pipelines",
+    "--strict/--no-strict",
+    default=True,
+    help="Fail on missing source files (default). Use --no-strict to skip affected pipelines instead.",
 )
 @click.option(
     "--strip-mathjax2/--no-strip-mathjax2",
@@ -964,10 +963,9 @@ def catalog_enable(pipeline_id, catalog_path):
     help="Overwrite existing docs without prompting",
 )
 @click.option(
-    "--strict",
-    is_flag=True,
+    "--strict/--no-strict",
     default=False,
-    help="Error and exit on missing source files instead of skipping affected pipelines",
+    help="Skip pipelines with missing source files (default). Use --strict to fail on any missing file.",
 )
 def catalog_build(force_write, strict):
     """Build HTML documentation for the global catalog.

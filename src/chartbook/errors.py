@@ -250,7 +250,7 @@ class MissingSourceFilesError(Exception):
             click.style("Hint: ", fg="green")
             + "Ensure these files exist or update the paths in chartbook.toml."
         )
-        lines.append("      Without --strict, affected pipelines are skipped automatically.")
+        lines.append("      Use --no-strict to skip affected pipelines instead of failing.")
 
         return "\n".join(lines)
 
