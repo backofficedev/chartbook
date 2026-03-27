@@ -93,7 +93,6 @@ path_to_excel_data = "./_data/sales_data.xlsx"
 dataframe_docs_path = "./docs_src/dataframes/sales_data.md"
 
 [notebooks.exploratory]
-notebook_name = "Exploratory Data Analysis"
 notebook_description = "Initial exploration of sales patterns"
 notebook_path = "_output/01_exploratory.ipynb"
 
@@ -171,11 +170,12 @@ dataframe_docs_str = "Detailed documentation about this dataset, its columns, an
 
 ### Notebooks
 
+The notebook name is automatically inferred from the first `# Heading` in the notebook. Set `notebook_name` explicitly to override.
+
 ```toml
 [notebooks.my_notebook]
-notebook_name = "My Notebook Title"
 notebook_description = "What this notebook does"
-notebook_path = "_output/my_notebook.html"
+notebook_path = "_output/my_notebook.ipynb"
 ```
 
 ## Chart Field Reference

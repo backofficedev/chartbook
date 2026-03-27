@@ -247,3 +247,30 @@ def strip_mathjax2_from_notebook(notebook_path):
             f.write("\n")
 
     return modified
+
+
+def extract_notebook_title(notebook_path):
+    """Extract the first level-1 markdown heading from a notebook.
+
+    Searches through all cells for the first markdown cell containing a
+    level-1 heading (``# Title``). Returns the heading text, or ``None``
+    if no level-1 heading is found.
+
+    :param notebook_path: Path to the ``.ipynb`` file.
+    :type notebook_path: str or Path
+    :returns: The heading text (without the ``#`` prefix), or ``None``.
+    :rtype: str | None
+    """
+    notebook_path = Path(notebook_path)
+    with open(notebook_path, "r", encoding="utf-8") as f:
+        nb = json.load(f)
+
+    for cell in nb.get("cells", []):
+        if cell.get("cell_type") != "markdown":
+            continue
+        source = "".join(cell.get("source", []))
+        for line in source.split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("# ") and not stripped.startswith("##"):
+                return stripped[2:].strip()
+    return None

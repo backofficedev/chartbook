@@ -149,9 +149,9 @@ path_to_markdown_file = "./docs_src/methodology.md"
 ```
 
 ### [notebooks] - Jupyter Notebooks
+The notebook name is inferred from the first `# Heading` in the notebook. Set `notebook_name` to override.
 ```toml
 [notebooks.analysis]
-notebook_name = "Exploratory Analysis"
 notebook_description = "Initial data exploration"
 notebook_path = "_output/analysis.ipynb"
 ```

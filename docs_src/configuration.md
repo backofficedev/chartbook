@@ -188,20 +188,27 @@ path_to_markdown_file = "./docs_src/data_quality_notes.md"
 
 ### `[notebooks]` - Jupyter Notebooks
 
-Reference analytical notebooks:
+Reference analytical notebooks. The `notebook_name` is automatically inferred from the first `# Heading` in the notebook, so you typically only need `notebook_description` and `notebook_path`:
 
 ```toml
 [notebooks]
 
 [notebooks.exploratory_analysis]
-notebook_name = "Exploratory Data Analysis"
 notebook_description = "Initial exploration of revenue patterns and anomalies"
 notebook_path = "_output/01_exploratory_analysis.ipynb"
 
 [notebooks.model_development]
-notebook_name = "Forecasting Model Development"
 notebook_description = "Time series models for revenue forecasting"
 notebook_path = "_output/02_model_development.ipynb"
+```
+
+To override the inferred name, set `notebook_name` explicitly:
+
+```toml
+[notebooks.exploratory_analysis]
+notebook_name = "Custom Title"
+notebook_description = "Initial exploration of revenue patterns and anomalies"
+notebook_path = "_output/01_exploratory_analysis.ipynb"
 ```
 
 ## Complete Example

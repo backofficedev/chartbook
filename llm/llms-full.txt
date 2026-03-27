@@ -412,16 +412,16 @@ path_to_markdown_file = "./docs_src/data_quality_notes.md"
 
 ### [notebooks] - Jupyter Notebooks
 
+The notebook name is inferred from the first `# Heading` in the notebook. Set `notebook_name` to override.
+
 ```toml
 [notebooks]
 
 [notebooks.exploratory_analysis]
-notebook_name = "Exploratory Data Analysis"
 notebook_description = "Initial exploration of revenue patterns and anomalies"
 notebook_path = "_output/01_exploratory_analysis.ipynb"
 
 [notebooks.model_development]
-notebook_name = "Forecasting Model Development"
 notebook_description = "Time series models for revenue forecasting"
 notebook_path = "_output/02_model_development.ipynb"
 ```

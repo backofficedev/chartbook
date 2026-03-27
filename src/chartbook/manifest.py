@@ -8,7 +8,7 @@ import tomli
 from packaging import version  # Add this import for proper version comparison
 
 from chartbook.__about__ import __version__  # Import the version
-from chartbook.utils import is_glob_pattern
+from chartbook.utils import extract_notebook_title, is_glob_pattern
 
 BASE_DIR = Path(".").resolve()
 OUTPUT_DIR = Path("./_output")
@@ -261,6 +261,16 @@ def _load_pipeline_manifest(raw_manifest):
     manifest.setdefault("charts", {})
     manifest.setdefault("dataframes", {})
     manifest.setdefault("notebooks", {})
+
+    # Infer notebook_name from notebook H1 heading when not explicitly set
+    for notebook_id in manifest.get("notebooks", {}):
+        nb_manifest = manifest["notebooks"][notebook_id]
+        if "notebook_name" not in nb_manifest:
+            nb_path = base_dir / nb_manifest.get("notebook_path", "")
+            if nb_path.exists():
+                title = extract_notebook_title(nb_path)
+                if title:
+                    nb_manifest["notebook_name"] = title
 
     # Validate os_compatibility if present
     if "pipeline" in manifest and "os_compatibility" in manifest["pipeline"]:
