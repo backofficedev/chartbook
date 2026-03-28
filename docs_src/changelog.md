@@ -5,7 +5,7 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Upcoming]
+## [0.0.19]
 
 ### Added
 - `notebook_name` is now automatically inferred from the first level-1 markdown heading (`# Title`) in the notebook when not explicitly set in `chartbook.toml`. This makes `notebook_name` optional — notebooks just need a `# Heading` cell and the title will be extracted for the TOC and sidebar.
