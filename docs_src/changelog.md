@@ -5,7 +5,7 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.20]
 
 ### Added
 - New `chartbook install skill` command to install the bundled Claude Code skill into the current project. Copies skill files to `.claude/skills/chartbook/` so Claude can assist with chartbook projects. Supports `-f/--force` to overwrite without prompting. The chartbook Claude skill is now shipped with the Python package.

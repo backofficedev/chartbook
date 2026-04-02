@@ -488,7 +488,7 @@ def create_invalid_toml_project(base_dir: Path, error_type: str) -> Path:
         config = {
             "config": {
                 "type": "pipeline",
-                "chartbook_format_version": "0.0.19",
+                "chartbook_format_version": "0.0.20",
             },
             "site": {
                 "title": "Test",
