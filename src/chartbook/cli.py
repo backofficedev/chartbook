@@ -1181,5 +1181,54 @@ def config():
     click.echo('  df = data.load(pipeline="my_pipeline", dataframe="my_df")')
 
 
+@main.group()
+def install():
+    """Install bundled resources into the current project."""
+
+
+@install.command("skill")
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing skill files without prompting",
+)
+def install_skill(force):
+    """Copy bundled Claude skill files into .claude/skills/chartbook/.
+
+    Installs the chartbook Claude Code skill into the current directory
+    so that Claude can use it for project assistance.
+    """
+    import importlib.resources
+    import shutil
+
+    package_path = importlib.resources.files("chartbook")
+    skills_src = Path(str(package_path)) / "skills"
+
+    skill_files = list(skills_src.iterdir()) if skills_src.is_dir() else []
+    if not skill_files:
+        click.echo("Error: No bundled skill files found in package.", err=True)
+        raise SystemExit(1)
+
+    target_dir = Path.cwd() / ".claude" / "skills" / "chartbook"
+
+    if target_dir.exists() and any(target_dir.iterdir()) and not force:
+        click.echo(f"Skill files already exist in {target_dir}")
+        if not click.confirm("Overwrite existing files?"):
+            raise SystemExit(0)
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    copied = 0
+    for src_file in sorted(skill_files):
+        if src_file.is_file():
+            shutil.copy2(src_file, target_dir / src_file.name)
+            click.echo(f"  {src_file.name}")
+            copied += 1
+
+    click.echo(f"\nInstalled {copied} skill file(s) to {target_dir}")
+
+
 if __name__ == "__main__":
     main()

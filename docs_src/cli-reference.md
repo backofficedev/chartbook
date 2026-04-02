@@ -41,6 +41,7 @@ chartbook [OPTIONS] COMMAND [ARGS]...
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
 | `config` | Configure the default catalog path for data loading |
+| `install` | Install bundled resources (e.g., Claude skill) |
 | `catalog` | Manage the catalog (add pipelines) |
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
 | `data` | Data operations (get paths, docs) |
@@ -227,6 +228,38 @@ Catalog path set to: /data/my-catalog/chartbook.toml
 You can now load data with:
   from chartbook import data
   df = data.load(pipeline="my_pipeline", dataframe="my_df")
+```
+
+### `chartbook install`
+
+Install bundled resources into the current project.
+
+```console
+chartbook install COMMAND [OPTIONS]
+```
+
+**Subcommands:**
+- `skill`: Install the Claude Code skill
+
+#### `chartbook install skill`
+
+Copy the bundled Claude Code skill files into `.claude/skills/chartbook/` in the current directory. This gives Claude context about chartbook's CLI, configuration, and data loading API so it can assist with your project.
+
+```console
+chartbook install skill [OPTIONS]
+```
+
+**Options:**
+- `-f, --force`: Overwrite existing skill files without prompting
+
+**Examples:**
+
+```console
+# Install the skill
+chartbook install skill
+
+# Overwrite existing skill files
+chartbook install skill -f
 ```
 
 ### `chartbook catalog`
