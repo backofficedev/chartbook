@@ -5,6 +5,11 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.21]
+
+### Fixed
+- `chartbook catalog build` and `chartbook catalog browse` now respect the custom catalog path set via `chartbook config`. Previously these commands always used the default `~/.chartbook/chartbook.toml` location, ignoring the `catalog.path` setting in `settings.toml`. ([#2](https://github.com/backofficedev/chartbook/issues/2))
+
 ## [0.0.20]
 
 ### Added

@@ -970,24 +970,24 @@ def catalog_enable(pipeline_id, catalog_path):
 def catalog_build(force_write, strict):
     """Build HTML documentation for the global catalog.
 
-    Renders the catalog at ``~/.chartbook/chartbook.toml`` and writes
-    the output to ``~/.chartbook/docs/``.
+    Uses the catalog path from ``~/.chartbook/settings.toml`` if configured,
+    otherwise falls back to ``~/.chartbook/chartbook.toml``.
     """
     _check_sphinx_installed()
 
     from chartbook.build_docs import generate_docs
-    from chartbook.config import get_global_catalog_path, get_global_config_dir, get_global_docs_dir
+    from chartbook.config import get_default_catalog_path
 
-    catalog_path = get_global_catalog_path()
-    if not catalog_path.is_file():
+    catalog_path = get_default_catalog_path()
+    if catalog_path is None or not catalog_path.is_file():
         click.echo("Error: No global catalog found.", err=True)
         click.echo("", err=True)
         click.echo("Run 'chartbook catalog init' to create one.", err=True)
         raise SystemExit(1)
 
     project_dir = catalog_path.parent
-    output_dir = get_global_docs_dir()
-    config_dir = get_global_config_dir()
+    config_dir = catalog_path.parent
+    output_dir = config_dir / "docs"
     _docs_dir = config_dir / "_docs"
     temp_docs_src_dir = config_dir / "_docs_src"
 
@@ -1011,9 +1011,16 @@ def catalog_build(force_write, strict):
 @catalog.command("browse")
 def catalog_browse():
     """Open the global catalog documentation in your default browser."""
-    from chartbook.config import get_global_docs_dir
+    from chartbook.config import get_default_catalog_path
 
-    index_path = get_global_docs_dir() / "index.html"
+    catalog_path = get_default_catalog_path()
+    if catalog_path is None:
+        click.echo("Error: No global catalog found.", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook catalog init' to create one.", err=True)
+        raise SystemExit(1)
+
+    index_path = catalog_path.parent / "docs" / "index.html"
     if not index_path.is_file():
         click.echo("Error: Catalog docs not found.", err=True)
         click.echo("", err=True)
