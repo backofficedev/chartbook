@@ -44,7 +44,7 @@ chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
 ```toml
 [config]
 type = "pipeline"
-chartbook_format_version = "0.0.20"
+chartbook_format_version = "0.0.21"
 
 [site]
 title = "My Analytics"
