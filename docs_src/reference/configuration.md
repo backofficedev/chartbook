@@ -1,6 +1,6 @@
 # Configuration Guide
 
-chartbook uses a TOML configuration file (`chartbook.toml`) to define your project metadata, charts, dataframes, and pipelines. This page is the reference for **format v2**; the reasoning behind the design lives in {doc}`design/toml-format-v2`.
+chartbook uses a TOML configuration file (`chartbook.toml`) to define your project metadata, charts, dataframes, and pipelines. This page is the reference for **format v2**; the reasoning behind the design lives in {doc}`../design/toml-format-v2`.
 
 ## Configuration File Structure
 
@@ -103,7 +103,7 @@ data.load(pipeline="ftsfr/crsp_treasury", ...)                    # canonical
 data.load(pipeline="https://github.com/ftsfr/crsp_treasury", ...) # URL, normalized
 ```
 
-If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. `scope/name@rev` is reserved syntax for future version pinning and is rejected for now. See {doc}`design/toml-format-v2` for why identity works this way.
+If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. `scope/name@rev` is reserved syntax for future version pinning and is rejected for now. See {doc}`../design/toml-format-v2` for why identity works this way.
 
 ## `[pipelines]` — Catalog Registry
 
@@ -257,7 +257,7 @@ The old `[config]`/`[site]`/`[pipeline]` format is not supported; loading a v1 f
 python scripts/migrate_toml_v2.py /path/to/project
 ```
 
-The full v1 → v2 field mapping is in the {doc}`design doc <design/toml-format-v2>`.
+The full v1 → v2 field mapping is in the {doc}`design doc <../design/toml-format-v2>`.
 
 ## Global Configuration
 
@@ -275,7 +275,7 @@ from chartbook import data
 df = data.load(pipeline="yield_curve", dataframe="repo_public")
 ```
 
-An explicit `catalog_path` argument always takes priority over the global setting. See the {doc}`cli-reference` for details.
+An explicit `catalog_path` argument always takes priority over the global setting. See the {doc}`cli` reference for details.
 
 ## Best Practices
 

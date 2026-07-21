@@ -6,34 +6,34 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 ## Quick Start
 
-- [Installation](docs_src/getting-started.md): `pip install chartbook` for data loading, `pipx install chartbook` for CLI
-- [CLI Reference](docs_src/cli-reference.md): `chartbook build`, `chartbook publish`, `chartbook create-data-glimpses`, `chartbook config`, `chartbook ls`, `chartbook data`
+- [Getting Started](docs_src/getting-started.md): `pip install "chartbook[all]"` for everything, `pip install "chartbook[data]"` for data loading only
+- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook build`, `chartbook browse`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook config`
 
-## Core Concepts
+## Guides
 
-- [Pipelines](docs_src/user-guide/pipelines.md): Self-contained analytics projects with charts, dataframes, and documentation
-- [Charts](docs_src/user-guide/charts.md): Interactive HTML visualizations with metadata and governance tracking
-- [Dataframes](docs_src/user-guide/dataframes.md): Data sources in Parquet format with licensing and lineage tracking
-- [Catalog Projects](docs_src/user-guide/catalog-projects.md): Aggregate multiple pipelines into unified documentation
+- [Documenting a Pipeline](docs_src/guide/documenting-a-pipeline.md): Describe charts, dataframes, and notebooks in `chartbook.toml`
+- [Catalogs and Data Access](docs_src/guide/catalogs-and-data.md): Aggregate pipelines; load any cataloged dataset with `data.load()`
+- [Plotting](docs_src/guide/plotting.md): One call produces interactive HTML plus static PNG/PDF
+- [How the Build Works](docs_src/guide/how-the-build-works.md): Two-stage build internals and template overrides
 
-## Configuration
+## Reference
 
-- [Configuration Guide](docs_src/configuration.md): Complete `chartbook.toml` reference with all available fields
-
-## API
-
-- [Python API](docs_src/api/chartbook.md): `from chartbook import data; lf = data.load(pipeline="my_pipeline", dataframe="df_id")` — pipeline accepts a bare name or a scoped name (`myorg/my_pipeline`)
+- [Configuration](docs_src/reference/configuration.md): Complete `chartbook.toml` reference with all fields, types, and defaults
+- [Python API](docs_src/reference/api.md): `from chartbook import data; lf = data.load(pipeline="my_pipeline", dataframe="df_id")` — pipeline accepts a bare name or a scoped name (`myorg/my_pipeline`)
 
 ## Key Commands
 
 ```bash
+chartbook init            # Scaffold a new pipeline project
 chartbook build           # Generate HTML documentation website
 chartbook build -f        # Force overwrite existing docs
-chartbook publish            # Publish to directory
+chartbook browse          # Open the generated site
+chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook config             # Configure default catalog path
+chartbook catalog add <dir>  # Register a pipeline in the catalog
+chartbook catalog build      # Build the catalog site
 chartbook ls                 # List all pipelines, dataframes, charts
-chartbook ls pipelines       # List pipelines only
 chartbook ls dataframes      # List dataframes only
 chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
 chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
@@ -70,16 +70,18 @@ docs = "Documentation for this dataset."
 ```
 my-pipeline/
 ├── chartbook.toml      # Configuration
-├── _data/               # Parquet data files
-├── _output/             # Generated HTML charts
-├── docs_src/            # Markdown documentation
+├── README.md           # Required; becomes the site front page
+├── _data/              # Parquet data files
+├── _output/            # Generated HTML charts
+├── docs_src/           # Markdown documentation
 │   ├── charts/
-│   └── dataframes/
-└── src/                 # Python source code
+│   ├── dataframes/
+│   └── site/           # Optional custom site pages
+└── src/                # Python source code
 ```
 
 ## Optional
 
-- [Examples](docs_src/examples/index.md): Real-world examples and best practices
+- [Examples](docs_src/examples.md): The bundled example pipelines and catalog
 - [Contributing](docs_src/contributing.md): Development guidelines
 - [Changelog](docs_src/changelog.md): Version history

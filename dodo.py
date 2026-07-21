@@ -88,7 +88,7 @@ def mv(from_path, to_path):
 notebook_tasks = {
     "plotting_gallery": {
         "path": SCRIPTS_DIR / "plotting_gallery_ipynb.py",
-        "docs_path": DOCS_SRC / "user-guide" / "gallery.ipynb",
+        "docs_path": DOCS_SRC / "guide" / "gallery.ipynb",
         "file_dep": [],
         "targets": [],
     },

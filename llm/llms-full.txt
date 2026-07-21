@@ -9,32 +9,31 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ## Installation
 
 ### Prerequisites
-- Python 3.8 or higher
+- Python 3.10 or higher
 - pip package manager
 
-### For Data Scientists (loading data)
+### Everything (CLI, plotting, data loading, scaffolder)
 ```bash
-pip install chartbook
+pip install "chartbook[all]"
+# or isolated: pipx install "chartbook[all]"
+```
+
+### For Data Scientists (loading data only)
+```bash
+pip install "chartbook[data]"
 ```
 
 ```python
 from chartbook import data
-df = data.load(pipeline="fred_charts", dataframe="interest_rates")
+lf = data.load(pipeline="fred_charts", dataframe="fred")
 ```
 
-### For CLI (Recommended - isolated installation)
+### CLI / site building only
 ```bash
-pipx install chartbook
-
-# Or run without installing
-pipx run chartbook build
-uvx chartbook build
+pip install "chartbook[sphinx]"
 ```
 
-### Alternative CLI Installation
-```bash
-pip install chartbook[sphinx]
-```
+The bare package (`pip install chartbook`) contains only the TOML core; install an extra for the feature you need.
 
 ### Development Installation
 ```bash
@@ -53,12 +52,16 @@ pip install -e ".[dev]"
 
 | Command | Description |
 |---------|-------------|
+| `init` | Scaffold a new pipeline project from the cookiecutter template (via cruft) |
 | `build` | Generate HTML documentation website |
-| `publish` | Publish pipeline to a directory |
-| `create-data-glimpses` | Create data glimpse reports |
-| `config` | Configure the default catalog path for data loading |
+| `browse` | Open the generated site in the default browser |
+| `publish` | Stage a pipeline's publishable files into a directory |
+| `catalog init/add/disable/enable/build/browse` | Manage a catalog and build/browse its site |
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
 | `data` | Data operations (get paths, docs) |
+| `create-data-glimpses` | Create data glimpse reports from dodo.py targets |
+| `config` | Configure the default catalog path for data loading |
+| `install skill` | Install the bundled Claude Code skill into the project |
 
 ### chartbook build
 
@@ -231,22 +234,6 @@ chartbook data get-docs-path --pipeline <id> --dataframe <id> [--catalog PATH]
 $ chartbook data get-docs-path --pipeline sales --dataframe transactions
 /data/pipelines/sales/docs_src/dataframes/transactions.md
 ```
-
-### Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `OS_TYPE` | Operating system type (`windows` or `nix`) |
-| `BASE_DIR` | Base directory for the project |
-| `DATA_DIR` | Directory for data files |
-| `OUTPUT_DIR` | Directory for output files |
-
-### Exit Codes
-
-- `0`: Success
-- `1`: General error
-- `2`: Configuration error
-- `3`: File not found
 
 ---
 

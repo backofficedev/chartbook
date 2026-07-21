@@ -1,283 +1,136 @@
 # Getting Started
 
-This guide will help you install chartbook and create your first project.
+## Install
 
-## Installation
-
-### Prerequisites
-
-- Python 3.8 or higher
-- pip package manager
-
-chartbook has two main use cases with different installation methods:
-
-### For Data Scientists (using chartbook in your projects)
-
-Install the minimal package for loading data from ChartBook pipelines:
+ChartBook needs Python 3.10 or newer.
 
 ```console
-pip install chartbook
+pip install "chartbook[all]"
 ```
 
-This gives you access to the data loading API:
+`[all]` includes everything: the site-building CLI, the plotting module, data loading, and the `chartbook init` scaffolder. For an isolated CLI install, `pipx install "chartbook[all]"` works the same way.
 
-```python
-from chartbook import data
-df = data.load(pipeline="fred_charts", dataframe="interest_rates")
-```
+````{dropdown} Smaller installs
+:icon: package
 
-### For Generating Documentation (CLI)
+| Install | What you get |
+|---------|--------------|
+| `chartbook[data]` | `data.load()` and the polars/pyarrow stack — for projects that only *consume* cataloged data |
+| `chartbook[plotting]` | `chartbook.plotting` (matplotlib, plotly, kaleido) |
+| `chartbook[sphinx]` | The `build`/`publish`/`catalog` CLI and its Sphinx stack |
+| `chartbook[all]` | All of the above, plus `cruft` for `chartbook init` |
+| `chartbook[dev]` | Everything, plus the test toolchain (for contributors) |
 
-**Recommended** (isolated installation, no dependency pollution):
+The bare package (`pip install chartbook`) contains only the TOML core — install an extra for the feature you need.
+````
+
+## Scaffold a project
 
 ```console
-# Install globally via pipx
-pipx install chartbook
-
-# Or run without installing
-pipx run chartbook build
-uvx chartbook build
+chartbook init
 ```
 
-**Alternative** (if you prefer pip, installs Sphinx dependencies):
+This prompts for a project name and author, then creates a working pipeline from the [cookiecutter template](https://github.com/backofficedev/cookiecutter_chartbook): `chartbook.toml`, `README.md`, a `dodo.py` task runner, and `src/` scripts that pull data and build charts. Because the project is created with [cruft](https://cruft.github.io/cruft/), you can pull template improvements later with `cruft update`.
 
 ```console
-pip install "chartbook[sphinx]"
+cd <your-project>
+chartbook build
+chartbook browse
 ```
 
-### Development Installation
+You already have a documentation site.
 
-chartbook uses [Hatch](https://hatch.pypa.io/) for package management:
+## Or build one by hand
+
+The scaffold is convenience, not magic. A pipeline is any directory with a `chartbook.toml` — here is the whole thing from scratch.
+
+**1. Create the project.** The manifest can start nearly empty; `README.md` is required, and its content becomes the site's front page.
 
 ```console
-pip install hatch
-git clone <your-repo-url>
-cd chartbook
-hatch shell
-
-# Install with all dependencies (sphinx + dev tools)
-pip install -e ".[dev]"
+mkdir my-pipeline && cd my-pipeline
+git init
+mkdir _data _output src
 ```
 
-**Important:** The quotes around `".[dev]"` are required when installing with extras locally.
-
-Common installation patterns:
-
-```console
-pip install -e .              # Core only (data loading)
-pip install -e ".[sphinx]"    # Core + Sphinx CLI
-pip install -e ".[all]"       # All optional features (sphinx)
-pip install -e ".[dev]"       # Everything (all + pytest)
-```
-
-**Tip:** Use `pip install -e ".[all]"` for development when you want all features but don't need testing tools. This is ideal for contributors working on documentation or CLI features.
-
-## Working with Project Paths
-
-chartbook provides the `chartbook.env` module for consistent path handling across your project. This is especially useful when your scripts run from different directories or in Jupyter notebooks.
-
-### Finding the Project Root
-
-The `get_project_root()` function automatically locates your project root by searching for marker files like `.git`, `pyproject.toml`, or `.env`:
-
-```python
-import chartbook
-
-# Works from any subdirectory in your project
-BASE_DIR = chartbook.env.get_project_root()
-DATA_DIR = BASE_DIR / "_data"
-OUTPUT_DIR = BASE_DIR / "_output"
-```
-
-### Reading Environment Variables
-
-Use `chartbook.env.get()` to read configuration from `.env` files, environment variables, or command line arguments:
-
-```python
-import chartbook
-
-# Read from .env file or environment
-username = chartbook.env.get("WRDS_USERNAME")
-api_key = chartbook.env.get("FRED_API_KEY", default="")
-```
-
-See the {doc}`apidocs/chartbook/chartbook.env` documentation for full details.
-
-## Quick Start Tutorial
-
-### 1. Create Your First Pipeline Project
-
-Create a new directory for your project and navigate to it:
-
-```console
-mkdir my-analytics-project
-cd my-analytics-project
-git init  # Initialize git so chartbook can find project root
-```
-
-### 2. Create a Configuration File
-
-Create a `chartbook.toml` file to configure your project. Every field is optional — the presence of the file alone marks the directory as a chartbook pipeline, so even an empty file works. A minimal configuration:
+`chartbook.toml`:
 
 ```toml
 [project]
-name = "My First Pipeline"
+name = "My Pipeline"
+description = "A demo pipeline"
 ```
 
-Or with a bit more metadata:
-
-```toml
-[project]
-name = "My First Pipeline"
-description = "A demo pipeline for learning chartbook"
-maintainer = "Your Name"
-```
-
-### 3. Create Your First Chart
-
-Create the necessary directories:
-
-```console
-mkdir -p _data _output docs_src/charts
-```
-
-Create a simple Python script to generate data (`generate_data.py`):
-
-```python
-import pandas as pd
-import numpy as np
-import chartbook
-
-# Get project root - works from any subdirectory
-BASE_DIR = chartbook.env.get_project_root()
-DATA_DIR = BASE_DIR / "_data"
-
-# Generate sample data
-dates = pd.date_range('2023-01-01', '2024-01-01', freq='D')
-data = {
-    'date': dates,
-    'value1': np.cumsum(np.random.randn(len(dates))) + 100,
-    'value2': np.cumsum(np.random.randn(len(dates))) + 100
-}
-df = pd.DataFrame(data)
-
-# Save to parquet
-df.to_parquet(DATA_DIR / 'sample_data.parquet')
-print("Sample data generated!")
-```
-
-### 4. Create a Chart
-
-Create a chart using chartbook's plotting utilities:
-
-```python
-import chartbook
-import pandas as pd
-
-# Get project paths
-BASE_DIR = chartbook.env.get_project_root()
-DATA_DIR = BASE_DIR / "_data"
-OUTPUT_DIR = BASE_DIR / "_output"
-
-# Load the data
-df = pd.read_parquet(DATA_DIR / 'sample_data.parquet')
-
-# Create an interactive plot and save to files
-result = chartbook.plotting.line(
-    df,
-    x='date',
-    y=['value1', 'value2'],
-    title='My First Chart',
-)
-result.save(chart_id="my_first_chart", output_dir=str(OUTPUT_DIR))
-print("Chart created!")
-print(result.paths)
-```
-
-### 5. Add Chart Documentation
-
-Create `docs_src/charts/my_first_chart.md`:
+`README.md`:
 
 ```markdown
-# My First Chart
+# My Pipeline
 
-This chart shows the relationship between value1 and value2 over time.
-
-## Key Insights
-- Both values show trending behavior
-- The correlation between the series changes over time
-
-## Data Sources
-- Generated sample data for demonstration
+A demo pipeline showing two random walks.
 ```
 
-### 6. Update Configuration
+**2. Produce the artifacts.** ChartBook doesn't run your analysis — any script that leaves a parquet file and a chart HTML behind will do. `src/build_chart.py`:
 
-Add the chart to your `chartbook.toml`:
+```python
+import numpy as np
+import pandas as pd
+
+import chartbook
+
+df = pd.DataFrame({
+    "date": pd.date_range("2024-01-01", periods=365, freq="D"),
+    "walk_a": np.random.randn(365).cumsum() + 100,
+    "walk_b": np.random.randn(365).cumsum() + 100,
+})
+df.to_parquet("_data/walks.parquet")
+
+chartbook.plotting.line(
+    df,
+    x="date",
+    y=["walk_a", "walk_b"],
+    title="Two Random Walks",
+).save(chart_id="random_walks", output_dir="_output")
+```
+
+```console
+python src/build_chart.py
+```
+
+This writes `_data/walks.parquet` plus five chart files in `_output/` — interactive HTML and static PNG/PDF in two sizes (see {doc}`guide/plotting`).
+
+**3. Describe the artifacts.** Add them to `chartbook.toml`:
 
 ```toml
-[charts]
+[charts.random_walks]
+name = "Two Random Walks"
+description = "Cumulative sums of daily standard-normal draws"
+dataframe = "walks"
+path = "./_output/random_walks.html"
+docs = """
+Both series are pure noise. Any pattern you see is your brain's doing.
+"""
 
-[charts.my_first_chart]
-name = "My First Chart"
-description = "Demo chart showing two time series"
-dataframe = "sample_data"
-tags = ["Demo", "Time Series"]
-frequency = "Daily"
-units = "Index"
-path = "./_output/my_first_chart.html"
-docs_path = "./docs_src/charts/my_first_chart.md"
-
-[dataframes]
-
-[dataframes.sample_data]
-name = "Sample Data"
-description = "Generated sample data for demonstration"
-sources = ["Generated"]
-path = "./_data/sample_data.parquet"
+[dataframes.walks]
+name = "Random Walks"
+description = "Two simulated random walk series"
+sources = ["Simulated"]
+path = "./_data/walks.parquet"
 date_col = "date"
+docs = "365 daily observations of two cumulative-sum series."
 ```
 
-### 7. Generate Documentation
+Every chart and dataframe carries a short write-up: inline `docs` as above, or `docs_path` pointing at a markdown file once the write-up outgrows a string.
 
-Now generate your documentation website:
+**4. Build and view.**
 
 ```console
-chartbook build -f ./docs
+chartbook build
+chartbook browse
 ```
 
-Open `docs/index.html` in your browser to see your generated site!
+The site lands in `./docs/`: a front page from your README, a page per chart (the interactive plot, your write-up, a spec table), and a page per dataframe (a schema glimpse read from the parquet, plus a provenance table). Rebuild after changes with `chartbook build -f`.
 
-## Next Steps
+## Where next
 
-- Read the {doc}`user-guide/index` to learn about advanced features
-- Explore {doc}`examples/index` for more complex use cases
-- Check the {doc}`configuration` guide for all configuration options
-- Learn about {doc}`user-guide/pipelines` to build reproducible analytics
-
-## Common Issues
-
-### Module Not Found Error
-
-If you get import errors, make sure chartbook is installed in your current environment:
-
-```console
-pip show chartbook
-```
-
-### Permission Errors
-
-On Windows, you might need to run commands as administrator or adjust file permissions.
-
-### Sphinx Build Errors
-
-If documentation generation fails, check that all required files exist:
-- `chartbook.toml` in the project root
-- Chart HTML files in the paths specified
-- Documentation markdown files
-
-## Getting Help
-
-- Check the {doc}`cli-reference` for command options
-- See {doc}`examples/index` for working examples
-- Report issues on [GitHub](https://github.com/backofficedev/chartbook) 
+- {doc}`guide/documenting-a-pipeline` — the full manifest vocabulary: notebooks, metadata, custom site pages
+- {doc}`guide/catalogs-and-data` — register pipelines in a catalog and `data.load()` from anywhere
+- {doc}`reference/configuration` — every field, type, and default

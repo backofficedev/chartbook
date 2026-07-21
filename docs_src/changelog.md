@@ -31,6 +31,10 @@ The manifest format was redesigned; v1 files are no longer supported. Run `pytho
 - Unknown keys in `[project]` produce a warning with a did-you-mean suggestion, preventing silent field-name drift.
 - Fixed: catalog builds now generate per-pipeline README pages and render every member pipeline with the catalog theme (previously only the first member used it and README pages were skipped).
 
+### Changed — documentation overhaul
+
+The documentation was rebuilt around user tasks for this release: a `chartbook init`-based quick start (verified end-to-end), two consolidated guides (*Documenting a Pipeline* and *Catalogs and Data Access*) replacing the per-noun user guide, and a CLI reference regenerated from the actual command surface (adding `catalog build/browse/disable/enable` and `--strict`, dropping invented environment-variable and exit-code tables). Sections documenting features that don't exist (Trino upload, `chartbook.excel`, `chartbook.spec_reader`) were removed, duplicated field references were consolidated into a single configuration reference under `reference/`, and the site now carries roughly a third of its former word count. Old page URLs under `user-guide/` moved accordingly.
+
 ## [0.0.21]
 
 ### Fixed

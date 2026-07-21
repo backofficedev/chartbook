@@ -7,11 +7,11 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ## Installation
 
 ```bash
-# For data loading
-pip install chartbook
+# Everything: CLI, plotting, data loading, scaffolder
+pip install "chartbook[all]"
 
-# For CLI (recommended: isolated installation)
-pipx install chartbook
+# Data loading only
+pip install "chartbook[data]"
 ```
 
 ## Python API
@@ -48,10 +48,15 @@ docs_path = data.get_docs_path(pipeline="markets", dataframe="market_data")
 ## CLI Commands
 
 ```bash
+chartbook init               # Scaffold a new pipeline project
 chartbook build              # Generate HTML documentation
 chartbook build -f           # Force overwrite existing docs
-chartbook build --keep-build-dirs  # Keep temp files for debugging
-chartbook publish            # Publish to directory
+chartbook browse             # Open the generated site
+chartbook publish            # Stage publishable files to a directory
+chartbook catalog add <dir>  # Register a pipeline in the catalog
+chartbook catalog build      # Build the catalog site
+chartbook ls                 # List pipelines, dataframes, charts
+chartbook data get-path --pipeline <id> --dataframe <id>  # Parquet path
 chartbook create-data-glimpses     # Create data summary report
 chartbook config             # Configure default catalog path
 ```
