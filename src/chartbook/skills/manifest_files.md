@@ -5,17 +5,11 @@ Complete reference for configuring `chartbook.toml` manifest files — both pipe
 ## Installation
 
 ```bash
-# Data loading only
+# One install, everything included (data loading, plotting, CLI, scaffolder)
 pip install chartbook
 
-# CLI (recommended - isolated via pipx)
+# Isolated CLI install via pipx
 pipx install chartbook
-
-# CLI with pip
-pip install "chartbook[sphinx]"
-
-# Full install (recommended — includes data, plotting, sphinx)
-pip install "chartbook[all]"
 
 # Development
 pip install -e ".[dev]"

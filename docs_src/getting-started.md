@@ -5,24 +5,10 @@
 ChartBook needs Python 3.10 or newer.
 
 ```console
-pip install "chartbook[all]"
+pip install chartbook
 ```
 
-`[all]` includes everything: the site-building CLI, the plotting module, data loading, and the `chartbook init` scaffolder. For an isolated CLI install, `pipx install "chartbook[all]"` works the same way.
-
-````{dropdown} Smaller installs
-:icon: package
-
-| Install | What you get |
-|---------|--------------|
-| `chartbook[data]` | `data.load()` and the polars/pyarrow stack — for projects that only *consume* cataloged data |
-| `chartbook[plotting]` | `chartbook.plotting` (matplotlib, plotly, kaleido) |
-| `chartbook[sphinx]` | The `build`/`publish`/`catalog` CLI and its Sphinx stack |
-| `chartbook[all]` | All of the above, plus `cruft` for `chartbook init` |
-| `chartbook[dev]` | Everything, plus the test toolchain (for contributors) |
-
-The bare package (`pip install chartbook`) contains only the TOML core — install an extra for the feature you need.
-````
+One install, everything included: the site-building CLI, the plotting module, data loading, and the `chartbook init` scaffolder. For an isolated CLI install, `pipx install chartbook` works the same way. (Contributors: `pip install -e ".[dev]"` adds the test toolchain — see {doc}`contributing`.)
 
 ## Scaffold a project
 

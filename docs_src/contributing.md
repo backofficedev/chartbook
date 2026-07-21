@@ -29,14 +29,9 @@ Thank you for your interest in contributing to chartbook!
 
    Available installation options:
    ```bash
-   pip install -e .              # Core only (CLI + TOML config; no data loading)
-   pip install -e ".[data]"      # Core + data loading (polars, pyarrow)
-   pip install -e ".[sphinx]"    # Core + Sphinx site-building CLI
-   pip install -e ".[all]"       # All optional features (data, plotting, sphinx, cruft)
-   pip install -e ".[dev]"       # Everything (all + test toolchain)
+   pip install -e .              # The package (everything included)
+   pip install -e ".[dev]"       # Package + contributor toolchain (pytest, doit, jupytext, nbconvert)
    ```
-
-   **Tip:** Use `pip install -e ".[all]"` if you're working on features but don't need to run tests.
 
 ## Making Changes
 

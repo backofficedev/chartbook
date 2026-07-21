@@ -199,9 +199,8 @@ chartbook.plotting.line(
 
 ```{note}
 NBER recession shading is fetched from FRED's public `USREC` series via
-[pandas-datareader](https://pandas-datareader.readthedocs.io/) — no API key needed.
-Install it separately with `pip install pandas-datareader`; if it's missing,
-`nber_recessions=True` raises an error telling you so.
+[pandas-datareader](https://pandas-datareader.readthedocs.io/) (installed with
+chartbook) — no API key needed. Fetching requires network access.
 ```
 
 ### Horizontal Lines
@@ -392,20 +391,14 @@ See the API reference for details on implementing custom backends.
 
 ## Dependencies
 
-The plotting module requires additional dependencies:
+Everything the plotting module needs ships with `pip install chartbook`:
 
-```console
-pip install "chartbook[plotting]"
-```
-
-This installs:
 - `matplotlib` — Static chart generation
 - `plotly` — Interactive chart generation
 - `kaleido` — Plotly static export
 - `pluggy` — Plugin system
+- `pandas-datareader` — NBER recession data from FRED
 - `fredapi` — FRED API client, available for pipeline code
-
-NBER recession shading additionally needs `pandas-datareader`, which is not part of this extra — install it with `pip install pandas-datareader`.
 
 ## Workflow notes
 

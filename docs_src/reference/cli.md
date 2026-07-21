@@ -1,6 +1,6 @@
 # CLI Reference
 
-Every command supports `--help`. The site-building commands (`build`, `publish`, `catalog build`) require the Sphinx stack from `pip install "chartbook[all]"` and print install instructions if it's missing; see {doc}`../getting-started` for install options.
+Every command supports `--help`. Everything the CLI needs ships with `pip install chartbook`; see {doc}`../getting-started`.
 
 | Command | Purpose |
 |---------|---------|
@@ -17,7 +17,7 @@ Every command supports `--help`. The site-building commands (`build`, `publish`,
 
 ## chartbook init
 
-Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/cookiecutter_chartbook), via [cruft](https://cruft.github.io/cruft/) — so `cruft update` can pull template improvements later. Prompts for project name and author. Requires `cruft` (included in `chartbook[all]`).
+Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/cookiecutter_chartbook), via [cruft](https://cruft.github.io/cruft/) — so `cruft update` can pull template improvements later. Prompts for project name and author.
 
 ```console
 chartbook init

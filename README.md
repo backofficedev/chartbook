@@ -28,19 +28,11 @@ See [Documenting a Pipeline](https://backofficedev.github.io/chartbook/guide/doc
 
 ## Installation
 
-**Recommended:**
-
 ```bash
-pip install "chartbook[all]"
+pip install chartbook
 ```
 
-This gives you everything: data loading, plotting utilities, and the CLI for building documentation.
-
-**Minimal install** (data loading only):
-
-```bash
-pip install "chartbook[data]"
-```
+One install, everything included: data loading, plotting utilities, and the CLI for building documentation.
 
 **Development:**
 

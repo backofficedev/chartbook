@@ -7,11 +7,8 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ## Installation
 
 ```bash
-# Everything: CLI, plotting, data loading, scaffolder
-pip install "chartbook[all]"
-
-# Data loading only
-pip install "chartbook[data]"
+# One install, everything included: CLI, plotting, data loading, scaffolder
+pip install chartbook
 ```
 
 ## Python API

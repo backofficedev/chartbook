@@ -20,33 +20,28 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
-# Minimal base - CLI framework + TOML support for config/manifest
+# One install, everything included: CLI, data loading, plotting, and the
+# Sphinx documentation toolchain. (A future release may split these into
+# chartbook-data / chartbook-plot distributions that chartbook depends on;
+# `pip install chartbook` will still mean "you get it all".)
 dependencies = [
+    # CLI framework + TOML support for config/manifest
     "click>=8.1.7",
     "tomli>=2.2.1",
     "tomli-w>=1.1.0",
-]
-
-[project.optional-dependencies]
-# Data loading
-data = [
+    # Data loading
     "packaging",
     "polars>=1.9.0",
     "pyarrow",
     "python-decouple>=3.8",
-]
-
-# Plotting libraries
-plotting = [
+    # Plotting
     "matplotlib>=3.7.0",
     "plotly>=5.24.0",
     "kaleido>=0.2.1",
     "pluggy>=1.3.0",
     "fredapi>=0.5.0",
-]
-
-# Sphinx ecosystem for documentation generation (generate/publish commands)
-sphinx = [
+    "pandas-datareader>=0.10.0",
+    # Sphinx ecosystem for documentation generation (build/publish commands)
     "ablog>=0.11.11",
     "Jinja2>=3.1.4",
     "linkify-it-py>=2.0.3",
@@ -63,19 +58,23 @@ sphinx = [
     "sphinx-copybutton>=0.5.2",
     "sphinx_design>=0.6.1",
     "sphinx_external_toc>=1.0.1",
-]
-
-# Full install - recommended for most users
-all = [
-    "chartbook[data,plotting,sphinx]",
+    # Project scaffolding (chartbook init)
     "cruft",
 ]
 
-# Development dependencies
+[project.optional-dependencies]
+# Deprecated no-op aliases from the old extras layout — every install now
+# includes everything, so these resolve to the same full package. Kept so
+# existing specs like "chartbook[all]" or "chartbook[data]" don't break;
+# remove after one release.
+all = []
+data = []
+plotting = []
+sphinx = []
+
+# Contributor tooling only (tests + build automation)
 dev = [
-    "chartbook[all]",
     "pytest",
-    # Build automation
     "colorama",
     "doit>=0.36.0",
     "jupytext>=1.16.0",
@@ -119,21 +118,18 @@ packages = ["src/chartbook"]
 src = ""
 
 [tool.hatch.envs.hatch-test]
-# Use dev-mode to install local chartbook from src/
+# Use dev-mode to install local chartbook from src/ (base deps now include
+# the full data/plotting/sphinx stack)
 dev-mode = true
 extra-dependencies = [
-    "chartbook[all]",
     # Dependencies for running example project integration tests
     "colorama",
     "doit>=0.36.0",
     "ipython",
     "jupytext",
-    "matplotlib",
     "nbconvert",
     "numpy",
     "openpyxl",
-    "plotly>=5.24.0",
-    "python-decouple",
     "requests",
     "seaborn",
 ]
@@ -160,7 +156,6 @@ matrix.sphinx.extra-dependencies = [
 features = ["dev"]
 
 [tool.hatch.envs.docs]
-dependencies = ["chartbook[all]"]
 
 [tool.hatch.envs.docs.scripts]
 build = "sphinx-build -b html docs_src docs && touch docs/.nojekyll"

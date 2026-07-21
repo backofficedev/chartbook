@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — single install, extras retired
+
+`pip install chartbook` now installs everything: data loading, plotting, the Sphinx documentation toolchain, and the `chartbook init` scaffolder. The old `[data]`, `[plotting]`, `[sphinx]`, and `[all]` extras remain as deprecated no-op aliases — specs like `chartbook[all]` still resolve and now install the same full package — and will be removed in a future release. `pandas-datareader` is now a declared dependency, so NBER recession shading (`nber_recessions=True`) works out of the box. The `[dev]` extra (contributor tooling) is unchanged. Longer term, the package may split into `chartbook-data` / `chartbook-plot` distributions that `chartbook` depends on; `pip install chartbook` will keep meaning "you get it all".
+
+### Changed — Sphinx support widened to 9.x
+
+The Sphinx constraint is now `>=7.2.6,<10` (was `<9.0`), verified against Sphinx 8.2 and 9.1 across pipeline, catalog, and API-doc builds. The test suite now runs a Sphinx version matrix (7.4 and 8.2 pinned on Python 3.13, with newer majors covered by the unpinned Python matrix), so every supported Sphinx major is exercised in CI.
+
 ### Added — catalog auto-discovery (`pipelines.members`)
 
 A catalog's `[pipelines]` table now accepts reserved keys for glob-based membership, aimed at local catalogs so new projects join without `catalog add`:

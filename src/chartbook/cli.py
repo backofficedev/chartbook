@@ -18,12 +18,11 @@ def _check_sphinx_installed():
     except ImportError:
         click.echo("Error: Sphinx dependencies not installed.", err=True)
         click.echo("", err=True)
-        click.echo("Install the full package:", err=True)
-        click.echo('    pip install "chartbook[all]"', err=True)
-        click.echo("", err=True)
-        click.echo("Or use pipx for isolated installation:", err=True)
-        click.echo('    pipx install "chartbook[all]"', err=True)
-        click.echo('    pipx run "chartbook[all]" build', err=True)
+        click.echo(
+            "These ship with chartbook, so this usually means a broken or"
+            " partial installation. Reinstall with:", err=True
+        )
+        click.echo("    pip install --force-reinstall chartbook", err=True)
         raise SystemExit(1)
 
 
@@ -1228,8 +1227,11 @@ def init():
     except ImportError:
         click.echo("Error: cruft is not installed.", err=True)
         click.echo("", err=True)
-        click.echo("Install it with:", err=True)
-        click.echo('    pip install "chartbook[all]"', err=True)
+        click.echo(
+            "cruft ships with chartbook, so this usually means a broken or"
+            " partial installation. Reinstall with:", err=True
+        )
+        click.echo("    pip install --force-reinstall chartbook", err=True)
         raise SystemExit(1)
 
     import subprocess

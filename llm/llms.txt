@@ -6,7 +6,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 ## Quick Start
 
-- [Getting Started](docs_src/getting-started.md): `pip install "chartbook[all]"` for everything, `pip install "chartbook[data]"` for data loading only
+- [Getting Started](docs_src/getting-started.md): `pip install chartbook` — one install, everything included
 - [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook build`, `chartbook browse`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook config`
 
 ## Guides

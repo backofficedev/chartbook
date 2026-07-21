@@ -24,7 +24,7 @@ df = data.load(pipeline="fred_charts", dataframe="fred", format="pandas")
 ## From zero to a documented pipeline
 
 ```console
-pip install "chartbook[all]"
+pip install chartbook
 chartbook init            # scaffold a pipeline project
 cd my-pipeline
 chartbook build           # generate its documentation site

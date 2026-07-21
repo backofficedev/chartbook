@@ -23,7 +23,7 @@ ChartBook is a developer platform for data science teams to discover, document, 
 ## Key CLI Commands
 
 ```bash
-chartbook init              # Scaffold new project (requires chartbook[all])
+chartbook init              # Scaffold new project from the cookiecutter template
 chartbook build             # Generate HTML documentation website
 chartbook build -f          # Force overwrite existing docs
 chartbook browse            # Open project docs in default browser
@@ -177,7 +177,7 @@ chartbook.plotting.configure(nber_recessions=True, default_output_dir="./_output
 chartbook.plotting.set_style("chartbook")
 ```
 
-Requires `pip install "chartbook[plotting]"` or `pip install "chartbook[all]"`.
+Included in every install (`pip install chartbook`).
 
 ## Quick Start Configuration
 

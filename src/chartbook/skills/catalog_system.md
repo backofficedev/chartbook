@@ -288,7 +288,7 @@ os_type = chartbook.env.get_os_type()
 ## Scaffolding New Projects
 
 ```bash
-chartbook init   # Wraps cruft create — requires pip install "chartbook[all]"
+chartbook init   # Wraps cruft create (cruft ships with chartbook)
 ```
 
 Creates a new pipeline project from the cookiecutter template. Projects can later pull upstream template updates via `cruft update`.

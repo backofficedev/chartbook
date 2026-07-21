@@ -12,15 +12,10 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 - Python 3.10 or higher
 - pip package manager
 
-### Everything (CLI, plotting, data loading, scaffolder)
+### One install, everything included (CLI, plotting, data loading, scaffolder)
 ```bash
-pip install "chartbook[all]"
-# or isolated: pipx install "chartbook[all]"
-```
-
-### For Data Scientists (loading data only)
-```bash
-pip install "chartbook[data]"
+pip install chartbook
+# or isolated: pipx install chartbook
 ```
 
 ```python
@@ -28,12 +23,7 @@ from chartbook import data
 lf = data.load(pipeline="fred_charts", dataframe="fred")
 ```
 
-### CLI / site building only
-```bash
-pip install "chartbook[sphinx]"
-```
-
-The bare package (`pip install chartbook`) contains only the TOML core; install an extra for the feature you need.
+The old `[data]`/`[plotting]`/`[sphinx]`/`[all]` extras are deprecated no-op aliases; they still resolve but install the same full package.
 
 ### Development Installation
 ```bash
