@@ -499,8 +499,201 @@ def _resolve_policy(raw_manifest: dict, source: str) -> dict:
     return {"mode": mode, "required": required}
 
 
+#: Keys inside [pipelines] that configure the registry itself rather than
+#: naming a pipeline entry. A pipeline cannot use these as a bare ID.
+RESERVED_PIPELINES_KEYS = ("members", "exclude", "disabled")
+
+
+def _require_string_list(value, key: str, source: str) -> list:
+    """Validate that a reserved [pipelines] key holds an array of strings."""
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ValueError(
+            f"{source}: pipelines.{key} must be an array of strings, "
+            f"e.g. {key} = [\"../my_repos/*\"]. Got: {value!r}"
+        )
+    return value
+
+
+def _expand_exclude_patterns(patterns: list, base_dir: Path) -> set:
+    """Resolve pipelines.exclude patterns to a set of absolute paths."""
+    import glob as glob_module
+
+    excluded = set()
+    for pattern in patterns:
+        expanded = str(Path(base_dir) / pattern)
+        matches = glob_module.glob(expanded)
+        if matches:
+            excluded.update(Path(m).resolve() for m in matches)
+        else:
+            # A non-matching exclude is harmless; keep the literal path so
+            # excluding a not-yet-created directory still works.
+            excluded.add(Path(expanded).resolve())
+    return excluded
+
+
+def _discover_member_pipelines(
+    members: list,
+    exclude: list,
+    explicit_entries: dict,
+    base_dir: Path,
+    source: str,
+) -> dict:
+    """Expand pipelines.members path patterns into pipeline entries.
+
+    Each discovered directory must hold a v2 pipeline chartbook.toml; its
+    catalog key is the derived scoped ID. Glob patterns silently skip
+    directories that are not chartbook pipelines (and any catalogs they
+    match); a non-glob member path must point at a valid pipeline.
+
+    :returns: Mapping of derived pipeline ID -> entry dict, with a
+        ``_member_source`` describing where each came from (for errors).
+    :raises ValueError: With fix-it suggestions, on broken explicit paths,
+        v1-format members, or two members deriving the same ID.
+    """
+    import glob as glob_module
+
+    from chartbook.identity import derive_pipeline_id
+
+    excluded_paths = _expand_exclude_patterns(exclude, base_dir)
+    catalog_dir = Path(base_dir).resolve()
+
+    # Map resolved path -> explicit entry key, so explicit entries override
+    # the member that discovered the same directory
+    explicit_paths = {}
+    for key, entry in explicit_entries.items():
+        entry_path = entry.get("path")
+        if isinstance(entry_path, str):
+            explicit_paths[(catalog_dir / entry_path).resolve()] = key
+
+    discovered = {}
+    seen_dirs = set()
+    for pattern in members:
+        is_glob = is_glob_pattern(pattern)
+        expanded = str(Path(base_dir) / pattern)
+        matches = sorted(glob_module.glob(expanded))
+        match_dirs = [Path(m).resolve() for m in matches if Path(m).is_dir()]
+
+        if not match_dirs:
+            if is_glob:
+                warnings.warn(
+                    f"{source}: pipelines.members pattern {pattern!r} matched "
+                    f"no directories (searched {expanded}).",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                continue
+            raise ValueError(
+                f"{source}: pipelines.members entry {pattern!r} does not exist "
+                f"(resolved to {expanded}).\n"
+                f"To fix, do one of:\n"
+                f"  - check the path is spelled correctly relative to {catalog_dir}\n"
+                f"  - remove {pattern!r} from pipelines.members"
+            )
+
+        for member_dir in match_dirs:
+            if member_dir in seen_dirs or member_dir in excluded_paths:
+                continue
+            if member_dir == catalog_dir or member_dir in explicit_paths:
+                continue
+            seen_dirs.add(member_dir)
+
+            member_toml = member_dir / "chartbook.toml"
+            if not member_toml.is_file():
+                if is_glob:
+                    continue  # not a chartbook project; globs just pass it by
+                raise ValueError(
+                    f"{source}: pipelines.members entry {pattern!r} has no "
+                    f"chartbook.toml (looked in {member_dir}).\n"
+                    f"To fix, do one of:\n"
+                    f"  - create a chartbook.toml there (an empty file is a valid pipeline)\n"
+                    f"  - remove {pattern!r} from pipelines.members"
+                )
+
+            with open(member_toml, "rb") as f:
+                member_raw = tomli.load(f)
+
+            if detect_v1_format(member_raw):
+                raise ValueError(
+                    f"{source}: catalog member {member_dir} uses the old v1 "
+                    f"chartbook.toml format.\n"
+                    f"To fix, do one of:\n"
+                    f"  - migrate it: python scripts/migrate_toml_v2.py {member_dir}\n"
+                    f"    (script lives in the chartbook repo)\n"
+                    f"  - exclude it from this catalog: add "
+                    f"\"{pattern if not is_glob else member_dir}\" to pipelines.exclude"
+                )
+
+            member_type = resolve_project_type(member_raw, source=str(member_toml))
+            if member_type != "pipeline":
+                if is_glob:
+                    continue  # catalogs matched by a glob are just skipped
+                raise ValueError(
+                    f"{source}: pipelines.members entry {pattern!r} points at "
+                    f"{member_dir}, which is a catalog, not a pipeline.\n"
+                    f"To fix: remove it from pipelines.members (catalogs cannot "
+                    f"nest inside catalogs)."
+                )
+
+            member_id = derive_pipeline_id(member_raw.get("project", {}), member_dir)
+            member_source = f"members pattern {pattern!r}"
+
+            if member_id in discovered:
+                other = discovered[member_id]
+                raise ValueError(
+                    f"{source}: two catalog members resolve to the same pipeline "
+                    f"ID {member_id!r}:\n"
+                    f"  - {other['path']} (from {other['_member_source']})\n"
+                    f"  - {member_dir} (from {member_source})\n"
+                    f"To fix, do one of:\n"
+                    f"  - give one repo a distinct explicit ID in its own "
+                    f"chartbook.toml:  [project] id = \"myscope/{member_id.rsplit('/', 1)[-1]}\"\n"
+                    f"  - exclude one path in this catalog:  [pipelines] "
+                    f"exclude = [\"{member_dir}\"]"
+                )
+            if member_id in explicit_entries:
+                raise ValueError(
+                    f"{source}: catalog member {member_dir} (from {member_source}) "
+                    f"derives the ID {member_id!r}, which is already declared as an "
+                    f"explicit [pipelines] entry pointing elsewhere.\n"
+                    f"To fix, do one of:\n"
+                    f"  - point the explicit entry at this directory (then the "
+                    f"explicit entry wins)\n"
+                    f"  - exclude this path:  [pipelines] exclude = [\"{member_dir}\"]\n"
+                    f"  - give the repo a distinct ID in its own chartbook.toml"
+                )
+
+            try:
+                rel_path = os.path.relpath(member_dir, catalog_dir)
+            except ValueError:
+                rel_path = str(member_dir)
+            discovered[member_id] = {"path": rel_path, "_member_source": member_source}
+
+    return discovered
+
+
+def _apply_disabled_list(entries: dict, disabled_ids: list, source: str) -> None:
+    """Remove entries named in pipelines.disabled, warning on unknown IDs."""
+    for disabled_id in disabled_ids:
+        if disabled_id in entries:
+            del entries[disabled_id]
+        else:
+            suggestion = difflib.get_close_matches(disabled_id, entries.keys(), n=1)
+            hint = f" Did you mean {suggestion[0]!r}?" if suggestion else ""
+            warnings.warn(
+                f"{source}: pipelines.disabled entry {disabled_id!r} does not "
+                f"match any pipeline in this catalog.{hint}",
+                UserWarning,
+                stacklevel=2,
+            )
+
+
 def _load_catalog_manifest(raw_manifest):
     """Process a raw catalog manifest, loading each registered pipeline.
+
+    The [pipelines] table holds explicit entries (keyed by pipeline ID, with
+    a plain string as shorthand for {path = ...}) plus the reserved keys
+    ``members`` (path patterns to auto-discover), ``exclude`` (paths to skip
+    during discovery), and ``disabled`` (pipeline IDs to drop).
 
     :param raw_manifest: The raw manifest dictionary loaded from chartbook.toml
         (with ``base_dir`` already attached).
@@ -514,15 +707,40 @@ def _load_catalog_manifest(raw_manifest):
     manifest["project"] = _resolve_project(raw_manifest, base_dir, "catalog")
     manifest["project"]["_resolved_site_dir"] = None
     manifest["policy"] = _resolve_policy(raw_manifest, source)
-    manifest.setdefault("pipelines", {})
 
-    all_pipelines = list(manifest["pipelines"].keys())
-    for pipeline_id in all_pipelines:
-        validate_pipeline_id(pipeline_id)
-        pipeline_entry = manifest["pipelines"][pipeline_id]
-        if pipeline_entry.get("disabled", False):
-            del manifest["pipelines"][pipeline_id]
+    pipelines_raw = manifest.get("pipelines") or {}
+    members = pipelines_raw.get("members")
+    exclude = pipelines_raw.get("exclude", [])
+    disabled_ids = pipelines_raw.get("disabled", [])
+    if members is not None:
+        members = _require_string_list(members, "members", source)
+    exclude = _require_string_list(exclude, "exclude", source)
+    disabled_ids = _require_string_list(disabled_ids, "disabled", source)
+
+    # Explicit entries; a plain string value is shorthand for {path = ...}
+    entries = {}
+    for pipeline_id, entry in pipelines_raw.items():
+        if pipeline_id in RESERVED_PIPELINES_KEYS:
             continue
+        validate_pipeline_id(pipeline_id)
+        if isinstance(entry, str):
+            entry = {"path": entry}
+        entries[pipeline_id] = dict(entry)
+
+    # Auto-discovered members join the explicit entries
+    if members is not None:
+        entries.update(
+            _discover_member_pipelines(members, exclude, entries, base_dir, source)
+        )
+
+    # Drop disabled pipelines: per-entry flags first, then the ID list
+    for pipeline_id in [k for k, v in entries.items() if v.get("disabled", False)]:
+        del entries[pipeline_id]
+    _apply_disabled_list(entries, disabled_ids, source)
+
+    manifest["pipelines"] = {}
+    for pipeline_id in entries:
+        pipeline_entry = entries[pipeline_id]
         path_to_pipeline = pipeline_entry.get("path")
         if path_to_pipeline is None:
             raise ValueError(
@@ -536,7 +754,8 @@ def _load_catalog_manifest(raw_manifest):
         if sub_manifest["project"]["type"] != "pipeline":
             raise ValueError(
                 f"{source}: [pipelines.\"{pipeline_id}\"] points at "
-                f"{pipeline_base_dir}, which is a catalog, not a pipeline."
+                f"{pipeline_base_dir}, which is a catalog, not a pipeline.\n"
+                f"To fix: remove the entry (catalogs cannot nest inside catalogs)."
             )
         # The catalog key is the authoritative identity within this catalog.
         sub_manifest["project"]["id"] = pipeline_id

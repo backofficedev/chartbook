@@ -48,6 +48,33 @@ $ chartbook catalog add ../crsp_treasury
 
 See {doc}`../cli-reference` for the full command reference and {doc}`concepts` for how scoped identities work.
 
+## Auto-Discovery with `members`
+
+For a local catalog, you can skip explicit entries entirely: declare membership as path patterns, and any pipeline dropped into a matched directory joins the catalog automatically —
+
+```toml
+[pipelines]
+members = [
+    "../GitRepositories/ftsfr_repos/*",
+    "../GitRepositories/finm33200/news_headlines",
+]
+disabled = ["ftsfr/sovereign_bonds"]
+```
+
+How it behaves:
+
+- Patterns resolve relative to the catalog directory; a plain path is just a glob that matches one thing. Each matched directory holding a pipeline `chartbook.toml` joins under its **derived** scoped ID.
+- Glob matches are forgiving: non-pipeline directories and other catalogs are skipped silently, and the catalog never discovers itself. A *literal* member path that is missing or broken is a hard error — you named it explicitly.
+- v1-format members and two members deriving the same ID are hard errors, with "To fix" suggestions (migrate the file, exclude a path, or give one repo an explicit `[project] id`).
+- `disabled` lists pipeline IDs to switch off — member-discovered pipelines have no entry to flag, so `chartbook catalog disable <id>` maintains this list for them. Unknown IDs warn with a did-you-mean suggestion.
+- `exclude = [...]` removes paths from matching before anything else.
+- Explicit entries coexist with `members`; an explicit entry pointing at a directory a pattern matched **wins**, which is how you rename a pipeline within your catalog.
+- `members`, `exclude`, and `disabled` are reserved keys in `[pipelines]` and cannot be used as bare pipeline IDs.
+
+`chartbook catalog add` on a path already covered by a pattern reports the coverage instead of adding a redundant entry.
+
+Auto-discovery is designed for the **local** catalog, where "everything in this directory is mine" is exactly right. Publishing to a shared or public catalog should remain an explicit act with explicit entries.
+
 ## Platform-Specific Paths
 
 When a pipeline lives at different locations on different operating systems, give `path` as a table with `unix` and `windows` keys:

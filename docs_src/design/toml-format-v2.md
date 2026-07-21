@@ -243,10 +243,74 @@ path = { unix = "/Users/jbejarano/GitRepositories/finm33200/news_headlines", win
 
 Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table for
 platform-specific locations — renamed from v1 `path_to_pipeline` with
-capitalized `Unix`/`Windows` keys) and `disabled` (bool, default false).
+capitalized `Unix`/`Windows` keys) and `disabled` (bool, default false). A
+plain string value is shorthand for `{ path = ... }`:
+
+```toml
+[pipelines]
+"ftsfr/crsp_treasury" = "../crsp_treasury"
+```
 
 `chartbook catalog add <dir>` reads the target's git remote and writes the
 scoped key automatically, falling back to the bare directory name.
+
+### Catalog auto-discovery: `members`
+
+*(Addendum, 2026-07-21.)* For a **local** catalog, membership can be
+declared as path patterns instead of one entry per pipeline, so new projects
+join automatically. Publishing to a shared/public catalog remains an
+explicit act — this mechanism deliberately targets the personal catalog,
+which is why implicit membership and filesystem-dependent loading are
+features here rather than liabilities.
+
+```toml
+[pipelines]
+members = [
+    "../GitRepositories/ftsfr_repos/*",
+    "../GitRepositories/finm33200/news_headlines",
+]
+exclude = ["../GitRepositories/ftsfr_repos/scratch_*"]
+disabled = ["ftsfr/sovereign_bonds"]
+```
+
+`members`, `exclude`, and `disabled` are reserved keys inside `[pipelines]`
+(a pipeline cannot use them as a bare ID); explicit entries coexist freely
+with them. Semantics:
+
+- **`members`** — path patterns, glob or literal, resolved relative to the
+  catalog directory. Each matched directory holding a v2 pipeline
+  `chartbook.toml` joins the catalog under its *derived* scoped ID (the
+  pipeline's own explicit `id` wins, then git remote + dirname). A plain
+  path is just a glob that matches one thing.
+- **Glob matches are forgiving**: directories without a `chartbook.toml`
+  and catalog-type manifests are silently skipped (dropping a stray
+  checkout next to your pipelines must not break the catalog). The catalog
+  never discovers itself.
+- **Literal (non-glob) member paths are strict**: a missing directory,
+  missing manifest, or catalog-type target is a hard error — you named it,
+  so it being broken is news.
+- **v1-format members are always a hard error**, glob or not, with the
+  migration command in the message — silently skipping a real pipeline
+  would be a mystery; erroring with the fix is not.
+- **ID collisions are hard errors**: two members deriving the same ID, or a
+  member colliding with an explicit entry that points elsewhere, abort the
+  load listing both paths and the fixes (set an explicit `[project] id` in
+  one repo, or `exclude` one path). An explicit entry pointing at the
+  *same* directory a member matched simply wins (that's the rename/override
+  mechanism).
+- **`disabled`** — a list of pipeline IDs, complementing the per-entry
+  `disabled = true` flag; member-discovered pipelines have no entry to
+  flag, so the list is how they're switched off. Unknown IDs warn with a
+  did-you-mean suggestion. `chartbook catalog disable/enable` edits the
+  flag for explicit entries and the list for member-discovered ones.
+- **`exclude`** — path patterns removed from member matching before any of
+  the above; excluding a nonexistent path is harmless.
+- All such errors are formatted with a "To fix, do one of:" section listing
+  concrete commands/edits, and the CLI surfaces them as clean messages, not
+  tracebacks.
+
+`chartbook catalog add` on a path already covered by a members pattern
+reports the coverage instead of writing a redundant explicit entry.
 
 ### Catalog policy
 

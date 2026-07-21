@@ -218,6 +218,19 @@ platform-specific locations) and `disabled` (bool, default false).
 `chartbook catalog add <dir>` reads the target's git remote and writes the
 scoped key automatically, falling back to the bare directory name.
 
+### Catalog Auto-Discovery
+
+Local catalogs can declare membership as path patterns instead of explicit entries; matched directories with a pipeline `chartbook.toml` join under their derived scoped IDs:
+
+```toml
+[pipelines]
+members = ["../my_repos/*"]
+disabled = ["scope/some_pipeline"]   # switch members off by ID
+exclude = ["../my_repos/scratch_*"]  # optional
+```
+
+`members`, `exclude`, and `disabled` are reserved keys (not usable as pipeline IDs). Globs skip non-pipeline directories silently; literal broken paths, v1-format members, and duplicate derived IDs are hard errors with fix suggestions. Explicit entries coexist and win over a member pointing at the same directory. A plain string entry value is shorthand for `{ path = ... }`.
+
 ### Catalog Policy
 
 The format itself is permissive; **requiredness is catalog policy**. A catalog

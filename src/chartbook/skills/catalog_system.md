@@ -92,6 +92,30 @@ disabled = true
 path = { unix = "/data/pipelines/news_headlines", windows = "T:/pipelines/news_headlines" }
 ```
 
+### Auto-Discovery with `members` (local catalogs)
+
+Instead of explicit entries, a catalog's `[pipelines]` table can declare membership as path patterns — new pipelines dropped into a matched directory join automatically:
+
+```toml
+[pipelines]
+members = [
+    "../GitRepositories/ftsfr_repos/*",
+    "../GitRepositories/finm33200/news_headlines",
+]
+disabled = ["ftsfr/sovereign_bonds"]    # switch member pipelines off by ID
+exclude = ["../GitRepositories/ftsfr_repos/scratch_*"]   # optional
+```
+
+Rules:
+- Patterns resolve relative to the catalog directory; matched directories with a pipeline `chartbook.toml` join under their **derived** scoped ID.
+- Glob matches skip non-pipeline directories and catalogs silently (the catalog never discovers itself); a *literal* member path that is missing/broken is a hard error.
+- v1-format members and duplicate derived IDs are hard errors with "To fix" suggestions.
+- Explicit entries coexist with `members`; one pointing at the same directory a pattern matched wins (rename mechanism).
+- `members`, `exclude`, `disabled` are reserved keys — not usable as bare pipeline IDs.
+- `catalog add` on a covered path reports "already covered by pipelines.members pattern" instead of adding an entry.
+
+Auto-discovery targets the **local** catalog; publishing to shared catalogs should stay explicit.
+
 ### Disable / Enable Pipelines
 
 ```bash
@@ -99,7 +123,7 @@ chartbook catalog disable ftsfr/crsp_treasury [--catalog PATH]
 chartbook catalog enable ftsfr/crsp_treasury [--catalog PATH]
 ```
 
-Sets or clears `disabled = true` on a pipeline entry. Disabled pipelines remain in the TOML file but are skipped during builds and excluded from queries. Pipeline IDs may be given bare (`crsp_treasury`) when unambiguous, or scoped (`ftsfr/crsp_treasury`).
+For explicit entries, sets or clears `disabled = true` on the entry; for member-discovered pipelines, maintains the `pipelines.disabled` ID list. Disabled pipelines remain in the TOML file but are skipped during builds and excluded from queries.
 
 ### Catalog Policy (Required Fields)
 

@@ -472,3 +472,159 @@ class TestLoadManifestValidationErrors:
         """Explicit pipeline type plus [pipelines] registry is a hard error."""
         with pytest.raises(ValueError, match="cannot contain a catalog registry"):
             load_manifest(invalid_project_type_conflict)
+
+
+class TestCatalogMembers:
+    """Tests for [pipelines] members auto-discovery, exclude, and disabled."""
+
+    @staticmethod
+    def _make_pipeline(root, dirname, project=None):
+        d = root / dirname
+        d.mkdir(parents=True)
+        with open(d / "chartbook.toml", "wb") as f:
+            tomli_w.dump({"project": project or {}}, f)
+        return d
+
+    @staticmethod
+    def _make_catalog(root, pipelines_table):
+        d = root / "catalog"
+        d.mkdir(parents=True, exist_ok=True)
+        with open(d / "chartbook.toml", "wb") as f:
+            tomli_w.dump(
+                {"project": {"type": "catalog", "name": "C"}, "pipelines": pipelines_table},
+                f,
+            )
+        return d
+
+    def test_glob_members_discovered(self, tmp_path):
+        self._make_pipeline(tmp_path / "repos", "alpha")
+        self._make_pipeline(tmp_path / "repos", "beta")
+        catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
+
+        manifest = load_manifest(catalog)
+        assert sorted(manifest["pipelines"]) == ["alpha", "beta"]
+
+    def test_glob_skips_non_pipeline_dirs_and_catalogs(self, tmp_path):
+        self._make_pipeline(tmp_path / "repos", "alpha")
+        (tmp_path / "repos" / "not_a_pipeline").mkdir(parents=True)
+        other_catalog = tmp_path / "repos" / "other_catalog"
+        other_catalog.mkdir()
+        with open(other_catalog / "chartbook.toml", "wb") as f:
+            tomli_w.dump({"project": {"type": "catalog"}, "pipelines": {}}, f)
+        catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
+
+        manifest = load_manifest(catalog)
+        assert list(manifest["pipelines"]) == ["alpha"]
+
+    def test_member_uses_explicit_id_from_pipeline(self, tmp_path):
+        self._make_pipeline(
+            tmp_path / "repos", "alpha", project={"id": "myscope/alpha"}
+        )
+        catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
+
+        manifest = load_manifest(catalog)
+        assert list(manifest["pipelines"]) == ["myscope/alpha"]
+        assert manifest["pipelines"]["myscope/alpha"]["project"]["id"] == "myscope/alpha"
+
+    def test_exclude_removes_member(self, tmp_path):
+        self._make_pipeline(tmp_path / "repos", "alpha")
+        self._make_pipeline(tmp_path / "repos", "beta")
+        catalog = self._make_catalog(
+            tmp_path, {"members": ["../repos/*"], "exclude": ["../repos/beta"]}
+        )
+
+        manifest = load_manifest(catalog)
+        assert list(manifest["pipelines"]) == ["alpha"]
+
+    def test_disabled_list_removes_member(self, tmp_path):
+        self._make_pipeline(tmp_path / "repos", "alpha")
+        self._make_pipeline(tmp_path / "repos", "beta")
+        catalog = self._make_catalog(
+            tmp_path, {"members": ["../repos/*"], "disabled": ["beta"]}
+        )
+
+        manifest = load_manifest(catalog)
+        assert list(manifest["pipelines"]) == ["alpha"]
+
+    def test_disabled_unknown_id_warns_with_suggestion(self, tmp_path):
+        self._make_pipeline(tmp_path / "repos", "alpha")
+        catalog = self._make_catalog(
+            tmp_path, {"members": ["../repos/*"], "disabled": ["alpah"]}
+        )
+
+        with pytest.warns(UserWarning, match="'alpah'.*'alpha'"):
+            manifest = load_manifest(catalog)
+        assert list(manifest["pipelines"]) == ["alpha"]
+
+    def test_string_shorthand_entry(self, tmp_path):
+        alpha = self._make_pipeline(tmp_path / "repos", "alpha")
+        catalog = self._make_catalog(tmp_path, {"alpha": str(alpha)})
+
+        manifest = load_manifest(catalog)
+        assert list(manifest["pipelines"]) == ["alpha"]
+
+    def test_explicit_entry_coexists_with_members(self, tmp_path):
+        self._make_pipeline(tmp_path / "repos", "alpha")
+        gamma = self._make_pipeline(tmp_path / "elsewhere", "gamma")
+        catalog = self._make_catalog(
+            tmp_path, {"members": ["../repos/*"], "gamma": str(gamma)}
+        )
+
+        manifest = load_manifest(catalog)
+        assert sorted(manifest["pipelines"]) == ["alpha", "gamma"]
+
+    def test_explicit_entry_overrides_member_for_same_dir(self, tmp_path):
+        alpha = self._make_pipeline(tmp_path / "repos", "alpha")
+        catalog = self._make_catalog(
+            tmp_path, {"members": ["../repos/*"], "renamed/alpha": str(alpha)}
+        )
+
+        manifest = load_manifest(catalog)
+        assert list(manifest["pipelines"]) == ["renamed/alpha"]
+
+    def test_duplicate_derived_id_is_hard_error(self, tmp_path):
+        self._make_pipeline(tmp_path / "repos_a", "alpha")
+        self._make_pipeline(tmp_path / "repos_b", "alpha")
+        catalog = self._make_catalog(
+            tmp_path, {"members": ["../repos_a/*", "../repos_b/*"]}
+        )
+
+        with pytest.raises(ValueError, match=r"(?s)same pipeline ID 'alpha'.*To fix"):
+            load_manifest(catalog)
+
+    def test_explicit_member_path_missing_is_hard_error(self, tmp_path):
+        catalog = self._make_catalog(tmp_path, {"members": ["../does_not_exist"]})
+
+        with pytest.raises(ValueError, match=r"(?s)does not exist.*To fix"):
+            load_manifest(catalog)
+
+    def test_v1_member_is_hard_error_with_migrate_hint(self, tmp_path):
+        d = tmp_path / "repos" / "old_style"
+        d.mkdir(parents=True)
+        with open(d / "chartbook.toml", "wb") as f:
+            tomli_w.dump({"config": {"type": "pipeline"}}, f)
+        catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
+
+        with pytest.raises(ValueError, match=r"(?s)v1.*migrate_toml_v2"):
+            load_manifest(catalog)
+
+    def test_glob_matching_nothing_warns(self, tmp_path):
+        (tmp_path / "repos").mkdir()
+        catalog = self._make_catalog(tmp_path, {"members": ["../repos/*"]})
+
+        with pytest.warns(UserWarning, match="matched no directories"):
+            manifest = load_manifest(catalog)
+        assert manifest["pipelines"] == {}
+
+    def test_members_must_be_string_list(self, tmp_path):
+        catalog = self._make_catalog(tmp_path, {"members": "../repos/*"})
+
+        with pytest.raises(ValueError, match="must be an array of strings"):
+            load_manifest(catalog)
+
+    def test_catalog_does_not_discover_itself(self, tmp_path):
+        self._make_pipeline(tmp_path, "alpha")
+        catalog = self._make_catalog(tmp_path, {"members": ["../*"]})
+
+        manifest = load_manifest(catalog)
+        assert list(manifest["pipelines"]) == ["alpha"]

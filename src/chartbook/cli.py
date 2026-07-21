@@ -161,18 +161,22 @@ def build(
     # Store whether we need to remove existing directory after successful generation
     should_remove_existing = output_dir.exists() and force_write
 
-    generate_docs(
-        output_dir=output_dir,
-        project_dir=project_dir,
-        publish_dir=publish_dir,
-        _docs_dir=docs_build_dir,
-        temp_docs_src_dir=temp_docs_src_dir,
-        keep_build_dirs=keep_build_dirs,
-        should_remove_existing=should_remove_existing,
-        size_threshold=size_threshold,
-        strict=strict,
-        strip_mathjax2=strip_mathjax2,
-    )
+    try:
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=project_dir,
+            publish_dir=publish_dir,
+            _docs_dir=docs_build_dir,
+            temp_docs_src_dir=temp_docs_src_dir,
+            keep_build_dirs=keep_build_dirs,
+            should_remove_existing=should_remove_existing,
+            size_threshold=size_threshold,
+            strict=strict,
+            strip_mathjax2=strip_mathjax2,
+        )
+    except (ValueError, FileNotFoundError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
     click.echo(f"Successfully generated documentation in {output_dir}")
 
 
@@ -381,7 +385,11 @@ def _load_catalog_for_cli(catalog_path=None):
     except CatalogNotConfiguredError:
         resolved = _prompt_catalog_init()
 
-    manifest = load_manifest(base_dir=resolved.parent)
+    try:
+        manifest = load_manifest(base_dir=resolved.parent)
+    except (ValueError, FileNotFoundError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
     return manifest, resolved
 
 
@@ -604,10 +612,14 @@ def _get_existing_absolute_paths(raw_catalog, catalog_dir):
     :returns: A dict mapping absolute paths to their catalog keys.
     :rtype: dict
     """
-    from chartbook.manifest import resolve_platform_path
+    from chartbook.manifest import RESERVED_PIPELINES_KEYS, resolve_platform_path
 
     result = {}
     for key, entry in raw_catalog.get("pipelines", {}).items():
+        if key in RESERVED_PIPELINES_KEYS:
+            continue
+        if isinstance(entry, str):
+            entry = {"path": entry}
         pipeline_path = entry.get("path")
         if pipeline_path is None:
             continue
@@ -618,6 +630,26 @@ def _get_existing_absolute_paths(raw_catalog, catalog_dir):
         abs_path = (catalog_dir / resolved).resolve()
         result[abs_path] = key
     return result
+
+
+def _get_members_covered_paths(raw_catalog, catalog_dir):
+    """Map absolute paths already covered by pipelines.members patterns.
+
+    :returns: Dict of absolute path -> the members pattern that covers it.
+    :rtype: dict
+    """
+    import glob as glob_mod
+
+    covered = {}
+    members = raw_catalog.get("pipelines", {}).get("members", [])
+    if not isinstance(members, list):
+        return covered
+    for pattern in members:
+        if not isinstance(pattern, str):
+            continue
+        for match in glob_mod.glob(str(catalog_dir / pattern)):
+            covered[Path(match).resolve()] = pattern
+    return covered
 
 
 def _prompt_catalog_init():
@@ -755,6 +787,7 @@ def catalog_add(paths, catalog_path, yes):
 
     # Get existing absolute paths for duplicate detection
     existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_dir)
+    members_covered = _get_members_covered_paths(raw_catalog, catalog_dir)
     existing_keys = set(raw_catalog.get("pipelines", {}).keys())
     reenabled = 0
 
@@ -837,6 +870,14 @@ def catalog_add(paths, catalog_path, yes):
                     err=True,
                 )
                 raise SystemExit(1)
+
+        # Paths already matched by a members pattern need no explicit entry
+        if d in members_covered:
+            click.echo(
+                f"  Already covered by pipelines.members pattern "
+                f"'{members_covered[d]}': {d.name}/"
+            )
+            continue
 
         # Check for duplicates — re-enable if disabled
         if d in existing_abs:
@@ -927,24 +968,45 @@ def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
     :param disabled: Whether to disable (True) or enable (False) the pipeline.
     :type disabled: bool
     """
-    import tomli
     import tomli_w
+
+    from chartbook.manifest import RESERVED_PIPELINES_KEYS
 
     catalog_toml = _resolve_catalog_toml_path(catalog_path)
     raw_catalog = _load_raw_catalog(catalog_toml)
 
     pipelines = raw_catalog.get("pipelines", {})
-    if pipeline_id not in pipelines:
+    has_members = isinstance(pipelines.get("members"), list)
+
+    if pipeline_id in pipelines and pipeline_id not in RESERVED_PIPELINES_KEYS:
+        # Explicit entry: toggle its disabled flag (string shorthand becomes
+        # a table when the flag is set)
+        entry = pipelines[pipeline_id]
+        if isinstance(entry, str):
+            entry = {"path": entry}
+            pipelines[pipeline_id] = entry
+        if disabled:
+            entry["disabled"] = True
+        else:
+            entry.pop("disabled", None)
+    elif has_members:
+        # Member-discovered pipelines are toggled via the pipelines.disabled
+        # ID list
+        disabled_list = pipelines.setdefault("disabled", [])
+        if disabled and pipeline_id not in disabled_list:
+            disabled_list.append(pipeline_id)
+        elif not disabled and pipeline_id in disabled_list:
+            disabled_list.remove(pipeline_id)
+        if not disabled_list:
+            pipelines.pop("disabled", None)
+    else:
         click.echo(f"Error: Pipeline '{pipeline_id}' not found in catalog.", err=True)
         click.echo("", err=True)
-        available = ", ".join(sorted(pipelines.keys())) or "(none)"
+        available = ", ".join(
+            sorted(k for k in pipelines if k not in RESERVED_PIPELINES_KEYS)
+        ) or "(none)"
         click.echo(f"Available pipelines: {available}", err=True)
         raise SystemExit(1)
-
-    if disabled:
-        pipelines[pipeline_id]["disabled"] = True
-    else:
-        pipelines[pipeline_id].pop("disabled", None)
 
     with open(catalog_toml, "wb") as f:
         tomli_w.dump(raw_catalog, f)
@@ -1098,7 +1160,7 @@ def data_get_path(pipeline, dataframe, catalog):
         click.echo("", err=True)
         click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
-    except KeyError as e:
+    except (KeyError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
@@ -1124,7 +1186,7 @@ def data_get_docs(pipeline, dataframe, catalog):
         click.echo("", err=True)
         click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
-    except KeyError as e:
+    except (KeyError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
     except FileNotFoundError as e:
@@ -1153,7 +1215,7 @@ def data_get_docs_path(pipeline, dataframe, catalog):
         click.echo("", err=True)
         click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
-    except KeyError as e:
+    except (KeyError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 

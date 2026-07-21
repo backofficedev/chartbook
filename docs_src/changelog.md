@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — catalog auto-discovery (`pipelines.members`)
+
+A catalog's `[pipelines]` table now accepts reserved keys for glob-based membership, aimed at local catalogs so new projects join without `catalog add`:
+
+- `members = ["../my_repos/*", ...]` — path patterns (relative to the catalog) whose matched directories join under their derived scoped IDs. Globs skip non-pipeline directories and catalogs silently; literal paths that are broken, v1-format members, and duplicate derived IDs are hard errors with "To fix" suggestions.
+- `disabled = ["scope/name", ...]` — switch member pipelines off by ID (unknown IDs warn with a did-you-mean); `chartbook catalog disable/enable` maintains this list for member-discovered pipelines.
+- `exclude = [...]` — paths removed from matching.
+- Explicit entries coexist and override members pointing at the same directory; a plain string entry value is now shorthand for `{ path = ... }`.
+- `chartbook catalog add` recognizes paths already covered by a members pattern, and manifest-loading errors in `build`/`ls`/`data` commands now print as clean messages instead of tracebacks.
+
 ### Changed — **breaking: chartbook.toml format v2**
 
 The manifest format was redesigned; v1 files are no longer supported. Run `python scripts/migrate_toml_v2.py <project>` to rewrite a v1 file. The full specification and the reasoning behind each decision are in the {doc}`design doc <design/toml-format-v2>`.

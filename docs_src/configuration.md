@@ -124,7 +124,28 @@ disabled = true                    # kept but skipped during builds
 path = { unix = "/data/pipelines/news_headlines", windows = "T:/pipelines/news_headlines" }
 ```
 
-Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table) and `disabled` (bool). `chartbook catalog add <dir>` writes the scoped key for you, derived from the target's git remote.
+Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table) and `disabled` (bool). A plain string value is shorthand for the path. `chartbook catalog add <dir>` writes the scoped key for you, derived from the target's git remote.
+
+### Auto-discovery with `members`
+
+For a local catalog, skip per-pipeline entries entirely and declare membership as path patterns — new projects dropped into a matched directory join the catalog automatically:
+
+```toml
+[project]
+name = "My Catalog"
+
+[pipelines]
+members = [
+    "../GitRepositories/ftsfr_repos/*",
+    "../GitRepositories/finm33200/news_headlines",
+]
+disabled = ["ftsfr/sovereign_bonds"]   # switch members off by ID
+exclude = ["../GitRepositories/ftsfr_repos/scratch_*"]   # optional
+```
+
+Each matched directory containing a pipeline `chartbook.toml` joins under its derived scoped ID. Glob matches skip non-pipeline directories and catalogs silently; a *literal* member path that's broken is a hard error, as are v1-format members and two members deriving the same ID — all errors explain how to fix them. Explicit entries coexist with `members` and win when they point at the same directory (useful to rename a pipeline in your catalog). `members`, `exclude`, and `disabled` are reserved keys and can't be used as bare pipeline IDs.
+
+This is designed for the **local** catalog — publishing to a shared catalog should stay an explicit act.
 
 ## `[policy]` — Catalog Requiredness
 
