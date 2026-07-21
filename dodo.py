@@ -246,7 +246,7 @@ def task_test():
     junit_path = TEST_RESULTS_DIR / "junit.xml"
     return {
         "actions": [_run_tests("hatch test -v", junit_path)],
-        "file_dep": src_files + test_files,
+        "file_dep": src_files + test_files + [PROJECT_ROOT / "pyproject.toml"],
         "targets": [junit_path],
         "clean": True,
         "verbosity": 2,
@@ -254,13 +254,13 @@ def task_test():
 
 
 def task_test_all():
-    """Run tests on all Python versions (matrix: 3.10-3.13)."""
+    """Run tests on all Python versions and the Sphinx matrix (see pyproject)."""
     src_files = list(SRC_DIR.rglob("*.py"))
     test_files = list((PROJECT_ROOT / "tests").rglob("*.py"))
     junit_path = TEST_RESULTS_DIR / "junit-all.xml"
     return {
         "actions": [_run_tests("hatch test --all -v", junit_path)],
-        "file_dep": src_files + test_files,
+        "file_dep": src_files + test_files + [PROJECT_ROOT / "pyproject.toml"],
         "targets": [junit_path],
         "clean": True,
         "verbosity": 2,

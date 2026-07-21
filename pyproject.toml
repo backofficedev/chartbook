@@ -55,7 +55,9 @@ sphinx = [
     "myst-parser>=2.0.0",
     "pandas>=2.1.4",
     "pydata-sphinx-theme>=0.15.4",
-    "Sphinx>=7.2.6,<9.0",
+    # Cap tracks the newest Sphinx major verified by the hatch-test sphinx
+    # matrix below; raise it only after a green matrix run on the new major.
+    "Sphinx>=7.2.6,<10",
     "sphinx-autodoc2>=0.5.0",
     "sphinx-book-theme>=1.1.3",
     "sphinx-copybutton>=0.5.2",
@@ -138,6 +140,20 @@ extra-dependencies = [
 
 [[tool.hatch.envs.hatch-test.matrix]]
 python = ["3.10", "3.11", "3.12", "3.13"]
+
+# Sphinx-version coverage. The python matrix above already spreads the upper
+# range at resolver level (3.10 -> Sphinx 8.1, 3.11 -> 8.2, 3.12/3.13 -> 9.x);
+# these envs pin the 7.x floor era and the 8.2 stack explicitly so every
+# supported Sphinx major stays tested as new majors ship.
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.13"]
+sphinx = ["sphinx7", "sphinx8"]
+
+[tool.hatch.envs.hatch-test.overrides]
+matrix.sphinx.extra-dependencies = [
+    { value = "sphinx~=7.4", if = ["sphinx7"] },
+    { value = "sphinx~=8.2", if = ["sphinx8"] },
+]
 
 [tool.hatch.envs.default]
 # Default environment includes dev dependencies
