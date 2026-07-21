@@ -323,6 +323,19 @@ disabled = true                     # Temporarily excluded from builds
 path = { unix = "/data/pipelines/monthly", windows = "T:/pipelines/monthly" }
 ```
 
+### Catalog Auto-Discovery (members)
+
+For local catalogs, membership can be declared as path patterns instead of explicit entries; matched directories holding a pipeline `chartbook.toml` join under their derived scoped IDs:
+
+```toml
+[pipelines]
+members = ["../my_repos/*"]
+disabled = ["acme/some_pipeline"]   # switch members off by ID
+exclude = ["../my_repos/scratch_*"] # optional
+```
+
+`members`, `exclude`, and `disabled` are reserved keys (not usable as pipeline IDs). Globs skip non-pipeline directories and catalogs silently; literal broken paths, v1-format members, and duplicate derived IDs are hard errors with fix suggestions. Explicit entries coexist and win over a member at the same directory; a plain string entry value is shorthand for `{path = ...}`. Designed for the local catalog — shared catalogs should use explicit entries.
+
 ### [policy] - Catalog Policy
 
 The format is permissive; requiredness is catalog policy. A catalog may declare which fields its member pipelines must fill in:

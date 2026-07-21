@@ -302,9 +302,11 @@ chartbook catalog add [OPTIONS] PATHS...
 The command will:
 1. Verify each path contains a valid pipeline `chartbook.toml`
 2. Derive the scoped catalog key from the pipeline's git remote and directory name
-3. Check for duplicates against existing catalog entries (comparing resolved absolute paths)
+3. Check for duplicates against existing catalog entries (comparing resolved absolute paths) and against `pipelines.members` patterns — paths already covered by a members pattern are reported instead of added
 4. Prompt for confirmation when adding multiple pipelines (unless `-y` is used)
 5. Store paths relative to the catalog directory
+
+If your catalog uses `pipelines.members` auto-discovery (see {doc}`user-guide/catalog-projects`), you rarely need this command at all — dropping a pipeline into a matched directory registers it.
 
 **Examples:**
 

@@ -92,6 +92,14 @@ path = "../pipelines/sales"
 path = { unix = "/data/pipelines/monthly", windows = "T:/pipelines/monthly" }
 ```
 
+Local catalogs can auto-discover members with path patterns instead of explicit entries (`members`, `exclude`, and `disabled` are reserved keys in `[pipelines]`):
+
+```toml
+[pipelines]
+members = ["../my_repos/*"]
+disabled = ["acme/some_pipeline"]
+```
+
 ## Configuration Reference
 
 ### [project] - Project Metadata (all keys optional)
