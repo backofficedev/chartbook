@@ -36,7 +36,7 @@ class TestManifestToGeneratorPipelineWorkflow:
 
         # Step 1: Read and verify manifest
         manifest = load_manifest(Path("."))
-        assert manifest["config"]["type"] == "pipeline"
+        assert manifest["project"]["type"] == "pipeline"
         assert "dataframes" in manifest
         assert "charts" in manifest
 
@@ -79,7 +79,7 @@ class TestManifestToGeneratorCatalogWorkflow:
     def test_catalog_manifest_reading(self, catalog_project):
         """Test that catalog manifest is read and processed correctly."""
         manifest = load_manifest(catalog_project)
-        assert manifest["config"]["type"] == "catalog"
+        assert manifest["project"]["type"] == "catalog"
 
         pipeline_ids = get_pipeline_ids(manifest)
         assert len(pipeline_ids) == 2
@@ -89,14 +89,14 @@ class TestManifestToGeneratorCatalogWorkflow:
         # Verify each pipeline has full manifest
         for pid in pipeline_ids:
             pipeline_manifest = get_pipeline_manifest(manifest, pid)
-            assert pipeline_manifest["config"]["type"] == "pipeline"
+            assert pipeline_manifest["project"]["type"] == "pipeline"
             assert "dataframes" in pipeline_manifest
             assert "charts" in pipeline_manifest
 
     def test_catalog_platform_paths_resolution(self, catalog_project_platform_paths):
         """Test catalog with platform-specific path dictionaries."""
         manifest = load_manifest(catalog_project_platform_paths)
-        assert manifest["config"]["type"] == "catalog"
+        assert manifest["project"]["type"] == "catalog"
 
         # Both pipelines should be accessible
         pipeline_ids = get_pipeline_ids(manifest)
@@ -106,7 +106,7 @@ class TestManifestToGeneratorCatalogWorkflow:
         # Each should have valid manifest
         for pid in pipeline_ids:
             pipeline_manifest = get_pipeline_manifest(manifest, pid)
-            assert pipeline_manifest["pipeline"]["id"] == pid
+            assert pipeline_manifest["project"]["id"] == pid
 
 
 class TestWorkflowErrorHandling:
@@ -120,7 +120,7 @@ class TestWorkflowErrorHandling:
         docs_dir = tmp_path / "_docs"
         docs_src_dir = tmp_path / "_docs_src"
 
-        with pytest.raises((AssertionError, ValueError)):
+        with pytest.raises((FileNotFoundError, ValueError)):
             generate_docs(
                 output_dir=output_dir,
                 project_dir=invalid_project_missing_file,

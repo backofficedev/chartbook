@@ -260,7 +260,7 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
 
     project_dir = resolve_project_dir(project_dir)
     manifest = load_manifest(base_dir=project_dir)
-    pipeline_id = manifest["pipeline"]["id"]
+    pipeline_id = manifest["project"]["id"]
 
     if publish_dir is None:
         BASE_DIR = Path(".").resolve()
@@ -393,9 +393,7 @@ def _get_pipeline_name(pipeline_manifest):
     :returns: The pipeline name or 'Unknown'.
     :rtype: str
     """
-    if "pipeline" in pipeline_manifest:
-        return pipeline_manifest["pipeline"].get("pipeline_name", "Unknown")
-    return "Unknown"
+    return pipeline_manifest.get("project", {}).get("name", "Unknown")
 
 
 @main.group(invoke_without_command=True)
@@ -422,7 +420,7 @@ def ls(ctx, catalog):
         click.echo(f"Catalog: {catalog_path}")
         click.echo("")
 
-        if manifest["config"]["type"] == "catalog":
+        if manifest["project"]["type"] == "catalog":
             # Catalog with multiple pipelines
             for pipeline_id in sorted(manifest["pipelines"].keys()):
                 pipeline_manifest = manifest["pipelines"][pipeline_id]
@@ -433,7 +431,7 @@ def ls(ctx, catalog):
                 if "dataframes" in pipeline_manifest:
                     for df_id in sorted(pipeline_manifest["dataframes"].keys()):
                         df_name = pipeline_manifest["dataframes"][df_id].get(
-                            "dataframe_name", "Unknown"
+                            "name", "Unknown"
                         )
                         click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
 
@@ -441,27 +439,23 @@ def ls(ctx, catalog):
                 if "charts" in pipeline_manifest:
                     for chart_id in sorted(pipeline_manifest["charts"].keys()):
                         chart_name = pipeline_manifest["charts"][chart_id].get(
-                            "chart_name", "Unknown"
+                            "name", "Unknown"
                         )
                         click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
         else:
             # Single pipeline
-            pipeline_id = manifest["pipeline"]["id"]
+            pipeline_id = manifest["project"]["id"]
             pipeline_name = _get_pipeline_name(manifest)
             click.echo(f"[pipeline] {pipeline_id}: {pipeline_name}")
 
             if "dataframes" in manifest:
                 for df_id in sorted(manifest["dataframes"].keys()):
-                    df_name = manifest["dataframes"][df_id].get(
-                        "dataframe_name", "Unknown"
-                    )
+                    df_name = manifest["dataframes"][df_id].get("name", "Unknown")
                     click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
 
             if "charts" in manifest:
                 for chart_id in sorted(manifest["charts"].keys()):
-                    chart_name = manifest["charts"][chart_id].get(
-                        "chart_name", "Unknown"
-                    )
+                    chart_name = manifest["charts"][chart_id].get("name", "Unknown")
                     click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
 
 
@@ -472,13 +466,13 @@ def ls_pipelines(ctx):
     catalog = ctx.obj.get("catalog")
     manifest, _ = _load_catalog_for_cli(catalog)
 
-    if manifest["config"]["type"] == "catalog":
+    if manifest["project"]["type"] == "catalog":
         for pipeline_id in sorted(manifest["pipelines"].keys()):
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             pipeline_name = _get_pipeline_name(pipeline_manifest)
             click.echo(f"{pipeline_id}: {pipeline_name}")
     else:
-        pipeline_id = manifest["pipeline"]["id"]
+        pipeline_id = manifest["project"]["id"]
         pipeline_name = _get_pipeline_name(manifest)
         click.echo(f"{pipeline_id}: {pipeline_name}")
 
@@ -490,20 +484,20 @@ def ls_dataframes(ctx):
     catalog = ctx.obj.get("catalog")
     manifest, _ = _load_catalog_for_cli(catalog)
 
-    if manifest["config"]["type"] == "catalog":
+    if manifest["project"]["type"] == "catalog":
         for pipeline_id in sorted(manifest["pipelines"].keys()):
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "dataframes" in pipeline_manifest:
                 for df_id in sorted(pipeline_manifest["dataframes"].keys()):
                     df_name = pipeline_manifest["dataframes"][df_id].get(
-                        "dataframe_name", "Unknown"
+                        "name", "Unknown"
                     )
                     click.echo(f"{pipeline_id}/{df_id}: {df_name}")
     else:
-        pipeline_id = manifest["pipeline"]["id"]
+        pipeline_id = manifest["project"]["id"]
         if "dataframes" in manifest:
             for df_id in sorted(manifest["dataframes"].keys()):
-                df_name = manifest["dataframes"][df_id].get("dataframe_name", "Unknown")
+                df_name = manifest["dataframes"][df_id].get("name", "Unknown")
                 click.echo(f"{pipeline_id}/{df_id}: {df_name}")
 
 
@@ -514,20 +508,20 @@ def ls_charts(ctx):
     catalog = ctx.obj.get("catalog")
     manifest, _ = _load_catalog_for_cli(catalog)
 
-    if manifest["config"]["type"] == "catalog":
+    if manifest["project"]["type"] == "catalog":
         for pipeline_id in sorted(manifest["pipelines"].keys()):
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "charts" in pipeline_manifest:
                 for chart_id in sorted(pipeline_manifest["charts"].keys()):
                     chart_name = pipeline_manifest["charts"][chart_id].get(
-                        "chart_name", "Unknown"
+                        "name", "Unknown"
                     )
                     click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
     else:
-        pipeline_id = manifest["pipeline"]["id"]
+        pipeline_id = manifest["project"]["id"]
         if "charts" in manifest:
             for chart_id in sorted(manifest["charts"].keys()):
-                chart_name = manifest["charts"][chart_id].get("chart_name", "Unknown")
+                chart_name = manifest["charts"][chart_id].get("name", "Unknown")
                 click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
 
 
@@ -582,9 +576,16 @@ def _load_raw_catalog(catalog_toml_path):
     """
     import tomli
 
+    from chartbook.manifest import detect_v1_format, resolve_project_type
+
     with open(catalog_toml_path, "rb") as f:
         data = tomli.load(f)
-    config_type = data.get("config", {}).get("type")
+    if detect_v1_format(data):
+        raise click.UsageError(
+            f"{catalog_toml_path} uses the old v1 format. "
+            f"Run: python scripts/migrate_toml_v2.py {catalog_toml_path.parent}"
+        )
+    config_type = resolve_project_type(data, source=str(catalog_toml_path))
     if config_type != "catalog":
         raise click.UsageError(
             f"{catalog_toml_path} is not a catalog (type={config_type!r})"
@@ -607,11 +608,11 @@ def _get_existing_absolute_paths(raw_catalog, catalog_dir):
 
     result = {}
     for key, entry in raw_catalog.get("pipelines", {}).items():
-        path_to_pipeline = entry.get("path_to_pipeline")
-        if path_to_pipeline is None:
+        pipeline_path = entry.get("path")
+        if pipeline_path is None:
             continue
         try:
-            resolved = resolve_platform_path(path_to_pipeline)
+            resolved = resolve_platform_path(pipeline_path)
         except (ValueError, TypeError):
             continue
         abs_path = (catalog_dir / resolved).resolve()
@@ -803,7 +804,29 @@ def catalog_add(paths, catalog_path, yes):
                 click.echo(f"Error: Invalid TOML in {toml_path}: {e}", err=True)
                 raise SystemExit(1)
 
-        config_type = pipeline_toml.get("config", {}).get("type")
+        from chartbook.manifest import detect_v1_format, resolve_project_type
+
+        if detect_v1_format(pipeline_toml):
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ (old v1-format chartbook.toml)")
+                continue
+            else:
+                click.echo(
+                    f"Error: {toml_path} uses the old v1 format. "
+                    f"Run: python scripts/migrate_toml_v2.py {d}",
+                    err=True,
+                )
+                raise SystemExit(1)
+
+        try:
+            config_type = resolve_project_type(pipeline_toml, source=str(toml_path))
+        except ValueError as e:
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ ({e})")
+                continue
+            else:
+                click.echo(f"Error: {e}", err=True)
+                raise SystemExit(1)
         if config_type != "pipeline":
             if is_multi:
                 click.echo(f"  Skipping {d.name}/ (type={config_type!r}, not pipeline)")
@@ -829,10 +852,8 @@ def catalog_add(paths, catalog_path, yes):
                 )
             continue
 
-        pipeline_name = (
-            pipeline_toml.get("pipeline", {}).get("pipeline_name", d.name)
-        )
-        valid_pipelines.append((d, pipeline_name))
+        pipeline_name = pipeline_toml.get("project", {}).get("name", d.name)
+        valid_pipelines.append((d, pipeline_name, pipeline_toml.get("project", {})))
 
     if not valid_pipelines and not reenabled:
         click.echo("No new pipelines to add.")
@@ -846,12 +867,22 @@ def catalog_add(paths, catalog_path, yes):
         click.echo(f"Re-enabled {reenabled} pipeline(s) in {catalog_toml}")
         return
 
+    from chartbook.identity import derive_pipeline_id
+
+    def _derive_catalog_key(directory, project_table):
+        # Scoped id: explicit project.id, else scope from the git remote /
+        # repo_url with the directory name, else the bare directory name
+        try:
+            return derive_pipeline_id(project_table, directory)
+        except ValueError:
+            return _sanitize_pipeline_key(directory.name)
+
     # Prompt for confirmation if multiple
     if len(valid_pipelines) > 1 and not yes:
         click.echo("")
         click.echo("Pipelines to add:")
-        for d, name in valid_pipelines:
-            key = _sanitize_pipeline_key(d.name)
+        for d, name, project_table in valid_pipelines:
+            key = _derive_catalog_key(d, project_table)
             key = _ensure_unique_key(key, existing_keys)
             click.echo(f"  {key}: {name} ({d})")
         click.echo("")
@@ -860,8 +891,8 @@ def catalog_add(paths, catalog_path, yes):
 
     # Add each pipeline
     added = 0
-    for d, name in valid_pipelines:
-        key = _sanitize_pipeline_key(d.name)
+    for d, name, project_table in valid_pipelines:
+        key = _derive_catalog_key(d, project_table)
         key = _ensure_unique_key(key, existing_keys)
         existing_keys.add(key)
 
@@ -871,7 +902,7 @@ def catalog_add(paths, catalog_path, yes):
             # Cross-drive on Windows
             rel_path = str(d)
 
-        raw_catalog["pipelines"][key] = {"path_to_pipeline": rel_path}
+        raw_catalog["pipelines"][key] = {"path": rel_path}
         click.echo(f"  Added '{key}': {name} ({rel_path})")
         added += 1
 

@@ -136,6 +136,7 @@ cli-reference
 api/chartbook
 examples/index
 configuration
+design/toml-format-v2
 llms-txt
 contributing
 changelog

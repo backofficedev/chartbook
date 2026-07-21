@@ -18,10 +18,10 @@ In `chartbook.toml`:
 
 ```toml
 [dataframes.sales_data]
-dataframe_name = "Sales Transaction Data"
-short_description_df = "Daily sales transactions with customer details"
-data_sources = ["CRM System"]
-path_to_parquet_data = "./_data/sales_data.parquet"
+name = "Sales Transaction Data"
+description = "Daily sales transactions with customer details"
+sources = ["CRM System"]
+path = "./_data/sales_data.parquet"
 date_col = "transaction_date"
 ```
 
@@ -32,36 +32,36 @@ All available fields:
 ```toml
 [dataframes.market_data]
 # Basic Information
-dataframe_name = "Financial Market Data"
-short_description_df = "Daily stock prices and trading volumes for S&P 500"
+name = "Financial Market Data"
+description = "Daily stock prices and trading volumes for S&P 500"
 
 # Data Sources
-data_sources = ["Bloomberg", "Reuters", "Yahoo Finance"]
-data_providers = ["Bloomberg LP", "Refinitiv", "Yahoo"]
-links_to_data_providers = [
+sources = ["Bloomberg", "Reuters", "Yahoo Finance"]
+providers = ["Bloomberg LP", "Refinitiv", "Yahoo"]
+provider_links = [
     "https://www.bloomberg.com/professional",
     "https://www.refinitiv.com",
     "https://finance.yahoo.com"
 ]
 
 # Access and Licensing
-type_of_data_access = ["Subscription", "Subscription", "Public"]
-need_to_contact_provider = ["Yes", "Yes", "No"]
-data_on_pre_approved_list = ["Yes", "Yes", "N/A"]
-data_license = "Bloomberg Data License Agreement"
-license_expiration_date = "2025-12-31"
-provider_contact_info = "marketdata@bloomberg.com"
-restriction_on_use = "Internal use only, no redistribution"
+access_types = ["Subscription", "Subscription", "Public"]
+contact_required = ["Yes", "Yes", "No"]
+pre_approved = ["Yes", "Yes", "N/A"]
+license = "Bloomberg Data License Agreement"
+license_expiration = "2025-12-31"
+provider_contact = "marketdata@bloomberg.com"
+restrictions = "Internal use only, no redistribution"
 
 # Technical Details
-how_is_pulled = "Python API with daily scheduled job"
-topic_tags = ["Market Data", "Equities", "S&P 500"]
+pull_method = "Python API with daily scheduled job"
+tags = ["Market Data", "Equities", "S&P 500"]
 date_col = "date"
 
 # File Paths
-path_to_parquet_data = "./_data/market_data.parquet"
-path_to_excel_data = "./_data/market_data.xlsx"
-dataframe_docs_path = "./docs_src/dataframes/market_data.md"
+path = "./_data/market_data.parquet"
+excel_path = "./_data/market_data.xlsx"
+docs_path = "./docs_src/dataframes/market_data.md"
 ```
 
 ## Creating Dataframes
@@ -192,13 +192,13 @@ Track data lineage and compliance:
 
 ```toml
 # Licensing information
-data_license = "Bloomberg Data License"
-license_expiration_date = "2025-12-31"
-restriction_on_use = "Internal analytics only"
+license = "Bloomberg Data License"
+license_expiration = "2025-12-31"
+restrictions = "Internal analytics only"
 
 # Access control
-need_to_contact_provider = ["Yes"]
-data_on_pre_approved_list = ["Yes"]
+contact_required = ["Yes"]
+pre_approved = ["Yes"]
 ```
 
 ### Data Quality
@@ -305,15 +305,15 @@ daily_summary.to_parquet('_data/daily_summary.parquet')
 
 ## Hive-Partitioned Data
 
-For large datasets stored in hive-style partitioned format, use glob patterns in `path_to_parquet_data`:
+For large datasets stored in hive-style partitioned format, use glob patterns in `path`:
 
 ```toml
 [dataframes.market_data]
-dataframe_name = "Market Data (Partitioned)"
-short_description_df = "Market data partitioned by year and month"
-path_to_parquet_data = "./_data/market_data/**/*.parquet"
+name = "Market Data (Partitioned)"
+description = "Market data partitioned by year and month"
+path = "./_data/market_data/**/*.parquet"
 date_col = "date"
-dataframe_docs_path = "./docs_src/dataframes/market_data.md"
+docs_path = "./docs_src/dataframes/market_data.md"
 ```
 
 This expects a directory structure like:

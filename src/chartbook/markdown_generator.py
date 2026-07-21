@@ -29,6 +29,16 @@ DOCS_BUILD_DIR = BASE_DIR / Path("_docs")
 DOCS_SRC_DIR = BASE_DIR / Path("_docs_src")
 
 
+def _fs_slug(pipeline_id):
+    """Filesystem/URL-safe form of a (possibly scoped) pipeline ID.
+
+    Scoped IDs contain a slash (``ftsfr/crsp_treasury``); generated docs
+    paths flatten it to ``ftsfr--crsp_treasury`` so pages stay one level
+    deep and relative links keep working.
+    """
+    return str(pipeline_id).replace("/", "--")
+
+
 def _yaml_escape_filter(value):
     """Escape double quotes in a string for safe use inside YAML double-quoted scalars."""
     return str(value).replace("\\", "\\\\").replace('"', '\\"')
@@ -62,11 +72,12 @@ def get_sphinx_file_alignment_plan(
     for pipeline_id in pipeline_ids:
         if skip_pipelines and pipeline_id in skip_pipelines:
             continue
+        pipeline_slug = _fs_slug(pipeline_id)
         download_chart_dir_download = (
-            Path(docs_build_dir) / "cb" / "download_chart" / str(pipeline_id)
+            Path(docs_build_dir) / "cb" / "download_chart" / pipeline_slug
         )
-        download_chart_dir_static = Path(docs_build_dir) / "_static" / str(pipeline_id)
-        notebook_dir = Path(docs_build_dir) / "cb" / "notebooks" / str(pipeline_id)
+        download_chart_dir_static = Path(docs_build_dir) / "_static" / pipeline_slug
+        notebook_dir = Path(docs_build_dir) / "cb" / "notebooks" / pipeline_slug
 
         download_chart_dir_download.mkdir(parents=True, exist_ok=True)
         download_chart_dir_static.mkdir(parents=True, exist_ok=True)
@@ -75,7 +86,7 @@ def get_sphinx_file_alignment_plan(
         # Only create download_dataframe directory when data downloads are enabled
         if enable_data_download:
             download_dataframe_dir = (
-                Path(docs_build_dir) / "cb" / "download_dataframe" / str(pipeline_id)
+                Path(docs_build_dir) / "cb" / "download_dataframe" / pipeline_slug
             )
             download_dataframe_dir.mkdir(parents=True, exist_ok=True)
 
@@ -87,37 +98,34 @@ def get_sphinx_file_alignment_plan(
             for dataframe_id in pipeline_manifest["dataframes"]:
                 dataframe_manifest = pipeline_manifest["dataframes"][dataframe_id]
 
-                path_to_parquet_data = dataframe_manifest["path_to_parquet_data"]
-                if (path_to_parquet_data is None) or (path_to_parquet_data == ""):
+                parquet_path = dataframe_manifest.get("path", "")
+                if (parquet_path is None) or (parquet_path == ""):
                     pass
-                elif is_glob_pattern(path_to_parquet_data):
+                elif is_glob_pattern(parquet_path):
                     # Skip file copy for glob/hive-partitioned datasets
                     pass
                 else:
-                    file_path = pipeline_base_dir / Path(path_to_parquet_data)
+                    file_path = pipeline_base_dir / Path(parquet_path)
                     dataset_plan[file_path] = (
                         download_dataframe_dir / f"{dataframe_id}.parquet"
                     )
 
         for chart_id in pipeline_manifest["charts"]:
-            # Plan for copying HTML chart to download folder
             chart_manifest = pipeline_manifest["charts"][chart_id]
-            path_to_html_chart = Path(chart_manifest["path_to_html_chart"])
-            file_path = pipeline_base_dir / path_to_html_chart
+            chart_html_path = chart_manifest.get("path", "")
+            if not chart_html_path:
+                continue
+            file_path = pipeline_base_dir / Path(chart_html_path)
+            # Copy the HTML chart to both the download folder and _static (display)
             chart_plan_download[file_path] = (
                 download_chart_dir_download / f"{chart_id}.html"
             )
-
-            # Plan for copying HTML chart to _static folder for display
-            chart_manifest = pipeline_manifest["charts"][chart_id]
-            path_to_html_chart = Path(chart_manifest["path_to_html_chart"])
-            file_path = pipeline_base_dir / path_to_html_chart
             chart_plan_static[file_path] = (
                 download_chart_dir_static / f"{chart_id}.html"
             )
 
         for notebook_id in pipeline_manifest["notebooks"]:
-            notebook_path = pipeline_manifest["notebooks"][notebook_id]["notebook_path"]
+            notebook_path = pipeline_manifest["notebooks"][notebook_id]["path"]
             notebook_path = pipeline_base_dir / Path(notebook_path)
             notebook_path = notebook_path.resolve()
             notebook_name = notebook_path.name
@@ -182,7 +190,6 @@ def generate_all_pipeline_docs(
             size_threshold=size_threshold,
             enable_data_download=enable_data_download,
         )
-        pipeline_theme = pipeline_manifest["config"]["type"]
         if pipeline_theme == "catalog":
             # Copy pipeline README to pipelines directory
             pipeline_readme_dir = docs_build_dir / "cb" / "pipelines"
@@ -194,16 +201,17 @@ def generate_all_pipeline_docs(
 
             # Remove the first two lines, add line with link to pipeline GitHub repo and
             # to index.html in html build dir, and then join the rest of the README.
-            pipeline_name = pipeline_manifest["pipeline_name"]
-            git_repo_URL = pipeline_manifest["git_repo_URL"]
+            pipeline_name = pipeline_manifest["project"]["name"]
+            repo_url = pipeline_manifest["project"]["repo_url"]
+            site_url = pipeline_manifest["project"]["site_url"]
             readme_text = f"# `{pipeline_id}` {pipeline_name} \n\n " + (
-                f'Pipeline GitHub Repo <a href="{git_repo_URL}">{git_repo_URL}.</a>\n\n\n'
-                + f'Pipeline Web Page <a href="{git_repo_URL}">{git_repo_URL}.</a>\n\n\n'
+                f'Pipeline GitHub Repo <a href="{repo_url}">{repo_url}.</a>\n\n\n'
+                + f'Pipeline Web Page <a href="{site_url}">{site_url}.</a>\n\n\n'
                 + "".join(readme_content[2:])
             )
 
             readme_destination_filepath = (
-                pipeline_readme_dir / f"{pipeline_id}_README.md"
+                pipeline_readme_dir / f"{_fs_slug(pipeline_id)}_README.md"
             )
             file_path = readme_destination_filepath
             with open(file_path, mode="w", encoding="utf-8") as file:
@@ -220,7 +228,7 @@ def generate_all_pipeline_docs(
     package_path = importlib.resources.files("chartbook")
 
     # Determine which template directory to use based on pipeline_theme
-    pipeline_theme = manifest["config"]["type"]
+    pipeline_theme = manifest["project"]["type"]
     if pipeline_theme == "catalog":
         theme_template_dir = Path(str(package_path)) / "docs_src_catalog"
     elif pipeline_theme == "pipeline":
@@ -301,19 +309,18 @@ def generate_all_pipeline_docs(
                 "incomplete_pct": round(100 * (1 - df["Metadata Complete"].mean()), 1),
             }
 
-        # Import field counts from diagnostics module
-        from chartbook.diagnostics import (
-            CHART_FIELDS,
-            DATAFRAME_FIELDS,
-            PIPELINE_FIELDS,
-        )
+        # Required fields come from the catalog's [policy] (or defaults)
+        from chartbook.diagnostics import get_active_policy
+
+        required_fields = get_active_policy(manifest)["required"]
 
         rendered_page = template.render(
             diagnostics_data=diagnostics_data,
             diagnostics_summary=diagnostics_summary,
-            pipeline_field_count=len(PIPELINE_FIELDS),
-            dataframe_field_count=len(DATAFRAME_FIELDS),
-            chart_field_count=len(CHART_FIELDS),
+            required_fields=required_fields,
+            pipeline_field_count=len(required_fields["project"]),
+            dataframe_field_count=len(required_fields["dataframes"]),
+            chart_field_count=len(required_fields["charts"]),
         )
 
         file_path = docs_build_dir / "cb" / "diagnostics.md"
@@ -330,7 +337,7 @@ def generate_all_pipeline_docs(
             dataframe_file_list=dataframe_file_list,
             pipeline_manifest=pipeline_manifest,
             readme_text=readme_text,
-            pipeline_page_link=f"cb/pipelines/{pipeline_id}_README.md",
+            pipeline_page_link=f"cb/pipelines/{_fs_slug(pipeline_id)}_README.md",
             dot_or_dotdot="cb",
         )
         file_path = docs_build_dir / "index.md"
@@ -348,9 +355,9 @@ def generate_all_pipeline_docs(
         notebook_list = []
         for notebook_id in pipeline_manifest["notebooks"]:
             nb_manifest = pipeline_manifest["notebooks"][notebook_id]
-            nb_filename = Path(nb_manifest["notebook_path"]).stem
-            nb_path = f"cb/notebooks/{pipeline_id}/{nb_filename}"
-            nb_title = nb_manifest.get("notebook_name", notebook_id)
+            nb_filename = Path(nb_manifest["path"]).stem
+            nb_path = f"cb/notebooks/{_fs_slug(pipeline_id)}/{nb_filename}"
+            nb_title = nb_manifest.get("name", notebook_id)
             notebook_list.append(f"{nb_title} <{nb_path}>")
 
         # Handle markdown notes if they exist
@@ -359,7 +366,7 @@ def generate_all_pipeline_docs(
             # Copy markdown files to docs build directory
             for note_id in pipeline_manifest["notes"]:
                 note_manifest = pipeline_manifest["notes"][note_id]
-                source_file = note_manifest["full_path"]
+                source_file = note_manifest["_resolved_path"]
 
                 # Copy to cb/ directory with note_id as filename
                 cb_dir = docs_build_dir / "cb"
@@ -371,7 +378,7 @@ def generate_all_pipeline_docs(
                 notes_list.append(f"cb/{note_id}.md")
 
         # Load site_dir content for index template merge
-        site_dir = pipeline_manifest.get("pipeline", {}).get("_resolved_site_dir")
+        site_dir = pipeline_manifest.get("project", {}).get("_resolved_site_dir")
         index_toc_content = ""
         site_pages_list = []
         if site_dir:
@@ -504,7 +511,7 @@ def generate_dataframe_docs(
     """
     dataframe_manifest = pipeline_manifest["dataframes"][dataframe_id]
 
-    dataframe_docs_dir = docs_build_dir / "cb" / "dataframes" / pipeline_id
+    dataframe_docs_dir = docs_build_dir / "cb" / "dataframes" / _fs_slug(pipeline_id)
     dataframe_docs_dir.mkdir(parents=True, exist_ok=True)
 
     # Get package templates directory
@@ -538,16 +545,14 @@ def generate_dataframe_docs(
     # Load doc content based on mode (path or inline string)
     doc_mode = dataframe_manifest.get("_doc_mode", "path")
     if doc_mode == "path":
-        path_to_dataframe_doc = Path(
-            dataframe_manifest["dataframe_docs_path"]
-        ).as_posix()
+        path_to_dataframe_doc = Path(dataframe_manifest["docs_path"]).as_posix()
         source = environment.loader.get_source(environment, path_to_dataframe_doc)[0]
     else:  # doc_mode == "str"
-        source = dataframe_manifest["dataframe_docs_str"]
+        source = dataframe_manifest["docs"]
 
     # Use filenames instead of paths for includes, so they can be found in any of our search locations
     modified_source = (
-        """# Dataframe: `{{pipeline_id}}:{{dataframe_id}}` - {{dataframe_name}}\n\n"""
+        """# Dataframe: `{{pipeline_id}}:{{dataframe_id}}` - {{name}}\n\n"""
         + source
         + """\n\n
 ## DataFrame Glimpse
@@ -576,15 +581,15 @@ def generate_dataframe_docs(
         pipeline_page_link = "../../../index.md"
         dataframe_path_prefix = "../dataframes/"
     elif pipeline_theme == "catalog":
-        pipeline_page_link = f"../pipelines/{pipeline_id}_README.md"
+        pipeline_page_link = f"../pipelines/{_fs_slug(pipeline_id)}_README.md"
         dataframe_path_prefix = ""
     else:
         raise ValueError("Invalid Pipeline theme")
     link_to_dataframe_docs = (
-        Path(dataframe_path_prefix) / pipeline_id / f"{dataframe_id}.md"
+        Path(dataframe_path_prefix) / _fs_slug(pipeline_id) / f"{dataframe_id}.md"
     ).as_posix()
     # Compute the absolute path to the parquet file
-    raw_parquet_path = dataframe_manifest["path_to_parquet_data"]
+    raw_parquet_path = dataframe_manifest.get("path", "")
     if is_glob_pattern(raw_parquet_path):
         parquet_path = pipeline_base_dir / raw_parquet_path
     else:
@@ -717,7 +722,7 @@ def generate_chart_docs(
 
     # Get all manifest related to the chart
     chart_manifest = pipeline_manifest["charts"][chart_id]
-    dataframe_id = chart_manifest["dataframe_id"]
+    dataframe_id = chart_manifest["dataframe"]
     dataframe_manifest = pipeline_manifest["dataframes"][dataframe_id]
 
     # Get package templates directory
@@ -752,10 +757,10 @@ def generate_chart_docs(
     # Load doc content based on mode (path or inline string)
     doc_mode = chart_manifest.get("_doc_mode", "path")
     if doc_mode == "path":
-        path_to_chart_doc = Path(chart_manifest["chart_docs_path"]).as_posix()
+        path_to_chart_doc = Path(chart_manifest["docs_path"]).as_posix()
         source = environment.loader.get_source(environment, path_to_chart_doc)[0]
     else:  # doc_mode == "str"
-        source = chart_manifest["chart_docs_str"]
+        source = chart_manifest["docs"]
 
     # Use filenames instead of paths for includes
     modified_source = (
@@ -774,13 +779,13 @@ def generate_chart_docs(
         pipeline_page_link = "../../index.md"
         dataframe_path_prefix = "../dataframes/"
     elif pipeline_theme == "catalog":
-        pipeline_page_link = f"../pipelines/{pipeline_id}_README.md"
+        pipeline_page_link = f"../pipelines/{_fs_slug(pipeline_id)}_README.md"
         dataframe_path_prefix = "../dataframes/"
     else:
         raise ValueError("Invalid Pipeline theme")
 
     # Compute the absolute path to the parquet file
-    raw_parquet_path = dataframe_manifest["path_to_parquet_data"]
+    raw_parquet_path = dataframe_manifest.get("path", "")
     if is_glob_pattern(raw_parquet_path):
         parquet_path = pipeline_base_dir / raw_parquet_path
     else:
@@ -797,12 +802,10 @@ def generate_chart_docs(
         dataframe_last_updated = get_file_modified_datetime(parquet_path)
 
     # Get and format paths to charts
-    path_to_html_chart_unix = pipeline_base_dir / Path(
-        chart_manifest["path_to_html_chart"]
-    )
+    path_to_html_chart_unix = pipeline_base_dir / Path(chart_manifest["path"])
 
     link_to_dataframe_docs = (
-        Path(dataframe_path_prefix) / pipeline_id / f"{dataframe_id}.md"
+        Path(dataframe_path_prefix) / _fs_slug(pipeline_id) / f"{dataframe_id}.md"
     ).as_posix()
 
     # Render chart page
@@ -824,7 +827,7 @@ def generate_chart_docs(
     # print(chart_page)
 
     (docs_build_dir / "cb" / "charts").mkdir(parents=True, exist_ok=True)
-    filename = f"{pipeline_id}.{chart_id}.md"
+    filename = f"{_fs_slug(pipeline_id)}.{chart_id}.md"
     file_path = docs_build_dir / "cb" / "charts" / filename
     with open(file_path, mode="w", encoding="utf-8") as file:
         file.write(chart_page)
@@ -857,8 +860,8 @@ def _validate_generated_frontmatter(md_path, pipeline_id, chart_id):
             file_path=Path(md_path),
             hint=(
                 f"Chart '{pipeline_id}:{chart_id}' produced invalid YAML frontmatter. "
-                f"This usually means a field in chartbook.toml (e.g. data_sources, "
-                f"topic_tags, chart_name) contains characters that are unsafe in YAML "
+                f"This usually means a field in chartbook.toml (e.g. sources, "
+                f"tags, name) contains characters that are unsafe in YAML "
                 f"(colons, brackets, etc.).\nYAML error: {e}"
             ),
         )
@@ -880,7 +883,7 @@ def get_dataframes_and_dataframe_docs(base_dir=BASE_DIR):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         for dataframe_id in pipeline_manifest["dataframes"]:
             filename = Path(f"{dataframe_id}.md")
-            file_path = Path("cb/dataframes") / pipeline_id / filename
+            file_path = Path("cb/dataframes") / _fs_slug(pipeline_id) / filename
             pipeline_dataframe_id = f"{pipeline_id}:{dataframe_id}"
             table_file_map[pipeline_dataframe_id] = file_path.as_posix()
     return table_file_map
@@ -1044,11 +1047,11 @@ def ensure_notebook_titles(manifest, docs_build_dir, skip_pipelines=None):
         if skip_pipelines and pipeline_id in skip_pipelines:
             continue
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
-        notebook_dir = Path(docs_build_dir) / "cb" / "notebooks" / str(pipeline_id)
+        notebook_dir = Path(docs_build_dir) / "cb" / "notebooks" / _fs_slug(pipeline_id)
 
         for notebook_id in pipeline_manifest.get("notebooks", {}):
             nb_manifest = pipeline_manifest["notebooks"][notebook_id]
-            nb_filename = Path(nb_manifest["notebook_path"]).name
+            nb_filename = Path(nb_manifest["path"]).name
             nb_path = notebook_dir / nb_filename
 
             if not nb_path.exists():
@@ -1067,7 +1070,7 @@ def ensure_notebook_titles(manifest, docs_build_dir, skip_pipelines=None):
                     has_title = True
 
             if not has_title:
-                title = nb_manifest.get("notebook_name", notebook_id)
+                title = nb_manifest.get("name", notebook_id)
                 title_cell = {
                     "cell_type": "markdown",
                     "metadata": {},
@@ -1111,7 +1114,7 @@ def build_all(
     manifest = load_manifest(base_dir=base_dir)
 
     # Extract enable_data_download setting (defaults to False)
-    enable_data_download = manifest.get("site", {}).get("enable_data_download", False)
+    enable_data_download = manifest["project"].get("enable_data_download", False)
 
     (
         dataset_plan,
@@ -1159,7 +1162,7 @@ def build_all(
     pipeline_ids = get_pipeline_ids(manifest)
     if pipeline_ids:
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_ids[0])
-        site_dir = pipeline_manifest.get("pipeline", {}).get("_resolved_site_dir")
+        site_dir = pipeline_manifest.get("project", {}).get("_resolved_site_dir")
         if site_dir:
             copy_site_dir_to_build(site_dir, docs_build_dir)
 

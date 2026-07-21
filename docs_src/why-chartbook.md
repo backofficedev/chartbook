@@ -60,8 +60,10 @@ df = data.load(pipeline="sales", dataframe="quarterly_summary")
 
 ChartBook supports two project types:
 
-- **Pipeline** — A single analytics pipeline with its own charts, dataframes, and documentation (`type = "pipeline"`)
-- **Catalog** — A collection of multiple pipelines aggregated into a unified documentation site (`type = "catalog"`)
+- **Pipeline** — A single analytics pipeline with its own charts, dataframes, and documentation
+- **Catalog** — A collection of multiple pipelines aggregated into a unified documentation site
+
+The type is inferred from your `chartbook.toml`: a `[pipelines]` table means catalog, otherwise pipeline.
 
 Start with a pipeline to document a single project, then create a catalog when you want to aggregate multiple pipelines into a searchable portal.
 

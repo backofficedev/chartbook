@@ -10,8 +10,6 @@ from pathlib import Path
 import polars as pl
 import tomli_w
 
-from chartbook.__about__ import __version__
-
 
 def create_sample_parquet(path: Path, columns: dict = None, rows: int = 10) -> Path:
     """Creates a real parquet file using polars.
@@ -174,7 +172,7 @@ def create_pipeline_project(
         include_notebooks: Whether to include notebooks section
         dataframe_count: Number of dataframes to create
         charts_per_dataframe: Number of charts per dataframe
-        use_inline_docs: If True, uses dataframe_docs_str instead of dataframe_docs_path
+        use_inline_docs: If True, uses inline docs instead of docs_path
         include_site_dir: Whether to create a site directory with sample pages
         site_dir_in_docs_src: If True, creates site dir inside docs_src/; otherwise top-level
 
@@ -203,29 +201,14 @@ def create_pipeline_project(
         f"# {pipeline_name}\n\nThis is a test pipeline.\n"
     )
 
-    # Build chartbook.toml
+    # Build chartbook.toml (format v2)
     config = {
-        "config": {
-            "type": "pipeline",
-            "chartbook_format_version": __version__,
-        },
-        "site": {
-            "title": pipeline_name,
-            "author": "Test Author",
-            "copyright": "2024",
-            "logo_path": "",
-            "favicon_path": "",
-        },
-        "pipeline": {
+        "project": {
             "id": pipeline_id,
-            "pipeline_name": pipeline_name,
-            "pipeline_description": f"Description for {pipeline_name}",
-            "lead_pipeline_developer": "Test Developer",
-            "contributors": [],
-            "software_modules_command": "",
-            "runs_on_grid_or_windows_or_other": "",
-            "git_repo_URL": "",
-            "README_file_path": "",
+            "name": pipeline_name,
+            "description": f"Description for {pipeline_name}",
+            "maintainer": "Test Developer",
+            "copyright": "2024",
         },
     }
 
@@ -255,22 +238,21 @@ def create_pipeline_project(
             )
 
             df_config = {
-                "dataframe_name": f"Dataframe {i}",
-                "short_description_df": f"Description for dataframe {i}",
-                "path_to_parquet_data": parquet_path,
-                "path_to_excel_data": "",  # Required by build_markdown
+                "name": f"Dataframe {i}",
+                "description": f"Description for dataframe {i}",
+                "path": parquet_path,
                 "date_col": "date",
-                "topic_tags": ["test tag", "UPPERCASE TAG"],
-                "data_sources": ["Test Source"],
-                "data_providers": ["Test Provider"],
+                "tags": ["test tag", "UPPERCASE TAG"],
+                "sources": ["Test Source"],
+                "providers": ["Test Provider"],
             }
 
             if use_inline_docs:
-                df_config["dataframe_docs_str"] = (
+                df_config["docs"] = (
                     f"# Dataframe {i}\n\nInline documentation for dataframe {i}.\n"
                 )
             else:
-                df_config["dataframe_docs_path"] = dataframe_docs_path
+                df_config["docs_path"] = dataframe_docs_path
 
             config["dataframes"][df_id] = df_config
 
@@ -291,13 +273,12 @@ def create_pipeline_project(
                     )
 
                     config["charts"][chart_id] = {
-                        "chart_name": f"Chart {i}-{j}",
-                        "short_description_chart": f"Description for chart {i}-{j}",
-                        "dataframe_id": df_id,
-                        "path_to_html_chart": chart_path,
-                        "path_to_excel_chart": "",  # Optional
-                        "chart_docs_path": chart_docs_path,
-                        "topic_tags": ["chart tag"],
+                        "name": f"Chart {i}-{j}",
+                        "description": f"Description for chart {i}-{j}",
+                        "dataframe": df_id,
+                        "path": chart_path,
+                        "docs_path": chart_docs_path,
+                        "tags": ["chart tag"],
                     }
 
     # Always include empty notebooks section (required by build_markdown)
@@ -310,17 +291,17 @@ def create_pipeline_project(
 
         config["notes"] = {
             "note1": {
-                "path_to_markdown_file": "docs_src/note1.md",
+                "path": "docs_src/note1.md",
             }
         }
 
     if include_site_dir:
         if site_dir_in_docs_src:
             site_dir = base_dir / "docs_src" / "site"
-            config["pipeline"]["site_dir"] = "./docs_src/site/"
+            config["project"]["site_dir"] = "./docs_src/site/"
         else:
             site_dir = base_dir / "site"
-            config["pipeline"]["site_dir"] = "./site/"
+            config["project"]["site_dir"] = "./site/"
 
         site_dir.mkdir(parents=True, exist_ok=True)
         (site_dir / "index_toc.md").write_text(
@@ -359,7 +340,7 @@ def create_catalog_project(
         base_dir: Root directory for the catalog
         pipeline_ids: List of pipeline IDs to create. Defaults to ["pipeline_a", "pipeline_b"]
         use_platform_paths: If True, uses platform-specific path dicts
-        use_inline_docs: If True, uses dataframe_docs_str instead of dataframe_docs_path
+        use_inline_docs: If True, uses inline docs instead of docs_path
 
     Returns:
         Path to the catalog directory
@@ -389,28 +370,23 @@ def create_catalog_project(
 
         if use_platform_paths:
             pipelines_config[pid] = {
-                "path_to_pipeline": {
-                    "Unix": f"pipelines/{pid}",
-                    "Windows": f"pipelines\\{pid}",
+                "path": {
+                    "unix": f"pipelines/{pid}",
+                    "windows": f"pipelines\\{pid}",
                 }
             }
         else:
             pipelines_config[pid] = {
-                "path_to_pipeline": f"pipelines/{pid}",
+                "path": f"pipelines/{pid}",
             }
 
-    # Create main chartbook.toml for catalog
+    # Create main chartbook.toml for catalog (format v2)
     config = {
-        "config": {
+        "project": {
             "type": "catalog",
-            "chartbook_format_version": __version__,
-        },
-        "site": {
-            "title": "Test Catalog",
-            "author": "Test Author",
+            "name": "Test Catalog",
+            "maintainer": "Test Author",
             "copyright": "2024",
-            "logo_path": "",
-            "favicon_path": "",
         },
         "pipelines": pipelines_config,
     }
@@ -426,8 +402,8 @@ def create_invalid_toml_project(base_dir: Path, error_type: str) -> Path:
 
     Args:
         base_dir: Root directory for the project
-        error_type: One of "missing_file", "invalid_type", "invalid_version",
-                   "missing_version", "invalid_toml_syntax"
+        error_type: One of "missing_file", "invalid_type", "v1_format",
+                   "type_conflict", "invalid_toml_syntax"
 
     Returns:
         Path to the project directory
@@ -447,66 +423,33 @@ def create_invalid_toml_project(base_dir: Path, error_type: str) -> Path:
 
     if error_type == "invalid_type":
         config = {
-            "config": {
+            "project": {
                 "type": "invalid_type",
-                "chartbook_format_version": __version__,
-            },
-            "site": {
-                "title": "Test",
-                "author": "",
-                "copyright": "",
-                "logo_path": "",
-                "favicon_path": "",
+                "name": "Test",
             },
         }
-    elif error_type == "invalid_version":
+    elif error_type == "v1_format":
         config = {
             "config": {
                 "type": "pipeline",
-                "chartbook_format_version": "not-a-version",
+                "chartbook_format_version": "0.0.2",
             },
             "site": {
                 "title": "Test",
-                "author": "",
-                "copyright": "",
-                "logo_path": "",
-                "favicon_path": "",
             },
             "pipeline": {
                 "id": "test",
                 "pipeline_name": "Test",
-                "pipeline_description": "",
-                "lead_pipeline_developer": "",
-                "contributors": [],
-                "software_modules_command": "",
-                "runs_on_grid_or_windows_or_other": "",
-                "git_repo_URL": "",
-                "README_file_path": "",
             },
         }
-    elif error_type == "old_version":
+    elif error_type == "type_conflict":
         config = {
-            "config": {
+            "project": {
                 "type": "pipeline",
-                "chartbook_format_version": "0.0.21",
+                "name": "Test",
             },
-            "site": {
-                "title": "Test",
-                "author": "",
-                "copyright": "",
-                "logo_path": "",
-                "favicon_path": "",
-            },
-            "pipeline": {
-                "id": "test",
-                "pipeline_name": "Test",
-                "pipeline_description": "",
-                "lead_pipeline_developer": "",
-                "contributors": [],
-                "software_modules_command": "",
-                "runs_on_grid_or_windows_or_other": "",
-                "git_repo_URL": "",
-                "README_file_path": "",
+            "pipelines": {
+                "other": {"path": "../other"},
             },
         }
     elif error_type == "invalid_toml_syntax":

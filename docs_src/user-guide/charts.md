@@ -18,11 +18,11 @@ Add charts to your `chartbook.toml`:
 
 ```toml
 [charts.monthly_revenue]
-chart_name = "Monthly Revenue Analysis"
-short_description_chart = "Revenue trends with YoY comparison"
-dataframe_id = "revenue_data"  # Links to dataframe
-path_to_html_chart = "./_output/monthly_revenue.html"
-chart_docs_path = "./docs_src/charts/monthly_revenue.md"
+name = "Monthly Revenue Analysis"
+description = "Revenue trends with YoY comparison"
+dataframe = "revenue_data"  # Links to dataframe
+path = "./_output/monthly_revenue.html"
+docs_path = "./docs_src/charts/monthly_revenue.md"
 ```
 
 ### Complete Configuration
@@ -32,8 +32,8 @@ All available fields:
 ```toml
 [charts.revenue_forecast]
 # Basic Information
-chart_name = "Revenue Forecast Model"
-short_description_chart = "12-month revenue forecast with confidence intervals"
+name = "Revenue Forecast Model"
+description = "12-month revenue forecast with confidence intervals"
 
 # Clearance and Governance
 date_cleared_by_iv_and_v = "2025-01-15"
@@ -41,28 +41,28 @@ last_legal_clearance_date = "2025-01-10"
 last_cleared_by = "Legal Team"
 
 # Publication History
-past_publications = [
+publications = [
     "[Q4 Report 2024, Figure 3](https://example.com/q4-2024)",
     "[Board Presentation, Slide 15](https://example.com/board-2024)",
 ]
 
 # Data Characteristics
-dataframe_id = "revenue_forecast_data"
-topic_tags = ["Revenue", "Forecast", "Financial Planning"]
-data_series_start_date = "1/1/2020"
-data_frequency = "Monthly"
+dataframe = "revenue_forecast_data"
+tags = ["Revenue", "Forecast", "Financial Planning"]
+start_date = "1/1/2020"
+frequency = "Monthly"
 observation_period = "Month-end"
-lag_in_data_release = "5 business days"
-data_release_timing = "First week of month"
+release_lag = "5 business days"
+release_timing = "First week of month"
 seasonal_adjustment = "X-13ARIMA-SEATS"
 units = "USD (Millions)"
-data_series = ["Historical Revenue", "Forecast", "Upper Bound", "Lower Bound"]
+series = ["Historical Revenue", "Forecast", "Upper Bound", "Lower Bound"]
 mnemonic = "REV_FCST"
 
 # File Paths
-path_to_html_chart = "./_output/revenue_forecast.html"
-path_to_excel_chart = "./excel/revenue_forecast.xlsx"
-chart_docs_path = "./docs_src/charts/revenue_forecast.md"
+path = "./_output/revenue_forecast.html"
+excel_path = "./excel/revenue_forecast.xlsx"
+docs_path = "./docs_src/charts/revenue_forecast.md"
 ```
 
 ## Creating Charts
@@ -160,7 +160,7 @@ last_cleared_by = "John Doe, Legal Team"  # Approver
 Document where charts have been used:
 
 ```toml
-past_publications = [
+publications = [
     "[Annual Report 2024, p.45](https://link-to-report)",
     "[Board Meeting Q4 2024](https://internal-link)",
     "Investor Presentation, March 2024",  # No link available
@@ -172,11 +172,11 @@ past_publications = [
 Describe the underlying data:
 
 ```toml
-data_frequency = "Daily"        # Daily, Weekly, Monthly, Quarterly, Annual
+frequency = "Daily"             # Daily, Weekly, Monthly, Quarterly, Annual
 observation_period = "Close"    # When measurement taken
-lag_in_data_release = "T+1"     # How long until available
+release_lag = "T+1"             # How long until available
 seasonal_adjustment = "None"    # None, X-13ARIMA-SEATS, etc.
-units = "Percent"              # Units of measurement
+units = "Percent"               # Units of measurement
 ```
 
 ## Best Practices
@@ -268,7 +268,7 @@ def create_comparison_chart(df, metrics, chart_id):
 
 1. **Chart not found**: Check file paths in `chartbook.toml`
 2. **Broken links**: Ensure documentation paths are correct
-3. **Missing data**: Verify dataframe_id matches
+3. **Missing data**: Verify the `dataframe` key matches a dataframe ID
 4. **Display issues**: Check browser compatibility
 
 ### Validation
@@ -282,7 +282,7 @@ from pathlib import Path
 
 specs = read_specs()
 for chart_id, chart_config in specs["charts"].items():
-    chart_path = Path(chart_config["path_to_html_chart"])
+    chart_path = Path(chart_config["path"])
     if not chart_path.exists():
         print(f"Missing chart: {chart_id}")
 ```

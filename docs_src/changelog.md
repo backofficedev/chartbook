@@ -5,6 +5,22 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed — **breaking: chartbook.toml format v2**
+
+The manifest format was redesigned; v1 files are no longer supported. Run `python scripts/migrate_toml_v2.py <project>` to rewrite a v1 file. The full specification and the reasoning behind each decision are in the {doc}`design doc <design/toml-format-v2>`.
+
+- The `[config]`, `[site]`, and `[pipeline]` sections are consolidated into a single `[project]` table. Every field is optional with sensible defaults (`name` defaults to the directory name, `copyright` to the current year, `maintainer` to the first contributor, …). The minimal valid pipeline manifest is an empty file.
+- `chartbook_format_version` is removed. Project `type` is inferred from structure (`[pipelines]` registry → catalog, otherwise pipeline); explicit `type` is allowed and contradictions are hard errors.
+- Entity fields are de-prefixed across `[charts]`, `[dataframes]`, `[notebooks]`, and `[notes]` (e.g. `chart_name` → `name`, `dataframe_id` → `dataframe`, `path_to_parquet_data` → `path`, `topic_tags` → `tags`, `*_docs_str` → `docs`, `*_docs_path` → `docs_path`). Every entity's primary artifact is now `path`.
+- **Scoped pipeline identity**: pipelines are canonically identified as `scope/name` (e.g. `ftsfr/crsp_treasury`), derived from the git remote and directory name. `data.load(pipeline=...)` accepts bare names (when unambiguous), scoped names, or repository URLs; ambiguous bare names error with candidates. `scope/name@rev` is reserved for future version pinning. Catalog `[pipelines]` keys are scoped IDs (quoted), with `path` replacing `path_to_pipeline`.
+- **Catalog policy**: requiredness moved out of the format. A catalog may declare `[policy]` (`mode = "warn"|"strict"`) and `[policy.required]` field lists per object type; strict mode fails the catalog build on missing metadata. Defaults preserve the old diagnostics behavior.
+- `build` replaces `build_commands`/`software_modules_command`: one string with shell-script semantics (multi-line values are one script).
+- `site_dir` now defaults to `./docs_src/site/` when that directory exists.
+- Unknown keys in `[project]` produce a warning with a did-you-mean suggestion, preventing silent field-name drift.
+- Fixed: catalog builds now generate per-pipeline README pages and render every member pipeline with the catalog theme (previously only the first member used it and README pages were skipped).
+
 ## [0.0.21]
 
 ### Fixed

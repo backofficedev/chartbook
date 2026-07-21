@@ -22,7 +22,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 ## API
 
-- [Python API](docs_src/api/chartbook.md): `from chartbook import data; df = data.load(pipeline="ID", dataframe="df_id")`
+- [Python API](docs_src/api/chartbook.md): `from chartbook import data; lf = data.load(pipeline="my_pipeline", dataframe="df_id")` — pipeline accepts a bare name or a scoped name (`myorg/my_pipeline`)
 
 ## Key Commands
 
@@ -41,35 +41,28 @@ chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
 
 ## Minimal Configuration Example
 
+All `[project]` keys are optional (an empty `chartbook.toml` is a valid pipeline manifest). Project type is inferred: a `[pipelines]` registry table means catalog, otherwise pipeline. Each chart and dataframe needs exactly one of `docs_path` (external markdown file) or `docs` (inline markdown).
+
 ```toml
-[config]
-type = "pipeline"
-chartbook_format_version = "0.0.21"
-
-[site]
-title = "My Analytics"
-author = "Your Name"
-copyright = "2025"
-
-[pipeline]
-id = "MYPROJ"
-pipeline_name = "My Pipeline"
-pipeline_description = "Analytics pipeline description"
-lead_pipeline_developer = "Your Name"
+[project]
+name = "My Pipeline"
+description = "Analytics pipeline description"
+maintainer = "Your Name"
 
 [charts.my_chart]
-chart_name = "My Chart"
-short_description_chart = "Chart description"
-dataframe_id = "my_data"
-path_to_html_chart = "./_output/chart.html"
-chart_docs_path = "./docs_src/charts/chart.md"
+name = "My Chart"
+description = "Chart description"
+dataframe = "my_data"
+path = "./_output/chart.html"
+docs_path = "./docs_src/charts/chart.md"
 
 [dataframes.my_data]
-dataframe_name = "My Data"
-short_description_df = "Data description"
-data_sources = ["Source"]
-path_to_parquet_data = "./_data/data.parquet"
+name = "My Data"
+description = "Data description"
+sources = ["Source"]
+path = "./_data/data.parquet"
 date_col = "date"
+docs = "Documentation for this dataset."
 ```
 
 ## Directory Structure

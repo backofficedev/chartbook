@@ -35,7 +35,7 @@ class TestSiteConfig:
                 sphinx_theme="pydata_sphinx_theme",
             )
         assert "cannot be empty" in str(exc_info.value)
-        assert exc_info.value.field_name == "site.title"
+        assert exc_info.value.field_name == "project.name"
 
     def test_whitespace_only_title_raises(self):
         """Test that whitespace-only title raises ValidationError."""
@@ -78,7 +78,7 @@ class TestSiteConfig:
                 sphinx_theme="pydata_sphinx_theme",
             )
         assert "invalid characters" in str(exc_info.value)
-        assert exc_info.value.field_name == "site.title"
+        assert exc_info.value.field_name == "project.name"
 
     def test_double_quotes_blocked(self):
         """Test that double quotes are blocked."""
@@ -156,7 +156,7 @@ class TestSiteConfig:
                 sphinx_theme="malicious_theme",
             )
         assert "Invalid sphinx theme" in str(exc_info.value)
-        assert exc_info.value.field_name == "config.type"
+        assert exc_info.value.field_name == "project.type"
 
     def test_max_length_exceeded(self):
         """Test that exceeding max length raises error."""
@@ -168,7 +168,7 @@ class TestSiteConfig:
                 sphinx_theme="pydata_sphinx_theme",
             )
         assert "exceeds maximum length" in str(exc_info.value)
-        assert exc_info.value.field_name == "site.title"
+        assert exc_info.value.field_name == "project.name"
 
     def test_max_length_boundary(self):
         """Test that exactly max length is allowed."""
@@ -255,9 +255,9 @@ class TestSiteConfigFromManifest:
     def test_from_manifest_catalog_theme(self):
         """Test creating config from manifest with catalog theme."""
         manifest = {
-            "site": {
-                "title": "My Catalog",
-                "author": "Test Author",
+            "project": {
+                "name": "My Catalog",
+                "maintainer": "Test Author",
                 "copyright": "2024",
             }
         }
@@ -270,9 +270,9 @@ class TestSiteConfigFromManifest:
     def test_from_manifest_pipeline_theme(self):
         """Test creating config from manifest with pipeline theme."""
         manifest = {
-            "site": {
-                "title": "My Pipeline",
-                "author": "Test Author",
+            "project": {
+                "name": "My Pipeline",
+                "maintainer": "Test Author",
                 "copyright": "2024",
             }
         }
@@ -282,13 +282,13 @@ class TestSiteConfigFromManifest:
 
     def test_from_manifest_invalid_pipeline_theme(self):
         """Test that invalid pipeline theme raises error."""
-        manifest = {"site": {"title": "Test", "author": "", "copyright": ""}}
+        manifest = {"project": {"name": "Test"}}
         with pytest.raises(ValidationError) as exc_info:
             SiteConfig.from_manifest(manifest, "invalid")
         assert "Invalid pipeline theme" in str(exc_info.value)
 
     def test_from_manifest_missing_site_uses_defaults(self):
-        """Test that missing site section uses defaults."""
+        """Test that a missing project section uses defaults."""
         from datetime import datetime
 
         manifest = {}
@@ -298,12 +298,12 @@ class TestSiteConfigFromManifest:
         assert config.copyright == str(datetime.now().year)  # Auto-generated year when key missing
 
     def test_from_manifest_partial_site_uses_defaults(self):
-        """Test that partial site section uses defaults for missing fields."""
+        """Test that a partial project section uses defaults for missing fields."""
         from datetime import datetime
 
         manifest = {
-            "site": {
-                "title": "Custom Title",
+            "project": {
+                "name": "Custom Title",
             }
         }
         config = SiteConfig.from_manifest(manifest, "pipeline")
@@ -318,9 +318,9 @@ class TestValidateConfPyValues:
     def test_validate_returns_site_config(self):
         """Test that validate_conf_py_values returns SiteConfig."""
         specs = {
-            "site": {
-                "title": "Test Project",
-                "author": "Test Author",
+            "project": {
+                "name": "Test Project",
+                "maintainer": "Test Author",
                 "copyright": "2024",
             }
         }
@@ -332,9 +332,9 @@ class TestValidateConfPyValues:
     def test_validate_with_catalog_theme(self):
         """Test validation with catalog theme."""
         specs = {
-            "site": {
-                "title": "My Catalog",
-                "author": "Author",
+            "project": {
+                "name": "My Catalog",
+                "maintainer": "Author",
                 "copyright": "2024",
             }
         }
@@ -344,9 +344,9 @@ class TestValidateConfPyValues:
     def test_validate_raises_on_invalid_input(self):
         """Test that validation raises on invalid input."""
         specs = {
-            "site": {
-                "title": 'Invalid"; title',
-                "author": "Author",
+            "project": {
+                "name": 'Invalid"; title',
+                "maintainer": "Author",
                 "copyright": "2024",
             }
         }
@@ -486,7 +486,7 @@ class TestValidateSourceFiles:
         assert any(mf.file_type == "note" for mf in missing)
 
     def test_inline_docs_not_checked_for_path(self, catalog_project_inline_docs):
-        """Test that inline docs (dataframe_docs_str) don't trigger path checks."""
+        """Test that inline docs don't trigger path checks."""
         manifest = load_manifest(catalog_project_inline_docs)
         missing = validate_source_files(manifest, catalog_project_inline_docs)
         assert not any(mf.file_type == "dataframe_docs" for mf in missing)

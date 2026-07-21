@@ -17,7 +17,6 @@ Settings file format::
     path = "/absolute/path/to/catalog/chartbook.toml"
 """
 
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -146,10 +145,15 @@ def set_default_catalog_path(catalog_path: Path) -> None:
         raise FileNotFoundError(f"File not found: {catalog_path}")
 
     # Validate that it is a catalog-type manifest
+    from chartbook.manifest import V1FormatError, detect_v1_format, resolve_project_type
+
     with open(catalog_path, "rb") as f:
         manifest = tomli.load(f)
 
-    config_type = manifest.get("config", {}).get("type")
+    if detect_v1_format(manifest):
+        raise V1FormatError(catalog_path)
+
+    config_type = resolve_project_type(manifest, source=str(catalog_path))
     if config_type != "catalog":
         raise ValueError(
             f"Expected a catalog-type chartbook.toml, but found type={config_type!r}. "
@@ -183,17 +187,11 @@ def create_global_catalog(title: str = "My Catalog", author: str = "") -> Path:
     if catalog_path.is_file():
         raise FileExistsError(f"Global catalog already exists: {catalog_path}")
 
-    year = str(datetime.now().year)
     catalog = {
-        "config": {
+        "project": {
             "type": "catalog",
-        },
-        "site": {
-            "title": title,
-            "author": author,
-            "copyright": year,
-            "logo_path": "",
-            "favicon_path": "",
+            "name": title,
+            "maintainer": author,
         },
         "pipelines": {},
     }

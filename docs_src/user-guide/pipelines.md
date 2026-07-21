@@ -29,35 +29,27 @@ my-pipeline/
 │   ├── data_processing.py
 │   └── create_charts.py
 ├── docs_src/              # Documentation sources
-│   ├── charts/           # Chart documentation
-│   └── dataframes/       # Dataframe documentation
+│   ├── charts/           # Chart documentation fragments
+│   ├── dataframes/       # Dataframe documentation fragments
+│   └── site/             # Custom site pages (auto-detected as site_dir)
 └── excel/                 # Excel files (optional)
 ```
+
+Custom markdown pages placed in `docs_src/site/` are merged into the generated site automatically — `site_dir` defaults to `./docs_src/site/` when that directory exists. The built HTML output goes to `./docs/`.
 
 ## Creating a Pipeline
 
 ### Step 1: Initialize Configuration
 
-Create a `chartbook.toml` file:
+Create a `chartbook.toml` file. The presence of the file alone marks the directory as a chartbook pipeline — even an empty file is valid — but you will usually add project metadata:
 
 ```toml
-[config]
-type = "pipeline"
-chartbook_format_version = "0.0.21"
-
-[site]
-title = "My Analytics Pipeline"
-author = "Data Team"
-copyright = "2025"
-
-[pipeline]
-id = "ANALYTICS"
-pipeline_name = "Business Analytics Pipeline"
-pipeline_description = "Monthly business metrics and KPIs"
-lead_pipeline_developer = "Jane Doe"
+[project]
+name = "Business Analytics Pipeline"
+description = "Monthly business metrics and KPIs"
+maintainer = "Jane Doe"
 contributors = ["Jane Doe", "John Smith"]
-git_repo_URL = "https://repository.yourcompany.org/scm/chart/repos/analytics"
-README_file_path = "./README.md"
+repo_url = "https://repository.yourcompany.org/scm/chart/repos/analytics"
 ```
 
 ### Step 2: Organize Your Data
@@ -118,37 +110,46 @@ This chart displays the relationship between revenue and costs over time.
 
 ## Pipeline Configuration
 
-### Required Fields
+All `[project]` keys are optional with sensible defaults — `name` defaults to the directory name, `repo_url` to the git `origin` remote, and the pipeline's scoped ID (`scope/name`) is derived from the git remote and directory name (see {doc}`concepts` for how identity works). Whether any field is *required* is decided by the catalog that aggregates your pipeline, via its `[policy]` section (see {doc}`catalog-projects`).
 
-Every pipeline must define:
+### Core Fields
+
+The fields most catalogs expect:
 
 ```toml
-[pipeline]
-id = "UNIQUE_ID"              # Unique identifier (uppercase)
-pipeline_name = "Full Name"   # Human-readable name
-pipeline_description = "..."  # Detailed description
-lead_pipeline_developer = "Name"
+[project]
+name = "Full Name"            # Human-readable name (also the site title)
+description = "..."           # Detailed description
+maintainer = "Name"           # Primary maintainer (also the site author)
+repo_url = "https://..."      # Repository URL
 ```
 
-### Optional Fields
-
-Additional metadata:
+### Additional Fields
 
 ```toml
-[pipeline]
+[project]
+id = "acme/analytics"         # Scoped ID; usually derived, set only to override
 contributors = ["Name1", "Name2"]
-software_modules_command = "module load python/3.11"
-runs_on_grid_or_windows_or_other = "Windows/Linux"
-git_repo_URL = "https://..."
-README_file_path = "./README.md"
+os_compatibility = ["Windows", "Linux", "macOS"]
+readme = "./README.md"        # Defaults to ./README.md
+site_url = "https://..."      # URL of the published site
+copyright = "2026"            # Defaults to the current year
+logo = "./assets/logo.png"    # Defaults to a bundled asset
+favicon = "./assets/favicon.ico"
+build = """
+module load python/3.11
+doit
+"""
 ```
+
+The `build` field is a single string with shell-script semantics: a multi-line value is one script, so state (like an activated environment) carries across lines. See {doc}`../configuration` for the full key reference.
 
 ## Best Practices
 
 ### 1. Consistent Naming
 
 Use consistent naming conventions:
-- Pipeline ID: `UPPERCASE_WITH_UNDERSCORES`
+- Pipeline ID: `scope/name` with lowercase components (e.g. `ftsfr/crsp_treasury`)
 - File names: `lowercase_with_underscores`
 - Chart IDs: `descriptive_chart_name`
 

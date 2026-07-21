@@ -1,18 +1,12 @@
-[config]
+[project]
 type = "catalog"
-chartbook_format_version = "0.0.21"
-
-[site]
-title = "ChartBook Catalog"
-author = "Jeremy Bejarano"
+name = "ChartBook Catalog"
+maintainer = "Jeremy Bejarano"
 copyright = "2025"
-logo_path = "./logo.png"
-favicon_path = ""
+logo = "./logo.png"
 
-[pipelines]
+[pipelines."backofficedev/fred_charts"]
+path = "../fred_charts"
 
-[pipelines.fred_charts]
-path_to_pipeline = "../fred_charts"
-
-[pipelines.yield_curve]
-path_to_pipeline = "../yield_curve"
+[pipelines."backofficedev/yield_curve"]
+path = "../yield_curve"

@@ -48,6 +48,7 @@ suppress_warnings = [
 ]
 
 # MyST configuration
+myst_heading_anchors = 3
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",

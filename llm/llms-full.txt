@@ -164,19 +164,19 @@ chartbook ls [OPTIONS] [COMMAND]
 $ chartbook ls
 Catalog: /data/my-catalog/chartbook.toml
 
-[pipeline] sales: Sales Analytics
-  [dataframe] sales/transactions: Sales Transactions
-  [chart] sales/monthly_revenue: Monthly Revenue
-[pipeline] marketing: Marketing Analytics
-  [dataframe] marketing/campaigns: Campaign Data
+[pipeline] acme/sales: Sales Analytics
+  [dataframe] acme/sales/transactions: Sales Transactions
+  [chart] acme/sales/monthly_revenue: Monthly Revenue
+[pipeline] acme/marketing: Marketing Analytics
+  [dataframe] acme/marketing/campaigns: Campaign Data
 
 $ chartbook ls pipelines
-sales: Sales Analytics
-marketing: Marketing Analytics
+acme/sales: Sales Analytics
+acme/marketing: Marketing Analytics
 
 $ chartbook ls dataframes
-sales/transactions: Sales Transactions
-marketing/campaigns: Campaign Data
+acme/sales/transactions: Sales Transactions
+acme/marketing/campaigns: Campaign Data
 
 $ chartbook ls --catalog /path/to/other/catalog
 ```
@@ -257,146 +257,148 @@ ChartBook uses a TOML configuration file (`chartbook.toml`) to define your proje
 ### Configuration File Structure
 
 ```toml
-[config]           # Project type and version
-[site]             # Website metadata
-[pipeline]         # Pipeline information (for pipeline projects)
-[pipelines]        # Pipeline references (for catalog projects)
+[project]          # All project metadata (every key optional)
+[pipelines]        # Pipeline registry (for catalog projects, scoped keys)
+[policy]           # Required-field policy (for catalog projects)
 [charts]           # Chart definitions
 [dataframes]       # Dataframe definitions
 [notes]            # Additional documentation notes
 [notebooks]        # Jupyter notebook references
 ```
 
+There is no format version key. The minimal valid pipeline manifest is an empty file — its presence alone marks a directory as a ChartBook pipeline.
+
 ### Project Types
 
-#### Pipeline Project
-A single analytics pipeline with its own charts and dataframes:
+The project type is **inferred**: a manifest with a `[pipelines]` registry table is a **catalog**; otherwise it is a **pipeline**. You may set `type = "pipeline"` or `type = "catalog"` explicitly in `[project]`; a `type` that contradicts the file structure is an error.
+
+### [project] - Project Metadata
+
+All keys are optional with defaults:
 
 ```toml
-[config]
-type = "pipeline"
-chartbook_format_version = "0.0.21"
-```
-
-#### Catalog Project
-A collection of multiple pipelines aggregated into a unified catalog:
-
-```toml
-[config]
-type = "catalog"
-chartbook_format_version = "0.0.21"
-```
-
-### [config] - Project Configuration
-
-```toml
-[config]
-type = "pipeline"  # or "catalog"
-chartbook_format_version = "0.0.21"
-```
-
-### [site] - Website Metadata
-
-```toml
-[site]
-title = "My Analytics Project"
-author = "Data Team"
-copyright = "2025"
-logo_path = "./assets/logo.png"    # Optional
-favicon_path = "./assets/icon.png"  # Optional
-```
-
-### [pipeline] - Pipeline Information
-
-For pipeline projects only:
-
-```toml
-[pipeline]
-id = "MYPROJ"
-pipeline_name = "My Analytics Pipeline"
-pipeline_description = "Comprehensive analytics for business metrics"
-lead_pipeline_developer = "Jane Doe"
+[project]
+# type = "pipeline"                # Optional — inferred from structure
+# id = "myorg/my_pipeline"         # Optional — scoped ID, default derived from git remote + dirname
+name = "My Analytics Pipeline"     # Default: directory name (doubles as site title)
+description = "Comprehensive analytics for business metrics"
+maintainer = "Jane Doe"            # Also rendered as site author
 contributors = ["Jane Doe", "John Smith", "Alice Johnson"]
-software_modules_command = "module load python/3.11"  # Optional
-runs_on_grid_or_windows_or_other = "Windows/Linux/MacOS"
-git_repo_URL = "https://github.com/org/repo"
-README_file_path = "./README.md"
+repo_url = "https://github.com/org/repo"   # Default: git remote origin
+readme = "./README.md"             # Default
+copyright = "2026"                 # Default: current year
+logo = "./assets/logo.png"         # Default: bundled asset
+favicon = "./assets/icon.png"      # Default: bundled asset
+os_compatibility = ["Windows", "Linux", "macOS"]
+build = """
+module load python/3.11
+doit
+"""
+site_dir = "./docs_src/site/"      # Default when that directory exists
+enable_data_download = false       # Default
 ```
 
-### [pipelines] - Pipeline References
+`build` is a single string with shell-script semantics — a multi-line value is one script, so state (e.g. `conda activate`) carries across lines.
 
-For catalog projects only:
+### Pipeline Identity
+
+Canonical pipeline identity is a scoped name `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically: explicit `[project] id` if set, else scope from the git `origin` remote plus the directory name, else the bare directory name. `data.load`, `chartbook ls`, and `chartbook data` accept a bare name (when unambiguous), a scoped name, or a repo URL (normalized). An `@rev` suffix is reserved but not yet supported.
+
+### [pipelines] - Pipeline Registry
+
+For catalog projects only. Keys are scoped pipeline IDs, quoted because they contain `/`:
 
 ```toml
 [pipelines]
 
-[pipelines.EX]
-path_to_pipeline = "../pipelines/example"
+[pipelines."acme/example"]
+path = "../pipelines/example"
 
-[pipelines.ANALYTICS]
-path_to_pipeline = "../pipelines/analytics"
+[pipelines."acme/analytics"]
+path = "../pipelines/analytics"
+disabled = true                     # Temporarily excluded from builds
 
 # Platform-specific paths
-[pipelines.DATA.MONTHLY]
-Unix = "/data/pipelines/monthly"
-Windows = "T:/pipelines/monthly"
+[pipelines."acme/monthly"]
+path = { unix = "/data/pipelines/monthly", windows = "T:/pipelines/monthly" }
 ```
+
+### [policy] - Catalog Policy
+
+The format is permissive; requiredness is catalog policy. A catalog may declare which fields its member pipelines must fill in:
+
+```toml
+[policy]
+mode = "warn"          # "warn" (default): report on diagnostics page
+                       # "strict": fail the catalog build
+
+[policy.required]
+project    = ["description", "maintainer", "repo_url"]
+dataframes = ["date_col", "pull_method"]
+charts     = ["units", "frequency"]
+```
+
+Policy is enforced only when the catalog builds; standalone pipeline builds are always permissive.
 
 ### [charts] - Chart Definitions
 
 ```toml
 [charts.revenue_trend]
-chart_name = "Revenue Trend Analysis"
+name = "Revenue Trend Analysis"
 date_cleared_by_iv_and_v = "2025-01-15"
 last_legal_clearance_date = "2025-01-15"
 last_cleared_by = "Legal Team"
-past_publications = [
+publications = [
     "[Q4 Report 2024, p15](https://example.com/reports/q4-2024)",
     "[Annual Report 2024, p45](https://example.com/reports/annual-2024)",
 ]
-short_description_chart = "Monthly revenue trends with seasonal adjustments"
-dataframe_id = "revenue_data"
-topic_tags = ["Revenue", "Financial", "Monthly"]
-data_series_start_date = "1/1/2020"
-data_frequency = "Monthly"
+description = "Monthly revenue trends with seasonal adjustments"
+dataframe = "revenue_data"
+tags = ["Revenue", "Financial", "Monthly"]
+start_date = "1/1/2020"
+frequency = "Monthly"
 observation_period = "Month-end"
-lag_in_data_release = "15 days"
-data_release_timing = "Mid-month"
+release_lag = "15 days"
+release_timing = "Mid-month"
 seasonal_adjustment = "X-13ARIMA-SEATS"
 units = "USD Millions"
-data_series = ["Gross Revenue", "Net Revenue", "Revenue Growth Rate"]
+series = ["Gross Revenue", "Net Revenue", "Revenue Growth Rate"]
 mnemonic = "REV_TREND"
-path_to_html_chart = "./_output/revenue_trend.html"
-path_to_excel_chart = "./excel/revenue_trend.xlsx"
-chart_docs_path = "./docs_src/charts/revenue_trend.md"
+path = "./_output/revenue_trend.html"
+excel_path = "./excel/revenue_trend.xlsx"
+docs_path = "./docs_src/charts/revenue_trend.md"
 ```
+
+Each chart needs exactly one of `docs_path` (external markdown file) or `docs` (inline markdown string).
 
 ### [dataframes] - Dataframe Definitions
 
 ```toml
 [dataframes.revenue_data]
-dataframe_name = "Revenue Dataset"
-short_description_df = "Comprehensive revenue data with geographic breakdowns"
-data_sources = ["Internal Sales System", "Finance Database"]
-data_providers = ["Sales Team", "Finance Team"]
-need_to_contact_provider = ["No", "No"]
-data_on_pre_approved_list = ["Yes", "Yes"]
-links_to_data_providers = [
+name = "Revenue Dataset"
+description = "Comprehensive revenue data with geographic breakdowns"
+sources = ["Internal Sales System", "Finance Database"]
+providers = ["Sales Team", "Finance Team"]
+contact_required = ["No", "No"]
+pre_approved = ["Yes", "Yes"]
+provider_links = [
     "https://internal.company.com/sales",
     "https://internal.company.com/finance"
 ]
-topic_tags = ["Revenue", "Sales", "Financial"]
-type_of_data_access = ["Internal", "Internal"]
-data_license = "Internal Use Only"
-license_expiration_date = "2025-12-31"
-provider_contact_info = "data-team@company.com"
-restriction_on_use = "Internal analytics only"
-how_is_pulled = "SQL query via Python"
-path_to_parquet_data = "./_data/revenue_data.parquet"
-path_to_excel_data = "./_data/revenue_data.xlsx"
+tags = ["Revenue", "Sales", "Financial"]
+access_types = ["Internal", "Internal"]
+license = "Internal Use Only"
+license_expiration = "2025-12-31"
+provider_contact = "data-team@company.com"
+restrictions = "Internal analytics only"
+pull_method = "SQL query via Python"
+path = "./_data/revenue_data.parquet"
+excel_path = "./_data/revenue_data.xlsx"
 date_col = "date"
-dataframe_docs_path = "./docs_src/dataframes/revenue_data.md"
+docs_path = "./docs_src/dataframes/revenue_data.md"
 ```
+
+Each dataframe needs exactly one of `docs_path` or `docs` (inline markdown string).
 
 ### [notes] - Additional Documentation
 
@@ -404,26 +406,26 @@ dataframe_docs_path = "./docs_src/dataframes/revenue_data.md"
 [notes]
 
 [notes.methodology]
-path_to_markdown_file = "./docs_src/methodology.md"
+path = "./docs_src/methodology.md"
 
 [notes.data_quality]
-path_to_markdown_file = "./docs_src/data_quality_notes.md"
+path = "./docs_src/data_quality_notes.md"
 ```
 
 ### [notebooks] - Jupyter Notebooks
 
-The notebook name is inferred from the first `# Heading` in the notebook. Set `notebook_name` to override.
+The notebook name is inferred from the first `# Heading` in the notebook. Set `name` to override. Set `publishable = false` to exclude a notebook from publishing.
 
 ```toml
 [notebooks]
 
 [notebooks.exploratory_analysis]
-notebook_description = "Initial exploration of revenue patterns and anomalies"
-notebook_path = "_output/01_exploratory_analysis.ipynb"
+description = "Initial exploration of revenue patterns and anomalies"
+path = "_output/01_exploratory_analysis.ipynb"
 
 [notebooks.model_development]
-notebook_description = "Time series models for revenue forecasting"
-notebook_path = "_output/02_model_development.ipynb"
+description = "Time series models for revenue forecasting"
+path = "_output/02_model_development.ipynb"
 ```
 
 ---
@@ -464,28 +466,33 @@ my-pipeline/
 
 ### Pipeline Configuration
 
-Required fields:
+All fields are optional — an empty `chartbook.toml` is a valid pipeline manifest. Recommended fields:
+
 ```toml
-[pipeline]
-id = "UNIQUE_ID"              # Unique identifier (uppercase)
-pipeline_name = "Full Name"   # Human-readable name
-pipeline_description = "..."  # Detailed description
-lead_pipeline_developer = "Name"
+[project]
+name = "Full Name"            # Human-readable name (default: directory name)
+description = "..."           # Detailed description
+maintainer = "Name"
 ```
 
-Optional fields:
+More fields:
+
 ```toml
-[pipeline]
+[project]
+# id = "myorg/my_pipeline"    # Scoped ID (default derived from git remote + dirname)
 contributors = ["Name1", "Name2"]
-software_modules_command = "module load python/3.11"
-runs_on_grid_or_windows_or_other = "Windows/Linux"
-git_repo_URL = "https://..."
-README_file_path = "./README.md"
+os_compatibility = ["Windows", "Linux"]
+build = """
+module load python/3.11
+doit
+"""
+repo_url = "https://..."
+readme = "./README.md"
 ```
 
 ### Best Practices
 
-1. **Consistent Naming**: Use `UPPERCASE_WITH_UNDERSCORES` for IDs
+1. **Consistent Naming**: Use lowercase `scope/name` pipeline IDs (usually derived automatically from the git remote and directory name)
 2. **Version Control**: Track all files in git
 3. **Data Management**: Store raw data separately from processed data
 4. **Reproducibility**: Set random seeds, document package versions
@@ -531,11 +538,11 @@ Charts are the primary output of ChartBook pipelines. Each chart combines data v
 
 ```toml
 [charts.monthly_revenue]
-chart_name = "Monthly Revenue Analysis"
-short_description_chart = "Revenue trends with YoY comparison"
-dataframe_id = "revenue_data"
-path_to_html_chart = "./_output/monthly_revenue.html"
-chart_docs_path = "./docs_src/charts/monthly_revenue.md"
+name = "Monthly Revenue Analysis"
+description = "Revenue trends with YoY comparison"
+dataframe = "revenue_data"
+path = "./_output/monthly_revenue.html"
+docs_path = "./docs_src/charts/monthly_revenue.md"
 ```
 
 ### Creating Charts
@@ -566,12 +573,12 @@ chartbook.plotting.multiline(
 - `last_cleared_by`: Approver name
 
 **Publication Tracking:**
-- `past_publications`: List of previous uses
+- `publications`: List of previous uses
 
 **Data Characteristics:**
-- `data_frequency`: Daily, Weekly, Monthly, Quarterly, Annual
+- `frequency`: Daily, Weekly, Monthly, Quarterly, Annual
 - `observation_period`: When measurement taken
-- `lag_in_data_release`: How long until available
+- `release_lag`: How long until available
 - `seasonal_adjustment`: None, X-13ARIMA-SEATS, etc.
 - `units`: Units of measurement
 
@@ -592,39 +599,40 @@ Dataframes are the foundation of ChartBook analytics, representing structured da
 
 ```toml
 [dataframes.sales_data]
-dataframe_name = "Sales Transaction Data"
-short_description_df = "Daily sales transactions with customer details"
-data_sources = ["CRM System"]
-path_to_parquet_data = "./_data/sales_data.parquet"
+name = "Sales Transaction Data"
+description = "Daily sales transactions with customer details"
+sources = ["CRM System"]
+path = "./_data/sales_data.parquet"
 date_col = "transaction_date"
+docs = "Daily sales transaction records."
 ```
 
 ### Complete Dataframe Configuration
 
 ```toml
 [dataframes.market_data]
-dataframe_name = "Financial Market Data"
-short_description_df = "Daily stock prices and trading volumes"
-data_sources = ["Bloomberg", "Reuters", "Yahoo Finance"]
-data_providers = ["Bloomberg LP", "Refinitiv", "Yahoo"]
-links_to_data_providers = [
+name = "Financial Market Data"
+description = "Daily stock prices and trading volumes"
+sources = ["Bloomberg", "Reuters", "Yahoo Finance"]
+providers = ["Bloomberg LP", "Refinitiv", "Yahoo"]
+provider_links = [
     "https://www.bloomberg.com/professional",
     "https://www.refinitiv.com",
     "https://finance.yahoo.com"
 ]
-type_of_data_access = ["Subscription", "Subscription", "Public"]
-need_to_contact_provider = ["Yes", "Yes", "No"]
-data_on_pre_approved_list = ["Yes", "Yes", "N/A"]
-data_license = "Bloomberg Data License Agreement"
-license_expiration_date = "2025-12-31"
-provider_contact_info = "marketdata@bloomberg.com"
-restriction_on_use = "Internal use only, no redistribution"
-how_is_pulled = "Python API with daily scheduled job"
-topic_tags = ["Market Data", "Equities", "S&P 500"]
+access_types = ["Subscription", "Subscription", "Public"]
+contact_required = ["Yes", "Yes", "No"]
+pre_approved = ["Yes", "Yes", "N/A"]
+license = "Bloomberg Data License Agreement"
+license_expiration = "2025-12-31"
+provider_contact = "marketdata@bloomberg.com"
+restrictions = "Internal use only, no redistribution"
+pull_method = "Python API with daily scheduled job"
+tags = ["Market Data", "Equities", "S&P 500"]
 date_col = "date"
-path_to_parquet_data = "./_data/market_data.parquet"
-path_to_excel_data = "./_data/market_data.xlsx"
-dataframe_docs_path = "./docs_src/dataframes/market_data.md"
+path = "./_data/market_data.parquet"
+excel_path = "./_data/market_data.xlsx"
+docs_path = "./docs_src/dataframes/market_data.md"
 ```
 
 ### Loading Data
@@ -633,27 +641,30 @@ From a catalog (requires a configured catalog via `chartbook config` or an expli
 ```python
 from chartbook import data
 
-# Load as pandas DataFrame (default)
-df = data.load(pipeline="MARKETS", dataframe="market_data")
+# Load as Polars LazyFrame (default) — bare pipeline name
+lf = data.load(pipeline="markets", dataframe="market_data")
 
-# Load as polars DataFrame
-df = data.load(pipeline="MARKETS", dataframe="market_data", format="polars")
+# Scoped pipeline name (canonical; required when a bare name is ambiguous)
+lf = data.load(pipeline="acme/markets", dataframe="market_data")
 
-# Load as polars LazyFrame (deferred execution)
-lf = data.load(pipeline="MARKETS", dataframe="market_data", format="polars-lazyframe")
+# Load as Polars eager DataFrame
+df = data.load(pipeline="markets", dataframe="market_data", format="polars_eager")
+
+# Load as pandas DataFrame
+df = data.load(pipeline="markets", dataframe="market_data", format="pandas")
 
 # Explicit catalog path (no global config needed)
-df = data.load(pipeline="MARKETS", dataframe="market_data",
+lf = data.load(pipeline="markets", dataframe="market_data",
                catalog_path="/path/to/catalog")
 
 # Get just the resolved data file path
-path = data.get_data_path(pipeline="MARKETS", dataframe="market_data")
+path = data.get_data_path(pipeline="markets", dataframe="market_data")
 
 # Get documentation content as a string
-docs = data.get_docs(pipeline="MARKETS", dataframe="market_data")
+docs = data.get_docs(pipeline="markets", dataframe="market_data")
 
 # Get path to documentation source file
-docs_path = data.get_docs_path(pipeline="MARKETS", dataframe="market_data")
+docs_path = data.get_docs_path(pipeline="markets", dataframe="market_data")
 ```
 
 Direct loading:
@@ -684,29 +695,44 @@ A catalog project aggregates multiple pipelines into a unified documentation sit
 
 ### Configuration
 
+Catalog keys are scoped pipeline IDs, quoted because they contain `/`. The presence of the `[pipelines]` table is what makes the manifest a catalog:
+
 ```toml
-[config]
-type = "catalog"
-chartbook_format_version = "0.0.21"
+[project]
+name = "Company Analytics Catalog"
 
 [pipelines]
 
-[pipelines.SALES]
-path_to_pipeline = "../pipelines/sales"
+[pipelines."acme/sales"]
+path = "../pipelines/sales"
 
-[pipelines.MARKETING]
-path_to_pipeline = "../pipelines/marketing"
+[pipelines."acme/marketing"]
+path = "../pipelines/marketing"
 
-[pipelines.FINANCE]
-path_to_pipeline = "../pipelines/finance"
+[pipelines."acme/finance"]
+path = "../pipelines/finance"
+disabled = true                  # Temporarily excluded from builds
 ```
 
 ### Platform-Specific Paths
 
 ```toml
-[pipelines.DATA.MONTHLY]
-Unix = "/data/pipelines/monthly"
-Windows = "T:/pipelines/monthly"
+[pipelines."acme/monthly"]
+path = { unix = "/data/pipelines/monthly", windows = "T:/pipelines/monthly" }
+```
+
+### Catalog Policy
+
+A catalog may declare which fields its member pipelines must fill in. `mode = "warn"` (default) reports on the diagnostics page; `mode = "strict"` fails the catalog build:
+
+```toml
+[policy]
+mode = "warn"
+
+[policy.required]
+project    = ["description", "maintainer", "repo_url"]
+dataframes = ["date_col", "pull_method"]
+charts     = ["units", "frequency"]
 ```
 
 ---
@@ -742,47 +768,40 @@ An explicit `catalog_path` argument always takes priority over the global settin
 ## Complete Configuration Example
 
 ```toml
-[config]
-type = "pipeline"
-chartbook_format_version = "0.0.21"
-
-[site]
-title = "Sales Analytics Pipeline"
-author = "Analytics Team"
-copyright = "2025, My Company"
-logo_path = "./assets/company_logo.png"
-favicon_path = "./assets/favicon.ico"
-
-[pipeline]
-id = "SALES"
-pipeline_name = "Sales Analytics Pipeline"
-pipeline_description = "End-to-end sales analytics and reporting"
-lead_pipeline_developer = "Jane Doe"
+[project]
+name = "Sales Analytics Pipeline"
+description = "End-to-end sales analytics and reporting"
+maintainer = "Jane Doe"
 contributors = ["Jane Doe", "John Smith"]
-runs_on_grid_or_windows_or_other = "Windows/Linux"
-git_repo_URL = "https://github.com/org/sales-analytics"
-README_file_path = "./README.md"
+os_compatibility = ["Windows", "Linux"]
+repo_url = "https://github.com/org/sales-analytics"
+logo = "./assets/company_logo.png"
+favicon = "./assets/favicon.ico"
+build = """
+doit
+"""
 
 [charts]
 
 [charts.monthly_sales]
-chart_name = "Monthly Sales Overview"
-short_description_chart = "Total sales by month with YoY comparison"
-dataframe_id = "sales_data"
-topic_tags = ["Sales", "Monthly", "Revenue"]
-data_frequency = "Monthly"
+name = "Monthly Sales Overview"
+description = "Total sales by month with YoY comparison"
+dataframe = "sales_data"
+tags = ["Sales", "Monthly", "Revenue"]
+frequency = "Monthly"
 units = "USD"
-path_to_html_chart = "./_output/monthly_sales.html"
-chart_docs_path = "./docs_src/charts/monthly_sales.md"
+path = "./_output/monthly_sales.html"
+docs_path = "./docs_src/charts/monthly_sales.md"
 
 [dataframes]
 
 [dataframes.sales_data]
-dataframe_name = "Sales Transactions"
-short_description_df = "Detailed sales transaction data"
-data_sources = ["CRM System"]
-path_to_parquet_data = "./_data/sales_data.parquet"
+name = "Sales Transactions"
+description = "Detailed sales transaction data"
+sources = ["CRM System"]
+path = "./_data/sales_data.parquet"
 date_col = "transaction_date"
+docs = "Detailed sales transaction records from the CRM system."
 ```
 
 ---
@@ -809,7 +828,7 @@ python -m http.server -d ./docs             # Test locally
 
 ## Best Practices
 
-1. **Version Control**: Always specify `chartbook_format_version`
+1. **Lean Manifests**: Rely on defaults — only set `[project]` keys that differ from them
 2. **File Paths**: Use relative paths from the project root
 3. **Metadata**: Provide comprehensive metadata for discoverability
 4. **Tags**: Use consistent topic tags across charts and dataframes

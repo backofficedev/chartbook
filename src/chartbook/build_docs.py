@@ -147,7 +147,7 @@ def generate_docs(
 
     # Load configuration
     manifest = load_manifest(project_dir)
-    pipeline_theme = manifest["config"]["type"]
+    pipeline_theme = manifest["project"]["type"]
 
     # Validate that all source files exist
     missing_files = validate_source_files(manifest, project_dir)
@@ -179,7 +179,32 @@ def generate_docs(
             raise ValueError(f"Invalid pipeline theme: {pipeline_theme}")
 
         # Generate diagnostics CSV first so it's available during markdown build
-        generate_metadata_diagnostics(manifest=manifest, docs_build_dir=_docs_dir)
+        diagnostic_rows = generate_metadata_diagnostics(
+            manifest=manifest, docs_build_dir=_docs_dir
+        )
+
+        # A catalog with policy.mode = "strict" fails the build on any
+        # missing required field
+        policy = manifest.get("policy")
+        if policy and policy["mode"] == "strict":
+            incomplete = [r for r in diagnostic_rows if not r.metadata_complete]
+            if incomplete:
+                import click
+
+                lines = [
+                    "Catalog policy is 'strict' and required metadata is missing:"
+                ]
+                for row in incomplete:
+                    lines.append(
+                        f"  - {row.object_type} '{row.pipeline_id}:{row.identifier}' "
+                        f"missing: {row.missing_fields}"
+                    )
+                lines.append(
+                    "Fill in the fields above, relax [policy.required], or set "
+                    "policy.mode = 'warn' in the catalog's chartbook.toml."
+                )
+                click.echo(click.style("\n".join(lines), fg="red"), err=True)
+                raise SystemExit(1)
 
         # Run pipeline publish
         run_build_markdown(

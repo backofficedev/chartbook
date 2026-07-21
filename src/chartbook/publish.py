@@ -40,6 +40,27 @@ def convert_paths_to_strings(obj):
         return obj
 
 
+INTERNAL_TOP_LEVEL_KEYS = ("base_dir", "pipeline_base_dir")
+
+
+def strip_internal_keys(obj, _top_level=True):
+    """Recursively drop loader-derived keys (underscore-prefixed, machine paths).
+
+    :param obj: The manifest structure to clean.
+    :returns: A copy without internal keys, safe to serialize as a v2 manifest.
+    """
+    if isinstance(obj, dict):
+        return {
+            key: strip_internal_keys(value, _top_level=False)
+            for key, value in obj.items()
+            if not (isinstance(key, str) and key.startswith("_"))
+            and not (_top_level and key in INTERNAL_TOP_LEVEL_KEYS)
+        }
+    elif isinstance(obj, list):
+        return [strip_internal_keys(item, _top_level=False) for item in obj]
+    return obj
+
+
 def create_dodo_file_with_mod_date(date, dodo_path, publish_dir=PUBLISH_DIR):
     """Create a Python file named 'dodo.py' with specified content and set its modification date.
 
@@ -111,7 +132,7 @@ def get_pipeline_publishing_plan(manifest, publish_dir=PUBLISH_DIR):
 
         # Add README and chartbook.toml files
         _add_file_to_plan(
-            pipeline_base_dir, pipeline_manifest["pipeline"]["README_file_path"]
+            pipeline_base_dir, pipeline_manifest["project"]["readme"]
         )
         _add_file_to_plan(pipeline_base_dir, "chartbook.toml")
 
@@ -120,30 +141,30 @@ def get_pipeline_publishing_plan(manifest, publish_dir=PUBLISH_DIR):
             dataframe_manifest = pipeline_manifest["dataframes"][dataframe_id]
 
             _add_file_to_plan(
-                pipeline_base_dir, dataframe_manifest["path_to_parquet_data"]
+                pipeline_base_dir, dataframe_manifest.get("path")
             )
             # Only copy doc file if using path mode (not inline string)
             if dataframe_manifest.get("_doc_mode") == "path":
                 _add_file_to_plan(
-                    pipeline_base_dir, dataframe_manifest.get("dataframe_docs_path")
+                    pipeline_base_dir, dataframe_manifest.get("docs_path")
                 )
 
         # Process charts
         for chart_id in pipeline_manifest["charts"]:
             chart_manifest = pipeline_manifest["charts"][chart_id]
 
-            _add_file_to_plan(pipeline_base_dir, chart_manifest["path_to_html_chart"])
+            _add_file_to_plan(pipeline_base_dir, chart_manifest.get("path"))
             # Only copy doc file if using path mode (not inline string)
             if chart_manifest.get("_doc_mode") == "path":
                 _add_file_to_plan(
-                    pipeline_base_dir, chart_manifest.get("chart_docs_path")
+                    pipeline_base_dir, chart_manifest.get("docs_path")
                 )
 
         # Process notebooks
         for notebook_id in pipeline_manifest["notebooks"]:
             notebook_manifest = pipeline_manifest["notebooks"][notebook_id]
-            if notebook_manifest.get("is_publishable") is True:
-                _add_file_to_plan(pipeline_base_dir, notebook_manifest["notebook_path"])
+            if notebook_manifest.get("publishable") is True:
+                _add_file_to_plan(pipeline_base_dir, notebook_manifest["path"])
 
     return publishing_plan
 
@@ -179,7 +200,7 @@ def copy_publishable_pipeline_files(manifest, base_dir, publish_dir, verbose=Fal
 def revise_published_chartbook_toml(publish_dir: Path, base_dir: Path = BASE_DIR):
     """Revise the chartbook.toml file in the publish directory.
 
-    Only keep notebooks with is_publishable == True.
+    Only keep notebooks with publishable == True.
 
     :param publish_dir: The directory where the revised chartbook.toml file will be saved.
     :type publish_dir: Path
@@ -191,12 +212,13 @@ def revise_published_chartbook_toml(publish_dir: Path, base_dir: Path = BASE_DIR
     revised_notebooks = {
         notebook_id: notebook_manifest
         for notebook_id, notebook_manifest in notebooks.items()
-        if notebook_manifest.get("is_publishable") is True
+        if notebook_manifest.get("publishable") is True
     }
     manifest["notebooks"] = revised_notebooks
 
-    # Convert all Path objects to strings before writing to TOML
-    manifest_for_toml = convert_paths_to_strings(manifest)
+    # Strip loader-derived keys so the published file is a clean v2 manifest,
+    # then convert Path objects to strings for TOML serialization
+    manifest_for_toml = convert_paths_to_strings(strip_internal_keys(manifest))
 
     chartbook_toml_path = publish_dir / "chartbook.toml"
     with open(chartbook_toml_path, "wb") as f:

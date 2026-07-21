@@ -6,7 +6,7 @@ myst:
 html_theme.secondary_sidebar.remove: true
 ---
 
-# {{manifest.site.title}}
+# {{manifest.project.name}}
 
 <!-- <img src="../assets/logo.png" alt="logo" width="200px" class="bg-primary"> -->
 

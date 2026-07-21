@@ -68,15 +68,17 @@ For detailed catalog management commands, browsing, and data access workflows, s
 
 ## Configuration File
 
-Projects use `chartbook.toml` with these sections:
+Projects use `chartbook.toml` with these sections (all `[project]` keys are optional — an empty file is a valid pipeline manifest):
 
-- `[config]`: Project type (pipeline/catalog) and version
-- `[site]`: Title, author, copyright, logo, `enable_data_download`
-- `[pipeline]`: ID, name, description, developer info, `site_dir` (optional path to custom site pages)
+- `[project]`: All project metadata — name, description, maintainer, contributors, repo_url, copyright, logo/favicon, os_compatibility, build (shell script string), `site_dir` (custom site pages, defaults to `./docs_src/site/` when it exists), `enable_data_download`
 - `[charts]`: Chart definitions with metadata
 - `[dataframes]`: Data source definitions with governance info
 - `[notebooks]`: Jupyter notebook references
 - `[notes]`: Additional documentation
+- `[pipelines]`: Pipeline registry (catalogs only, scoped keys like `"ftsfr/crsp_treasury"`)
+- `[policy]`: Required-field policy (catalogs only)
+
+Project type is inferred: a `[pipelines]` table means catalog, otherwise pipeline. An explicit `type = "pipeline"`/`"catalog"` in `[project]` is allowed; contradictions with the file structure are errors. There is no format version key.
 
 For complete TOML field references, required fields, and full configuration examples, see **manifest_files.md**.
 
@@ -85,8 +87,8 @@ For complete TOML field references, required fields, and full configuration exam
 Pipelines in a catalog can be temporarily disabled by adding `disabled = true`:
 
 ```toml
-[pipelines.sovereign_bonds]
-path_to_pipeline = "../sovereign_bonds"
+[pipelines."ftsfr/sovereign_bonds"]
+path = "../sovereign_bonds"
 disabled = true
 ```
 
@@ -97,37 +99,43 @@ Disabled pipelines are skipped during builds. Use `chartbook catalog disable <id
 ```python
 from chartbook import data
 
-# Load a dataframe (returns Polars LazyFrame by default)
-lf = data.load(pipeline="PROJ", dataframe="my_data")
+# Load a dataframe (returns Polars LazyFrame by default) — bare pipeline name
+lf = data.load(pipeline="crsp_treasury", dataframe="my_data")
+
+# Scoped pipeline name (canonical; required when a bare name is ambiguous)
+lf = data.load(pipeline="ftsfr/crsp_treasury", dataframe="my_data")
 
 # Load as Polars eager DataFrame
-df = data.load(pipeline="PROJ", dataframe="my_data", format="polars_eager")
+df = data.load(pipeline="crsp_treasury", dataframe="my_data", format="polars_eager")
 
 # Load as pandas DataFrame
-df = data.load(pipeline="PROJ", dataframe="my_data", format="pandas")
+df = data.load(pipeline="crsp_treasury", dataframe="my_data", format="pandas")
 
 # Load with explicit catalog path
-lf = data.load(pipeline="PROJ", dataframe="my_data", catalog_path="/path/to/catalog")
+lf = data.load(pipeline="crsp_treasury", dataframe="my_data", catalog_path="/path/to/catalog")
 
 # Get data file path
-path = data.get_data_path(pipeline="PROJ", dataframe="my_data")
+path = data.get_data_path(pipeline="crsp_treasury", dataframe="my_data")
 
 # Get documentation content as a string
-docs = data.get_docs(pipeline="PROJ", dataframe="my_data")
+docs = data.get_docs(pipeline="crsp_treasury", dataframe="my_data")
 
 # Get path to documentation source file
-docs_path = data.get_docs_path(pipeline="PROJ", dataframe="my_data")
+docs_path = data.get_docs_path(pipeline="crsp_treasury", dataframe="my_data")
 ```
+
+The `pipeline` argument accepts a bare name (resolved against the catalog when unambiguous), a scoped name (`scope/name`), or a repo URL (normalized to a scoped name). An `@rev` suffix is reserved but not yet supported.
 
 For advanced loading options, format details, and catalog setup, see **catalog_system.md**.
 
 ### Hive-Partitioned Data
 
-Use glob patterns in `path_to_parquet_data` for hive-partitioned datasets:
+Use glob patterns in the dataframe `path` field for hive-partitioned datasets:
 
 ```toml
 [dataframes.my_data]
-path_to_parquet_data = "./_data/hive_dataset/**/*.parquet"
+path = "./_data/hive_dataset/**/*.parquet"
+docs = "Hive-partitioned dataset."
 ```
 
 Polars `scan_parquet` handles glob patterns natively with automatic hive partitioning. Glob paths only support `format="polars"` (LazyFrame).
@@ -174,22 +182,15 @@ Requires `pip install "chartbook[plotting]"` or `pip install "chartbook[all]"`.
 ## Quick Start Configuration
 
 ```toml
-[config]
-type = "pipeline"
-chartbook_format_version = "0.0.21"
-
-[site]
-title = "My Analytics"
-author = "Your Name"
-copyright = "2026"
-
-[pipeline]
-id = "MYPROJ"
-pipeline_name = "My Pipeline"
-pipeline_description = "Description"
-lead_pipeline_developer = "Your Name"
-# site_dir = "./docs_src/site/"  # Optional: custom site pages directory
+[project]
+name = "My Pipeline"
+description = "Description"
+maintainer = "Your Name"
+# id = "myorg/my_pipeline"       # Optional: scoped ID (default derived from git remote + dirname)
+# site_dir = "./docs_src/site/"  # Optional: default when the directory exists
 ```
+
+Every key is optional — an empty `chartbook.toml` is a valid pipeline manifest.
 
 ## Troubleshooting
 

@@ -48,21 +48,13 @@ Use a Pipeline when you have:
 
 ### Pipeline Configuration
 
-Pipelines are configured with `chartbook.toml`:
+Pipelines are configured with `chartbook.toml`. All fields are optional — an empty file is a valid pipeline manifest — but you will usually want at least:
 
 ```toml
-[config]
-type = "pipeline"
-chartbook_format_version = "0.1.0"
-
-[site]
-title = "My Analytics Pipeline"
-author = "Data Team"
-
-[pipeline]
-id = "ANALYTICS"
-pipeline_name = "Quarterly Analytics"
-pipeline_description = "Quarterly business metrics and analysis"
+[project]
+name = "Quarterly Analytics"
+description = "Quarterly business metrics and analysis"
+maintainer = "Data Team"
 ```
 
 See {doc}`pipelines` for detailed configuration options.
@@ -89,20 +81,18 @@ Use a Catalog when you have:
 
 ### Catalog Configuration
 
+A catalog is a `chartbook.toml` with a `[pipelines]` table — its presence is what marks the project as a catalog. Keys are scoped pipeline IDs (quoted, because they contain `/`):
+
 ```toml
-[config]
-type = "catalog"
-chartbook_format_version = "0.1.0"
+[project]
+name = "Analytics Catalog"
+maintainer = "Data Science Team"
 
-[site]
-title = "Analytics Catalog"
-author = "Data Science Team"
+[pipelines."acme/quarterly"]
+path = "./pipelines/quarterly"
 
-[pipelines.quarterly]
-path_to_pipeline = "./pipelines/quarterly"
-
-[pipelines.monthly]
-path_to_pipeline = "./pipelines/monthly"
+[pipelines."acme/monthly"]
+path = "./pipelines/monthly"
 ```
 
 See {doc}`catalog-projects` for detailed configuration options.
@@ -115,9 +105,35 @@ One of the key benefits of a Catalog is the ability to load data from any pipeli
 from chartbook import data
 
 # Load data from any pipeline in your catalog
-quarterly_df = data.load(pipeline="QUARTERLY", dataframe="summary")
-monthly_df = data.load(pipeline="MONTHLY", dataframe="metrics")
+quarterly_df = data.load(pipeline="quarterly", dataframe="summary")
+monthly_df = data.load(pipeline="acme/monthly", dataframe="metrics")
 ```
+
+## Pipeline Identity
+
+Every pipeline has a canonical identity: a **scoped name** of the form `scope/name`, such as `ftsfr/crsp_treasury`. The scope is by convention the hosting org or user (e.g. the GitHub org), and the name is the pipeline itself. A bare unscoped `name` is also legal for local-only projects.
+
+You rarely need to configure this. The ID is derived automatically:
+
+1. An explicit `id` in `[project]`, if you set one.
+2. Otherwise, the scope comes from the repo's git `origin` remote (or `repo_url`) and the name from the directory name.
+3. Otherwise, the bare directory name, unscoped.
+
+### Looking Up Pipelines
+
+Wherever a pipeline is referenced — `data.load(pipeline=...)`, `chartbook ls`, `chartbook data get-path` — three forms are accepted, from most convenient to most explicit:
+
+```python
+data.load(pipeline="crsp_treasury", ...)                          # bare name
+data.load(pipeline="ftsfr/crsp_treasury", ...)                    # canonical scoped name
+data.load(pipeline="https://github.com/ftsfr/crsp_treasury", ...) # repo URL, normalized
+```
+
+- A **scoped name** matches its catalog key exactly.
+- A **bare name** matches any catalog entry whose name component equals it. If exactly one entry matches, it resolves. If several match, chartbook raises an error listing the candidates (e.g. `ftsfr/crsp_treasury`, `other/crsp_treasury`) so you can qualify with a scope. You never type a scope you don't need.
+- A **URL** is normalized to a scoped name (scheme and host stripped, trailing `.git` removed, last two path segments kept). URLs are accepted as *input only* — they are never stored as identity, so your references survive repo moves and renames.
+
+For the reasoning behind scoped names (and why URLs make poor identities), see {doc}`../design/toml-format-v2`.
 
 ## ChartBook (Future Feature)
 

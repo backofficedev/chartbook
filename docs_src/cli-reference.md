@@ -264,18 +264,29 @@ chartbook install skill -f
 
 ### `chartbook catalog`
 
-Manage the chartbook catalog. Currently supports adding pipelines.
+Manage the chartbook catalog.
 
 ```console
 chartbook catalog COMMAND [OPTIONS]
 ```
 
 **Subcommands:**
+- `init`: Initialize the global catalog at `~/.chartbook/chartbook.toml`
 - `add`: Add pipeline directory(ies) to the catalog
+
+#### `chartbook catalog init`
+
+Create a minimal global catalog with an empty `[pipelines]` section. Use `chartbook catalog add` to add pipelines afterwards.
+
+```console
+chartbook catalog init [--title TITLE]
+```
 
 #### `chartbook catalog add`
 
-Add one or more pipeline directories to the catalog. Each directory must contain a valid `chartbook.toml` with `type = "pipeline"`. Paths are stored relative to the catalog directory.
+Add one or more pipeline directories to the catalog. Each directory must contain a pipeline `chartbook.toml` (the project type is inferred from the file; directories with old v1-format files or catalog-type manifests are skipped). Paths are stored relative to the catalog directory.
+
+The catalog key is the pipeline's scoped ID (`scope/name`), derived from the target's `[project] id` if set, otherwise from its git `origin` remote plus the directory name, falling back to the bare directory name when there is no remote.
 
 ```console
 chartbook catalog add [OPTIONS] PATHS...
@@ -290,9 +301,10 @@ chartbook catalog add [OPTIONS] PATHS...
 
 The command will:
 1. Verify each path contains a valid pipeline `chartbook.toml`
-2. Check for duplicates against existing catalog entries (comparing resolved absolute paths)
-3. Prompt for confirmation when adding multiple pipelines (unless `-y` is used)
-4. Store paths relative to the catalog directory
+2. Derive the scoped catalog key from the pipeline's git remote and directory name
+3. Check for duplicates against existing catalog entries (comparing resolved absolute paths)
+4. Prompt for confirmation when adding multiple pipelines (unless `-y` is used)
+5. Store paths relative to the catalog directory
 
 **Examples:**
 
@@ -318,15 +330,15 @@ chartbook catalog add ./proj1 ./proj2 ./proj3
 ```console
 $ chartbook catalog add /data/projects/*
   Skipping assets/ (no chartbook.toml)
-  Already in catalog as 'yield_curve': yield_curve/
+  Already in catalog as 'acme/yield_curve': yield_curve/
 
 Pipelines to add:
-  fred_charts: FRED Charts (/data/projects/fred_charts)
-  macro_data: Macro Economic Data (/data/projects/macro_data)
+  acme/fred_charts: FRED Charts (/data/projects/fred_charts)
+  acme/macro_data: Macro Economic Data (/data/projects/macro_data)
 
 Add 2 pipeline(s)? [y/N]: y
-  Added 'fred_charts': FRED Charts (../projects/fred_charts)
-  Added 'macro_data': Macro Economic Data (../projects/macro_data)
+  Added 'acme/fred_charts': FRED Charts (../projects/fred_charts)
+  Added 'acme/macro_data': Macro Economic Data (../projects/macro_data)
 
 Added 2 pipeline(s) to /data/catalog/chartbook.toml
 ```
@@ -368,16 +380,18 @@ chartbook ls --catalog /path/to/chartbook.toml
 
 **Example output:**
 
+Pipelines are listed under their scoped catalog keys (`scope/name`):
+
 ```console
 $ chartbook ls
 Catalog: /data/my-catalog/chartbook.toml
 
-[pipeline] yield_curve: Yield Curve Analysis
-  [dataframe] yield_curve/repo_public: Repo Public Data
-  [dataframe] yield_curve/treasury_rates: Treasury Rates
-  [chart] yield_curve/yield_spread: Yield Spread Chart
-[pipeline] macro_data: Macro Economic Data
-  [dataframe] macro_data/gdp_quarterly: GDP Quarterly
+[pipeline] acme/yield_curve: Yield Curve Analysis
+  [dataframe] acme/yield_curve/repo_public: Repo Public Data
+  [dataframe] acme/yield_curve/treasury_rates: Treasury Rates
+  [chart] acme/yield_curve/yield_spread: Yield Spread Chart
+[pipeline] acme/macro_data: Macro Economic Data
+  [dataframe] acme/macro_data/gdp_quarterly: GDP Quarterly
 ```
 
 ### `chartbook data`
@@ -399,7 +413,7 @@ chartbook data get-path --pipeline PIPELINE --dataframe DATAFRAME [--catalog PAT
 ```
 
 **Options:**
-- `--pipeline`: Pipeline ID (required)
+- `--pipeline`: Pipeline reference (required) — a bare name (if unambiguous), scoped ID (`scope/name`), or repo URL
 - `--dataframe`: Dataframe ID (required)
 - `--catalog PATH`: Path to catalog `chartbook.toml`
 
@@ -412,7 +426,7 @@ chartbook data get-docs --pipeline PIPELINE --dataframe DATAFRAME [--catalog PAT
 ```
 
 **Options:**
-- `--pipeline`: Pipeline ID (required)
+- `--pipeline`: Pipeline reference (required) — a bare name (if unambiguous), scoped ID (`scope/name`), or repo URL
 - `--dataframe`: Dataframe ID (required)
 - `--catalog PATH`: Path to catalog `chartbook.toml`
 
@@ -425,16 +439,21 @@ chartbook data get-docs-path --pipeline PIPELINE --dataframe DATAFRAME [--catalo
 ```
 
 **Options:**
-- `--pipeline`: Pipeline ID (required)
+- `--pipeline`: Pipeline reference (required) — a bare name (if unambiguous), scoped ID (`scope/name`), or repo URL
 - `--dataframe`: Dataframe ID (required)
 - `--catalog PATH`: Path to catalog `chartbook.toml`
 
 **Examples:**
 
+A bare pipeline name resolves against the catalog when exactly one entry matches; if several scopes share the name, the command errors and lists the candidates so you can qualify (e.g. `acme/yield_curve`).
+
 ```console
-# Get path to a dataframe's parquet file
+# Get path to a dataframe's parquet file (bare name, unambiguous)
 chartbook data get-path --pipeline yield_curve --dataframe repo_public
 # Output: /data/my-catalog/yield_curve/_output/repo_public.parquet
+
+# Fully qualified with a scoped ID
+chartbook data get-path --pipeline acme/yield_curve --dataframe repo_public
 
 # Print documentation for a dataframe
 chartbook data get-docs --pipeline yield_curve --dataframe repo_public

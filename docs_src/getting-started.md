@@ -117,26 +117,20 @@ git init  # Initialize git so chartbook can find project root
 
 ### 2. Create a Configuration File
 
-Create a `chartbook.toml` file to configure your project:
+Create a `chartbook.toml` file to configure your project. Every field is optional — the presence of the file alone marks the directory as a chartbook pipeline, so even an empty file works. A minimal configuration:
 
 ```toml
-[config]
-type = "pipeline"
-chartbook_format_version = "0.0.21"
+[project]
+name = "My First Pipeline"
+```
 
-[site]
-title = "My Analytics Project"
-author = "Your Name"
-copyright = "2025"
-logo_path = ""
-favicon_path = ""
+Or with a bit more metadata:
 
-[pipeline]
-id = "MYPROJ"
-pipeline_name = "My First Pipeline"
-pipeline_description = "A demo pipeline for learning chartbook"
-lead_pipeline_developer = "Your Name"
-contributors = ["Your Name"]
+```toml
+[project]
+name = "My First Pipeline"
+description = "A demo pipeline for learning chartbook"
+maintainer = "Your Name"
 ```
 
 ### 3. Create Your First Chart
@@ -225,22 +219,22 @@ Add the chart to your `chartbook.toml`:
 [charts]
 
 [charts.my_first_chart]
-chart_name = "My First Chart"
-short_description_chart = "Demo chart showing two time series"
-dataframe_id = "sample_data"
-topic_tags = ["Demo", "Time Series"]
-data_frequency = "Daily"
+name = "My First Chart"
+description = "Demo chart showing two time series"
+dataframe = "sample_data"
+tags = ["Demo", "Time Series"]
+frequency = "Daily"
 units = "Index"
-path_to_html_chart = "./_output/my_first_chart.html"
-chart_docs_path = "./docs_src/charts/my_first_chart.md"
+path = "./_output/my_first_chart.html"
+docs_path = "./docs_src/charts/my_first_chart.md"
 
 [dataframes]
 
 [dataframes.sample_data]
-dataframe_name = "Sample Data"
-short_description_df = "Generated sample data for demonstration"
-data_sources = ["Generated"]
-path_to_parquet_data = "./_data/sample_data.parquet"
+name = "Sample Data"
+description = "Generated sample data for demonstration"
+sources = ["Generated"]
+path = "./_data/sample_data.parquet"
 date_col = "date"
 ```
 

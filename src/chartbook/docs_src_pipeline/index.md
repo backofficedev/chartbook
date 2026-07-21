@@ -1,4 +1,4 @@
-# {{pipeline_manifest.pipeline.pipeline_name}}
+# {{pipeline_manifest.project.name}}
 
 Last updated: {sub-ref}`today`
 

@@ -6,7 +6,6 @@ import tomli
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook.__about__ import __version__
 from chartbook.cli import main
 from tests.fixtures import create_catalog_project, create_pipeline_project
 
@@ -21,14 +20,10 @@ def _make_minimal_catalog(catalog_dir, pipelines=None):
     catalog_dir = Path(catalog_dir)
     catalog_dir.mkdir(parents=True, exist_ok=True)
     config = {
-        "config": {
+        "project": {
             "type": "catalog",
-            "chartbook_format_version": __version__,
-        },
-        "site": {
-            "title": "Test Catalog",
-            "author": "Test",
-            "copyright": "2024",
+            "name": "Test Catalog",
+            "maintainer": "Test",
         },
         "pipelines": pipelines or {},
     }
@@ -38,25 +33,17 @@ def _make_minimal_catalog(catalog_dir, pipelines=None):
 
 
 def _make_minimal_pipeline(pipeline_dir, pipeline_id="TP", pipeline_name="Test Pipeline"):
-    """Create a minimal pipeline chartbook.toml (no data files needed for catalog add)."""
+    """Create a minimal pipeline chartbook.toml (no data files needed for catalog add).
+
+    No explicit project.id is written, so the catalog key derives from the
+    directory name (these tmp dirs are outside any git repo).
+    """
     pipeline_dir = Path(pipeline_dir)
     pipeline_dir.mkdir(parents=True, exist_ok=True)
     config = {
-        "config": {
-            "type": "pipeline",
-            "chartbook_format_version": __version__,
-        },
-        "site": {
-            "title": pipeline_name,
-            "author": "Test",
-            "copyright": "2024",
-        },
-        "pipeline": {
-            "id": pipeline_id,
-            "pipeline_name": pipeline_name,
-            "pipeline_description": "",
-            "lead_pipeline_developer": "",
-            "contributors": [],
+        "project": {
+            "name": pipeline_name,
+            "maintainer": "Test",
         },
     }
     with open(pipeline_dir / "chartbook.toml", "wb") as f:
@@ -90,13 +77,13 @@ class TestCatalogAddSingle:
 
         data = _read_catalog(catalog_dir)
         assert "my_pipeline" in data["pipelines"]
-        assert "path_to_pipeline" in data["pipelines"]["my_pipeline"]
+        assert "path" in data["pipelines"]["my_pipeline"]
 
     def test_add_duplicate_skipped(self, tmp_path):
         pipeline_dir = _make_minimal_pipeline(tmp_path / "pipelines" / "alpha")
         catalog_dir = _make_minimal_catalog(
             tmp_path / "catalog",
-            pipelines={"alpha": {"path_to_pipeline": str(pipeline_dir)}},
+            pipelines={"alpha": {"path": str(pipeline_dir)}},
         )
 
         runner = CliRunner()
@@ -251,7 +238,7 @@ class TestCatalogAddGlob:
 
         catalog_dir = _make_minimal_catalog(
             tmp_path / "catalog",
-            pipelines={"existing": {"path_to_pipeline": str(pipeline_dir)}},
+            pipelines={"existing": {"path": str(pipeline_dir)}},
         )
 
         runner = CliRunner()
@@ -337,7 +324,7 @@ class TestCatalogAddPreservesContent:
             tmp_path / "catalog",
             pipelines={
                 "existing_proj": {
-                    "path_to_pipeline": str(existing_pipeline),
+                    "path": str(existing_pipeline),
                 }
             },
         )
@@ -362,9 +349,9 @@ class TestCatalogAddPreservesContent:
         assert "existing_proj" in data["pipelines"]
         # New pipeline added
         assert "new_proj" in data["pipelines"]
-        # Site config preserved
-        assert data["site"]["title"] == "Test Catalog"
-        assert data["config"]["type"] == "catalog"
+        # Project metadata preserved
+        assert data["project"]["name"] == "Test Catalog"
+        assert data["project"]["type"] == "catalog"
 
 
 class TestCatalogAddWithRelativePaths:
@@ -387,7 +374,7 @@ class TestCatalogAddWithRelativePaths:
 
         assert result.exit_code == 0, result.output
         data = _read_catalog(catalog_dir)
-        stored_path = data["pipelines"]["my_pipeline"]["path_to_pipeline"]
+        stored_path = data["pipelines"]["my_pipeline"]["path"]
         # Should be relative (e.g., "../my_pipeline")
         assert not Path(stored_path).is_absolute()
 

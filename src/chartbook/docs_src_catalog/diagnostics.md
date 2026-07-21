@@ -63,26 +63,20 @@ This page provides metadata quality diagnostics for all pipelines, dataframes, a
 
 ## Required Fields by Object Type
 
+These lists come from the catalog's `[policy.required]` section in
+`chartbook.toml` (or chartbook's defaults when no policy is set).
+
 ### Pipeline Fields ({{ pipeline_field_count }} required)
-- Pipeline name and description
-- Lead developer and contributors
-- Git repository URL
-- Software modules/dependencies
-- README file path
+{% for field in required_fields.project %}- `{{ field }}`
+{% endfor %}
 
 ### Dataframe Fields ({{ dataframe_field_count }} required)
-- Data sources and providers
-- Topic tags and data access info
-- License information
-- File paths (Parquet, Excel, docs)
-- Date column specification
+{% for field in required_fields.dataframes %}- `{{ field }}`
+{% endfor %}- `docs_path` or `docs` (exactly one)
 
 ### Chart Fields ({{ chart_field_count }} required)
-- Chart name and description
-- Legal clearance information
-- Data characteristics (frequency, units, etc.)
-- File paths for HTML and Excel outputs
-- Associated dataframe reference
+{% for field in required_fields.charts %}- `{{ field }}`
+{% endfor %}- `docs_path` or `docs` (exactly one)
 
 ## How to Use This Report
 
