@@ -2,11 +2,11 @@
 
 **Catalog and publish your team's data science work.**
 
-```{image} _static/logo.png
+<!-- ```{image} _static/logo.png
 :alt: ChartBook logo
 :width: 300px
 :align: center
-```
+``` -->
 
 ChartBook turns an analytics project — code, parquet files, chart HTML — into a documented website, and aggregates many projects into a searchable catalog with programmatic data access. If you know [Backstage](https://backstage.io/), Spotify's service catalog for software teams: ChartBook plays that role for data science teams, so pipelines, datasets, and charts are registered and discoverable instead of scattered across notebooks and shared drives.
 

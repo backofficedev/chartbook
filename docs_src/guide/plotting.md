@@ -47,8 +47,8 @@ result = chartbook.plotting.line(
 result.save(chart_id="gdp_growth")
 
 print(result.paths)
-# {'html': './_output/gdp_growth.html',
-#  'png': './_output/gdp_growth.png', ...}
+# {'html': Path('_output/gdp_growth.html'),
+#  'png': Path('_output/gdp_growth.png'), ...}
 ```
 
 ## ChartResult Object
@@ -198,8 +198,10 @@ chartbook.plotting.line(
 ```
 
 ```{note}
-NBER recession data requires a FRED API key. Set the `FRED_API_KEY` environment variable.
-Get a free key at [https://fred.stlouisfed.org/docs/api/api_key.html](https://fred.stlouisfed.org/docs/api/api_key.html)
+NBER recession shading is fetched from FRED's public `USREC` series via
+[pandas-datareader](https://pandas-datareader.readthedocs.io/) — no API key needed.
+Install it separately with `pip install pandas-datareader`; if it's missing,
+`nber_recessions=True` raises an error telling you so.
 ```
 
 ### Horizontal Lines
@@ -401,7 +403,9 @@ This installs:
 - `plotly` — Interactive chart generation
 - `kaleido` — Plotly static export
 - `pluggy` — Plugin system
-- `fredapi` — NBER recession data from FRED
+- `fredapi` — FRED API client, available for pipeline code
+
+NBER recession shading additionally needs `pandas-datareader`, which is not part of this extra — install it with `pip install pandas-datareader`.
 
 ## Workflow notes
 

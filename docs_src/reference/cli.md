@@ -29,7 +29,7 @@ chartbook init
 chartbook build [OPTIONS] [OUTPUT_DIR]
 ```
 
-Generate the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the project directory itself). Works for both pipelines and catalogs — the project type comes from the manifest. Internals: {doc}`../guide/how-the-build-works`.
+Generate the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the current working directory itself). Works for both pipelines and catalogs — the project type comes from the manifest. Internals: {doc}`../guide/how-the-build-works`.
 
 | Option | Default | Effect |
 |--------|---------|--------|
@@ -90,7 +90,7 @@ chartbook catalog add ../repos/* -y         # glob, no confirmation prompt
 
 ### catalog disable / enable
 
-Switch a pipeline off or on without deleting its registration. Explicit entries get `disabled = true`; member-discovered pipelines are tracked on the `pipelines.disabled` ID list. Unknown IDs warn with a did-you-mean suggestion.
+Switch a pipeline off or on without deleting its registration. Explicit entries get `disabled = true`; member-discovered pipelines are tracked on the `pipelines.disabled` ID list. In a catalog with only explicit entries, an unknown ID errors and lists the available pipelines; in a member-based catalog the ID is simply added to (or removed from) the list, and if it matches no pipeline the next build warns with a did-you-mean suggestion.
 
 ```console
 chartbook catalog disable ftsfr/sovereign_bonds [--catalog PATH]

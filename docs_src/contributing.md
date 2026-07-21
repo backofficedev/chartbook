@@ -29,10 +29,11 @@ Thank you for your interest in contributing to chartbook!
 
    Available installation options:
    ```bash
-   pip install -e .              # Core only (data loading)
-   pip install -e ".[sphinx]"    # Core + Sphinx CLI
-   pip install -e ".[all]"       # All optional features (sphinx)
-   pip install -e ".[dev]"       # Everything (all + pytest)
+   pip install -e .              # Core only (CLI + TOML config; no data loading)
+   pip install -e ".[data]"      # Core + data loading (polars, pyarrow)
+   pip install -e ".[sphinx]"    # Core + Sphinx site-building CLI
+   pip install -e ".[all]"       # All optional features (data, plotting, sphinx, cruft)
+   pip install -e ".[dev]"       # Everything (all + test toolchain)
    ```
 
    **Tip:** Use `pip install -e ".[all]"` if you're working on features but don't need to run tests.
@@ -90,7 +91,7 @@ Use consistent verb prefixes to indicate function behavior:
 
 | Prefix | Usage | Example |
 |--------|-------|---------|
-| `load_*` | Reading files/config from disk (I/O) | `load_specs()` |
+| `load_*` | Reading files/config from disk (I/O) | `load_manifest()` |
 | `get_*` | Retrieving values from data structures (no I/O) | `get_pipeline_ids()` |
 | `find_*` | Searching across data structures | `find_latest_source_modification()` |
 | `resolve_*` | Converting paths/references to final form | `resolve_platform_path()` |
@@ -99,11 +100,11 @@ Use consistent verb prefixes to indicate function behavior:
 | `create_*` | Creating new objects/files | `create_config()` |
 | `build_*` | Assembling complex structures | `build_diagnostics()` |
 | `generate_*` | Generating output/transformations | `generate_docs()` |
-| `_*` | Private/internal functions | `_load_pipeline_specs()` |
+| `_*` | Private/internal functions | `_load_pipeline_manifest()` |
 
 ### Naming Principles
 
-1. **Use consistent terminology**: Use "specs" consistently (not "spec" or "specifications")
+1. **Use consistent terminology**: Use "manifest" for the parsed `chartbook.toml` data (matching the public `load_manifest()`), and reserve "config"/"settings" for global `settings.toml` data
 2. **Use plural for list returns**: `get_pipeline_ids()` not `get_pipeline_id_list()`
 3. **Mark internal functions**: Prefix with underscore for module-internal functions
 4. **Distinguish I/O from memory**: Use `load_*` for disk operations, `get_*` for in-memory access
@@ -124,7 +125,7 @@ hatch test
 # Run tests with coverage
 hatch test --cover
 
-# Run tests across all supported Python versions (3.9-3.13)
+# Run tests across all supported Python versions (3.10-3.13)
 hatch test --all
 ```
 

@@ -111,7 +111,7 @@ chartbook data get-docs --pipeline yield_curve --dataframe repo_public
 
 ## Referring to pipelines
 
-Wherever a pipeline is named — `data.load`, `chartbook ls`, `chartbook data` — three forms are accepted:
+Wherever you pass a pipeline reference — `data.load` (and the other `data.*` helpers) and the `chartbook data` commands — three forms are accepted:
 
 ```python
 data.load(pipeline="crsp_treasury", ...)                          # bare name — fine when unambiguous

@@ -95,7 +95,7 @@ Today the field is rendered on the pipeline's documentation page; the script sem
 
 ## Pipeline Identity
 
-Every pipeline has a canonical ID, ideally scoped: `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically — scope from the repo's git `origin` remote (or `repo_url`), name from the directory name — or set explicitly with `id` in `[project]`. Anywhere a pipeline reference is accepted (`data.load`, `chartbook ls`, `chartbook data get-path`), three forms work:
+Every pipeline has a canonical ID, ideally scoped: `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically — scope from the repo's git `origin` remote (or `repo_url`), name from the directory name — or set explicitly with `id` in `[project]`. Anywhere a pipeline reference is accepted (`data.load`, `chartbook data get-path`, `chartbook data get-docs`), three forms work:
 
 ```python
 data.load(pipeline="crsp_treasury", ...)                          # bare, if unambiguous
@@ -268,7 +268,7 @@ Per-user settings live in `~/.chartbook/settings.toml`, managed by the `chartboo
 path = "/absolute/path/to/catalog/chartbook.toml"
 ```
 
-When a default catalog is configured (or `~/.chartbook/chartbook.toml` exists), `data.load()` and `data.get_path()` work without an explicit `catalog_path` argument:
+When a default catalog is configured (or `~/.chartbook/chartbook.toml` exists), `data.load()` and `data.get_data_path()` work without an explicit `catalog_path` argument:
 
 ```python
 from chartbook import data

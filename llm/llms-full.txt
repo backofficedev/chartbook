@@ -271,7 +271,7 @@ name = "My Analytics Pipeline"     # Default: directory name (doubles as site ti
 description = "Comprehensive analytics for business metrics"
 maintainer = "Jane Doe"            # Also rendered as site author
 contributors = ["Jane Doe", "John Smith", "Alice Johnson"]
-repo_url = "https://github.com/org/repo"   # Default: git remote origin
+repo_url = "https://github.com/org/repo"   # Default: "" (empty); the git remote seeds the id's scope, not this field
 readme = "./README.md"             # Default
 copyright = "2026"                 # Default: current year
 logo = "./assets/logo.png"         # Default: bundled asset
@@ -414,7 +414,7 @@ path = "./docs_src/data_quality_notes.md"
 
 ### [notebooks] - Jupyter Notebooks
 
-The notebook name is inferred from the first `# Heading` in the notebook. Set `name` to override. Set `publishable = false` to exclude a notebook from publishing.
+The notebook name is inferred from the first `# Heading` in the notebook. Set `name` to override. Notebooks are excluded from publishing by default; set `publishable = true` to include a notebook in `chartbook publish` output.
 
 ```toml
 [notebooks]
@@ -554,15 +554,16 @@ from pathlib import Path
 
 df = pd.read_parquet("_data/revenue_data.parquet")
 
-chartbook.plotting.multiline(
-    df=df,
-    x_col="date",
-    y_cols=["actual", "forecast"],
+# Chart functions are keyword-only: x is a column, y a column or list of columns.
+# The call returns a ChartResult; .save(chart_id) writes the HTML + static files.
+chartbook.plotting.line(
+    df,
+    x="date",
+    y=["actual", "forecast"],
     title="Revenue Forecast Model",
-    subtitle="12-month forecast with 95% confidence interval",
-    y_axis_label="Revenue (USD Millions)",
-    output_file_path=Path("_output/revenue_forecast.html")
-)
+    caption="12-month forecast with 95% confidence interval",
+    y_title="Revenue (USD Millions)",
+).save(chart_id="revenue_forecast", output_dir="_output")
 ```
 
 ### Chart Metadata Fields

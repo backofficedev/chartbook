@@ -26,7 +26,7 @@ Only `chartbook.toml` and `README.md` are fixed names. The rest is convention â€
 
 ## Project metadata
 
-Every `[project]` field is optional with sensible defaults (`name` defaults to the directory name, `repo_url` to the git remote):
+Every `[project]` field is optional with sensible defaults (`name` defaults to the directory name, `copyright` to the current year, `maintainer` to the first contributor; the pipeline `id`'s scope is inferred from the git `origin` remote when `id` and `repo_url` are unset):
 
 ```toml
 [project]
