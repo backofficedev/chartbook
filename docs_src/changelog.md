@@ -5,7 +5,9 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-07-22
+
+The format-v2 release. Everything below ships together: the breaking `chartbook.toml` redesign, catalog auto-discovery, single-install packaging, Sphinx 9 support, and rebuilt documentation.
 
 ### Changed — single install, extras retired
 
