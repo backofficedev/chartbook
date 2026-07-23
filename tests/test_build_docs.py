@@ -6,6 +6,7 @@ generate_docs() -> load_manifest() -> _retrieve_correct_docs_src_dir() ->
 run_build_markdown() -> run_sphinx_build()
 """
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,11 +14,13 @@ import pytest
 
 from chartbook.build_docs import (
     _retrieve_correct_docs_src_dir,
+    _strip_mathjax2_from_notebooks,
     generate_docs,
     get_docs_src_path,
     run_sphinx_build,
 )
 from chartbook.manifest import load_manifest
+from chartbook.utils import MATHJAX2_PATTERN, strip_mathjax2_from_notebook
 
 
 class TestGetDocsSrcPath:
@@ -217,3 +220,375 @@ class TestGenerateDocsEndToEnd:
 
         # Verify old marker file is gone
         assert not marker_file.exists()
+
+    def test_catalog_dataframes_toctree_uses_relative_paths(
+        self, catalog_project, monkeypatch
+    ):
+        """Test that catalog dataframes.md toctree entries are relative to cb/.
+
+        Regression test: the dataframes.md file lives at cb/dataframes.md,
+        so toctree entries must NOT have a cb/ prefix (Sphinx resolves them
+        relative to the document location). A cb/ prefix would cause Sphinx
+        to look for cb/cb/dataframes/... which doesn't exist, resulting in
+        an empty Dataframes page.
+        """
+        output_dir = catalog_project / "docs_test"
+        docs_dir = catalog_project / "_docs"
+
+        monkeypatch.chdir(catalog_project)
+
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            _docs_dir=docs_dir,
+            keep_build_dirs=True,
+        )
+
+        # Read the rendered dataframes.md from the build directory
+        dataframes_md = docs_dir / "cb" / "dataframes.md"
+        assert dataframes_md.exists(), "cb/dataframes.md not generated"
+        content = dataframes_md.read_text()
+
+        # Toctree entries should start with "dataframes/", not "cb/dataframes/"
+        lines = content.strip().splitlines()
+        toctree_entries = [
+            line.strip()
+            for line in lines
+            if line.strip() and line.strip().endswith(".md") and not line.startswith("#")
+        ]
+        assert len(toctree_entries) > 0, "No dataframe entries found in toctree"
+        for entry in toctree_entries:
+            assert not entry.startswith("cb/"), (
+                f"Toctree entry '{entry}' has cb/ prefix — paths in cb/dataframes.md "
+                f"must be relative to cb/, not the project root"
+            )
+
+
+class TestStrictFlag:
+    """Tests for --strict flag behavior in generate_docs."""
+
+    def test_no_strict_skips_pipelines_with_missing_files(
+        self, catalog_project, monkeypatch, capsys
+    ):
+        """Test that with --no-strict, pipelines with missing files are skipped."""
+        output_dir = catalog_project / "docs_test"
+        monkeypatch.chdir(catalog_project)
+
+        # Delete a chart file from pipeline_a to trigger missing file detection
+        chart_files = list(
+            (catalog_project / "pipelines" / "pipeline_a" / "_output" / "charts").glob("*.html")
+        )
+        assert len(chart_files) > 0, "Fixture should create chart HTML files"
+        chart_files[0].unlink()
+
+        # Explicit strict=False should succeed, skipping pipeline_a
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            keep_build_dirs=False,
+            strict=False,
+        )
+
+        # Build should succeed
+        assert output_dir.exists()
+        assert (output_dir / "index.html").exists()
+
+        # Warning about skipping should appear on stderr
+        captured = capsys.readouterr()
+        assert "Skipping pipeline 'pipeline_a'" in captured.err
+
+    def test_default_strict_errors_on_missing_files(
+        self, catalog_project, monkeypatch
+    ):
+        """Test that the default (strict=True) causes exit on missing files."""
+        output_dir = catalog_project / "docs_test"
+        monkeypatch.chdir(catalog_project)
+
+        # Delete a chart file from pipeline_a
+        chart_files = list(
+            (catalog_project / "pipelines" / "pipeline_a" / "_output" / "charts").glob("*.html")
+        )
+        assert len(chart_files) > 0, "Fixture should create chart HTML files"
+        chart_files[0].unlink()
+
+        with pytest.raises(SystemExit) as exc_info:
+            generate_docs(
+                output_dir=output_dir,
+                project_dir=Path("."),
+                keep_build_dirs=False,
+            )
+        assert exc_info.value.code == 1
+
+    def test_strict_errors_on_missing_files(
+        self, catalog_project, monkeypatch
+    ):
+        """Test that --strict causes exit on missing files."""
+        output_dir = catalog_project / "docs_test"
+        monkeypatch.chdir(catalog_project)
+
+        # Delete a chart file from pipeline_a
+        chart_files = list(
+            (catalog_project / "pipelines" / "pipeline_a" / "_output" / "charts").glob("*.html")
+        )
+        assert len(chart_files) > 0, "Fixture should create chart HTML files"
+        chart_files[0].unlink()
+
+        with pytest.raises(SystemExit) as exc_info:
+            generate_docs(
+                output_dir=output_dir,
+                project_dir=Path("."),
+                keep_build_dirs=False,
+                strict=True,
+            )
+        assert exc_info.value.code == 1
+
+    def test_no_missing_files_builds_all_pipelines(
+        self, catalog_project, monkeypatch
+    ):
+        """Test that when no files are missing, all pipelines are built."""
+        output_dir = catalog_project / "docs_test"
+        docs_dir = catalog_project / "_docs"
+        monkeypatch.chdir(catalog_project)
+
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=Path("."),
+            _docs_dir=docs_dir,
+            keep_build_dirs=True,
+        )
+
+        assert output_dir.exists()
+        assert (output_dir / "index.html").exists()
+
+
+class TestMissingSourceFilesError:
+    """Tests for MissingSourceFilesError helper methods."""
+
+    def test_get_pipelines_to_skip(self):
+        """Test that get_pipelines_to_skip returns correct pipeline IDs."""
+        from chartbook.errors import MissingFile, MissingSourceFilesError
+
+        missing = [
+            MissingFile(Path("/a.parquet"), "dataframe", "df1", "pipeline_a"),
+            MissingFile(Path("/b.html"), "chart", "chart1", "pipeline_a"),
+            MissingFile(Path("/c.parquet"), "dataframe", "df2", "pipeline_b"),
+        ]
+        error = MissingSourceFilesError(missing)
+        assert error.get_pipelines_to_skip() == {"pipeline_a", "pipeline_b"}
+
+    def test_format_skip_warnings_groups_by_pipeline(self):
+        """Test that format_skip_warnings groups messages by pipeline."""
+        from chartbook.errors import MissingFile, MissingSourceFilesError
+
+        missing = [
+            MissingFile(Path("/a.parquet"), "dataframe", "df1", "pipeline_a"),
+            MissingFile(Path("/b.html"), "chart", "chart1", "pipeline_a"),
+            MissingFile(Path("/c.parquet"), "dataframe", "df2", "pipeline_b"),
+        ]
+        error = MissingSourceFilesError(missing)
+        warnings = error.format_skip_warnings()
+
+        # Should have header + 2 files for pipeline_a, then header + 1 file for pipeline_b
+        assert any("pipeline_a" in w and "2 missing" in w for w in warnings)
+        assert any("pipeline_b" in w and "1 missing" in w for w in warnings)
+
+    def test_format_cli_message_mentions_no_strict(self):
+        """Test that the CLI error message references --no-strict."""
+        from chartbook.errors import MissingFile, MissingSourceFilesError
+
+        missing = [
+            MissingFile(Path("/a.parquet"), "dataframe", "df1", "pipeline_a"),
+        ]
+        error = MissingSourceFilesError(missing)
+        message = error.format_cli_message()
+        assert "--no-strict" in message
+
+
+# Sample MathJax 2 script tags as injected by Plotly's NotebookRenderer
+PLOTLY_MATHJAX2_SCRIPT = (
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/'
+    'MathJax.js?config=TeX-AMS-MML_SVG"></script>'
+)
+PLOTLY_MATHJAX2_SCRIPT_WITH_CONFIG = (
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/'
+    'MathJax.js?config=TeX-AMS-MML_SVG"></script>'
+    '<script type="text/javascript">if (window.MathJax && window.MathJax.Hub'
+    " && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG:"
+    ' {font: "STIX-Web"}});}</script>'
+)
+
+
+def _make_notebook(cells):
+    """Create a minimal notebook dict with the given cells."""
+    return {
+        "nbformat": 4,
+        "nbformat_minor": 5,
+        "metadata": {},
+        "cells": cells,
+    }
+
+
+def _make_plotly_cell(mathjax_script=PLOTLY_MATHJAX2_SCRIPT_WITH_CONFIG):
+    """Create a notebook cell that mimics Plotly output with MathJax 2 injection."""
+    return {
+        "cell_type": "code",
+        "source": ["import plotly"],
+        "outputs": [
+            {
+                "output_type": "display_data",
+                "data": {
+                    "text/html": [
+                        "<div>",
+                        mathjax_script,
+                        '<div id="plotly-graph"></div>',
+                        "</div>",
+                    ]
+                },
+                "metadata": {},
+            }
+        ],
+        "metadata": {},
+    }
+
+
+class TestStripMathjax2FromNotebook:
+    """Tests for strip_mathjax2_from_notebook function."""
+
+    def test_strips_mathjax2_from_plotly_output(self, tmp_path):
+        """Test that MathJax 2 scripts are removed from notebook outputs."""
+        nb = _make_notebook([_make_plotly_cell()])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        result = strip_mathjax2_from_notebook(nb_path)
+
+        assert result is True
+        cleaned = json.loads(nb_path.read_text())
+        html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+        for part in html_parts:
+            assert "mathjax/2" not in part
+            assert "MathJax.Hub.Config" not in part
+
+    def test_preserves_non_mathjax_content(self, tmp_path):
+        """Test that non-MathJax HTML content is preserved."""
+        nb = _make_notebook([_make_plotly_cell()])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        strip_mathjax2_from_notebook(nb_path)
+
+        cleaned = json.loads(nb_path.read_text())
+        html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+        assert "<div>" in html_parts
+        assert '<div id="plotly-graph"></div>' in html_parts
+
+    def test_no_modification_when_no_mathjax2(self, tmp_path):
+        """Test that notebooks without MathJax 2 are not modified."""
+        cell = {
+            "cell_type": "code",
+            "source": ["print('hello')"],
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {"text/html": ["<div>No mathjax here</div>"]},
+                    "metadata": {},
+                }
+            ],
+            "metadata": {},
+        }
+        nb = _make_notebook([cell])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        result = strip_mathjax2_from_notebook(nb_path)
+
+        assert result is False
+
+    def test_strips_mathjax2_cdn_script_only(self, tmp_path):
+        """Test that only the CDN script is stripped (without the config script)."""
+        nb = _make_notebook([_make_plotly_cell(PLOTLY_MATHJAX2_SCRIPT)])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        result = strip_mathjax2_from_notebook(nb_path)
+
+        assert result is True
+        cleaned = json.loads(nb_path.read_text())
+        html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+        for part in html_parts:
+            assert "mathjax/2" not in part
+
+    def test_handles_string_html_output(self, tmp_path):
+        """Test handling of text/html as a single string instead of list."""
+        cell = {
+            "cell_type": "code",
+            "source": [],
+            "outputs": [
+                {
+                    "output_type": "display_data",
+                    "data": {
+                        "text/html": f"<div>{PLOTLY_MATHJAX2_SCRIPT}</div>"
+                    },
+                    "metadata": {},
+                }
+            ],
+            "metadata": {},
+        }
+        nb = _make_notebook([cell])
+        nb_path = tmp_path / "test.ipynb"
+        nb_path.write_text(json.dumps(nb))
+
+        result = strip_mathjax2_from_notebook(nb_path)
+
+        assert result is True
+        cleaned = json.loads(nb_path.read_text())
+        html = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+        assert isinstance(html, str)
+        assert "mathjax/2" not in html
+
+
+class TestStripMathjax2FromNotebooks:
+    """Tests for _strip_mathjax2_from_notebooks helper."""
+
+    def test_processes_all_notebooks_in_directory(self, tmp_path):
+        """Test that all .ipynb files in subdirectories are processed."""
+        nb = _make_notebook([_make_plotly_cell()])
+
+        # Create notebooks in nested directories
+        (tmp_path / "notebooks" / "pipeline_a").mkdir(parents=True)
+        (tmp_path / "notebooks" / "pipeline_b").mkdir(parents=True)
+
+        for subdir in ["pipeline_a", "pipeline_b"]:
+            nb_path = tmp_path / "notebooks" / subdir / "test.ipynb"
+            nb_path.write_text(json.dumps(nb))
+
+        _strip_mathjax2_from_notebooks(tmp_path)
+
+        for subdir in ["pipeline_a", "pipeline_b"]:
+            nb_path = tmp_path / "notebooks" / subdir / "test.ipynb"
+            cleaned = json.loads(nb_path.read_text())
+            html_parts = cleaned["cells"][0]["outputs"][0]["data"]["text/html"]
+            for part in html_parts:
+                assert "mathjax/2" not in part
+
+
+class TestMathjax2Pattern:
+    """Tests for the MATHJAX2_PATTERN regex."""
+
+    def test_matches_plotly_mathjax2_cdn_script(self):
+        """Test that pattern matches the Plotly MathJax 2 CDN script."""
+        assert MATHJAX2_PATTERN.search(PLOTLY_MATHJAX2_SCRIPT)
+
+    def test_matches_plotly_mathjax2_with_config(self):
+        """Test that pattern matches MathJax 2 script + SVG config script."""
+        assert MATHJAX2_PATTERN.search(PLOTLY_MATHJAX2_SCRIPT_WITH_CONFIG)
+
+    def test_does_not_match_mathjax3(self):
+        """Test that pattern does not match MathJax 3 scripts."""
+        mathjax3 = '<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>'
+        assert not MATHJAX2_PATTERN.search(mathjax3)
+
+    def test_does_not_match_unrelated_scripts(self):
+        """Test that pattern does not match other script tags."""
+        other_script = '<script src="https://cdn.example.com/plotly.min.js"></script>'
+        assert not MATHJAX2_PATTERN.search(other_script)

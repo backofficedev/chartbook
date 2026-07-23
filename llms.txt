@@ -7,11 +7,8 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ## Installation
 
 ```bash
-# For data loading
+# One install, everything included: CLI, plotting, data loading, scaffolder
 pip install chartbook
-
-# For CLI (recommended: isolated installation)
-pipx install chartbook
 ```
 
 ## Python API
@@ -19,36 +16,44 @@ pipx install chartbook
 ```python
 from chartbook import data
 
-# Load dataframe (requires configured catalog or explicit path)
-df = data.load(pipeline="MARKETS", dataframe="market_data")
+# Load dataframe (returns Polars LazyFrame by default) — bare pipeline name
+lf = data.load(pipeline="markets", dataframe="market_data")
 
-# Load as polars DataFrame
-df = data.load(pipeline="MARKETS", dataframe="market_data", format="polars")
+# Scoped pipeline name (canonical; required when a bare name is ambiguous)
+lf = data.load(pipeline="acme/markets", dataframe="market_data")
 
-# Load as polars LazyFrame
-lf = data.load(pipeline="MARKETS", dataframe="market_data", format="polars-lazyframe")
+# Load as Polars eager DataFrame
+df = data.load(pipeline="markets", dataframe="market_data", format="polars_eager")
+
+# Load as pandas DataFrame
+df = data.load(pipeline="markets", dataframe="market_data", format="pandas")
 
 # Explicit catalog path (no global config needed)
-df = data.load(pipeline="MARKETS", dataframe="market_data",
+lf = data.load(pipeline="markets", dataframe="market_data",
                catalog_path="/path/to/catalog")
 
 # Get resolved data file path
-path = data.get_data_path(pipeline="MARKETS", dataframe="market_data")
+path = data.get_data_path(pipeline="markets", dataframe="market_data")
 
 # Get documentation content as string
-docs = data.get_docs(pipeline="MARKETS", dataframe="market_data")
+docs = data.get_docs(pipeline="markets", dataframe="market_data")
 
 # Get path to documentation source file
-docs_path = data.get_docs_path(pipeline="MARKETS", dataframe="market_data")
+docs_path = data.get_docs_path(pipeline="markets", dataframe="market_data")
 ```
 
 ## CLI Commands
 
 ```bash
+chartbook init               # Scaffold a new pipeline project
 chartbook build              # Generate HTML documentation
 chartbook build -f           # Force overwrite existing docs
-chartbook build --keep-build-dirs  # Keep temp files for debugging
-chartbook publish            # Publish to directory
+chartbook browse             # Open the generated site
+chartbook publish            # Stage publishable files to a directory
+chartbook catalog add <dir>  # Register a pipeline in the catalog
+chartbook catalog build      # Build the catalog site
+chartbook ls                 # List pipelines, dataframes, charts
+chartbook data get-path --pipeline <id> --dataframe <id>  # Parquet path
 chartbook create-data-glimpses     # Create data summary report
 chartbook config             # Configure default catalog path
 ```
@@ -66,94 +71,106 @@ Set via `chartbook config` command. When configured, `data.load()` works without
 
 ## Project Types
 
+The project type is inferred from structure: a manifest with a `[pipelines]` registry table is a **catalog**; otherwise it is a **pipeline**. An explicit `type = "pipeline"`/`"catalog"` in `[project]` is allowed; contradictions with the file structure are errors. There is no format version key. The minimal valid pipeline manifest is an empty file.
+
 ### Pipeline Project
 ```toml
-[config]
-type = "pipeline"
-chartbook_format_version = "0.0.6"
+[project]
+name = "My Pipeline"     # Optional — defaults to the directory name
 ```
 
 ### Catalog Project (aggregates multiple pipelines)
+
+Catalog keys are scoped pipeline IDs (`scope/name`), quoted because they contain `/`:
+
 ```toml
-[config]
-type = "catalog"
-chartbook_format_version = "0.0.6"
+[project]
+name = "My Catalog"
 
-[pipelines.SALES]
-path_to_pipeline = "../pipelines/sales"
+[pipelines."acme/sales"]
+path = "../pipelines/sales"
 
-[pipelines.DATA.MONTHLY]
-Unix = "/data/pipelines/monthly"
-Windows = "T:/pipelines/monthly"
+[pipelines."acme/monthly"]
+path = { unix = "/data/pipelines/monthly", windows = "T:/pipelines/monthly" }
+```
+
+Local catalogs can auto-discover members with path patterns instead of explicit entries (`members`, `exclude`, and `disabled` are reserved keys in `[pipelines]`):
+
+```toml
+[pipelines]
+members = ["../my_repos/*"]
+disabled = ["acme/some_pipeline"]
 ```
 
 ## Configuration Reference
 
-### [site] - Website Metadata
+### [project] - Project Metadata (all keys optional)
 ```toml
-[site]
-title = "My Analytics"
-author = "Your Name"
-copyright = "2025"
-logo_path = "./assets/logo.png"      # Optional
-favicon_path = "./assets/icon.png"   # Optional
-```
-
-### [pipeline] - Pipeline Information
-```toml
-[pipeline]
-id = "MYPROJ"                        # Unique ID (uppercase)
-pipeline_name = "My Pipeline"
-pipeline_description = "Description"
-lead_pipeline_developer = "Your Name"
-contributors = ["Name1", "Name2"]    # Optional
-git_repo_URL = "https://..."         # Optional
-README_file_path = "./README.md"     # Optional
+[project]
+name = "My Pipeline"                 # Default: directory name (doubles as site title)
+description = "Description"
+maintainer = "Your Name"             # Also rendered as site author
+contributors = ["Name1", "Name2"]
+repo_url = "https://..."             # Default: "" (empty); the git remote seeds the id's scope, not this field
+readme = "./README.md"               # Default
+copyright = "2026"                   # Default: current year
+logo = "./assets/logo.png"           # Default: bundled asset
+favicon = "./assets/icon.png"        # Default: bundled asset
+os_compatibility = ["Windows", "Linux"]
+build = """
+doit
+"""                                  # Shell-script semantics (multi-line = one script)
+site_dir = "./docs_src/site/"        # Default when that directory exists
+# id = "myorg/my_pipeline"           # Scoped ID (default: derived from git remote + dirname)
 ```
 
 ### [charts.chart_id] - Chart Definitions
 ```toml
 [charts.revenue_trend]
-chart_name = "Revenue Trend"
-short_description_chart = "Monthly revenue trends"
-dataframe_id = "revenue_data"
-path_to_html_chart = "./_output/revenue_trend.html"
-chart_docs_path = "./docs_src/charts/revenue_trend.md"
-topic_tags = ["Revenue", "Monthly"]           # Optional
-data_frequency = "Monthly"                    # Optional
+name = "Revenue Trend"
+description = "Monthly revenue trends"
+dataframe = "revenue_data"
+path = "./_output/revenue_trend.html"
+docs_path = "./docs_src/charts/revenue_trend.md"  # Or inline: docs = "..."
+tags = ["Revenue", "Monthly"]                 # Optional
+frequency = "Monthly"                         # Optional
 units = "USD Millions"                        # Optional
 date_cleared_by_iv_and_v = "2025-01-15"       # Optional: governance
 last_legal_clearance_date = "2025-01-15"      # Optional: governance
 ```
 
+Exactly one of `docs_path` (external markdown file) or `docs` (inline markdown) is required per chart.
+
 ### [dataframes.df_id] - Dataframe Definitions
 ```toml
 [dataframes.market_data]
-dataframe_name = "Market Data"
-short_description_df = "Daily stock prices"
-data_sources = ["Bloomberg", "Reuters"]
-path_to_parquet_data = "./_data/market_data.parquet"
+name = "Market Data"
+description = "Daily stock prices"
+sources = ["Bloomberg", "Reuters"]
+path = "./_data/market_data.parquet"
 date_col = "date"
-dataframe_docs_path = "./docs_src/dataframes/market_data.md"  # Optional
-topic_tags = ["Market Data", "Equities"]                       # Optional
-data_providers = ["Bloomberg LP", "Refinitiv"]                 # Optional
-type_of_data_access = ["Subscription", "Subscription"]         # Optional
-data_license = "Bloomberg Data License"                        # Optional
-license_expiration_date = "2025-12-31"                         # Optional
+docs_path = "./docs_src/dataframes/market_data.md"  # Or inline: docs = "..."
+tags = ["Market Data", "Equities"]                  # Optional
+providers = ["Bloomberg LP", "Refinitiv"]           # Optional
+access_types = ["Subscription", "Subscription"]     # Optional
+license = "Bloomberg Data License"                  # Optional
+license_expiration = "2025-12-31"                   # Optional
 ```
+
+Exactly one of `docs_path` or `docs` is required per dataframe.
 
 ### [notes] - Additional Documentation
 ```toml
 [notes.methodology]
-path_to_markdown_file = "./docs_src/methodology.md"
+path = "./docs_src/methodology.md"
 ```
 
 ### [notebooks] - Jupyter Notebooks
+The notebook name is inferred from the first `# Heading` in the notebook. Set `name` to override.
 ```toml
 [notebooks.analysis]
-notebook_name = "Exploratory Analysis"
-notebook_description = "Initial data exploration"
-notebook_path = "_output/analysis.ipynb"
+description = "Initial data exploration"
+path = "_output/analysis.ipynb"
 ```
 
 ## Directory Structure
@@ -165,7 +182,8 @@ my-pipeline/
 ├── _output/            # Generated HTML charts
 ├── docs_src/           # Markdown documentation
 │   ├── charts/
-│   └── dataframes/
+│   ├── dataframes/
+│   └── site/           # (Optional) Custom site pages (site_dir default)
 └── src/                # Python source code
 ```
 

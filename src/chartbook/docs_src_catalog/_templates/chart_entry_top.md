@@ -1,18 +1,17 @@
 ---
-date: {{pipeline_manifest.source_last_modified_date}}
-tags: {{dataframe_manifest.data_sources | join(', ')}}
-category: {{topic_tags | join(', ')}}
+date: "{{pipeline_manifest.source_last_modified_date | yaml_escape}}"
+tags: "{{dataframe_manifest.sources | join(', ') | yaml_escape}}"
+category: "{{tags | join(', ') | yaml_escape}}"
 ---
 
-# Chart: {{chart_name}}
-{{short_description_chart}}
+# Chart: {{name}}
+{{description}}
 
 ## Chart
 ```{raw} html
-<iframe src="../_static/{{pipeline_id}}/{{chart_id}}.html" height="500px" width="100%"></iframe>
+<iframe src="../../_static/{{pipeline_id | replace('/', '--')}}/{{chart_id}}.html" height="500px" width="100%"></iframe>
 
-<p style="text-align: center;">Sources: {{dataframe_manifest.data_sources | join(', ')}}</p>
+<p style="text-align: center;">Sources: {{dataframe_manifest.sources | join(', ')}}</p>
 ```
-[Full Screen Chart](../download_chart/{{pipeline_id}}/{{chart_id}}.html)
-
+[Full Screen Chart](../download_chart/{{pipeline_id | replace('/', '--')}}/{{chart_id}}.html)
 

@@ -20,33 +20,28 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
-# Minimal base - CLI framework + TOML support for config/manifest
+# One install, everything included: CLI, data loading, plotting, and the
+# Sphinx documentation toolchain. (A future release may split these into
+# chartbook-data / chartbook-plot distributions that chartbook depends on;
+# `pip install chartbook` will still mean "you get it all".)
 dependencies = [
+    # CLI framework + TOML support for config/manifest
     "click>=8.1.7",
     "tomli>=2.2.1",
     "tomli-w>=1.1.0",
-]
-
-[project.optional-dependencies]
-# Data loading
-data = [
+    # Data loading
     "packaging",
     "polars>=1.9.0",
     "pyarrow",
     "python-decouple>=3.8",
-]
-
-# Plotting libraries
-plotting = [
+    # Plotting
     "matplotlib>=3.7.0",
     "plotly>=5.24.0",
     "kaleido>=0.2.1",
     "pluggy>=1.3.0",
     "fredapi>=0.5.0",
-]
-
-# Sphinx ecosystem for documentation generation (generate/publish commands)
-sphinx = [
+    "pandas-datareader>=0.10.0",
+    # Sphinx ecosystem for documentation generation (build/publish commands)
     "ablog>=0.11.11",
     "Jinja2>=3.1.4",
     "linkify-it-py>=2.0.3",
@@ -55,24 +50,31 @@ sphinx = [
     "myst-parser>=2.0.0",
     "pandas>=2.1.4",
     "pydata-sphinx-theme>=0.15.4",
-    "Sphinx>=7.2.6,<9.0",
+    # Cap tracks the newest Sphinx major verified by the hatch-test sphinx
+    # matrix below; raise it only after a green matrix run on the new major.
+    "Sphinx>=7.2.6,<10",
     "sphinx-autodoc2>=0.5.0",
     "sphinx-book-theme>=1.1.3",
     "sphinx-copybutton>=0.5.2",
     "sphinx_design>=0.6.1",
     "sphinx_external_toc>=1.0.1",
+    # Project scaffolding (chartbook init)
+    "cruft",
 ]
 
-# Full install - recommended for most users
-all = [
-    "chartbook[data,plotting,sphinx]",
-]
+[project.optional-dependencies]
+# Deprecated no-op aliases from the old extras layout — every install now
+# includes everything, so these resolve to the same full package. Kept so
+# existing specs like "chartbook[all]" or "chartbook[data]" don't break;
+# remove after one release.
+all = []
+data = []
+plotting = []
+sphinx = []
 
-# Development dependencies
+# Contributor tooling only (tests + build automation)
 dev = [
-    "chartbook[all]",
     "pytest",
-    # Build automation
     "colorama",
     "doit>=0.36.0",
     "jupytext>=1.16.0",
@@ -116,21 +118,18 @@ packages = ["src/chartbook"]
 src = ""
 
 [tool.hatch.envs.hatch-test]
-# Use dev-mode to install local chartbook from src/
+# Use dev-mode to install local chartbook from src/ (base deps now include
+# the full data/plotting/sphinx stack)
 dev-mode = true
 extra-dependencies = [
-    "chartbook[all]",
     # Dependencies for running example project integration tests
     "colorama",
     "doit>=0.36.0",
     "ipython",
     "jupytext",
-    "matplotlib",
     "nbconvert",
     "numpy",
     "openpyxl",
-    "plotly>=5.24.0",
-    "python-decouple",
     "requests",
     "seaborn",
 ]
@@ -138,12 +137,25 @@ extra-dependencies = [
 [[tool.hatch.envs.hatch-test.matrix]]
 python = ["3.10", "3.11", "3.12", "3.13"]
 
+# Sphinx-version coverage. The python matrix above already spreads the upper
+# range at resolver level (3.10 -> Sphinx 8.1, 3.11 -> 8.2, 3.12/3.13 -> 9.x);
+# these envs pin the 7.x floor era and the 8.2 stack explicitly so every
+# supported Sphinx major stays tested as new majors ship.
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.13"]
+sphinx = ["sphinx7", "sphinx8"]
+
+[tool.hatch.envs.hatch-test.overrides]
+matrix.sphinx.extra-dependencies = [
+    { value = "sphinx~=7.4", if = ["sphinx7"] },
+    { value = "sphinx~=8.2", if = ["sphinx8"] },
+]
+
 [tool.hatch.envs.default]
 # Default environment includes dev dependencies
 features = ["dev"]
 
 [tool.hatch.envs.docs]
-dependencies = ["chartbook[all]"]
 
 [tool.hatch.envs.docs.scripts]
 build = "sphinx-build -b html docs_src docs && touch docs/.nojekyll"

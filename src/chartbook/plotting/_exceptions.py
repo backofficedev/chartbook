@@ -25,7 +25,7 @@ class MissingDependencyError(PlottingError):
         self.feature = feature
         super().__init__(
             f"'{package}' is required for {feature}. "
-            f"Install with: pip install chartbook[plotting]"
+            f"Install with: pip install {package}"
         )
 
 

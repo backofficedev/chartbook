@@ -1,9 +1,12 @@
 """Tests for the validation module."""
 
+from pathlib import Path
+
 import pytest
 
 from chartbook.errors import ValidationError
-from chartbook.validation import SiteConfig, validate_conf_py_values
+from chartbook.conf_validation import SiteConfig, validate_conf_py_values, validate_source_files
+from chartbook.manifest import load_manifest
 
 
 class TestSiteConfig:
@@ -32,7 +35,7 @@ class TestSiteConfig:
                 sphinx_theme="pydata_sphinx_theme",
             )
         assert "cannot be empty" in str(exc_info.value)
-        assert exc_info.value.field_name == "site.title"
+        assert exc_info.value.field_name == "project.name"
 
     def test_whitespace_only_title_raises(self):
         """Test that whitespace-only title raises ValidationError."""
@@ -75,7 +78,7 @@ class TestSiteConfig:
                 sphinx_theme="pydata_sphinx_theme",
             )
         assert "invalid characters" in str(exc_info.value)
-        assert exc_info.value.field_name == "site.title"
+        assert exc_info.value.field_name == "project.name"
 
     def test_double_quotes_blocked(self):
         """Test that double quotes are blocked."""
@@ -153,7 +156,7 @@ class TestSiteConfig:
                 sphinx_theme="malicious_theme",
             )
         assert "Invalid sphinx theme" in str(exc_info.value)
-        assert exc_info.value.field_name == "config.type"
+        assert exc_info.value.field_name == "project.type"
 
     def test_max_length_exceeded(self):
         """Test that exceeding max length raises error."""
@@ -165,7 +168,7 @@ class TestSiteConfig:
                 sphinx_theme="pydata_sphinx_theme",
             )
         assert "exceeds maximum length" in str(exc_info.value)
-        assert exc_info.value.field_name == "site.title"
+        assert exc_info.value.field_name == "project.name"
 
     def test_max_length_boundary(self):
         """Test that exactly max length is allowed."""
@@ -252,9 +255,9 @@ class TestSiteConfigFromManifest:
     def test_from_manifest_catalog_theme(self):
         """Test creating config from manifest with catalog theme."""
         manifest = {
-            "site": {
-                "title": "My Catalog",
-                "author": "Test Author",
+            "project": {
+                "name": "My Catalog",
+                "maintainer": "Test Author",
                 "copyright": "2024",
             }
         }
@@ -267,9 +270,9 @@ class TestSiteConfigFromManifest:
     def test_from_manifest_pipeline_theme(self):
         """Test creating config from manifest with pipeline theme."""
         manifest = {
-            "site": {
-                "title": "My Pipeline",
-                "author": "Test Author",
+            "project": {
+                "name": "My Pipeline",
+                "maintainer": "Test Author",
                 "copyright": "2024",
             }
         }
@@ -279,30 +282,34 @@ class TestSiteConfigFromManifest:
 
     def test_from_manifest_invalid_pipeline_theme(self):
         """Test that invalid pipeline theme raises error."""
-        manifest = {"site": {"title": "Test", "author": "", "copyright": ""}}
+        manifest = {"project": {"name": "Test"}}
         with pytest.raises(ValidationError) as exc_info:
             SiteConfig.from_manifest(manifest, "invalid")
         assert "Invalid pipeline theme" in str(exc_info.value)
 
     def test_from_manifest_missing_site_uses_defaults(self):
-        """Test that missing site section uses defaults."""
+        """Test that a missing project section uses defaults."""
+        from datetime import datetime
+
         manifest = {}
         config = SiteConfig.from_manifest(manifest, "catalog")
         assert config.title == "chartbook"
         assert config.author == ""
-        assert config.copyright == ""
+        assert config.copyright == str(datetime.now().year)  # Auto-generated year when key missing
 
     def test_from_manifest_partial_site_uses_defaults(self):
-        """Test that partial site section uses defaults for missing fields."""
+        """Test that a partial project section uses defaults for missing fields."""
+        from datetime import datetime
+
         manifest = {
-            "site": {
-                "title": "Custom Title",
+            "project": {
+                "name": "Custom Title",
             }
         }
         config = SiteConfig.from_manifest(manifest, "pipeline")
         assert config.title == "Custom Title"
         assert config.author == ""
-        assert config.copyright == ""
+        assert config.copyright == str(datetime.now().year)  # Auto-generated year when key missing
 
 
 class TestValidateConfPyValues:
@@ -311,9 +318,9 @@ class TestValidateConfPyValues:
     def test_validate_returns_site_config(self):
         """Test that validate_conf_py_values returns SiteConfig."""
         specs = {
-            "site": {
-                "title": "Test Project",
-                "author": "Test Author",
+            "project": {
+                "name": "Test Project",
+                "maintainer": "Test Author",
                 "copyright": "2024",
             }
         }
@@ -325,9 +332,9 @@ class TestValidateConfPyValues:
     def test_validate_with_catalog_theme(self):
         """Test validation with catalog theme."""
         specs = {
-            "site": {
-                "title": "My Catalog",
-                "author": "Author",
+            "project": {
+                "name": "My Catalog",
+                "maintainer": "Author",
                 "copyright": "2024",
             }
         }
@@ -337,9 +344,9 @@ class TestValidateConfPyValues:
     def test_validate_raises_on_invalid_input(self):
         """Test that validation raises on invalid input."""
         specs = {
-            "site": {
-                "title": 'Invalid"; title',
-                "author": "Author",
+            "project": {
+                "name": 'Invalid"; title',
+                "maintainer": "Author",
                 "copyright": "2024",
             }
         }
@@ -411,3 +418,75 @@ class TestSecurityPatterns:
                     copyright="2024",
                     sphinx_theme="pydata_sphinx_theme",
                 )
+
+
+class TestValidateSourceFiles:
+    """Tests for validate_source_files with expanded resource validation."""
+
+    def test_no_missing_files_returns_empty(self, pipeline_project):
+        """Test that a valid project has no missing files."""
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert missing == []
+
+    def test_missing_parquet_detected(self, pipeline_project):
+        """Test that a missing parquet file is detected."""
+        parquet_files = list((pipeline_project / "_data").rglob("*.parquet"))
+        assert len(parquet_files) > 0
+        parquet_files[0].unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "dataframe" for mf in missing)
+
+    def test_missing_dataframe_docs_detected(self, pipeline_project):
+        """Test that a missing dataframe docs file is detected."""
+        docs_files = list((pipeline_project / "docs_src" / "dataframes").glob("*.md"))
+        assert len(docs_files) > 0
+        docs_files[0].unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "dataframe_docs" for mf in missing)
+
+    def test_missing_chart_html_detected(self, pipeline_project):
+        """Test that a missing chart HTML file is detected."""
+        chart_files = list((pipeline_project / "_output" / "charts").glob("*.html"))
+        assert len(chart_files) > 0
+        chart_files[0].unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "chart" for mf in missing)
+
+    def test_missing_chart_docs_detected(self, pipeline_project):
+        """Test that a missing chart docs file is detected."""
+        chart_docs = list((pipeline_project / "docs_src" / "charts").glob("*.md"))
+        assert len(chart_docs) > 0
+        chart_docs[0].unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "chart_docs" for mf in missing)
+
+    def test_missing_readme_detected(self, pipeline_project):
+        """Test that a missing README.md is detected."""
+        (pipeline_project / "README.md").unlink()
+
+        manifest = load_manifest(pipeline_project)
+        missing = validate_source_files(manifest, pipeline_project)
+        assert any(mf.file_type == "readme" for mf in missing)
+
+    def test_missing_note_markdown_detected(self, pipeline_project_with_notes):
+        """Test that a missing note markdown file is detected."""
+        (pipeline_project_with_notes / "docs_src" / "note1.md").unlink()
+
+        manifest = load_manifest(pipeline_project_with_notes)
+        missing = validate_source_files(manifest, pipeline_project_with_notes)
+        assert any(mf.file_type == "note" for mf in missing)
+
+    def test_inline_docs_not_checked_for_path(self, catalog_project_inline_docs):
+        """Test that inline docs don't trigger path checks."""
+        manifest = load_manifest(catalog_project_inline_docs)
+        missing = validate_source_files(manifest, catalog_project_inline_docs)
+        assert not any(mf.file_type == "dataframe_docs" for mf in missing)

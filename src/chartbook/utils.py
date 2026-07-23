@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -6,6 +7,17 @@ from io import StringIO
 from pathlib import Path
 
 import polars as pl
+
+
+def is_glob_pattern(path_str) -> bool:
+    """Check if a path string contains glob pattern characters.
+
+    :param path_str: The path string to check.
+    :type path_str: str or Path
+    :returns: True if the path contains glob characters (``*``, ``?``, ``[``).
+    :rtype: bool
+    """
+    return any(c in str(path_str) for c in ("*", "?", "["))
 
 # Default file size threshold (in MB) above which to use memory-efficient loading
 DEFAULT_SIZE_THRESHOLD_MB = 50
@@ -96,10 +108,15 @@ def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
         source_path = Path(source)
         destination_path = Path(destination)
 
-        # Skip if source file doesn't exist (validation happens upfront in build_docs.py)
+        # Warn if source file doesn't exist (should have been caught by validation)
         if not source_path.exists():
-            if verbose:
-                print(f"Skipping {source_path} - file does not exist")
+            import warnings
+
+            warnings.warn(
+                f"Skipping {source_path} - file does not exist "
+                f"(should have been caught by validation)",
+                stacklevel=2,
+            )
             continue
 
         # Create parent directories if needed
@@ -135,17 +152,22 @@ def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB)
     try:
         filepath = Path(filepath)
 
-        # Check file size to determine loading strategy
-        file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
-        is_large_file = file_size_mb > size_threshold_mb
-
-        # Load data lazily
-        if filepath.suffix.lower() == ".csv":
-            lf = pl.scan_csv(filepath)
-        elif filepath.suffix.lower() == ".parquet":
-            lf = pl.scan_parquet(filepath)
+        if is_glob_pattern(str(filepath)):
+            # Glob/hive-partitioned paths: use scan_parquet directly
+            lf = pl.scan_parquet(filepath, hive_partitioning=True)
+            is_large_file = False
         else:
-            return f"Unsupported file type: {filepath.suffix}"
+            # Check file size to determine loading strategy
+            file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
+            is_large_file = file_size_mb > size_threshold_mb
+
+            # Load data lazily
+            if filepath.suffix.lower() == ".csv":
+                lf = pl.scan_csv(filepath)
+            elif filepath.suffix.lower() == ".parquet":
+                lf = pl.scan_parquet(filepath)
+            else:
+                return f"Unsupported file type: {filepath.suffix}"
 
         # Get actual row count efficiently (works for both small and large files)
         row_count_df = lf.select(pl.len().alias("count")).collect()
@@ -169,3 +191,86 @@ def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB)
 
     except Exception as e:
         return f"Error reading file: {e!s}"
+
+
+# Regex to match MathJax 2 script tags injected by Plotly's NotebookRenderer.
+# Plotly hardcodes include_mathjax="cdn" which embeds a MathJax 2.7.x CDN script
+# and an optional SVG font config script into every Plotly cell output. When Sphinx
+# (via myst-nb) copies these into HTML, MathJax 2 conflicts with Sphinx's MathJax 3
+# and crashes all math rendering on the page.
+MATHJAX2_PATTERN = re.compile(
+    r'<script src="https://cdnjs\.cloudflare\.com/ajax/libs/mathjax/2\.[^"]*">[^<]*</script>'
+    r'(?:\s*<script type="text/javascript">if \(window\.MathJax && window\.MathJax\.Hub'
+    r" && window\.MathJax\.Hub\.Config\) \{window\.MathJax\.Hub\.Config\(\{SVG:"
+    r' \{font: "STIX-Web"\}\}\);\}</script>)?'
+)
+
+
+def strip_mathjax2_from_notebook(notebook_path):
+    """Strip MathJax 2 script tags injected by Plotly from notebook cell outputs.
+
+    Plotly's NotebookRenderer injects MathJax 2 CDN scripts into every Plotly cell
+    output. These conflict with Sphinx's MathJax 3, crashing all math rendering.
+    This function removes those script tags from the notebook's saved outputs.
+
+    :param notebook_path: Path to the .ipynb file to sanitize (modified in-place).
+    :type notebook_path: str or Path
+    :returns: True if the notebook was modified, False otherwise.
+    :rtype: bool
+    """
+    notebook_path = Path(notebook_path)
+    with open(notebook_path, "r", encoding="utf-8") as f:
+        nb = json.load(f)
+
+    modified = False
+    for cell in nb.get("cells", []):
+        for output in cell.get("outputs", []):
+            if "data" in output and "text/html" in output["data"]:
+                html_parts = output["data"]["text/html"]
+                if isinstance(html_parts, list):
+                    new_parts = []
+                    for part in html_parts:
+                        cleaned = MATHJAX2_PATTERN.sub("", part)
+                        if cleaned != part:
+                            modified = True
+                        new_parts.append(cleaned)
+                    output["data"]["text/html"] = new_parts
+                elif isinstance(html_parts, str):
+                    cleaned = MATHJAX2_PATTERN.sub("", html_parts)
+                    if cleaned != html_parts:
+                        modified = True
+                        output["data"]["text/html"] = cleaned
+
+    if modified:
+        with open(notebook_path, "w", encoding="utf-8") as f:
+            json.dump(nb, f, indent=1, ensure_ascii=False)
+            f.write("\n")
+
+    return modified
+
+
+def extract_notebook_title(notebook_path):
+    """Extract the first level-1 markdown heading from a notebook.
+
+    Searches through all cells for the first markdown cell containing a
+    level-1 heading (``# Title``). Returns the heading text, or ``None``
+    if no level-1 heading is found.
+
+    :param notebook_path: Path to the ``.ipynb`` file.
+    :type notebook_path: str or Path
+    :returns: The heading text (without the ``#`` prefix), or ``None``.
+    :rtype: str | None
+    """
+    notebook_path = Path(notebook_path)
+    with open(notebook_path, "r", encoding="utf-8") as f:
+        nb = json.load(f)
+
+    for cell in nb.get("cells", []):
+        if cell.get("cell_type") != "markdown":
+            continue
+        source = "".join(cell.get("source", []))
+        for line in source.split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("# ") and not stripped.startswith("##"):
+                return stripped[2:].strip()
+    return None

@@ -2,8 +2,8 @@
 
 A developer platform for data science teams.
 
-[![PyPI - Version](https://img.shields.io/badge/PyPI-v0.0.6-blue?logo=pypi)](https://pypi.org/project/chartbook)
-[![PyPI - Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue?logo=python)](https://pypi.org/project/chartbook)
+[![PyPI - Version](https://img.shields.io/pypi/v/chartbook?logo=pypi)](https://pypi.org/project/chartbook)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/chartbook?logo=python)](https://pypi.org/project/chartbook)
 [![GitHub Stars](https://img.shields.io/github/stars/backofficedev/chartbook?style=flat&logo=github)](https://github.com/backofficedev/chartbook)
 [![Documentation](https://img.shields.io/badge/docs-backofficedev.github.io%2Fchartbook-blue)](https://backofficedev.github.io/chartbook/)
 
@@ -16,7 +16,7 @@ ChartBook supports two project types:
 - **Pipeline** — A single analytics pipeline with its own charts, dataframes, and documentation
 - **Catalog** — A collection of multiple pipelines aggregated into a unified documentation site
 
-See the [Concepts](https://backofficedev.github.io/chartbook/user-guide/concepts.html) page for the full terminology including ChartBooks and ChartHub.
+See [Documenting a Pipeline](https://backofficedev.github.io/chartbook/guide/documenting-a-pipeline.html) and [Catalogs and Data Access](https://backofficedev.github.io/chartbook/guide/catalogs-and-data.html) for how the two fit together.
 
 ## Features
 
@@ -28,19 +28,11 @@ See the [Concepts](https://backofficedev.github.io/chartbook/user-guide/concepts
 
 ## Installation
 
-**Recommended:**
-
 ```bash
-pip install "chartbook[all]"
+pip install chartbook
 ```
 
-This gives you everything: data loading, plotting utilities, and the CLI for building documentation.
-
-**Minimal install** (data loading only):
-
-```bash
-pip install "chartbook[data]"
-```
+One install, everything included: data loading, plotting utilities, and the CLI for building documentation.
 
 **Development:**
 
@@ -84,8 +76,8 @@ See the [documentation](https://backofficedev.github.io/chartbook) for configura
 Full documentation is available at [backofficedev.github.io/chartbook](https://backofficedev.github.io/chartbook).
 
 - [Getting Started](https://backofficedev.github.io/chartbook/getting-started.html)
-- [Configuration Reference](https://backofficedev.github.io/chartbook/configuration.html)
-- [CLI Reference](https://backofficedev.github.io/chartbook/cli-reference.html)
+- [Configuration Reference](https://backofficedev.github.io/chartbook/reference/configuration.html)
+- [CLI Reference](https://backofficedev.github.io/chartbook/reference/cli.html)
 
 ## Contributing
 

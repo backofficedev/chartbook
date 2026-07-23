@@ -1,18 +1,18 @@
 ## Chart Specs
 
-| Chart Name             | {{chart_name}}                                             |
+| Chart Name             | {{name}}                                                   |
 |------------------------|------------------------------------------------------------|
 | Chart ID               | {{chart_id}}                                               |
-| Topic Tags             | {{topic_tags | join(', ')}}                                |
-| Data Series Start Date | {{data_series_start_date}}                                 |
-| Data Frequency         | {{data_frequency}}                                         |
+| Tags                   | {{tags | join(', ')}}                                      |
+| Data Series Start Date | {{start_date}}                                             |
+| Data Frequency         | {{frequency}}                                              |
 | Observation Period     | {{observation_period}}                                     |
-| Lag in Data Release    | {{lag_in_data_release}}                                    |
-| Data Release Timing    | {{data_release_timing}}                                    |
+| Lag in Data Release    | {{release_lag}}                                            |
+| Data Release Timing    | {{release_timing}}                                         |
 | Seasonal Adjustment    | {{seasonal_adjustment}}                                    |
 | Units                  | {{units}}                                                  |
-{% if data_series %}| Data Series            | {{data_series | join(', ')}}                                            |
-{% endif %}| HTML Chart             | [HTML](../download_chart/{{pipeline_id}}/{{chart_id}}.html)    |
+{% if series %}| Data Series            | {{series | join(', ')}}                                            |
+{% endif %}| HTML Chart             | [HTML](../download_chart/{{pipeline_id | replace('/', '--')}}/{{chart_id}}.html)    |
 {% if excel_chart_exists %}| Excel Chart             | [Excel]({{excel_chart_download_path}})    |{% endif %}
 
 ## Dataframe Manifest

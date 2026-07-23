@@ -6,29 +6,29 @@ myst:
 html_theme.secondary_sidebar.remove: true
 ---
 
-# {{manifest.site.title}}
+# {{manifest.project.name}}
 
 <!-- <img src="../assets/logo.png" alt="logo" width="200px" class="bg-primary"> -->
 
-Last updated: {sub-ref}`today` 
+Last updated: {sub-ref}`today`
 
 
 ::::{grid} 3
 
-:::{grid-item-card}  📈 [Charts](charts.md)
-:link: charts
+:::{grid-item-card}  📈 [Charts](cb/charts.md)
+:link: cb/charts
 :link-type: doc
 Search among individual charts (chart haven entries) or browse charts by topic, data source, or other categories. Download or export when you're ready.
 :::
 
-:::{grid-item-card} 📊 [Dataframes](dataframes.md)
-:link: dataframes
+:::{grid-item-card} 📊 [Dataframes](cb/dataframes.md)
+:link: cb/dataframes
 :link-type: doc
 Browse dataframes that are produced by each pipeline, the dataframes that power the individual charts.
 :::
 
-:::{grid-item-card}  🔌 [Pipelines](pipelines.md)
-:link: pipelines
+:::{grid-item-card}  🔌 [Pipelines](cb/pipelines.md)
+:link: cb/pipelines
 :link-type: doc
 Browse the pipelines that power the generated dataframes and charts.
 :::
@@ -39,8 +39,8 @@ Browse the pipelines that power the generated dataframes and charts.
 Information about contributing to this catalog project.
 :::
 
-:::{grid-item-card}  🩺 [Diagnostics](diagnostics.md)
-:link: diagnostics
+:::{grid-item-card}  🩺 [Diagnostics](cb/diagnostics.md)
+:link: cb/diagnostics
 :link-type: doc
 View metadata quality reports and download CSV files that flag metadata gaps across pipelines, dataframes, and charts.
 :::
@@ -51,9 +51,9 @@ View metadata quality reports and download CSV files that flag metadata gaps acr
 :maxdepth: 2
 :hidden:
 
-charts.md
-dataframes.md
-pipelines.md
-diagnostics.md
+cb/charts.md
+cb/dataframes.md
+cb/pipelines.md
+cb/diagnostics.md
 contributing.md
 ```

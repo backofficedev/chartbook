@@ -4,10 +4,14 @@ Load dataframes from registered pipelines in a catalog::
 
     from chartbook import data
 
-    df = data.load(pipeline="yield_curve", dataframe="repo_public")
+    # Load as Polars LazyFrame (default)
+    lf = data.load(pipeline="yield_curve", dataframe="repo_public")
 
-    # Specify format
-    df_pl = data.load(pipeline="yield_curve", dataframe="repo_public", format="polars")
+    # Load as Polars eager DataFrame
+    df = data.load(pipeline="yield_curve", dataframe="repo_public", format="polars_eager")
+
+    # Load as pandas DataFrame
+    df = data.load(pipeline="yield_curve", dataframe="repo_public", format="pandas")
 
     # Get just the data path
     path = data.get_data_path(pipeline="yield_curve", dataframe="repo_public")
@@ -24,6 +28,8 @@ from typing import Optional, Union
 
 from chartbook.config import get_default_catalog_path, get_global_settings_path
 from chartbook.errors import CatalogNotConfiguredError
+from chartbook.identity import resolve_pipeline_ref
+from chartbook.utils import is_glob_pattern
 
 
 def _resolve_catalog_path(
@@ -64,7 +70,9 @@ def _get_dataframe_path_from_catalog(
 
     :param catalog_path: Path to the catalog's ``chartbook.toml``.
     :type catalog_path: Path
-    :param pipeline: The pipeline identifier within the catalog.
+    :param pipeline: The pipeline reference — a bare name
+        (``"crsp_treasury"``, if unambiguous), a scoped ID
+        (``"ftsfr/crsp_treasury"``), or a repository URL.
     :type pipeline: str
     :param dataframe: The dataframe identifier within the pipeline.
     :type dataframe: str
@@ -76,22 +84,23 @@ def _get_dataframe_path_from_catalog(
 
     manifest = load_manifest(base_dir=catalog_path.parent)
 
-    available_pipelines = list(manifest.get("pipelines", {}).keys())
-    if pipeline not in manifest.get("pipelines", {}):
-        raise KeyError(
-            f"Pipeline {pipeline!r} not found in catalog. "
-            f"Available pipelines: {available_pipelines}"
-        )
+    pipeline_key = resolve_pipeline_ref(manifest.get("pipelines", {}).keys(), pipeline)
 
-    pipeline_manifest = manifest["pipelines"][pipeline]
+    pipeline_manifest = manifest["pipelines"][pipeline_key]
     available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())
     if dataframe not in pipeline_manifest.get("dataframes", {}):
         raise KeyError(
-            f"Dataframe {dataframe!r} not found in pipeline {pipeline!r}. "
+            f"Dataframe {dataframe!r} not found in pipeline {pipeline_key!r}. "
             f"Available dataframes: {available_dataframes}"
         )
 
-    return Path(pipeline_manifest["dataframes"][dataframe]["dataframe_path"])
+    resolved = pipeline_manifest["dataframes"][dataframe].get("_resolved_path")
+    if resolved is None:
+        raise KeyError(
+            f"Dataframe {dataframe!r} in pipeline {pipeline_key!r} has no "
+            f"'path' set in its chartbook.toml."
+        )
+    return Path(resolved)
 
 
 def _get_dataframe_docs_info_from_catalog(
@@ -103,7 +112,9 @@ def _get_dataframe_docs_info_from_catalog(
 
     :param catalog_path: Path to the catalog's ``chartbook.toml``.
     :type catalog_path: Path
-    :param pipeline: The pipeline identifier within the catalog.
+    :param pipeline: The pipeline reference — a bare name
+        (``"crsp_treasury"``, if unambiguous), a scoped ID
+        (``"ftsfr/crsp_treasury"``), or a repository URL.
     :type pipeline: str
     :param dataframe: The dataframe identifier within the pipeline.
     :type dataframe: str
@@ -117,18 +128,13 @@ def _get_dataframe_docs_info_from_catalog(
 
     manifest = load_manifest(base_dir=catalog_path.parent)
 
-    available_pipelines = list(manifest.get("pipelines", {}).keys())
-    if pipeline not in manifest.get("pipelines", {}):
-        raise KeyError(
-            f"Pipeline {pipeline!r} not found in catalog. "
-            f"Available pipelines: {available_pipelines}"
-        )
+    pipeline_key = resolve_pipeline_ref(manifest.get("pipelines", {}).keys(), pipeline)
 
-    pipeline_manifest = manifest["pipelines"][pipeline]
+    pipeline_manifest = manifest["pipelines"][pipeline_key]
     available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())
     if dataframe not in pipeline_manifest.get("dataframes", {}):
         raise KeyError(
-            f"Dataframe {dataframe!r} not found in pipeline {pipeline!r}. "
+            f"Dataframe {dataframe!r} not found in pipeline {pipeline_key!r}. "
             f"Available dataframes: {available_dataframes}"
         )
 
@@ -147,7 +153,12 @@ def get_data_path(
 ) -> Path:
     """Get the resolved path to a dataframe's parquet file.
 
-    :param pipeline: The pipeline identifier within the catalog.
+    For glob patterns (e.g., ``**/*.parquet``), returns a ``Path`` containing
+    the glob pattern characters.
+
+    :param pipeline: The pipeline reference — a bare name
+        (``"crsp_treasury"``, if unambiguous), a scoped ID
+        (``"ftsfr/crsp_treasury"``), or a repository URL.
     :type pipeline: str
     :param dataframe: The dataframe identifier within the pipeline.
     :type dataframe: str
@@ -155,7 +166,7 @@ def get_data_path(
         directory.  If ``None``, the global default from
         ``~/.chartbook/settings.toml`` is used.
     :type catalog_path: Optional[Union[str, Path]]
-    :returns: The resolved path to the parquet file.
+    :returns: The resolved path to the parquet file (may contain glob characters).
     :rtype: Path
     :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
@@ -171,11 +182,13 @@ def get_docs_path(
 ) -> Path:
     """Get the path to a dataframe's documentation source.
 
-    For dataframes using ``dataframe_docs_path``, returns the path to the
-    ``.md`` file. For dataframes using ``dataframe_docs_str`` (inline docs),
-    returns the path to the ``chartbook.toml`` file where the docs are defined.
+    For dataframes using ``docs_path``, returns the path to the ``.md``
+    file. For dataframes using ``docs`` (inline docs), returns the path to
+    the ``chartbook.toml`` file where the docs are defined.
 
-    :param pipeline: The pipeline identifier within the catalog.
+    :param pipeline: The pipeline reference — a bare name
+        (``"crsp_treasury"``, if unambiguous), a scoped ID
+        (``"ftsfr/crsp_treasury"``), or a repository URL.
     :type pipeline: str
     :param dataframe: The dataframe identifier within the pipeline.
     :type dataframe: str
@@ -207,12 +220,13 @@ def get_docs(
 
     Works with both documentation modes:
 
-    - If the dataframe uses ``dataframe_docs_path``, reads and returns the
-      content of the ``.md`` file.
-    - If the dataframe uses ``dataframe_docs_str``, returns the inline string
-      directly.
+    - If the dataframe uses ``docs_path``, reads and returns the content of
+      the ``.md`` file.
+    - If the dataframe uses ``docs``, returns the inline string directly.
 
-    :param pipeline: The pipeline identifier within the catalog.
+    :param pipeline: The pipeline reference — a bare name
+        (``"crsp_treasury"``, if unambiguous), a scoped ID
+        (``"ftsfr/crsp_treasury"``), or a repository URL.
     :type pipeline: str
     :param dataframe: The dataframe identifier within the pipeline.
     :type dataframe: str
@@ -239,17 +253,21 @@ def get_docs(
 def load(
     pipeline: str,
     dataframe: str,
-    format: str = "pandas",
+    format: str = "polars",
     catalog_path: Optional[Union[str, Path]] = None,
 ):
     """Load a dataframe from a registered pipeline in a catalog.
 
-    :param pipeline: The pipeline identifier within the catalog.
+    :param pipeline: The pipeline reference — a bare name
+        (``"crsp_treasury"``, if unambiguous), a scoped ID
+        (``"ftsfr/crsp_treasury"``), or a repository URL.
     :type pipeline: str
     :param dataframe: The dataframe identifier within the pipeline.
     :type dataframe: str
-    :param format: Output format — ``"pandas"`` (default), ``"polars"``,
-        or ``"polars-lazyframe"``.
+    :param format: Output format — ``"polars"`` (default, returns LazyFrame),
+        ``"polars_eager"``, ``"pandas"``, or ``"polars-lazyframe"`` (deprecated
+        alias for ``"polars"``).  Glob patterns in a dataframe's ``path`` only
+        support ``"polars"`` (LazyFrame).
     :type format: str
     :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent
         directory.  If ``None``, the global default from
@@ -259,43 +277,70 @@ def load(
     :rtype: pandas.DataFrame or polars.DataFrame or polars.LazyFrame
     :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
-    :raises ValueError: If *format* is not one of the supported values.
+    :raises ValueError: If *format* is not one of the supported values, or if
+        a glob path is used with a non-LazyFrame format.
 
     **Examples**
 
-    Load as a pandas DataFrame (default):
+    Load as a Polars LazyFrame (default):
 
     >>> from chartbook import data
-    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
-    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
-
-    Load as a polars DataFrame:
-
-    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
-    ...               format="polars",
-    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
-
-    Load as a polars LazyFrame:
-
     >>> lf = data.load(pipeline="yield_curve", dataframe="repo_public",
-    ...               format="polars-lazyframe",
+    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
+
+    Load as a Polars eager DataFrame:
+
+    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
+    ...               format="polars_eager",
+    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
+
+    Load as a pandas DataFrame:
+
+    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
+    ...               format="pandas",
     ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
     """
     file_path = get_data_path(pipeline, dataframe, catalog_path)
+    _is_glob = is_glob_pattern(file_path)
 
     if format == "pandas":
+        if _is_glob:
+            raise ValueError(
+                "Glob patterns in a dataframe's path only support format='polars' "
+                "(LazyFrame). Use data.load(..., format='polars') and call .collect() "
+                "to materialize, then .to_pandas() if needed."
+            )
         import pandas as pd
 
         return pd.read_parquet(file_path)
     elif format == "polars":
         import polars as pl
 
-        return pl.read_parquet(file_path)
-    elif format == "polars-lazyframe":
+        return pl.scan_parquet(file_path, hive_partitioning=True)
+    elif format == "polars_eager":
+        if _is_glob:
+            raise ValueError(
+                "Glob patterns in a dataframe's path only support format='polars' "
+                "(LazyFrame). Use data.load(..., format='polars') and call .collect() "
+                "to materialize."
+            )
         import polars as pl
 
-        return pl.scan_parquet(file_path)
+        return pl.read_parquet(file_path, hive_partitioning=True)
+    elif format == "polars-lazyframe":
+        import warnings
+
+        import polars as pl
+
+        warnings.warn(
+            "format='polars-lazyframe' is deprecated. Use format='polars' instead "
+            "(polars format now returns LazyFrame by default).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return pl.scan_parquet(file_path, hive_partitioning=True)
     else:
         raise ValueError(
-            f"Invalid format: {format!r}. Must be 'pandas', 'polars', or 'polars-lazyframe'."
+            f"Invalid format: {format!r}. Must be 'polars', 'polars_eager', "
+            f"'pandas', or 'polars-lazyframe'."
         )

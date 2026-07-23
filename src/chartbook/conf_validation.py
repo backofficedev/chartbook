@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from typing import ClassVar
 
 from chartbook.errors import ValidationError
@@ -32,6 +33,14 @@ class SiteConfig:
     author: str
     copyright: str
     sphinx_theme: str
+
+    # Maps SiteConfig attribute -> the chartbook.toml key it comes from,
+    # used in validation error messages.
+    TOML_KEYS: ClassVar[dict[str, str]] = {
+        "title": "project.name",
+        "author": "project.maintainer",
+        "copyright": "project.copyright",
+    }
 
     # Class-level constants
     ALLOWED_THEMES: ClassVar[frozenset[str]] = frozenset(
@@ -75,10 +84,11 @@ class SiteConfig:
         :type allow_empty: bool
         :raises ValidationError: If validation fails.
         """
+        toml_key = self.TOML_KEYS.get(field_name, f"project.{field_name}")
         if not isinstance(value, str):
             raise ValidationError(
                 message=f"Field must be a string, got {type(value).__name__}",
-                field_name=f"site.{field_name}",
+                field_name=toml_key,
                 invalid_value=repr(value),
                 hint="Ensure the value is a quoted string in chartbook.toml.",
             )
@@ -86,15 +96,15 @@ class SiteConfig:
         if not allow_empty and not value.strip():
             raise ValidationError(
                 message="Field cannot be empty",
-                field_name=f"site.{field_name}",
+                field_name=toml_key,
                 invalid_value=value,
-                hint=f"Provide a non-empty value for site.{field_name} in chartbook.toml.",
+                hint=f"Provide a non-empty value for {toml_key} in chartbook.toml.",
             )
 
         if len(value) > self.MAX_TEXT_LENGTH:
             raise ValidationError(
                 message=f"Field exceeds maximum length of {self.MAX_TEXT_LENGTH} characters",
-                field_name=f"site.{field_name}",
+                field_name=toml_key,
                 invalid_value=value,
                 hint=f"Shorten the value to {self.MAX_TEXT_LENGTH} characters or less.",
             )
@@ -106,7 +116,7 @@ class SiteConfig:
         if not self.SAFE_TEXT_PATTERN.match(value):
             raise ValidationError(
                 message="Field contains invalid characters",
-                field_name=f"site.{field_name}",
+                field_name=toml_key,
                 invalid_value=value,
                 hint=(
                     "Only alphanumeric characters, spaces, accented letters "
@@ -125,7 +135,7 @@ class SiteConfig:
         if theme not in self.ALLOWED_THEMES:
             raise ValidationError(
                 message=f"Invalid sphinx theme: {theme!r}",
-                field_name="config.type",
+                field_name="project.type",
                 invalid_value=theme,
                 hint=f"Allowed themes: {', '.join(sorted(self.ALLOWED_THEMES))}",
             )
@@ -151,17 +161,17 @@ class SiteConfig:
         if sphinx_theme is None:
             raise ValidationError(
                 message=f"Invalid pipeline theme: {pipeline_theme!r}",
-                field_name="config.type",
+                field_name="project.type",
                 invalid_value=pipeline_theme,
-                hint="config.type must be either 'catalog' or 'pipeline'.",
+                hint="project.type must be either 'catalog' or 'pipeline'.",
             )
 
-        site = manifest.get("site", {})
+        project = manifest.get("project", {})
 
         return cls(
-            title=site.get("title", "chartbook"),
-            author=site.get("author", ""),
-            copyright=site.get("copyright", ""),
+            title=project.get("name") or "chartbook",
+            author=project.get("maintainer", ""),
+            copyright=project.get("copyright") or str(datetime.now().year),
             sphinx_theme=sphinx_theme,
         )
 
@@ -187,9 +197,14 @@ def validate_source_files(manifest: dict, base_dir) -> list:
     """Validate that all source files referenced in the manifest exist.
 
     Checks for the existence of:
-    - Dataframe parquet files (path_to_parquet_data)
-    - Chart HTML files (path_to_html_chart)
-    - Notebook files (notebook_path)
+    - Dataframe parquet files (path)
+    - Dataframe documentation files (docs_path, when mode="path")
+    - Chart HTML files (path)
+    - Chart documentation files (docs_path, when mode="path")
+    - Notebook files (path)
+    - Note markdown files (path)
+    - README.md per pipeline
+    - User-specified logo and favicon files
 
     :param manifest: The manifest dictionary from chartbook.toml.
     :type manifest: dict
@@ -214,22 +229,59 @@ def validate_source_files(manifest: dict, base_dir) -> list:
 
         # Check dataframe files
         for dataframe_id, dataframe_config in pipeline_manifest.get("dataframes", {}).items():
-            parquet_path = dataframe_config.get("path_to_parquet_data")
+            parquet_path = dataframe_config.get("path")
             if parquet_path and parquet_path.strip():
-                full_path = (pipeline_base_dir / parquet_path).resolve()
-                if not full_path.exists():
-                    missing_files.append(
-                        MissingFile(
-                            file_path=full_path,
-                            file_type="dataframe",
-                            item_id=dataframe_id,
-                            pipeline_id=pipeline_id,
-                        )
+                from chartbook.utils import is_glob_pattern
+
+                if is_glob_pattern(parquet_path):
+                    import glob as glob_module
+
+                    full_pattern = str(
+                        (pipeline_base_dir / parquet_path).as_posix()
                     )
+                    matching_files = glob_module.glob(
+                        full_pattern, recursive=True
+                    )
+                    if not matching_files:
+                        missing_files.append(
+                            MissingFile(
+                                file_path=Path(full_pattern),
+                                file_type="dataframe",
+                                item_id=dataframe_id,
+                                pipeline_id=pipeline_id,
+                            )
+                        )
+                else:
+                    full_path = (pipeline_base_dir / parquet_path).resolve()
+                    if not full_path.exists():
+                        missing_files.append(
+                            MissingFile(
+                                file_path=full_path,
+                                file_type="dataframe",
+                                item_id=dataframe_id,
+                                pipeline_id=pipeline_id,
+                            )
+                        )
+
+            # Check dataframe documentation files (path mode only)
+            doc_mode = dataframe_config.get("_doc_mode", "path")
+            if doc_mode == "path":
+                docs_path = dataframe_config.get("docs_path")
+                if docs_path and docs_path.strip():
+                    full_path = (pipeline_base_dir / docs_path).resolve()
+                    if not full_path.exists():
+                        missing_files.append(
+                            MissingFile(
+                                file_path=full_path,
+                                file_type="dataframe_docs",
+                                item_id=dataframe_id,
+                                pipeline_id=pipeline_id,
+                            )
+                        )
 
         # Check chart files
         for chart_id, chart_config in pipeline_manifest.get("charts", {}).items():
-            chart_path = chart_config.get("path_to_html_chart")
+            chart_path = chart_config.get("path")
             if chart_path and chart_path.strip():
                 full_path = (pipeline_base_dir / chart_path).resolve()
                 if not full_path.exists():
@@ -242,9 +294,25 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                         )
                     )
 
+            # Check chart documentation files (path mode only)
+            doc_mode = chart_config.get("_doc_mode", "path")
+            if doc_mode == "path":
+                docs_path = chart_config.get("docs_path")
+                if docs_path and docs_path.strip():
+                    full_path = (pipeline_base_dir / docs_path).resolve()
+                    if not full_path.exists():
+                        missing_files.append(
+                            MissingFile(
+                                file_path=full_path,
+                                file_type="chart_docs",
+                                item_id=chart_id,
+                                pipeline_id=pipeline_id,
+                            )
+                        )
+
         # Check notebook files
         for notebook_id, notebook_config in pipeline_manifest.get("notebooks", {}).items():
-            notebook_path = notebook_config.get("notebook_path")
+            notebook_path = notebook_config.get("path")
             if notebook_path and notebook_path.strip():
                 full_path = (pipeline_base_dir / notebook_path).resolve()
                 if not full_path.exists():
@@ -256,5 +324,59 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                             pipeline_id=pipeline_id,
                         )
                     )
+
+        # Check note markdown files
+        for note_id, note_config in pipeline_manifest.get("notes", {}).items():
+            md_path = note_config.get("path")
+            if md_path and md_path.strip():
+                full_path = (pipeline_base_dir / md_path).resolve()
+                if not full_path.exists():
+                    missing_files.append(
+                        MissingFile(
+                            file_path=full_path,
+                            file_type="note",
+                            item_id=note_id,
+                            pipeline_id=pipeline_id,
+                        )
+                    )
+
+        # Check README.md
+        readme_path = (pipeline_base_dir / "README.md").resolve()
+        if not readme_path.exists():
+            missing_files.append(
+                MissingFile(
+                    file_path=readme_path,
+                    file_type="readme",
+                    item_id="README.md",
+                    pipeline_id=pipeline_id,
+                )
+            )
+
+    # Check user-specified logo and favicon (site-level, outside pipeline loop)
+    logo_path = manifest.get("project", {}).get("logo", "")
+    if logo_path:
+        full_logo = (base_dir / logo_path).resolve()
+        if not full_logo.exists():
+            missing_files.append(
+                MissingFile(
+                    file_path=full_logo,
+                    file_type="logo",
+                    item_id="project.logo",
+                    pipeline_id="(project)",
+                )
+            )
+
+    favicon_path = manifest.get("project", {}).get("favicon", "")
+    if favicon_path:
+        full_favicon = (base_dir / favicon_path).resolve()
+        if not full_favicon.exists():
+            missing_files.append(
+                MissingFile(
+                    file_path=full_favicon,
+                    file_type="favicon",
+                    item_id="project.favicon",
+                    pipeline_id="(project)",
+                )
+            )
 
     return missing_files

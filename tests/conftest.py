@@ -88,6 +88,40 @@ def catalog_project_inline_docs(tmp_path):
 
 
 @pytest.fixture
+def catalog_project_glob(tmp_path):
+    """Creates a catalog project with glob/hive-partitioned parquet data."""
+    return create_catalog_project(
+        tmp_path / "catalog_glob",
+        pipeline_ids=["pipeline_glob"],
+        use_glob_paths=True,
+    )
+
+
+@pytest.fixture
+def pipeline_project_with_site_dir(tmp_path):
+    """Pipeline project with site_dir inside docs_src/."""
+    return create_pipeline_project(
+        tmp_path / "pipeline_site",
+        pipeline_id="site_test",
+        pipeline_name="Site Dir Test",
+        include_site_dir=True,
+        site_dir_in_docs_src=True,
+    )
+
+
+@pytest.fixture
+def pipeline_project_with_site_dir_top_level(tmp_path):
+    """Pipeline project with site_dir at top level (backward compat)."""
+    return create_pipeline_project(
+        tmp_path / "pipeline_site_top",
+        pipeline_id="site_top_test",
+        pipeline_name="Site Dir Top Level Test",
+        include_site_dir=True,
+        site_dir_in_docs_src=False,
+    )
+
+
+@pytest.fixture
 def invalid_project_missing_file(tmp_path):
     """Creates a project without chartbook.toml."""
     return create_invalid_toml_project(tmp_path / "missing_file", "missing_file")
@@ -100,12 +134,12 @@ def invalid_project_invalid_type(tmp_path):
 
 
 @pytest.fixture
-def invalid_project_invalid_version(tmp_path):
-    """Creates a project with invalid version format."""
-    return create_invalid_toml_project(tmp_path / "invalid_version", "invalid_version")
+def invalid_project_v1_format(tmp_path):
+    """Creates a project with an old v1-format chartbook.toml."""
+    return create_invalid_toml_project(tmp_path / "v1_format", "v1_format")
 
 
 @pytest.fixture
-def invalid_project_old_version(tmp_path):
-    """Creates a project with old version."""
-    return create_invalid_toml_project(tmp_path / "old_version", "old_version")
+def invalid_project_type_conflict(tmp_path):
+    """Creates a project whose explicit type contradicts its structure."""
+    return create_invalid_toml_project(tmp_path / "type_conflict", "type_conflict")

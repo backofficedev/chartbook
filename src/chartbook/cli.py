@@ -4,6 +4,8 @@ from pathlib import Path
 
 import click
 
+from chartbook.__about__ import __version__
+
 
 def _check_sphinx_installed():
     """Check if Sphinx dependencies are installed.
@@ -16,16 +18,16 @@ def _check_sphinx_installed():
     except ImportError:
         click.echo("Error: Sphinx dependencies not installed.", err=True)
         click.echo("", err=True)
-        click.echo("Install the full package:", err=True)
-        click.echo('    pip install "chartbook[all]"', err=True)
-        click.echo("", err=True)
-        click.echo("Or use pipx for isolated installation:", err=True)
-        click.echo('    pipx install "chartbook[all]"', err=True)
-        click.echo('    pipx run "chartbook[all]" build', err=True)
+        click.echo(
+            "These ship with chartbook, so this usually means a broken or"
+            " partial installation. Reinstall with:", err=True
+        )
+        click.echo("    pip install --force-reinstall chartbook", err=True)
         raise SystemExit(1)
 
 
 @click.group()
+@click.version_option(version=__version__)
 def main():
     """chartbook CLI tool for generating documentation websites."""
 
@@ -71,10 +73,14 @@ def main():
     help="File size threshold in MB above which to use memory-efficient loading (default: 50)",
 )
 @click.option(
-    "--warn-missing",
-    is_flag=True,
-    default=False,
-    help="Warn instead of error when source files (charts, notebooks, dataframes) are missing",
+    "--strict/--no-strict",
+    default=True,
+    help="Fail on missing source files (default). Use --no-strict to skip affected pipelines instead.",
+)
+@click.option(
+    "--strip-mathjax2/--no-strip-mathjax2",
+    default=True,
+    help="Strip Plotly's MathJax 2 scripts from notebook outputs to prevent conflicts with Sphinx's MathJax 3 (default: enabled)",
 )
 def build(
     output_dir,
@@ -85,7 +91,8 @@ def build(
     keep_build_dirs,
     force_write,
     size_threshold,
-    warn_missing,
+    strict,
+    strip_mathjax2,
 ):
     """Generate HTML documentation in the specified output directory.
 
@@ -105,9 +112,19 @@ def build(
     :type force_write: bool
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
-    :param warn_missing: If True, warn instead of error when source files are missing.
-    :type warn_missing: bool
+    :param strict: If True, error and exit on missing source files.
+    :type strict: bool
+    :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
+    :type strip_mathjax2: bool
     """
+    # Validate paths for shell/platform mismatches
+    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
+
+    shell_env = detect_shell_environment()
+    path_args = [p for p in [output_dir, project_dir, publish_dir, docs_build_dir, temp_docs_src_dir] if p is not None]
+    if path_args:
+        validate_cli_paths(path_args, shell_env, auto_confirm=True)
+
     # Check for Sphinx dependencies
     _check_sphinx_installed()
 
@@ -143,18 +160,63 @@ def build(
     # Store whether we need to remove existing directory after successful generation
     should_remove_existing = output_dir.exists() and force_write
 
-    generate_docs(
-        output_dir=output_dir,
-        project_dir=project_dir,
-        publish_dir=publish_dir,
-        _docs_dir=docs_build_dir,
-        temp_docs_src_dir=temp_docs_src_dir,
-        keep_build_dirs=keep_build_dirs,
-        should_remove_existing=should_remove_existing,
-        size_threshold=size_threshold,
-        warn_missing=warn_missing,
-    )
+    try:
+        generate_docs(
+            output_dir=output_dir,
+            project_dir=project_dir,
+            publish_dir=publish_dir,
+            _docs_dir=docs_build_dir,
+            temp_docs_src_dir=temp_docs_src_dir,
+            keep_build_dirs=keep_build_dirs,
+            should_remove_existing=should_remove_existing,
+            size_threshold=size_threshold,
+            strict=strict,
+            strip_mathjax2=strip_mathjax2,
+        )
+    except (ValueError, FileNotFoundError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
     click.echo(f"Successfully generated documentation in {output_dir}")
+
+
+@main.command()
+@click.argument("output_dir", type=click.Path(), default="./docs", required=False)
+@click.option("--project-dir", type=click.Path(), help="Path to project directory")
+def browse(output_dir, project_dir):
+    """Open the project documentation in your default browser.
+
+    Looks for index.html in the OUTPUT_DIR (default: ./docs) and opens it
+    using the system's default web browser. Works on macOS, Windows, and Linux.
+
+    Examples:
+        chartbook browse
+        chartbook browse ./my-docs
+        chartbook browse --project-dir /path/to/project
+    """
+    # Validate paths for shell/platform mismatches
+    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
+
+    shell_env = detect_shell_environment()
+    path_args = [p for p in [output_dir, project_dir] if p is not None]
+    if path_args:
+        validate_cli_paths(path_args, shell_env, auto_confirm=True)
+
+    project_dir = resolve_project_dir(project_dir)
+    index_path = (project_dir / Path(output_dir) / "index.html").resolve()
+
+    if not index_path.is_file():
+        click.echo("Error: Documentation not found.", err=True)
+        click.echo(f"  Expected: {index_path}", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook build' first.", err=True)
+        raise SystemExit(1)
+
+    import webbrowser
+
+    url = index_path.as_uri()
+    click.echo(f"Opening {index_path}")
+    if not webbrowser.open(url):
+        click.echo(f"Could not open browser. Open this URL manually: {url}")
 
 
 @main.command()
@@ -184,6 +246,14 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     :param verbose: If True, enables verbose output.
     :type verbose: bool
     """
+    # Validate paths for shell/platform mismatches
+    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
+
+    shell_env = detect_shell_environment()
+    path_args = [p for p in [publish_dir, project_dir] if p is not None]
+    if path_args:
+        validate_cli_paths(path_args, shell_env, auto_confirm=True)
+
     # Check for Sphinx dependencies
     _check_sphinx_installed()
 
@@ -193,7 +263,7 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
 
     project_dir = resolve_project_dir(project_dir)
     manifest = load_manifest(base_dir=project_dir)
-    pipeline_id = manifest["pipeline"]["id"]
+    pipeline_id = manifest["project"]["id"]
 
     if publish_dir is None:
         BASE_DIR = Path(".").resolve()
@@ -311,13 +381,14 @@ def _load_catalog_for_cli(catalog_path=None):
 
     try:
         resolved = _resolve_catalog_path(catalog_path)
-    except CatalogNotConfiguredError as e:
-        click.echo(f"Error: {e}", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook config' to set a default catalog.", err=True)
-        raise SystemExit(1)
+    except CatalogNotConfiguredError:
+        resolved = _prompt_catalog_init()
 
-    manifest = load_manifest(base_dir=resolved.parent)
+    try:
+        manifest = load_manifest(base_dir=resolved.parent)
+    except (ValueError, FileNotFoundError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
     return manifest, resolved
 
 
@@ -329,9 +400,7 @@ def _get_pipeline_name(pipeline_manifest):
     :returns: The pipeline name or 'Unknown'.
     :rtype: str
     """
-    if "pipeline" in pipeline_manifest:
-        return pipeline_manifest["pipeline"].get("pipeline_name", "Unknown")
-    return "Unknown"
+    return pipeline_manifest.get("project", {}).get("name", "Unknown")
 
 
 @main.group(invoke_without_command=True)
@@ -358,7 +427,7 @@ def ls(ctx, catalog):
         click.echo(f"Catalog: {catalog_path}")
         click.echo("")
 
-        if manifest["config"]["type"] == "catalog":
+        if manifest["project"]["type"] == "catalog":
             # Catalog with multiple pipelines
             for pipeline_id in sorted(manifest["pipelines"].keys()):
                 pipeline_manifest = manifest["pipelines"][pipeline_id]
@@ -369,7 +438,7 @@ def ls(ctx, catalog):
                 if "dataframes" in pipeline_manifest:
                     for df_id in sorted(pipeline_manifest["dataframes"].keys()):
                         df_name = pipeline_manifest["dataframes"][df_id].get(
-                            "dataframe_name", "Unknown"
+                            "name", "Unknown"
                         )
                         click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
 
@@ -377,27 +446,23 @@ def ls(ctx, catalog):
                 if "charts" in pipeline_manifest:
                     for chart_id in sorted(pipeline_manifest["charts"].keys()):
                         chart_name = pipeline_manifest["charts"][chart_id].get(
-                            "chart_name", "Unknown"
+                            "name", "Unknown"
                         )
                         click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
         else:
             # Single pipeline
-            pipeline_id = manifest["pipeline"]["id"]
+            pipeline_id = manifest["project"]["id"]
             pipeline_name = _get_pipeline_name(manifest)
             click.echo(f"[pipeline] {pipeline_id}: {pipeline_name}")
 
             if "dataframes" in manifest:
                 for df_id in sorted(manifest["dataframes"].keys()):
-                    df_name = manifest["dataframes"][df_id].get(
-                        "dataframe_name", "Unknown"
-                    )
+                    df_name = manifest["dataframes"][df_id].get("name", "Unknown")
                     click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
 
             if "charts" in manifest:
                 for chart_id in sorted(manifest["charts"].keys()):
-                    chart_name = manifest["charts"][chart_id].get(
-                        "chart_name", "Unknown"
-                    )
+                    chart_name = manifest["charts"][chart_id].get("name", "Unknown")
                     click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
 
 
@@ -408,13 +473,13 @@ def ls_pipelines(ctx):
     catalog = ctx.obj.get("catalog")
     manifest, _ = _load_catalog_for_cli(catalog)
 
-    if manifest["config"]["type"] == "catalog":
+    if manifest["project"]["type"] == "catalog":
         for pipeline_id in sorted(manifest["pipelines"].keys()):
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             pipeline_name = _get_pipeline_name(pipeline_manifest)
             click.echo(f"{pipeline_id}: {pipeline_name}")
     else:
-        pipeline_id = manifest["pipeline"]["id"]
+        pipeline_id = manifest["project"]["id"]
         pipeline_name = _get_pipeline_name(manifest)
         click.echo(f"{pipeline_id}: {pipeline_name}")
 
@@ -426,20 +491,20 @@ def ls_dataframes(ctx):
     catalog = ctx.obj.get("catalog")
     manifest, _ = _load_catalog_for_cli(catalog)
 
-    if manifest["config"]["type"] == "catalog":
+    if manifest["project"]["type"] == "catalog":
         for pipeline_id in sorted(manifest["pipelines"].keys()):
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "dataframes" in pipeline_manifest:
                 for df_id in sorted(pipeline_manifest["dataframes"].keys()):
                     df_name = pipeline_manifest["dataframes"][df_id].get(
-                        "dataframe_name", "Unknown"
+                        "name", "Unknown"
                     )
                     click.echo(f"{pipeline_id}/{df_id}: {df_name}")
     else:
-        pipeline_id = manifest["pipeline"]["id"]
+        pipeline_id = manifest["project"]["id"]
         if "dataframes" in manifest:
             for df_id in sorted(manifest["dataframes"].keys()):
-                df_name = manifest["dataframes"][df_id].get("dataframe_name", "Unknown")
+                df_name = manifest["dataframes"][df_id].get("name", "Unknown")
                 click.echo(f"{pipeline_id}/{df_id}: {df_name}")
 
 
@@ -450,21 +515,616 @@ def ls_charts(ctx):
     catalog = ctx.obj.get("catalog")
     manifest, _ = _load_catalog_for_cli(catalog)
 
-    if manifest["config"]["type"] == "catalog":
+    if manifest["project"]["type"] == "catalog":
         for pipeline_id in sorted(manifest["pipelines"].keys()):
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "charts" in pipeline_manifest:
                 for chart_id in sorted(pipeline_manifest["charts"].keys()):
                     chart_name = pipeline_manifest["charts"][chart_id].get(
-                        "chart_name", "Unknown"
+                        "name", "Unknown"
                     )
                     click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
     else:
-        pipeline_id = manifest["pipeline"]["id"]
+        pipeline_id = manifest["project"]["id"]
         if "charts" in manifest:
             for chart_id in sorted(manifest["charts"].keys()):
-                chart_name = manifest["charts"][chart_id].get("chart_name", "Unknown")
+                chart_name = manifest["charts"][chart_id].get("name", "Unknown")
                 click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
+
+
+# =============================================================================
+# catalog command group - Manage the catalog
+# =============================================================================
+
+
+def _sanitize_pipeline_key(dirname):
+    """Convert a directory name to a valid TOML key for the pipelines table.
+
+    :param dirname: The directory name to sanitize.
+    :type dirname: str
+    :returns: A sanitized key suitable for use in TOML.
+    :rtype: str
+    """
+    import re
+
+    key = dirname.lower().replace("-", "_").replace(" ", "_")
+    key = re.sub(r"[^a-z0-9_]", "_", key)
+    key = re.sub(r"_+", "_", key)
+    key = key.strip("_")
+    return key
+
+
+def _ensure_unique_key(key, existing_keys):
+    """Append a numeric suffix if key already exists in the set.
+
+    :param key: The candidate key.
+    :type key: str
+    :param existing_keys: Set of keys already in use.
+    :type existing_keys: set
+    :returns: A unique key.
+    :rtype: str
+    """
+    if key not in existing_keys:
+        return key
+    i = 2
+    while f"{key}_{i}" in existing_keys:
+        i += 1
+    return f"{key}_{i}"
+
+
+def _load_raw_catalog(catalog_toml_path):
+    """Load a catalog TOML file without full manifest processing.
+
+    :param catalog_toml_path: Path to the catalog's chartbook.toml.
+    :type catalog_toml_path: Path
+    :returns: The raw catalog dictionary.
+    :rtype: dict
+    :raises click.UsageError: If the file is not a catalog-type manifest.
+    """
+    import tomli
+
+    from chartbook.manifest import detect_v1_format, resolve_project_type
+
+    with open(catalog_toml_path, "rb") as f:
+        data = tomli.load(f)
+    if detect_v1_format(data):
+        raise click.UsageError(
+            f"{catalog_toml_path} uses the old v1 format. "
+            f"Run: python scripts/migrate_toml_v2.py {catalog_toml_path.parent}"
+        )
+    config_type = resolve_project_type(data, source=str(catalog_toml_path))
+    if config_type != "catalog":
+        raise click.UsageError(
+            f"{catalog_toml_path} is not a catalog (type={config_type!r})"
+        )
+    data.setdefault("pipelines", {})
+    return data
+
+
+def _get_existing_absolute_paths(raw_catalog, catalog_dir):
+    """Resolve all existing pipeline paths in the catalog to absolute paths.
+
+    :param raw_catalog: The raw catalog dictionary.
+    :type raw_catalog: dict
+    :param catalog_dir: The directory containing the catalog TOML.
+    :type catalog_dir: Path
+    :returns: A dict mapping absolute paths to their catalog keys.
+    :rtype: dict
+    """
+    from chartbook.manifest import RESERVED_PIPELINES_KEYS, resolve_platform_path
+
+    result = {}
+    for key, entry in raw_catalog.get("pipelines", {}).items():
+        if key in RESERVED_PIPELINES_KEYS:
+            continue
+        if isinstance(entry, str):
+            entry = {"path": entry}
+        pipeline_path = entry.get("path")
+        if pipeline_path is None:
+            continue
+        try:
+            resolved = resolve_platform_path(pipeline_path)
+        except (ValueError, TypeError):
+            continue
+        abs_path = (catalog_dir / resolved).resolve()
+        result[abs_path] = key
+    return result
+
+
+def _get_members_covered_paths(raw_catalog, catalog_dir):
+    """Map absolute paths already covered by pipelines.members patterns.
+
+    :returns: Dict of absolute path -> the members pattern that covers it.
+    :rtype: dict
+    """
+    import glob as glob_mod
+
+    covered = {}
+    members = raw_catalog.get("pipelines", {}).get("members", [])
+    if not isinstance(members, list):
+        return covered
+    for pattern in members:
+        if not isinstance(pattern, str):
+            continue
+        for match in glob_mod.glob(str(catalog_dir / pattern)):
+            covered[Path(match).resolve()] = pattern
+    return covered
+
+
+def _prompt_catalog_init():
+    """Prompt the user to create a global catalog if running interactively.
+
+    :returns: The resolved catalog path if created, otherwise raises SystemExit.
+    :rtype: Path
+    :raises SystemExit: If the user declines or stdin is not a TTY.
+    """
+    import sys
+
+    from chartbook.config import create_global_catalog, get_global_catalog_path
+
+    if not sys.stdin.isatty():
+        click.echo(
+            "Run 'chartbook catalog init' to create a new catalog, "
+            "or 'chartbook config' to point to an existing one.",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    click.echo("No catalog found.", err=True)
+    if click.confirm("Create a new global catalog now?", default=False):
+        title = click.prompt("Catalog title", default="My Catalog")
+        catalog_path = create_global_catalog(title=title)
+        click.echo(f"Created global catalog: {catalog_path}")
+        click.echo("")
+        return get_global_catalog_path()
+
+    click.echo("", err=True)
+    click.echo(
+        "Run 'chartbook catalog init' to create a new catalog, "
+        "or 'chartbook config' to point to an existing one.",
+        err=True,
+    )
+    raise SystemExit(1)
+
+
+def _resolve_catalog_toml_path(catalog_path):
+    """Resolve the catalog TOML path from an option or global settings.
+
+    :param catalog_path: Optional explicit path to catalog chartbook.toml.
+    :type catalog_path: str or Path, optional
+    :returns: The resolved path to the catalog's chartbook.toml.
+    :rtype: Path
+    :raises SystemExit: If no catalog is configured.
+    """
+    from chartbook.data import _resolve_catalog_path
+    from chartbook.errors import CatalogNotConfiguredError
+
+    try:
+        return _resolve_catalog_path(catalog_path)
+    except CatalogNotConfiguredError:
+        return _prompt_catalog_init()
+
+
+@main.group()
+def catalog():
+    """Manage the chartbook catalog."""
+    pass
+
+
+@catalog.command("init")
+@click.option("--title", default=None, help="Title for the catalog site")
+def catalog_init(title):
+    """Initialize the global catalog at ~/.chartbook/chartbook.toml.
+
+    Creates a minimal catalog with an empty pipelines section.
+    Use ``chartbook catalog add`` to add pipelines afterwards.
+    """
+    from chartbook.config import create_global_catalog, get_global_catalog_path
+
+    catalog_path = get_global_catalog_path()
+    if catalog_path.is_file():
+        click.echo(f"Global catalog already exists: {catalog_path}")
+        return
+
+    if title is None:
+        title = click.prompt("Catalog title", default="My Catalog")
+
+    catalog_path = create_global_catalog(title=title)
+    click.echo(f"Created global catalog: {catalog_path}")
+    click.echo("")
+    click.echo("Next steps:")
+    click.echo("  chartbook catalog add /path/to/pipeline   # add a pipeline")
+    click.echo("  chartbook catalog build                   # build HTML docs")
+    click.echo("  chartbook catalog browse                  # open in browser")
+
+
+@catalog.command("add")
+@click.argument("paths", type=str, nargs=-1, required=True)
+@click.option(
+    "--catalog",
+    "catalog_path",
+    type=click.Path(),
+    default=None,
+    help="Path to catalog chartbook.toml (uses default from settings if omitted)",
+)
+@click.option(
+    "-y",
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="Skip confirmation prompt when adding multiple pipelines",
+)
+def catalog_add(paths, catalog_path, yes):
+    """Add pipeline directory(ies) to the catalog.
+
+    PATHS can be one or more directories containing a chartbook.toml file,
+    or glob patterns that expand to such directories.
+
+    Examples::
+
+        chartbook catalog add /path/to/pipeline
+        chartbook catalog add /path/to/parent/*
+        chartbook catalog add /path/to/parent/* -y
+        chartbook catalog add ./proj1 ./proj2 ./proj3
+    """
+    import glob as glob_mod
+    import os
+
+    import tomli
+    import tomli_w
+
+    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
+
+    # Validate paths for shell/platform mismatches before processing
+    shell_env = detect_shell_environment()
+    paths = validate_cli_paths(paths, shell_env, auto_confirm=yes)
+
+    # Resolve catalog
+    catalog_toml = _resolve_catalog_toml_path(catalog_path)
+    catalog_dir = catalog_toml.parent
+    raw_catalog = _load_raw_catalog(catalog_toml)
+
+    # Get existing absolute paths for duplicate detection
+    existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_dir)
+    members_covered = _get_members_covered_paths(raw_catalog, catalog_dir)
+    existing_keys = set(raw_catalog.get("pipelines", {}).keys())
+    reenabled = 0
+
+    # Expand all path arguments (handles globs)
+    candidate_dirs = []
+    for p in paths:
+        expanded = glob_mod.glob(p)
+        if not expanded:
+            # Not a glob, treat as literal path
+            expanded = [p]
+        for entry in expanded:
+            entry_path = Path(entry).resolve()
+            if entry_path.is_dir():
+                candidate_dirs.append(entry_path)
+
+    if not candidate_dirs:
+        tried = ", ".join(paths)
+        click.echo(
+            f"No matching directories found for: {tried}\n"
+            f"Check that the path(s) exist and are spelled correctly.",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    # Validate each candidate
+    is_multi = len(candidate_dirs) > 1
+    valid_pipelines = []  # list of (abs_path, pipeline_name)
+
+    for d in candidate_dirs:
+        toml_path = d / "chartbook.toml"
+        if not toml_path.is_file():
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ (no chartbook.toml)")
+                continue
+            else:
+                click.echo(f"Error: No chartbook.toml found in {d}", err=True)
+                raise SystemExit(1)
+
+        try:
+            with open(toml_path, "rb") as f:
+                pipeline_toml = tomli.load(f)
+        except Exception as e:
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ (invalid TOML: {e})")
+                continue
+            else:
+                click.echo(f"Error: Invalid TOML in {toml_path}: {e}", err=True)
+                raise SystemExit(1)
+
+        from chartbook.manifest import detect_v1_format, resolve_project_type
+
+        if detect_v1_format(pipeline_toml):
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ (old v1-format chartbook.toml)")
+                continue
+            else:
+                click.echo(
+                    f"Error: {toml_path} uses the old v1 format. "
+                    f"Run: python scripts/migrate_toml_v2.py {d}",
+                    err=True,
+                )
+                raise SystemExit(1)
+
+        try:
+            config_type = resolve_project_type(pipeline_toml, source=str(toml_path))
+        except ValueError as e:
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ ({e})")
+                continue
+            else:
+                click.echo(f"Error: {e}", err=True)
+                raise SystemExit(1)
+        if config_type != "pipeline":
+            if is_multi:
+                click.echo(f"  Skipping {d.name}/ (type={config_type!r}, not pipeline)")
+                continue
+            else:
+                click.echo(
+                    f"Error: {toml_path} is not a pipeline (type={config_type!r})",
+                    err=True,
+                )
+                raise SystemExit(1)
+
+        # Paths already matched by a members pattern need no explicit entry
+        if d in members_covered:
+            click.echo(
+                f"  Already covered by pipelines.members pattern "
+                f"'{members_covered[d]}': {d.name}/"
+            )
+            continue
+
+        # Check for duplicates — re-enable if disabled
+        if d in existing_abs:
+            key = existing_abs[d]
+            entry = raw_catalog["pipelines"][key]
+            if entry.get("disabled", False):
+                entry.pop("disabled")
+                reenabled += 1
+                click.echo(f"  Re-enabled '{key}': {d.name}/")
+            else:
+                click.echo(
+                    f"  Already in catalog as '{key}': {d.name}/"
+                )
+            continue
+
+        pipeline_name = pipeline_toml.get("project", {}).get("name", d.name)
+        valid_pipelines.append((d, pipeline_name, pipeline_toml.get("project", {})))
+
+    if not valid_pipelines and not reenabled:
+        click.echo("No new pipelines to add.")
+        return
+
+    if not valid_pipelines and reenabled:
+        # Only re-enables, no new additions — still need to write
+        with open(catalog_toml, "wb") as f:
+            tomli_w.dump(raw_catalog, f)
+        click.echo("")
+        click.echo(f"Re-enabled {reenabled} pipeline(s) in {catalog_toml}")
+        return
+
+    from chartbook.identity import derive_pipeline_id
+
+    def _derive_catalog_key(directory, project_table):
+        # Scoped id: explicit project.id, else scope from the git remote /
+        # repo_url with the directory name, else the bare directory name
+        try:
+            return derive_pipeline_id(project_table, directory)
+        except ValueError:
+            return _sanitize_pipeline_key(directory.name)
+
+    # Prompt for confirmation if multiple
+    if len(valid_pipelines) > 1 and not yes:
+        click.echo("")
+        click.echo("Pipelines to add:")
+        for d, name, project_table in valid_pipelines:
+            key = _derive_catalog_key(d, project_table)
+            key = _ensure_unique_key(key, existing_keys)
+            click.echo(f"  {key}: {name} ({d})")
+        click.echo("")
+        if not click.confirm(f"Add {len(valid_pipelines)} pipeline(s)?"):
+            raise SystemExit(0)
+
+    # Add each pipeline
+    added = 0
+    for d, name, project_table in valid_pipelines:
+        key = _derive_catalog_key(d, project_table)
+        key = _ensure_unique_key(key, existing_keys)
+        existing_keys.add(key)
+
+        try:
+            rel_path = os.path.relpath(d, catalog_dir)
+        except ValueError:
+            # Cross-drive on Windows
+            rel_path = str(d)
+
+        raw_catalog["pipelines"][key] = {"path": rel_path}
+        click.echo(f"  Added '{key}': {name} ({rel_path})")
+        added += 1
+
+    # Write back
+    with open(catalog_toml, "wb") as f:
+        tomli_w.dump(raw_catalog, f)
+
+    click.echo("")
+    parts = [f"Added {added} pipeline(s)"]
+    if reenabled:
+        parts.append(f"re-enabled {reenabled}")
+    click.echo(f"{', '.join(parts)} in {catalog_toml}")
+
+
+def _set_pipeline_disabled(pipeline_id, catalog_path, disabled):
+    """Set or clear the disabled flag on a pipeline in the catalog.
+
+    :param pipeline_id: The pipeline key in the catalog.
+    :type pipeline_id: str
+    :param catalog_path: Optional explicit path to catalog chartbook.toml.
+    :type catalog_path: str or Path, optional
+    :param disabled: Whether to disable (True) or enable (False) the pipeline.
+    :type disabled: bool
+    """
+    import tomli_w
+
+    from chartbook.manifest import RESERVED_PIPELINES_KEYS
+
+    catalog_toml = _resolve_catalog_toml_path(catalog_path)
+    raw_catalog = _load_raw_catalog(catalog_toml)
+
+    pipelines = raw_catalog.get("pipelines", {})
+    has_members = isinstance(pipelines.get("members"), list)
+
+    if pipeline_id in pipelines and pipeline_id not in RESERVED_PIPELINES_KEYS:
+        # Explicit entry: toggle its disabled flag (string shorthand becomes
+        # a table when the flag is set)
+        entry = pipelines[pipeline_id]
+        if isinstance(entry, str):
+            entry = {"path": entry}
+            pipelines[pipeline_id] = entry
+        if disabled:
+            entry["disabled"] = True
+        else:
+            entry.pop("disabled", None)
+    elif has_members:
+        # Member-discovered pipelines are toggled via the pipelines.disabled
+        # ID list
+        disabled_list = pipelines.setdefault("disabled", [])
+        if disabled and pipeline_id not in disabled_list:
+            disabled_list.append(pipeline_id)
+        elif not disabled and pipeline_id in disabled_list:
+            disabled_list.remove(pipeline_id)
+        if not disabled_list:
+            pipelines.pop("disabled", None)
+    else:
+        click.echo(f"Error: Pipeline '{pipeline_id}' not found in catalog.", err=True)
+        click.echo("", err=True)
+        available = ", ".join(
+            sorted(k for k in pipelines if k not in RESERVED_PIPELINES_KEYS)
+        ) or "(none)"
+        click.echo(f"Available pipelines: {available}", err=True)
+        raise SystemExit(1)
+
+    with open(catalog_toml, "wb") as f:
+        tomli_w.dump(raw_catalog, f)
+
+    state = "disabled" if disabled else "enabled"
+    click.echo(f"Pipeline '{pipeline_id}' {state} in {catalog_toml}")
+
+
+@catalog.command("disable")
+@click.argument("pipeline_id")
+@click.option(
+    "--catalog",
+    "catalog_path",
+    type=click.Path(),
+    default=None,
+    help="Path to catalog chartbook.toml (uses default from settings if omitted)",
+)
+def catalog_disable(pipeline_id, catalog_path):
+    """Disable a pipeline in the catalog.
+
+    The pipeline entry is kept but skipped during builds.
+    Re-enable with ``chartbook catalog enable``.
+    """
+    _set_pipeline_disabled(pipeline_id, catalog_path, disabled=True)
+
+
+@catalog.command("enable")
+@click.argument("pipeline_id")
+@click.option(
+    "--catalog",
+    "catalog_path",
+    type=click.Path(),
+    default=None,
+    help="Path to catalog chartbook.toml (uses default from settings if omitted)",
+)
+def catalog_enable(pipeline_id, catalog_path):
+    """Re-enable a previously disabled pipeline in the catalog."""
+    _set_pipeline_disabled(pipeline_id, catalog_path, disabled=False)
+
+
+@catalog.command("build")
+@click.option(
+    "-f",
+    "--force-write",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing docs without prompting",
+)
+@click.option(
+    "--strict/--no-strict",
+    default=False,
+    help="Skip pipelines with missing source files (default). Use --strict to fail on any missing file.",
+)
+def catalog_build(force_write, strict):
+    """Build HTML documentation for the global catalog.
+
+    Uses the catalog path from ``~/.chartbook/settings.toml`` if configured,
+    otherwise falls back to ``~/.chartbook/chartbook.toml``.
+    """
+    _check_sphinx_installed()
+
+    from chartbook.build_docs import generate_docs
+    from chartbook.config import get_default_catalog_path
+
+    catalog_path = get_default_catalog_path()
+    if catalog_path is None or not catalog_path.is_file():
+        click.echo("Error: No global catalog found.", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook catalog init' to create one.", err=True)
+        raise SystemExit(1)
+
+    project_dir = catalog_path.parent
+    config_dir = catalog_path.parent
+    output_dir = config_dir / "docs"
+    _docs_dir = config_dir / "_docs"
+    temp_docs_src_dir = config_dir / "_docs_src"
+
+    click.echo(f"Building catalog from: {catalog_path}")
+    click.echo(f"Output directory: {output_dir}")
+
+    generate_docs(
+        output_dir=output_dir,
+        project_dir=project_dir,
+        _docs_dir=_docs_dir,
+        temp_docs_src_dir=temp_docs_src_dir,
+        should_remove_existing=force_write,
+        strict=strict,
+    )
+
+    click.echo("")
+    click.echo(f"Catalog built successfully: {output_dir / 'index.html'}")
+    click.echo("Run 'chartbook catalog browse' to open in your browser.")
+
+
+@catalog.command("browse")
+def catalog_browse():
+    """Open the global catalog documentation in your default browser."""
+    from chartbook.config import get_default_catalog_path
+
+    catalog_path = get_default_catalog_path()
+    if catalog_path is None:
+        click.echo("Error: No global catalog found.", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook catalog init' to create one.", err=True)
+        raise SystemExit(1)
+
+    index_path = catalog_path.parent / "docs" / "index.html"
+    if not index_path.is_file():
+        click.echo("Error: Catalog docs not found.", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook catalog build' first.", err=True)
+        raise SystemExit(1)
+
+    import webbrowser
+
+    url = index_path.as_uri()
+    click.echo(f"Opening {index_path}")
+    if not webbrowser.open(url):
+        click.echo(f"Could not open browser. Open this URL manually: {url}")
 
 
 # =============================================================================
@@ -499,7 +1159,7 @@ def data_get_path(pipeline, dataframe, catalog):
         click.echo("", err=True)
         click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
-    except KeyError as e:
+    except (KeyError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 
@@ -525,7 +1185,7 @@ def data_get_docs(pipeline, dataframe, catalog):
         click.echo("", err=True)
         click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
-    except KeyError as e:
+    except (KeyError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
     except FileNotFoundError as e:
@@ -554,9 +1214,32 @@ def data_get_docs_path(pipeline, dataframe, catalog):
         click.echo("", err=True)
         click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
-    except KeyError as e:
+    except (KeyError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
+
+
+@main.command()
+def init():
+    """Initialize a new chartbook project from the cookiecutter template."""
+    try:
+        import cruft  # noqa: F401
+    except ImportError:
+        click.echo("Error: cruft is not installed.", err=True)
+        click.echo("", err=True)
+        click.echo(
+            "cruft ships with chartbook, so this usually means a broken or"
+            " partial installation. Reinstall with:", err=True
+        )
+        click.echo("    pip install --force-reinstall chartbook", err=True)
+        raise SystemExit(1)
+
+    import subprocess
+
+    subprocess.run(
+        ["cruft", "create", "https://github.com/backofficedev/cookiecutter_chartbook"],
+        check=True,
+    )
 
 
 @main.command()
@@ -598,6 +1281,116 @@ def config():
     click.echo("You can now load data with:")
     click.echo('  from chartbook import data')
     click.echo('  df = data.load(pipeline="my_pipeline", dataframe="my_df")')
+
+
+@main.group()
+def install():
+    """Install bundled resources into the current project."""
+
+
+VERSION_STAMP_NAME = ".chartbook-skill-version"
+
+
+@install.command("skill")
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing skill files without prompting",
+)
+@click.option(
+    "--project",
+    is_flag=True,
+    default=False,
+    help="Install into ./.claude/skills/ in the current directory (commit it "
+    "to share the skill with everyone working in the repo) instead of the "
+    "user-level skills directory",
+)
+def install_skill(force, project):
+    """Install the bundled Claude Code skill.
+
+    By default the skill is installed user-level — into
+    ``~/.claude/skills/chartbook/``, or ``$CLAUDE_CONFIG_DIR/skills/chartbook/``
+    when that variable is set — so it is available in every Claude Code
+    session. With ``--project`` it is installed into
+    ``./.claude/skills/chartbook/`` in the current directory instead.
+
+    The command is idempotent: if the installed files already match the
+    bundled skill, nothing is rewritten. Files from older skill layouts are
+    removed so the installed copy exactly mirrors the bundled one, and the
+    installing chartbook version is recorded alongside the skill files.
+
+    :param force: If True, overwrite existing files without prompting.
+    :type force: bool
+    :param project: If True, install into the current directory's .claude/
+        instead of the user-level skills directory.
+    :type project: bool
+    """
+    import importlib.resources
+    import os
+    import shutil
+
+    package_path = importlib.resources.files("chartbook")
+    skills_src = Path(str(package_path)) / "skills"
+
+    skill_files = sorted(
+        p for p in (skills_src.iterdir() if skills_src.is_dir() else []) if p.is_file()
+    )
+    if not skill_files:
+        click.echo("Error: No bundled skill files found in package.", err=True)
+        raise SystemExit(1)
+
+    if project:
+        base_dir = Path.cwd() / ".claude"
+    else:
+        config_dir = os.environ.get("CLAUDE_CONFIG_DIR")
+        base_dir = (
+            Path(config_dir).expanduser() if config_dir else Path.home() / ".claude"
+        )
+    target_dir = base_dir / "skills" / "chartbook"
+    expected_names = {p.name for p in skill_files}
+
+    def _visible_files():
+        return [
+            p
+            for p in target_dir.iterdir()
+            if p.is_file() and not p.name.startswith(".")
+        ]
+
+    # Idempotent no-op: the installed files already match the bundled skill.
+    # Hidden files (the version stamp, .DS_Store, ...) don't affect the check.
+    if target_dir.is_dir():
+        current = _visible_files()
+        if {p.name for p in current} == expected_names and all(
+            (target_dir / p.name).read_bytes() == p.read_bytes() for p in skill_files
+        ):
+            (target_dir / VERSION_STAMP_NAME).write_text(f"{__version__}\n")
+            click.echo(f"Skill already up to date in {target_dir}")
+            return
+
+    if target_dir.is_dir() and any(_visible_files()) and not force:
+        click.echo(f"Skill files already exist in {target_dir}")
+        if not click.confirm("Overwrite existing files?"):
+            raise SystemExit(0)
+
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # Drop files from older skill layouts (e.g. REFERENCE.md) so the
+    # installed copy exactly mirrors the bundled skill
+    for existing in _visible_files():
+        if existing.name not in expected_names:
+            existing.unlink()
+            click.echo(f"  removed stale {existing.name}")
+
+    copied = 0
+    for src_file in skill_files:
+        shutil.copy2(src_file, target_dir / src_file.name)
+        click.echo(f"  {src_file.name}")
+        copied += 1
+
+    (target_dir / VERSION_STAMP_NAME).write_text(f"{__version__}\n")
+    click.echo(f"\nInstalled {copied} skill file(s) to {target_dir}")
 
 
 if __name__ == "__main__":

@@ -250,7 +250,7 @@ class MissingSourceFilesError(Exception):
             click.style("Hint: ", fg="green")
             + "Ensure these files exist or update the paths in chartbook.toml."
         )
-        lines.append("      Use --warn-missing to continue with warnings instead of errors.")
+        lines.append("      Use --no-strict to skip affected pipelines instead of failing.")
 
         return "\n".join(lines)
 
@@ -266,6 +266,37 @@ class MissingSourceFilesError(Exception):
                 f"Warning: Missing {mf.file_type} file: {mf.file_path} "
                 f"(referenced by {mf.file_type}s.{mf.item_id} in pipeline {mf.pipeline_id})"
             )
+        return warnings
+
+    def get_pipelines_to_skip(self) -> set[str]:
+        """Return the set of pipeline IDs that have missing files.
+
+        :returns: Set of pipeline IDs with at least one missing file.
+        :rtype: set[str]
+        """
+        return {mf.pipeline_id for mf in self.missing_files}
+
+    def format_skip_warnings(self) -> list[str]:
+        """Format per-pipeline skip warnings grouped by pipeline.
+
+        :returns: A list of warning message strings, one header per pipeline
+            followed by its missing files.
+        :rtype: list[str]
+        """
+        from collections import defaultdict
+
+        by_pipeline: dict[str, list[MissingFile]] = defaultdict(list)
+        for mf in self.missing_files:
+            by_pipeline[mf.pipeline_id].append(mf)
+
+        warnings: list[str] = []
+        for pipeline_id, files in by_pipeline.items():
+            warnings.append(
+                f"Warning: Skipping pipeline '{pipeline_id}' due to "
+                f"{len(files)} missing file(s):"
+            )
+            for mf in files:
+                warnings.append(f"  - {mf.file_type}: {mf.file_path}")
         return warnings
 
     def exit_with_message(self) -> None:

@@ -10,52 +10,57 @@ from typing import Any
 
 from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest
 
-PIPELINE_FIELDS: list[str] = [
-    "id",
-    "pipeline_name",
-    "pipeline_description",
-    "lead_pipeline_developer",
+PROJECT_FIELDS: list[str] = [
+    "name",
+    "description",
+    "maintainer",
     "contributors",
-    "build_commands",
+    "build",
     "os_compatibility",
-    "git_repo_URL",
-    "README_file_path",
+    "repo_url",
 ]
 
 DATAFRAME_FIELDS: list[str] = [
-    "dataframe_name",
-    "short_description_df",
-    "data_sources",
-    "data_providers",
-    "links_to_data_providers",
-    "topic_tags",
-    "how_is_pulled",
-    "path_to_parquet_data",
-    "date_col",
+    "name",
+    "description",
+    "sources",
+    "providers",
+    "provider_links",
+    "tags",
+    "pull_method",
+    "path",
 ]
-
-# Mutually exclusive doc fields for dataframes (exactly one required)
-DATAFRAME_DOCS_FIELDS: tuple[str, str] = ("dataframe_docs_path", "dataframe_docs_str")
 
 CHART_FIELDS: list[str] = [
-    "chart_name",
-    "short_description_chart",
-    "dataframe_id",
-    "topic_tags",
-    "data_frequency",
+    "name",
+    "description",
+    "dataframe",
+    "tags",
+    "frequency",
     "observation_period",
-    "lag_in_data_release",
-    "data_release_timing",
+    "release_lag",
+    "release_timing",
     "units",
-    "path_to_html_chart",
+    "path",
 ]
 
-# Mutually exclusive doc fields for charts (exactly one required)
-CHART_DOCS_FIELDS: tuple[str, str] = ("chart_docs_path", "chart_docs_str")
+NOTEBOOK_FIELDS: list[str] = []
+
+# Mutually exclusive doc fields (exactly one required) for charts and dataframes
+DOCS_FIELDS: tuple[str, str] = ("docs_path", "docs")
+
+#: The default warn-only policy. A catalog's [policy.required] section
+#: overrides these lists per object type; see the format design doc.
+DEFAULT_REQUIRED_FIELDS: dict[str, list[str]] = {
+    "project": PROJECT_FIELDS,
+    "dataframes": DATAFRAME_FIELDS,
+    "charts": CHART_FIELDS,
+    "notebooks": NOTEBOOK_FIELDS,
+}
 
 # Optional chart fields (not required for diagnostics)
 OPTIONAL_CHART_FIELDS: list[str] = [
-    "data_series",
+    "series",
 ]
 
 
@@ -132,38 +137,56 @@ def _check_mutually_exclusive_doc_fields(
 
 
 def _build_page_link(object_type: str, identifier: str, pipeline_id: str) -> str:
-    """Build relative page link for manual concatenation with homepage URL.
+    """Build relative page link for the diagnostics page.
 
-    Returns paths relative to homepage (index.html) like:
-    - ../charts/{pipeline_id}.{chart_id}.html
-    - ../dataframes/{pipeline_id}/{dataframe_id}.html
-    - ../index.html (for pipelines)
+    Returns paths relative to the cb/ directory (where diagnostics.md lives):
+    - ./charts/{pipeline_id}.{chart_id}.html
+    - ./dataframes/{pipeline_id}/{dataframe_id}.html
+    - ../index.html (for pipelines, from cb/ up to root)
     """
+    pipeline_slug = pipeline_id.replace("/", "--")
     if object_type == "chart":
-        return f"../charts/{pipeline_id}.{identifier}.html"
+        return f"./charts/{pipeline_slug}.{identifier}.html"
     elif object_type == "dataframe":
-        return f"../dataframes/{pipeline_id}/{identifier}.html"
+        return f"./dataframes/{pipeline_slug}/{identifier}.html"
     elif object_type == "pipeline":
         return "../index.html"
     else:
         return ""
 
 
+def get_active_policy(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Return the manifest's resolved policy, or the default warn-only policy.
+
+    Catalog manifests carry a resolved ``policy`` key; standalone pipelines
+    fall back to the defaults.
+    """
+    policy = manifest.get("policy")
+    if policy:
+        return policy
+    return {"mode": "warn", "required": dict(DEFAULT_REQUIRED_FIELDS)}
+
+
 def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
-    """Generate diagnostics rows for all pipelines, dataframes, and charts."""
+    """Generate diagnostics rows for all pipelines, dataframes, and charts.
+
+    Required fields come from the manifest's [policy] section when present
+    (catalogs), otherwise from the default lists in this module.
+    """
 
     diagnostics: list[DiagnosticRow] = []
     pipeline_ids = get_pipeline_ids(manifest)
+    required = get_active_policy(manifest)["required"]
 
     for pipeline_id in pipeline_ids:
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
-        pipeline_meta = pipeline_manifest.get("pipeline", {})
+        project_meta = pipeline_manifest.get("project", {})
 
-        pipeline_missing = _collect_missing_fields(pipeline_meta, PIPELINE_FIELDS)
+        pipeline_missing = _collect_missing_fields(project_meta, required["project"])
         diagnostics.append(
             DiagnosticRow(
                 object_type="pipeline",
-                object_name=pipeline_meta.get("pipeline_name", pipeline_id),
+                object_name=project_meta.get("name", pipeline_id),
                 metadata_complete=len(pipeline_missing) == 0,
                 identifier=pipeline_id,
                 pipeline_id=pipeline_id,
@@ -175,18 +198,16 @@ def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
         dataframes = pipeline_manifest.get("dataframes", {})
         for dataframe_id, dataframe_meta in dataframes.items():
             dataframe_missing = _collect_missing_fields(
-                dataframe_meta, DATAFRAME_FIELDS
+                dataframe_meta, required["dataframes"]
             )
             # Check mutually exclusive doc fields
             dataframe_missing.extend(
-                _check_mutually_exclusive_doc_fields(
-                    dataframe_meta, DATAFRAME_DOCS_FIELDS
-                )
+                _check_mutually_exclusive_doc_fields(dataframe_meta, DOCS_FIELDS)
             )
             diagnostics.append(
                 DiagnosticRow(
                     object_type="dataframe",
-                    object_name=dataframe_meta.get("dataframe_name", dataframe_id),
+                    object_name=dataframe_meta.get("name", dataframe_id),
                     metadata_complete=len(dataframe_missing) == 0,
                     identifier=dataframe_id,
                     pipeline_id=pipeline_id,
@@ -197,15 +218,15 @@ def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
 
         charts = pipeline_manifest.get("charts", {})
         for chart_id, chart_meta in charts.items():
-            chart_missing = _collect_missing_fields(chart_meta, CHART_FIELDS)
+            chart_missing = _collect_missing_fields(chart_meta, required["charts"])
             # Check mutually exclusive doc fields
             chart_missing.extend(
-                _check_mutually_exclusive_doc_fields(chart_meta, CHART_DOCS_FIELDS)
+                _check_mutually_exclusive_doc_fields(chart_meta, DOCS_FIELDS)
             )
             diagnostics.append(
                 DiagnosticRow(
                     object_type="chart",
-                    object_name=chart_meta.get("chart_name", chart_id),
+                    object_name=chart_meta.get("name", chart_id),
                     metadata_complete=len(chart_missing) == 0,
                     identifier=chart_id,
                     pipeline_id=pipeline_id,
@@ -213,6 +234,25 @@ def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
                     page_link=_build_page_link("chart", chart_id, pipeline_id),
                 )
             )
+
+        if required.get("notebooks"):
+            for notebook_id, notebook_meta in pipeline_manifest.get(
+                "notebooks", {}
+            ).items():
+                notebook_missing = _collect_missing_fields(
+                    notebook_meta, required["notebooks"]
+                )
+                diagnostics.append(
+                    DiagnosticRow(
+                        object_type="notebook",
+                        object_name=notebook_meta.get("name", notebook_id),
+                        metadata_complete=len(notebook_missing) == 0,
+                        identifier=notebook_id,
+                        pipeline_id=pipeline_id,
+                        missing_fields=", ".join(notebook_missing),
+                        page_link="",
+                    )
+                )
 
     return diagnostics
 
@@ -249,11 +289,14 @@ def write_diagnostics_csv(diagnostics: list[DiagnosticRow], output_path: Path) -
 
 def generate_metadata_diagnostics(
     manifest: dict[str, Any], docs_build_dir: Path
-) -> Path:
-    """Create the metadata diagnostics CSV file inside the docs build directory."""
+) -> list[DiagnosticRow]:
+    """Create the metadata diagnostics CSV inside the docs build directory.
+
+    :returns: The diagnostic rows, so callers can enforce strict policy.
+    """
 
     diagnostics = build_diagnostics(manifest)
     diagnostics_dir = docs_build_dir / "_static" / "diagnostics"
     diagnostics_path = diagnostics_dir / "chartbook_metadata_diagnostics.csv"
     write_diagnostics_csv(diagnostics, diagnostics_path)
-    return diagnostics_path
+    return diagnostics

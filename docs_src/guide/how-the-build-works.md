@@ -1,0 +1,437 @@
+# How the Build Works
+
+The `chartbook build` command uses a **two-stage pipeline** to generate your documentation site:
+
+1. **Markdown generation** — reads your `chartbook.toml` manifest and project files, then produces intermediate Markdown files (and copies static assets) into a temporary `_docs/` directory.
+2. **Sphinx build** — runs `sphinx-build` to convert those intermediate Markdown files into a static HTML site.
+
+By default, the temporary directories are deleted when the build finishes — whether it succeeded or failed. Using the `--keep-build-dirs` flag preserves them so you can inspect the intermediate output, which is exactly what you want when debugging a failed build.
+
+Understanding these internals is useful for:
+- **Debugging build failures** — examining the exact Markdown that Sphinx tried to process
+- **Verifying metadata** — checking that manifest values rendered correctly in spec tables
+- **Customizing templates** — overriding the default Jinja2 templates used during generation
+- **Understanding the output** — seeing how your `chartbook.toml` configuration maps to generated pages
+
+
+## The Two-Stage Build Process
+
+The following diagram shows the full build flow:
+
+```
+chartbook build [OUTPUT_DIR]
+    |
+    |-- Stage 0: Template Preparation
+    |   Copy theme templates into _docs_src/
+    |   Copy logo + favicon
+    |
+    |-- Stage 1: Markdown Generation
+    |   Copy charts, notebooks, parquets into _docs/
+    |   Generate diagnostics CSV
+    |   Render Jinja2 templates into .md files
+    |   Copy remaining _docs_src/ files to _docs/
+    |
+    |-- Stage 2: Sphinx Build
+    |   Render conf.py.j2 -> conf.py
+    |   Run: sphinx-build -M html _docs _docs/_build
+    |   Copy _docs/_build/html/ to OUTPUT_DIR
+    |
+    |-- Cleanup (unless --keep-build-dirs)
+        Delete _docs/ and _docs_src/
+```
+
+### Stage 0: Template Preparation (`_docs_src/`)
+
+Before any Markdown is generated, ChartBook assembles a temporary `_docs_src/` directory containing all the Sphinx source templates and configuration:
+
+1. **Theme selection**: Based on the resolved project type — inferred from your `chartbook.toml` structure (a `[pipelines]` table means catalog), or set explicitly via `[project] type` — the package's built-in theme templates are copied from either `docs_src_pipeline/` (for single pipelines) or `docs_src_catalog/` (for multi-pipeline catalogs).
+
+2. **Assets**: Your logo and favicon (from the `[project]` `logo` and `favicon` paths in `chartbook.toml`, or package defaults) are copied into `_docs_src/_static/` and `_docs_src/assets/`.
+
+To override a template, place a file with the same base name in your **project root** — that's the first entry on the Jinja search path (see [Template resolution order](#template-resolution-order) below). Your project's own `docs_src/` directory is *not* copied into `_docs_src/`.
+
+The resulting `_docs_src/` directory looks like this:
+
+```
+_docs_src/
+├── _static/
+│   ├── logo.png
+│   ├── favicon.ico
+│   ├── custom.css
+│   └── chartbook-custom.js          # catalog theme only
+├── _templates/
+│   ├── chart_entry_top.md            # chart page header + iframe
+│   ├── chart_entry_bottom.md         # chart specs table + manifests
+│   ├── dataframe_entry_top.md        # dataframe page heading
+│   ├── dataframe_manifest.md         # dataframe metadata table
+│   ├── pipeline_manifest.md          # pipeline metadata table
+│   └── layout.html                   # catalog theme only
+├── assets/
+│   ├── logo.png
+│   └── favicon.ico
+├── conf.py.j2                        # Sphinx config (Jinja2 template)
+├── index.md                          # site index template
+├── charts.md                         # charts listing page
+├── dataframes.md                     # catalog theme only
+├── pipelines.md                      # catalog theme only
+├── diagnostics.md                    # catalog theme only
+└── contributing.md                   # catalog theme only
+```
+
+### Stage 1: Markdown Generation (`_docs/`)
+
+This is the core of the build. The `build_all()` function in `markdown_generator.py` orchestrates all file copying and Markdown generation:
+
+All generated content is namespaced under a `cb/` subdirectory, keeping it separate from your custom site pages (which are copied to the docs root) so the two can never collide. In file paths, `{pipeline_id}` is the scoped ID with `/` replaced by `--` (e.g. `acme/yield_curve` → `acme--yield_curve`) so IDs stay filesystem-safe.
+
+**1. File alignment (copying source files into position):**
+
+| Source | Destination in `_docs/` | Purpose |
+|--------|------------------------|---------|
+| Chart HTML files | `_static/{pipeline_id}/{chart_id}.html` | Displayed in `<iframe>` on chart pages |
+| Chart HTML files | `cb/download_chart/{pipeline_id}/{chart_id}.html` | "Full Screen" download link |
+| Parquet data files | `cb/download_dataframe/{pipeline_id}/{dataframe_id}.parquet` | Data download (when `enable_data_download = true`) |
+| Notebook `.ipynb` files | `cb/notebooks/{pipeline_id}/{notebook_filename}` | Rendered by myst-nb during Sphinx build (copied under the basename of the notebook's `path`, not renamed to its ID) |
+
+**2. Diagnostics CSV:**
+A metadata completeness report is generated at `_docs/_static/diagnostics/chartbook_metadata_diagnostics.csv`. This CSV lists every pipeline, dataframe, and chart with whether its metadata is complete and which fields are missing.
+
+**3. Per-pipeline Markdown generation:**
+
+For each pipeline defined in your manifest:
+
+- **Dataframe pages** (`cb/dataframes/{pipeline_id}/{dataframe_id}.md`): Generated by rendering your user-authored dataframe documentation (from the dataframe's `docs_path` file, or inline `docs`) together with a generated heading and Jinja2 template partials for the DataFrame Glimpse, dataframe manifest table, and pipeline manifest table.
+
+- **Chart pages** (`cb/charts/{pipeline_id}.{chart_id}.md`): Generated by combining `chart_entry_top.md` (ABlog frontmatter, heading, iframe embed) + your user-authored chart docs (from the chart's `docs_path` file, or inline `docs`) + `chart_entry_bottom.md` (specs table, manifest tables).
+
+- **Pipeline READMEs** (`cb/pipelines/{pipeline_id}_README.md`): Catalog theme only. Includes the pipeline's README content with a manifest header.
+
+**4. Top-level pages:**
+
+- `index.md` — rendered from the theme's index template with pipeline/dataframe/chart listings; lives at the docs root
+- `cb/charts.md`, and for the catalog theme `cb/dataframes.md`, `cb/pipelines.md`, `cb/diagnostics.md` — listing pages over the generated content
+
+**5. Remaining files:**
+All other files from `_docs_src/` (CSS, JS, templates, etc.) are copied into `_docs/`.
+
+
+### Stage 2: Sphinx Build
+
+Once all Markdown files are in place:
+
+1. **`conf.py` rendering**: The `conf.py.j2` Jinja2 template is rendered with your project metadata (`name`, `maintainer`, and `copyright` from `[project]` in `chartbook.toml`, plus the Sphinx theme chosen by project type) and written as `_docs/conf.py`. The `.j2` template is then deleted.
+
+2. **Sphinx execution**: ChartBook runs:
+   ```
+   sphinx-build -M html _docs _docs/_build
+   ```
+   This processes all `.md` files using extensions like `myst-nb` (notebook rendering), `ablog` (blog-style chart pages), `sphinx_design` (grid cards), and `sphinx_copybutton`.
+
+3. **Output copy**: The HTML output from `_docs/_build/html/` is copied to your output directory (default: `./docs`). A `.nojekyll` file is added for GitHub Pages compatibility.
+
+### Cleanup
+
+By default, both `_docs/` and `_docs_src/` are deleted when the build finishes, whether it succeeded or failed. To keep them — for example, to inspect the intermediate output after a *failed* build — pass `--keep-build-dirs`:
+
+```console
+chartbook build --keep-build-dirs
+```
+
+The command prints the path to the preserved directory:
+```
+Keeping temporary build directory: /path/to/project/_docs
+```
+
+
+## Inspecting Intermediate Files
+
+### Using `--keep-build-dirs`
+
+The simplest way to inspect intermediate files:
+
+```console
+chartbook build --keep-build-dirs
+```
+
+This preserves both `_docs/` (generated Markdown + assets) and `_docs_src/` (resolved templates) after the build.
+
+### Custom Build Directory Paths
+
+You can control where intermediate files are placed:
+
+```console
+chartbook build --docs-build-dir ./my_build --temp-docs-src-dir ./my_src --keep-build-dirs
+```
+
+This is useful if you want to compare outputs from different builds side by side.
+
+### Development Workflow
+
+A typical debugging workflow:
+
+```console
+# 1. Build with intermediate files preserved
+chartbook build --keep-build-dirs
+
+# 2. Inspect the generated Markdown
+cat _docs/cb/charts/acme--yield_curve.repo_rates.md
+
+# 3. Check the rendered Sphinx config
+cat _docs/conf.py
+
+# 4. Look at diagnostics
+cat _docs/_static/diagnostics/chartbook_metadata_diagnostics.csv
+
+# 5. Browse the final HTML locally
+python -m http.server -d ./docs
+```
+
+
+## Complete `_docs/` Directory Structure
+
+After a build with `--keep-build-dirs`, the `_docs/` directory contains:
+
+```
+_docs/
+├── index.md                              # Main site index (rendered from template)
+├── conf.py                               # Rendered Sphinx configuration
+├── contributing.md                       # catalog theme only
+├── *.md                                  # your custom site pages (from site_dir)
+│
+├── cb/                                   # ── all generated content ──
+│   ├── charts.md                         # Charts listing page (toctree)
+│   ├── dataframes.md                     # catalog theme only
+│   ├── pipelines.md                      # catalog theme only
+│   ├── diagnostics.md                    # catalog theme only
+│   │
+│   ├── pipelines/                        # catalog theme only
+│   │   └── {pipeline_id}_README.md       # Pipeline README with manifest header
+│   ├── dataframes/
+│   │   └── {pipeline_id}/
+│   │       └── {dataframe_id}.md         # Dataframe doc with spec table + glimpse
+│   ├── charts/
+│   │   └── {pipeline_id}.{chart_id}.md   # Chart doc with iframe + metadata
+│   ├── notebooks/
+│   │   └── {pipeline_id}/
+│   │       └── {notebook_filename}       # Copied notebook (keeps its path basename)
+│   ├── download_chart/
+│   │   └── {pipeline_id}/
+│   │       └── {chart_id}.html           # Chart HTML for download link
+│   └── download_dataframe/               # only when enable_data_download = true
+│       └── {pipeline_id}/
+│           └── {dataframe_id}.parquet    # Parquet file for download link
+│
+├── _static/
+│   ├── logo.png
+│   ├── favicon.ico
+│   ├── custom.css
+│   ├── {pipeline_id}/
+│   │   └── {chart_id}.html              # Chart HTML for iframe display
+│   └── diagnostics/
+│       └── chartbook_metadata_diagnostics.csv
+│
+├── _templates/                           # Jinja2/Sphinx templates
+│   ├── chart_entry_top.md
+│   ├── chart_entry_bottom.md
+│   ├── dataframe_entry_top.md
+│   ├── dataframe_manifest.md
+│   └── pipeline_manifest.md
+│
+└── _build/
+    └── html/                             # Final Sphinx HTML output
+        ├── index.html
+        ├── cb/
+        └── ...
+```
+
+(Directory names like `{pipeline_id}` use the slugged form, `acme--yield_curve`.)
+
+
+## What Each Generated File Contains
+
+### Dataframe pages
+
+**Path:** `cb/dataframes/{pipeline_id}/{dataframe_id}.md`
+
+Each dataframe page is assembled from your user-authored documentation (specified by the dataframe's `docs_path` in `chartbook.toml`, or inline `docs`) plus auto-generated sections:
+
+```markdown
+# Dataframe: `acme/yield_curve:repo_public` - Public Repo Data
+
+[Your user-authored documentation from docs_path]
+
+## DataFrame Glimpse
+
+  Rows: 16580
+  Columns: 31
+  $ SVENY01    <f64> 4.216397633330158
+  $ SVENY02    <f64> 5.006153097049543
+  ...
+
+## Dataframe Manifest
+
+| Dataframe Name  | Public Repo Data                       |
+|-----------------|----------------------------------------|
+| Dataframe ID    | repo_public                            |
+| Data Sources    | FRED, Office of Financial Research     |
+| Data Providers  | FRED, Office of Financial Research     |
+| ...             | ...                                    |
+
+## Pipeline Manifest
+
+| Pipeline Name   | Yield Curve                            |
+|-----------------|----------------------------------------|
+| Pipeline ID     | acme/yield_curve                       |
+| ...             | ...                                    |
+```
+
+The DataFrame Glimpse is generated by reading a single sample row of the parquet file with Polars — the last row for normal-sized files (and glob/partitioned paths), or the first row for files above the size threshold (50 MB by default, where reading the head avoids a full scan). The total row count shown is always the true count, corrected after sampling. If the file is missing, an error message is shown instead.
+
+### Chart pages
+
+**Path:** `cb/charts/{pipeline_id}.{chart_id}.md`
+
+Each chart page includes ABlog frontmatter (for blog-style categorization), an interactive chart iframe, and metadata tables:
+
+```markdown
+---
+date: 2026-03-02
+tags: FRED, Office of Financial Research
+category: Short Term Funding, Repo
+---
+
+# Chart: Repo Rates
+SOFR, the Effective Funds Rate, and the Fed's Target Range
+
+## Chart
+  (iframe embedding the interactive HTML chart)
+
+Full Screen Chart (download link)
+
+[Your user-authored chart documentation from docs_path]
+
+## Chart Specs
+| Chart Name     | Repo Rates       |
+|----------------|------------------|
+| Data Frequency | Daily            |
+| Units          | Percent          |
+| ...            | ...              |
+
+## Dataframe Manifest
+(auto-generated table)
+
+## Pipeline Manifest
+(auto-generated table)
+```
+
+### Index page
+
+**Path:** `index.md`
+
+The index page differs by theme:
+
+- **Pipeline theme**: Contains toctrees organized by Notebooks, Charts, and Dataframes, plus the pipeline manifest table and README content.
+- **Catalog theme**: Contains grid cards linking to Charts, Dataframes, Pipelines, Diagnostics, and Contributing pages.
+
+### Diagnostics page (catalog only)
+
+**Path:** `cb/diagnostics.md`
+
+Shows metadata completeness for every object in the catalog. Generated from the diagnostics CSV at `_static/diagnostics/chartbook_metadata_diagnostics.csv`.
+
+### Sphinx configuration
+
+**Path:** `conf.py`
+
+The rendered Sphinx configuration, with the `name`, `maintainer`, and `copyright` values from `[project]` in `chartbook.toml` substituted in (the Sphinx theme follows from the project type). Includes all extension settings for `myst_nb`, `ablog`, `sphinx_design`, etc.
+
+
+## Template System and Customization
+
+### Template Resolution Order
+
+During Markdown generation, Jinja2 searches for templates in the following order (first match wins):
+
+1. **Project root** — `{project_dir}/`
+2. **Temp docs source** — `_docs_src/`
+3. **Temp docs templates** — `_docs_src/_templates/`
+4. **Package templates** — `chartbook/templates/` (inside the installed package)
+5. **Theme directory** — `chartbook/docs_src_pipeline/` or `chartbook/docs_src_catalog/`
+6. **Theme templates** — `chartbook/docs_src_{theme}/_templates/`
+
+This means you can override any built-in template by placing a file with the same base name in your **project root** — search path #1, e.g. `{project_dir}/chart_entry_bottom.md`. Note that your project's own `docs_src/_templates/` directory is *not* on this list (only the temporary `_docs_src/` copy is), so a template placed there has no effect; use the project root.
+
+### Overridable Templates
+
+| Template File | What It Controls |
+|---|---|
+| `chart_entry_top.md` | Chart page header: ABlog frontmatter, title, iframe embed, sources line, download link |
+| `chart_entry_bottom.md` | Chart page footer: specs table, dataframe manifest, pipeline manifest |
+| `dataframe_manifest.md` | Dataframe metadata table (shown on dataframe and chart pages) |
+| `pipeline_manifest.md` | Pipeline metadata table (shown on multiple page types) |
+| `index.md` | Main site index layout and toctree structure |
+| `conf.py.j2` | Sphinx configuration (advanced — override with care) |
+
+### Example: Customizing the Chart Footer
+
+To add a custom disclaimer to all chart pages, create `chart_entry_bottom.md` in your project root and include your additions:
+
+```markdown
+## Chart Specs
+
+| Chart Name             | {{name}}                          |
+|------------------------|-----------------------------------|
+| Data Frequency         | {{frequency}}                     |
+| Units                  | {{units}}                         |
+| HTML Chart             | [HTML](../download_chart/{{pipeline_id | replace('/', '--')}}/{{chart_id}}.html) |
+
+## Dataframe Manifest
+{% include "dataframe_manifest.md" %}
+
+## Pipeline Manifest
+{% include "pipeline_manifest.md" %}
+
+## Disclaimer
+This chart is for informational purposes only.
+```
+
+You can use any Jinja2 template variables that are available in the original template. Inspect `_docs_src/_templates/` (with `--keep-build-dirs`) to see the default templates and available variables.
+
+
+## Debugging Tips
+
+### Chart display issues
+
+- Verify the chart HTML was copied: check that `_docs/_static/{pipeline_id}/{chart_id}.html` exists
+- Check the generated Markdown: open `_docs/cb/charts/{pipeline_id}.{chart_id}.md` and verify the iframe `src` path
+- Compare with the download copy: `_docs/cb/download_chart/{pipeline_id}/{chart_id}.html`
+
+### Missing or incorrect data
+
+- Check the DataFrame Glimpse section in `_docs/cb/dataframes/{pipeline_id}/{dataframe_id}.md`
+- If the glimpse shows an error, the parquet file may be missing or corrupted
+- Verify `most_recent_data_min` and `most_recent_data_max` values in the dataframe manifest table
+
+### Template issues
+
+- Compare `_docs_src/_templates/` (the resolved templates) with your project's `docs_src/_templates/` overrides
+- Check that your override template includes all necessary `{% include %}` directives
+- Verify the rendered output in `_docs/` matches expectations
+
+### Sphinx build errors
+
+- Check `_docs/conf.py` for configuration issues (e.g., missing extensions, incorrect theme name)
+- Sphinx error messages reference paths inside `_docs/` — use `--keep-build-dirs` to examine those files
+- Look at `_docs/_build/` for Sphinx build artifacts and logs
+
+### Metadata completeness
+
+- Open `_docs/_static/diagnostics/chartbook_metadata_diagnostics.csv` to see which fields are missing
+- For catalog projects, check `_docs/cb/diagnostics.md` for the rendered completeness report
+
+
+## Next Steps
+
+- {doc}`documenting-a-pipeline` — the manifest that drives all of this
+- {doc}`../reference/cli` — full option reference for `chartbook build`
+- {doc}`catalogs-and-data` — combine multiple pipelines into a catalog

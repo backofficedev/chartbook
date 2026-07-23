@@ -1,142 +1,76 @@
 # ChartBook
 
-**A developer platform for data science teams**
+**Catalog and publish your team's data science work.**
 
-```{image} _static/logo.png
+<!-- ```{image} _static/logo.png
 :alt: ChartBook logo
-:width: 400px
+:width: 300px
 :align: center
-```
+``` -->
 
-Discover, document, and share data science work across your organization.
+ChartBook turns an analytics project — code, parquet files, chart HTML — into a documented website, and aggregates many projects into a searchable catalog with programmatic data access. If you know [Backstage](https://backstage.io/), Spotify's service catalog for software teams: ChartBook plays that role for data science teams, so pipelines, datasets, and charts are registered and discoverable instead of scattered across notebooks and shared drives.
 
-## Overview
+Everything hangs off two kinds of `chartbook.toml`:
 
-ChartBook provides a centralized catalog for data pipelines, charts, and documentation. It helps data science teams:
-
-- Organize and discover analytics work across the organization
-- Generate searchable documentation websites
-- Track data governance, licensing, and access permissions
-- Load pipeline outputs programmatically into pandas or polars
-
-New to ChartBook? Read {doc}`why-chartbook` to understand how it compares to tools like Backstage.
-
-::::{grid} 1 2 2 2
-:gutter: 3
-
-:::{grid-item-card} 🚀 **Getting Started**
-:link: getting-started
-:link-type: doc
-
-Installation and quick start guide.
-:::
-
-:::{grid-item-card} 📖 **User Guide**
-:link: user-guide/index
-:link-type: doc
-
-Pipelines, charts, dataframes, and configuration.
-:::
-
-:::{grid-item-card} 💡 **Examples**
-:link: examples/index
-:link-type: doc
-
-Real-world examples and best practices.
-:::
-
-:::{grid-item-card} 🐍 **API Reference**
-:link: api/chartbook
-:link-type: doc
-
-Python API documentation.
-:::
-
-::::
-
-## Features
-
-- **Chart Management** — Organize and document charts with metadata and publication tracking
-- **Dataframe Catalog** — Maintain a catalog of datasets with sources, licensing, and documentation
-- **Pipeline Support** — Build reproducible analytics pipelines with dependency management
-- **Documentation Generation** — Generate static websites to share analytics work
-- **Database Integration** — Upload dataframes to Trino for enterprise-wide access
-- **Plotting Module** — Simple API for creating charts with automatic HTML, PNG, and PDF export
-
-## Quick Example
+- A **pipeline** is any project directory whose `chartbook.toml` describes its charts, dataframes, and notebooks. `chartbook build` renders it into a static documentation site.
+- A **catalog** is a `chartbook.toml` that registers many pipelines. It builds one combined, searchable site — and lets anyone load any cataloged dataset by name:
 
 ```python
-from chartbook import data, plotting
+from chartbook import data
 
-# Load data from a pipeline
-df = data.load(pipeline="fred_charts", dataframe="interest_rates")
-
-# Create a chart with automatic multi-format export
-plotting.line(
-    df,
-    chart_id="repo_rates",
-    x="date",
-    y=["SOFR", "EFFR"],
-    title="Repo Rates",
-    nber_recessions=True,
-)
+df = data.load(pipeline="fred_charts", dataframe="fred", format="pandas")
 ```
 
-```bash
-# Build documentation website
-chartbook build
-```
-
-## Installation
-
-**Recommended for most users:**
+## From zero to a documented pipeline
 
 ```console
-pip install "chartbook[all]"
+pip install chartbook
+chartbook init            # scaffold a pipeline project
+cd my-pipeline
+chartbook build           # generate its documentation site
+chartbook browse          # open it in your browser
 ```
 
-This installs everything you need to load data, create visualizations, and build documentation sites.
+{doc}`getting-started` walks through this and ends with your first chart on a page.
 
-````{dropdown} Other installation options
-:icon: tools
+## Where things are
 
-**Minimal install (data loading only):**
-```console
-pip install "chartbook[data]"
-```
+- {doc}`getting-started` — install, scaffold, first build
+- {doc}`guide/documenting-a-pipeline` — describe your charts, dataframes, and notebooks
+- {doc}`guide/catalogs-and-data` — aggregate pipelines and load data from anywhere
+- {doc}`guide/plotting` — one call, five output files (interactive HTML plus static PNG/PDF)
+- {doc}`reference/configuration` — every `chartbook.toml` field, type, and default
+- {doc}`reference/cli` — every command
 
-**Using pipx (isolated environment):**
-```console
-pipx install "chartbook[all]"
-```
-
-**Development:**
-```console
-git clone <your-repo-url>
-cd chartbook
-pip install -e ".[dev]"
-```
-````
-
-## Next Steps
-
-- Follow the {doc}`getting-started` guide to install chartbook
-- Read the {doc}`user-guide/index` to learn about key concepts
-- Explore {doc}`examples/index` to see chartbook in action
-- Check the {doc}`cli-reference` for command-line usage
+Working with an AI assistant? The built docs site ships [llms.txt](https://llmstxt.org/) files (`llms.txt` and `llms-full.txt` at the site root), and `chartbook install skill` installs a ChartBook skill for Claude Code — user-level by default, or `--project` to vendor it into a repo.
 
 ```{toctree}
 :hidden:
-:maxdepth: 2
+:caption: Learn
 
-why-chartbook
 getting-started
-user-guide/index
-cli-reference
-api/chartbook
-examples/index
-configuration
-llms-txt
-contributing
+guide/documenting-a-pipeline
+guide/catalogs-and-data
+guide/plotting
+guide/gallery
+guide/how-the-build-works
+examples
+```
+
+```{toctree}
+:hidden:
+:caption: Reference
+
+reference/configuration
+reference/cli
+reference/api
+```
+
+```{toctree}
+:hidden:
+:caption: Project
+
 changelog
+contributing
+design/toml-format-v2
 ```

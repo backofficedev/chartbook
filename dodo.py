@@ -7,6 +7,8 @@ Run with:
 """
 
 import shutil
+import subprocess
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from colorama import Fore, Style, init
@@ -19,6 +21,7 @@ OUTPUT_DIR = PROJECT_ROOT / "_build"
 DOCS_SRC = PROJECT_ROOT / "docs_src"
 DOCS_OUTPUT = PROJECT_ROOT / "docs"
 SRC_DIR = PROJECT_ROOT / "src"
+TEST_RESULTS_DIR = OUTPUT_DIR / "test-results"
 
 # Ensure build directories exist
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -85,7 +88,7 @@ def mv(from_path, to_path):
 notebook_tasks = {
     "plotting_gallery": {
         "path": SCRIPTS_DIR / "plotting_gallery_ipynb.py",
-        "docs_path": DOCS_SRC / "user-guide" / "gallery.ipynb",
+        "docs_path": DOCS_SRC / "guide" / "gallery.ipynb",
         "file_dep": [],
         "targets": [],
     },
@@ -202,17 +205,63 @@ def task_clean_all():
     }
 
 
+def _run_tests(hatch_cmd, junit_path):
+    """Run tests via hatch, produce JUnit XML, fail if any tests fail."""
+
+    def _action():
+        junit_path.parent.mkdir(parents=True, exist_ok=True)
+        if junit_path.exists():
+            junit_path.unlink()
+
+        result = subprocess.run(
+            f"{hatch_cmd} -- --junitxml={junit_path}",
+            shell=True,
+        )
+
+        # If hatch/pytest exited non-zero, clean up target and fail
+        if result.returncode != 0:
+            if junit_path.exists():
+                junit_path.unlink()
+            raise RuntimeError(f"Tests failed (exit code {result.returncode})")
+
+        # Double-check: parse XML for failures even if exit code was 0
+        if junit_path.exists():
+            tree = ET.parse(junit_path)
+            root = tree.getroot()
+            failures = int(root.attrib.get("failures", 0))
+            errors = int(root.attrib.get("errors", 0))
+            if failures > 0 or errors > 0:
+                junit_path.unlink()
+                raise RuntimeError(
+                    f"Tests had {failures} failure(s) and {errors} error(s)"
+                )
+
+    return _action
+
+
 def task_test():
     """Run tests on default Python version."""
+    src_files = list(SRC_DIR.rglob("*.py"))
+    test_files = list((PROJECT_ROOT / "tests").rglob("*.py"))
+    junit_path = TEST_RESULTS_DIR / "junit.xml"
     return {
-        "actions": ["hatch test -v"],
+        "actions": [_run_tests("hatch test -v", junit_path)],
+        "file_dep": src_files + test_files + [PROJECT_ROOT / "pyproject.toml"],
+        "targets": [junit_path],
+        "clean": True,
         "verbosity": 2,
     }
 
 
 def task_test_all():
-    """Run tests on all Python versions (matrix: 3.10-3.13)."""
+    """Run tests on all Python versions and the Sphinx matrix (see pyproject)."""
+    src_files = list(SRC_DIR.rglob("*.py"))
+    test_files = list((PROJECT_ROOT / "tests").rglob("*.py"))
+    junit_path = TEST_RESULTS_DIR / "junit-all.xml"
     return {
-        "actions": ["hatch test --all -v"],
+        "actions": [_run_tests("hatch test --all -v", junit_path)],
+        "file_dep": src_files + test_files + [PROJECT_ROOT / "pyproject.toml"],
+        "targets": [junit_path],
+        "clean": True,
         "verbosity": 2,
     }

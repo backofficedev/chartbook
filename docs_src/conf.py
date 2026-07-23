@@ -13,9 +13,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "chartbook"
-copyright = "2025, Jeremiah Bejarano"
+copyright = "2026, Jeremiah Bejarano"
 author = "Jeremiah Bejarano"
-release = "0.0.6"
+release = "0.1.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -48,6 +48,7 @@ suppress_warnings = [
 ]
 
 # MyST configuration
+myst_heading_anchors = 3
 myst_enable_extensions = [
     "amsmath",
     "colon_fence",
