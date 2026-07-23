@@ -5,6 +5,12 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed — `install skill` defaults to user-level
+
+`chartbook install skill` now installs to `~/.claude/skills/chartbook/` (honoring `$CLAUDE_CONFIG_DIR`), making the skill available in every Claude Code session rather than one repo; the previous per-repo behavior moved behind `--project`. The command is now idempotent ("already up to date" when the installed files match), removes files from older skill layouts on install, and records the installing chartbook version in a `.chartbook-skill-version` stamp.
+
 ## [0.1.0] - 2026-07-22
 
 The format-v2 release. Everything below ships together: the breaking `chartbook.toml` redesign, catalog auto-discovery, single-install packaging, Sphinx 9 support, and rebuilt documentation.

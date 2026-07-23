@@ -42,7 +42,7 @@ chartbook browse          # open it in your browser
 - {doc}`reference/configuration` — every `chartbook.toml` field, type, and default
 - {doc}`reference/cli` — every command
 
-Working with an AI assistant? The built docs site ships [llms.txt](https://llmstxt.org/) files (`llms.txt` and `llms-full.txt` at the site root), and `chartbook install skill` adds a ChartBook skill to a Claude Code project.
+Working with an AI assistant? The built docs site ships [llms.txt](https://llmstxt.org/) files (`llms.txt` and `llms-full.txt` at the site root), and `chartbook install skill` installs a ChartBook skill for Claude Code — user-level by default, or `--project` to vendor it into a repo.
 
 ```{toctree}
 :hidden:

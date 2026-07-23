@@ -1288,6 +1288,9 @@ def install():
     """Install bundled resources into the current project."""
 
 
+VERSION_STAMP_NAME = ".chartbook-skill-version"
+
+
 @install.command("skill")
 @click.option(
     "-f",
@@ -1296,39 +1299,97 @@ def install():
     default=False,
     help="Overwrite existing skill files without prompting",
 )
-def install_skill(force):
-    """Copy bundled Claude skill files into .claude/skills/chartbook/.
+@click.option(
+    "--project",
+    is_flag=True,
+    default=False,
+    help="Install into ./.claude/skills/ in the current directory (commit it "
+    "to share the skill with everyone working in the repo) instead of the "
+    "user-level skills directory",
+)
+def install_skill(force, project):
+    """Install the bundled Claude Code skill.
 
-    Installs the chartbook Claude Code skill into the current directory
-    so that Claude can use it for project assistance.
+    By default the skill is installed user-level — into
+    ``~/.claude/skills/chartbook/``, or ``$CLAUDE_CONFIG_DIR/skills/chartbook/``
+    when that variable is set — so it is available in every Claude Code
+    session. With ``--project`` it is installed into
+    ``./.claude/skills/chartbook/`` in the current directory instead.
+
+    The command is idempotent: if the installed files already match the
+    bundled skill, nothing is rewritten. Files from older skill layouts are
+    removed so the installed copy exactly mirrors the bundled one, and the
+    installing chartbook version is recorded alongside the skill files.
+
+    :param force: If True, overwrite existing files without prompting.
+    :type force: bool
+    :param project: If True, install into the current directory's .claude/
+        instead of the user-level skills directory.
+    :type project: bool
     """
     import importlib.resources
+    import os
     import shutil
 
     package_path = importlib.resources.files("chartbook")
     skills_src = Path(str(package_path)) / "skills"
 
-    skill_files = list(skills_src.iterdir()) if skills_src.is_dir() else []
+    skill_files = sorted(
+        p for p in (skills_src.iterdir() if skills_src.is_dir() else []) if p.is_file()
+    )
     if not skill_files:
         click.echo("Error: No bundled skill files found in package.", err=True)
         raise SystemExit(1)
 
-    target_dir = Path.cwd() / ".claude" / "skills" / "chartbook"
+    if project:
+        base_dir = Path.cwd() / ".claude"
+    else:
+        config_dir = os.environ.get("CLAUDE_CONFIG_DIR")
+        base_dir = (
+            Path(config_dir).expanduser() if config_dir else Path.home() / ".claude"
+        )
+    target_dir = base_dir / "skills" / "chartbook"
+    expected_names = {p.name for p in skill_files}
 
-    if target_dir.exists() and any(target_dir.iterdir()) and not force:
+    def _visible_files():
+        return [
+            p
+            for p in target_dir.iterdir()
+            if p.is_file() and not p.name.startswith(".")
+        ]
+
+    # Idempotent no-op: the installed files already match the bundled skill.
+    # Hidden files (the version stamp, .DS_Store, ...) don't affect the check.
+    if target_dir.is_dir():
+        current = _visible_files()
+        if {p.name for p in current} == expected_names and all(
+            (target_dir / p.name).read_bytes() == p.read_bytes() for p in skill_files
+        ):
+            (target_dir / VERSION_STAMP_NAME).write_text(f"{__version__}\n")
+            click.echo(f"Skill already up to date in {target_dir}")
+            return
+
+    if target_dir.is_dir() and any(_visible_files()) and not force:
         click.echo(f"Skill files already exist in {target_dir}")
         if not click.confirm("Overwrite existing files?"):
             raise SystemExit(0)
 
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    copied = 0
-    for src_file in sorted(skill_files):
-        if src_file.is_file():
-            shutil.copy2(src_file, target_dir / src_file.name)
-            click.echo(f"  {src_file.name}")
-            copied += 1
+    # Drop files from older skill layouts (e.g. REFERENCE.md) so the
+    # installed copy exactly mirrors the bundled skill
+    for existing in _visible_files():
+        if existing.name not in expected_names:
+            existing.unlink()
+            click.echo(f"  removed stale {existing.name}")
 
+    copied = 0
+    for src_file in skill_files:
+        shutil.copy2(src_file, target_dir / src_file.name)
+        click.echo(f"  {src_file.name}")
+        copied += 1
+
+    (target_dir / VERSION_STAMP_NAME).write_text(f"{__version__}\n")
     click.echo(f"\nInstalled {copied} skill file(s) to {target_dir}")
 
 

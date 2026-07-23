@@ -51,7 +51,7 @@ pip install -e ".[dev]"
 | `data` | Data operations (get paths, docs) |
 | `create-data-glimpses` | Create data glimpse reports from dodo.py targets |
 | `config` | Configure the default catalog path for data loading |
-| `install skill` | Install the bundled Claude Code skill into the project |
+| `install skill` | Install the bundled Claude Code skill (user-level by default; `--project` for the repo) |
 
 ### chartbook build
 

@@ -13,7 +13,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every data file your `dodo.py` produces |
 | `chartbook config` | Set the default catalog for data loading |
-| `chartbook install skill` | Install the bundled Claude Code skill |
+| `chartbook install skill` | Install the bundled Claude Code skill (user-level by default) |
 
 ## chartbook init
 
@@ -160,8 +160,12 @@ chartbook config
 
 ## chartbook install skill
 
-Copy the bundled Claude Code skill into `./.claude/skills/chartbook/`, giving Claude context about the CLI, manifest format, and data API when working in your project. `-f` overwrites existing files.
+Install the bundled Claude Code skill, giving Claude context about the CLI, manifest format, and data API. By default it installs **user-level** — `~/.claude/skills/chartbook/`, or `$CLAUDE_CONFIG_DIR/skills/chartbook/` when that variable is set — so the skill is available in every Claude Code session on your machine. Re-run it after upgrading chartbook; when nothing changed it reports "already up to date" and exits.
 
 ```console
-chartbook install skill [-f]
+chartbook install skill              # user-level (default)
+chartbook install skill --project    # ./.claude/skills/chartbook/ — commit it to share with a team
+chartbook install skill -f           # overwrite locally modified files without prompting
 ```
+
+Files from older skill layouts are removed on install so the copy exactly mirrors the bundled skill, and the installing chartbook version is recorded in a `.chartbook-skill-version` stamp alongside the files.
