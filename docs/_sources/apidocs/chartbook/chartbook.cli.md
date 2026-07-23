@@ -15,8 +15,40 @@
 :class: autosummary longtable
 :align: left
 
+* - {py:obj}`browse <chartbook.cli.browse>`
+  - ```{autodoc2-docstring} chartbook.cli.browse
+    :summary:
+    ```
 * - {py:obj}`build <chartbook.cli.build>`
   - ```{autodoc2-docstring} chartbook.cli.build
+    :summary:
+    ```
+* - {py:obj}`catalog <chartbook.cli.catalog>`
+  - ```{autodoc2-docstring} chartbook.cli.catalog
+    :summary:
+    ```
+* - {py:obj}`catalog_add <chartbook.cli.catalog_add>`
+  - ```{autodoc2-docstring} chartbook.cli.catalog_add
+    :summary:
+    ```
+* - {py:obj}`catalog_browse <chartbook.cli.catalog_browse>`
+  - ```{autodoc2-docstring} chartbook.cli.catalog_browse
+    :summary:
+    ```
+* - {py:obj}`catalog_build <chartbook.cli.catalog_build>`
+  - ```{autodoc2-docstring} chartbook.cli.catalog_build
+    :summary:
+    ```
+* - {py:obj}`catalog_disable <chartbook.cli.catalog_disable>`
+  - ```{autodoc2-docstring} chartbook.cli.catalog_disable
+    :summary:
+    ```
+* - {py:obj}`catalog_enable <chartbook.cli.catalog_enable>`
+  - ```{autodoc2-docstring} chartbook.cli.catalog_enable
+    :summary:
+    ```
+* - {py:obj}`catalog_init <chartbook.cli.catalog_init>`
+  - ```{autodoc2-docstring} chartbook.cli.catalog_init
     :summary:
     ```
 * - {py:obj}`config <chartbook.cli.config>`
@@ -41,6 +73,18 @@
     ```
 * - {py:obj}`data_get_path <chartbook.cli.data_get_path>`
   - ```{autodoc2-docstring} chartbook.cli.data_get_path
+    :summary:
+    ```
+* - {py:obj}`init <chartbook.cli.init>`
+  - ```{autodoc2-docstring} chartbook.cli.init
+    :summary:
+    ```
+* - {py:obj}`install <chartbook.cli.install>`
+  - ```{autodoc2-docstring} chartbook.cli.install
+    :summary:
+    ```
+* - {py:obj}`install_skill <chartbook.cli.install_skill>`
+  - ```{autodoc2-docstring} chartbook.cli.install_skill
     :summary:
     ```
 * - {py:obj}`ls <chartbook.cli.ls>`
@@ -73,12 +117,90 @@
     ```
 ````
 
+### Data
+
+````{list-table}
+:class: autosummary longtable
+:align: left
+
+* - {py:obj}`VERSION_STAMP_NAME <chartbook.cli.VERSION_STAMP_NAME>`
+  - ```{autodoc2-docstring} chartbook.cli.VERSION_STAMP_NAME
+    :summary:
+    ```
+````
+
 ### API
 
-````{py:function} build(output_dir, project_dir, publish_dir, docs_build_dir, temp_docs_src_dir, keep_build_dirs, force_write, size_threshold, warn_missing)
+````{py:data} VERSION_STAMP_NAME
+:canonical: chartbook.cli.VERSION_STAMP_NAME
+:value: >
+   '.chartbook-skill-version'
+
+```{autodoc2-docstring} chartbook.cli.VERSION_STAMP_NAME
+```
+
+````
+
+````{py:function} browse(output_dir, project_dir)
+:canonical: chartbook.cli.browse
+
+```{autodoc2-docstring} chartbook.cli.browse
+```
+````
+
+````{py:function} build(output_dir, project_dir, publish_dir, docs_build_dir, temp_docs_src_dir, keep_build_dirs, force_write, size_threshold, strict, strip_mathjax2)
 :canonical: chartbook.cli.build
 
 ```{autodoc2-docstring} chartbook.cli.build
+```
+````
+
+````{py:function} catalog()
+:canonical: chartbook.cli.catalog
+
+```{autodoc2-docstring} chartbook.cli.catalog
+```
+````
+
+````{py:function} catalog_add(paths, catalog_path, yes)
+:canonical: chartbook.cli.catalog_add
+
+```{autodoc2-docstring} chartbook.cli.catalog_add
+```
+````
+
+````{py:function} catalog_browse()
+:canonical: chartbook.cli.catalog_browse
+
+```{autodoc2-docstring} chartbook.cli.catalog_browse
+```
+````
+
+````{py:function} catalog_build(force_write, strict)
+:canonical: chartbook.cli.catalog_build
+
+```{autodoc2-docstring} chartbook.cli.catalog_build
+```
+````
+
+````{py:function} catalog_disable(pipeline_id, catalog_path)
+:canonical: chartbook.cli.catalog_disable
+
+```{autodoc2-docstring} chartbook.cli.catalog_disable
+```
+````
+
+````{py:function} catalog_enable(pipeline_id, catalog_path)
+:canonical: chartbook.cli.catalog_enable
+
+```{autodoc2-docstring} chartbook.cli.catalog_enable
+```
+````
+
+````{py:function} catalog_init(title)
+:canonical: chartbook.cli.catalog_init
+
+```{autodoc2-docstring} chartbook.cli.catalog_init
 ```
 ````
 
@@ -121,6 +243,27 @@
 :canonical: chartbook.cli.data_get_path
 
 ```{autodoc2-docstring} chartbook.cli.data_get_path
+```
+````
+
+````{py:function} init()
+:canonical: chartbook.cli.init
+
+```{autodoc2-docstring} chartbook.cli.init
+```
+````
+
+````{py:function} install()
+:canonical: chartbook.cli.install
+
+```{autodoc2-docstring} chartbook.cli.install
+```
+````
+
+````{py:function} install_skill(force, project)
+:canonical: chartbook.cli.install_skill
+
+```{autodoc2-docstring} chartbook.cli.install_skill
 ```
 ````
 

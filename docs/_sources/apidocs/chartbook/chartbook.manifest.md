@@ -15,6 +15,10 @@
 :class: autosummary longtable
 :align: left
 
+* - {py:obj}`detect_v1_format <chartbook.manifest.detect_v1_format>`
+  - ```{autodoc2-docstring} chartbook.manifest.detect_v1_format
+    :summary:
+    ```
 * - {py:obj}`find_latest_source_modification <chartbook.manifest.find_latest_source_modification>`
   - ```{autodoc2-docstring} chartbook.manifest.find_latest_source_modification
     :summary:
@@ -55,12 +59,16 @@
   - ```{autodoc2-docstring} chartbook.manifest.resolve_platform_path
     :summary:
     ```
-* - {py:obj}`validate_config_file <chartbook.manifest.validate_config_file>`
-  - ```{autodoc2-docstring} chartbook.manifest.validate_config_file
+* - {py:obj}`resolve_project_type <chartbook.manifest.resolve_project_type>`
+  - ```{autodoc2-docstring} chartbook.manifest.resolve_project_type
     :summary:
     ```
 * - {py:obj}`validate_doc_fields <chartbook.manifest.validate_doc_fields>`
   - ```{autodoc2-docstring} chartbook.manifest.validate_doc_fields
+    :summary:
+    ```
+* - {py:obj}`validate_manifest_file <chartbook.manifest.validate_manifest_file>`
+  - ```{autodoc2-docstring} chartbook.manifest.validate_manifest_file
     :summary:
     ```
 * - {py:obj}`validate_os_compatibility <chartbook.manifest.validate_os_compatibility>`
@@ -79,8 +87,8 @@
   - ```{autodoc2-docstring} chartbook.manifest.BASE_DIR
     :summary:
     ```
-* - {py:obj}`DEFAULT_CONFIG <chartbook.manifest.DEFAULT_CONFIG>`
-  - ```{autodoc2-docstring} chartbook.manifest.DEFAULT_CONFIG
+* - {py:obj}`DEFAULT_SITE_DIR <chartbook.manifest.DEFAULT_SITE_DIR>`
+  - ```{autodoc2-docstring} chartbook.manifest.DEFAULT_SITE_DIR
     :summary:
     ```
 * - {py:obj}`DOCS_BUILD_DIR <chartbook.manifest.DOCS_BUILD_DIR>`
@@ -91,6 +99,10 @@
   - ```{autodoc2-docstring} chartbook.manifest.DOCS_SRC_DIR
     :summary:
     ```
+* - {py:obj}`ENTITY_SECTIONS <chartbook.manifest.ENTITY_SECTIONS>`
+  - ```{autodoc2-docstring} chartbook.manifest.ENTITY_SECTIONS
+    :summary:
+    ```
 * - {py:obj}`OUTPUT_DIR <chartbook.manifest.OUTPUT_DIR>`
   - ```{autodoc2-docstring} chartbook.manifest.OUTPUT_DIR
     :summary:
@@ -99,8 +111,20 @@
   - ```{autodoc2-docstring} chartbook.manifest.PIPELINE_THEME
     :summary:
     ```
+* - {py:obj}`PROJECT_DEFAULTS <chartbook.manifest.PROJECT_DEFAULTS>`
+  - ```{autodoc2-docstring} chartbook.manifest.PROJECT_DEFAULTS
+    :summary:
+    ```
 * - {py:obj}`PUBLISH_DIR <chartbook.manifest.PUBLISH_DIR>`
   - ```{autodoc2-docstring} chartbook.manifest.PUBLISH_DIR
+    :summary:
+    ```
+* - {py:obj}`RESERVED_PIPELINES_KEYS <chartbook.manifest.RESERVED_PIPELINES_KEYS>`
+  - ```{autodoc2-docstring} chartbook.manifest.RESERVED_PIPELINES_KEYS
+    :summary:
+    ```
+* - {py:obj}`V1_MARKER_SECTIONS <chartbook.manifest.V1_MARKER_SECTIONS>`
+  - ```{autodoc2-docstring} chartbook.manifest.V1_MARKER_SECTIONS
     :summary:
     ```
 ````
@@ -117,12 +141,12 @@
 
 ````
 
-````{py:data} DEFAULT_CONFIG
-:canonical: chartbook.manifest.DEFAULT_CONFIG
+````{py:data} DEFAULT_SITE_DIR
+:canonical: chartbook.manifest.DEFAULT_SITE_DIR
 :value: >
-   None
+   './docs_src/site/'
 
-```{autodoc2-docstring} chartbook.manifest.DEFAULT_CONFIG
+```{autodoc2-docstring} chartbook.manifest.DEFAULT_SITE_DIR
 ```
 
 ````
@@ -147,6 +171,16 @@
 
 ````
 
+````{py:data} ENTITY_SECTIONS
+:canonical: chartbook.manifest.ENTITY_SECTIONS
+:value: >
+   ('charts', 'dataframes', 'notebooks', 'notes')
+
+```{autodoc2-docstring} chartbook.manifest.ENTITY_SECTIONS
+```
+
+````
+
 ````{py:data} OUTPUT_DIR
 :canonical: chartbook.manifest.OUTPUT_DIR
 :value: >
@@ -167,6 +201,16 @@
 
 ````
 
+````{py:data} PROJECT_DEFAULTS
+:canonical: chartbook.manifest.PROJECT_DEFAULTS
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.manifest.PROJECT_DEFAULTS
+```
+
+````
+
 ````{py:data} PUBLISH_DIR
 :canonical: chartbook.manifest.PUBLISH_DIR
 :value: >
@@ -175,6 +219,49 @@
 ```{autodoc2-docstring} chartbook.manifest.PUBLISH_DIR
 ```
 
+````
+
+````{py:data} RESERVED_PIPELINES_KEYS
+:canonical: chartbook.manifest.RESERVED_PIPELINES_KEYS
+:value: >
+   ('members', 'exclude', 'disabled')
+
+```{autodoc2-docstring} chartbook.manifest.RESERVED_PIPELINES_KEYS
+```
+
+````
+
+````{py:exception} V1FormatError(source: typing.Union[str, pathlib.Path])
+:canonical: chartbook.manifest.V1FormatError
+
+Bases: {py:obj}`ValueError`
+
+```{autodoc2-docstring} chartbook.manifest.V1FormatError
+```
+
+```{rubric} Initialization
+```
+
+```{autodoc2-docstring} chartbook.manifest.V1FormatError.__init__
+```
+
+````
+
+````{py:data} V1_MARKER_SECTIONS
+:canonical: chartbook.manifest.V1_MARKER_SECTIONS
+:value: >
+   ('config', 'site', 'pipeline')
+
+```{autodoc2-docstring} chartbook.manifest.V1_MARKER_SECTIONS
+```
+
+````
+
+````{py:function} detect_v1_format(raw_manifest: dict) -> bool
+:canonical: chartbook.manifest.detect_v1_format
+
+```{autodoc2-docstring} chartbook.manifest.detect_v1_format
+```
 ````
 
 ````{py:function} find_latest_source_modification(base_dir: typing.Union[str, pathlib.Path]) -> datetime.datetime
@@ -247,17 +334,24 @@
 ```
 ````
 
-````{py:function} validate_config_file(path: pathlib.Path = BASE_DIR) -> bool
-:canonical: chartbook.manifest.validate_config_file
+````{py:function} resolve_project_type(raw_manifest: dict, source: str = 'chartbook.toml') -> str
+:canonical: chartbook.manifest.resolve_project_type
 
-```{autodoc2-docstring} chartbook.manifest.validate_config_file
+```{autodoc2-docstring} chartbook.manifest.resolve_project_type
 ```
 ````
 
-````{py:function} validate_doc_fields(manifest: dict, path_key: str, str_key: str, object_type: str, object_id: str) -> tuple[str, str]
+````{py:function} validate_doc_fields(manifest: dict, object_type: str, object_id: str) -> tuple[str, str]
 :canonical: chartbook.manifest.validate_doc_fields
 
 ```{autodoc2-docstring} chartbook.manifest.validate_doc_fields
+```
+````
+
+````{py:function} validate_manifest_file(path: pathlib.Path = BASE_DIR) -> bool
+:canonical: chartbook.manifest.validate_manifest_file
+
+```{autodoc2-docstring} chartbook.manifest.validate_manifest_file
 ```
 ````
 

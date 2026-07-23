@@ -29,7 +29,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
@@ -39,7 +39,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="../../_static/documentation_options.js?v=d1237063"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -263,6 +263,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
@@ -279,7 +280,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -289,6 +290,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
@@ -400,6 +402,14 @@ document.write(`
 <span class="sd">Manages reading and writing ``~/.chartbook/settings.toml``, which stores</span>
 <span class="sd">user-level defaults such as the path to a catalog&#39;s ``chartbook.toml``.</span>
 
+<span class="sd">The global config directory (``~/.chartbook/``) has this structure::</span>
+
+<span class="sd">    ~/.chartbook/</span>
+<span class="sd">    ├── settings.toml        # user settings (catalog path override, etc.)</span>
+<span class="sd">    ├── chartbook.toml       # default global catalog</span>
+<span class="sd">    ├── artifacts/            # auxiliary files (e.g. cached data)</span>
+<span class="sd">    └── docs/                # rendered catalog HTML</span>
+
 <span class="sd">Settings file format::</span>
 
 <span class="sd">    [catalog]</span>
@@ -422,6 +432,42 @@ document.write(`
 <span class="sd">    :rtype: Path</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;.chartbook&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="get_global_catalog_path">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_catalog_path">[docs]</a>
+<span class="k">def</span> <span class="nf">get_global_catalog_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the path to the default global catalog.</span>
+
+<span class="sd">    :returns: ``~/.chartbook/chartbook.toml``</span>
+<span class="sd">    :rtype: Path</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">get_global_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="get_global_artifacts_dir">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_artifacts_dir">[docs]</a>
+<span class="k">def</span> <span class="nf">get_global_artifacts_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the path to the global artifacts directory.</span>
+
+<span class="sd">    :returns: ``~/.chartbook/artifacts/``</span>
+<span class="sd">    :rtype: Path</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">get_global_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;artifacts&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="get_global_docs_dir">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_docs_dir">[docs]</a>
+<span class="k">def</span> <span class="nf">get_global_docs_dir</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the path to the global rendered docs directory.</span>
+
+<span class="sd">    :returns: ``~/.chartbook/docs/``</span>
+<span class="sd">    :rtype: Path</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">get_global_config_dir</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;docs&quot;</span></div>
 
 
 
@@ -456,17 +502,30 @@ document.write(`
 <div class="viewcode-block" id="get_default_catalog_path">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.config.html#chartbook.config.get_default_catalog_path">[docs]</a>
 <span class="k">def</span> <span class="nf">get_default_catalog_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the default catalog path from global settings.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the default catalog path.</span>
 
-<span class="sd">    :returns: The configured catalog path, or ``None`` if not set.</span>
+<span class="sd">    Resolution order:</span>
+
+<span class="sd">    1. ``catalog.path`` from ``~/.chartbook/settings.toml`` (explicit override).</span>
+<span class="sd">    2. ``~/.chartbook/chartbook.toml`` if it exists (global catalog).</span>
+<span class="sd">    3. ``None`` if neither is available.</span>
+
+<span class="sd">    :returns: The resolved catalog path, or ``None`` if not found.</span>
 <span class="sd">    :rtype: Optional[Path]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">settings</span> <span class="o">=</span> <span class="n">read_global_settings</span><span class="p">()</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">raw</span> <span class="o">=</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;catalog&quot;</span><span class="p">][</span><span class="s2">&quot;path&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span>
-    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span></div>
+        <span class="k">pass</span>
+
+    <span class="c1"># Fall back to the global catalog if it exists</span>
+    <span class="n">global_catalog</span> <span class="o">=</span> <span class="n">get_global_catalog_path</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">global_catalog</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">global_catalog</span>
+
+    <span class="k">return</span> <span class="kc">None</span></div>
 
 
 
@@ -511,10 +570,15 @@ document.write(`
         <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File not found: </span><span class="si">{</span><span class="n">catalog_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="c1"># Validate that it is a catalog-type manifest</span>
+    <span class="kn">from</span> <span class="nn">chartbook.manifest</span> <span class="kn">import</span> <span class="n">V1FormatError</span><span class="p">,</span> <span class="n">detect_v1_format</span><span class="p">,</span> <span class="n">resolve_project_type</span>
+
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">manifest</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
-    <span class="n">config_type</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;config&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">detect_v1_format</span><span class="p">(</span><span class="n">manifest</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">V1FormatError</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">)</span>
+
+    <span class="n">config_type</span> <span class="o">=</span> <span class="n">resolve_project_type</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">config_type</span> <span class="o">!=</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;Expected a catalog-type chartbook.toml, but found type=</span><span class="si">{</span><span class="n">config_type</span><span class="si">!r}</span><span class="s2">. &quot;</span>
@@ -525,6 +589,45 @@ document.write(`
     <span class="n">settings</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;catalog&quot;</span><span class="p">,</span> <span class="p">{})</span>
     <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;catalog&quot;</span><span class="p">][</span><span class="s2">&quot;path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">)</span>
     <span class="n">write_global_settings</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="create_global_catalog">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.config.html#chartbook.config.create_global_catalog">[docs]</a>
+<span class="k">def</span> <span class="nf">create_global_catalog</span><span class="p">(</span><span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;My Catalog&quot;</span><span class="p">,</span> <span class="n">author</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a minimal global catalog at ``~/.chartbook/chartbook.toml``.</span>
+
+<span class="sd">    Also creates the ``~/.chartbook/artifacts/`` directory.</span>
+
+<span class="sd">    :param title: Site title for the catalog.</span>
+<span class="sd">    :type title: str</span>
+<span class="sd">    :param author: Author name for the catalog.</span>
+<span class="sd">    :type author: str</span>
+<span class="sd">    :returns: Path to the created ``chartbook.toml``.</span>
+<span class="sd">    :rtype: Path</span>
+<span class="sd">    :raises FileExistsError: If ``~/.chartbook/chartbook.toml`` already exists.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config_dir</span> <span class="o">=</span> <span class="n">get_global_config_dir</span><span class="p">()</span>
+    <span class="n">config_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">get_global_artifacts_dir</span><span class="p">()</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">catalog_path</span> <span class="o">=</span> <span class="n">get_global_catalog_path</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">catalog_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileExistsError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Global catalog already exists: </span><span class="si">{</span><span class="n">catalog_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">catalog</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;project&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;catalog&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span>
+            <span class="s2">&quot;maintainer&quot;</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;pipelines&quot;</span><span class="p">:</span> <span class="p">{},</span>
+    <span class="p">}</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">catalog_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">tomli_w</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">catalog</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">catalog_path</span></div>
 
 </pre></div>
 

@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=c0169425" />
@@ -40,7 +40,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="../_static/documentation_options.js?v=d1237063"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -268,6 +268,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../cli-reference.html">CLI Reference</a></li>
@@ -284,7 +285,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -294,6 +295,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../llms-txt.html">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
@@ -460,6 +462,10 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#connecting-pipelines">Connecting Pipelines</a></li>
 </ul>
 </li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-identity">Pipeline Identity</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#looking-up-pipelines">Looking Up Pipelines</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-future-feature">ChartBook (Future Feature)</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#vision-for-chartbooks">Vision for ChartBooks</a></li>
 </ul>
@@ -548,19 +554,11 @@ document.write(`
 </section>
 <section id="pipeline-configuration">
 <h3>Pipeline Configuration<a class="headerlink" href="#pipeline-configuration" title="Link to this heading">#</a></h3>
-<p>Pipelines are configured with <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[config]</span>
-<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pipeline&quot;</span>
-<span class="n">chartbook_format_version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.1.0&quot;</span>
-
-<span class="k">[site]</span>
-<span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Analytics Pipeline&quot;</span>
-<span class="n">author</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Data Team&quot;</span>
-
-<span class="k">[pipeline]</span>
-<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ANALYTICS&quot;</span>
-<span class="n">pipeline_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Quarterly Analytics&quot;</span>
-<span class="n">pipeline_description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Quarterly business metrics and analysis&quot;</span>
+<p>Pipelines are configured with <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>. All fields are optional — an empty file is a valid pipeline manifest — but you will usually want at least:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Quarterly Analytics&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Quarterly business metrics and analysis&quot;</span>
+<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Data Team&quot;</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="pipelines.html"><span class="doc">Pipelines</span></a> for detailed configuration options.</p>
@@ -590,19 +588,16 @@ document.write(`
 </section>
 <section id="catalog-configuration">
 <h3>Catalog Configuration<a class="headerlink" href="#catalog-configuration" title="Link to this heading">#</a></h3>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[config]</span>
-<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;catalog&quot;</span>
-<span class="n">chartbook_format_version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.1.0&quot;</span>
+<p>A catalog is a <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> with a <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> table — its presence is what marks the project as a catalog. Keys are scoped pipeline IDs (quoted, because they contain <code class="docutils literal notranslate"><span class="pre">/</span></code>):</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Analytics Catalog&quot;</span>
+<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Data Science Team&quot;</span>
 
-<span class="k">[site]</span>
-<span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Analytics Catalog&quot;</span>
-<span class="n">author</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Data Science Team&quot;</span>
+<span class="k">[pipelines.</span><span class="s2">&quot;acme/quarterly&quot;</span><span class="k">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./pipelines/quarterly&quot;</span>
 
-<span class="k">[pipelines.quarterly]</span>
-<span class="n">path_to_pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./pipelines/quarterly&quot;</span>
-
-<span class="k">[pipelines.monthly]</span>
-<span class="n">path_to_pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./pipelines/monthly&quot;</span>
+<span class="k">[pipelines.</span><span class="s2">&quot;acme/monthly&quot;</span><span class="k">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./pipelines/monthly&quot;</span>
 </pre></div>
 </div>
 <p>See <a class="reference internal" href="catalog-projects.html"><span class="doc">Catalog Projects</span></a> for detailed configuration options.</p>
@@ -613,10 +608,35 @@ document.write(`
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">data</span>
 
 <span class="c1"># Load data from any pipeline in your catalog</span>
-<span class="n">quarterly_df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;QUARTERLY&quot;</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">=</span><span class="s2">&quot;summary&quot;</span><span class="p">)</span>
-<span class="n">monthly_df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;MONTHLY&quot;</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">=</span><span class="s2">&quot;metrics&quot;</span><span class="p">)</span>
+<span class="n">quarterly_df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;quarterly&quot;</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">=</span><span class="s2">&quot;summary&quot;</span><span class="p">)</span>
+<span class="n">monthly_df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;acme/monthly&quot;</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">=</span><span class="s2">&quot;metrics&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
+</section>
+</section>
+<section id="pipeline-identity">
+<h2>Pipeline Identity<a class="headerlink" href="#pipeline-identity" title="Link to this heading">#</a></h2>
+<p>Every pipeline has a canonical identity: a <strong>scoped name</strong> of the form <code class="docutils literal notranslate"><span class="pre">scope/name</span></code>, such as <code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury</span></code>. The scope is by convention the hosting org or user (e.g. the GitHub org), and the name is the pipeline itself. A bare unscoped <code class="docutils literal notranslate"><span class="pre">name</span></code> is also legal for local-only projects.</p>
+<p>You rarely need to configure this. The ID is derived automatically:</p>
+<ol class="arabic simple">
+<li><p>An explicit <code class="docutils literal notranslate"><span class="pre">id</span></code> in <code class="docutils literal notranslate"><span class="pre">[project]</span></code>, if you set one.</p></li>
+<li><p>Otherwise, the scope comes from the repo’s git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote (or <code class="docutils literal notranslate"><span class="pre">repo_url</span></code>) and the name from the directory name.</p></li>
+<li><p>Otherwise, the bare directory name, unscoped.</p></li>
+</ol>
+<section id="looking-up-pipelines">
+<h3>Looking Up Pipelines<a class="headerlink" href="#looking-up-pipelines" title="Link to this heading">#</a></h3>
+<p>Wherever a pipeline is referenced — <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=...)</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path</span></code> — three forms are accepted, from most convenient to most explicit:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                          <span class="c1"># bare name</span>
+<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;ftsfr/crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                    <span class="c1"># canonical scoped name</span>
+<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;https://github.com/ftsfr/crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="c1"># repo URL, normalized</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>A <strong>scoped name</strong> matches its catalog key exactly.</p></li>
+<li><p>A <strong>bare name</strong> matches any catalog entry whose name component equals it. If exactly one entry matches, it resolves. If several match, chartbook raises an error listing the candidates (e.g. <code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury</span></code>, <code class="docutils literal notranslate"><span class="pre">other/crsp_treasury</span></code>) so you can qualify with a scope. You never type a scope you don’t need.</p></li>
+<li><p>A <strong>URL</strong> is normalized to a scoped name (scheme and host stripped, trailing <code class="docutils literal notranslate"><span class="pre">.git</span></code> removed, last two path segments kept). URLs are accepted as <em>input only</em> — they are never stored as identity, so your references survive repo moves and renames.</p></li>
+</ul>
+<p>For the reasoning behind scoped names (and why URLs make poor identities), see <a class="reference internal" href="../design/toml-format-v2.html"><span class="doc">Design: chartbook.toml Format v2</span></a>.</p>
 </section>
 </section>
 <section id="chartbook-future-feature">
@@ -757,6 +777,10 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#when-to-use-a-catalog">When to Use a Catalog</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-configuration">Catalog Configuration</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#connecting-pipelines">Connecting Pipelines</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-identity">Pipeline Identity</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#looking-up-pipelines">Looking Up Pipelines</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-future-feature">ChartBook (Future Feature)</a><ul class="visible nav section-nav flex-column">

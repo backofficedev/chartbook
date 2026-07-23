@@ -15,12 +15,28 @@
 :class: autosummary longtable
 :align: left
 
+* - {py:obj}`create_global_catalog <chartbook.config.create_global_catalog>`
+  - ```{autodoc2-docstring} chartbook.config.create_global_catalog
+    :summary:
+    ```
 * - {py:obj}`get_default_catalog_path <chartbook.config.get_default_catalog_path>`
   - ```{autodoc2-docstring} chartbook.config.get_default_catalog_path
     :summary:
     ```
+* - {py:obj}`get_global_artifacts_dir <chartbook.config.get_global_artifacts_dir>`
+  - ```{autodoc2-docstring} chartbook.config.get_global_artifacts_dir
+    :summary:
+    ```
+* - {py:obj}`get_global_catalog_path <chartbook.config.get_global_catalog_path>`
+  - ```{autodoc2-docstring} chartbook.config.get_global_catalog_path
+    :summary:
+    ```
 * - {py:obj}`get_global_config_dir <chartbook.config.get_global_config_dir>`
   - ```{autodoc2-docstring} chartbook.config.get_global_config_dir
+    :summary:
+    ```
+* - {py:obj}`get_global_docs_dir <chartbook.config.get_global_docs_dir>`
+  - ```{autodoc2-docstring} chartbook.config.get_global_docs_dir
     :summary:
     ```
 * - {py:obj}`get_global_settings_path <chartbook.config.get_global_settings_path>`
@@ -43,6 +59,13 @@
 
 ### API
 
+````{py:function} create_global_catalog(title: str = 'My Catalog', author: str = '') -> pathlib.Path
+:canonical: chartbook.config.create_global_catalog
+
+```{autodoc2-docstring} chartbook.config.create_global_catalog
+```
+````
+
 ````{py:function} get_default_catalog_path() -> typing.Optional[pathlib.Path]
 :canonical: chartbook.config.get_default_catalog_path
 
@@ -50,10 +73,31 @@
 ```
 ````
 
+````{py:function} get_global_artifacts_dir() -> pathlib.Path
+:canonical: chartbook.config.get_global_artifacts_dir
+
+```{autodoc2-docstring} chartbook.config.get_global_artifacts_dir
+```
+````
+
+````{py:function} get_global_catalog_path() -> pathlib.Path
+:canonical: chartbook.config.get_global_catalog_path
+
+```{autodoc2-docstring} chartbook.config.get_global_catalog_path
+```
+````
+
 ````{py:function} get_global_config_dir() -> pathlib.Path
 :canonical: chartbook.config.get_global_config_dir
 
 ```{autodoc2-docstring} chartbook.config.get_global_config_dir
+```
+````
+
+````{py:function} get_global_docs_dir() -> pathlib.Path
+:canonical: chartbook.config.get_global_docs_dir
+
+```{autodoc2-docstring} chartbook.config.get_global_docs_dir
 ```
 ````
 

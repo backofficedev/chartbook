@@ -1,0 +1,1493 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Design: chartbook.toml Format v2 &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=55ac272d"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'design/toml-format-v2';</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Contributing" href="../contributing.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/design/toml-format-v2.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Design: chartbook.toml Format v2</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#motivation">Motivation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#design-principles">Design principles</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#specification">Specification</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-project-table">The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> table</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#project-type-inference">Project type inference</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-identity-and-namespacing">Pipeline identity and namespacing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-registry-pipelines">Catalog registry: <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-auto-discovery-members">Catalog auto-discovery: <code class="docutils literal notranslate"><span class="pre">members</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-policy">Catalog policy</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build-commands">Build commands</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#custom-site-pages-site-dir">Custom site pages: <code class="docutils literal notranslate"><span class="pre">site_dir</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#removed-chartbook-format-version">Removed: <code class="docutils literal notranslate"><span class="pre">chartbook_format_version</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#entity-sections-field-renames">Entity sections: field renames</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rationale-identity-and-namespacing">Rationale: identity and namespacing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#future-work">Future work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-questions">Open questions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#migration">Migration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-plan">Implementation plan</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-plan">Documentation plan</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="design-chartbook-toml-format-v2">
+<h1>Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2<a class="headerlink" href="#design-chartbook-toml-format-v2" title="Link to this heading">#</a></h1>
+<div class="note admonition">
+<p class="admonition-title">Status</p>
+<p><strong>Accepted</strong> — designed 2026-07-20. This document is both the specification for
+the v2 format and the permanent record of why it looks the way it does.
+Implementation status is tracked in the <a class="reference internal" href="#implementation-plan">Implementation plan</a>
+section at the bottom.</p>
+</div>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">#</a></h2>
+<p>Format v2 collapses the three v1 metadata sections — <code class="docutils literal notranslate"><span class="pre">[config]</span></code>, <code class="docutils literal notranslate"><span class="pre">[site]</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">[pipeline]</span></code> — into a single <code class="docutils literal notranslate"><span class="pre">[project]</span></code> table, makes every field optional with
+sensible defaults, removes <code class="docutils literal notranslate"><span class="pre">chartbook_format_version</span></code>, infers the project type
+from file structure, introduces scoped pipeline identities (<code class="docutils literal notranslate"><span class="pre">scope/name</span></code>), and
+moves required-field policy out of the format and into the catalog. The
+<code class="docutils literal notranslate"><span class="pre">[charts]</span></code>, <code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code>, <code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code>, and <code class="docutils literal notranslate"><span class="pre">[notes]</span></code> sections keep their
+structure but their field names are de-prefixed in the same break (see
+<a class="reference internal" href="#entity-sections-field-renames">Entity sections</a>) so files are migrated once.</p>
+<p>v1 files are <strong>not</strong> supported by the v2 loader. A one-shot migration script
+rewrites them; see <a class="reference internal" href="#migration">Migration</a>.</p>
+</section>
+<section id="motivation">
+<h2>Motivation<a class="headerlink" href="#motivation" title="Link to this heading">#</a></h2>
+<p>The v1 format split project metadata across three sections. A survey of every
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> in the wild (19 ftsfr pipeline repos, their catalog, the
+cookiecutter template, and the bundled examples) showed the split never carried
+its weight:</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">[config]</span></code> held exactly two keys</strong> (<code class="docutils literal notranslate"><span class="pre">type</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook_format_version</span></code>) in
+every file ever written. A two-key section named “config” inside a
+configuration file is pure ceremony.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">[site]</span></code> and <code class="docutils literal notranslate"><span class="pre">[pipeline]</span></code> overlapped in practice.</strong> In all 19 ftsfr repos,
+<code class="docutils literal notranslate"><span class="pre">site.title</span></code> was byte-identical to <code class="docutils literal notranslate"><span class="pre">pipeline.pipeline_name</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">site.author</span></code> named the same person as <code class="docutils literal notranslate"><span class="pre">pipeline.lead_pipeline_developer</span></code>.
+<code class="docutils literal notranslate"><span class="pre">logo_path</span></code> and <code class="docutils literal notranslate"><span class="pre">favicon_path</span></code> were empty strings in 18 of 19 files.</p></li>
+<li><p><strong>The split hid field-name drift.</strong> Because unknown keys were never
+validated, <code class="docutils literal notranslate"><span class="pre">[pipeline]</span></code> existed in four incompatible dialects
+simultaneously: the code expected <code class="docutils literal notranslate"><span class="pre">os_compatibility</span></code>/<code class="docutils literal notranslate"><span class="pre">build_commands</span></code>, all
+19 ftsfr repos wrote <code class="docutils literal notranslate"><span class="pre">runs_on</span></code>, and the docs and cookiecutter template used
+<code class="docutils literal notranslate"><span class="pre">runs_on_grid_or_windows_or_other</span></code>/<code class="docutils literal notranslate"><span class="pre">software_modules_command</span></code>. The repos’
+metadata was silently dead — never rendered — while diagnostics reported the
+same information as missing.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">chartbook_format_version</span></code> never worked.</strong> The check compared <em>minor</em>
+versions, a no-op while everything is 0.0.x — files stamped <code class="docutils literal notranslate"><span class="pre">0.0.2</span></code> passed
+against package 0.0.21 — and it would have rejected every existing file the
+day the package released 0.1.0.</p></li>
+<li><p><strong>Two competing identity systems.</strong> <code class="docutils literal notranslate"><span class="pre">pipeline.id</span></code> was used by standalone
+builds, while <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">add</span></code> generated the catalog key from the directory
+name and ignored <code class="docutils literal notranslate"><span class="pre">pipeline.id</span></code> entirely. <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=...)</span></code> used the
+catalog key.</p></li>
+<li><p><strong>A stray top-level key.</strong> <code class="docutils literal notranslate"><span class="pre">webpage_URL</span></code> was read from the manifest root,
+outside any section.</p></li>
+</ul>
+</section>
+<section id="design-principles">
+<h2>Design principles<a class="headerlink" href="#design-principles" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p><strong>One table for project metadata; sections only for collections.</strong> Sections
+earn their existence by holding many entries (<code class="docutils literal notranslate"><span class="pre">[charts.*]</span></code>,
+<code class="docutils literal notranslate"><span class="pre">[dataframes.*]</span></code>), not by categorizing a handful of scalars.</p></li>
+<li><p><strong>Everything optional, with sensible defaults.</strong> The format defines what
+fields <em>mean</em>; it does not decide what is <em>required</em>. Requiredness is
+policy, and policy belongs to the catalog that aggregates your work (see
+<a class="reference internal" href="#catalog-policy">Catalog policy</a>). The minimal valid pipeline
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> is an empty file — its presence alone marks a directory as
+a chartbook pipeline.</p></li>
+<li><p><strong>Infer what can be inferred; error loudly on ambiguity.</strong> Project type and
+pipeline identity are derivable from structure (the <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> table,
+the git remote, the directory name). When signals conflict, chartbook
+raises an error asking the user to be explicit rather than guessing.</p></li>
+<li><p><strong>Identity is not location.</strong> Pipelines are identified by scoped names, not
+URLs. URLs are accepted as <em>input</em> and normalized. See
+<a class="reference internal" href="#rationale-identity-and-namespacing">Rationale</a> for why.</p></li>
+<li><p><strong>Batch format breaks.</strong> ChartBook is currently a personal project with no
+backward-compatibility obligations. Rather than maintain a dual-format
+loader, v2 makes all pending breaking changes at once and migrates every
+known file with a one-shot script.</p></li>
+</ol>
+</section>
+<section id="specification">
+<h2>Specification<a class="headerlink" href="#specification" title="Link to this heading">#</a></h2>
+<section id="the-project-table">
+<h3>The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> table<a class="headerlink" href="#the-project-table" title="Link to this heading">#</a></h3>
+<p>All keys are optional. Types and defaults:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Replaces (v1)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">type</span></code></p></td>
+<td><p>string: <code class="docutils literal notranslate"><span class="pre">&quot;pipeline&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;catalog&quot;</span></code></p></td>
+<td><p>inferred, see <a class="reference internal" href="#project-type-inference">Type inference</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">config.type</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">id</span></code></p></td>
+<td><p>string: <code class="docutils literal notranslate"><span class="pre">scope/name</span></code> or bare <code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>derived, see <a class="reference internal" href="#pipeline-identity-and-namespacing">Identity</a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pipeline.id</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>string</p></td>
+<td><p>directory name</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">site.title</span></code> <strong>and</strong> <code class="docutils literal notranslate"><span class="pre">pipeline.pipeline_name</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">description</span></code></p></td>
+<td><p>string</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pipeline.pipeline_description</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">maintainer</span></code></p></td>
+<td><p>string</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pipeline.lead_pipeline_developer</span></code> and <code class="docutils literal notranslate"><span class="pre">site.author</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">contributors</span></code></p></td>
+<td><p>array of strings</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[]</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pipeline.contributors</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">repo_url</span></code></p></td>
+<td><p>string</p></td>
+<td><p>git remote <code class="docutils literal notranslate"><span class="pre">origin</span></code> if available, else <code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pipeline.git_repo_URL</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">site_url</span></code></p></td>
+<td><p>string</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">file://</span></code> path to local built docs</p></td>
+<td><p>top-level <code class="docutils literal notranslate"><span class="pre">webpage_URL</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">readme</span></code></p></td>
+<td><p>string (path)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;./README.md&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pipeline.README_file_path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">copyright</span></code></p></td>
+<td><p>string</p></td>
+<td><p>current year</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">site.copyright</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">logo</span></code></p></td>
+<td><p>string (path)</p></td>
+<td><p>bundled default asset</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">site.logo_path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">favicon</span></code></p></td>
+<td><p>string (path)</p></td>
+<td><p>bundled default asset</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">site.favicon_path</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">os_compatibility</span></code></p></td>
+<td><p>array of strings</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[]</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pipeline.os_compatibility</span></code>, <code class="docutils literal notranslate"><span class="pre">runs_on</span></code>, <code class="docutils literal notranslate"><span class="pre">runs_on_grid_or_windows_or_other</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">build</span></code></p></td>
+<td><p>string (multi-line allowed)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pipeline.build_commands</span></code>, <code class="docutils literal notranslate"><span class="pre">software_modules_command</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">site_dir</span></code></p></td>
+<td><p>string (path)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;./docs_src/site/&quot;</span></code> when that directory exists, else disabled</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pipeline.site_dir</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">enable_data_download</span></code></p></td>
+<td><p>bool</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">site.enable_data_download</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Notes:</p>
+<ul class="simple">
+<li><p>There is no separate <code class="docutils literal notranslate"><span class="pre">author</span></code> key. The Sphinx <code class="docutils literal notranslate"><span class="pre">author</span></code> renders from
+<code class="docutils literal notranslate"><span class="pre">maintainer</span></code> (falling back to the first entry of <code class="docutils literal notranslate"><span class="pre">contributors</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code> doubles as the site title and the human-readable pipeline name; the
+v1 survey showed these were always the same value.</p></li>
+<li><p>Unknown keys in <code class="docutils literal notranslate"><span class="pre">[project]</span></code> produce a <strong>warning</strong> naming the key and the
+closest known key. This is what prevents the <code class="docutils literal notranslate"><span class="pre">runs_on</span></code>-style dialect drift
+from recurring.</p></li>
+</ul>
+<p>A fully populated pipeline file:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;CRSP Treasury&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Treasury Securities Data from CRSP&quot;</span>
+<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Jeremy Bejarano&quot;</span>
+<span class="n">contributors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Jeremy Bejarano&quot;</span><span class="p">]</span>
+<span class="n">repo_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://github.com/ftsfr/crsp_treasury&quot;</span>
+<span class="n">os_compatibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Windows&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Linux&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;macOS&quot;</span><span class="p">]</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">doit</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="k">[charts.treasury_returns_replication]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Treasury Bond Portfolio Returns&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Treasury bond portfolio returns from CRSP data&quot;</span>
+<span class="n">dataframe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ftsfr_treas_bond_portfolio_returns&quot;</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;treasury&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;bonds&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;returns&quot;</span><span class="p">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/treasury_returns_replication.html&quot;</span>
+<span class="n">docs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">## Treasury Bond Portfolio Returns</span>
+<span class="s2">Monthly Treasury bond returns from CRSP, grouped by maturity bucket.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="k">[dataframes.ftsfr_treas_bond_portfolio_returns]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Treasury Bond Portfolio Returns&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Treasury bond portfolio returns grouped by maturity buckets&quot;</span>
+<span class="n">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;CRSP Treasury Database&quot;</span><span class="p">]</span>
+<span class="n">providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;WRDS&quot;</span><span class="p">]</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;treasury&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;bonds&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;returns&quot;</span><span class="p">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/ftsfr_treas_bond_portfolio_returns.parquet&quot;</span>
+<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ds&quot;</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/dataframes/ftsfr_treas_bond_portfolio_returns.md&quot;</span>
+</pre></div>
+</div>
+<p>A minimal one — this is a complete, valid pipeline manifest:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;CRSP Treasury&quot;</span>
+</pre></div>
+</div>
+<p>as is an empty file.</p>
+</section>
+<section id="project-type-inference">
+<h3>Project type inference<a class="headerlink" href="#project-type-inference" title="Link to this heading">#</a></h3>
+<p>Once <code class="docutils literal notranslate"><span class="pre">[pipeline]</span></code> merges into <code class="docutils literal notranslate"><span class="pre">[project]</span></code>, the only structural signal left is
+the <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> registry table, which makes inference unambiguous:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">type</span></code> key</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> present</p></th>
+<th class="head"><p>pipeline-only sections present¹</p></th>
+<th class="head"><p>Result</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>absent</p></td>
+<td><p>no</p></td>
+<td><p>any</p></td>
+<td><p><strong>pipeline</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p>absent</p></td>
+<td><p>yes</p></td>
+<td><p>no</p></td>
+<td><p><strong>catalog</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>absent</p></td>
+<td><p>yes</p></td>
+<td><p>yes</p></td>
+<td><p><strong>error</strong> — ambiguous, set <code class="docutils literal notranslate"><span class="pre">type</span></code> explicitly</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;pipeline&quot;</span></code></p></td>
+<td><p>yes</p></td>
+<td><p>—</p></td>
+<td><p><strong>error</strong> — contradiction</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">&quot;catalog&quot;</span></code></p></td>
+<td><p>—</p></td>
+<td><p>yes</p></td>
+<td><p><strong>error</strong> — contradiction</p></td>
+</tr>
+<tr class="row-odd"><td><p>explicit, consistent</p></td>
+<td><p></p></td>
+<td><p></p></td>
+<td><p>as stated</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>¹ <code class="docutils literal notranslate"><span class="pre">[charts]</span></code>, <code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code>, <code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code>, <code class="docutils literal notranslate"><span class="pre">[notes]</span></code> (non-empty).</p>
+<p>The type is resolved <strong>once</strong>, at load time in <code class="docutils literal notranslate"><span class="pre">load_manifest()</span></code>, and stamped
+into the internal manifest. All consumers (<code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">add</span></code> validation,
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code>, the docs builder) read the resolved type; nothing
+re-inspects the raw file.</p>
+</section>
+<section id="pipeline-identity-and-namespacing">
+<h3>Pipeline identity and namespacing<a class="headerlink" href="#pipeline-identity-and-namespacing" title="Link to this heading">#</a></h3>
+<p><strong>Canonical identity is a scoped name</strong>: <code class="docutils literal notranslate"><span class="pre">scope/name</span></code>, e.g.
+<code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury</span></code>. Each component matches <code class="docutils literal notranslate"><span class="pre">[A-Za-z0-9._-]+</span></code>; lowercase is
+recommended. The scope is by convention the hosting org/user (GitHub org),
+but it is just a namespace string — nothing enforces the convention. A bare
+unscoped <code class="docutils literal notranslate"><span class="pre">name</span></code> is also legal for local-only projects.</p>
+<p><strong>Derivation precedence</strong> (highest first):</p>
+<ol class="arabic simple">
+<li><p>Explicit <code class="docutils literal notranslate"><span class="pre">id</span></code> in <code class="docutils literal notranslate"><span class="pre">[project]</span></code>.</p></li>
+<li><p>Derived: scope from the repo’s git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote (or <code class="docutils literal notranslate"><span class="pre">repo_url</span></code>), name
+from the directory name.</p></li>
+<li><p>Bare fallback: the directory name, unscoped.</p></li>
+</ol>
+<p>In practice this means all existing ftsfr repos get correct scoped IDs with
+zero configuration.</p>
+<p><strong>Resolution</strong> for <code class="docutils literal notranslate"><span class="pre">data.load(pipeline=...)</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code>, and friends,
+from most convenient to most explicit:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                          <span class="c1"># bare name</span>
+<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;ftsfr/crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                    <span class="c1"># canonical</span>
+<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;https://github.com/ftsfr/crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="c1"># URL, normalized</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>A <strong>scoped name</strong> matches its catalog key exactly.</p></li>
+<li><p>A <strong>bare name</strong> matches any catalog entry whose name component equals it. If
+exactly one entry matches, it resolves; if several do, chartbook errors and
+lists the candidates (<code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury</span></code>, <code class="docutils literal notranslate"><span class="pre">other/crsp_treasury</span></code>) so the
+caller can qualify. Bare lookup keeps today’s ergonomics — you never type a
+scope you don’t need.</p></li>
+<li><p>A <strong>URL</strong> is normalized to a scoped name: strip scheme and host, strip a
+trailing <code class="docutils literal notranslate"><span class="pre">.git</span></code>, take the last two path segments. URLs are never stored as
+identity.</p></li>
+</ul>
+<p><strong>Version pinning syntax is reserved, not implemented</strong>: <code class="docutils literal notranslate"><span class="pre">scope/name&#64;rev</span></code>
+(e.g. <code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury&#64;a1b2c3d</span></code>). The parser recognizes and rejects it
+with a “not yet supported” error, so the grammar is claimed before the
+<a class="reference internal" href="#future-work">dependencies feature</a> needs it.</p>
+</section>
+<section id="catalog-registry-pipelines">
+<h3>Catalog registry: <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code><a class="headerlink" href="#catalog-registry-pipelines" title="Link to this heading">#</a></h3>
+<p>Catalog keys are canonical pipeline IDs. TOML requires quoting keys containing
+<code class="docutils literal notranslate"><span class="pre">/</span></code>:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;FTSFR Catalog&quot;</span>
+
+<span class="k">[pipelines.</span><span class="s2">&quot;ftsfr/crsp_treasury&quot;</span><span class="k">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;../crsp_treasury&quot;</span>
+
+<span class="k">[pipelines.</span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="k">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;../fed_yield_curve&quot;</span>
+<span class="n">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                    </span><span class="c1"># temporarily excluded from builds</span>
+
+<span class="k">[pipelines.</span><span class="s2">&quot;finm33200/news_headlines&quot;</span><span class="k">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">unix</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;/Users/jbejarano/GitRepositories/finm33200/news_headlines&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">windows</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;T:/finm33200/news_headlines&quot;</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Entry keys: <code class="docutils literal notranslate"><span class="pre">path</span></code> (string, or a <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">unix</span> <span class="pre">=</span> <span class="pre">...,</span> <span class="pre">windows</span> <span class="pre">=</span> <span class="pre">...</span> <span class="pre">}</span></code> table for
+platform-specific locations — renamed from v1 <code class="docutils literal notranslate"><span class="pre">path_to_pipeline</span></code> with
+capitalized <code class="docutils literal notranslate"><span class="pre">Unix</span></code>/<code class="docutils literal notranslate"><span class="pre">Windows</span></code> keys) and <code class="docutils literal notranslate"><span class="pre">disabled</span></code> (bool, default false). A
+plain string value is shorthand for <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">path</span> <span class="pre">=</span> <span class="pre">...</span> <span class="pre">}</span></code>:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[pipelines]</span>
+<span class="s2">&quot;ftsfr/crsp_treasury&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;../crsp_treasury&quot;</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span> <span class="pre">&lt;dir&gt;</span></code> reads the target’s git remote and writes the
+scoped key automatically, falling back to the bare directory name.</p>
+</section>
+<section id="catalog-auto-discovery-members">
+<h3>Catalog auto-discovery: <code class="docutils literal notranslate"><span class="pre">members</span></code><a class="headerlink" href="#catalog-auto-discovery-members" title="Link to this heading">#</a></h3>
+<p><em>(Addendum, 2026-07-21.)</em> For a <strong>local</strong> catalog, membership can be
+declared as path patterns instead of one entry per pipeline, so new projects
+join automatically. Publishing to a shared/public catalog remains an
+explicit act — this mechanism deliberately targets the personal catalog,
+which is why implicit membership and filesystem-dependent loading are
+features here rather than liabilities.</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[pipelines]</span>
+<span class="n">members</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;../GitRepositories/ftsfr_repos/*&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;../GitRepositories/finm33200/news_headlines&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;../GitRepositories/ftsfr_repos/scratch_*&quot;</span><span class="p">]</span>
+<span class="n">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/sovereign_bonds&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">members</span></code>, <code class="docutils literal notranslate"><span class="pre">exclude</span></code>, and <code class="docutils literal notranslate"><span class="pre">disabled</span></code> are reserved keys inside <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code>
+(a pipeline cannot use them as a bare ID); explicit entries coexist freely
+with them. Semantics:</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">members</span></code></strong> — path patterns, glob or literal, resolved relative to the
+catalog directory. Each matched directory holding a v2 pipeline
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> joins the catalog under its <em>derived</em> scoped ID (the
+pipeline’s own explicit <code class="docutils literal notranslate"><span class="pre">id</span></code> wins, then git remote + dirname). A plain
+path is just a glob that matches one thing.</p></li>
+<li><p><strong>Glob matches are forgiving</strong>: directories without a <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>
+and catalog-type manifests are silently skipped (dropping a stray
+checkout next to your pipelines must not break the catalog). The catalog
+never discovers itself.</p></li>
+<li><p><strong>Literal (non-glob) member paths are strict</strong>: a missing directory,
+missing manifest, or catalog-type target is a hard error — you named it,
+so it being broken is news.</p></li>
+<li><p><strong>v1-format members are always a hard error</strong>, glob or not, with the
+migration command in the message — silently skipping a real pipeline
+would be a mystery; erroring with the fix is not.</p></li>
+<li><p><strong>ID collisions are hard errors</strong>: two members deriving the same ID, or a
+member colliding with an explicit entry that points elsewhere, abort the
+load listing both paths and the fixes (set an explicit <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">id</span></code> in
+one repo, or <code class="docutils literal notranslate"><span class="pre">exclude</span></code> one path). An explicit entry pointing at the
+<em>same</em> directory a member matched simply wins (that’s the rename/override
+mechanism).</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">disabled</span></code></strong> — a list of pipeline IDs, complementing the per-entry
+<code class="docutils literal notranslate"><span class="pre">disabled</span> <span class="pre">=</span> <span class="pre">true</span></code> flag; member-discovered pipelines have no entry to
+flag, so the list is how they’re switched off. Unknown IDs warn with a
+did-you-mean suggestion. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">disable/enable</span></code> edits the
+flag for explicit entries and the list for member-discovered ones.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">exclude</span></code></strong> — path patterns removed from member matching before any of
+the above; excluding a nonexistent path is harmless.</p></li>
+<li><p>All such errors are formatted with a “To fix, do one of:” section listing
+concrete commands/edits, and the CLI surfaces them as clean messages, not
+tracebacks.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span></code> on a path already covered by a members pattern
+reports the coverage instead of writing a redundant explicit entry.</p>
+</section>
+<section id="catalog-policy">
+<h3>Catalog policy<a class="headerlink" href="#catalog-policy" title="Link to this heading">#</a></h3>
+<p>The format is permissive; <strong>requiredness is catalog policy</strong>. A catalog may
+declare which fields its member pipelines must fill in:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[policy]</span>
+<span class="n">mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;warn&quot;</span><span class="w">          </span><span class="c1"># &quot;warn&quot; (default): report in diagnostics page</span>
+<span class="w">                       </span><span class="c1"># &quot;strict&quot;: fail the catalog build</span>
+
+<span class="k">[policy.required]</span>
+<span class="n">project</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;maintainer&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;repo_url&quot;</span><span class="p">]</span>
+<span class="n">dataframes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;date_col&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pull_method&quot;</span><span class="p">]</span>
+<span class="n">charts</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;frequency&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>With no <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> section, the hardcoded recommended-field lists that
+previously lived in <code class="docutils literal notranslate"><span class="pre">diagnostics.py</span></code> serve as the default <em>warn-only</em>
+policy, so the diagnostics page keeps working as before.</p></li>
+<li><p>Policy is enforced only when the <strong>catalog</strong> builds. A pipeline built
+standalone is always permissive.</p></li>
+<li><p>This separates schema (what fields mean — owned by chartbook) from policy
+(what is required — owned by whoever aggregates your work), the same split
+linters use.</p></li>
+</ul>
+</section>
+<section id="build-commands">
+<h3>Build commands<a class="headerlink" href="#build-commands" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">build</span></code> is a single string with <strong>shell-script semantics</strong>: a multi-line value
+is one script, so state carries across lines —</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">module load anaconda3/2024.02</span>
+<span class="s2">conda activate ftsfr</span>
+<span class="s2">doit</span>
+<span class="s2">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+<p>This is deliberately <em>not</em> an array of independent commands: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span></code>
+on line 1 must affect line 3, and an array invites the wrong mental model of
+each element running in a fresh shell. Today the field is documentation-only
+(rendered as a code block on the pipeline page); choosing script semantics now
+means a future <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> can execute the value as-is with no format
+change. If variants are ever needed (setup vs. build, per-OS commands), the
+natural extension is a <code class="docutils literal notranslate"><span class="pre">[project.build]</span></code> table with named keys — deferred
+until actually needed.</p>
+</section>
+<section id="custom-site-pages-site-dir">
+<h3>Custom site pages: <code class="docutils literal notranslate"><span class="pre">site_dir</span></code><a class="headerlink" href="#custom-site-pages-site-dir" title="Link to this heading">#</a></h3>
+<p>Unchanged semantics, new default. <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> is the <em>markdown source</em>
+directory for custom pages merged into the generated site (the built HTML
+output remains <code class="docutils literal notranslate"><span class="pre">./docs/</span></code>). It now defaults to <code class="docutils literal notranslate"><span class="pre">./docs_src/site/</span></code>,
+auto-enabled when that directory exists.</p>
+<p>The default is deliberately <strong>not</strong> <code class="docutils literal notranslate"><span class="pre">./docs_src/</span></code> itself: that directory also
+holds <code class="docutils literal notranslate"><span class="pre">chart_docs_path</span></code>/<code class="docutils literal notranslate"><span class="pre">dataframe_docs_path</span></code> fragments
+(<code class="docutils literal notranslate"><span class="pre">docs_src/charts/*.md</span></code>, <code class="docutils literal notranslate"><span class="pre">docs_src/dataframes/*.md</span></code>), and since <code class="docutils literal notranslate"><span class="pre">site_dir</span></code>
+copies everything recursively and auto-discovers every <code class="docutils literal notranslate"><span class="pre">.md</span></code>, a <code class="docutils literal notranslate"><span class="pre">docs_src/</span></code>
+default would publish each fragment twice — once embedded in its generated
+chart/dataframe page and again as an orphan standalone page. Convention:
+fragments live in <code class="docutils literal notranslate"><span class="pre">docs_src/charts/</span></code> and <code class="docutils literal notranslate"><span class="pre">docs_src/dataframes/</span></code>; site pages
+live in <code class="docutils literal notranslate"><span class="pre">docs_src/site/</span></code>.</p>
+</section>
+<section id="removed-chartbook-format-version">
+<h3>Removed: <code class="docutils literal notranslate"><span class="pre">chartbook_format_version</span></code><a class="headerlink" href="#removed-chartbook-format-version" title="Link to this heading">#</a></h3>
+<p>Deleted with no replacement, which is safe because “absent” is
+well-defined: a file without a version key <strong>is</strong> a v2 file (v1 files are
+detected structurally by the presence of <code class="docutils literal notranslate"><span class="pre">[config]</span></code> and rejected with a
+pointer to the migration script). If the format ever breaks again, a
+<code class="docutils literal notranslate"><span class="pre">format_version</span></code> key gets reintroduced <em>at that point</em>, with absence defined
+to mean v2 — the standard pattern for tools that add versioning late. A
+version field is cheap insurance for a tool with thousands of external users;
+for a format whose every instance can be migrated in one afternoon, it is
+dead weight. The v1 implementation also never actually protected anything:
+it compared minor versions, a no-op at 0.0.x.</p>
+</section>
+<section id="entity-sections-field-renames">
+<h3>Entity sections: field renames<a class="headerlink" href="#entity-sections-field-renames" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">[charts.*]</span></code>, <code class="docutils literal notranslate"><span class="pre">[dataframes.*]</span></code>, <code class="docutils literal notranslate"><span class="pre">[notebooks.*]</span></code>, and <code class="docutils literal notranslate"><span class="pre">[notes.*]</span></code> keep their
+structure, but field names are de-prefixed — the same section-redundancy fix
+applied to <code class="docutils literal notranslate"><span class="pre">[project]</span></code>. Three conventions govern the new names:</p>
+<ol class="arabic simple">
+<li><p><strong>The section provides the context.</strong> Inside <code class="docutils literal notranslate"><span class="pre">[charts.gdp]</span></code>, <code class="docutils literal notranslate"><span class="pre">chart_name</span></code>
+says “chart” twice; it is just <code class="docutils literal notranslate"><span class="pre">name</span></code>. Likewise <code class="docutils literal notranslate"><span class="pre">description</span></code>, <code class="docutils literal notranslate"><span class="pre">tags</span></code>,
+<code class="docutils literal notranslate"><span class="pre">docs</span></code> everywhere.</p></li>
+<li><p><strong>Every entity’s primary artifact is <code class="docutils literal notranslate"><span class="pre">path</span></code>.</strong> Chart → its HTML file,
+dataframe → its parquet file (what <code class="docutils literal notranslate"><span class="pre">data.load</span></code> reads), notebook → its
+<code class="docutils literal notranslate"><span class="pre">.ipynb</span></code>, note → its markdown file. Secondary artifacts get a
+<code class="docutils literal notranslate"><span class="pre">&lt;kind&gt;_path</span></code> name (<code class="docutils literal notranslate"><span class="pre">excel_path</span></code>).</p></li>
+<li><p><strong>The docs pair is <code class="docutils literal notranslate"><span class="pre">docs</span></code> / <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>.</strong> <code class="docutils literal notranslate"><span class="pre">docs</span></code> holds inline markdown,
+<code class="docutils literal notranslate"><span class="pre">docs_path</span></code> references a file; exactly one is required, same rule as v1.</p></li>
+</ol>
+<p>Renames that apply to more than one section: <code class="docutils literal notranslate"><span class="pre">topic_tags</span></code> → <code class="docutils literal notranslate"><span class="pre">tags</span></code>,
+<code class="docutils literal notranslate"><span class="pre">*_docs_str</span></code> → <code class="docutils literal notranslate"><span class="pre">docs</span></code>, <code class="docutils literal notranslate"><span class="pre">*_docs_path</span></code> → <code class="docutils literal notranslate"><span class="pre">docs_path</span></code>.</p>
+<p><strong>Charts</strong> (<code class="docutils literal notranslate"><span class="pre">[charts.*]</span></code>):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>v1</p></th>
+<th class="head"><p>v2</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chart_name</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">short_description_chart</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">description</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dataframe_id</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dataframe</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">topic_tags</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">tags</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data_frequency</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">frequency</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lag_in_data_release</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">release_lag</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data_release_timing</span></code> (drift variant <code class="docutils literal notranslate"><span class="pre">data_release_dates</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">release_timing</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data_series</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">series</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data_series_start_date</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">start_date</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">past_publications</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">publications</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">path_to_html_chart</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">path_to_excel_chart</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">excel_path</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chart_docs_path</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">docs_path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chart_docs_str</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">docs</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Unchanged: <code class="docutils literal notranslate"><span class="pre">units</span></code>, <code class="docutils literal notranslate"><span class="pre">mnemonic</span></code>, <code class="docutils literal notranslate"><span class="pre">observation_period</span></code>, <code class="docutils literal notranslate"><span class="pre">seasonal_adjustment</span></code>,
+and the governance trio <code class="docutils literal notranslate"><span class="pre">date_cleared_by_iv_and_v</span></code>,
+<code class="docutils literal notranslate"><span class="pre">last_legal_clearance_date</span></code>, <code class="docutils literal notranslate"><span class="pre">last_cleared_by</span></code> (domain vocabulary with no
+redundancy to remove).</p>
+<p><strong>Dataframes</strong> (<code class="docutils literal notranslate"><span class="pre">[dataframes.*]</span></code>):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>v1</p></th>
+<th class="head"><p>v2</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dataframe_name</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">short_description_df</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">description</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">topic_tags</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">tags</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data_sources</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sources</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data_providers</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">providers</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">links_to_data_providers</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">provider_links</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">type_of_data_access</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">access_types</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">need_to_contact_provider</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">contact_required</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">data_on_pre_approved_list</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pre_approved</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data_license</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">license</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">license_expiration_date</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">license_expiration</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">provider_contact_info</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">provider_contact</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">restriction_on_use</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">restrictions</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">how_is_pulled</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pull_method</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">path_to_parquet_data</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">path_to_excel_data</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">excel_path</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dataframe_docs_path</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">docs_path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dataframe_docs_str</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">docs</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Unchanged: <code class="docutils literal notranslate"><span class="pre">date_col</span></code>.</p>
+<p><strong>Notebooks</strong> (<code class="docutils literal notranslate"><span class="pre">[notebooks.*]</span></code>):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>v1</p></th>
+<th class="head"><p>v2</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">notebook_name</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">notebook_description</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">description</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">notebook_path</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">is_publishable</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">publishable</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Notes</strong> (<code class="docutils literal notranslate"><span class="pre">[notes.*]</span></code>):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>v1</p></th>
+<th class="head"><p>v2</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">path_to_markdown_file</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">path</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Semantics are untouched — these are mechanical renames only, applied by the
+same migration script pass as the section consolidation.</p>
+</section>
+</section>
+<section id="rationale-identity-and-namespacing">
+<h2>Rationale: identity and namespacing<a class="headerlink" href="#rationale-identity-and-namespacing" title="Link to this heading">#</a></h2>
+<p><em>(Preserved deliberately — this is the reasoning behind the <code class="docutils literal notranslate"><span class="pre">scope/name</span></code>
+decision, recorded so future changes can be weighed against it.)</em></p>
+<p>The long-term vision is a global pipeline catalog — PyPI/npm/JSR, but for
+data pipelines. That raises the question of what a pipeline’s identity
+<em>is</em>. The design space has been thoroughly explored by package ecosystems:</p>
+<ul class="simple">
+<li><p><strong>Deno ran the URL experiment.</strong> It launched with raw URLs as package
+identity (<code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">from</span> <span class="pre">&quot;https://deno.land/x/...&quot;</span></code>) and spent years walking
+it back to JSR’s <code class="docutils literal notranslate"><span class="pre">&#64;scope/name</span></code>, because URLs make poor identities: repos
+get renamed, orgs restructure, hosting moves, and every such event breaks
+every reference.</p></li>
+<li><p><strong>Go modules chose location-as-identity</strong> (<code class="docutils literal notranslate"><span class="pre">github.com/user/repo</span></code>) and pay
+for it with permanent coupling to the hosting path plus vanity-URL
+machinery to escape it.</p></li>
+<li><p><strong>Docker’s model aged best</strong>: a short name (<code class="docutils literal notranslate"><span class="pre">ubuntu</span></code>), an optional
+namespace (<code class="docutils literal notranslate"><span class="pre">library/ubuntu</span></code>), an optional registry prefix, and well-defined
+resolution from short to fully qualified. Users type the short thing; the
+system stores the canonical thing.</p></li>
+</ul>
+<p>ChartBook follows the Docker/JSR shape: <strong>scoped names are canonical, URLs
+are accepted as input and normalized, bare names resolve against the local
+catalog when unambiguous.</strong> Consequences of this choice:</p>
+<ul class="simple">
+<li><p><strong>Identity survives hosting changes.</strong> <code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury</span></code> stays valid if
+the repo moves hosts; only the location mapping (catalog entry or future
+registry record) updates.</p></li>
+<li><p><strong>The host is deliberately not part of the ID.</strong> Go-style
+<code class="docutils literal notranslate"><span class="pre">github.com/ftsfr/...</span></code> would buy registry independence at the cost of
+welding identity to hosting — the exact trap. If host disambiguation is
+ever needed, an <em>optional</em> registry prefix can be added later,
+Docker-style, without breaking existing IDs.</p></li>
+<li><p><strong>The local catalog is already the right indirection layer.</strong> It maps
+ID → path today; a future registry maps ID → repo URL. The catalog then
+acts like a lockfile of installed pipelines, and
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span> <span class="pre">ftsfr/crsp_treasury</span></code> (no path) can someday fetch.
+Scope ownership/squatting is a registry problem to solve <em>when</em> a registry
+exists; locally, the catalog is the authority, so conflicts are impossible
+until then.</p></li>
+<li><p><strong>Ambiguity is an error, not a guess.</strong> Bare-name resolution failing loudly
+when two scopes share a name matches the format’s general
+infer-or-error principle.</p></li>
+</ul>
+<p>The cost of adopting this now is near zero — a string grammar and a
+three-step lookup — which is what makes it the future-proof choice: nothing
+about the format changes when the registry, version pinning, or cross-pipeline
+dependencies arrive.</p>
+</section>
+<section id="future-work">
+<h2>Future work<a class="headerlink" href="#future-work" title="Link to this heading">#</a></h2>
+<p>Kept on the table, explicitly out of scope for v2:</p>
+<ul>
+<li><p><strong>Cross-pipeline dependencies</strong> — a <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> for pipelines,
+pinned by commit:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dependencies]</span>
+<span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">rev</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;a1b2c3d&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="s2">&quot;ftsfr/crsp_treasury&quot;</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">path</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;../crsp_treasury&quot;</span><span class="w"> </span><span class="p">}</span><span class="w">   </span><span class="c1"># local, unpinned</span>
+</pre></div>
+</div>
+<p>The v2 identity work exists partly to serve this: dependency declarations,
+<code class="docutils literal notranslate"><span class="pre">data.load</span></code>, and catalog keys all share one naming scheme, and the
+catalog’s <code class="docutils literal notranslate"><span class="pre">path</span></code> entries are structurally path-dependencies already, so
+registration and dependency resolution can converge on one mechanism.</p>
+</li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code></strong> — executing the <code class="docutils literal notranslate"><span class="pre">build</span></code> field (needed the moment
+dependencies exist, so a dependency pipeline can be built automatically).
+The script semantics of <code class="docutils literal notranslate"><span class="pre">build</span></code> were chosen so this needs no format change.</p></li>
+<li><p><strong>A global registry</strong> mapping <code class="docutils literal notranslate"><span class="pre">scope/name</span></code> → repo URL + metadata.</p></li>
+</ul>
+</section>
+<section id="open-questions">
+<h2>Open questions<a class="headerlink" href="#open-questions" title="Link to this heading">#</a></h2>
+<p><em>(none — the entity field de-prefixing question was resolved in favor of
+batching the renames into this break; the approved list is in
+<a class="reference internal" href="#entity-sections-field-renames">Entity sections</a>.)</em></p>
+</section>
+<section id="migration">
+<h2>Migration<a class="headerlink" href="#migration" title="Link to this heading">#</a></h2>
+<p>No backward compatibility. The v2 loader detects v1 files (presence of
+<code class="docutils literal notranslate"><span class="pre">[config]</span></code>) and fails with a message pointing at the migration script.</p>
+<p>A one-shot script (<code class="docutils literal notranslate"><span class="pre">scripts/migrate_toml_v2.py</span></code>, deleted after use) rewrites
+v1 → v2 mechanically:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>v1</p></th>
+<th class="head"><p>v2</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[config]</span> <span class="pre">type</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">type</span></code> (then usually dropped as inferable)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[config]</span> <span class="pre">chartbook_format_version</span></code></p></td>
+<td><p>removed</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[site]</span> <span class="pre">title</span></code> + <code class="docutils literal notranslate"><span class="pre">[pipeline]</span> <span class="pre">pipeline_name</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">name</span></code> (nearly always identical; on mismatch the script warns and prefers <code class="docutils literal notranslate"><span class="pre">pipeline_name</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[site]</span> <span class="pre">author</span></code>, <code class="docutils literal notranslate"><span class="pre">[pipeline]</span> <span class="pre">lead_pipeline_developer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">maintainer</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[site]</span> <span class="pre">copyright</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">copyright</span></code> (dropped if == current year)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[site]</span> <span class="pre">logo_path</span></code> / <code class="docutils literal notranslate"><span class="pre">favicon_path</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">logo</span></code> / <code class="docutils literal notranslate"><span class="pre">favicon</span></code> (dropped if empty)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[site]</span> <span class="pre">enable_data_download</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">enable_data_download</span></code> (dropped if false)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[pipeline]</span> <span class="pre">id</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">id</span></code>, scoped via git remote (dropped if it equals the derived value)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[pipeline]</span> <span class="pre">pipeline_description</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">description</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[pipeline]</span> <span class="pre">contributors</span></code>, <code class="docutils literal notranslate"><span class="pre">git_repo_URL</span></code>, <code class="docutils literal notranslate"><span class="pre">README_file_path</span></code>, <code class="docutils literal notranslate"><span class="pre">site_dir</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">contributors</span></code>, <code class="docutils literal notranslate"><span class="pre">repo_url</span></code>, <code class="docutils literal notranslate"><span class="pre">readme</span></code>, <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> (defaults dropped)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[pipeline]</span> <span class="pre">os_compatibility</span></code>, <code class="docutils literal notranslate"><span class="pre">runs_on</span></code>, <code class="docutils literal notranslate"><span class="pre">runs_on_grid_or_windows_or_other</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">os_compatibility</span></code> — slash-separated OS strings split into arrays; unrecognized free text kept as a single-element array</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[pipeline]</span> <span class="pre">build_commands</span></code>, <code class="docutils literal notranslate"><span class="pre">software_modules_command</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">build</span></code> (concatenated in module-command-first order)</p></td>
+</tr>
+<tr class="row-even"><td><p>top-level <code class="docutils literal notranslate"><span class="pre">webpage_URL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">site_url</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[pipelines.X]</span> <span class="pre">path_to_pipeline</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[pipelines.&quot;scope/X&quot;]</span> <span class="pre">path</span></code> (scope from the target’s git remote); <code class="docutils literal notranslate"><span class="pre">{Unix=…,</span> <span class="pre">Windows=…}</span></code> → <code class="docutils literal notranslate"><span class="pre">{unix=…,</span> <span class="pre">windows=…}</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>all <code class="docutils literal notranslate"><span class="pre">[charts.*]</span></code> / <code class="docutils literal notranslate"><span class="pre">[dataframes.*]</span></code> / <code class="docutils literal notranslate"><span class="pre">[notebooks.*]</span></code> / <code class="docutils literal notranslate"><span class="pre">[notes.*]</span></code> fields</p></td>
+<td><p>renamed per the <a class="reference internal" href="#entity-sections-field-renames">entity rename tables</a>, including drift variants (<code class="docutils literal notranslate"><span class="pre">data_release_dates</span></code> → <code class="docutils literal notranslate"><span class="pre">release_timing</span></code>)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Files to migrate: the 19 ftsfr pipeline repos + their catalog, the
+cookiecutter template (Jinja preserved), <code class="docutils literal notranslate"><span class="pre">examples/{fred_charts,yield_curve,catalog}</span></code>,
+test fixtures, <code class="docutils literal notranslate"><span class="pre">create_global_catalog()</span></code> output, and any <code class="docutils literal notranslate"><span class="pre">~/.chartbook/chartbook.toml</span></code>.
+The legacy <code class="docutils literal notranslate"><span class="pre">src/chartbook/templates/chartbook.toml</span></code> (an orphaned <code class="docutils literal notranslate"><span class="pre">[theme]</span></code>/<code class="docutils literal notranslate"><span class="pre">[site]</span></code>
+stub) is deleted.</p>
+</section>
+<section id="implementation-plan">
+<span id="id1"></span><h2>Implementation plan<a class="headerlink" href="#implementation-plan" title="Link to this heading">#</a></h2>
+<p>Ordered so each phase leaves the repo green. Internal code adopts the v2
+names throughout — no compatibility shims — since every consumer lives in
+this repo.</p>
+<p><strong>Phase 1 — Loader core</strong> (<code class="docutils literal notranslate"><span class="pre">manifest.py</span></code>, <code class="docutils literal notranslate"><span class="pre">conf_validation.py</span></code>, <code class="docutils literal notranslate"><span class="pre">errors.py</span></code>)</p>
+<ul class="simple">
+<li><p>Parse <code class="docutils literal notranslate"><span class="pre">[project]</span></code>; replace <code class="docutils literal notranslate"><span class="pre">DEFAULT_CONFIG</span></code>; type-inference table with the
+three error cases; v1 detection (<code class="docutils literal notranslate"><span class="pre">[config]</span></code> present) → friendly error.</p></li>
+<li><p>Identity derivation (explicit <code class="docutils literal notranslate"><span class="pre">id</span></code> → git remote + dirname → bare dirname);
+reserve and reject <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code>.</p></li>
+<li><p>Unknown-key warning for <code class="docutils literal notranslate"><span class="pre">[project]</span></code>.</p></li>
+<li><p>Internal manifest keyed by v2 names (<code class="docutils literal notranslate"><span class="pre">manifest[&quot;project&quot;][&quot;name&quot;]</span></code>, resolved
+<code class="docutils literal notranslate"><span class="pre">type</span></code>, resolved <code class="docutils literal notranslate"><span class="pre">id</span></code>); <code class="docutils literal notranslate"><span class="pre">SiteConfig.from_manifest</span></code> reads
+<code class="docutils literal notranslate"><span class="pre">name</span></code>/<code class="docutils literal notranslate"><span class="pre">maintainer</span></code>/<code class="docutils literal notranslate"><span class="pre">copyright</span></code>; <code class="docutils literal notranslate"><span class="pre">get_logo_path</span></code>/<code class="docutils literal notranslate"><span class="pre">get_favicon_path</span></code> read
+<code class="docutils literal notranslate"><span class="pre">project.logo</span></code>/<code class="docutils literal notranslate"><span class="pre">favicon</span></code>; <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> default-if-exists logic.</p></li>
+</ul>
+<p><strong>Phase 2 — Consumers</strong> (<code class="docutils literal notranslate"><span class="pre">markdown_generator.py</span></code>, <code class="docutils literal notranslate"><span class="pre">build_docs.py</span></code>,
+<code class="docutils literal notranslate"><span class="pre">publish.py</span></code>, <code class="docutils literal notranslate"><span class="pre">diagnostics.py</span></code>, Jinja templates in <code class="docutils literal notranslate"><span class="pre">docs_src_pipeline/</span></code> and
+<code class="docutils literal notranslate"><span class="pre">docs_src_catalog/</span></code>)</p>
+<ul class="simple">
+<li><p>Templates: <code class="docutils literal notranslate"><span class="pre">pipeline_manifest.pipeline.pipeline_name</span></code> →
+<code class="docutils literal notranslate"><span class="pre">pipeline_manifest.project.name</span></code>, etc.; render <code class="docutils literal notranslate"><span class="pre">build</span></code> as a code block;
+drop the duplicated-URL “Pipeline Web Page” row in favor of <code class="docutils literal notranslate"><span class="pre">site_url</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">publish.py</span></code> reads <code class="docutils literal notranslate"><span class="pre">project.readme</span></code>; diagnostics field list switches to v2
+names.</p></li>
+</ul>
+<p><strong>Phase 3 — Identity resolution &amp; CLI</strong> (<code class="docutils literal notranslate"><span class="pre">data.py</span></code>, <code class="docutils literal notranslate"><span class="pre">cli.py</span></code>, <code class="docutils literal notranslate"><span class="pre">config.py</span></code>)</p>
+<ul class="simple">
+<li><p>Three-step resolution (scoped exact → bare unique-or-error → URL
+normalize) behind one helper used by <code class="docutils literal notranslate"><span class="pre">data.load</span></code>, <code class="docutils literal notranslate"><span class="pre">data.get_path</span></code>,
+<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">add</span></code>: scoped key from target’s git remote; quoted-key TOML
+emission; <code class="docutils literal notranslate"><span class="pre">path</span></code> entry shape.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">init</span></code> / <code class="docutils literal notranslate"><span class="pre">create_global_catalog()</span></code> emit v2; <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code>
+catalog validation uses resolved type.</p></li>
+</ul>
+<p><strong>Phase 4 — Policy</strong> (<code class="docutils literal notranslate"><span class="pre">diagnostics.py</span></code>, <code class="docutils literal notranslate"><span class="pre">build_docs.py</span></code>)</p>
+<ul class="simple">
+<li><p>Parse <code class="docutils literal notranslate"><span class="pre">[policy]</span></code>; current hardcoded lists become the default warn-only
+policy; <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">&quot;strict&quot;</span></code> fails the catalog build; diagnostics page reports
+against the active policy.</p></li>
+</ul>
+<p><strong>Phase 5 — Migration &amp; fleet update</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">scripts/migrate_toml_v2.py</span></code> implementing the mapping table above
+(drift-variant normalization included, <code class="docutils literal notranslate"><span class="pre">--check</span></code> dry-run mode).</p></li>
+<li><p>Run over: test fixtures, <code class="docutils literal notranslate"><span class="pre">examples/</span></code>, cookiecutter template + <code class="docutils literal notranslate"><span class="pre">example/</span></code>,
+all 19 ftsfr repos + catalog, <code class="docutils literal notranslate"><span class="pre">~/.chartbook/</span></code>. Delete the orphaned
+<code class="docutils literal notranslate"><span class="pre">templates/chartbook.toml</span></code>.</p></li>
+</ul>
+<p><strong>Phase 6 — Tests</strong></p>
+<ul class="simple">
+<li><p>Update fixtures and assertions across <code class="docutils literal notranslate"><span class="pre">test_manifest</span></code>, <code class="docutils literal notranslate"><span class="pre">test_config</span></code>,
+<code class="docutils literal notranslate"><span class="pre">test_conf_validation</span></code>, <code class="docutils literal notranslate"><span class="pre">test_catalog_add</span></code>, <code class="docutils literal notranslate"><span class="pre">test_build_docs</span></code>,
+<code class="docutils literal notranslate"><span class="pre">test_build_command</span></code>, <code class="docutils literal notranslate"><span class="pre">test_integration</span></code>, <code class="docutils literal notranslate"><span class="pre">test_data</span></code>, <code class="docutils literal notranslate"><span class="pre">test_config_cli</span></code>,
+<code class="docutils literal notranslate"><span class="pre">test_errors</span></code>.</p></li>
+<li><p>New coverage: type-inference truth table (incl. the three error rows),
+identity derivation precedence, bare/scoped/URL resolution and the
+ambiguity error, <code class="docutils literal notranslate"><span class="pre">&#64;rev</span></code> rejection, unknown-key warning, <code class="docutils literal notranslate"><span class="pre">[policy]</span></code>
+warn vs. strict, v1-file rejection message, <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> default gating,
+migration script golden files.</p></li>
+</ul>
+<p><strong>Phase 7 — Docs &amp; release</strong> (see next section), version bump, changelog
+entry describing the break.</p>
+</section>
+<section id="documentation-plan">
+<h2>Documentation plan<a class="headerlink" href="#documentation-plan" title="Link to this heading">#</a></h2>
+<p>Reference material to rewrite, and where the rationale is preserved:</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">docs_src/configuration.md</span></code></strong> — full rewrite as the v2 reference: the
+<code class="docutils literal notranslate"><span class="pre">[project]</span></code> key table, type-inference rules, minimal-file example, catalog
+registry and <code class="docutils literal notranslate"><span class="pre">[policy]</span></code>, <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> conventions. Cross-links to this design
+doc for the “why”.</p></li>
+<li><p><strong>This document</strong> (<code class="docutils literal notranslate"><span class="pre">docs_src/design/toml-format-v2.md</span></code>) — added to the site
+toctree so the reasoning (especially the
+<a class="reference internal" href="#rationale-identity-and-namespacing">namespacing rationale</a>) is published,
+not buried in git history.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">docs_src/user-guide/concepts.md</span></code></strong> — new “Pipeline identity” section:
+scoped names, the three lookup forms, ambiguity behavior.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">docs_src/user-guide/catalog-projects.md</span></code></strong> — scoped keys, <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">add</span></code>
+behavior, <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> with the permissive-format/catalog-owns-policy framing.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">docs_src/user-guide/pipelines.md</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">build-pipeline.md</span></code></strong> —
+<code class="docutils literal notranslate"><span class="pre">[project]</span></code> examples, the <code class="docutils literal notranslate"><span class="pre">build</span></code> field and its script semantics.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">docs_src/getting-started.md</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">docs_src/index.md</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">README.md</span></code></strong>
+— update <code class="docutils literal notranslate"><span class="pre">data.load(...)</span></code> examples to scoped names.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">docs_src/cli-reference.md</span></code></strong> — <code class="docutils literal notranslate"><span class="pre">catalog</span> <span class="pre">add</span></code>/<code class="docutils literal notranslate"><span class="pre">ls</span></code> output changes.</p></li>
+<li><p><strong>Bundled skills</strong> (<code class="docutils literal notranslate"><span class="pre">src/chartbook/skills/manifest_files.md</span></code>, <code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code>,
+<code class="docutils literal notranslate"><span class="pre">catalog_system.md</span></code>) — rewritten for v2; these are what AI assistants read,
+so they must not teach the dead format.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">llm/llms.txt</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">llm/llms-full.txt</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">docs_src/llms-txt.md</span></code></strong> —
+regenerated with v2 examples.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">docs_src/changelog.md</span></code></strong> — breaking-change entry summarizing v1 → v2 and
+linking here.</p></li>
+<li><p><strong>Cookiecutter repo</strong> (<code class="docutils literal notranslate"><span class="pre">cookiecutter_chartbook</span></code>) — template
+<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> (Jinja preserved), rendered <code class="docutils literal notranslate"><span class="pre">example/</span></code>, and its README.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../contributing.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Contributing</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#motivation">Motivation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#design-principles">Design principles</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#specification">Specification</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-project-table">The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> table</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#project-type-inference">Project type inference</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-identity-and-namespacing">Pipeline identity and namespacing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-registry-pipelines">Catalog registry: <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-auto-discovery-members">Catalog auto-discovery: <code class="docutils literal notranslate"><span class="pre">members</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-policy">Catalog policy</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build-commands">Build commands</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#custom-site-pages-site-dir">Custom site pages: <code class="docutils literal notranslate"><span class="pre">site_dir</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#removed-chartbook-format-version">Removed: <code class="docutils literal notranslate"><span class="pre">chartbook_format_version</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#entity-sections-field-renames">Entity sections: field renames</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rationale-identity-and-namespacing">Rationale: identity and namespacing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#future-work">Future work</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#open-questions">Open questions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#migration">Migration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#implementation-plan">Implementation plan</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#documentation-plan">Documentation plan</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

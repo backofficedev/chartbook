@@ -1,0 +1,806 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>CLI Reference &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=55ac272d"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'reference/cli';</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="API Reference" href="api.html" />
+    <link rel="prev" title="Configuration Guide" href="configuration.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/reference/cli.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>CLI Reference</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-init">chartbook init</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-build">chartbook build</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-browse">chartbook browse</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-publish">chartbook publish</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog">chartbook catalog</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-init">catalog init</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-add">catalog add</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-disable-enable">catalog disable / enable</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-build">catalog build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-browse">catalog browse</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-ls">chartbook ls</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-data">chartbook data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-create-data-glimpses">chartbook create-data-glimpses</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-config">chartbook config</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-install-skill">chartbook install skill</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="cli-reference">
+<h1>CLI Reference<a class="headerlink" href="#cli-reference" title="Link to this heading">#</a></h1>
+<p>Every command supports <code class="docutils literal notranslate"><span class="pre">--help</span></code>. Everything the CLI needs ships with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">chartbook</span></code>; see <a class="reference internal" href="../getting-started.html"><span class="doc">Getting Started</span></a>.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Command</p></th>
+<th class="head"><p>Purpose</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code></p></td>
+<td><p>Scaffold a new pipeline project</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code></p></td>
+<td><p>Generate the documentation site</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">browse</span></code></p></td>
+<td><p>Open the generated site in a browser</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">publish</span></code></p></td>
+<td><p>Stage a pipeline’s publishable files into a directory</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">init/add/disable/enable/build/browse</span></code></p></td>
+<td><p>Manage a catalog and its site</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span> <span class="pre">[pipelines|dataframes|charts]</span></code></p></td>
+<td><p>List cataloged objects</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path/get-docs/get-docs-path</span></code></p></td>
+<td><p>Look up a dataframe’s file or write-up</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">create-data-glimpses</span></code></p></td>
+<td><p>Summarize every data file your <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code> produces</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code></p></td>
+<td><p>Set the default catalog for data loading</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span> <span class="pre">skill</span></code></p></td>
+<td><p>Install the bundled Claude Code skill (user-level by default)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="chartbook-init">
+<h2>chartbook init<a class="headerlink" href="#chartbook-init" title="Link to this heading">#</a></h2>
+<p>Scaffold a new pipeline from the <a class="reference external" href="https://github.com/backofficedev/cookiecutter_chartbook">cookiecutter template</a>, via <a class="reference external" href="https://cruft.github.io/cruft/">cruft</a> — so <code class="docutils literal notranslate"><span class="pre">cruft</span> <span class="pre">update</span></code> can pull template improvements later. Prompts for project name and author.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook init</span>
+</pre></div>
+</div>
+</section>
+<section id="chartbook-build">
+<h2>chartbook build<a class="headerlink" href="#chartbook-build" title="Link to this heading">#</a></h2>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook build [OPTIONS] [OUTPUT_DIR]</span>
+</pre></div>
+</div>
+<p>Generate the HTML site into <code class="docutils literal notranslate"><span class="pre">OUTPUT_DIR</span></code> (default <code class="docutils literal notranslate"><span class="pre">./docs</span></code>; it cannot be the current working directory itself). Works for both pipelines and catalogs — the project type comes from the manifest. Internals: <a class="reference internal" href="../guide/how-the-build-works.html"><span class="doc">How the Build Works</span></a>.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Effect</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-f,</span> <span class="pre">--force-write</span></code></p></td>
+<td><p>off</p></td>
+<td><p>Delete and recreate an existing output directory</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--project-dir</span> <span class="pre">PATH</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.</span></code></p></td>
+<td><p>Project to build</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--strict</span> <span class="pre">/</span> <span class="pre">--no-strict</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">--strict</span></code></p></td>
+<td><p>Strict: a <code class="docutils literal notranslate"><span class="pre">path</span></code>/<code class="docutils literal notranslate"><span class="pre">docs_path</span></code> pointing at a missing file fails the build, naming the file and the manifest entry. <code class="docutils literal notranslate"><span class="pre">--no-strict</span></code> warns and skips the affected pipeline</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--size-threshold</span> <span class="pre">FLOAT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">50</span></code></p></td>
+<td><p>File size (MB) above which parquet glimpses use memory-efficient loading</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--strip-mathjax2</span> <span class="pre">/</span> <span class="pre">--no-strip-mathjax2</span></code></p></td>
+<td><p>on</p></td>
+<td><p>Strip Plotly’s MathJax 2 scripts from notebook outputs so they don’t clash with Sphinx’s MathJax 3</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code></p></td>
+<td><p>off</p></td>
+<td><p>Keep the intermediate <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> and <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code> directories for inspection</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--docs-build-dir</span> <span class="pre">PATH</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">./_docs</span></code></p></td>
+<td><p>Intermediate build directory</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--temp-docs-src-dir</span> <span class="pre">PATH</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">./_docs_src</span></code></p></td>
+<td><p>Intermediate template directory</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--publish-dir</span> <span class="pre">PATH</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">./_output/to_be_published/</span></code></p></td>
+<td><p>Publish staging directory</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook build             # first build</span>
+<span class="go">chartbook build -f          # rebuild</span>
+<span class="go">chartbook build ./site -f   # custom output directory</span>
+</pre></div>
+</div>
+</section>
+<section id="chartbook-browse">
+<h2>chartbook browse<a class="headerlink" href="#chartbook-browse" title="Link to this heading">#</a></h2>
+<p>Open the generated site (default <code class="docutils literal notranslate"><span class="pre">./docs/index.html</span></code>) in your default browser.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook browse [OUTPUT_DIR] [--project-dir PATH]</span>
+</pre></div>
+</div>
+</section>
+<section id="chartbook-publish">
+<h2>chartbook publish<a class="headerlink" href="#chartbook-publish" title="Link to this heading">#</a></h2>
+<p>Copy the pipeline’s publishable <em>source</em> files — README, <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, parquet artifacts, write-ups, chart HTML, and notebooks marked <code class="docutils literal notranslate"><span class="pre">publishable</span> <span class="pre">=</span> <span class="pre">true</span></code> — into a staging directory. This is for sharing the pipeline itself; <code class="docutils literal notranslate"><span class="pre">build</span></code> is what renders the website.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook publish [--publish-dir PATH] [--project-dir PATH] [-v]</span>
+</pre></div>
+</div>
+</section>
+<section id="chartbook-catalog">
+<h2>chartbook catalog<a class="headerlink" href="#chartbook-catalog" title="Link to this heading">#</a></h2>
+<p>Manage a catalog — by default the global one at <code class="docutils literal notranslate"><span class="pre">~/.chartbook/chartbook.toml</span></code> (<code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code> can point these commands at a different catalog). Concepts and the auto-discovery alternative: <a class="reference internal" href="../guide/catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>.</p>
+<section id="catalog-init">
+<h3>catalog init<a class="headerlink" href="#catalog-init" title="Link to this heading">#</a></h3>
+<p>Create the global catalog with an empty <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> section.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog init [--title TITLE]</span>
+</pre></div>
+</div>
+</section>
+<section id="catalog-add">
+<h3>catalog add<a class="headerlink" href="#catalog-add" title="Link to this heading">#</a></h3>
+<p>Register pipeline directories. For each path, the scoped key (<code class="docutils literal notranslate"><span class="pre">scope/name</span></code>) is derived from the target’s <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">id</span></code> if set, otherwise from its git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote plus the directory name, falling back to the bare directory name. Paths are stored relative to the catalog; duplicates (by resolved path) are skipped, as are paths already covered by a <code class="docutils literal notranslate"><span class="pre">pipelines.members</span></code> pattern.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog add PATHS... [--catalog PATH] [-y]</span>
+
+<span class="go">chartbook catalog add ../crsp_treasury      # one pipeline</span>
+<span class="go">chartbook catalog add ../repos/* -y         # glob, no confirmation prompt</span>
+</pre></div>
+</div>
+</section>
+<section id="catalog-disable-enable">
+<h3>catalog disable / enable<a class="headerlink" href="#catalog-disable-enable" title="Link to this heading">#</a></h3>
+<p>Switch a pipeline off or on without deleting its registration. Explicit entries get <code class="docutils literal notranslate"><span class="pre">disabled</span> <span class="pre">=</span> <span class="pre">true</span></code>; member-discovered pipelines are tracked on the <code class="docutils literal notranslate"><span class="pre">pipelines.disabled</span></code> ID list. In a catalog with only explicit entries, an unknown ID errors and lists the available pipelines; in a member-based catalog the ID is simply added to (or removed from) the list, and if it matches no pipeline the next build warns with a did-you-mean suggestion.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog disable ftsfr/sovereign_bonds [--catalog PATH]</span>
+<span class="go">chartbook catalog enable ftsfr/sovereign_bonds</span>
+</pre></div>
+</div>
+</section>
+<section id="catalog-build">
+<h3>catalog build<a class="headerlink" href="#catalog-build" title="Link to this heading">#</a></h3>
+<p>Build the catalog’s site into <code class="docutils literal notranslate"><span class="pre">~/.chartbook/docs/</span></code> (or the configured catalog’s location). Unlike top-level <code class="docutils literal notranslate"><span class="pre">build</span></code>, the default here is <code class="docutils literal notranslate"><span class="pre">--no-strict</span></code>: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog build [-f] [--strict/--no-strict]</span>
+</pre></div>
+</div>
+</section>
+<section id="catalog-browse">
+<h3>catalog browse<a class="headerlink" href="#catalog-browse" title="Link to this heading">#</a></h3>
+<p>Open the built catalog site.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog browse</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="chartbook-ls">
+<h2>chartbook ls<a class="headerlink" href="#chartbook-ls" title="Link to this heading">#</a></h2>
+<p>List cataloged objects. Without a subcommand, prints a tree of every pipeline with its dataframes and charts; subcommands print flat lists.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook ls [pipelines|dataframes|charts] [--catalog PATH]</span>
+</pre></div>
+</div>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>ls
+<span class="go">Catalog: /data/my-catalog/chartbook.toml</span>
+
+<span class="go">[pipeline] acme/yield_curve: Yield Curve Analysis</span>
+<span class="go">  [dataframe] acme/yield_curve/repo_public: Repo Public Data</span>
+<span class="go">  [chart] acme/yield_curve/yield_spread: Yield Spread Chart</span>
+</pre></div>
+</div>
+</section>
+<section id="chartbook-data">
+<h2>chartbook data<a class="headerlink" href="#chartbook-data" title="Link to this heading">#</a></h2>
+<p>Look up a cataloged dataframe from the shell. <code class="docutils literal notranslate"><span class="pre">--pipeline</span></code> accepts a bare name (when unambiguous), a scoped ID, or a repo URL; ambiguous bare names error with the candidates listed.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook data get-path      --pipeline yield_curve --dataframe repo_public   # parquet path</span>
+<span class="go">chartbook data get-docs      --pipeline yield_curve --dataframe repo_public   # write-up content</span>
+<span class="go">chartbook data get-docs-path --pipeline yield_curve --dataframe repo_public   # write-up source file</span>
+</pre></div>
+</div>
+<p>All three take <code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code> to override the configured catalog. The Python equivalents live in <code class="docutils literal notranslate"><span class="pre">chartbook.data</span></code> — see <a class="reference internal" href="../guide/catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a>.</p>
+</section>
+<section id="chartbook-create-data-glimpses">
+<h2>chartbook create-data-glimpses<a class="headerlink" href="#chartbook-create-data-glimpses" title="Link to this heading">#</a></h2>
+<p>Parse <code class="docutils literal notranslate"><span class="pre">dodo.py</span></code>, find every CSV/parquet target your tasks produce, and write <code class="docutils literal notranslate"><span class="pre">data_glimpses.md</span></code>: file metadata, column types, null percentages, sample rows, and numeric summary stats.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-threshold MB]</span>
+</pre></div>
+</div>
+</section>
+<section id="chartbook-config">
+<h2>chartbook config<a class="headerlink" href="#chartbook-config" title="Link to this heading">#</a></h2>
+<p>Interactively set the default catalog path (stored as <code class="docutils literal notranslate"><span class="pre">catalog.path</span></code> in <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code>). This is what <code class="docutils literal notranslate"><span class="pre">data.load()</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span></code>, and the <code class="docutils literal notranslate"><span class="pre">catalog</span></code> commands use when no explicit <code class="docutils literal notranslate"><span class="pre">--catalog</span></code>/<code class="docutils literal notranslate"><span class="pre">catalog_path</span></code> is given.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook config</span>
+</pre></div>
+</div>
+</section>
+<section id="chartbook-install-skill">
+<h2>chartbook install skill<a class="headerlink" href="#chartbook-install-skill" title="Link to this heading">#</a></h2>
+<p>Install the bundled Claude Code skill, giving Claude context about the CLI, manifest format, and data API. By default it installs <strong>user-level</strong> — <code class="docutils literal notranslate"><span class="pre">~/.claude/skills/chartbook/</span></code>, or <code class="docutils literal notranslate"><span class="pre">$CLAUDE_CONFIG_DIR/skills/chartbook/</span></code> when that variable is set — so the skill is available in every Claude Code session on your machine. Re-run it after upgrading chartbook; when nothing changed it reports “already up to date” and exits.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook install skill              # user-level (default)</span>
+<span class="go">chartbook install skill --project    # ./.claude/skills/chartbook/ — commit it to share with a team</span>
+<span class="go">chartbook install skill -f           # overwrite locally modified files without prompting</span>
+</pre></div>
+</div>
+<p>Files from older skill layouts are removed on install so the copy exactly mirrors the bundled skill, and the installing chartbook version is recorded in a <code class="docutils literal notranslate"><span class="pre">.chartbook-skill-version</span></code> stamp alongside the files.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="configuration.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Configuration Guide</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="api.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">API Reference</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-init">chartbook init</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-build">chartbook build</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-browse">chartbook browse</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-publish">chartbook publish</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog">chartbook catalog</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-init">catalog init</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-add">catalog add</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-disable-enable">catalog disable / enable</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-build">catalog build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-browse">catalog browse</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-ls">chartbook ls</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-data">chartbook data</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-create-data-glimpses">chartbook create-data-glimpses</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-config">chartbook config</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-install-skill">chartbook install skill</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

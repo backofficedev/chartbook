@@ -1,0 +1,1088 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>How the Build Works &#8212; ChartBook Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=c0169425" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=55ac272d"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'guide/how-the-build-works';</script>
+    <link rel="icon" href="../_static/logo.png"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Examples" href="../examples.html" />
+    <link rel="prev" title="ChartBook Plotting Gallery" href="gallery.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/backofficedev/chartbook" title="Repository" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-code-branch fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">Repository</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="ChartBook Documentation - Home"/>
+    <script>document.write(`<img src="../_static/logo.png" class="logo__image only-dark" alt="ChartBook Documentation - Home"/>`);</script>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        
+        <ul class="nav bd-sidenav bd-sidenav__home-link">
+            <li class="toctree-l1">
+                <a class="reference internal" href="../index.html">
+                    ChartBook
+                </a>
+            </li>
+        </ul>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/chartbook/chartbook.plotting.backends.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting.backends</span></code></a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/guide/how-the-build-works.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>How the Build Works</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-two-stage-build-process">The Two-Stage Build Process</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-0-template-preparation-docs-src">Stage 0: Template Preparation (<code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-1-markdown-generation-docs">Stage 1: Markdown Generation (<code class="docutils literal notranslate"><span class="pre">_docs/</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-2-sphinx-build">Stage 2: Sphinx Build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cleanup">Cleanup</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#inspecting-intermediate-files">Inspecting Intermediate Files</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-keep-build-dirs">Using <code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#custom-build-directory-paths">Custom Build Directory Paths</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#development-workflow">Development Workflow</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#complete-docs-directory-structure">Complete <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> Directory Structure</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-each-generated-file-contains">What Each Generated File Contains</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe-pages">Dataframe pages</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-pages">Chart pages</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#index-page">Index page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diagnostics-page-catalog-only">Diagnostics page (catalog only)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sphinx-configuration">Sphinx configuration</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-system-and-customization">Template System and Customization</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#template-resolution-order">Template Resolution Order</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#overridable-templates">Overridable Templates</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example-customizing-the-chart-footer">Example: Customizing the Chart Footer</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#debugging-tips">Debugging Tips</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-display-issues">Chart display issues</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#missing-or-incorrect-data">Missing or incorrect data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#template-issues">Template issues</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sphinx-build-errors">Sphinx build errors</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#metadata-completeness">Metadata completeness</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#next-steps">Next Steps</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="how-the-build-works">
+<h1>How the Build Works<a class="headerlink" href="#how-the-build-works" title="Link to this heading">#</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> command uses a <strong>two-stage pipeline</strong> to generate your documentation site:</p>
+<ol class="arabic simple">
+<li><p><strong>Markdown generation</strong> — reads your <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> manifest and project files, then produces intermediate Markdown files (and copies static assets) into a temporary <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> directory.</p></li>
+<li><p><strong>Sphinx build</strong> — runs <code class="docutils literal notranslate"><span class="pre">sphinx-build</span></code> to convert those intermediate Markdown files into a static HTML site.</p></li>
+</ol>
+<p>By default, the temporary directories are deleted when the build finishes — whether it succeeded or failed. Using the <code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code> flag preserves them so you can inspect the intermediate output, which is exactly what you want when debugging a failed build.</p>
+<p>Understanding these internals is useful for:</p>
+<ul class="simple">
+<li><p><strong>Debugging build failures</strong> — examining the exact Markdown that Sphinx tried to process</p></li>
+<li><p><strong>Verifying metadata</strong> — checking that manifest values rendered correctly in spec tables</p></li>
+<li><p><strong>Customizing templates</strong> — overriding the default Jinja2 templates used during generation</p></li>
+<li><p><strong>Understanding the output</strong> — seeing how your <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> configuration maps to generated pages</p></li>
+</ul>
+<section id="the-two-stage-build-process">
+<h2>The Two-Stage Build Process<a class="headerlink" href="#the-two-stage-build-process" title="Link to this heading">#</a></h2>
+<p>The following diagram shows the full build flow:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">chartbook</span> <span class="n">build</span> <span class="p">[</span><span class="n">OUTPUT_DIR</span><span class="p">]</span>
+    <span class="o">|</span>
+    <span class="o">|--</span> <span class="n">Stage</span> <span class="mi">0</span><span class="p">:</span> <span class="n">Template</span> <span class="n">Preparation</span>
+    <span class="o">|</span>   <span class="n">Copy</span> <span class="n">theme</span> <span class="n">templates</span> <span class="n">into</span> <span class="n">_docs_src</span><span class="o">/</span>
+    <span class="o">|</span>   <span class="n">Copy</span> <span class="n">logo</span> <span class="o">+</span> <span class="n">favicon</span>
+    <span class="o">|</span>
+    <span class="o">|--</span> <span class="n">Stage</span> <span class="mi">1</span><span class="p">:</span> <span class="n">Markdown</span> <span class="n">Generation</span>
+    <span class="o">|</span>   <span class="n">Copy</span> <span class="n">charts</span><span class="p">,</span> <span class="n">notebooks</span><span class="p">,</span> <span class="n">parquets</span> <span class="n">into</span> <span class="n">_docs</span><span class="o">/</span>
+    <span class="o">|</span>   <span class="n">Generate</span> <span class="n">diagnostics</span> <span class="n">CSV</span>
+    <span class="o">|</span>   <span class="n">Render</span> <span class="n">Jinja2</span> <span class="n">templates</span> <span class="n">into</span> <span class="o">.</span><span class="n">md</span> <span class="n">files</span>
+    <span class="o">|</span>   <span class="n">Copy</span> <span class="n">remaining</span> <span class="n">_docs_src</span><span class="o">/</span> <span class="n">files</span> <span class="n">to</span> <span class="n">_docs</span><span class="o">/</span>
+    <span class="o">|</span>
+    <span class="o">|--</span> <span class="n">Stage</span> <span class="mi">2</span><span class="p">:</span> <span class="n">Sphinx</span> <span class="n">Build</span>
+    <span class="o">|</span>   <span class="n">Render</span> <span class="n">conf</span><span class="o">.</span><span class="n">py</span><span class="o">.</span><span class="n">j2</span> <span class="o">-&gt;</span> <span class="n">conf</span><span class="o">.</span><span class="n">py</span>
+    <span class="o">|</span>   <span class="n">Run</span><span class="p">:</span> <span class="n">sphinx</span><span class="o">-</span><span class="n">build</span> <span class="o">-</span><span class="n">M</span> <span class="n">html</span> <span class="n">_docs</span> <span class="n">_docs</span><span class="o">/</span><span class="n">_build</span>
+    <span class="o">|</span>   <span class="n">Copy</span> <span class="n">_docs</span><span class="o">/</span><span class="n">_build</span><span class="o">/</span><span class="n">html</span><span class="o">/</span> <span class="n">to</span> <span class="n">OUTPUT_DIR</span>
+    <span class="o">|</span>
+    <span class="o">|--</span> <span class="n">Cleanup</span> <span class="p">(</span><span class="n">unless</span> <span class="o">--</span><span class="n">keep</span><span class="o">-</span><span class="n">build</span><span class="o">-</span><span class="n">dirs</span><span class="p">)</span>
+        <span class="n">Delete</span> <span class="n">_docs</span><span class="o">/</span> <span class="ow">and</span> <span class="n">_docs_src</span><span class="o">/</span>
+</pre></div>
+</div>
+<section id="stage-0-template-preparation-docs-src">
+<h3>Stage 0: Template Preparation (<code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code>)<a class="headerlink" href="#stage-0-template-preparation-docs-src" title="Link to this heading">#</a></h3>
+<p>Before any Markdown is generated, ChartBook assembles a temporary <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code> directory containing all the Sphinx source templates and configuration:</p>
+<ol class="arabic simple">
+<li><p><strong>Theme selection</strong>: Based on the resolved project type — inferred from your <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> structure (a <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> table means catalog), or set explicitly via <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">type</span></code> — the package’s built-in theme templates are copied from either <code class="docutils literal notranslate"><span class="pre">docs_src_pipeline/</span></code> (for single pipelines) or <code class="docutils literal notranslate"><span class="pre">docs_src_catalog/</span></code> (for multi-pipeline catalogs).</p></li>
+<li><p><strong>Assets</strong>: Your logo and favicon (from the <code class="docutils literal notranslate"><span class="pre">[project]</span></code> <code class="docutils literal notranslate"><span class="pre">logo</span></code> and <code class="docutils literal notranslate"><span class="pre">favicon</span></code> paths in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, or package defaults) are copied into <code class="docutils literal notranslate"><span class="pre">_docs_src/_static/</span></code> and <code class="docutils literal notranslate"><span class="pre">_docs_src/assets/</span></code>.</p></li>
+</ol>
+<p>To override a template, place a file with the same base name in your <strong>project root</strong> — that’s the first entry on the Jinja search path (see <a class="reference internal" href="#template-resolution-order">Template resolution order</a> below). Your project’s own <code class="docutils literal notranslate"><span class="pre">docs_src/</span></code> directory is <em>not</em> copied into <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code>.</p>
+<p>The resulting <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code> directory looks like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>_docs_src/
+├── _static/
+│   ├── logo.png
+│   ├── favicon.ico
+│   ├── custom.css
+│   └── chartbook-custom.js          # catalog theme only
+├── _templates/
+│   ├── chart_entry_top.md            # chart page header + iframe
+│   ├── chart_entry_bottom.md         # chart specs table + manifests
+│   ├── dataframe_entry_top.md        # dataframe page heading
+│   ├── dataframe_manifest.md         # dataframe metadata table
+│   ├── pipeline_manifest.md          # pipeline metadata table
+│   └── layout.html                   # catalog theme only
+├── assets/
+│   ├── logo.png
+│   └── favicon.ico
+├── conf.py.j2                        # Sphinx config (Jinja2 template)
+├── index.md                          # site index template
+├── charts.md                         # charts listing page
+├── dataframes.md                     # catalog theme only
+├── pipelines.md                      # catalog theme only
+├── diagnostics.md                    # catalog theme only
+└── contributing.md                   # catalog theme only
+</pre></div>
+</div>
+</section>
+<section id="stage-1-markdown-generation-docs">
+<h3>Stage 1: Markdown Generation (<code class="docutils literal notranslate"><span class="pre">_docs/</span></code>)<a class="headerlink" href="#stage-1-markdown-generation-docs" title="Link to this heading">#</a></h3>
+<p>This is the core of the build. The <code class="docutils literal notranslate"><span class="pre">build_all()</span></code> function in <code class="docutils literal notranslate"><span class="pre">markdown_generator.py</span></code> orchestrates all file copying and Markdown generation:</p>
+<p>All generated content is namespaced under a <code class="docutils literal notranslate"><span class="pre">cb/</span></code> subdirectory, keeping it separate from your custom site pages (which are copied to the docs root) so the two can never collide. In file paths, <code class="docutils literal notranslate"><span class="pre">{pipeline_id}</span></code> is the scoped ID with <code class="docutils literal notranslate"><span class="pre">/</span></code> replaced by <code class="docutils literal notranslate"><span class="pre">--</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">acme/yield_curve</span></code> → <code class="docutils literal notranslate"><span class="pre">acme--yield_curve</span></code>) so IDs stay filesystem-safe.</p>
+<p><strong>1. File alignment (copying source files into position):</strong></p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Source</p></th>
+<th class="head"><p>Destination in <code class="docutils literal notranslate"><span class="pre">_docs/</span></code></p></th>
+<th class="head"><p>Purpose</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Chart HTML files</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">_static/{pipeline_id}/{chart_id}.html</span></code></p></td>
+<td><p>Displayed in <code class="docutils literal notranslate"><span class="pre">&lt;iframe&gt;</span></code> on chart pages</p></td>
+</tr>
+<tr class="row-odd"><td><p>Chart HTML files</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cb/download_chart/{pipeline_id}/{chart_id}.html</span></code></p></td>
+<td><p>“Full Screen” download link</p></td>
+</tr>
+<tr class="row-even"><td><p>Parquet data files</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cb/download_dataframe/{pipeline_id}/{dataframe_id}.parquet</span></code></p></td>
+<td><p>Data download (when <code class="docutils literal notranslate"><span class="pre">enable_data_download</span> <span class="pre">=</span> <span class="pre">true</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Notebook <code class="docutils literal notranslate"><span class="pre">.ipynb</span></code> files</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cb/notebooks/{pipeline_id}/{notebook_filename}</span></code></p></td>
+<td><p>Rendered by myst-nb during Sphinx build (copied under the basename of the notebook’s <code class="docutils literal notranslate"><span class="pre">path</span></code>, not renamed to its ID)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>2. Diagnostics CSV:</strong>
+A metadata completeness report is generated at <code class="docutils literal notranslate"><span class="pre">_docs/_static/diagnostics/chartbook_metadata_diagnostics.csv</span></code>. This CSV lists every pipeline, dataframe, and chart with whether its metadata is complete and which fields are missing.</p>
+<p><strong>3. Per-pipeline Markdown generation:</strong></p>
+<p>For each pipeline defined in your manifest:</p>
+<ul class="simple">
+<li><p><strong>Dataframe pages</strong> (<code class="docutils literal notranslate"><span class="pre">cb/dataframes/{pipeline_id}/{dataframe_id}.md</span></code>): Generated by rendering your user-authored dataframe documentation (from the dataframe’s <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> file, or inline <code class="docutils literal notranslate"><span class="pre">docs</span></code>) together with a generated heading and Jinja2 template partials for the DataFrame Glimpse, dataframe manifest table, and pipeline manifest table.</p></li>
+<li><p><strong>Chart pages</strong> (<code class="docutils literal notranslate"><span class="pre">cb/charts/{pipeline_id}.{chart_id}.md</span></code>): Generated by combining <code class="docutils literal notranslate"><span class="pre">chart_entry_top.md</span></code> (ABlog frontmatter, heading, iframe embed) + your user-authored chart docs (from the chart’s <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> file, or inline <code class="docutils literal notranslate"><span class="pre">docs</span></code>) + <code class="docutils literal notranslate"><span class="pre">chart_entry_bottom.md</span></code> (specs table, manifest tables).</p></li>
+<li><p><strong>Pipeline READMEs</strong> (<code class="docutils literal notranslate"><span class="pre">cb/pipelines/{pipeline_id}_README.md</span></code>): Catalog theme only. Includes the pipeline’s README content with a manifest header.</p></li>
+</ul>
+<p><strong>4. Top-level pages:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">index.md</span></code> — rendered from the theme’s index template with pipeline/dataframe/chart listings; lives at the docs root</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cb/charts.md</span></code>, and for the catalog theme <code class="docutils literal notranslate"><span class="pre">cb/dataframes.md</span></code>, <code class="docutils literal notranslate"><span class="pre">cb/pipelines.md</span></code>, <code class="docutils literal notranslate"><span class="pre">cb/diagnostics.md</span></code> — listing pages over the generated content</p></li>
+</ul>
+<p><strong>5. Remaining files:</strong>
+All other files from <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code> (CSS, JS, templates, etc.) are copied into <code class="docutils literal notranslate"><span class="pre">_docs/</span></code>.</p>
+</section>
+<section id="stage-2-sphinx-build">
+<h3>Stage 2: Sphinx Build<a class="headerlink" href="#stage-2-sphinx-build" title="Link to this heading">#</a></h3>
+<p>Once all Markdown files are in place:</p>
+<ol class="arabic">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">conf.py</span></code> rendering</strong>: The <code class="docutils literal notranslate"><span class="pre">conf.py.j2</span></code> Jinja2 template is rendered with your project metadata (<code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">maintainer</span></code>, and <code class="docutils literal notranslate"><span class="pre">copyright</span></code> from <code class="docutils literal notranslate"><span class="pre">[project]</span></code> in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, plus the Sphinx theme chosen by project type) and written as <code class="docutils literal notranslate"><span class="pre">_docs/conf.py</span></code>. The <code class="docutils literal notranslate"><span class="pre">.j2</span></code> template is then deleted.</p></li>
+<li><p><strong>Sphinx execution</strong>: ChartBook runs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sphinx</span><span class="o">-</span><span class="n">build</span> <span class="o">-</span><span class="n">M</span> <span class="n">html</span> <span class="n">_docs</span> <span class="n">_docs</span><span class="o">/</span><span class="n">_build</span>
+</pre></div>
+</div>
+<p>This processes all <code class="docutils literal notranslate"><span class="pre">.md</span></code> files using extensions like <code class="docutils literal notranslate"><span class="pre">myst-nb</span></code> (notebook rendering), <code class="docutils literal notranslate"><span class="pre">ablog</span></code> (blog-style chart pages), <code class="docutils literal notranslate"><span class="pre">sphinx_design</span></code> (grid cards), and <code class="docutils literal notranslate"><span class="pre">sphinx_copybutton</span></code>.</p>
+</li>
+<li><p><strong>Output copy</strong>: The HTML output from <code class="docutils literal notranslate"><span class="pre">_docs/_build/html/</span></code> is copied to your output directory (default: <code class="docutils literal notranslate"><span class="pre">./docs</span></code>). A <code class="docutils literal notranslate"><span class="pre">.nojekyll</span></code> file is added for GitHub Pages compatibility.</p></li>
+</ol>
+</section>
+<section id="cleanup">
+<h3>Cleanup<a class="headerlink" href="#cleanup" title="Link to this heading">#</a></h3>
+<p>By default, both <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> and <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code> are deleted when the build finishes, whether it succeeded or failed. To keep them — for example, to inspect the intermediate output after a <em>failed</em> build — pass <code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook build --keep-build-dirs</span>
+</pre></div>
+</div>
+<p>The command prints the path to the preserved directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Keeping</span> <span class="n">temporary</span> <span class="n">build</span> <span class="n">directory</span><span class="p">:</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">project</span><span class="o">/</span><span class="n">_docs</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="inspecting-intermediate-files">
+<h2>Inspecting Intermediate Files<a class="headerlink" href="#inspecting-intermediate-files" title="Link to this heading">#</a></h2>
+<section id="using-keep-build-dirs">
+<h3>Using <code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code><a class="headerlink" href="#using-keep-build-dirs" title="Link to this heading">#</a></h3>
+<p>The simplest way to inspect intermediate files:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook build --keep-build-dirs</span>
+</pre></div>
+</div>
+<p>This preserves both <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> (generated Markdown + assets) and <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code> (resolved templates) after the build.</p>
+</section>
+<section id="custom-build-directory-paths">
+<h3>Custom Build Directory Paths<a class="headerlink" href="#custom-build-directory-paths" title="Link to this heading">#</a></h3>
+<p>You can control where intermediate files are placed:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook build --docs-build-dir ./my_build --temp-docs-src-dir ./my_src --keep-build-dirs</span>
+</pre></div>
+</div>
+<p>This is useful if you want to compare outputs from different builds side by side.</p>
+</section>
+<section id="development-workflow">
+<h3>Development Workflow<a class="headerlink" href="#development-workflow" title="Link to this heading">#</a></h3>
+<p>A typical debugging workflow:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span><span class="m">1</span>.<span class="w"> </span>Build<span class="w"> </span>with<span class="w"> </span>intermediate<span class="w"> </span>files<span class="w"> </span>preserved
+<span class="go">chartbook build --keep-build-dirs</span>
+
+<span class="gp"># </span><span class="m">2</span>.<span class="w"> </span>Inspect<span class="w"> </span>the<span class="w"> </span>generated<span class="w"> </span>Markdown
+<span class="go">cat _docs/cb/charts/acme--yield_curve.repo_rates.md</span>
+
+<span class="gp"># </span><span class="m">3</span>.<span class="w"> </span>Check<span class="w"> </span>the<span class="w"> </span>rendered<span class="w"> </span>Sphinx<span class="w"> </span>config
+<span class="go">cat _docs/conf.py</span>
+
+<span class="gp"># </span><span class="m">4</span>.<span class="w"> </span>Look<span class="w"> </span>at<span class="w"> </span>diagnostics
+<span class="go">cat _docs/_static/diagnostics/chartbook_metadata_diagnostics.csv</span>
+
+<span class="gp"># </span><span class="m">5</span>.<span class="w"> </span>Browse<span class="w"> </span>the<span class="w"> </span>final<span class="w"> </span>HTML<span class="w"> </span>locally
+<span class="go">python -m http.server -d ./docs</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="complete-docs-directory-structure">
+<h2>Complete <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> Directory Structure<a class="headerlink" href="#complete-docs-directory-structure" title="Link to this heading">#</a></h2>
+<p>After a build with <code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code>, the <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> directory contains:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>_docs/
+├── index.md                              # Main site index (rendered from template)
+├── conf.py                               # Rendered Sphinx configuration
+├── contributing.md                       # catalog theme only
+├── *.md                                  # your custom site pages (from site_dir)
+│
+├── cb/                                   # ── all generated content ──
+│   ├── charts.md                         # Charts listing page (toctree)
+│   ├── dataframes.md                     # catalog theme only
+│   ├── pipelines.md                      # catalog theme only
+│   ├── diagnostics.md                    # catalog theme only
+│   │
+│   ├── pipelines/                        # catalog theme only
+│   │   └── {pipeline_id}_README.md       # Pipeline README with manifest header
+│   ├── dataframes/
+│   │   └── {pipeline_id}/
+│   │       └── {dataframe_id}.md         # Dataframe doc with spec table + glimpse
+│   ├── charts/
+│   │   └── {pipeline_id}.{chart_id}.md   # Chart doc with iframe + metadata
+│   ├── notebooks/
+│   │   └── {pipeline_id}/
+│   │       └── {notebook_filename}       # Copied notebook (keeps its path basename)
+│   ├── download_chart/
+│   │   └── {pipeline_id}/
+│   │       └── {chart_id}.html           # Chart HTML for download link
+│   └── download_dataframe/               # only when enable_data_download = true
+│       └── {pipeline_id}/
+│           └── {dataframe_id}.parquet    # Parquet file for download link
+│
+├── _static/
+│   ├── logo.png
+│   ├── favicon.ico
+│   ├── custom.css
+│   ├── {pipeline_id}/
+│   │   └── {chart_id}.html              # Chart HTML for iframe display
+│   └── diagnostics/
+│       └── chartbook_metadata_diagnostics.csv
+│
+├── _templates/                           # Jinja2/Sphinx templates
+│   ├── chart_entry_top.md
+│   ├── chart_entry_bottom.md
+│   ├── dataframe_entry_top.md
+│   ├── dataframe_manifest.md
+│   └── pipeline_manifest.md
+│
+└── _build/
+    └── html/                             # Final Sphinx HTML output
+        ├── index.html
+        ├── cb/
+        └── ...
+</pre></div>
+</div>
+<p>(Directory names like <code class="docutils literal notranslate"><span class="pre">{pipeline_id}</span></code> use the slugged form, <code class="docutils literal notranslate"><span class="pre">acme--yield_curve</span></code>.)</p>
+</section>
+<section id="what-each-generated-file-contains">
+<h2>What Each Generated File Contains<a class="headerlink" href="#what-each-generated-file-contains" title="Link to this heading">#</a></h2>
+<section id="dataframe-pages">
+<h3>Dataframe pages<a class="headerlink" href="#dataframe-pages" title="Link to this heading">#</a></h3>
+<p><strong>Path:</strong> <code class="docutils literal notranslate"><span class="pre">cb/dataframes/{pipeline_id}/{dataframe_id}.md</span></code></p>
+<p>Each dataframe page is assembled from your user-authored documentation (specified by the dataframe’s <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>, or inline <code class="docutils literal notranslate"><span class="pre">docs</span></code>) plus auto-generated sections:</p>
+<div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span><span class="gh"># Dataframe: `acme/yield_curve:repo_public` - Public Repo Data</span>
+
+[Your user-authored documentation from docs_path]
+
+<span class="gu">## DataFrame Glimpse</span>
+
+  Rows: 16580
+  Columns: 31
+  $ SVENY01    &lt;f64&gt; 4.216397633330158
+  $ SVENY02    &lt;f64&gt; 5.006153097049543
+  ...
+
+<span class="gu">## Dataframe Manifest</span>
+
+| Dataframe Name  | Public Repo Data                       |
+|-----------------|----------------------------------------|
+| Dataframe ID    | repo_public                            |
+| Data Sources    | FRED, Office of Financial Research     |
+| Data Providers  | FRED, Office of Financial Research     |
+| ...             | ...                                    |
+
+<span class="gu">## Pipeline Manifest</span>
+
+| Pipeline Name   | Yield Curve                            |
+|-----------------|----------------------------------------|
+| Pipeline ID     | acme/yield_curve                       |
+| ...             | ...                                    |
+</pre></div>
+</div>
+<p>The DataFrame Glimpse is generated by reading a single sample row of the parquet file with Polars — the last row for normal-sized files (and glob/partitioned paths), or the first row for files above the size threshold (50 MB by default, where reading the head avoids a full scan). The total row count shown is always the true count, corrected after sampling. If the file is missing, an error message is shown instead.</p>
+</section>
+<section id="chart-pages">
+<h3>Chart pages<a class="headerlink" href="#chart-pages" title="Link to this heading">#</a></h3>
+<p><strong>Path:</strong> <code class="docutils literal notranslate"><span class="pre">cb/charts/{pipeline_id}.{chart_id}.md</span></code></p>
+<p>Each chart page includes ABlog frontmatter (for blog-style categorization), an interactive chart iframe, and metadata tables:</p>
+<div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span>---
+date: 2026-03-02
+tags: FRED, Office of Financial Research
+<span class="gu">category: Short Term Funding, Repo</span>
+<span class="gu">---</span>
+
+<span class="gh"># Chart: Repo Rates</span>
+SOFR, the Effective Funds Rate, and the Fed&#39;s Target Range
+
+<span class="gu">## Chart</span>
+  (iframe embedding the interactive HTML chart)
+
+Full Screen Chart (download link)
+
+[Your user-authored chart documentation from docs_path]
+
+<span class="gu">## Chart Specs</span>
+| Chart Name     | Repo Rates       |
+|----------------|------------------|
+| Data Frequency | Daily            |
+| Units          | Percent          |
+| ...            | ...              |
+
+<span class="gu">## Dataframe Manifest</span>
+(auto-generated table)
+
+<span class="gu">## Pipeline Manifest</span>
+(auto-generated table)
+</pre></div>
+</div>
+</section>
+<section id="index-page">
+<h3>Index page<a class="headerlink" href="#index-page" title="Link to this heading">#</a></h3>
+<p><strong>Path:</strong> <code class="docutils literal notranslate"><span class="pre">index.md</span></code></p>
+<p>The index page differs by theme:</p>
+<ul class="simple">
+<li><p><strong>Pipeline theme</strong>: Contains toctrees organized by Notebooks, Charts, and Dataframes, plus the pipeline manifest table and README content.</p></li>
+<li><p><strong>Catalog theme</strong>: Contains grid cards linking to Charts, Dataframes, Pipelines, Diagnostics, and Contributing pages.</p></li>
+</ul>
+</section>
+<section id="diagnostics-page-catalog-only">
+<h3>Diagnostics page (catalog only)<a class="headerlink" href="#diagnostics-page-catalog-only" title="Link to this heading">#</a></h3>
+<p><strong>Path:</strong> <code class="docutils literal notranslate"><span class="pre">cb/diagnostics.md</span></code></p>
+<p>Shows metadata completeness for every object in the catalog. Generated from the diagnostics CSV at <code class="docutils literal notranslate"><span class="pre">_static/diagnostics/chartbook_metadata_diagnostics.csv</span></code>.</p>
+</section>
+<section id="sphinx-configuration">
+<h3>Sphinx configuration<a class="headerlink" href="#sphinx-configuration" title="Link to this heading">#</a></h3>
+<p><strong>Path:</strong> <code class="docutils literal notranslate"><span class="pre">conf.py</span></code></p>
+<p>The rendered Sphinx configuration, with the <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">maintainer</span></code>, and <code class="docutils literal notranslate"><span class="pre">copyright</span></code> values from <code class="docutils literal notranslate"><span class="pre">[project]</span></code> in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> substituted in (the Sphinx theme follows from the project type). Includes all extension settings for <code class="docutils literal notranslate"><span class="pre">myst_nb</span></code>, <code class="docutils literal notranslate"><span class="pre">ablog</span></code>, <code class="docutils literal notranslate"><span class="pre">sphinx_design</span></code>, etc.</p>
+</section>
+</section>
+<section id="template-system-and-customization">
+<h2>Template System and Customization<a class="headerlink" href="#template-system-and-customization" title="Link to this heading">#</a></h2>
+<section id="template-resolution-order">
+<h3>Template Resolution Order<a class="headerlink" href="#template-resolution-order" title="Link to this heading">#</a></h3>
+<p>During Markdown generation, Jinja2 searches for templates in the following order (first match wins):</p>
+<ol class="arabic simple">
+<li><p><strong>Project root</strong> — <code class="docutils literal notranslate"><span class="pre">{project_dir}/</span></code></p></li>
+<li><p><strong>Temp docs source</strong> — <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code></p></li>
+<li><p><strong>Temp docs templates</strong> — <code class="docutils literal notranslate"><span class="pre">_docs_src/_templates/</span></code></p></li>
+<li><p><strong>Package templates</strong> — <code class="docutils literal notranslate"><span class="pre">chartbook/templates/</span></code> (inside the installed package)</p></li>
+<li><p><strong>Theme directory</strong> — <code class="docutils literal notranslate"><span class="pre">chartbook/docs_src_pipeline/</span></code> or <code class="docutils literal notranslate"><span class="pre">chartbook/docs_src_catalog/</span></code></p></li>
+<li><p><strong>Theme templates</strong> — <code class="docutils literal notranslate"><span class="pre">chartbook/docs_src_{theme}/_templates/</span></code></p></li>
+</ol>
+<p>This means you can override any built-in template by placing a file with the same base name in your <strong>project root</strong> — search path #1, e.g. <code class="docutils literal notranslate"><span class="pre">{project_dir}/chart_entry_bottom.md</span></code>. Note that your project’s own <code class="docutils literal notranslate"><span class="pre">docs_src/_templates/</span></code> directory is <em>not</em> on this list (only the temporary <code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code> copy is), so a template placed there has no effect; use the project root.</p>
+</section>
+<section id="overridable-templates">
+<h3>Overridable Templates<a class="headerlink" href="#overridable-templates" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Template File</p></th>
+<th class="head"><p>What It Controls</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">chart_entry_top.md</span></code></p></td>
+<td><p>Chart page header: ABlog frontmatter, title, iframe embed, sources line, download link</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">chart_entry_bottom.md</span></code></p></td>
+<td><p>Chart page footer: specs table, dataframe manifest, pipeline manifest</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dataframe_manifest.md</span></code></p></td>
+<td><p>Dataframe metadata table (shown on dataframe and chart pages)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pipeline_manifest.md</span></code></p></td>
+<td><p>Pipeline metadata table (shown on multiple page types)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">index.md</span></code></p></td>
+<td><p>Main site index layout and toctree structure</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">conf.py.j2</span></code></p></td>
+<td><p>Sphinx configuration (advanced — override with care)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="example-customizing-the-chart-footer">
+<h3>Example: Customizing the Chart Footer<a class="headerlink" href="#example-customizing-the-chart-footer" title="Link to this heading">#</a></h3>
+<p>To add a custom disclaimer to all chart pages, create <code class="docutils literal notranslate"><span class="pre">chart_entry_bottom.md</span></code> in your project root and include your additions:</p>
+<div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span><span class="gu">## Chart Specs</span>
+
+| Chart Name             | {{name}}                          |
+|------------------------|-----------------------------------|
+| Data Frequency         | {{frequency}}                     |
+| Units                  | {{units}}                         |
+| HTML Chart             | [<span class="nt">HTML</span>](<span class="na">../download_chart/{{pipeline_id | replace(&#39;/&#39;, &#39;--&#39;</span>)}}/{{chart_id}}.html) |
+
+<span class="gu">## Dataframe Manifest</span>
+{% include &quot;dataframe_manifest.md&quot; %}
+
+<span class="gu">## Pipeline Manifest</span>
+{% include &quot;pipeline_manifest.md&quot; %}
+
+<span class="gu">## Disclaimer</span>
+This chart is for informational purposes only.
+</pre></div>
+</div>
+<p>You can use any Jinja2 template variables that are available in the original template. Inspect <code class="docutils literal notranslate"><span class="pre">_docs_src/_templates/</span></code> (with <code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code>) to see the default templates and available variables.</p>
+</section>
+</section>
+<section id="debugging-tips">
+<h2>Debugging Tips<a class="headerlink" href="#debugging-tips" title="Link to this heading">#</a></h2>
+<section id="chart-display-issues">
+<h3>Chart display issues<a class="headerlink" href="#chart-display-issues" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Verify the chart HTML was copied: check that <code class="docutils literal notranslate"><span class="pre">_docs/_static/{pipeline_id}/{chart_id}.html</span></code> exists</p></li>
+<li><p>Check the generated Markdown: open <code class="docutils literal notranslate"><span class="pre">_docs/cb/charts/{pipeline_id}.{chart_id}.md</span></code> and verify the iframe <code class="docutils literal notranslate"><span class="pre">src</span></code> path</p></li>
+<li><p>Compare with the download copy: <code class="docutils literal notranslate"><span class="pre">_docs/cb/download_chart/{pipeline_id}/{chart_id}.html</span></code></p></li>
+</ul>
+</section>
+<section id="missing-or-incorrect-data">
+<h3>Missing or incorrect data<a class="headerlink" href="#missing-or-incorrect-data" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Check the DataFrame Glimpse section in <code class="docutils literal notranslate"><span class="pre">_docs/cb/dataframes/{pipeline_id}/{dataframe_id}.md</span></code></p></li>
+<li><p>If the glimpse shows an error, the parquet file may be missing or corrupted</p></li>
+<li><p>Verify <code class="docutils literal notranslate"><span class="pre">most_recent_data_min</span></code> and <code class="docutils literal notranslate"><span class="pre">most_recent_data_max</span></code> values in the dataframe manifest table</p></li>
+</ul>
+</section>
+<section id="template-issues">
+<h3>Template issues<a class="headerlink" href="#template-issues" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Compare <code class="docutils literal notranslate"><span class="pre">_docs_src/_templates/</span></code> (the resolved templates) with your project’s <code class="docutils literal notranslate"><span class="pre">docs_src/_templates/</span></code> overrides</p></li>
+<li><p>Check that your override template includes all necessary <code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">include</span> <span class="pre">%}</span></code> directives</p></li>
+<li><p>Verify the rendered output in <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> matches expectations</p></li>
+</ul>
+</section>
+<section id="sphinx-build-errors">
+<h3>Sphinx build errors<a class="headerlink" href="#sphinx-build-errors" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Check <code class="docutils literal notranslate"><span class="pre">_docs/conf.py</span></code> for configuration issues (e.g., missing extensions, incorrect theme name)</p></li>
+<li><p>Sphinx error messages reference paths inside <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> — use <code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code> to examine those files</p></li>
+<li><p>Look at <code class="docutils literal notranslate"><span class="pre">_docs/_build/</span></code> for Sphinx build artifacts and logs</p></li>
+</ul>
+</section>
+<section id="metadata-completeness">
+<h3>Metadata completeness<a class="headerlink" href="#metadata-completeness" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Open <code class="docutils literal notranslate"><span class="pre">_docs/_static/diagnostics/chartbook_metadata_diagnostics.csv</span></code> to see which fields are missing</p></li>
+<li><p>For catalog projects, check <code class="docutils literal notranslate"><span class="pre">_docs/cb/diagnostics.md</span></code> for the rendered completeness report</p></li>
+</ul>
+</section>
+</section>
+<section id="next-steps">
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="documenting-a-pipeline.html"><span class="doc">Documenting a Pipeline</span></a> — the manifest that drives all of this</p></li>
+<li><p><a class="reference internal" href="../reference/cli.html"><span class="doc">CLI Reference</span></a> — full option reference for <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code></p></li>
+<li><p><a class="reference internal" href="catalogs-and-data.html"><span class="doc">Catalogs and Data Access</span></a> — combine multiple pipelines into a catalog</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="gallery.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">ChartBook Plotting Gallery</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../examples.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Examples</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-two-stage-build-process">The Two-Stage Build Process</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-0-template-preparation-docs-src">Stage 0: Template Preparation (<code class="docutils literal notranslate"><span class="pre">_docs_src/</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-1-markdown-generation-docs">Stage 1: Markdown Generation (<code class="docutils literal notranslate"><span class="pre">_docs/</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-2-sphinx-build">Stage 2: Sphinx Build</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cleanup">Cleanup</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#inspecting-intermediate-files">Inspecting Intermediate Files</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#using-keep-build-dirs">Using <code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#custom-build-directory-paths">Custom Build Directory Paths</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#development-workflow">Development Workflow</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#complete-docs-directory-structure">Complete <code class="docutils literal notranslate"><span class="pre">_docs/</span></code> Directory Structure</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-each-generated-file-contains">What Each Generated File Contains</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe-pages">Dataframe pages</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-pages">Chart pages</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#index-page">Index page</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#diagnostics-page-catalog-only">Diagnostics page (catalog only)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sphinx-configuration">Sphinx configuration</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#template-system-and-customization">Template System and Customization</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#template-resolution-order">Template Resolution Order</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#overridable-templates">Overridable Templates</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#example-customizing-the-chart-footer">Example: Customizing the Chart Footer</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#debugging-tips">Debugging Tips</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chart-display-issues">Chart display issues</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#missing-or-incorrect-data">Missing or incorrect data</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#template-issues">Template issues</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#sphinx-build-errors">Sphinx build errors</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#metadata-completeness">Metadata completeness</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#next-steps">Next Steps</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Jeremiah Bejarano
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, Jeremiah Bejarano.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

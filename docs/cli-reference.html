@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/custom.css?v=c0169425" />
@@ -40,7 +40,7 @@
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="_static/documentation_options.js?v=d1237063"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="API Reference" href="api/chartbook.html" />
-    <link rel="prev" title="Writing with MyST Markdown" href="user-guide/myst-markdown.html" />
+    <link rel="prev" title="Build Pipeline Internals" href="user-guide/build-pipeline.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -268,6 +268,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="user-guide/notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">CLI Reference</a></li>
@@ -284,7 +285,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -294,6 +295,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="llms-txt.html">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
@@ -449,10 +451,21 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#global-usage">Global Usage</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#commands-overview">Commands Overview</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#command-reference">Command Reference</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-init"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-build"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-browse"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">browse</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-publish"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">publish</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-create-data-glimpses"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">create-data-glimpses</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-config"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-install"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-install-skill"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span> <span class="pre">skill</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog-init"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">init</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog-add"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-ls"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-data"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span></code></a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-data-get-path"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path</span></code></a></li>
@@ -517,8 +530,14 @@ document.write(`
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">build</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">init</span></code></p></td>
+<td><p>Scaffold a new chartbook project from a template</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">build</span></code></p></td>
 <td><p>Generate HTML documentation website</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">browse</span></code></p></td>
+<td><p>Open project documentation in your default browser</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">publish</span></code></p></td>
 <td><p>Publish pipeline to a directory</p></td>
@@ -528,6 +547,12 @@ document.write(`
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">config</span></code></p></td>
 <td><p>Configure the default catalog path for data loading</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">install</span></code></p></td>
+<td><p>Install bundled resources (e.g., Claude skill)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">catalog</span></code></p></td>
+<td><p>Manage the catalog (add pipelines)</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ls</span></code></p></td>
 <td><p>List catalog objects (pipelines, dataframes, charts)</p></td>
@@ -541,6 +566,23 @@ document.write(`
 </section>
 <section id="command-reference">
 <h2>Command Reference<a class="headerlink" href="#command-reference" title="Link to this heading">#</a></h2>
+<section id="chartbook-init">
+<h3><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code><a class="headerlink" href="#chartbook-init" title="Link to this heading">#</a></h3>
+<p>Scaffold a new chartbook project from the <a class="reference external" href="https://github.com/backofficedev/cookiecutter_chartbook">cookiecutter template</a> using <a class="reference external" href="https://cruft.github.io/cruft/">cruft</a>. Because the project is created with cruft, you can later pull upstream template updates with <code class="docutils literal notranslate"><span class="pre">cruft</span> <span class="pre">update</span></code>.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook init</span>
+</pre></div>
+</div>
+<p>This command requires <code class="docutils literal notranslate"><span class="pre">cruft</span></code>, which is included in the <code class="docutils literal notranslate"><span class="pre">all</span></code> extra:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install &quot;chartbook[all]&quot;</span>
+</pre></div>
+</div>
+<p><strong>Example session:</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>init
+<span class="gp"># </span>Cruft<span class="w"> </span>will<span class="w"> </span>prompt<span class="w"> </span>you<span class="w"> </span>to<span class="w"> </span>fill<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>template<span class="w"> </span>variables
+<span class="gp"># </span><span class="o">(</span>project<span class="w"> </span>name,<span class="w"> </span>author,<span class="w"> </span>etc.<span class="o">)</span><span class="w"> </span>and<span class="w"> </span><span class="k">then</span><span class="w"> </span>create<span class="w"> </span>the<span class="w"> </span>project<span class="w"> </span>directory.
+</pre></div>
+</div>
+</section>
 <section id="chartbook-build">
 <h3><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code><a class="headerlink" href="#chartbook-build" title="Link to this heading">#</a></h3>
 <p>Generate HTML documentation in the specified output directory.</p>
@@ -558,7 +600,7 @@ document.write(`
 <li><p><code class="docutils literal notranslate"><span class="pre">--publish-dir</span> <span class="pre">PATH</span></code>: Directory for published files (default: <code class="docutils literal notranslate"><span class="pre">./_output/to_be_published/</span></code>)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--docs-build-dir</span> <span class="pre">PATH</span></code>: Build directory (default: <code class="docutils literal notranslate"><span class="pre">./_docs</span></code>)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--temp-docs-src-dir</span> <span class="pre">PATH</span></code>: Temporary source directory (default: <code class="docutils literal notranslate"><span class="pre">./_docs_src</span></code>)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code>: Keep temporary build directories after generation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--keep-build-dirs</span></code>: Keep temporary build directories after generation. See <a class="reference internal" href="user-guide/build-pipeline.html"><span class="doc">Build Pipeline Internals</span></a> for details on what these directories contain</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--size-threshold</span> <span class="pre">FLOAT</span></code>: File size threshold in MB above which to use memory-efficient loading (default: 50)</p></li>
 </ul>
 <p><strong>Examples:</strong></p>
@@ -573,6 +615,32 @@ document.write(`
 
 <span class="gp"># </span>Keep<span class="w"> </span>build<span class="w"> </span>directories<span class="w"> </span><span class="k">for</span><span class="w"> </span>debugging
 <span class="go">chartbook build --keep-build-dirs</span>
+</pre></div>
+</div>
+</section>
+<section id="chartbook-browse">
+<h3><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">browse</span></code><a class="headerlink" href="#chartbook-browse" title="Link to this heading">#</a></h3>
+<p>Open the project documentation in your default web browser. Works on macOS, Windows, and Linux.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook browse [OUTPUT_DIR] [OPTIONS]</span>
+</pre></div>
+</div>
+<p><strong>Arguments:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">OUTPUT_DIR</span></code>: Directory containing the generated HTML (default: <code class="docutils literal notranslate"><span class="pre">./docs</span></code>)</p></li>
+</ul>
+<p><strong>Options:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--project-dir</span> <span class="pre">PATH</span></code>: Path to project directory</p></li>
+</ul>
+<p><strong>Examples:</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Open<span class="w"> </span>docs<span class="w"> </span>from<span class="w"> </span>default<span class="w"> </span>location
+<span class="go">chartbook browse</span>
+
+<span class="gp"># </span>Open<span class="w"> </span>docs<span class="w"> </span>from<span class="w"> </span>a<span class="w"> </span>custom<span class="w"> </span>output<span class="w"> </span>directory
+<span class="go">chartbook browse ./my-docs</span>
+
+<span class="gp"># </span>Open<span class="w"> </span>docs<span class="w"> </span><span class="k">for</span><span class="w"> </span>a<span class="w"> </span>project<span class="w"> </span><span class="k">in</span><span class="w"> </span>another<span class="w"> </span>directory
+<span class="go">chartbook browse --project-dir /path/to/project</span>
 </pre></div>
 </div>
 </section>
@@ -667,6 +735,114 @@ document.write(`
 </pre></div>
 </div>
 </section>
+<section id="chartbook-install">
+<h3><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span></code><a class="headerlink" href="#chartbook-install" title="Link to this heading">#</a></h3>
+<p>Install bundled resources into the current project.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook install COMMAND [OPTIONS]</span>
+</pre></div>
+</div>
+<p><strong>Subcommands:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">skill</span></code>: Install the Claude Code skill</p></li>
+</ul>
+<section id="chartbook-install-skill">
+<h4><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span> <span class="pre">skill</span></code><a class="headerlink" href="#chartbook-install-skill" title="Link to this heading">#</a></h4>
+<p>Copy the bundled Claude Code skill files into <code class="docutils literal notranslate"><span class="pre">.claude/skills/chartbook/</span></code> in the current directory. This gives Claude context about chartbook’s CLI, configuration, and data loading API so it can assist with your project.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook install skill [OPTIONS]</span>
+</pre></div>
+</div>
+<p><strong>Options:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-f,</span> <span class="pre">--force</span></code>: Overwrite existing skill files without prompting</p></li>
+</ul>
+<p><strong>Examples:</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Install<span class="w"> </span>the<span class="w"> </span>skill
+<span class="go">chartbook install skill</span>
+
+<span class="gp"># </span>Overwrite<span class="w"> </span>existing<span class="w"> </span>skill<span class="w"> </span>files
+<span class="go">chartbook install skill -f</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="chartbook-catalog">
+<h3><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span></code><a class="headerlink" href="#chartbook-catalog" title="Link to this heading">#</a></h3>
+<p>Manage the chartbook catalog.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog COMMAND [OPTIONS]</span>
+</pre></div>
+</div>
+<p><strong>Subcommands:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">init</span></code>: Initialize the global catalog at <code class="docutils literal notranslate"><span class="pre">~/.chartbook/chartbook.toml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add</span></code>: Add pipeline directory(ies) to the catalog</p></li>
+</ul>
+<section id="chartbook-catalog-init">
+<h4><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">init</span></code><a class="headerlink" href="#chartbook-catalog-init" title="Link to this heading">#</a></h4>
+<p>Create a minimal global catalog with an empty <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> section. Use <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span></code> to add pipelines afterwards.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog init [--title TITLE]</span>
+</pre></div>
+</div>
+</section>
+<section id="chartbook-catalog-add">
+<h4><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span></code><a class="headerlink" href="#chartbook-catalog-add" title="Link to this heading">#</a></h4>
+<p>Add one or more pipeline directories to the catalog. Each directory must contain a pipeline <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> (the project type is inferred from the file; directories with old v1-format files or catalog-type manifests are skipped). Paths are stored relative to the catalog directory.</p>
+<p>The catalog key is the pipeline’s scoped ID (<code class="docutils literal notranslate"><span class="pre">scope/name</span></code>), derived from the target’s <code class="docutils literal notranslate"><span class="pre">[project]</span> <span class="pre">id</span></code> if set, otherwise from its git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote plus the directory name, falling back to the bare directory name when there is no remote.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook catalog add [OPTIONS] PATHS...</span>
+</pre></div>
+</div>
+<p><strong>Arguments:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">PATHS</span></code>: One or more directories (or glob patterns) containing pipeline <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> files</p></li>
+</ul>
+<p><strong>Options:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code>: Path to catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> (uses configured default if not specified)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-y,</span> <span class="pre">--yes</span></code>: Skip confirmation prompt when adding multiple pipelines</p></li>
+</ul>
+<p>The command will:</p>
+<ol class="arabic simple">
+<li><p>Verify each path contains a valid pipeline <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code></p></li>
+<li><p>Derive the scoped catalog key from the pipeline’s git remote and directory name</p></li>
+<li><p>Check for duplicates against existing catalog entries (comparing resolved absolute paths) and against <code class="docutils literal notranslate"><span class="pre">pipelines.members</span></code> patterns — paths already covered by a members pattern are reported instead of added</p></li>
+<li><p>Prompt for confirmation when adding multiple pipelines (unless <code class="docutils literal notranslate"><span class="pre">-y</span></code> is used)</p></li>
+<li><p>Store paths relative to the catalog directory</p></li>
+</ol>
+<p>If your catalog uses <code class="docutils literal notranslate"><span class="pre">pipelines.members</span></code> auto-discovery (see <a class="reference internal" href="user-guide/catalog-projects.html"><span class="doc">Catalog Projects</span></a>), you rarely need this command at all — dropping a pipeline into a matched directory registers it.</p>
+<p><strong>Examples:</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Add<span class="w"> </span>a<span class="w"> </span>single<span class="w"> </span>pipeline
+<span class="go">chartbook catalog add /path/to/my-pipeline</span>
+
+<span class="gp"># </span>Add<span class="w"> </span>all<span class="w"> </span>pipelines<span class="w"> </span><span class="k">in</span><span class="w"> </span>a<span class="w"> </span>directory<span class="w"> </span>using<span class="w"> </span>a<span class="w"> </span>glob<span class="w"> </span>pattern
+<span class="go">chartbook catalog add /path/to/projects/*</span>
+
+<span class="gp"># </span>Add<span class="w"> </span>multiple<span class="w"> </span>pipelines<span class="w"> </span>without<span class="w"> </span>confirmation<span class="w"> </span>prompt
+<span class="go">chartbook catalog add /path/to/projects/* -y</span>
+
+<span class="gp"># </span>Add<span class="w"> </span>to<span class="w"> </span>a<span class="w"> </span>specific<span class="w"> </span>catalog<span class="w"> </span><span class="o">(</span>instead<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>default<span class="o">)</span>
+<span class="go">chartbook catalog add /path/to/pipeline --catalog /path/to/catalog/chartbook.toml</span>
+
+<span class="gp"># </span>Add<span class="w"> </span>multiple<span class="w"> </span>specific<span class="w"> </span>directories
+<span class="go">chartbook catalog add ./proj1 ./proj2 ./proj3</span>
+</pre></div>
+</div>
+<p><strong>Example output:</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>catalog<span class="w"> </span>add<span class="w"> </span>/data/projects/*
+<span class="go">  Skipping assets/ (no chartbook.toml)</span>
+<span class="go">  Already in catalog as &#39;acme/yield_curve&#39;: yield_curve/</span>
+
+<span class="go">Pipelines to add:</span>
+<span class="go">  acme/fred_charts: FRED Charts (/data/projects/fred_charts)</span>
+<span class="go">  acme/macro_data: Macro Economic Data (/data/projects/macro_data)</span>
+
+<span class="go">Add 2 pipeline(s)? [y/N]: y</span>
+<span class="go">  Added &#39;acme/fred_charts&#39;: FRED Charts (../projects/fred_charts)</span>
+<span class="go">  Added &#39;acme/macro_data&#39;: Macro Economic Data (../projects/macro_data)</span>
+
+<span class="go">Added 2 pipeline(s) to /data/catalog/chartbook.toml</span>
+</pre></div>
+</div>
+</section>
+</section>
 <section id="chartbook-ls">
 <h3><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code><a class="headerlink" href="#chartbook-ls" title="Link to this heading">#</a></h3>
 <p>List catalog objects (pipelines, dataframes, charts). Without a subcommand, displays all objects in a tree format.</p>
@@ -701,15 +877,16 @@ document.write(`
 </pre></div>
 </div>
 <p><strong>Example output:</strong></p>
+<p>Pipelines are listed under their scoped catalog keys (<code class="docutils literal notranslate"><span class="pre">scope/name</span></code>):</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>chartbook<span class="w"> </span>ls
 <span class="go">Catalog: /data/my-catalog/chartbook.toml</span>
 
-<span class="go">[pipeline] yield_curve: Yield Curve Analysis</span>
-<span class="go">  [dataframe] yield_curve/repo_public: Repo Public Data</span>
-<span class="go">  [dataframe] yield_curve/treasury_rates: Treasury Rates</span>
-<span class="go">  [chart] yield_curve/yield_spread: Yield Spread Chart</span>
-<span class="go">[pipeline] macro_data: Macro Economic Data</span>
-<span class="go">  [dataframe] macro_data/gdp_quarterly: GDP Quarterly</span>
+<span class="go">[pipeline] acme/yield_curve: Yield Curve Analysis</span>
+<span class="go">  [dataframe] acme/yield_curve/repo_public: Repo Public Data</span>
+<span class="go">  [dataframe] acme/yield_curve/treasury_rates: Treasury Rates</span>
+<span class="go">  [chart] acme/yield_curve/yield_spread: Yield Spread Chart</span>
+<span class="go">[pipeline] acme/macro_data: Macro Economic Data</span>
+<span class="go">  [dataframe] acme/macro_data/gdp_quarterly: GDP Quarterly</span>
 </pre></div>
 </div>
 </section>
@@ -728,7 +905,7 @@ document.write(`
 </div>
 <p><strong>Options:</strong></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">--pipeline</span></code>: Pipeline ID (required)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--pipeline</span></code>: Pipeline reference (required) — a bare name (if unambiguous), scoped ID (<code class="docutils literal notranslate"><span class="pre">scope/name</span></code>), or repo URL</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--dataframe</span></code>: Dataframe ID (required)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code>: Path to catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code></p></li>
 </ul>
@@ -741,7 +918,7 @@ document.write(`
 </div>
 <p><strong>Options:</strong></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">--pipeline</span></code>: Pipeline ID (required)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--pipeline</span></code>: Pipeline reference (required) — a bare name (if unambiguous), scoped ID (<code class="docutils literal notranslate"><span class="pre">scope/name</span></code>), or repo URL</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--dataframe</span></code>: Dataframe ID (required)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code>: Path to catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code></p></li>
 </ul>
@@ -754,14 +931,18 @@ document.write(`
 </div>
 <p><strong>Options:</strong></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">--pipeline</span></code>: Pipeline ID (required)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--pipeline</span></code>: Pipeline reference (required) — a bare name (if unambiguous), scoped ID (<code class="docutils literal notranslate"><span class="pre">scope/name</span></code>), or repo URL</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--dataframe</span></code>: Dataframe ID (required)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--catalog</span> <span class="pre">PATH</span></code>: Path to catalog <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code></p></li>
 </ul>
 <p><strong>Examples:</strong></p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Get<span class="w"> </span>path<span class="w"> </span>to<span class="w"> </span>a<span class="w"> </span>dataframe<span class="err">&#39;</span>s<span class="w"> </span>parquet<span class="w"> </span>file
+<p>A bare pipeline name resolves against the catalog when exactly one entry matches; if several scopes share the name, the command errors and lists the candidates so you can qualify (e.g. <code class="docutils literal notranslate"><span class="pre">acme/yield_curve</span></code>).</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Get<span class="w"> </span>path<span class="w"> </span>to<span class="w"> </span>a<span class="w"> </span>dataframe<span class="err">&#39;</span>s<span class="w"> </span>parquet<span class="w"> </span>file<span class="w"> </span><span class="o">(</span>bare<span class="w"> </span>name,<span class="w"> </span>unambiguous<span class="o">)</span>
 <span class="go">chartbook data get-path --pipeline yield_curve --dataframe repo_public</span>
 <span class="gp"># </span>Output:<span class="w"> </span>/data/my-catalog/yield_curve/_output/repo_public.parquet
+
+<span class="gp"># </span>Fully<span class="w"> </span>qualified<span class="w"> </span>with<span class="w"> </span>a<span class="w"> </span>scoped<span class="w"> </span>ID
+<span class="go">chartbook data get-path --pipeline acme/yield_curve --dataframe repo_public</span>
 
 <span class="gp"># </span>Print<span class="w"> </span>documentation<span class="w"> </span><span class="k">for</span><span class="w"> </span>a<span class="w"> </span>dataframe
 <span class="go">chartbook data get-docs --pipeline yield_curve --dataframe repo_public</span>
@@ -839,8 +1020,8 @@ document.write(`
 <span class="gp"># </span><span class="m">2</span>.<span class="w"> </span>Generate<span class="w"> </span>docs<span class="w"> </span>with<span class="w"> </span>build<span class="w"> </span><span class="nb">dirs</span><span class="w"> </span>kept
 <span class="go">chartbook build --keep-build-dirs</span>
 
-<span class="gp"># </span><span class="m">3</span>.<span class="w"> </span>Test<span class="w"> </span>locally
-<span class="go">python -m http.server -d ./docs</span>
+<span class="gp"># </span><span class="m">3</span>.<span class="w"> </span>Open<span class="w"> </span><span class="k">in</span><span class="w"> </span>browser
+<span class="go">chartbook browse</span>
 </pre></div>
 </div>
 </section>
@@ -859,12 +1040,12 @@ document.write(`
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="user-guide/myst-markdown.html"
+       href="user-guide/build-pipeline.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Writing with MyST Markdown</p>
+        <p class="prev-next-title">Build Pipeline Internals</p>
       </div>
     </a>
     <a class="right-next"
@@ -896,10 +1077,21 @@ document.write(`
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#global-usage">Global Usage</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#commands-overview">Commands Overview</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#command-reference">Command Reference</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-init"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">init</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-build"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-browse"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">browse</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-publish"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">publish</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-create-data-glimpses"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">create-data-glimpses</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-config"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-install"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-install-skill"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">install</span> <span class="pre">skill</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog-init"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">init</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-catalog-add"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-ls"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-data"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span></code></a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook-data-get-path"><code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path</span></code></a></li>

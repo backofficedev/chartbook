@@ -35,6 +35,10 @@
   - ```{autodoc2-docstring} chartbook.diagnostics.generate_metadata_diagnostics
     :summary:
     ```
+* - {py:obj}`get_active_policy <chartbook.diagnostics.get_active_policy>`
+  - ```{autodoc2-docstring} chartbook.diagnostics.get_active_policy
+    :summary:
+    ```
 * - {py:obj}`write_diagnostics_csv <chartbook.diagnostics.write_diagnostics_csv>`
   - ```{autodoc2-docstring} chartbook.diagnostics.write_diagnostics_csv
     :summary:
@@ -47,63 +51,45 @@
 :class: autosummary longtable
 :align: left
 
-* - {py:obj}`CHART_DOCS_FIELDS <chartbook.diagnostics.CHART_DOCS_FIELDS>`
-  - ```{autodoc2-docstring} chartbook.diagnostics.CHART_DOCS_FIELDS
-    :summary:
-    ```
 * - {py:obj}`CHART_FIELDS <chartbook.diagnostics.CHART_FIELDS>`
   - ```{autodoc2-docstring} chartbook.diagnostics.CHART_FIELDS
-    :summary:
-    ```
-* - {py:obj}`DATAFRAME_DOCS_FIELDS <chartbook.diagnostics.DATAFRAME_DOCS_FIELDS>`
-  - ```{autodoc2-docstring} chartbook.diagnostics.DATAFRAME_DOCS_FIELDS
     :summary:
     ```
 * - {py:obj}`DATAFRAME_FIELDS <chartbook.diagnostics.DATAFRAME_FIELDS>`
   - ```{autodoc2-docstring} chartbook.diagnostics.DATAFRAME_FIELDS
     :summary:
     ```
+* - {py:obj}`DEFAULT_REQUIRED_FIELDS <chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS>`
+  - ```{autodoc2-docstring} chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS
+    :summary:
+    ```
+* - {py:obj}`DOCS_FIELDS <chartbook.diagnostics.DOCS_FIELDS>`
+  - ```{autodoc2-docstring} chartbook.diagnostics.DOCS_FIELDS
+    :summary:
+    ```
+* - {py:obj}`NOTEBOOK_FIELDS <chartbook.diagnostics.NOTEBOOK_FIELDS>`
+  - ```{autodoc2-docstring} chartbook.diagnostics.NOTEBOOK_FIELDS
+    :summary:
+    ```
 * - {py:obj}`OPTIONAL_CHART_FIELDS <chartbook.diagnostics.OPTIONAL_CHART_FIELDS>`
   - ```{autodoc2-docstring} chartbook.diagnostics.OPTIONAL_CHART_FIELDS
     :summary:
     ```
-* - {py:obj}`PIPELINE_FIELDS <chartbook.diagnostics.PIPELINE_FIELDS>`
-  - ```{autodoc2-docstring} chartbook.diagnostics.PIPELINE_FIELDS
+* - {py:obj}`PROJECT_FIELDS <chartbook.diagnostics.PROJECT_FIELDS>`
+  - ```{autodoc2-docstring} chartbook.diagnostics.PROJECT_FIELDS
     :summary:
     ```
 ````
 
 ### API
 
-````{py:data} CHART_DOCS_FIELDS
-:canonical: chartbook.diagnostics.CHART_DOCS_FIELDS
-:type: tuple[str, str]
-:value: >
-   ('chart_docs_path', 'chart_docs_str')
-
-```{autodoc2-docstring} chartbook.diagnostics.CHART_DOCS_FIELDS
-```
-
-````
-
 ````{py:data} CHART_FIELDS
 :canonical: chartbook.diagnostics.CHART_FIELDS
 :type: list[str]
 :value: >
-   ['chart_name', 'short_description_chart', 'dataframe_id', 'topic_tags', 'data_frequency', 'observati...
+   ['name', 'description', 'dataframe', 'tags', 'frequency', 'observation_period', 'release_lag', 'rele...
 
 ```{autodoc2-docstring} chartbook.diagnostics.CHART_FIELDS
-```
-
-````
-
-````{py:data} DATAFRAME_DOCS_FIELDS
-:canonical: chartbook.diagnostics.DATAFRAME_DOCS_FIELDS
-:type: tuple[str, str]
-:value: >
-   ('dataframe_docs_path', 'dataframe_docs_str')
-
-```{autodoc2-docstring} chartbook.diagnostics.DATAFRAME_DOCS_FIELDS
 ```
 
 ````
@@ -112,9 +98,31 @@
 :canonical: chartbook.diagnostics.DATAFRAME_FIELDS
 :type: list[str]
 :value: >
-   ['dataframe_name', 'short_description_df', 'data_sources', 'data_providers', 'links_to_data_provider...
+   ['name', 'description', 'sources', 'providers', 'provider_links', 'tags', 'pull_method', 'path']
 
 ```{autodoc2-docstring} chartbook.diagnostics.DATAFRAME_FIELDS
+```
+
+````
+
+````{py:data} DEFAULT_REQUIRED_FIELDS
+:canonical: chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS
+:type: dict[str, list[str]]
+:value: >
+   None
+
+```{autodoc2-docstring} chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS
+```
+
+````
+
+````{py:data} DOCS_FIELDS
+:canonical: chartbook.diagnostics.DOCS_FIELDS
+:type: tuple[str, str]
+:value: >
+   ('docs_path', 'docs')
+
+```{autodoc2-docstring} chartbook.diagnostics.DOCS_FIELDS
 ```
 
 ````
@@ -212,24 +220,35 @@
 
 `````
 
+````{py:data} NOTEBOOK_FIELDS
+:canonical: chartbook.diagnostics.NOTEBOOK_FIELDS
+:type: list[str]
+:value: >
+   []
+
+```{autodoc2-docstring} chartbook.diagnostics.NOTEBOOK_FIELDS
+```
+
+````
+
 ````{py:data} OPTIONAL_CHART_FIELDS
 :canonical: chartbook.diagnostics.OPTIONAL_CHART_FIELDS
 :type: list[str]
 :value: >
-   ['data_series']
+   ['series']
 
 ```{autodoc2-docstring} chartbook.diagnostics.OPTIONAL_CHART_FIELDS
 ```
 
 ````
 
-````{py:data} PIPELINE_FIELDS
-:canonical: chartbook.diagnostics.PIPELINE_FIELDS
+````{py:data} PROJECT_FIELDS
+:canonical: chartbook.diagnostics.PROJECT_FIELDS
 :type: list[str]
 :value: >
-   ['id', 'pipeline_name', 'pipeline_description', 'lead_pipeline_developer', 'contributors', 'build_co...
+   ['name', 'description', 'maintainer', 'contributors', 'build', 'os_compatibility', 'repo_url']
 
-```{autodoc2-docstring} chartbook.diagnostics.PIPELINE_FIELDS
+```{autodoc2-docstring} chartbook.diagnostics.PROJECT_FIELDS
 ```
 
 ````
@@ -241,10 +260,17 @@
 ```
 ````
 
-````{py:function} generate_metadata_diagnostics(manifest: dict[str, typing.Any], docs_build_dir: pathlib.Path) -> pathlib.Path
+````{py:function} generate_metadata_diagnostics(manifest: dict[str, typing.Any], docs_build_dir: pathlib.Path) -> list[chartbook.diagnostics.DiagnosticRow]
 :canonical: chartbook.diagnostics.generate_metadata_diagnostics
 
 ```{autodoc2-docstring} chartbook.diagnostics.generate_metadata_diagnostics
+```
+````
+
+````{py:function} get_active_policy(manifest: dict[str, typing.Any]) -> dict[str, typing.Any]
+:canonical: chartbook.diagnostics.get_active_policy
+
+```{autodoc2-docstring} chartbook.diagnostics.get_active_policy
 ```
 ````
 

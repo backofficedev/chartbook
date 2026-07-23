@@ -35,14 +35,40 @@ chartbook [OPTIONS] COMMAND [ARGS]...
 
 | Command | Description |
 |---------|-------------|
+| `init` | Scaffold a new chartbook project from a template |
 | `build` | Generate HTML documentation website |
+| `browse` | Open project documentation in your default browser |
 | `publish` | Publish pipeline to a directory |
 | `create-data-glimpses` | Create data glimpse reports |
 | `config` | Configure the default catalog path for data loading |
+| `install` | Install bundled resources (e.g., Claude skill) |
+| `catalog` | Manage the catalog (add pipelines) |
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
 | `data` | Data operations (get paths, docs) |
 
 ## Command Reference
+
+### `chartbook init`
+
+Scaffold a new chartbook project from the [cookiecutter template](https://github.com/backofficedev/cookiecutter_chartbook) using [cruft](https://cruft.github.io/cruft/). Because the project is created with cruft, you can later pull upstream template updates with `cruft update`.
+
+```console
+chartbook init
+```
+
+This command requires `cruft`, which is included in the `all` extra:
+
+```console
+pip install "chartbook[all]"
+```
+
+**Example session:**
+
+```console
+$ chartbook init
+# Cruft will prompt you to fill in the template variables
+# (project name, author, etc.) and then create the project directory.
+```
 
 ### `chartbook build`
 
@@ -61,7 +87,7 @@ chartbook build [OPTIONS] [OUTPUT_DIR]
 - `--publish-dir PATH`: Directory for published files (default: `./_output/to_be_published/`)
 - `--docs-build-dir PATH`: Build directory (default: `./_docs`)
 - `--temp-docs-src-dir PATH`: Temporary source directory (default: `./_docs_src`)
-- `--keep-build-dirs`: Keep temporary build directories after generation
+- `--keep-build-dirs`: Keep temporary build directories after generation. See {doc}`user-guide/build-pipeline` for details on what these directories contain
 - `--size-threshold FLOAT`: File size threshold in MB above which to use memory-efficient loading (default: 50)
 
 **Examples:**
@@ -78,6 +104,33 @@ chartbook build ./my-docs --force-write
 
 # Keep build directories for debugging
 chartbook build --keep-build-dirs
+```
+
+### `chartbook browse`
+
+Open the project documentation in your default web browser. Works on macOS, Windows, and Linux.
+
+```console
+chartbook browse [OUTPUT_DIR] [OPTIONS]
+```
+
+**Arguments:**
+- `OUTPUT_DIR`: Directory containing the generated HTML (default: `./docs`)
+
+**Options:**
+- `--project-dir PATH`: Path to project directory
+
+**Examples:**
+
+```console
+# Open docs from default location
+chartbook browse
+
+# Open docs from a custom output directory
+chartbook browse ./my-docs
+
+# Open docs for a project in another directory
+chartbook browse --project-dir /path/to/project
 ```
 
 ### `chartbook publish`
@@ -177,6 +230,121 @@ You can now load data with:
   df = data.load(pipeline="my_pipeline", dataframe="my_df")
 ```
 
+### `chartbook install`
+
+Install bundled resources into the current project.
+
+```console
+chartbook install COMMAND [OPTIONS]
+```
+
+**Subcommands:**
+- `skill`: Install the Claude Code skill
+
+#### `chartbook install skill`
+
+Copy the bundled Claude Code skill files into `.claude/skills/chartbook/` in the current directory. This gives Claude context about chartbook's CLI, configuration, and data loading API so it can assist with your project.
+
+```console
+chartbook install skill [OPTIONS]
+```
+
+**Options:**
+- `-f, --force`: Overwrite existing skill files without prompting
+
+**Examples:**
+
+```console
+# Install the skill
+chartbook install skill
+
+# Overwrite existing skill files
+chartbook install skill -f
+```
+
+### `chartbook catalog`
+
+Manage the chartbook catalog.
+
+```console
+chartbook catalog COMMAND [OPTIONS]
+```
+
+**Subcommands:**
+- `init`: Initialize the global catalog at `~/.chartbook/chartbook.toml`
+- `add`: Add pipeline directory(ies) to the catalog
+
+#### `chartbook catalog init`
+
+Create a minimal global catalog with an empty `[pipelines]` section. Use `chartbook catalog add` to add pipelines afterwards.
+
+```console
+chartbook catalog init [--title TITLE]
+```
+
+#### `chartbook catalog add`
+
+Add one or more pipeline directories to the catalog. Each directory must contain a pipeline `chartbook.toml` (the project type is inferred from the file; directories with old v1-format files or catalog-type manifests are skipped). Paths are stored relative to the catalog directory.
+
+The catalog key is the pipeline's scoped ID (`scope/name`), derived from the target's `[project] id` if set, otherwise from its git `origin` remote plus the directory name, falling back to the bare directory name when there is no remote.
+
+```console
+chartbook catalog add [OPTIONS] PATHS...
+```
+
+**Arguments:**
+- `PATHS`: One or more directories (or glob patterns) containing pipeline `chartbook.toml` files
+
+**Options:**
+- `--catalog PATH`: Path to catalog `chartbook.toml` (uses configured default if not specified)
+- `-y, --yes`: Skip confirmation prompt when adding multiple pipelines
+
+The command will:
+1. Verify each path contains a valid pipeline `chartbook.toml`
+2. Derive the scoped catalog key from the pipeline's git remote and directory name
+3. Check for duplicates against existing catalog entries (comparing resolved absolute paths) and against `pipelines.members` patterns — paths already covered by a members pattern are reported instead of added
+4. Prompt for confirmation when adding multiple pipelines (unless `-y` is used)
+5. Store paths relative to the catalog directory
+
+If your catalog uses `pipelines.members` auto-discovery (see {doc}`user-guide/catalog-projects`), you rarely need this command at all — dropping a pipeline into a matched directory registers it.
+
+**Examples:**
+
+```console
+# Add a single pipeline
+chartbook catalog add /path/to/my-pipeline
+
+# Add all pipelines in a directory using a glob pattern
+chartbook catalog add /path/to/projects/*
+
+# Add multiple pipelines without confirmation prompt
+chartbook catalog add /path/to/projects/* -y
+
+# Add to a specific catalog (instead of the default)
+chartbook catalog add /path/to/pipeline --catalog /path/to/catalog/chartbook.toml
+
+# Add multiple specific directories
+chartbook catalog add ./proj1 ./proj2 ./proj3
+```
+
+**Example output:**
+
+```console
+$ chartbook catalog add /data/projects/*
+  Skipping assets/ (no chartbook.toml)
+  Already in catalog as 'acme/yield_curve': yield_curve/
+
+Pipelines to add:
+  acme/fred_charts: FRED Charts (/data/projects/fred_charts)
+  acme/macro_data: Macro Economic Data (/data/projects/macro_data)
+
+Add 2 pipeline(s)? [y/N]: y
+  Added 'acme/fred_charts': FRED Charts (../projects/fred_charts)
+  Added 'acme/macro_data': Macro Economic Data (../projects/macro_data)
+
+Added 2 pipeline(s) to /data/catalog/chartbook.toml
+```
+
 ### `chartbook ls`
 
 List catalog objects (pipelines, dataframes, charts). Without a subcommand, displays all objects in a tree format.
@@ -214,16 +382,18 @@ chartbook ls --catalog /path/to/chartbook.toml
 
 **Example output:**
 
+Pipelines are listed under their scoped catalog keys (`scope/name`):
+
 ```console
 $ chartbook ls
 Catalog: /data/my-catalog/chartbook.toml
 
-[pipeline] yield_curve: Yield Curve Analysis
-  [dataframe] yield_curve/repo_public: Repo Public Data
-  [dataframe] yield_curve/treasury_rates: Treasury Rates
-  [chart] yield_curve/yield_spread: Yield Spread Chart
-[pipeline] macro_data: Macro Economic Data
-  [dataframe] macro_data/gdp_quarterly: GDP Quarterly
+[pipeline] acme/yield_curve: Yield Curve Analysis
+  [dataframe] acme/yield_curve/repo_public: Repo Public Data
+  [dataframe] acme/yield_curve/treasury_rates: Treasury Rates
+  [chart] acme/yield_curve/yield_spread: Yield Spread Chart
+[pipeline] acme/macro_data: Macro Economic Data
+  [dataframe] acme/macro_data/gdp_quarterly: GDP Quarterly
 ```
 
 ### `chartbook data`
@@ -245,7 +415,7 @@ chartbook data get-path --pipeline PIPELINE --dataframe DATAFRAME [--catalog PAT
 ```
 
 **Options:**
-- `--pipeline`: Pipeline ID (required)
+- `--pipeline`: Pipeline reference (required) — a bare name (if unambiguous), scoped ID (`scope/name`), or repo URL
 - `--dataframe`: Dataframe ID (required)
 - `--catalog PATH`: Path to catalog `chartbook.toml`
 
@@ -258,7 +428,7 @@ chartbook data get-docs --pipeline PIPELINE --dataframe DATAFRAME [--catalog PAT
 ```
 
 **Options:**
-- `--pipeline`: Pipeline ID (required)
+- `--pipeline`: Pipeline reference (required) — a bare name (if unambiguous), scoped ID (`scope/name`), or repo URL
 - `--dataframe`: Dataframe ID (required)
 - `--catalog PATH`: Path to catalog `chartbook.toml`
 
@@ -271,16 +441,21 @@ chartbook data get-docs-path --pipeline PIPELINE --dataframe DATAFRAME [--catalo
 ```
 
 **Options:**
-- `--pipeline`: Pipeline ID (required)
+- `--pipeline`: Pipeline reference (required) — a bare name (if unambiguous), scoped ID (`scope/name`), or repo URL
 - `--dataframe`: Dataframe ID (required)
 - `--catalog PATH`: Path to catalog `chartbook.toml`
 
 **Examples:**
 
+A bare pipeline name resolves against the catalog when exactly one entry matches; if several scopes share the name, the command errors and lists the candidates so you can qualify (e.g. `acme/yield_curve`).
+
 ```console
-# Get path to a dataframe's parquet file
+# Get path to a dataframe's parquet file (bare name, unambiguous)
 chartbook data get-path --pipeline yield_curve --dataframe repo_public
 # Output: /data/my-catalog/yield_curve/_output/repo_public.parquet
+
+# Fully qualified with a scoped ID
+chartbook data get-path --pipeline acme/yield_curve --dataframe repo_public
 
 # Print documentation for a dataframe
 chartbook data get-docs --pipeline yield_curve --dataframe repo_public
@@ -339,6 +514,6 @@ chartbook create-data-glimpses -o ./docs/
 # 2. Generate docs with build dirs kept
 chartbook build --keep-build-dirs
 
-# 3. Test locally
-python -m http.server -d ./docs
+# 3. Open in browser
+chartbook browse
 ```

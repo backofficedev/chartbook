@@ -35,7 +35,7 @@
 
 ### API
 
-````{py:function} generate_docs(output_dir: pathlib.Path, project_dir: pathlib.Path, publish_dir: pathlib.Path = Path('./_output/to_be_published/'), _docs_dir: pathlib.Path = Path('./_docs'), keep_build_dirs: bool = False, temp_docs_src_dir: pathlib.Path = Path('_docs_src'), should_remove_existing: bool = False, size_threshold: float = 50, warn_missing: bool = False)
+````{py:function} generate_docs(output_dir: pathlib.Path, project_dir: pathlib.Path, publish_dir: pathlib.Path = Path('./_output/to_be_published/'), _docs_dir: pathlib.Path = Path('./_docs'), keep_build_dirs: bool = False, temp_docs_src_dir: pathlib.Path = Path('_docs_src'), should_remove_existing: bool = False, size_threshold: float = 50, strict: bool = True, strip_mathjax2: bool = True)
 :canonical: chartbook.build_docs.generate_docs
 
 ```{autodoc2-docstring} chartbook.build_docs.generate_docs
@@ -49,7 +49,7 @@
 ```
 ````
 
-````{py:function} run_build_markdown(project_dir: pathlib.Path, pipeline_theme: str = 'catalog', publish_dir: pathlib.Path = Path('./_output/to_be_published/'), _docs_dir: pathlib.Path = Path('./_docs'), docs_src_dir: pathlib.Path = Path('_docs_src'), size_threshold: float = 50)
+````{py:function} run_build_markdown(project_dir: pathlib.Path, pipeline_theme: str = 'catalog', publish_dir: pathlib.Path = Path('./_output/to_be_published/'), _docs_dir: pathlib.Path = Path('./_docs'), docs_src_dir: pathlib.Path = Path('_docs_src'), size_threshold: float = 50, skip_pipelines: set[str] | None = None)
 :canonical: chartbook.build_docs.run_build_markdown
 
 ```{autodoc2-docstring} chartbook.build_docs.run_build_markdown

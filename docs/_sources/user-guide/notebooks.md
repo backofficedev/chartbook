@@ -12,14 +12,17 @@ Notebooks in chartbook:
 
 ## Configuration
 
+The notebook name is automatically inferred from the first `# Heading` in the notebook. You only need `description` and `path`:
+
 ```toml
 [notebooks]
 
 [notebooks.analysis]
-notebook_name = "Exploratory Data Analysis"
-notebook_description = "Initial data exploration and insights"
-notebook_path = "_output/01_analysis.ipynb"
+description = "Initial data exploration and insights"
+path = "_output/01_analysis.ipynb"
 ```
+
+Set `name` explicitly to override the inferred title.
 
 ## Best Practices
 

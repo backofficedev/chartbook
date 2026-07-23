@@ -29,7 +29,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
@@ -39,7 +39,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="../../_static/documentation_options.js?v=d1237063"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -263,6 +263,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
@@ -279,7 +280,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -289,6 +290,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
@@ -395,16 +397,31 @@ document.write(`
                 <article class="bd-article">
                   
   <h1>Source code for chartbook.manifest</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">importlib.resources</span>
+<span></span><span class="sd">&quot;&quot;&quot;Load and process ``chartbook.toml`` manifests (format v2).</span>
+
+<span class="sd">A v2 manifest has a single ``[project]`` metadata table plus the entity</span>
+<span class="sd">sections ``[charts]``, ``[dataframes]``, ``[notebooks]``, and ``[notes]``</span>
+<span class="sd">(pipelines), or a ``[pipelines]`` registry and optional ``[policy]``</span>
+<span class="sd">(catalogs). Every ``[project]`` field is optional; defaults are filled at</span>
+<span class="sd">load time. See ``docs_src/design/toml-format-v2.md`` for the full</span>
+<span class="sd">specification.</span>
+
+<span class="sd">v1 manifests (the old ``[config]``/``[site]``/``[pipeline]`` layout) are not</span>
+<span class="sd">supported; loading one raises an error pointing at the migration script.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">difflib</span>
+<span class="kn">import</span> <span class="nn">importlib.resources</span>
 <span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">tomli</span>
-<span class="kn">from</span> <span class="nn">packaging</span> <span class="kn">import</span> <span class="n">version</span>  <span class="c1"># Add this import for proper version comparison</span>
 
-<span class="kn">from</span> <span class="nn">chartbook.__about__</span> <span class="kn">import</span> <span class="n">__version__</span>  <span class="c1"># Import the version</span>
+<span class="kn">from</span> <span class="nn">chartbook.identity</span> <span class="kn">import</span> <span class="n">derive_pipeline_id</span><span class="p">,</span> <span class="n">validate_pipeline_id</span>
+<span class="kn">from</span> <span class="nn">chartbook.utils</span> <span class="kn">import</span> <span class="n">extract_notebook_title</span><span class="p">,</span> <span class="n">is_glob_pattern</span>
 
 <span class="n">BASE_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 <span class="n">OUTPUT_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./_output&quot;</span><span class="p">)</span>
@@ -413,143 +430,222 @@ document.write(`
 <span class="n">DOCS_BUILD_DIR</span> <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;_docs&quot;</span><span class="p">)</span>
 <span class="n">DOCS_SRC_DIR</span> <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;_docs_src&quot;</span><span class="p">)</span>
 
-<span class="n">DEFAULT_CONFIG</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;chartbook_format_version&quot;</span><span class="p">:</span> <span class="n">__version__</span><span class="p">,</span>  <span class="c1"># Use imported version</span>
-    <span class="p">},</span>
-    <span class="s2">&quot;site&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;chartbook&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;copyright&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;logo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;favicon_path&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;enable_data_download&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="p">},</span>
-    <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;DEFAULT&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;pipeline_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Default Pipeline&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;pipeline_description&quot;</span><span class="p">:</span> <span class="s2">&quot;Default pipeline description&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;lead_pipeline_developer&quot;</span><span class="p">:</span> <span class="s2">&quot;Default lead pipeline developer&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;contributors&quot;</span><span class="p">:</span> <span class="p">[],</span>
-        <span class="s2">&quot;build_commands&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;os_compatibility&quot;</span><span class="p">:</span> <span class="p">[],</span>
-        <span class="s2">&quot;git_repo_URL&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;README_file_path&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-    <span class="p">},</span>
+<span class="c1">#: Default location for custom site pages, used when the directory exists</span>
+<span class="c1">#: and ``project.site_dir`` is not set explicitly.</span>
+<span class="n">DEFAULT_SITE_DIR</span> <span class="o">=</span> <span class="s2">&quot;./docs_src/site/&quot;</span>
+
+<span class="c1">#: All recognized ``[project]`` keys with their defaults. Empty-string and</span>
+<span class="c1">#: empty-list defaults are placeholders resolved at load time (see</span>
+<span class="c1">#: ``_resolve_project``).</span>
+<span class="n">PROJECT_DEFAULTS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;maintainer&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;contributors&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="s2">&quot;repo_url&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;site_url&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;readme&quot;</span><span class="p">:</span> <span class="s2">&quot;./README.md&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;copyright&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;logo&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;favicon&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;os_compatibility&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="s2">&quot;build&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;site_dir&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;enable_data_download&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">}</span>
 
+<span class="c1">#: Entity sections that mark a manifest as pipeline-shaped.</span>
+<span class="n">ENTITY_SECTIONS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;charts&quot;</span><span class="p">,</span> <span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="s2">&quot;notebooks&quot;</span><span class="p">,</span> <span class="s2">&quot;notes&quot;</span><span class="p">)</span>
 
-<div class="viewcode-block" id="resolve_platform_path">
-<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.resolve_platform_path">[docs]</a>
-<span class="k">def</span> <span class="nf">resolve_platform_path</span><span class="p">(</span><span class="n">path_input</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolves a path that can be either a direct path string or a dictionary of platform-specific paths.</span>
+<span class="c1">#: v1 sections whose presence identifies an unmigrated manifest.</span>
+<span class="n">V1_MARKER_SECTIONS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;config&quot;</span><span class="p">,</span> <span class="s2">&quot;site&quot;</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">)</span>
 
-<span class="sd">    :param path_input: Either a string representing a direct path, or a dictionary containing platform-specific paths with &#39;Windows&#39; and/or &#39;Unix&#39; keys.</span>
-<span class="sd">    :type path_input: Union[str, dict]</span>
-<span class="sd">    :returns: The resolved path appropriate for the current platform.</span>
-<span class="sd">    :rtype: Path</span>
-<span class="sd">    :raises ValueError: If using a dict input and no valid path is found for the current platform.</span>
+<span class="n">_V1_HINT</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;This chartbook.toml uses the old v1 format ([config]/[site]/[pipeline] &quot;</span>
+    <span class="s2">&quot;sections), which is no longer supported. Run the migration script to &quot;</span>
+    <span class="s2">&quot;rewrite it: python scripts/migrate_toml_v2.py &lt;path&gt;. &quot;</span>
+    <span class="s2">&quot;See docs_src/design/toml-format-v2.md for the v2 format.&quot;</span>
+<span class="p">)</span>
 
-<span class="sd">    **Examples**::</span>
 
-<span class="sd">        resolve_platform_path(&#39;/path/to/dir&#39;)</span>
-<span class="sd">        # Returns: PosixPath(&#39;/path/to/dir&#39;)</span>
+<div class="viewcode-block" id="V1FormatError">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.V1FormatError">[docs]</a>
+<span class="k">class</span> <span class="nc">V1FormatError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when a v1-format chartbook.toml is loaded.&quot;&quot;&quot;</span>
 
-<span class="sd">        resolve_platform_path({&#39;Windows&#39;: &#39;C:/data&#39;, &#39;Unix&#39;: &#39;/home/data&#39;})</span>
-<span class="sd">        # Returns: WindowsPath(&#39;C:/data&#39;) on Windows, PosixPath(&#39;/home/data&#39;) on Unix/macOS</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">result_path</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path_input</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="n">result_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_input</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># Handle dict case (platform-specific paths)</span>
-        <span class="kn">import</span> <span class="nn">platform</span>
-
-        <span class="n">is_windows</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;windows&quot;</span>
-
-        <span class="k">if</span> <span class="n">is_windows</span> <span class="ow">and</span> <span class="s2">&quot;Windows&quot;</span> <span class="ow">in</span> <span class="n">path_input</span><span class="p">:</span>
-            <span class="n">result_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_input</span><span class="p">[</span><span class="s2">&quot;Windows&quot;</span><span class="p">])</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">is_windows</span> <span class="ow">and</span> <span class="s2">&quot;Unix&quot;</span> <span class="ow">in</span> <span class="n">path_input</span><span class="p">:</span>
-            <span class="n">result_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_input</span><span class="p">[</span><span class="s2">&quot;Unix&quot;</span><span class="p">])</span>
-
-        <span class="k">if</span> <span class="n">result_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;No valid path found for current platform (</span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span><span class="si">}</span><span class="s2">). &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Available paths: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">path_input</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">result_path</span></div>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">_V1_HINT</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 
-<div class="viewcode-block" id="validate_config_file">
-<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_config_file">[docs]</a>
-<span class="k">def</span> <span class="nf">validate_config_file</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">BASE_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validates that a chartbook.toml file exists in the specified directory.</span>
+<div class="viewcode-block" id="detect_v1_format">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.detect_v1_format">[docs]</a>
+<span class="k">def</span> <span class="nf">detect_v1_format</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True if a raw manifest dict uses the old v1 layout.</span>
 
-<span class="sd">    :param path: The directory path to check for chartbook.toml.</span>
-<span class="sd">    :type path: Path</span>
-<span class="sd">    :returns: True if validation succeeds.</span>
+<span class="sd">    :param raw_manifest: The dict parsed from chartbook.toml.</span>
 <span class="sd">    :rtype: bool</span>
-<span class="sd">    :raises ValueError: If the chartbook.toml file is missing or invalid.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">chartbook_toml</span> <span class="o">=</span> <span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">chartbook_toml</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No chartbook.toml found in directory: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="c1"># Test ability to load chartbook.toml</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">chartbook_toml</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">chartbook_toml</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">chartbook_toml</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="s2">&quot;catalog&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">section</span> <span class="ow">in</span> <span class="n">raw_manifest</span> <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">V1_MARKER_SECTIONS</span><span class="p">)</span></div>
 
-        <span class="n">current_version</span> <span class="o">=</span> <span class="n">__version__</span>  <span class="c1"># Use imported version</span>
-        <span class="n">expected_minor_version</span> <span class="o">=</span> <span class="n">version</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">current_version</span><span class="p">)</span><span class="o">.</span><span class="n">minor</span>
-        <span class="n">actual_version_str</span> <span class="o">=</span> <span class="n">chartbook_toml</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-            <span class="s2">&quot;chartbook_format_version&quot;</span><span class="p">,</span> <span class="s2">&quot;0.0.0&quot;</span>
-        <span class="p">)</span>  <span class="c1"># Handle missing key</span>
-        <span class="c1"># Check if the actual version string is parseable</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">actual_minor_version</span> <span class="o">=</span> <span class="n">version</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">actual_version_str</span><span class="p">)</span><span class="o">.</span><span class="n">minor</span>
-        <span class="k">except</span> <span class="n">version</span><span class="o">.</span><span class="n">InvalidVersion</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Invalid version format in chartbook.toml: </span><span class="si">{</span><span class="n">actual_version_str</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
 
-        <span class="k">assert</span> <span class="n">actual_minor_version</span> <span class="o">&gt;=</span> <span class="n">expected_minor_version</span><span class="p">,</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;chartbook.toml version is too low. Expected version </span><span class="si">{</span><span class="n">current_version</span><span class="si">}</span><span class="s2"> or greater, found </span><span class="si">{</span><span class="n">actual_version_str</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<div class="viewcode-block" id="resolve_project_type">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.resolve_project_type">[docs]</a>
+<span class="k">def</span> <span class="nf">resolve_project_type</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve a manifest&#39;s project type, inferring from structure when unset.</span>
+
+<span class="sd">    Inference: a ``[pipelines]`` registry table means catalog; anything else</span>
+<span class="sd">    means pipeline. Contradictions between an explicit ``type`` and the file</span>
+<span class="sd">    structure are hard errors, as is a file that is both catalog- and</span>
+<span class="sd">    pipeline-shaped with no explicit type.</span>
+
+<span class="sd">    :param raw_manifest: The dict parsed from chartbook.toml.</span>
+<span class="sd">    :param source: Label used in error messages.</span>
+<span class="sd">    :returns: ``&quot;pipeline&quot;`` or ``&quot;catalog&quot;``.</span>
+<span class="sd">    :raises ValueError: On an invalid ``type`` value, a contradiction, or</span>
+<span class="sd">        an ambiguous file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">explicit</span> <span class="o">=</span> <span class="n">raw_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span>
+    <span class="n">has_registry</span> <span class="o">=</span> <span class="s2">&quot;pipelines&quot;</span> <span class="ow">in</span> <span class="n">raw_manifest</span>
+    <span class="n">entity_sections</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">ENTITY_SECTIONS</span> <span class="k">if</span> <span class="n">raw_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">explicit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">explicit</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="s2">&quot;catalog&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: invalid project.type </span><span class="si">{</span><span class="n">explicit</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Must be &#39;pipeline&#39; or &#39;catalog&#39; (or omitted to infer).&quot;</span>
         <span class="p">)</span>
-        <span class="c1"># https://packaging.pypa.io/en/latest/version.html#packaging.version.Version.minor</span>
-    <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing key in chartbook.toml: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">explicit</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span> <span class="ow">and</span> <span class="n">has_registry</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: project.type is &#39;pipeline&#39; but a [pipelines] registry &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;table is present. A pipeline cannot contain a catalog registry; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;remove [pipelines] or set type = &#39;catalog&#39;.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">explicit</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span> <span class="ow">and</span> <span class="n">entity_sections</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: project.type is &#39;catalog&#39; but pipeline sections are &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;present (</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;[&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;]&#39;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">entity_sections</span><span class="p">)</span><span class="si">}</span><span class="s2">). &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;A catalog cannot define its own charts or dataframes; move them &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;to a pipeline or set type = &#39;pipeline&#39;.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">explicit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">explicit</span>
+
+    <span class="k">if</span> <span class="n">has_registry</span> <span class="ow">and</span> <span class="n">entity_sections</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: ambiguous project type — the file has both a &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;[pipelines] registry and pipeline sections &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;[&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;]&#39;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">entity_sections</span><span class="p">)</span><span class="si">}</span><span class="s2">). &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Set project.type explicitly.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="s2">&quot;catalog&quot;</span> <span class="k">if</span> <span class="n">has_registry</span> <span class="k">else</span> <span class="s2">&quot;pipeline&quot;</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_read_manifest_file</span><span class="p">(</span><span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read and parse a chartbook.toml, rejecting v1 files.</span>
+
+<span class="sd">    :param base_dir: Directory containing chartbook.toml.</span>
+<span class="sd">    :returns: The raw parsed dict.</span>
+<span class="sd">    :raises FileNotFoundError: If no chartbook.toml exists.</span>
+<span class="sd">    :raises V1FormatError: If the file uses the v1 layout.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">chartbook_toml_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">chartbook_toml_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No chartbook.toml found in directory: </span><span class="si">{</span><span class="n">base_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">chartbook_toml_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">raw_manifest</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">detect_v1_format</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">V1FormatError</span><span class="p">(</span><span class="n">chartbook_toml_path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">raw_manifest</span>
+
+
+<div class="viewcode-block" id="validate_manifest_file">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_manifest_file">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_manifest_file</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">BASE_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that a directory holds a loadable v2 chartbook.toml.</span>
+
+<span class="sd">    :param path: The directory to check.</span>
+<span class="sd">    :returns: True if validation succeeds.</span>
+<span class="sd">    :raises ValueError: If the file is missing, unparseable, v1-format, or</span>
+<span class="sd">        has an unresolvable project type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">raw_manifest</span> <span class="o">=</span> <span class="n">_read_manifest_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">resolve_project_type</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">))</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">V1FormatError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">):</span>
+        <span class="k">raise</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error loading chartbook.toml: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="kc">True</span></div>
 
 
 
-<div class="viewcode-block" id="validate_os_compatibility">
-<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_os_compatibility">[docs]</a>
-<span class="k">def</span> <span class="nf">validate_os_compatibility</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that os_compatibility is either a string or a list of strings.</span>
+<div class="viewcode-block" id="resolve_platform_path">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.resolve_platform_path">[docs]</a>
+<span class="k">def</span> <span class="nf">resolve_platform_path</span><span class="p">(</span><span class="n">path_input</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve a path that is either a string or a platform table.</span>
 
-<span class="sd">    :param value: The os_compatibility value to validate.</span>
-<span class="sd">    :type value: Union[str, list]</span>
-<span class="sd">    :returns: The validated value (unchanged).</span>
-<span class="sd">    :rtype: Union[str, list]</span>
-<span class="sd">    :raises TypeError: If the value is neither a string nor a list of strings.</span>
+<span class="sd">    :param path_input: Either a path string, or a dict with ``unix`` and/or</span>
+<span class="sd">        ``windows`` keys for platform-specific paths.</span>
+<span class="sd">    :returns: The path for the current platform.</span>
+<span class="sd">    :raises ValueError: If using a dict input and no path is defined for the</span>
+<span class="sd">        current platform.</span>
 
 <span class="sd">    **Examples**::</span>
 
-<span class="sd">        validate_os_compatibility(&quot;Windows/Linux/macOS&quot;)</span>
-<span class="sd">        # Returns: &quot;Windows/Linux/macOS&quot;</span>
+<span class="sd">        resolve_platform_path(&#39;/path/to/dir&#39;)</span>
+<span class="sd">        # Returns: PosixPath(&#39;/path/to/dir&#39;)</span>
 
-<span class="sd">        validate_os_compatibility([&quot;Windows&quot;, &quot;Linux&quot;, &quot;macOS&quot;])</span>
-<span class="sd">        # Returns: [&quot;Windows&quot;, &quot;Linux&quot;, &quot;macOS&quot;]</span>
+<span class="sd">        resolve_platform_path({&#39;unix&#39;: &#39;/home/data&#39;, &#39;windows&#39;: &#39;C:/data&#39;})</span>
+<span class="sd">        # Returns: PosixPath(&#39;/home/data&#39;) on Unix/macOS, WindowsPath(&#39;C:/data&#39;) on Windows</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.path_validation</span> <span class="kn">import</span> <span class="p">(</span>
+        <span class="n">_print_diagnostic</span><span class="p">,</span>
+        <span class="n">check_toml_path</span><span class="p">,</span>
+        <span class="n">detect_shell_environment</span><span class="p">,</span>
+    <span class="p">)</span>
 
-<span class="sd">        validate_os_compatibility(123)</span>
-<span class="sd">        # Raises: TypeError</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path_input</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">result_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_input</span><span class="p">)</span>
+        <span class="c1"># Warn about potential shell/platform path mismatches</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">detect_shell_environment</span><span class="p">()</span>
+        <span class="n">diags</span> <span class="o">=</span> <span class="n">check_toml_path</span><span class="p">(</span><span class="n">path_input</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">diags</span><span class="p">:</span>
+            <span class="n">_print_diagnostic</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result_path</span>
+
+    <span class="kn">import</span> <span class="nn">platform</span>
+
+    <span class="n">is_windows</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;windows&quot;</span>
+    <span class="n">platform_key</span> <span class="o">=</span> <span class="s2">&quot;windows&quot;</span> <span class="k">if</span> <span class="n">is_windows</span> <span class="k">else</span> <span class="s2">&quot;unix&quot;</span>
+    <span class="k">if</span> <span class="n">platform_key</span> <span class="ow">in</span> <span class="n">path_input</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">path_input</span><span class="p">[</span><span class="n">platform_key</span><span class="p">])</span>
+
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;No path defined for the current platform (</span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span><span class="si">}</span><span class="s2">). &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Available keys: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">path_input</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">; expected &#39;unix&#39; and/or &#39;windows&#39;.&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="validate_os_compatibility">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_os_compatibility">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_os_compatibility</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that os_compatibility is a string or a list of strings.</span>
+
+<span class="sd">    :param value: The os_compatibility value to validate.</span>
+<span class="sd">    :returns: The validated value (unchanged).</span>
+<span class="sd">    :raises TypeError: If the value is neither a string nor a list of strings.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">value</span>
@@ -572,9 +668,7 @@ document.write(`
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize a list of tags to Title Case.</span>
 
 <span class="sd">    :param tags: List of tag strings to normalize</span>
-<span class="sd">    :type tags: list</span>
 <span class="sd">    :returns: List of tags in Title Case</span>
-<span class="sd">    :rtype: list</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -594,222 +688,530 @@ document.write(`
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_doc_fields">[docs]</a>
 <span class="k">def</span> <span class="nf">validate_doc_fields</span><span class="p">(</span>
     <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
-    <span class="n">path_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">str_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">object_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that exactly one of path or str doc fields is provided.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that exactly one of ``docs_path`` / ``docs`` is provided.</span>
 
 <span class="sd">    :param manifest: The manifest dictionary for the object (dataframe or chart).</span>
-<span class="sd">    :param path_key: The key for the path-based documentation field.</span>
-<span class="sd">    :param str_key: The key for the inline string documentation field.</span>
 <span class="sd">    :param object_type: The type of object (&#39;dataframe&#39; or &#39;chart&#39;) for error messages.</span>
 <span class="sd">    :param object_id: The ID of the object for error messages.</span>
 <span class="sd">    :returns: A tuple of (mode, value) where mode is &#39;path&#39; or &#39;str&#39;.</span>
 <span class="sd">    :raises ValueError: If both or neither fields are provided.</span>
-
-<span class="sd">    **Examples**::</span>
-
-<span class="sd">        validate_doc_fields(</span>
-<span class="sd">            {&#39;dataframe_docs_path&#39;: &#39;./docs/df.md&#39;},</span>
-<span class="sd">            &#39;dataframe_docs_path&#39;, &#39;dataframe_docs_str&#39;,</span>
-<span class="sd">            &#39;dataframe&#39;, &#39;my_df&#39;</span>
-<span class="sd">        )</span>
-<span class="sd">        # Returns: (&#39;path&#39;, &#39;./docs/df.md&#39;)</span>
-
-<span class="sd">        validate_doc_fields(</span>
-<span class="sd">            {&#39;dataframe_docs_str&#39;: &#39;Inline docs here&#39;},</span>
-<span class="sd">            &#39;dataframe_docs_path&#39;, &#39;dataframe_docs_str&#39;,</span>
-<span class="sd">            &#39;dataframe&#39;, &#39;my_df&#39;</span>
-<span class="sd">        )</span>
-<span class="sd">        # Returns: (&#39;str&#39;, &#39;Inline docs here&#39;)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">has_path</span> <span class="o">=</span> <span class="n">path_key</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="ow">and</span> <span class="n">manifest</span><span class="p">[</span><span class="n">path_key</span><span class="p">]</span>
-    <span class="n">has_str</span> <span class="o">=</span> <span class="n">str_key</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="ow">and</span> <span class="n">manifest</span><span class="p">[</span><span class="n">str_key</span><span class="p">]</span>
+    <span class="n">has_path</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;docs_path&quot;</span><span class="p">)</span>
+    <span class="n">has_str</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;docs&quot;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">has_path</span> <span class="ow">and</span> <span class="n">has_str</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">object_type</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">object_id</span><span class="si">}</span><span class="s2">&#39; has both </span><span class="si">{</span><span class="n">path_key</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">str_key</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">object_type</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">object_id</span><span class="si">}</span><span class="s2">&#39; has both docs_path and docs. &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;Only one is allowed.&quot;</span>
         <span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">has_path</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">has_str</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">object_type</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">object_id</span><span class="si">}</span><span class="s2">&#39; must have either </span><span class="si">{</span><span class="n">path_key</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="n">str_key</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">object_type</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">object_id</span><span class="si">}</span><span class="s2">&#39; must have either docs_path (a markdown &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;file) or docs (inline markdown).&quot;</span>
         <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">has_path</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="n">path_key</span><span class="p">])</span>
-    <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;str&quot;</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="n">str_key</span><span class="p">])</span></div>
+        <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;docs_path&quot;</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;str&quot;</span><span class="p">,</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;docs&quot;</span><span class="p">])</span></div>
 
+
+
+<span class="k">def</span> <span class="nf">_warn_unknown_project_keys</span><span class="p">(</span><span class="n">project_raw</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Warn about unrecognized keys in the [project] table.</span>
+
+<span class="sd">    This is what prevents silent field-name drift (the v1 ``runs_on``</span>
+<span class="sd">    problem) from recurring.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">project_raw</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">PROJECT_DEFAULTS</span><span class="p">:</span>
+            <span class="n">suggestion</span> <span class="o">=</span> <span class="n">difflib</span><span class="o">.</span><span class="n">get_close_matches</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">PROJECT_DEFAULTS</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">hint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; Did you mean </span><span class="si">{</span><span class="n">suggestion</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">?&quot;</span> <span class="k">if</span> <span class="n">suggestion</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: unknown key </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2"> in [project] is ignored.</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_resolve_project</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">project_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build the resolved [project] dict with all defaults filled.</span>
+
+<span class="sd">    :param raw_manifest: The raw parsed manifest.</span>
+<span class="sd">    :param base_dir: The project&#39;s root directory.</span>
+<span class="sd">    :param project_type: The resolved project type.</span>
+<span class="sd">    :returns: A dict with every PROJECT_DEFAULTS key present and resolved.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span>
+    <span class="n">project_raw</span> <span class="o">=</span> <span class="n">raw_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">_warn_unknown_project_keys</span><span class="p">(</span><span class="n">project_raw</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+
+    <span class="n">project</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">PROJECT_DEFAULTS</span><span class="p">)</span>
+    <span class="n">project</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">project_raw</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">PROJECT_DEFAULTS</span><span class="p">})</span>
+    <span class="n">project</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">project_type</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">project</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]:</span>
+        <span class="n">project</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">project</span><span class="p">[</span><span class="s2">&quot;copyright&quot;</span><span class="p">]:</span>
+        <span class="n">project</span><span class="p">[</span><span class="s2">&quot;copyright&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">project</span><span class="p">[</span><span class="s2">&quot;maintainer&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">project</span><span class="p">[</span><span class="s2">&quot;contributors&quot;</span><span class="p">]:</span>
+        <span class="n">project</span><span class="p">[</span><span class="s2">&quot;maintainer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">project</span><span class="p">[</span><span class="s2">&quot;contributors&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">project</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">derive_pipeline_id</span><span class="p">(</span><span class="n">project_raw</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">project</span><span class="p">[</span><span class="s2">&quot;site_url&quot;</span><span class="p">]:</span>
+        <span class="n">webpage_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;docs&quot;</span> <span class="o">/</span> <span class="s2">&quot;index.html&quot;</span>
+        <span class="n">project</span><span class="p">[</span><span class="s2">&quot;site_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;file://</span><span class="si">{</span><span class="n">webpage_path</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">if</span> <span class="s2">&quot;os_compatibility&quot;</span> <span class="ow">in</span> <span class="n">project_raw</span><span class="p">:</span>
+        <span class="n">project</span><span class="p">[</span><span class="s2">&quot;os_compatibility&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_os_compatibility</span><span class="p">(</span>
+            <span class="n">project_raw</span><span class="p">[</span><span class="s2">&quot;os_compatibility&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">project</span>
+
+
+<span class="k">def</span> <span class="nf">_resolve_site_dir</span><span class="p">(</span><span class="n">project</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve the custom site pages directory into ``project[&quot;_resolved_site_dir&quot;]``.</span>
+
+<span class="sd">    An explicit ``site_dir`` must exist; the default (``docs_src/site/``) is</span>
+<span class="sd">    used only when present on disk.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">site_dir_raw</span> <span class="o">=</span> <span class="n">project</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;site_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">site_dir_raw</span><span class="p">:</span>
+        <span class="n">site_dir_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">site_dir_raw</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">site_dir_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;site_dir &#39;</span><span class="si">{</span><span class="n">site_dir_raw</span><span class="si">}</span><span class="s2">&#39; does not exist at </span><span class="si">{</span><span class="n">site_dir_path</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">site_dir_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">DEFAULT_SITE_DIR</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">site_dir_path</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="n">project</span><span class="p">[</span><span class="s2">&quot;_resolved_site_dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">return</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">site_dir_path</span> <span class="o">/</span> <span class="s2">&quot;cb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;site_dir contains a &#39;cb/&#39; subdirectory which conflicts with &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;the reserved chartbook namespace. Please rename or remove it.&quot;</span>
+        <span class="p">)</span>
+    <span class="n">project</span><span class="p">[</span><span class="s2">&quot;_resolved_site_dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">site_dir_path</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
 
 
 <span class="k">def</span> <span class="nf">_load_pipeline_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load the pipeline manifest from a TOML file and process it.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Process a raw pipeline manifest into the internal manifest shape.</span>
 
-<span class="sd">    :param raw_manifest: The raw manifest dictionary loaded from chartbook.toml.</span>
-<span class="sd">    :type raw_manifest: dict</span>
-<span class="sd">    :returns: The processed manifest dictionary with additional metadata.</span>
+<span class="sd">    :param raw_manifest: The raw manifest dictionary loaded from chartbook.toml</span>
+<span class="sd">        (with ``base_dir`` already attached).</span>
+<span class="sd">    :returns: The processed manifest dictionary with resolved metadata.</span>
 <span class="sd">    :rtype: dict</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">assert</span> <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span>
     <span class="n">base_dir</span> <span class="o">=</span> <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">]</span>
     <span class="n">manifest</span> <span class="o">=</span> <span class="n">raw_manifest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-    <span class="c1"># Validate os_compatibility if present</span>
-    <span class="k">if</span> <span class="s2">&quot;pipeline&quot;</span> <span class="ow">in</span> <span class="n">manifest</span> <span class="ow">and</span> <span class="s2">&quot;os_compatibility&quot;</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">]:</span>
-        <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">][</span><span class="s2">&quot;os_compatibility&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">validate_os_compatibility</span><span class="p">(</span>
-            <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">][</span><span class="s2">&quot;os_compatibility&quot;</span><span class="p">]</span>
-        <span class="p">)</span>
+    <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_resolve_project</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">)</span>
+    <span class="n">_resolve_site_dir</span><span class="p">(</span><span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">],</span> <span class="n">base_dir</span><span class="p">)</span>
 
-    <span class="n">source_last_modified_date</span> <span class="o">=</span> <span class="n">find_latest_source_modification</span><span class="p">(</span>
-        <span class="n">base_dir</span>
-    <span class="p">)</span>  <span class="c1"># Get the last modified date</span>
+    <span class="c1"># Ensure optional sections have defaults</span>
+    <span class="n">manifest</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;charts&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">manifest</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">manifest</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;notebooks&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+    <span class="c1"># Infer notebook name from the notebook&#39;s H1 heading when not explicitly set</span>
+    <span class="k">for</span> <span class="n">notebook_id</span> <span class="ow">in</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;notebooks&quot;</span><span class="p">,</span> <span class="p">{}):</span>
+        <span class="n">nb_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;notebooks&quot;</span><span class="p">][</span><span class="n">notebook_id</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">&quot;name&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">nb_manifest</span><span class="p">:</span>
+            <span class="n">nb_path</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="n">nb_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">nb_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">title</span> <span class="o">=</span> <span class="n">extract_notebook_title</span><span class="p">(</span><span class="n">nb_path</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">title</span><span class="p">:</span>
+                    <span class="n">nb_manifest</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">title</span>
+
+    <span class="n">source_last_modified_date</span> <span class="o">=</span> <span class="n">find_latest_source_modification</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
     <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;source_last_modified_date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_last_modified_date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span>
         <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span>
-    <span class="p">)</span>  <span class="c1"># Format and store the last modified date</span>
+    <span class="p">)</span>
     <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline_base_dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">base_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
-
-    <span class="n">candidate_webpage_url</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;webpage_URL&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">candidate_webpage_url</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">webpage_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;docs&quot;</span> <span class="o">/</span> <span class="s2">&quot;index.html&quot;</span>
-        <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;webpage_URL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;file://</span><span class="si">{</span><span class="n">webpage_path</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;webpage_URL&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidate_webpage_url</span>
 
     <span class="c1"># Process notes if they exist</span>
     <span class="k">if</span> <span class="s2">&quot;notes&quot;</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">note_id</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;notes&quot;</span><span class="p">]:</span>
             <span class="n">note_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;notes&quot;</span><span class="p">][</span><span class="n">note_id</span><span class="p">]</span>
-            <span class="c1"># Add the full path to the markdown file for easier access later</span>
-            <span class="n">note_manifest</span><span class="p">[</span><span class="s2">&quot;full_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">note_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_markdown_file&quot;</span><span class="p">]</span>
-            <span class="p">)</span>
+            <span class="n">note_manifest</span><span class="p">[</span><span class="s2">&quot;_resolved_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">note_manifest</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">]</span>
 
-    <span class="c1"># Create a mapping of dataframe_id to linked chart_ids</span>
+    <span class="c1"># Create a mapping of dataframe id to linked chart ids</span>
     <span class="k">if</span> <span class="s2">&quot;dataframes&quot;</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">:</span>
         <span class="n">dataframe_to_charts</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">dataframe_id</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">]</span>
-        <span class="p">}</span>  <span class="c1"># Initialize mapping</span>
+        <span class="p">}</span>
 
         <span class="k">for</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">]:</span>
             <span class="n">dataframe_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe_id</span><span class="p">]</span>
-            <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;dataframe_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;path_to_parquet_data&quot;</span><span class="p">]</span>
+            <span class="n">raw_parquet_path</span> <span class="o">=</span> <span class="n">dataframe_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;_is_glob&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="n">raw_parquet_path</span><span class="p">)</span>
+            <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;_resolved_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">raw_parquet_path</span> <span class="k">if</span> <span class="n">raw_parquet_path</span> <span class="k">else</span> <span class="kc">None</span>
             <span class="p">)</span>
-            <span class="c1"># Normalize topic_tags to Title Case</span>
-            <span class="k">if</span> <span class="s2">&quot;topic_tags&quot;</span> <span class="ow">in</span> <span class="n">dataframe_manifest</span><span class="p">:</span>
-                <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;topic_tags&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">normalize_tags</span><span class="p">(</span>
-                    <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;topic_tags&quot;</span><span class="p">]</span>
-                <span class="p">)</span>
-            <span class="c1"># Validate and store doc field mode</span>
+            <span class="k">if</span> <span class="s2">&quot;tags&quot;</span> <span class="ow">in</span> <span class="n">dataframe_manifest</span><span class="p">:</span>
+                <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">normalize_tags</span><span class="p">(</span><span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">])</span>
             <span class="n">doc_mode</span><span class="p">,</span> <span class="n">doc_value</span> <span class="o">=</span> <span class="n">validate_doc_fields</span><span class="p">(</span>
-                <span class="n">dataframe_manifest</span><span class="p">,</span>
-                <span class="s2">&quot;dataframe_docs_path&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;dataframe_docs_str&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;dataframe&quot;</span><span class="p">,</span>
-                <span class="n">dataframe_id</span><span class="p">,</span>
+                <span class="n">dataframe_manifest</span><span class="p">,</span> <span class="s2">&quot;dataframe&quot;</span><span class="p">,</span> <span class="n">dataframe_id</span>
             <span class="p">)</span>
             <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc_mode</span>
             <span class="n">dataframe_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_value&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc_value</span>
 
         <span class="k">if</span> <span class="s2">&quot;charts&quot;</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">chart_id</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">]:</span>
-                <span class="n">chart_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">][</span>
-                    <span class="n">chart_id</span>
-                <span class="p">]</span>  <span class="c1"># Get manifest for the current chart</span>
-                <span class="c1"># Normalize topic_tags to Title Case</span>
-                <span class="k">if</span> <span class="s2">&quot;topic_tags&quot;</span> <span class="ow">in</span> <span class="n">chart_manifest</span><span class="p">:</span>
-                    <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;topic_tags&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">normalize_tags</span><span class="p">(</span>
-                        <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;topic_tags&quot;</span><span class="p">]</span>
-                    <span class="p">)</span>
-                <span class="c1"># Validate and store doc field mode</span>
+                <span class="n">chart_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">][</span><span class="n">chart_id</span><span class="p">]</span>
+                <span class="k">if</span> <span class="s2">&quot;tags&quot;</span> <span class="ow">in</span> <span class="n">chart_manifest</span><span class="p">:</span>
+                    <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">normalize_tags</span><span class="p">(</span><span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">])</span>
                 <span class="n">doc_mode</span><span class="p">,</span> <span class="n">doc_value</span> <span class="o">=</span> <span class="n">validate_doc_fields</span><span class="p">(</span>
-                    <span class="n">chart_manifest</span><span class="p">,</span>
-                    <span class="s2">&quot;chart_docs_path&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;chart_docs_str&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;chart&quot;</span><span class="p">,</span>
-                    <span class="n">chart_id</span><span class="p">,</span>
+                    <span class="n">chart_manifest</span><span class="p">,</span> <span class="s2">&quot;chart&quot;</span><span class="p">,</span> <span class="n">chart_id</span>
                 <span class="p">)</span>
                 <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc_mode</span>
                 <span class="n">chart_manifest</span><span class="p">[</span><span class="s2">&quot;_doc_value&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc_value</span>
 
-                <span class="n">dataframe_id</span> <span class="o">=</span> <span class="n">chart_manifest</span><span class="p">[</span>
-                    <span class="s2">&quot;dataframe_id&quot;</span>
-                <span class="p">]</span>  <span class="c1"># Identify the linked dataframe</span>
+                <span class="n">dataframe_id</span> <span class="o">=</span> <span class="n">chart_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframe&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">dataframe_id</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Chart &#39;</span><span class="si">{</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">&#39; has no &#39;dataframe&#39; key linking it &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;to a dataframe in the [dataframes] section.&quot;</span>
+                    <span class="p">)</span>
                 <span class="k">if</span> <span class="n">dataframe_id</span> <span class="ow">in</span> <span class="n">dataframe_to_charts</span><span class="p">:</span>
-                    <span class="n">dataframe_to_charts</span><span class="p">[</span><span class="n">dataframe_id</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                        <span class="n">chart_id</span>
-                    <span class="p">)</span>  <span class="c1"># Link chart_id to dataframe_id</span>
+                    <span class="n">dataframe_to_charts</span><span class="p">[</span><span class="n">dataframe_id</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chart_id</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe_id</span><span class="si">}</span><span class="s2"> not found in dataframes section&quot;</span>
                     <span class="p">)</span>
 
-            <span class="c1"># Update dataframe_manifest with the linked charts</span>
             <span class="k">for</span> <span class="n">dataframe_id</span><span class="p">,</span> <span class="n">chart_ids</span> <span class="ow">in</span> <span class="n">dataframe_to_charts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe_id</span><span class="p">][</span><span class="s2">&quot;linked_charts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="n">chart_ids</span>  <span class="c1"># Add linked charts</span>
-                <span class="p">)</span>
+                <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe_id</span><span class="p">][</span><span class="s2">&quot;linked_charts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chart_ids</span>
+
     <span class="k">return</span> <span class="n">manifest</span>
 
 
-<span class="k">def</span> <span class="nf">_load_catalog_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load the catalog manifest from a TOML file and process it.</span>
+<span class="k">def</span> <span class="nf">_resolve_policy</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve a catalog&#39;s [policy] section, filling defaults.</span>
 
-<span class="sd">    :param raw_manifest: The raw manifest dictionary loaded from chartbook.toml.</span>
-<span class="sd">    :type raw_manifest: dict</span>
+<span class="sd">    :param raw_manifest: The raw parsed catalog manifest.</span>
+<span class="sd">    :param source: Label used in error messages.</span>
+<span class="sd">    :returns: Dict with ``mode`` and per-object-type ``required`` field lists.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">chartbook.diagnostics</span> <span class="kn">import</span> <span class="n">DEFAULT_REQUIRED_FIELDS</span>
+
+    <span class="n">policy_raw</span> <span class="o">=</span> <span class="n">raw_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;policy&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">policy_raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;warn&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;warn&quot;</span><span class="p">,</span> <span class="s2">&quot;strict&quot;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: invalid policy.mode </span><span class="si">{</span><span class="n">mode</span><span class="si">!r}</span><span class="s2">. Must be &#39;warn&#39; or &#39;strict&#39;.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">required_raw</span> <span class="o">=</span> <span class="n">policy_raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;required&quot;</span><span class="p">,</span> <span class="p">{})</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">required_raw</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DEFAULT_REQUIRED_FIELDS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: unknown policy.required key </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Allowed keys: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">DEFAULT_REQUIRED_FIELDS</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+    <span class="n">required</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">object_type</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">required_raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">object_type</span><span class="p">,</span> <span class="n">default_fields</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">object_type</span><span class="p">,</span> <span class="n">default_fields</span> <span class="ow">in</span> <span class="n">DEFAULT_REQUIRED_FIELDS</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;required&quot;</span><span class="p">:</span> <span class="n">required</span><span class="p">}</span>
+
+
+<span class="c1">#: Keys inside [pipelines] that configure the registry itself rather than</span>
+<span class="c1">#: naming a pipeline entry. A pipeline cannot use these as a bare ID.</span>
+<span class="n">RESERVED_PIPELINES_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;members&quot;</span><span class="p">,</span> <span class="s2">&quot;exclude&quot;</span><span class="p">,</span> <span class="s2">&quot;disabled&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_require_string_list</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate that a reserved [pipelines] key holds an array of strings.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: pipelines.</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> must be an array of strings, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;e.g. </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> = [</span><span class="se">\&quot;</span><span class="s2">../my_repos/*</span><span class="se">\&quot;</span><span class="s2">]. Got: </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">def</span> <span class="nf">_expand_exclude_patterns</span><span class="p">(</span><span class="n">patterns</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve pipelines.exclude patterns to a set of absolute paths.&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">glob</span> <span class="k">as</span> <span class="nn">glob_module</span>
+
+    <span class="n">excluded</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="n">patterns</span><span class="p">:</span>
+        <span class="n">expanded</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pattern</span><span class="p">)</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="n">glob_module</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">expanded</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">matches</span><span class="p">:</span>
+            <span class="n">excluded</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">matches</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># A non-matching exclude is harmless; keep the literal path so</span>
+            <span class="c1"># excluding a not-yet-created directory still works.</span>
+            <span class="n">excluded</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">expanded</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">excluded</span>
+
+
+<span class="k">def</span> <span class="nf">_discover_member_pipelines</span><span class="p">(</span>
+    <span class="n">members</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">exclude</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">explicit_entries</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Expand pipelines.members path patterns into pipeline entries.</span>
+
+<span class="sd">    Each discovered directory must hold a v2 pipeline chartbook.toml; its</span>
+<span class="sd">    catalog key is the derived scoped ID. Glob patterns silently skip</span>
+<span class="sd">    directories that are not chartbook pipelines (and any catalogs they</span>
+<span class="sd">    match); a non-glob member path must point at a valid pipeline.</span>
+
+<span class="sd">    :returns: Mapping of derived pipeline ID -&gt; entry dict, with a</span>
+<span class="sd">        ``_member_source`` describing where each came from (for errors).</span>
+<span class="sd">    :raises ValueError: With fix-it suggestions, on broken explicit paths,</span>
+<span class="sd">        v1-format members, or two members deriving the same ID.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">glob</span> <span class="k">as</span> <span class="nn">glob_module</span>
+
+    <span class="kn">from</span> <span class="nn">chartbook.identity</span> <span class="kn">import</span> <span class="n">derive_pipeline_id</span>
+
+    <span class="n">excluded_paths</span> <span class="o">=</span> <span class="n">_expand_exclude_patterns</span><span class="p">(</span><span class="n">exclude</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">)</span>
+    <span class="n">catalog_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+    <span class="c1"># Map resolved path -&gt; explicit entry key, so explicit entries override</span>
+    <span class="c1"># the member that discovered the same directory</span>
+    <span class="n">explicit_paths</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">explicit_entries</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">entry_path</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry_path</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">explicit_paths</span><span class="p">[(</span><span class="n">catalog_dir</span> <span class="o">/</span> <span class="n">entry_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()]</span> <span class="o">=</span> <span class="n">key</span>
+
+    <span class="n">discovered</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">seen_dirs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+        <span class="n">is_glob</span> <span class="o">=</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+        <span class="n">expanded</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">pattern</span><span class="p">)</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob_module</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">expanded</span><span class="p">))</span>
+        <span class="n">match_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">matches</span> <span class="k">if</span> <span class="n">Path</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">match_dirs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">is_glob</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: pipelines.members pattern </span><span class="si">{</span><span class="n">pattern</span><span class="si">!r}</span><span class="s2"> matched &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;no directories (searched </span><span class="si">{</span><span class="n">expanded</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">,</span>
+                    <span class="ne">UserWarning</span><span class="p">,</span>
+                    <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: pipelines.members entry </span><span class="si">{</span><span class="n">pattern</span><span class="si">!r}</span><span class="s2"> does not exist &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;(resolved to </span><span class="si">{</span><span class="n">expanded</span><span class="si">}</span><span class="s2">).</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;To fix, do one of:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;  - check the path is spelled correctly relative to </span><span class="si">{</span><span class="n">catalog_dir</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;  - remove </span><span class="si">{</span><span class="n">pattern</span><span class="si">!r}</span><span class="s2"> from pipelines.members&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">member_dir</span> <span class="ow">in</span> <span class="n">match_dirs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">member_dir</span> <span class="ow">in</span> <span class="n">seen_dirs</span> <span class="ow">or</span> <span class="n">member_dir</span> <span class="ow">in</span> <span class="n">excluded_paths</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">member_dir</span> <span class="o">==</span> <span class="n">catalog_dir</span> <span class="ow">or</span> <span class="n">member_dir</span> <span class="ow">in</span> <span class="n">explicit_paths</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">seen_dirs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">member_dir</span><span class="p">)</span>
+
+            <span class="n">member_toml</span> <span class="o">=</span> <span class="n">member_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">member_toml</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">is_glob</span><span class="p">:</span>
+                    <span class="k">continue</span>  <span class="c1"># not a chartbook project; globs just pass it by</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: pipelines.members entry </span><span class="si">{</span><span class="n">pattern</span><span class="si">!r}</span><span class="s2"> has no &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;chartbook.toml (looked in </span><span class="si">{</span><span class="n">member_dir</span><span class="si">}</span><span class="s2">).</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;To fix, do one of:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - create a chartbook.toml there (an empty file is a valid pipeline)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - remove </span><span class="si">{</span><span class="n">pattern</span><span class="si">!r}</span><span class="s2"> from pipelines.members&quot;</span>
+                <span class="p">)</span>
+
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">member_toml</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">member_raw</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">detect_v1_format</span><span class="p">(</span><span class="n">member_raw</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: catalog member </span><span class="si">{</span><span class="n">member_dir</span><span class="si">}</span><span class="s2"> uses the old v1 &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;chartbook.toml format.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;To fix, do one of:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - migrate it: python scripts/migrate_toml_v2.py </span><span class="si">{</span><span class="n">member_dir</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;    (script lives in the chartbook repo)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - exclude it from this catalog: add &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\&quot;</span><span class="si">{</span><span class="n">pattern</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">is_glob</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="n">member_dir</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> to pipelines.exclude&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">member_type</span> <span class="o">=</span> <span class="n">resolve_project_type</span><span class="p">(</span><span class="n">member_raw</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">member_toml</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">member_type</span> <span class="o">!=</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_glob</span><span class="p">:</span>
+                    <span class="k">continue</span>  <span class="c1"># catalogs matched by a glob are just skipped</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: pipelines.members entry </span><span class="si">{</span><span class="n">pattern</span><span class="si">!r}</span><span class="s2"> points at &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">member_dir</span><span class="si">}</span><span class="s2">, which is a catalog, not a pipeline.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;To fix: remove it from pipelines.members (catalogs cannot &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;nest inside catalogs).&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">member_id</span> <span class="o">=</span> <span class="n">derive_pipeline_id</span><span class="p">(</span><span class="n">member_raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project&quot;</span><span class="p">,</span> <span class="p">{}),</span> <span class="n">member_dir</span><span class="p">)</span>
+            <span class="n">member_source</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;members pattern </span><span class="si">{</span><span class="n">pattern</span><span class="si">!r}</span><span class="s2">&quot;</span>
+
+            <span class="k">if</span> <span class="n">member_id</span> <span class="ow">in</span> <span class="n">discovered</span><span class="p">:</span>
+                <span class="n">other</span> <span class="o">=</span> <span class="n">discovered</span><span class="p">[</span><span class="n">member_id</span><span class="p">]</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: two catalog members resolve to the same pipeline &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;ID </span><span class="si">{</span><span class="n">member_id</span><span class="si">!r}</span><span class="s2">:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">other</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (from </span><span class="si">{</span><span class="n">other</span><span class="p">[</span><span class="s1">&#39;_member_source&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">member_dir</span><span class="si">}</span><span class="s2"> (from </span><span class="si">{</span><span class="n">member_source</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;To fix, do one of:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - give one repo a distinct explicit ID in its own &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;chartbook.toml:  [project] id = </span><span class="se">\&quot;</span><span class="s2">myscope/</span><span class="si">{</span><span class="n">member_id</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="se">\&quot;\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - exclude one path in this catalog:  [pipelines] &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;exclude = [</span><span class="se">\&quot;</span><span class="si">{</span><span class="n">member_dir</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">]&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">member_id</span> <span class="ow">in</span> <span class="n">explicit_entries</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: catalog member </span><span class="si">{</span><span class="n">member_dir</span><span class="si">}</span><span class="s2"> (from </span><span class="si">{</span><span class="n">member_source</span><span class="si">}</span><span class="s2">) &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;derives the ID </span><span class="si">{</span><span class="n">member_id</span><span class="si">!r}</span><span class="s2">, which is already declared as an &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;explicit [pipelines] entry pointing elsewhere.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;To fix, do one of:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - point the explicit entry at this directory (then the &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;explicit entry wins)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - exclude this path:  [pipelines] exclude = [</span><span class="se">\&quot;</span><span class="si">{</span><span class="n">member_dir</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">]</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;  - give the repo a distinct ID in its own chartbook.toml&quot;</span>
+                <span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">rel_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">member_dir</span><span class="p">,</span> <span class="n">catalog_dir</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="n">rel_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">member_dir</span><span class="p">)</span>
+            <span class="n">discovered</span><span class="p">[</span><span class="n">member_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="n">rel_path</span><span class="p">,</span> <span class="s2">&quot;_member_source&quot;</span><span class="p">:</span> <span class="n">member_source</span><span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">discovered</span>
+
+
+<span class="k">def</span> <span class="nf">_apply_disabled_list</span><span class="p">(</span><span class="n">entries</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">disabled_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove entries named in pipelines.disabled, warning on unknown IDs.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">disabled_id</span> <span class="ow">in</span> <span class="n">disabled_ids</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">disabled_id</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">entries</span><span class="p">[</span><span class="n">disabled_id</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">suggestion</span> <span class="o">=</span> <span class="n">difflib</span><span class="o">.</span><span class="n">get_close_matches</span><span class="p">(</span><span class="n">disabled_id</span><span class="p">,</span> <span class="n">entries</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">hint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; Did you mean </span><span class="si">{</span><span class="n">suggestion</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">!r}</span><span class="s2">?&quot;</span> <span class="k">if</span> <span class="n">suggestion</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: pipelines.disabled entry </span><span class="si">{</span><span class="n">disabled_id</span><span class="si">!r}</span><span class="s2"> does not &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;match any pipeline in this catalog.</span><span class="si">{</span><span class="n">hint</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_load_catalog_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Process a raw catalog manifest, loading each registered pipeline.</span>
+
+<span class="sd">    The [pipelines] table holds explicit entries (keyed by pipeline ID, with</span>
+<span class="sd">    a plain string as shorthand for {path = ...}) plus the reserved keys</span>
+<span class="sd">    ``members`` (path patterns to auto-discover), ``exclude`` (paths to skip</span>
+<span class="sd">    during discovery), and ``disabled`` (pipeline IDs to drop).</span>
+
+<span class="sd">    :param raw_manifest: The raw manifest dictionary loaded from chartbook.toml</span>
+<span class="sd">        (with ``base_dir`` already attached).</span>
 <span class="sd">    :returns: The processed catalog manifest dictionary.</span>
 <span class="sd">    :rtype: dict</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">manifest</span> <span class="o">=</span> <span class="n">raw_manifest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">base_dir</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">]</span>
-    <span class="n">all_pipelines</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">all_pipelines</span><span class="p">:</span>
-        <span class="n">path_to_pipeline</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_id</span><span class="p">][</span><span class="s2">&quot;path_to_pipeline&quot;</span><span class="p">]</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span>
+
+    <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_resolve_project</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;catalog&quot;</span><span class="p">)</span>
+    <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">][</span><span class="s2">&quot;_resolved_site_dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;policy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_resolve_policy</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+
+    <span class="n">pipelines_raw</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipelines&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">members</span> <span class="o">=</span> <span class="n">pipelines_raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;members&quot;</span><span class="p">)</span>
+    <span class="n">exclude</span> <span class="o">=</span> <span class="n">pipelines_raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;exclude&quot;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="n">disabled_ids</span> <span class="o">=</span> <span class="n">pipelines_raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;disabled&quot;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="k">if</span> <span class="n">members</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">members</span> <span class="o">=</span> <span class="n">_require_string_list</span><span class="p">(</span><span class="n">members</span><span class="p">,</span> <span class="s2">&quot;members&quot;</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+    <span class="n">exclude</span> <span class="o">=</span> <span class="n">_require_string_list</span><span class="p">(</span><span class="n">exclude</span><span class="p">,</span> <span class="s2">&quot;exclude&quot;</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+    <span class="n">disabled_ids</span> <span class="o">=</span> <span class="n">_require_string_list</span><span class="p">(</span><span class="n">disabled_ids</span><span class="p">,</span> <span class="s2">&quot;disabled&quot;</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+
+    <span class="c1"># Explicit entries; a plain string value is shorthand for {path = ...}</span>
+    <span class="n">entries</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">pipeline_id</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">pipelines_raw</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">RESERVED_PIPELINES_KEYS</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">validate_pipeline_id</span><span class="p">(</span><span class="n">pipeline_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="p">}</span>
+        <span class="n">entries</span><span class="p">[</span><span class="n">pipeline_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+
+    <span class="c1"># Auto-discovered members join the explicit entries</span>
+    <span class="k">if</span> <span class="n">members</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">entries</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="n">_discover_member_pipelines</span><span class="p">(</span><span class="n">members</span><span class="p">,</span> <span class="n">exclude</span><span class="p">,</span> <span class="n">entries</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Drop disabled pipelines: per-entry flags first, then the ID list</span>
+    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">entries</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;disabled&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)]:</span>
+        <span class="k">del</span> <span class="n">entries</span><span class="p">[</span><span class="n">pipeline_id</span><span class="p">]</span>
+    <span class="n">_apply_disabled_list</span><span class="p">(</span><span class="n">entries</span><span class="p">,</span> <span class="n">disabled_ids</span><span class="p">,</span> <span class="n">source</span><span class="p">)</span>
+
+    <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
+        <span class="n">pipeline_entry</span> <span class="o">=</span> <span class="n">entries</span><span class="p">[</span><span class="n">pipeline_id</span><span class="p">]</span>
+        <span class="n">path_to_pipeline</span> <span class="o">=</span> <span class="n">pipeline_entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">path_to_pipeline</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: [pipelines.</span><span class="se">\&quot;</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">] has no &#39;path&#39; key.&quot;</span>
+            <span class="p">)</span>
         <span class="n">path_to_pipeline</span> <span class="o">=</span> <span class="n">resolve_platform_path</span><span class="p">(</span><span class="n">path_to_pipeline</span><span class="p">)</span>
         <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">path_to_pipeline</span>
         <span class="n">pipeline_base_dir</span> <span class="o">=</span> <span class="n">pipeline_base_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-        <span class="k">assert</span> <span class="n">validate_config_file</span><span class="p">(</span><span class="n">pipeline_base_dir</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">validate_manifest_file</span><span class="p">(</span><span class="n">pipeline_base_dir</span><span class="p">)</span>
         <span class="n">sub_manifest</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">pipeline_base_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sub_manifest</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">: [pipelines.</span><span class="se">\&quot;</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">] points at &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_base_dir</span><span class="si">}</span><span class="s2">, which is a catalog, not a pipeline.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;To fix: remove the entry (catalogs cannot nest inside catalogs).&quot;</span>
+            <span class="p">)</span>
+        <span class="c1"># The catalog key is the authoritative identity within this catalog.</span>
+        <span class="n">sub_manifest</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">][</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pipeline_id</span>
         <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">sub_manifest</span>
 
-    <span class="k">return</span> <span class="n">manifest</span>  <span class="c1"># Return the complete manifest</span>
+    <span class="k">return</span> <span class="n">manifest</span>
 
 
 <div class="viewcode-block" id="load_manifest">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.load_manifest">[docs]</a>
 <span class="k">def</span> <span class="nf">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">BASE_DIR</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load the pipeline manifest from a TOML file and process it.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load and process a chartbook.toml manifest (pipeline or catalog).</span>
 
-<span class="sd">    This will also handle imported pipeline manifests. It</span>
-<span class="sd">    will also create a mapping of dataframe_id to linked chart_ids</span>
-<span class="sd">    and a mapping of data</span>
+<span class="sd">    For catalogs, each registered pipeline&#39;s manifest is loaded recursively.</span>
+<span class="sd">    Pipeline manifests get resolved ``[project]`` metadata, linked-chart</span>
+<span class="sd">    mappings, and resolved artifact paths.</span>
 
-<span class="sd">    :param base_dir: The base directory where the chartbook.toml file is located.</span>
+<span class="sd">    :param base_dir: The directory where the chartbook.toml file is located.</span>
 <span class="sd">    :type base_dir: Union[str, Path]</span>
-<span class="sd">    :returns: A dictionary containing the manifest for all pipelines, including linked charts for each dataframe and linked dataframes for each pipeline.</span>
+<span class="sd">    :returns: The processed manifest dictionary.</span>
 <span class="sd">    :rtype: dict</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>  <span class="c1"># Convert base_dir to a Path object</span>
-    <span class="n">chartbook_toml_path</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span>
-    <span class="k">assert</span> <span class="n">chartbook_toml_path</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span>
-    <span class="k">assert</span> <span class="n">validate_config_file</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
-
-    <span class="c1"># Load the TOML manifest using tomli instead of json</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">chartbook_toml_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>  <span class="c1"># Note: tomli requires binary mode</span>
-        <span class="n">raw_manifest</span> <span class="o">=</span> <span class="n">tomli</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>  <span class="c1"># Load the TOML manifest</span>
-
+    <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+    <span class="n">raw_manifest</span> <span class="o">=</span> <span class="n">_read_manifest_file</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+    <span class="n">project_type</span> <span class="o">=</span> <span class="n">resolve_project_type</span><span class="p">(</span>
+        <span class="n">raw_manifest</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
     <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">base_dir</span>
 
-    <span class="k">if</span> <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">project_type</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
         <span class="n">manifest</span> <span class="o">=</span> <span class="n">_load_pipeline_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">raw_manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
-        <span class="n">manifest</span> <span class="o">=</span> <span class="n">_load_catalog_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Invalid config type: </span><span class="si">{</span><span class="n">raw_manifest</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. Must be &#39;pipeline&#39; or &#39;catalog&#39;.&quot;</span>
-        <span class="p">)</span>
+        <span class="n">manifest</span> <span class="o">=</span> <span class="n">_load_catalog_manifest</span><span class="p">(</span><span class="n">raw_manifest</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">manifest</span></div>
 
@@ -831,6 +1233,8 @@ document.write(`
 
     <span class="k">def</span> <span class="nf">get_latest_mod_time</span><span class="p">(</span><span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">datetime</span><span class="p">:</span>
         <span class="n">latest_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">min</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">directory</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">latest_time</span>
         <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">directory</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
                 <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">file</span>
@@ -842,12 +1246,9 @@ document.write(`
     <span class="c1"># Get the most recent modification time in src directory</span>
     <span class="n">src_latest</span> <span class="o">=</span> <span class="n">get_latest_mod_time</span><span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;src&quot;</span><span class="p">)</span>
 
-    <span class="c1"># Get modification times for dodo.py and chartbook.toml</span>
-    <span class="c1"># dodo_time = get_file_modified_datetime(base_dir / &quot;dodo.py&quot;)</span>
     <span class="n">pipeline_time</span> <span class="o">=</span> <span class="n">get_file_modified_datetime</span><span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook.toml&quot;</span><span class="p">)</span>
     <span class="n">docs_time</span> <span class="o">=</span> <span class="n">get_latest_mod_time</span><span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;docs_src&quot;</span><span class="p">)</span>
 
-    <span class="c1"># Return the most recent of all these times</span>
     <span class="n">latest</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">src_latest</span><span class="p">,</span> <span class="n">pipeline_time</span><span class="p">,</span> <span class="n">docs_time</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">latest</span></div>
 
@@ -864,9 +1265,7 @@ document.write(`
 <span class="sd">    :rtype: datetime</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">file_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-    <span class="c1"># Get the last modified time in seconds since the epoch</span>
     <span class="n">mtime</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-    <span class="c1"># Convert the time to a datetime object</span>
     <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">mtime</span><span class="p">)</span></div>
 
 
@@ -883,7 +1282,6 @@ document.write(`
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">package_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;chartbook&quot;</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="c1"># First try to get the asset directly using importlib.resources</span>
         <span class="k">with</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">as_file</span><span class="p">(</span>
             <span class="n">package_path</span> <span class="o">/</span> <span class="s2">&quot;assets&quot;</span> <span class="o">/</span> <span class="n">filename</span>
         <span class="p">)</span> <span class="k">as</span> <span class="n">asset_path</span><span class="p">:</span>
@@ -904,14 +1302,10 @@ document.write(`
 <span class="sd">    :returns: A list of pipeline IDs.</span>
 <span class="sd">    :rtype: list</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
         <span class="n">pipelines</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-    <span class="k">elif</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
-        <span class="n">pipelines</span> <span class="o">=</span> <span class="p">[</span><span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipeline&quot;</span><span class="p">][</span><span class="s2">&quot;id&quot;</span><span class="p">]]</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Invalid config type: </span><span class="si">{</span><span class="n">manifest</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. Must be &#39;pipeline&#39; or &#39;catalog&#39;.&quot;</span>
-        <span class="p">)</span>
+        <span class="n">pipelines</span> <span class="o">=</span> <span class="p">[</span><span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">][</span><span class="s2">&quot;id&quot;</span><span class="p">]]</span>
     <span class="k">return</span> <span class="n">pipelines</span></div>
 
 
@@ -928,8 +1322,8 @@ document.write(`
 <span class="sd">    :returns: The path to the logo file.</span>
 <span class="sd">    :rtype: Path</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">][</span><span class="s2">&quot;logo_path&quot;</span><span class="p">]:</span>
-        <span class="k">return</span> <span class="n">project_dir</span> <span class="o">/</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">][</span><span class="s2">&quot;logo_path&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;logo&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">project_dir</span> <span class="o">/</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">][</span><span class="s2">&quot;logo&quot;</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">get_default_asset_path</span><span class="p">(</span><span class="s2">&quot;logo.png&quot;</span><span class="p">)</span></div>
 
 
@@ -946,8 +1340,8 @@ document.write(`
 <span class="sd">    :returns: The path to the favicon file.</span>
 <span class="sd">    :rtype: Path</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">][</span><span class="s2">&quot;favicon_path&quot;</span><span class="p">]:</span>
-        <span class="k">return</span> <span class="n">project_dir</span> <span class="o">/</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;site&quot;</span><span class="p">][</span><span class="s2">&quot;favicon_path&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;favicon&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">project_dir</span> <span class="o">/</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">][</span><span class="s2">&quot;favicon&quot;</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">get_default_asset_path</span><span class="p">(</span><span class="s2">&quot;favicon.ico&quot;</span><span class="p">)</span></div>
 
 
@@ -964,22 +1358,12 @@ document.write(`
 <span class="sd">    :returns: The manifest dictionary for the specified pipeline.</span>
 <span class="sd">    :rtype: dict</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;catalog&quot;</span><span class="p">:</span>
         <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_id</span><span class="p">]</span>
-    <span class="k">elif</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
-        <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Invalid config type: </span><span class="si">{</span><span class="n">manifest</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">][</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. Must be &#39;pipeline&#39; or &#39;catalog&#39;.&quot;</span>
-        <span class="p">)</span>
+        <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">pipeline_manifest</span></div>
 
-
-
-<span class="k">def</span> <span class="nf">_demo</span><span class="p">():</span>
-    <span class="c1"># Find date modified</span>
-    <span class="n">dt_modified</span> <span class="o">=</span> <span class="n">get_file_modified_datetime</span><span class="p">(</span><span class="s2">&quot;mydata.parquet&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Last modified: </span><span class="si">{</span><span class="n">dt_modified</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>

@@ -23,6 +23,18 @@
   - ```{autodoc2-docstring} chartbook.markdown_generator.copy_docs_src_to_build
     :summary:
     ```
+* - {py:obj}`copy_site_dir_to_build <chartbook.markdown_generator.copy_site_dir_to_build>`
+  - ```{autodoc2-docstring} chartbook.markdown_generator.copy_site_dir_to_build
+    :summary:
+    ```
+* - {py:obj}`discover_site_pages <chartbook.markdown_generator.discover_site_pages>`
+  - ```{autodoc2-docstring} chartbook.markdown_generator.discover_site_pages
+    :summary:
+    ```
+* - {py:obj}`ensure_notebook_titles <chartbook.markdown_generator.ensure_notebook_titles>`
+  - ```{autodoc2-docstring} chartbook.markdown_generator.ensure_notebook_titles
+    :summary:
+    ```
 * - {py:obj}`find_most_recent_valid_datapoints <chartbook.markdown_generator.find_most_recent_valid_datapoints>`
   - ```{autodoc2-docstring} chartbook.markdown_generator.find_most_recent_valid_datapoints
     :summary:
@@ -109,7 +121,7 @@
 
 ````
 
-````{py:function} build_all(docs_build_dir=DOCS_BUILD_DIR, base_dir=BASE_DIR, pipeline_theme='pipeline', docs_src_dir=DOCS_SRC_DIR, size_threshold=50)
+````{py:function} build_all(docs_build_dir=DOCS_BUILD_DIR, base_dir=BASE_DIR, pipeline_theme='pipeline', docs_src_dir=DOCS_SRC_DIR, size_threshold=50, skip_pipelines=None)
 :canonical: chartbook.markdown_generator.build_all
 
 ```{autodoc2-docstring} chartbook.markdown_generator.build_all
@@ -123,6 +135,27 @@
 ```
 ````
 
+````{py:function} copy_site_dir_to_build(site_dir, docs_build_dir)
+:canonical: chartbook.markdown_generator.copy_site_dir_to_build
+
+```{autodoc2-docstring} chartbook.markdown_generator.copy_site_dir_to_build
+```
+````
+
+````{py:function} discover_site_pages(site_dir)
+:canonical: chartbook.markdown_generator.discover_site_pages
+
+```{autodoc2-docstring} chartbook.markdown_generator.discover_site_pages
+```
+````
+
+````{py:function} ensure_notebook_titles(manifest, docs_build_dir, skip_pipelines=None)
+:canonical: chartbook.markdown_generator.ensure_notebook_titles
+
+```{autodoc2-docstring} chartbook.markdown_generator.ensure_notebook_titles
+```
+````
+
 ````{py:function} find_most_recent_valid_datapoints(parquet_path, date_col='date', size_threshold_mb=50)
 :canonical: chartbook.markdown_generator.find_most_recent_valid_datapoints
 
@@ -130,7 +163,7 @@
 ```
 ````
 
-````{py:function} generate_all_pipeline_docs(manifest, docs_build_dir=DOCS_BUILD_DIR, base_dir=BASE_DIR, pipeline_theme='pipeline', docs_src_dir=DOCS_SRC_DIR, size_threshold=50, enable_data_download=False)
+````{py:function} generate_all_pipeline_docs(manifest, docs_build_dir=DOCS_BUILD_DIR, base_dir=BASE_DIR, pipeline_theme='pipeline', docs_src_dir=DOCS_SRC_DIR, size_threshold=50, enable_data_download=False, skip_pipelines=None)
 :canonical: chartbook.markdown_generator.generate_all_pipeline_docs
 
 ```{autodoc2-docstring} chartbook.markdown_generator.generate_all_pipeline_docs
@@ -172,7 +205,7 @@
 ```
 ````
 
-````{py:function} get_sphinx_file_alignment_plan(base_dir=BASE_DIR, docs_build_dir=DOCS_BUILD_DIR, enable_data_download=False)
+````{py:function} get_sphinx_file_alignment_plan(base_dir=BASE_DIR, docs_build_dir=DOCS_BUILD_DIR, enable_data_download=False, skip_pipelines=None)
 :canonical: chartbook.markdown_generator.get_sphinx_file_alignment_plan
 
 ```{autodoc2-docstring} chartbook.markdown_generator.get_sphinx_file_alignment_plan

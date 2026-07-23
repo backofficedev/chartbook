@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=c0169425" />
@@ -40,7 +40,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="../_static/documentation_options.js?v=d1237063"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -268,6 +268,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../cli-reference.html">CLI Reference</a></li>
@@ -284,7 +285,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -294,6 +295,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../llms-txt.html">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
@@ -512,11 +514,11 @@ document.write(`
 <h3>Basic Configuration<a class="headerlink" href="#basic-configuration" title="Link to this heading">#</a></h3>
 <p>Add charts to your <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[charts.monthly_revenue]</span>
-<span class="n">chart_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly Revenue Analysis&quot;</span>
-<span class="n">short_description_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue trends with YoY comparison&quot;</span>
-<span class="n">dataframe_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;revenue_data&quot;</span><span class="w">  </span><span class="c1"># Links to dataframe</span>
-<span class="n">path_to_html_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/monthly_revenue.html&quot;</span>
-<span class="n">chart_docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/monthly_revenue.md&quot;</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly Revenue Analysis&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue trends with YoY comparison&quot;</span>
+<span class="n">dataframe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;revenue_data&quot;</span><span class="w">  </span><span class="c1"># Links to dataframe</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/monthly_revenue.html&quot;</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/monthly_revenue.md&quot;</span>
 </pre></div>
 </div>
 </section>
@@ -525,8 +527,8 @@ document.write(`
 <p>All available fields:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[charts.revenue_forecast]</span>
 <span class="c1"># Basic Information</span>
-<span class="n">chart_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue Forecast Model&quot;</span>
-<span class="n">short_description_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;12-month revenue forecast with confidence intervals&quot;</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue Forecast Model&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;12-month revenue forecast with confidence intervals&quot;</span>
 
 <span class="c1"># Clearance and Governance</span>
 <span class="n">date_cleared_by_iv_and_v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-01-15&quot;</span>
@@ -534,28 +536,28 @@ document.write(`
 <span class="n">last_cleared_by</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Legal Team&quot;</span>
 
 <span class="c1"># Publication History</span>
-<span class="n">past_publications</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="n">publications</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="s2">&quot;[Q4 Report 2024, Figure 3](https://example.com/q4-2024)&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="s2">&quot;[Board Presentation, Slide 15](https://example.com/board-2024)&quot;</span><span class="p">,</span>
 <span class="p">]</span>
 
 <span class="c1"># Data Characteristics</span>
-<span class="n">dataframe_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;revenue_forecast_data&quot;</span>
-<span class="n">topic_tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Forecast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Financial Planning&quot;</span><span class="p">]</span>
-<span class="n">data_series_start_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1/1/2020&quot;</span>
-<span class="n">data_frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span>
+<span class="n">dataframe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;revenue_forecast_data&quot;</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Forecast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Financial Planning&quot;</span><span class="p">]</span>
+<span class="n">start_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1/1/2020&quot;</span>
+<span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span>
 <span class="n">observation_period</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Month-end&quot;</span>
-<span class="n">lag_in_data_release</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;5 business days&quot;</span>
-<span class="n">data_release_timing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;First week of month&quot;</span>
+<span class="n">release_lag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;5 business days&quot;</span>
+<span class="n">release_timing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;First week of month&quot;</span>
 <span class="n">seasonal_adjustment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;X-13ARIMA-SEATS&quot;</span>
 <span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;USD (Millions)&quot;</span>
-<span class="n">data_series</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Historical Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Forecast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Upper Bound&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Lower Bound&quot;</span><span class="p">]</span>
+<span class="n">series</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Historical Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Forecast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Upper Bound&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Lower Bound&quot;</span><span class="p">]</span>
 <span class="n">mnemonic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;REV_FCST&quot;</span>
 
 <span class="c1"># File Paths</span>
-<span class="n">path_to_html_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/revenue_forecast.html&quot;</span>
-<span class="n">path_to_excel_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./excel/revenue_forecast.xlsx&quot;</span>
-<span class="n">chart_docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/revenue_forecast.md&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/revenue_forecast.html&quot;</span>
+<span class="n">excel_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./excel/revenue_forecast.xlsx&quot;</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/revenue_forecast.md&quot;</span>
 </pre></div>
 </div>
 </section>
@@ -652,7 +654,7 @@ Analytics Team - analytics@company.com
 <section id="publication-tracking">
 <h3>Publication Tracking<a class="headerlink" href="#publication-tracking" title="Link to this heading">#</a></h3>
 <p>Document where charts have been used:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">past_publications</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">publications</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="s2">&quot;[Annual Report 2024, p.45](https://link-to-report)&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="s2">&quot;[Board Meeting Q4 2024](https://internal-link)&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="s2">&quot;Investor Presentation, March 2024&quot;</span><span class="p">,</span><span class="w">  </span><span class="c1"># No link available</span>
@@ -663,11 +665,11 @@ Analytics Team - analytics@company.com
 <section id="data-characteristics">
 <h3>Data Characteristics<a class="headerlink" href="#data-characteristics" title="Link to this heading">#</a></h3>
 <p>Describe the underlying data:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">data_frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Daily&quot;</span><span class="w">        </span><span class="c1"># Daily, Weekly, Monthly, Quarterly, Annual</span>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Daily&quot;</span><span class="w">             </span><span class="c1"># Daily, Weekly, Monthly, Quarterly, Annual</span>
 <span class="n">observation_period</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Close&quot;</span><span class="w">    </span><span class="c1"># When measurement taken</span>
-<span class="n">lag_in_data_release</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;T+1&quot;</span><span class="w">     </span><span class="c1"># How long until available</span>
+<span class="n">release_lag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;T+1&quot;</span><span class="w">             </span><span class="c1"># How long until available</span>
 <span class="n">seasonal_adjustment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;None&quot;</span><span class="w">    </span><span class="c1"># None, X-13ARIMA-SEATS, etc.</span>
-<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Percent&quot;</span><span class="w">              </span><span class="c1"># Units of measurement</span>
+<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Percent&quot;</span><span class="w">               </span><span class="c1"># Units of measurement</span>
 </pre></div>
 </div>
 </section>
@@ -770,7 +772,7 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <ol class="arabic simple">
 <li><p><strong>Chart not found</strong>: Check file paths in <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code></p></li>
 <li><p><strong>Broken links</strong>: Ensure documentation paths are correct</p></li>
-<li><p><strong>Missing data</strong>: Verify dataframe_id matches</p></li>
+<li><p><strong>Missing data</strong>: Verify the <code class="docutils literal notranslate"><span class="pre">dataframe</span></code> key matches a dataframe ID</p></li>
 <li><p><strong>Display issues</strong>: Check browser compatibility</p></li>
 </ol>
 </section>
@@ -783,7 +785,7 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 
 <span class="n">specs</span> <span class="o">=</span> <span class="n">read_specs</span><span class="p">()</span>
 <span class="k">for</span> <span class="n">chart_id</span><span class="p">,</span> <span class="n">chart_config</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="n">chart_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">chart_config</span><span class="p">[</span><span class="s2">&quot;path_to_html_chart&quot;</span><span class="p">])</span>
+    <span class="n">chart_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">chart_config</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">])</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">chart_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing chart: </span><span class="si">{</span><span class="n">chart_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </pre></div>

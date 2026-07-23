@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
@@ -40,7 +40,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="../../_static/documentation_options.js?v=55ac272d"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -255,23 +255,21 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../why-chartbook.html">Why ChartBook?</a></li>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/concepts.html">Core Concepts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/pipelines.html">Pipelines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/charts.html">Charts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/dataframes.html">Dataframes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/catalog-projects.html">Catalog Projects</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/plotting.html">Plotting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 </ul>
-</details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -279,24 +277,23 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/pipeline-example.html">Pipeline Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/chartbook-example.html">Catalog Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/data-pipeline.html">Data Pipeline</a></li>
 </ul>
-</details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 </ul>
 
     </div>
@@ -450,10 +447,10 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.CHART_DOCS_FIELDS"><code class="docutils literal notranslate"><span class="pre">CHART_DOCS_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.CHART_FIELDS"><code class="docutils literal notranslate"><span class="pre">CHART_FIELDS</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DATAFRAME_DOCS_FIELDS"><code class="docutils literal notranslate"><span class="pre">DATAFRAME_DOCS_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DATAFRAME_FIELDS"><code class="docutils literal notranslate"><span class="pre">DATAFRAME_FIELDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_REQUIRED_FIELDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DOCS_FIELDS"><code class="docutils literal notranslate"><span class="pre">DOCS_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DiagnosticRow"><code class="docutils literal notranslate"><span class="pre">DiagnosticRow</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DiagnosticRow.identifier"><code class="docutils literal notranslate"><span class="pre">DiagnosticRow.identifier</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DiagnosticRow.metadata_complete"><code class="docutils literal notranslate"><span class="pre">DiagnosticRow.metadata_complete</span></code></a></li>
@@ -465,10 +462,12 @@ document.write(`
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DiagnosticRow.to_dict"><code class="docutils literal notranslate"><span class="pre">DiagnosticRow.to_dict()</span></code></a></li>
 </ul>
 </li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.NOTEBOOK_FIELDS"><code class="docutils literal notranslate"><span class="pre">NOTEBOOK_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.OPTIONAL_CHART_FIELDS"><code class="docutils literal notranslate"><span class="pre">OPTIONAL_CHART_FIELDS</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.PIPELINE_FIELDS"><code class="docutils literal notranslate"><span class="pre">PIPELINE_FIELDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.PROJECT_FIELDS"><code class="docutils literal notranslate"><span class="pre">PROJECT_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.build_diagnostics"><code class="docutils literal notranslate"><span class="pre">build_diagnostics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.generate_metadata_diagnostics"><code class="docutils literal notranslate"><span class="pre">generate_metadata_diagnostics()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.get_active_policy"><code class="docutils literal notranslate"><span class="pre">get_active_policy()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.write_diagnostics_csv"><code class="docutils literal notranslate"><span class="pre">write_diagnostics_csv()</span></code></a></li>
 </ul>
 </li>
@@ -509,9 +508,12 @@ document.write(`
 <td><p>Generate diagnostics rows for all pipelines, dataframes, and charts.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.diagnostics.generate_metadata_diagnostics" title="chartbook.diagnostics.generate_metadata_diagnostics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_metadata_diagnostics</span></code></a></p></td>
-<td><p>Create the metadata diagnostics CSV file inside the docs build directory.</p></td>
+<td><p>Create the metadata diagnostics CSV inside the docs build directory.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.diagnostics.write_diagnostics_csv" title="chartbook.diagnostics.write_diagnostics_csv"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_diagnostics_csv</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.diagnostics.get_active_policy" title="chartbook.diagnostics.get_active_policy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_active_policy</span></code></a></p></td>
+<td><p>Return the manifest’s resolved policy, or the default warn-only policy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.diagnostics.write_diagnostics_csv" title="chartbook.diagnostics.write_diagnostics_csv"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_diagnostics_csv</span></code></a></p></td>
 <td><p>Write diagnostics rows to a CSV file.</p></td>
 </tr>
 </tbody>
@@ -522,22 +524,25 @@ document.write(`
 <h3>Data<a class="headerlink" href="#data" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.diagnostics.CHART_DOCS_FIELDS" title="chartbook.diagnostics.CHART_DOCS_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CHART_DOCS_FIELDS</span></code></a></p></td>
-<td></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.diagnostics.CHART_FIELDS" title="chartbook.diagnostics.CHART_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CHART_FIELDS</span></code></a></p></td>
-<td></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.diagnostics.DATAFRAME_DOCS_FIELDS" title="chartbook.diagnostics.DATAFRAME_DOCS_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DATAFRAME_DOCS_FIELDS</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.diagnostics.CHART_FIELDS" title="chartbook.diagnostics.CHART_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CHART_FIELDS</span></code></a></p></td>
 <td></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.diagnostics.DATAFRAME_FIELDS" title="chartbook.diagnostics.DATAFRAME_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DATAFRAME_FIELDS</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.diagnostics.OPTIONAL_CHART_FIELDS" title="chartbook.diagnostics.OPTIONAL_CHART_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OPTIONAL_CHART_FIELDS</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS" title="chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_REQUIRED_FIELDS</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.diagnostics.PIPELINE_FIELDS" title="chartbook.diagnostics.PIPELINE_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PIPELINE_FIELDS</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.diagnostics.DOCS_FIELDS" title="chartbook.diagnostics.DOCS_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DOCS_FIELDS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.diagnostics.NOTEBOOK_FIELDS" title="chartbook.diagnostics.NOTEBOOK_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NOTEBOOK_FIELDS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.diagnostics.OPTIONAL_CHART_FIELDS" title="chartbook.diagnostics.OPTIONAL_CHART_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OPTIONAL_CHART_FIELDS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.diagnostics.PROJECT_FIELDS" title="chartbook.diagnostics.PROJECT_FIELDS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PROJECT_FIELDS</span></code></a></p></td>
 <td></td>
 </tr>
 </tbody>
@@ -547,27 +552,27 @@ document.write(`
 <section id="api">
 <h3>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h3>
 <dl class="py data">
-<dt class="sig sig-object py" id="chartbook.diagnostics.CHART_DOCS_FIELDS">
-<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">CHART_DOCS_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.CHART_DOCS_FIELDS" title="Link to this definition">#</a></dt>
-<dd><p>(‘chart_docs_path’, ‘chart_docs_str’)</p>
-</dd></dl>
-
-<dl class="py data">
 <dt class="sig sig-object py" id="chartbook.diagnostics.CHART_FIELDS">
 <span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">CHART_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.CHART_FIELDS" title="Link to this definition">#</a></dt>
-<dd><p>[‘chart_name’, ‘short_description_chart’, ‘dataframe_id’, ‘topic_tags’, ‘data_frequency’, ‘observati…</p>
-</dd></dl>
-
-<dl class="py data">
-<dt class="sig sig-object py" id="chartbook.diagnostics.DATAFRAME_DOCS_FIELDS">
-<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">DATAFRAME_DOCS_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.DATAFRAME_DOCS_FIELDS" title="Link to this definition">#</a></dt>
-<dd><p>(‘dataframe_docs_path’, ‘dataframe_docs_str’)</p>
+<dd><p>[‘name’, ‘description’, ‘dataframe’, ‘tags’, ‘frequency’, ‘observation_period’, ‘release_lag’, ‘rele…</p>
 </dd></dl>
 
 <dl class="py data">
 <dt class="sig sig-object py" id="chartbook.diagnostics.DATAFRAME_FIELDS">
 <span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">DATAFRAME_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.DATAFRAME_FIELDS" title="Link to this definition">#</a></dt>
-<dd><p>[‘dataframe_name’, ‘short_description_df’, ‘data_sources’, ‘data_providers’, ‘links_to_data_provider…</p>
+<dd><p>[‘name’, ‘description’, ‘sources’, ‘providers’, ‘provider_links’, ‘tags’, ‘pull_method’, ‘path’]</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_REQUIRED_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.diagnostics.DOCS_FIELDS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">DOCS_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.DOCS_FIELDS" title="Link to this definition">#</a></dt>
+<dd><p>(‘docs_path’, ‘docs’)</p>
 </dd></dl>
 
 <dl class="py class">
@@ -623,27 +628,48 @@ document.write(`
 </dd></dl>
 
 <dl class="py data">
-<dt class="sig sig-object py" id="chartbook.diagnostics.OPTIONAL_CHART_FIELDS">
-<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">OPTIONAL_CHART_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.OPTIONAL_CHART_FIELDS" title="Link to this definition">#</a></dt>
-<dd><p>[‘data_series’]</p>
+<dt class="sig sig-object py" id="chartbook.diagnostics.NOTEBOOK_FIELDS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">NOTEBOOK_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.NOTEBOOK_FIELDS" title="Link to this definition">#</a></dt>
+<dd><p>[]</p>
 </dd></dl>
 
 <dl class="py data">
-<dt class="sig sig-object py" id="chartbook.diagnostics.PIPELINE_FIELDS">
-<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">PIPELINE_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.PIPELINE_FIELDS" title="Link to this definition">#</a></dt>
-<dd><p>[‘id’, ‘pipeline_name’, ‘pipeline_description’, ‘lead_pipeline_developer’, ‘contributors’, ‘build_co…</p>
+<dt class="sig sig-object py" id="chartbook.diagnostics.OPTIONAL_CHART_FIELDS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">OPTIONAL_CHART_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.OPTIONAL_CHART_FIELDS" title="Link to this definition">#</a></dt>
+<dd><p>[‘series’]</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.diagnostics.PROJECT_FIELDS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">PROJECT_FIELDS</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#chartbook.diagnostics.PROJECT_FIELDS" title="Link to this definition">#</a></dt>
+<dd><p>[‘name’, ‘description’, ‘maintainer’, ‘contributors’, ‘build’, ‘os_compatibility’, ‘repo_url’]</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.diagnostics.build_diagnostics">
 <span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">build_diagnostics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.diagnostics.DiagnosticRow" title="chartbook.diagnostics.DiagnosticRow"><span class="pre">chartbook.diagnostics.DiagnosticRow</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/diagnostics.html#build_diagnostics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.diagnostics.build_diagnostics" title="Link to this definition">#</a></dt>
 <dd><p>Generate diagnostics rows for all pipelines, dataframes, and charts.</p>
+<p>Required fields come from the manifest’s [policy] section when present
+(catalogs), otherwise from the default lists in this module.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.diagnostics.generate_metadata_diagnostics">
-<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">generate_metadata_diagnostics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docs_build_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/diagnostics.html#generate_metadata_diagnostics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.diagnostics.generate_metadata_diagnostics" title="Link to this definition">#</a></dt>
-<dd><p>Create the metadata diagnostics CSV file inside the docs build directory.</p>
+<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">generate_metadata_diagnostics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">docs_build_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#chartbook.diagnostics.DiagnosticRow" title="chartbook.diagnostics.DiagnosticRow"><span class="pre">chartbook.diagnostics.DiagnosticRow</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/diagnostics.html#generate_metadata_diagnostics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.diagnostics.generate_metadata_diagnostics" title="Link to this definition">#</a></dt>
+<dd><p>Create the metadata diagnostics CSV inside the docs build directory.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The diagnostic rows, so callers can enforce strict policy.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.diagnostics.get_active_policy">
+<span class="sig-prename descclassname"><span class="pre">chartbook.diagnostics.</span></span><span class="sig-name descname"><span class="pre">get_active_policy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/diagnostics.html#get_active_policy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.diagnostics.get_active_policy" title="Link to this definition">#</a></dt>
+<dd><p>Return the manifest’s resolved policy, or the default warn-only policy.</p>
+<p>Catalog manifests carry a resolved <code class="docutils literal notranslate"><span class="pre">policy</span></code> key; standalone pipelines
+fall back to the defaults.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -706,10 +732,10 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#functions">Functions</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.CHART_DOCS_FIELDS"><code class="docutils literal notranslate"><span class="pre">CHART_DOCS_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.CHART_FIELDS"><code class="docutils literal notranslate"><span class="pre">CHART_FIELDS</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DATAFRAME_DOCS_FIELDS"><code class="docutils literal notranslate"><span class="pre">DATAFRAME_DOCS_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DATAFRAME_FIELDS"><code class="docutils literal notranslate"><span class="pre">DATAFRAME_FIELDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS"><code class="docutils literal notranslate"><span class="pre">DEFAULT_REQUIRED_FIELDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DOCS_FIELDS"><code class="docutils literal notranslate"><span class="pre">DOCS_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DiagnosticRow"><code class="docutils literal notranslate"><span class="pre">DiagnosticRow</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DiagnosticRow.identifier"><code class="docutils literal notranslate"><span class="pre">DiagnosticRow.identifier</span></code></a></li>
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DiagnosticRow.metadata_complete"><code class="docutils literal notranslate"><span class="pre">DiagnosticRow.metadata_complete</span></code></a></li>
@@ -721,10 +747,12 @@ document.write(`
 <li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.DiagnosticRow.to_dict"><code class="docutils literal notranslate"><span class="pre">DiagnosticRow.to_dict()</span></code></a></li>
 </ul>
 </li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.NOTEBOOK_FIELDS"><code class="docutils literal notranslate"><span class="pre">NOTEBOOK_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.OPTIONAL_CHART_FIELDS"><code class="docutils literal notranslate"><span class="pre">OPTIONAL_CHART_FIELDS</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.PIPELINE_FIELDS"><code class="docutils literal notranslate"><span class="pre">PIPELINE_FIELDS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.PROJECT_FIELDS"><code class="docutils literal notranslate"><span class="pre">PROJECT_FIELDS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.build_diagnostics"><code class="docutils literal notranslate"><span class="pre">build_diagnostics()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.generate_metadata_diagnostics"><code class="docutils literal notranslate"><span class="pre">generate_metadata_diagnostics()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.get_active_policy"><code class="docutils literal notranslate"><span class="pre">get_active_policy()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.diagnostics.write_diagnostics_csv"><code class="docutils literal notranslate"><span class="pre">write_diagnostics_csv()</span></code></a></li>
 </ul>
 </li>
@@ -754,7 +782,7 @@ By Jeremiah Bejarano
 
   <p class="copyright">
     
-      © Copyright 2025, Jeremiah Bejarano.
+      © Copyright 2026, Jeremiah Bejarano.
       <br/>
     
   </p>

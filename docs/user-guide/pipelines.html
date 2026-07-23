@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=c0169425" />
@@ -40,7 +40,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="../_static/documentation_options.js?v=d1237063"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -268,6 +268,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../cli-reference.html">CLI Reference</a></li>
@@ -284,7 +285,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -294,6 +295,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../llms-txt.html">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
@@ -455,8 +457,8 @@ document.write(`
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-configuration">Pipeline Configuration</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#required-fields">Required Fields</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-fields">Optional Fields</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#core-fields">Core Fields</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#additional-fields">Additional Fields</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#best-practices">Best Practices</a><ul class="visible nav section-nav flex-column">
@@ -516,34 +518,25 @@ document.write(`
 │   ├── data_processing.py
 │   └── create_charts.py
 ├── docs_src/              # Documentation sources
-│   ├── charts/           # Chart documentation
-│   └── dataframes/       # Dataframe documentation
+│   ├── charts/           # Chart documentation fragments
+│   ├── dataframes/       # Dataframe documentation fragments
+│   └── site/             # Custom site pages (auto-detected as site_dir)
 └── excel/                 # Excel files (optional)
 </pre></div>
 </div>
+<p>Custom markdown pages placed in <code class="docutils literal notranslate"><span class="pre">docs_src/site/</span></code> are merged into the generated site automatically — <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> defaults to <code class="docutils literal notranslate"><span class="pre">./docs_src/site/</span></code> when that directory exists. The built HTML output goes to <code class="docutils literal notranslate"><span class="pre">./docs/</span></code>.</p>
 </section>
 <section id="creating-a-pipeline">
 <h2>Creating a Pipeline<a class="headerlink" href="#creating-a-pipeline" title="Link to this heading">#</a></h2>
 <section id="step-1-initialize-configuration">
 <h3>Step 1: Initialize Configuration<a class="headerlink" href="#step-1-initialize-configuration" title="Link to this heading">#</a></h3>
-<p>Create a <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> file:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[config]</span>
-<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pipeline&quot;</span>
-<span class="n">chartbook_format_version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.0.6&quot;</span>
-
-<span class="k">[site]</span>
-<span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Analytics Pipeline&quot;</span>
-<span class="n">author</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Data Team&quot;</span>
-<span class="n">copyright</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025&quot;</span>
-
-<span class="k">[pipeline]</span>
-<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ANALYTICS&quot;</span>
-<span class="n">pipeline_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Business Analytics Pipeline&quot;</span>
-<span class="n">pipeline_description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly business metrics and KPIs&quot;</span>
-<span class="n">lead_pipeline_developer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Jane Doe&quot;</span>
+<p>Create a <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> file. The presence of the file alone marks the directory as a chartbook pipeline — even an empty file is valid — but you will usually add project metadata:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Business Analytics Pipeline&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly business metrics and KPIs&quot;</span>
+<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Jane Doe&quot;</span>
 <span class="n">contributors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Jane Doe&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;John Smith&quot;</span><span class="p">]</span>
-<span class="n">git_repo_URL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://repository.yourcompany.org/scm/chart/repos/analytics&quot;</span>
-<span class="n">README_file_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./README.md&quot;</span>
+<span class="n">repo_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://repository.yourcompany.org/scm/chart/repos/analytics&quot;</span>
 </pre></div>
 </div>
 </section>
@@ -603,28 +596,36 @@ This chart displays the relationship between revenue and costs over time.
 </section>
 <section id="pipeline-configuration">
 <h2>Pipeline Configuration<a class="headerlink" href="#pipeline-configuration" title="Link to this heading">#</a></h2>
-<section id="required-fields">
-<h3>Required Fields<a class="headerlink" href="#required-fields" title="Link to this heading">#</a></h3>
-<p>Every pipeline must define:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[pipeline]</span>
-<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;UNIQUE_ID&quot;</span><span class="w">              </span><span class="c1"># Unique identifier (uppercase)</span>
-<span class="n">pipeline_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Full Name&quot;</span><span class="w">   </span><span class="c1"># Human-readable name</span>
-<span class="n">pipeline_description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w">  </span><span class="c1"># Detailed description</span>
-<span class="n">lead_pipeline_developer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Name&quot;</span>
+<p>All <code class="docutils literal notranslate"><span class="pre">[project]</span></code> keys are optional with sensible defaults — <code class="docutils literal notranslate"><span class="pre">name</span></code> defaults to the directory name, <code class="docutils literal notranslate"><span class="pre">repo_url</span></code> to the git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote, and the pipeline’s scoped ID (<code class="docutils literal notranslate"><span class="pre">scope/name</span></code>) is derived from the git remote and directory name (see <a class="reference internal" href="concepts.html"><span class="doc">Core Concepts</span></a> for how identity works). Whether any field is <em>required</em> is decided by the catalog that aggregates your pipeline, via its <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> section (see <a class="reference internal" href="catalog-projects.html"><span class="doc">Catalog Projects</span></a>).</p>
+<section id="core-fields">
+<h3>Core Fields<a class="headerlink" href="#core-fields" title="Link to this heading">#</a></h3>
+<p>The fields most catalogs expect:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Full Name&quot;</span><span class="w">            </span><span class="c1"># Human-readable name (also the site title)</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w">           </span><span class="c1"># Detailed description</span>
+<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Name&quot;</span><span class="w">           </span><span class="c1"># Primary maintainer (also the site author)</span>
+<span class="n">repo_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://...&quot;</span><span class="w">      </span><span class="c1"># Repository URL</span>
 </pre></div>
 </div>
 </section>
-<section id="optional-fields">
-<h3>Optional Fields<a class="headerlink" href="#optional-fields" title="Link to this heading">#</a></h3>
-<p>Additional metadata:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[pipeline]</span>
+<section id="additional-fields">
+<h3>Additional Fields<a class="headerlink" href="#additional-fields" title="Link to this heading">#</a></h3>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;acme/analytics&quot;</span><span class="w">         </span><span class="c1"># Scoped ID; usually derived, set only to override</span>
 <span class="n">contributors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Name1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Name2&quot;</span><span class="p">]</span>
-<span class="n">software_modules_command</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;module load python/3.11&quot;</span>
-<span class="n">runs_on_grid_or_windows_or_other</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Windows/Linux&quot;</span>
-<span class="n">git_repo_URL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://...&quot;</span>
-<span class="n">README_file_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./README.md&quot;</span>
+<span class="n">os_compatibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Windows&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Linux&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;macOS&quot;</span><span class="p">]</span>
+<span class="n">readme</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./README.md&quot;</span><span class="w">        </span><span class="c1"># Defaults to ./README.md</span>
+<span class="n">site_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://...&quot;</span><span class="w">      </span><span class="c1"># URL of the published site</span>
+<span class="n">copyright</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2026&quot;</span><span class="w">            </span><span class="c1"># Defaults to the current year</span>
+<span class="n">logo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./assets/logo.png&quot;</span><span class="w">    </span><span class="c1"># Defaults to a bundled asset</span>
+<span class="n">favicon</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./assets/favicon.ico&quot;</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">module load python/3.11</span>
+<span class="s2">doit</span>
+<span class="s2">&quot;&quot;&quot;</span>
 </pre></div>
 </div>
+<p>The <code class="docutils literal notranslate"><span class="pre">build</span></code> field is a single string with shell-script semantics: a multi-line value is one script, so state (like an activated environment) carries across lines. See <a class="reference internal" href="../configuration.html"><span class="doc">Configuration Guide</span></a> for the full key reference.</p>
 </section>
 </section>
 <section id="best-practices">
@@ -633,7 +634,7 @@ This chart displays the relationship between revenue and costs over time.
 <h3>1. Consistent Naming<a class="headerlink" href="#consistent-naming" title="Link to this heading">#</a></h3>
 <p>Use consistent naming conventions:</p>
 <ul class="simple">
-<li><p>Pipeline ID: <code class="docutils literal notranslate"><span class="pre">UPPERCASE_WITH_UNDERSCORES</span></code></p></li>
+<li><p>Pipeline ID: <code class="docutils literal notranslate"><span class="pre">scope/name</span></code> with lowercase components (e.g. <code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury</span></code>)</p></li>
 <li><p>File names: <code class="docutils literal notranslate"><span class="pre">lowercase_with_underscores</span></code></p></li>
 <li><p>Chart IDs: <code class="docutils literal notranslate"><span class="pre">descriptive_chart_name</span></code></p></li>
 </ul>
@@ -667,7 +668,7 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 <span class="c1"># requirements.txt</span>
 <span class="n">pandas</span><span class="o">==</span><span class="mf">2.0.0</span>
 <span class="n">numpy</span><span class="o">==</span><span class="mf">1.24.0</span>
-<span class="n">chartbook</span><span class="o">==</span><span class="mf">0.0.6</span>
+<span class="n">chartbook</span><span class="o">==</span><span class="mf">0.0.21</span>
 </pre></div>
 </div>
 </section>
@@ -822,8 +823,8 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-configuration">Pipeline Configuration</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#required-fields">Required Fields</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-fields">Optional Fields</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#core-fields">Core Fields</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#additional-fields">Additional Fields</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#best-practices">Best Practices</a><ul class="visible nav section-nav flex-column">

@@ -29,7 +29,7 @@
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/custom.css?v=c0169425" />
@@ -39,7 +39,7 @@
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="_static/documentation_options.js?v=55ac272d"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -250,23 +250,21 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="why-chartbook.html">Why ChartBook?</a></li>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="user-guide/concepts.html">Core Concepts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-guide/pipelines.html">Pipelines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-guide/charts.html">Charts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-guide/dataframes.html">Dataframes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-guide/catalog-projects.html">Catalog Projects</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-guide/plotting.html">Plotting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-guide/notebooks.html">Notebooks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 </ul>
-</details></li>
-<li class="toctree-l1"><a class="reference internal" href="cli-reference.html">CLI Reference</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="apidocs/chartbook/chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -274,24 +272,23 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="examples/pipeline-example.html">Pipeline Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/chartbook-example.html">Catalog Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="examples/data-pipeline.html">Data Pipeline</a></li>
 </ul>
-</details></li>
-<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="llms-txt.html">LLMs.txt</a></li>
-<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 </ul>
 
     </div>
@@ -415,6 +412,7 @@ document.write(`
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
  | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
  | <a href="#W"><strong>W</strong></a>
  | <a href="#X"><strong>X</strong></a>
@@ -424,7 +422,7 @@ document.write(`
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.SiteConfig.ALLOWED_THEMES">ALLOWED_THEMES (chartbook.validation.SiteConfig attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig.ALLOWED_THEMES">ALLOWED_THEMES (chartbook.conf_validation.SiteConfig attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.apply_matplotlib_style">apply_matplotlib_style() (in module chartbook.plotting._config)</a>
 </li>
@@ -436,7 +434,7 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._api.html#chartbook.plotting._api.area">area() (in module chartbook.plotting._api)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.SiteConfig.author">author (chartbook.validation.SiteConfig attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig.author">author (chartbook.conf_validation.SiteConfig attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -458,12 +456,14 @@ document.write(`
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._base.html#chartbook.plotting.backends._base.BaseBackend">BaseBackend (class in chartbook.plotting.backends._base)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.build">build() (in module chartbook.cli)</a>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.browse">browse() (in module chartbook.cli)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.build_all">build_all() (in module chartbook.markdown_generator)</a>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.build">build() (in module chartbook.cli)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.build_all">build_all() (in module chartbook.markdown_generator)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._plotly.html#chartbook.plotting.backends._plotly.PlotlyBackend.build_area">build_area() (chartbook.plotting.backends._plotly.PlotlyBackend method)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._plotly.html#chartbook.plotting.backends._plotly.PlotlyBackend.build_bar">build_bar() (chartbook.plotting.backends._plotly.PlotlyBackend method)</a>
@@ -492,9 +492,21 @@ document.write(`
         <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.caption">(chartbook.plotting._types.DualAxisConfig attribute)</a>
 </li>
       </ul></li>
-      <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError">CatalogNotConfiguredError</a>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog">catalog() (in module chartbook.cli)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.CHART_DOCS_FIELDS">CHART_DOCS_FIELDS (in module chartbook.diagnostics)</a>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_add">catalog_add() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_browse">catalog_browse() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_build">catalog_build() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_disable">catalog_disable() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_enable">catalog_enable() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.catalog_init">catalog_init() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.CatalogNotConfiguredError">CatalogNotConfiguredError</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.CHART_FIELDS">CHART_FIELDS (in module chartbook.diagnostics)</a>
 </li>
@@ -524,6 +536,13 @@ document.write(`
 
       <ul>
         <li><a href="apidocs/chartbook/chartbook.cli.html#module-chartbook.cli">module</a>
+</li>
+      </ul></li>
+      <li>
+    chartbook.conf_validation
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.conf_validation.html#module-chartbook.conf_validation">module</a>
 </li>
       </ul></li>
       <li>
@@ -562,6 +581,13 @@ document.write(`
 </li>
       </ul></li>
       <li>
+    chartbook.identity
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.identity.html#module-chartbook.identity">module</a>
+</li>
+      </ul></li>
+      <li>
     chartbook.manifest
 
       <ul>
@@ -573,6 +599,13 @@ document.write(`
 
       <ul>
         <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#module-chartbook.markdown_generator">module</a>
+</li>
+      </ul></li>
+      <li>
+    chartbook.path_validation
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.path_validation.html#module-chartbook.path_validation">module</a>
 </li>
       </ul></li>
       <li>
@@ -645,6 +678,8 @@ document.write(`
         <li><a href="apidocs/chartbook/chartbook.plotting.backends.html#module-chartbook.plotting.backends">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     chartbook.plotting.backends._base
 
@@ -666,20 +701,11 @@ document.write(`
         <li><a href="apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#module-chartbook.plotting.backends._matplotlib">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     chartbook.plotting.backends._plotly
 
       <ul>
         <li><a href="apidocs/chartbook/chartbook.plotting.backends._plotly.html#module-chartbook.plotting.backends._plotly">module</a>
-</li>
-      </ul></li>
-      <li>
-    chartbook.validation
-
-      <ul>
-        <li><a href="apidocs/chartbook/chartbook.validation.html#module-chartbook.validation">module</a>
 </li>
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._hookspecs.html#chartbook.plotting.backends._hookspecs.PlottingHookSpec.chartbook_create_area">chartbook_create_area() (chartbook.plotting.backends._hookspecs.PlottingHookSpec method)</a>
@@ -702,7 +728,11 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult">ChartResult (class in chartbook.plotting._types)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.check_toml_path">check_toml_path() (in module chartbook.path_validation)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.env.html#chartbook.env.clear_cache">clear_cache() (in module chartbook.env)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.clear_git_remote_cache">clear_git_remote_cache() (in module chartbook.identity)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.color">color (chartbook.plotting._types.ChartConfig attribute)</a>
 </li>
@@ -720,7 +750,9 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.copy_docs_src_to_build">copy_docs_src_to_build() (in module chartbook.markdown_generator)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.SiteConfig.copyright">copyright (chartbook.validation.SiteConfig attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.copy_site_dir_to_build">copy_site_dir_to_build() (in module chartbook.markdown_generator)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig.copyright">copyright (chartbook.conf_validation.SiteConfig attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._base.html#chartbook.plotting.backends._base.BaseBackend.create_area">create_area() (chartbook.plotting.backends._base.BaseBackend method)</a>
 
@@ -761,6 +793,8 @@ document.write(`
 </li>
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.plotting._output.html#chartbook.plotting._output.create_dual_chart_result">create_dual_chart_result() (in module chartbook.plotting._output)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.create_global_catalog">create_global_catalog() (in module chartbook.config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._base.html#chartbook.plotting.backends._base.BaseBackend.create_line">create_line() (chartbook.plotting.backends._base.BaseBackend method)</a>
 
@@ -806,25 +840,35 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.data_get_path">data_get_path() (in module chartbook.cli)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DATAFRAME_DOCS_FIELDS">DATAFRAME_DOCS_FIELDS (in module chartbook.diagnostics)</a>
-</li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DATAFRAME_FIELDS">DATAFRAME_FIELDS (in module chartbook.diagnostics)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.DataValidationError">DataValidationError</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.PlottingConfig.default_backend">default_backend (chartbook.plotting._config.PlottingConfig attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.DEFAULT_CONFIG">DEFAULT_CONFIG (in module chartbook.manifest)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.PlottingConfig.default_interactive">default_interactive (chartbook.plotting._config.PlottingConfig attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.env.html#chartbook.env.DEFAULT_MARKERS">DEFAULT_MARKERS (in module chartbook.env)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.PlottingConfig.default_output_dir">default_output_dir (chartbook.plotting._config.PlottingConfig attribute)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DEFAULT_REQUIRED_FIELDS">DEFAULT_REQUIRED_FIELDS (in module chartbook.diagnostics)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.DEFAULT_SITE_DIR">DEFAULT_SITE_DIR (in module chartbook.manifest)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.derive_pipeline_id">derive_pipeline_id() (in module chartbook.identity)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.detect_shell_environment">detect_shell_environment() (in module chartbook.path_validation)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.detect_v1_format">detect_v1_format() (in module chartbook.manifest)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.diagnose_path">diagnose_path() (in module chartbook.path_validation)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow">DiagnosticRow (class in chartbook.diagnostics)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.discover_site_pages">discover_site_pages() (in module chartbook.markdown_generator)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.DOCS_BUILD_DIR">DOCS_BUILD_DIR (in module chartbook.manifest)</a>
 
@@ -832,6 +876,8 @@ document.write(`
         <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.DOCS_BUILD_DIR">(in module chartbook.markdown_generator)</a>
 </li>
       </ul></li>
+      <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DOCS_FIELDS">DOCS_FIELDS (in module chartbook.diagnostics)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.DOCS_SRC_DIR">DOCS_SRC_DIR (in module chartbook.manifest)</a>
 
       <ul>
@@ -848,6 +894,10 @@ document.write(`
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.ensure_notebook_titles">ensure_notebook_titles() (in module chartbook.markdown_generator)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.ENTITY_SECTIONS">ENTITY_SECTIONS (in module chartbook.manifest)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ChartBookError.exit_with_message">exit_with_message() (chartbook.errors.ChartBookError method)</a>
 
       <ul>
@@ -884,10 +934,10 @@ document.write(`
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingFile.file_type">file_type (chartbook.errors.MissingFile attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.plotting._overlays.html#chartbook.plotting._overlays.filter_recessions_for_range">filter_recessions_for_range() (in module chartbook.plotting._overlays)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.find_latest_source_modification">find_latest_source_modification() (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#chartbook.markdown_generator.find_most_recent_valid_datapoints">find_most_recent_valid_datapoints() (in module chartbook.markdown_generator)</a>
@@ -896,11 +946,13 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ChartBookError.format_message">format_message() (chartbook.errors.ChartBookError method)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError.format_skip_warnings">format_skip_warnings() (chartbook.errors.MissingSourceFilesError method)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError.format_warnings">format_warnings() (chartbook.errors.MissingSourceFilesError method)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.FREDAPIError">FREDAPIError</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.SiteConfig.from_manifest">from_manifest() (chartbook.validation.SiteConfig class method)</a>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig.from_manifest">from_manifest() (chartbook.conf_validation.SiteConfig class method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -922,6 +974,8 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.env.html#chartbook.env.get">get() (in module chartbook.env)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.get_active_policy">get_active_policy() (in module chartbook.diagnostics)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends.html#chartbook.plotting.backends.get_backend">get_backend() (in module chartbook.plotting.backends)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.get_bundled_style_path">get_bundled_style_path() (in module chartbook.plotting._config)</a>
@@ -938,17 +992,25 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.data.html#chartbook.data.get_docs">get_docs() (in module chartbook.data)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.data.html#chartbook.data.get_docs_path">get_docs_path() (in module chartbook.data)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.build_docs.html#chartbook.build_docs.get_docs_src_path">get_docs_src_path() (in module chartbook.build_docs)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_favicon_path">get_favicon_path() (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_file_modified_datetime">get_file_modified_datetime() (in module chartbook.manifest)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.get_git_remote_url">get_git_remote_url() (in module chartbook.identity)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_artifacts_dir">get_global_artifacts_dir() (in module chartbook.config)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_catalog_path">get_global_catalog_path() (in module chartbook.config)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_config_dir">get_global_config_dir() (in module chartbook.config)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_docs_dir">get_global_docs_dir() (in module chartbook.config)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.config.html#chartbook.config.get_global_settings_path">get_global_settings_path() (in module chartbook.config)</a>
 </li>
@@ -963,6 +1025,8 @@ document.write(`
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_pipeline_ids">get_pipeline_ids() (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.get_pipeline_manifest">get_pipeline_manifest() (in module chartbook.manifest)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingSourceFilesError.get_pipelines_to_skip">get_pipelines_to_skip() (chartbook.errors.MissingSourceFilesError method)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends.html#chartbook.plotting.backends.get_plugin_manager">get_plugin_manager() (in module chartbook.plotting.backends)</a>
 </li>
@@ -979,11 +1043,15 @@ document.write(`
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.handle_validation_error">handle_validation_error() (in module chartbook.errors)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ChartBookError.hint">hint (chartbook.errors.ChartBookError attribute)</a>
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.PathDiagnostic.hint">(chartbook.path_validation.PathDiagnostic attribute)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.OverlayConfig.hlines">hlines (chartbook.plotting._types.OverlayConfig attribute)</a>
-</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.OverlayConfig.hlines">hlines (chartbook.plotting._types.OverlayConfig attribute)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._hookspecs.html#chartbook.plotting.backends._hookspecs.hookimpl">hookimpl (in module chartbook.plotting.backends._hookspecs)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._hookspecs.html#chartbook.plotting.backends._hookspecs.hookspec">hookspec (in module chartbook.plotting.backends._hookspecs)</a>
@@ -996,11 +1064,27 @@ document.write(`
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.ID_COMPONENT_PATTERN">ID_COMPONENT_PATTERN (in module chartbook.identity)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow.identifier">identifier (chartbook.diagnostics.DiagnosticRow attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.init">init() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.install">install() (in module chartbook.cli)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.install_skill">install_skill() (in module chartbook.cli)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ChartBookError.invalid_value">invalid_value (chartbook.errors.ChartBookError attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment.is_cygwin">is_cygwin (chartbook.path_validation.ShellEnvironment attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment.is_mingw">is_mingw (chartbook.path_validation.ShellEnvironment attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment.is_posix_on_windows">is_posix_on_windows (chartbook.path_validation.ShellEnvironment property)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment.is_wsl">is_wsl (chartbook.path_validation.ShellEnvironment attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.MissingFile.item_id">item_id (chartbook.errors.MissingFile attribute)</a>
 </li>
@@ -1023,6 +1107,8 @@ document.write(`
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.left_y_tickformat">left_y_tickformat (chartbook.plotting._types.DualAxisConfig attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.left_y_title">left_y_title (chartbook.plotting._types.DualAxisConfig attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.PathDiagnostic.level">level (chartbook.path_validation.PathDiagnostic attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -1054,10 +1140,14 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._matplotlib.html#chartbook.plotting.backends._matplotlib.MatplotlibBackend">MatplotlibBackend (class in chartbook.plotting.backends._matplotlib)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.SiteConfig.MAX_TEXT_LENGTH">MAX_TEXT_LENGTH (chartbook.validation.SiteConfig attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig.MAX_TEXT_LENGTH">MAX_TEXT_LENGTH (chartbook.conf_validation.SiteConfig attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ChartBookError.message">message (chartbook.errors.ChartBookError attribute)</a>
+
+      <ul>
+        <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.PathDiagnostic.message">(chartbook.path_validation.PathDiagnostic attribute)</a>
 </li>
+      </ul></li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow.metadata_complete">metadata_complete (chartbook.diagnostics.DiagnosticRow attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow.missing_fields">missing_fields (chartbook.diagnostics.DiagnosticRow attribute)</a>
@@ -1076,6 +1166,8 @@ document.write(`
 </li>
         <li><a href="apidocs/chartbook/chartbook.cli.html#module-chartbook.cli">chartbook.cli</a>
 </li>
+        <li><a href="apidocs/chartbook/chartbook.conf_validation.html#module-chartbook.conf_validation">chartbook.conf_validation</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.config.html#module-chartbook.config">chartbook.config</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.data.html#module-chartbook.data">chartbook.data</a>
@@ -1086,9 +1178,13 @@ document.write(`
 </li>
         <li><a href="apidocs/chartbook/chartbook.errors.html#module-chartbook.errors">chartbook.errors</a>
 </li>
+        <li><a href="apidocs/chartbook/chartbook.identity.html#module-chartbook.identity">chartbook.identity</a>
+</li>
         <li><a href="apidocs/chartbook/chartbook.manifest.html#module-chartbook.manifest">chartbook.manifest</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.markdown_generator.html#module-chartbook.markdown_generator">chartbook.markdown_generator</a>
+</li>
+        <li><a href="apidocs/chartbook/chartbook.path_validation.html#module-chartbook.path_validation">chartbook.path_validation</a>
 </li>
         <li><a href="apidocs/chartbook/chartbook.plotting.html#module-chartbook.plotting">chartbook.plotting</a>
 </li>
@@ -1118,14 +1214,14 @@ document.write(`
 </li>
         <li><a href="apidocs/chartbook/chartbook.plotting.backends._plotly.html#module-chartbook.plotting.backends._plotly">chartbook.plotting.backends._plotly</a>
 </li>
-        <li><a href="apidocs/chartbook/chartbook.validation.html#module-chartbook.validation">chartbook.validation</a>
-</li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.mpl_axes">mpl_axes (chartbook.plotting._types.ChartResult property)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.mpl_figure">mpl_figure (chartbook.plotting._types.ChartResult property)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment.msystem">msystem (chartbook.path_validation.ShellEnvironment attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1145,14 +1241,16 @@ document.write(`
       </ul></li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.names">names (chartbook.plotting._types.ChartConfig attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.PlottingConfig.nber_recessions">nber_recessions (chartbook.plotting._config.PlottingConfig attribute)</a>
 
       <ul>
         <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.OverlayConfig.nber_recessions">(chartbook.plotting._types.OverlayConfig attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.normalize_ref_to_id">normalize_ref_to_id() (in module chartbook.identity)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.normalize_tags">normalize_tags() (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.note">note (chartbook.plotting._types.ChartConfig attribute)</a>
@@ -1161,6 +1259,8 @@ document.write(`
         <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.note">(chartbook.plotting._types.DualAxisConfig attribute)</a>
 </li>
       </ul></li>
+      <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.NOTEBOOK_FIELDS">NOTEBOOK_FIELDS (in module chartbook.diagnostics)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -1173,10 +1273,14 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.OPTIONAL_CHART_FIELDS">OPTIONAL_CHART_FIELDS (in module chartbook.diagnostics)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.output_dir">output_dir (chartbook.plotting._types.ChartResult attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.PathDiagnostic.original_path">original_path (chartbook.path_validation.PathDiagnostic attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment.os_name">os_name (chartbook.path_validation.ShellEnvironment attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.output_dir">output_dir (chartbook.plotting._types.ChartResult attribute)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.OUTPUT_DIR">OUTPUT_DIR (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._exceptions.html#chartbook.plotting._exceptions.OutputError">OutputError</a>
@@ -1193,6 +1297,8 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow.page_link">page_link (chartbook.diagnostics.DiagnosticRow attribute)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.PathDiagnostic">PathDiagnostic (class in chartbook.path_validation)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.paths">paths (chartbook.plotting._types.ChartResult property)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.pdf_path">pdf_path (chartbook.plotting._types.ChartResult attribute)</a>
@@ -1200,8 +1306,6 @@ document.write(`
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.pdf_wide_path">pdf_wide_path (chartbook.plotting._types.ChartResult attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._api.html#chartbook.plotting._api.pie">pie() (in module chartbook.plotting._api)</a>
-</li>
-      <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.PIPELINE_FIELDS">PIPELINE_FIELDS (in module chartbook.diagnostics)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow.pipeline_id">pipeline_id (chartbook.diagnostics.DiagnosticRow attribute)</a>
 
@@ -1213,10 +1317,10 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.PlottingConfig.plotly_template">plotly_template (chartbook.plotting._config.PlottingConfig attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._plotly.html#chartbook.plotting.backends._plotly.PlotlyBackend">PlotlyBackend (class in chartbook.plotting.backends._plotly)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.plotting.backends._base.html#chartbook.plotting.backends._base.PlottingBackend">PlottingBackend (class in chartbook.plotting.backends._base)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._config.html#chartbook.plotting._config.PlottingConfig">PlottingConfig (class in chartbook.plotting._config)</a>
@@ -1228,6 +1332,10 @@ document.write(`
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.png_path">png_path (chartbook.plotting._types.ChartResult attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.png_wide_path">png_wide_path (chartbook.plotting._types.ChartResult attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.PROJECT_DEFAULTS">PROJECT_DEFAULTS (in module chartbook.manifest)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.PROJECT_FIELDS">PROJECT_FIELDS (in module chartbook.diagnostics)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ProjectRootNotFoundError">ProjectRootNotFoundError</a>
 </li>
@@ -1247,14 +1355,20 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.OverlayConfig.regression_line">regression_line (chartbook.plotting._types.OverlayConfig attribute)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.RESERVED_PIPELINES_KEYS">RESERVED_PIPELINES_KEYS (in module chartbook.manifest)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.resolve_pipeline_ref">resolve_pipeline_ref() (in module chartbook.identity)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.resolve_platform_path">resolve_platform_path() (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.resolve_project_dir">resolve_project_dir() (in module chartbook.cli)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.right_colors">right_colors (chartbook.plotting._types.DualAxisConfig attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.resolve_project_type">resolve_project_type() (in module chartbook.manifest)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.right_colors">right_colors (chartbook.plotting._types.DualAxisConfig attribute)</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.right_type">right_type (chartbook.plotting._types.DualAxisConfig attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.right_y">right_y (chartbook.plotting._types.DualAxisConfig attribute)</a>
@@ -1275,7 +1389,7 @@ document.write(`
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.SiteConfig.SAFE_TEXT_PATTERN">SAFE_TEXT_PATTERN (chartbook.validation.SiteConfig attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig.SAFE_TEXT_PATTERN">SAFE_TEXT_PATTERN (chartbook.conf_validation.SiteConfig attribute)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.save">save() (chartbook.plotting._types.ChartResult method)</a>
 </li>
@@ -1289,11 +1403,17 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.OverlayConfig.shaded_regions">shaded_regions (chartbook.plotting._types.OverlayConfig attribute)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment.shell_label">shell_label (chartbook.path_validation.ShellEnvironment property)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment.shell_style">shell_style (chartbook.path_validation.ShellEnvironment property)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.ShellEnvironment">ShellEnvironment (class in chartbook.path_validation)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartResult.show">show() (chartbook.plotting._types.ChartResult method)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.SiteConfig">SiteConfig (class in chartbook.validation)</a>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig">SiteConfig (class in chartbook.conf_validation)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.size">size (chartbook.plotting._types.ChartConfig attribute)</a>
 </li>
@@ -1303,9 +1423,15 @@ document.write(`
         <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.source">(chartbook.plotting._types.DualAxisConfig attribute)</a>
 </li>
       </ul></li>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.SiteConfig.sphinx_theme">sphinx_theme (chartbook.validation.SiteConfig attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig.sphinx_theme">sphinx_theme (chartbook.conf_validation.SiteConfig attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.split_rev">split_rev() (in module chartbook.identity)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.stacked">stacked (chartbook.plotting._types.ChartConfig attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.suggest_posix_path">suggest_posix_path() (in module chartbook.path_validation)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.PathDiagnostic.suggested_path">suggested_path (chartbook.path_validation.PathDiagnostic attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1313,12 +1439,12 @@ document.write(`
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.title">title (chartbook.plotting._types.ChartConfig attribute)</a>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig.title">title (chartbook.conf_validation.SiteConfig attribute)</a>
 
       <ul>
-        <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.title">(chartbook.plotting._types.DualAxisConfig attribute)</a>
+        <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.title">(chartbook.plotting._types.ChartConfig attribute)</a>
 </li>
-        <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.SiteConfig.title">(chartbook.validation.SiteConfig attribute)</a>
+        <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.DualAxisConfig.title">(chartbook.plotting._types.DualAxisConfig attribute)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -1327,25 +1453,41 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.DiagnosticRow.to_dict">to_dict() (chartbook.diagnostics.DiagnosticRow method)</a>
 </li>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.SiteConfig.TOML_KEYS">TOML_KEYS (chartbook.conf_validation.SiteConfig attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.UnsupportedRevisionError">UnsupportedRevisionError</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="V">V</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.V1_MARKER_SECTIONS">V1_MARKER_SECTIONS (in module chartbook.manifest)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.V1FormatError">V1FormatError</a>
+</li>
       <li><a href="apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_chart_id">validate_chart_id() (in module chartbook.plotting._validation)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.path_validation.html#chartbook.path_validation.validate_cli_paths">validate_cli_paths() (in module chartbook.path_validation)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_columns_exist">validate_columns_exist() (in module chartbook.plotting._validation)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.validate_conf_py_values">validate_conf_py_values() (in module chartbook.validation)</a>
-</li>
-      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_config_file">validate_config_file() (in module chartbook.manifest)</a>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.validate_conf_py_values">validate_conf_py_values() (in module chartbook.conf_validation)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_dataframe">validate_dataframe() (in module chartbook.plotting._validation)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_datetime_column">validate_datetime_column() (in module chartbook.plotting._validation)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_doc_fields">validate_doc_fields() (in module chartbook.manifest)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.manifest.html#chartbook.manifest.validate_manifest_file">validate_manifest_file() (in module chartbook.manifest)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_numeric_columns">validate_numeric_columns() (in module chartbook.plotting._validation)</a>
 </li>
@@ -1361,11 +1503,15 @@ document.write(`
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._validation.html#chartbook.plotting._validation.validate_overlay_vlines">validate_overlay_vlines() (in module chartbook.plotting._validation)</a>
 </li>
-      <li><a href="apidocs/chartbook/chartbook.validation.html#chartbook.validation.validate_source_files">validate_source_files() (in module chartbook.validation)</a>
+      <li><a href="apidocs/chartbook/chartbook.identity.html#chartbook.identity.validate_pipeline_id">validate_pipeline_id() (in module chartbook.identity)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.conf_validation.html#chartbook.conf_validation.validate_source_files">validate_source_files() (in module chartbook.conf_validation)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.errors.html#chartbook.errors.ValidationError">ValidationError</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.ChartConfig.values">values (chartbook.plotting._types.ChartConfig attribute)</a>
+</li>
+      <li><a href="apidocs/chartbook/chartbook.cli.html#chartbook.cli.VERSION_STAMP_NAME">VERSION_STAMP_NAME (in module chartbook.cli)</a>
 </li>
       <li><a href="apidocs/chartbook/chartbook.plotting._types.html#chartbook.plotting._types.OverlayConfig.vlines">vlines (chartbook.plotting._types.OverlayConfig attribute)</a>
 </li>
@@ -1462,7 +1608,7 @@ By Jeremiah Bejarano
 
   <p class="copyright">
     
-      © Copyright 2025, Jeremiah Bejarano.
+      © Copyright 2026, Jeremiah Bejarano.
       <br/>
     
   </p>

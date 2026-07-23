@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/custom.css?v=c0169425" />
@@ -40,7 +40,7 @@
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="_static/documentation_options.js?v=d1237063"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -52,7 +52,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Contributing" href="contributing.html" />
-    <link rel="prev" title="Configuration Guide" href="configuration.html" />
+    <link rel="prev" title="Design: chartbook.toml Format v2" href="design/toml-format-v2.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -268,6 +268,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="user-guide/notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="cli-reference.html">CLI Reference</a></li>
@@ -284,7 +285,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -294,6 +295,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
@@ -551,7 +553,7 @@ ChartBook organizes analytics work into <span class="gs">**pipelines**</span> (s
 
 <span class="gu">## API</span>
 
-<span class="k">-</span><span class="w"> </span>[<span class="nt">Python API</span>](<span class="na">docs_src/api/chartbook.md</span>): <span class="sb">`from chartbook import data; df = data.load(pipeline=&quot;ID&quot;, dataframe=&quot;df_id&quot;)`</span>
+<span class="k">-</span><span class="w"> </span>[<span class="nt">Python API</span>](<span class="na">docs_src/api/chartbook.md</span>): <span class="sb">`from chartbook import data; lf = data.load(pipeline=&quot;my_pipeline&quot;, dataframe=&quot;df_id&quot;)`</span> — pipeline accepts a bare name or a scoped name (<span class="sb">`myorg/my_pipeline`</span>)
 
 <span class="gu">## Key Commands</span>
 
@@ -563,34 +565,27 @@ chartbook config             # Configure default catalog path
 
 <span class="gu">## Minimal Configuration Example</span>
 
-[config]
-type = &quot;pipeline&quot;
-chartbook_format_version = &quot;0.0.6&quot;
+All [project] keys are optional (an empty chartbook.toml is a valid pipeline manifest). Project type is inferred: a [pipelines] registry table means catalog, otherwise pipeline. Each chart and dataframe needs exactly one of docs_path (external markdown file) or docs (inline markdown).
 
-[site]
-title = &quot;My Analytics&quot;
-author = &quot;Your Name&quot;
-copyright = &quot;2025&quot;
-
-[pipeline]
-id = &quot;MYPROJ&quot;
-pipeline_name = &quot;My Pipeline&quot;
-pipeline_description = &quot;Analytics pipeline description&quot;
-lead_pipeline_developer = &quot;Your Name&quot;
+[project]
+name = &quot;My Pipeline&quot;
+description = &quot;Analytics pipeline description&quot;
+maintainer = &quot;Your Name&quot;
 
 [charts.my_chart]
-chart_name = &quot;My Chart&quot;
-short_description_chart = &quot;Chart description&quot;
-dataframe_id = &quot;my_data&quot;
-path_to_html_chart = &quot;./_output/chart.html&quot;
-chart_docs_path = &quot;./docs_src/charts/chart.md&quot;
+name = &quot;My Chart&quot;
+description = &quot;Chart description&quot;
+dataframe = &quot;my_data&quot;
+path = &quot;./_output/chart.html&quot;
+docs_path = &quot;./docs_src/charts/chart.md&quot;
 
 [dataframes.my_data]
-dataframe_name = &quot;My Data&quot;
-short_description_df = &quot;Data description&quot;
-data_sources = [&quot;Source&quot;]
-path_to_parquet_data = &quot;./_data/data.parquet&quot;
+name = &quot;My Data&quot;
+description = &quot;Data description&quot;
+sources = [&quot;Source&quot;]
+path = &quot;./_data/data.parquet&quot;
 date_col = &quot;date&quot;
+docs = &quot;Documentation for this dataset.&quot;
 
 <span class="gu">## Directory Structure</span>
 
@@ -626,12 +621,12 @@ my-pipeline/
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="configuration.html"
+       href="design/toml-format-v2.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Configuration Guide</p>
+        <p class="prev-next-title">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</p>
       </div>
     </a>
     <a class="right-next"

@@ -29,7 +29,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
@@ -39,7 +39,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="../../_static/documentation_options.js?v=d1237063"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -263,6 +263,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
@@ -279,7 +280,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -289,6 +290,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
@@ -407,52 +409,57 @@ document.write(`
 
 <span class="kn">from</span> <span class="nn">chartbook.manifest</span> <span class="kn">import</span> <span class="n">get_pipeline_ids</span><span class="p">,</span> <span class="n">get_pipeline_manifest</span>
 
-<span class="n">PIPELINE_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;id&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;pipeline_name&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;pipeline_description&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;lead_pipeline_developer&quot;</span><span class="p">,</span>
+<span class="n">PROJECT_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;maintainer&quot;</span><span class="p">,</span>
     <span class="s2">&quot;contributors&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;build_commands&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;build&quot;</span><span class="p">,</span>
     <span class="s2">&quot;os_compatibility&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;git_repo_URL&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;README_file_path&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;repo_url&quot;</span><span class="p">,</span>
 <span class="p">]</span>
 
 <span class="n">DATAFRAME_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;dataframe_name&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;short_description_df&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;data_sources&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;data_providers&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;links_to_data_providers&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;topic_tags&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;how_is_pulled&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;path_to_parquet_data&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;date_col&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sources&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;providers&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;provider_links&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tags&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pull_method&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">,</span>
 <span class="p">]</span>
-
-<span class="c1"># Mutually exclusive doc fields for dataframes (exactly one required)</span>
-<span class="n">DATAFRAME_DOCS_FIELDS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;dataframe_docs_path&quot;</span><span class="p">,</span> <span class="s2">&quot;dataframe_docs_str&quot;</span><span class="p">)</span>
 
 <span class="n">CHART_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;chart_name&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;short_description_chart&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;dataframe_id&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;topic_tags&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;data_frequency&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dataframe&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tags&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;frequency&quot;</span><span class="p">,</span>
     <span class="s2">&quot;observation_period&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;lag_in_data_release&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;data_release_timing&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;release_lag&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;release_timing&quot;</span><span class="p">,</span>
     <span class="s2">&quot;units&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;path_to_html_chart&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;path&quot;</span><span class="p">,</span>
 <span class="p">]</span>
 
-<span class="c1"># Mutually exclusive doc fields for charts (exactly one required)</span>
-<span class="n">CHART_DOCS_FIELDS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;chart_docs_path&quot;</span><span class="p">,</span> <span class="s2">&quot;chart_docs_str&quot;</span><span class="p">)</span>
+<span class="n">NOTEBOOK_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="c1"># Mutually exclusive doc fields (exactly one required) for charts and dataframes</span>
+<span class="n">DOCS_FIELDS</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;docs_path&quot;</span><span class="p">,</span> <span class="s2">&quot;docs&quot;</span><span class="p">)</span>
+
+<span class="c1">#: The default warn-only policy. A catalog&#39;s [policy.required] section</span>
+<span class="c1">#: overrides these lists per object type; see the format design doc.</span>
+<span class="n">DEFAULT_REQUIRED_FIELDS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;project&quot;</span><span class="p">:</span> <span class="n">PROJECT_FIELDS</span><span class="p">,</span>
+    <span class="s2">&quot;dataframes&quot;</span><span class="p">:</span> <span class="n">DATAFRAME_FIELDS</span><span class="p">,</span>
+    <span class="s2">&quot;charts&quot;</span><span class="p">:</span> <span class="n">CHART_FIELDS</span><span class="p">,</span>
+    <span class="s2">&quot;notebooks&quot;</span><span class="p">:</span> <span class="n">NOTEBOOK_FIELDS</span><span class="p">,</span>
+<span class="p">}</span>
 
 <span class="c1"># Optional chart fields (not required for diagnostics)</span>
 <span class="n">OPTIONAL_CHART_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;data_series&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;series&quot;</span><span class="p">,</span>
 <span class="p">]</span>
 
 
@@ -535,40 +542,61 @@ document.write(`
 
 
 <span class="k">def</span> <span class="nf">_build_page_link</span><span class="p">(</span><span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build relative page link for manual concatenation with homepage URL.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build relative page link for the diagnostics page.</span>
 
-<span class="sd">    Returns paths relative to homepage (index.html) like:</span>
-<span class="sd">    - ../charts/{pipeline_id}.{chart_id}.html</span>
-<span class="sd">    - ../dataframes/{pipeline_id}/{dataframe_id}.html</span>
-<span class="sd">    - ../index.html (for pipelines)</span>
+<span class="sd">    Returns paths relative to the cb/ directory (where diagnostics.md lives):</span>
+<span class="sd">    - ./charts/{pipeline_id}.{chart_id}.html</span>
+<span class="sd">    - ./dataframes/{pipeline_id}/{dataframe_id}.html</span>
+<span class="sd">    - ../index.html (for pipelines, from cb/ up to root)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pipeline_slug</span> <span class="o">=</span> <span class="n">pipeline_id</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;--&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">object_type</span> <span class="o">==</span> <span class="s2">&quot;chart&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;../charts/</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">.html&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;./charts/</span><span class="si">{</span><span class="n">pipeline_slug</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">.html&quot;</span>
     <span class="k">elif</span> <span class="n">object_type</span> <span class="o">==</span> <span class="s2">&quot;dataframe&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;../dataframes/</span><span class="si">{</span><span class="n">pipeline_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">.html&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;./dataframes/</span><span class="si">{</span><span class="n">pipeline_slug</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">.html&quot;</span>
     <span class="k">elif</span> <span class="n">object_type</span> <span class="o">==</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="s2">&quot;../index.html&quot;</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="s2">&quot;&quot;</span>
 
 
+<div class="viewcode-block" id="get_active_policy">
+<a class="viewcode-back" href="../../apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.get_active_policy">[docs]</a>
+<span class="k">def</span> <span class="nf">get_active_policy</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the manifest&#39;s resolved policy, or the default warn-only policy.</span>
+
+<span class="sd">    Catalog manifests carry a resolved ``policy`` key; standalone pipelines</span>
+<span class="sd">    fall back to the defaults.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">policy</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;policy&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">policy</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">policy</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;warn&quot;</span><span class="p">,</span> <span class="s2">&quot;required&quot;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">DEFAULT_REQUIRED_FIELDS</span><span class="p">)}</span></div>
+
+
+
 <div class="viewcode-block" id="build_diagnostics">
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.build_diagnostics">[docs]</a>
 <span class="k">def</span> <span class="nf">build_diagnostics</span><span class="p">(</span><span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DiagnosticRow</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate diagnostics rows for all pipelines, dataframes, and charts.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate diagnostics rows for all pipelines, dataframes, and charts.</span>
+
+<span class="sd">    Required fields come from the manifest&#39;s [policy] section when present</span>
+<span class="sd">    (catalogs), otherwise from the default lists in this module.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">diagnostics</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DiagnosticRow</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">pipeline_ids</span> <span class="o">=</span> <span class="n">get_pipeline_ids</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+    <span class="n">required</span> <span class="o">=</span> <span class="n">get_active_policy</span><span class="p">(</span><span class="n">manifest</span><span class="p">)[</span><span class="s2">&quot;required&quot;</span><span class="p">]</span>
 
     <span class="k">for</span> <span class="n">pipeline_id</span> <span class="ow">in</span> <span class="n">pipeline_ids</span><span class="p">:</span>
         <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">get_pipeline_manifest</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">)</span>
-        <span class="n">pipeline_meta</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">project_meta</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;project&quot;</span><span class="p">,</span> <span class="p">{})</span>
 
-        <span class="n">pipeline_missing</span> <span class="o">=</span> <span class="n">_collect_missing_fields</span><span class="p">(</span><span class="n">pipeline_meta</span><span class="p">,</span> <span class="n">PIPELINE_FIELDS</span><span class="p">)</span>
+        <span class="n">pipeline_missing</span> <span class="o">=</span> <span class="n">_collect_missing_fields</span><span class="p">(</span><span class="n">project_meta</span><span class="p">,</span> <span class="n">required</span><span class="p">[</span><span class="s2">&quot;project&quot;</span><span class="p">])</span>
         <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
             <span class="n">DiagnosticRow</span><span class="p">(</span>
                 <span class="n">object_type</span><span class="o">=</span><span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
-                <span class="n">object_name</span><span class="o">=</span><span class="n">pipeline_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline_name&quot;</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">),</span>
+                <span class="n">object_name</span><span class="o">=</span><span class="n">project_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">),</span>
                 <span class="n">metadata_complete</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">pipeline_missing</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
                 <span class="n">identifier</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
                 <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
@@ -580,18 +608,16 @@ document.write(`
         <span class="n">dataframes</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{})</span>
         <span class="k">for</span> <span class="n">dataframe_id</span><span class="p">,</span> <span class="n">dataframe_meta</span> <span class="ow">in</span> <span class="n">dataframes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">dataframe_missing</span> <span class="o">=</span> <span class="n">_collect_missing_fields</span><span class="p">(</span>
-                <span class="n">dataframe_meta</span><span class="p">,</span> <span class="n">DATAFRAME_FIELDS</span>
+                <span class="n">dataframe_meta</span><span class="p">,</span> <span class="n">required</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">]</span>
             <span class="p">)</span>
             <span class="c1"># Check mutually exclusive doc fields</span>
             <span class="n">dataframe_missing</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
-                <span class="n">_check_mutually_exclusive_doc_fields</span><span class="p">(</span>
-                    <span class="n">dataframe_meta</span><span class="p">,</span> <span class="n">DATAFRAME_DOCS_FIELDS</span>
-                <span class="p">)</span>
+                <span class="n">_check_mutually_exclusive_doc_fields</span><span class="p">(</span><span class="n">dataframe_meta</span><span class="p">,</span> <span class="n">DOCS_FIELDS</span><span class="p">)</span>
             <span class="p">)</span>
             <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="n">DiagnosticRow</span><span class="p">(</span>
                     <span class="n">object_type</span><span class="o">=</span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span>
-                    <span class="n">object_name</span><span class="o">=</span><span class="n">dataframe_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframe_name&quot;</span><span class="p">,</span> <span class="n">dataframe_id</span><span class="p">),</span>
+                    <span class="n">object_name</span><span class="o">=</span><span class="n">dataframe_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">dataframe_id</span><span class="p">),</span>
                     <span class="n">metadata_complete</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">dataframe_missing</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
                     <span class="n">identifier</span><span class="o">=</span><span class="n">dataframe_id</span><span class="p">,</span>
                     <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
@@ -602,15 +628,15 @@ document.write(`
 
         <span class="n">charts</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;charts&quot;</span><span class="p">,</span> <span class="p">{})</span>
         <span class="k">for</span> <span class="n">chart_id</span><span class="p">,</span> <span class="n">chart_meta</span> <span class="ow">in</span> <span class="n">charts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">chart_missing</span> <span class="o">=</span> <span class="n">_collect_missing_fields</span><span class="p">(</span><span class="n">chart_meta</span><span class="p">,</span> <span class="n">CHART_FIELDS</span><span class="p">)</span>
+            <span class="n">chart_missing</span> <span class="o">=</span> <span class="n">_collect_missing_fields</span><span class="p">(</span><span class="n">chart_meta</span><span class="p">,</span> <span class="n">required</span><span class="p">[</span><span class="s2">&quot;charts&quot;</span><span class="p">])</span>
             <span class="c1"># Check mutually exclusive doc fields</span>
             <span class="n">chart_missing</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
-                <span class="n">_check_mutually_exclusive_doc_fields</span><span class="p">(</span><span class="n">chart_meta</span><span class="p">,</span> <span class="n">CHART_DOCS_FIELDS</span><span class="p">)</span>
+                <span class="n">_check_mutually_exclusive_doc_fields</span><span class="p">(</span><span class="n">chart_meta</span><span class="p">,</span> <span class="n">DOCS_FIELDS</span><span class="p">)</span>
             <span class="p">)</span>
             <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="n">DiagnosticRow</span><span class="p">(</span>
                     <span class="n">object_type</span><span class="o">=</span><span class="s2">&quot;chart&quot;</span><span class="p">,</span>
-                    <span class="n">object_name</span><span class="o">=</span><span class="n">chart_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;chart_name&quot;</span><span class="p">,</span> <span class="n">chart_id</span><span class="p">),</span>
+                    <span class="n">object_name</span><span class="o">=</span><span class="n">chart_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">chart_id</span><span class="p">),</span>
                     <span class="n">metadata_complete</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">chart_missing</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
                     <span class="n">identifier</span><span class="o">=</span><span class="n">chart_id</span><span class="p">,</span>
                     <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
@@ -618,6 +644,25 @@ document.write(`
                     <span class="n">page_link</span><span class="o">=</span><span class="n">_build_page_link</span><span class="p">(</span><span class="s2">&quot;chart&quot;</span><span class="p">,</span> <span class="n">chart_id</span><span class="p">,</span> <span class="n">pipeline_id</span><span class="p">),</span>
                 <span class="p">)</span>
             <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">required</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;notebooks&quot;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">notebook_id</span><span class="p">,</span> <span class="n">notebook_meta</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="s2">&quot;notebooks&quot;</span><span class="p">,</span> <span class="p">{}</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">notebook_missing</span> <span class="o">=</span> <span class="n">_collect_missing_fields</span><span class="p">(</span>
+                    <span class="n">notebook_meta</span><span class="p">,</span> <span class="n">required</span><span class="p">[</span><span class="s2">&quot;notebooks&quot;</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">diagnostics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">DiagnosticRow</span><span class="p">(</span>
+                        <span class="n">object_type</span><span class="o">=</span><span class="s2">&quot;notebook&quot;</span><span class="p">,</span>
+                        <span class="n">object_name</span><span class="o">=</span><span class="n">notebook_meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">notebook_id</span><span class="p">),</span>
+                        <span class="n">metadata_complete</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">notebook_missing</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span>
+                        <span class="n">identifier</span><span class="o">=</span><span class="n">notebook_id</span><span class="p">,</span>
+                        <span class="n">pipeline_id</span><span class="o">=</span><span class="n">pipeline_id</span><span class="p">,</span>
+                        <span class="n">missing_fields</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">notebook_missing</span><span class="p">),</span>
+                        <span class="n">page_link</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">diagnostics</span></div>
 
@@ -660,14 +705,17 @@ document.write(`
 <a class="viewcode-back" href="../../apidocs/chartbook/chartbook.diagnostics.html#chartbook.diagnostics.generate_metadata_diagnostics">[docs]</a>
 <span class="k">def</span> <span class="nf">generate_metadata_diagnostics</span><span class="p">(</span>
     <span class="n">manifest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">docs_build_dir</span><span class="p">:</span> <span class="n">Path</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create the metadata diagnostics CSV file inside the docs build directory.&quot;&quot;&quot;</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DiagnosticRow</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create the metadata diagnostics CSV inside the docs build directory.</span>
+
+<span class="sd">    :returns: The diagnostic rows, so callers can enforce strict policy.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">diagnostics</span> <span class="o">=</span> <span class="n">build_diagnostics</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
     <span class="n">diagnostics_dir</span> <span class="o">=</span> <span class="n">docs_build_dir</span> <span class="o">/</span> <span class="s2">&quot;_static&quot;</span> <span class="o">/</span> <span class="s2">&quot;diagnostics&quot;</span>
     <span class="n">diagnostics_path</span> <span class="o">=</span> <span class="n">diagnostics_dir</span> <span class="o">/</span> <span class="s2">&quot;chartbook_metadata_diagnostics.csv&quot;</span>
     <span class="n">write_diagnostics_csv</span><span class="p">(</span><span class="n">diagnostics</span><span class="p">,</span> <span class="n">diagnostics_path</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">diagnostics_path</span></div>
+    <span class="k">return</span> <span class="n">diagnostics</span></div>
 
 </pre></div>
 

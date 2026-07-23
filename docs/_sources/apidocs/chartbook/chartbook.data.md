@@ -56,7 +56,7 @@
 ```
 ````
 
-````{py:function} load(pipeline: str, dataframe: str, format: str = 'pandas', catalog_path: typing.Optional[typing.Union[str, pathlib.Path]] = None)
+````{py:function} load(pipeline: str, dataframe: str, format: str = 'polars', catalog_path: typing.Optional[typing.Union[str, pathlib.Path]] = None)
 :canonical: chartbook.data.load
 
 ```{autodoc2-docstring} chartbook.data.load

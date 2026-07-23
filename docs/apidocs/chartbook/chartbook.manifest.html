@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
@@ -40,7 +40,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="../../_static/documentation_options.js?v=55ac272d"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -255,23 +255,21 @@ document.write(`
                 </a>
             </li>
         </ul>
-        <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../why-chartbook.html">Why ChartBook?</a></li>
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Learn</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../user-guide/index.html">User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/concepts.html">Core Concepts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/pipelines.html">Pipelines</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/charts.html">Charts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/dataframes.html">Dataframes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/catalog-projects.html">Catalog Projects</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/plotting.html">Plotting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/documenting-a-pipeline.html">Documenting a Pipeline</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/catalogs-and-data.html">Catalogs and Data Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/gallery.html">ChartBook Plotting Gallery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../guide/how-the-build-works.html">How the Build Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 </ul>
-</details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../api/chartbook.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../reference/configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/cli.html">CLI Reference</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../reference/api.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="chartbook.data.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.data</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.env.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.env</span></code></a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="chartbook.plotting.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.plotting</span></code></a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -279,24 +277,23 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.cli.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.cli</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.config</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.identity.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.identity</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.build_docs.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.build_docs</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.diagnostics.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.diagnostics</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2 current active"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="chartbook.path_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.path_validation</span></code></a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/pipeline-example.html">Pipeline Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/chartbook-example.html">Catalog Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../examples/data-pipeline.html">Data Pipeline</a></li>
 </ul>
-</details></li>
-<li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Project</span></p>
+<ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 </ul>
 
     </div>
@@ -450,12 +447,18 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.BASE_DIR"><code class="docutils literal notranslate"><span class="pre">BASE_DIR</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DEFAULT_CONFIG"><code class="docutils literal notranslate"><span class="pre">DEFAULT_CONFIG</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DEFAULT_SITE_DIR"><code class="docutils literal notranslate"><span class="pre">DEFAULT_SITE_DIR</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DOCS_BUILD_DIR"><code class="docutils literal notranslate"><span class="pre">DOCS_BUILD_DIR</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DOCS_SRC_DIR"><code class="docutils literal notranslate"><span class="pre">DOCS_SRC_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.ENTITY_SECTIONS"><code class="docutils literal notranslate"><span class="pre">ENTITY_SECTIONS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.OUTPUT_DIR"><code class="docutils literal notranslate"><span class="pre">OUTPUT_DIR</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PIPELINE_THEME"><code class="docutils literal notranslate"><span class="pre">PIPELINE_THEME</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PROJECT_DEFAULTS"><code class="docutils literal notranslate"><span class="pre">PROJECT_DEFAULTS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PUBLISH_DIR"><code class="docutils literal notranslate"><span class="pre">PUBLISH_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.RESERVED_PIPELINES_KEYS"><code class="docutils literal notranslate"><span class="pre">RESERVED_PIPELINES_KEYS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.V1FormatError"><code class="docutils literal notranslate"><span class="pre">V1FormatError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.V1_MARKER_SECTIONS"><code class="docutils literal notranslate"><span class="pre">V1_MARKER_SECTIONS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.detect_v1_format"><code class="docutils literal notranslate"><span class="pre">detect_v1_format()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.find_latest_source_modification"><code class="docutils literal notranslate"><span class="pre">find_latest_source_modification()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_default_asset_path"><code class="docutils literal notranslate"><span class="pre">get_default_asset_path()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_favicon_path"><code class="docutils literal notranslate"><span class="pre">get_favicon_path()</span></code></a></li>
@@ -466,8 +469,9 @@ document.write(`
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.load_manifest"><code class="docutils literal notranslate"><span class="pre">load_manifest()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.normalize_tags"><code class="docutils literal notranslate"><span class="pre">normalize_tags()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.resolve_platform_path"><code class="docutils literal notranslate"><span class="pre">resolve_platform_path()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_config_file"><code class="docutils literal notranslate"><span class="pre">validate_config_file()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.resolve_project_type"><code class="docutils literal notranslate"><span class="pre">resolve_project_type()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_doc_fields"><code class="docutils literal notranslate"><span class="pre">validate_doc_fields()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_manifest_file"><code class="docutils literal notranslate"><span class="pre">validate_manifest_file()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_os_compatibility"><code class="docutils literal notranslate"><span class="pre">validate_os_compatibility()</span></code></a></li>
 </ul>
 </li>
@@ -486,50 +490,65 @@ document.write(`
                   
   <section class="tex2jax_ignore mathjax_ignore" id="module-chartbook.manifest">
 <span id="chartbook-manifest"></span><h1><a class="reference internal" href="#module-chartbook.manifest" title="chartbook.manifest"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a><a class="headerlink" href="#module-chartbook.manifest" title="Link to this heading">#</a></h1>
+<p>Load and process <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> manifests (format v2).</p>
+<p>A v2 manifest has a single <code class="docutils literal notranslate"><span class="pre">[project]</span></code> metadata table plus the entity
+sections <code class="docutils literal notranslate"><span class="pre">[charts]</span></code>, <code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code>, <code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code>, and <code class="docutils literal notranslate"><span class="pre">[notes]</span></code>
+(pipelines), or a <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> registry and optional <code class="docutils literal notranslate"><span class="pre">[policy]</span></code>
+(catalogs). Every <code class="docutils literal notranslate"><span class="pre">[project]</span></code> field is optional; defaults are filled at
+load time. See <code class="docutils literal notranslate"><span class="pre">docs_src/design/toml-format-v2.md</span></code> for the full
+specification.</p>
+<p>v1 manifests (the old <code class="docutils literal notranslate"><span class="pre">[config]</span></code>/<code class="docutils literal notranslate"><span class="pre">[site]</span></code>/<code class="docutils literal notranslate"><span class="pre">[pipeline]</span></code> layout) are not
+supported; loading one raises an error pointing at the migration script.</p>
 <section id="module-contents">
 <h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading">#</a></h2>
 <section id="functions">
 <h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table table-left">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.find_latest_source_modification" title="chartbook.manifest.find_latest_source_modification"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_latest_source_modification</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.detect_v1_format" title="chartbook.manifest.detect_v1_format"><code class="xref py py-obj docutils literal notranslate"><span class="pre">detect_v1_format</span></code></a></p></td>
+<td><p>Return True if a raw manifest dict uses the old v1 layout.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.find_latest_source_modification" title="chartbook.manifest.find_latest_source_modification"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_latest_source_modification</span></code></a></p></td>
 <td><p>Find the most recent modification datetime across pipeline source files.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.get_default_asset_path" title="chartbook.manifest.get_default_asset_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_default_asset_path</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.get_default_asset_path" title="chartbook.manifest.get_default_asset_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_default_asset_path</span></code></a></p></td>
 <td><p>Get path to default asset from package resources.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.get_favicon_path" title="chartbook.manifest.get_favicon_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_favicon_path</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.get_favicon_path" title="chartbook.manifest.get_favicon_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_favicon_path</span></code></a></p></td>
 <td><p>Get favicon path from config or return default.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.get_file_modified_datetime" title="chartbook.manifest.get_file_modified_datetime"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_file_modified_datetime</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.get_file_modified_datetime" title="chartbook.manifest.get_file_modified_datetime"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_file_modified_datetime</span></code></a></p></td>
 <td><p>Returns the datetime that a file was last modified.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.get_logo_path" title="chartbook.manifest.get_logo_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_logo_path</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.get_logo_path" title="chartbook.manifest.get_logo_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_logo_path</span></code></a></p></td>
 <td><p>Get logo path from config or return default.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.get_pipeline_ids" title="chartbook.manifest.get_pipeline_ids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pipeline_ids</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.get_pipeline_ids" title="chartbook.manifest.get_pipeline_ids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pipeline_ids</span></code></a></p></td>
 <td><p>Get a list of pipeline IDs from the manifest.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.get_pipeline_manifest" title="chartbook.manifest.get_pipeline_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pipeline_manifest</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.get_pipeline_manifest" title="chartbook.manifest.get_pipeline_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pipeline_manifest</span></code></a></p></td>
 <td><p>Get the manifest for a specific pipeline.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.load_manifest" title="chartbook.manifest.load_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_manifest</span></code></a></p></td>
-<td><p>Load the pipeline manifest from a TOML file and process it.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.load_manifest" title="chartbook.manifest.load_manifest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_manifest</span></code></a></p></td>
+<td><p>Load and process a chartbook.toml manifest (pipeline or catalog).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.normalize_tags" title="chartbook.manifest.normalize_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalize_tags</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.normalize_tags" title="chartbook.manifest.normalize_tags"><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalize_tags</span></code></a></p></td>
 <td><p>Normalize a list of tags to Title Case.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.resolve_platform_path" title="chartbook.manifest.resolve_platform_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_platform_path</span></code></a></p></td>
-<td><p>Resolves a path that can be either a direct path string or a dictionary of platform-specific paths.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.resolve_platform_path" title="chartbook.manifest.resolve_platform_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_platform_path</span></code></a></p></td>
+<td><p>Resolve a path that is either a string or a platform table.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.validate_config_file" title="chartbook.manifest.validate_config_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_config_file</span></code></a></p></td>
-<td><p>Validates that a chartbook.toml file exists in the specified directory.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.resolve_project_type" title="chartbook.manifest.resolve_project_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_project_type</span></code></a></p></td>
+<td><p>Resolve a manifest’s project type, inferring from structure when unset.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.validate_doc_fields" title="chartbook.manifest.validate_doc_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_doc_fields</span></code></a></p></td>
-<td><p>Validate that exactly one of path or str doc fields is provided.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.validate_doc_fields" title="chartbook.manifest.validate_doc_fields"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_doc_fields</span></code></a></p></td>
+<td><p>Validate that exactly one of <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> / <code class="docutils literal notranslate"><span class="pre">docs</span></code> is provided.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.validate_manifest_file" title="chartbook.manifest.validate_manifest_file"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_manifest_file</span></code></a></p></td>
+<td><p>Validate that a directory holds a loadable v2 chartbook.toml.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.validate_os_compatibility" title="chartbook.manifest.validate_os_compatibility"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_os_compatibility</span></code></a></p></td>
-<td><p>Validate that os_compatibility is either a string or a list of strings.</p></td>
+<td><p>Validate that os_compatibility is a string or a list of strings.</p></td>
 </tr>
 </tbody>
 </table>
@@ -542,7 +561,7 @@ document.write(`
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.BASE_DIR" title="chartbook.manifest.BASE_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BASE_DIR</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.DEFAULT_CONFIG" title="chartbook.manifest.DEFAULT_CONFIG"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_CONFIG</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.DEFAULT_SITE_DIR" title="chartbook.manifest.DEFAULT_SITE_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DEFAULT_SITE_DIR</span></code></a></p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.DOCS_BUILD_DIR" title="chartbook.manifest.DOCS_BUILD_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DOCS_BUILD_DIR</span></code></a></p></td>
@@ -551,13 +570,25 @@ document.write(`
 <tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.DOCS_SRC_DIR" title="chartbook.manifest.DOCS_SRC_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DOCS_SRC_DIR</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.OUTPUT_DIR" title="chartbook.manifest.OUTPUT_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OUTPUT_DIR</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.ENTITY_SECTIONS" title="chartbook.manifest.ENTITY_SECTIONS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ENTITY_SECTIONS</span></code></a></p></td>
 <td></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.PIPELINE_THEME" title="chartbook.manifest.PIPELINE_THEME"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PIPELINE_THEME</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.OUTPUT_DIR" title="chartbook.manifest.OUTPUT_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OUTPUT_DIR</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.PIPELINE_THEME" title="chartbook.manifest.PIPELINE_THEME"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PIPELINE_THEME</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.PROJECT_DEFAULTS" title="chartbook.manifest.PROJECT_DEFAULTS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PROJECT_DEFAULTS</span></code></a></p></td>
 <td></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.PUBLISH_DIR" title="chartbook.manifest.PUBLISH_DIR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PUBLISH_DIR</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#chartbook.manifest.RESERVED_PIPELINES_KEYS" title="chartbook.manifest.RESERVED_PIPELINES_KEYS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RESERVED_PIPELINES_KEYS</span></code></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#chartbook.manifest.V1_MARKER_SECTIONS" title="chartbook.manifest.V1_MARKER_SECTIONS"><code class="xref py py-obj docutils literal notranslate"><span class="pre">V1_MARKER_SECTIONS</span></code></a></p></td>
 <td></td>
 </tr>
 </tbody>
@@ -573,9 +604,9 @@ document.write(`
 </dd></dl>
 
 <dl class="py data">
-<dt class="sig sig-object py" id="chartbook.manifest.DEFAULT_CONFIG">
-<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_CONFIG</span></span><a class="headerlink" href="#chartbook.manifest.DEFAULT_CONFIG" title="Link to this definition">#</a></dt>
-<dd><p>None</p>
+<dt class="sig sig-object py" id="chartbook.manifest.DEFAULT_SITE_DIR">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">DEFAULT_SITE_DIR</span></span><a class="headerlink" href="#chartbook.manifest.DEFAULT_SITE_DIR" title="Link to this definition">#</a></dt>
+<dd><p>‘./docs_src/site/’</p>
 </dd></dl>
 
 <dl class="py data">
@@ -591,6 +622,12 @@ document.write(`
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.ENTITY_SECTIONS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">ENTITY_SECTIONS</span></span><a class="headerlink" href="#chartbook.manifest.ENTITY_SECTIONS" title="Link to this definition">#</a></dt>
+<dd><p>(‘charts’, ‘dataframes’, ‘notebooks’, ‘notes’)</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="chartbook.manifest.OUTPUT_DIR">
 <span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">OUTPUT_DIR</span></span><a class="headerlink" href="#chartbook.manifest.OUTPUT_DIR" title="Link to this definition">#</a></dt>
 <dd><p>‘Path(…)’</p>
@@ -603,9 +640,50 @@ document.write(`
 </dd></dl>
 
 <dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.PROJECT_DEFAULTS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">PROJECT_DEFAULTS</span></span><a class="headerlink" href="#chartbook.manifest.PROJECT_DEFAULTS" title="Link to this definition">#</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="py data">
 <dt class="sig sig-object py" id="chartbook.manifest.PUBLISH_DIR">
 <span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">PUBLISH_DIR</span></span><a class="headerlink" href="#chartbook.manifest.PUBLISH_DIR" title="Link to this definition">#</a></dt>
 <dd><p>‘Path(…)’</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.RESERVED_PIPELINES_KEYS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">RESERVED_PIPELINES_KEYS</span></span><a class="headerlink" href="#chartbook.manifest.RESERVED_PIPELINES_KEYS" title="Link to this definition">#</a></dt>
+<dd><p>(‘members’, ‘exclude’, ‘disabled’)</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="chartbook.manifest.V1FormatError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">V1FormatError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/manifest.html#V1FormatError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.V1FormatError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
+<p>Raised when a v1-format chartbook.toml is loaded.</p>
+<p class="rubric">Initialization</p>
+<p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="chartbook.manifest.V1_MARKER_SECTIONS">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">V1_MARKER_SECTIONS</span></span><a class="headerlink" href="#chartbook.manifest.V1_MARKER_SECTIONS" title="Link to this definition">#</a></dt>
+<dd><p>(‘config’, ‘site’, ‘pipeline’)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.detect_v1_format">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">detect_v1_format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw_manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#detect_v1_format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.detect_v1_format" title="Link to this definition">#</a></dt>
+<dd><p>Return True if a raw manifest dict uses the old v1 layout.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>raw_manifest</strong> – The dict parsed from chartbook.toml.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -739,16 +817,16 @@ document.write(`
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.manifest.load_manifest">
 <span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">load_manifest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">BASE_DIR</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/chartbook/manifest.html#load_manifest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.load_manifest" title="Link to this definition">#</a></dt>
-<dd><p>Load the pipeline manifest from a TOML file and process it.</p>
-<p>This will also handle imported pipeline manifests. It
-will also create a mapping of dataframe_id to linked chart_ids
-and a mapping of data</p>
+<dd><p>Load and process a chartbook.toml manifest (pipeline or catalog).</p>
+<p>For catalogs, each registered pipeline’s manifest is loaded recursively.
+Pipeline manifests get resolved <code class="docutils literal notranslate"><span class="pre">[project]</span></code> metadata, linked-chart
+mappings, and resolved artifact paths.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>base_dir</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>Path</em><em>]</em>) – The base directory where the chartbook.toml file is located.</p>
+<dd class="field-odd"><p><strong>base_dir</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>Path</em><em>]</em>) – The directory where the chartbook.toml file is located.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A dictionary containing the manifest for all pipelines, including linked charts for each dataframe and linked dataframes for each pipeline.</p>
+<dd class="field-even"><p>The processed manifest dictionary.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
@@ -762,13 +840,10 @@ and a mapping of data</p>
 <dd><p>Normalize a list of tags to Title Case.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>tags</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – List of tag strings to normalize</p>
+<dd class="field-odd"><p><strong>tags</strong> – List of tag strings to normalize</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>List of tags in Title Case</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
 </dd>
 </dl>
 <h2 class="rubric" id="id1">Examples</h2>
@@ -781,61 +856,63 @@ and a mapping of data</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.manifest.resolve_platform_path">
 <span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">resolve_platform_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path_input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#resolve_platform_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.resolve_platform_path" title="Link to this definition">#</a></dt>
-<dd><p>Resolves a path that can be either a direct path string or a dictionary of platform-specific paths.</p>
+<dd><p>Resolve a path that is either a string or a platform table.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path_input</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>]</em>) – Either a string representing a direct path, or a dictionary containing platform-specific paths with ‘Windows’ and/or ‘Unix’ keys.</p>
+<dd class="field-odd"><p><strong>path_input</strong> – Either a path string, or a dict with <code class="docutils literal notranslate"><span class="pre">unix</span></code> and/or
+<code class="docutils literal notranslate"><span class="pre">windows</span></code> keys for platform-specific paths.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The resolved path appropriate for the current platform.</p>
+<dd class="field-even"><p>The path for the current platform.</p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Path</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If using a dict input and no valid path is found for the current platform.</p>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If using a dict input and no path is defined for the
+current platform.</p>
 </dd>
 </dl>
 <p><strong>Examples</strong>::</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>resolve_platform_path(&#39;/path/to/dir&#39;)
 # Returns: PosixPath(&#39;/path/to/dir&#39;)
 
-resolve_platform_path({&#39;Windows&#39;: &#39;C:/data&#39;, &#39;Unix&#39;: &#39;/home/data&#39;})
-# Returns: WindowsPath(&#39;C:/data&#39;) on Windows, PosixPath(&#39;/home/data&#39;) on Unix/macOS
+resolve_platform_path({&#39;unix&#39;: &#39;/home/data&#39;, &#39;windows&#39;: &#39;C:/data&#39;})
+# Returns: PosixPath(&#39;/home/data&#39;) on Unix/macOS, WindowsPath(&#39;C:/data&#39;) on Windows
 </pre></div>
 </div>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="chartbook.manifest.validate_config_file">
-<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">validate_config_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">BASE_DIR</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#validate_config_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.validate_config_file" title="Link to this definition">#</a></dt>
-<dd><p>Validates that a chartbook.toml file exists in the specified directory.</p>
+<dt class="sig sig-object py" id="chartbook.manifest.resolve_project_type">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">resolve_project_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw_manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'chartbook.toml'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#resolve_project_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.resolve_project_type" title="Link to this definition">#</a></dt>
+<dd><p>Resolve a manifest’s project type, inferring from structure when unset.</p>
+<p>Inference: a <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> registry table means catalog; anything else
+means pipeline. Contradictions between an explicit <code class="docutils literal notranslate"><span class="pre">type</span></code> and the file
+structure are hard errors, as is a file that is both catalog- and
+pipeline-shaped with no explicit type.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> (<em>Path</em>) – The directory path to check for chartbook.toml.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>raw_manifest</strong> – The dict parsed from chartbook.toml.</p></li>
+<li><p><strong>source</strong> – Label used in error messages.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>True if validation succeeds.</p>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">&quot;pipeline&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;catalog&quot;</span></code>.</p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the chartbook.toml file is missing or invalid.</p>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – On an invalid <code class="docutils literal notranslate"><span class="pre">type</span></code> value, a contradiction, or
+an ambiguous file.</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.manifest.validate_doc_fields">
-<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">validate_doc_fields</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">str_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#validate_doc_fields"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.validate_doc_fields" title="Link to this definition">#</a></dt>
-<dd><p>Validate that exactly one of path or str doc fields is provided.</p>
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">validate_doc_fields</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manifest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">object_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#validate_doc_fields"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.validate_doc_fields" title="Link to this definition">#</a></dt>
+<dd><p>Validate that exactly one of <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> / <code class="docutils literal notranslate"><span class="pre">docs</span></code> is provided.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>manifest</strong> – The manifest dictionary for the object (dataframe or chart).</p></li>
-<li><p><strong>path_key</strong> – The key for the path-based documentation field.</p></li>
-<li><p><strong>str_key</strong> – The key for the inline string documentation field.</p></li>
 <li><p><strong>object_type</strong> – The type of object (‘dataframe’ or ‘chart’) for error messages.</p></li>
 <li><p><strong>object_id</strong> – The ID of the object for error messages.</p></li>
 </ul>
@@ -847,53 +924,41 @@ resolve_platform_path({&#39;Windows&#39;: &#39;C:/data&#39;, &#39;Unix&#39;: &#3
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If both or neither fields are provided.</p>
 </dd>
 </dl>
-<p><strong>Examples</strong>::</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>validate_doc_fields(
-    {&#39;dataframe_docs_path&#39;: &#39;./docs/df.md&#39;},
-    &#39;dataframe_docs_path&#39;, &#39;dataframe_docs_str&#39;,
-    &#39;dataframe&#39;, &#39;my_df&#39;
-)
-# Returns: (&#39;path&#39;, &#39;./docs/df.md&#39;)
+</dd></dl>
 
-validate_doc_fields(
-    {&#39;dataframe_docs_str&#39;: &#39;Inline docs here&#39;},
-    &#39;dataframe_docs_path&#39;, &#39;dataframe_docs_str&#39;,
-    &#39;dataframe&#39;, &#39;my_df&#39;
-)
-# Returns: (&#39;str&#39;, &#39;Inline docs here&#39;)
-</pre></div>
-</div>
+<dl class="py function">
+<dt class="sig sig-object py" id="chartbook.manifest.validate_manifest_file">
+<span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">validate_manifest_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">pathlib.Path</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">BASE_DIR</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#validate_manifest_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.validate_manifest_file" title="Link to this definition">#</a></dt>
+<dd><p>Validate that a directory holds a loadable v2 chartbook.toml.</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – The directory to check.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if validation succeeds.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the file is missing, unparseable, v1-format, or
+has an unresolvable project type.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="chartbook.manifest.validate_os_compatibility">
 <span class="sig-prename descclassname"><span class="pre">chartbook.manifest.</span></span><span class="sig-name descname"><span class="pre">validate_os_compatibility</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.14)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../../_modules/chartbook/manifest.html#validate_os_compatibility"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#chartbook.manifest.validate_os_compatibility" title="Link to this definition">#</a></dt>
-<dd><p>Validate that os_compatibility is either a string or a list of strings.</p>
+<dd><p>Validate that os_compatibility is a string or a list of strings.</p>
 <dl class="myst field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>value</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>]</em>) – The os_compatibility value to validate.</p>
+<dd class="field-odd"><p><strong>value</strong> – The os_compatibility value to validate.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The validated value (unchanged).</p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Union[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>]</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If the value is neither a string nor a list of strings.</p>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If the value is neither a string nor a list of strings.</p>
 </dd>
 </dl>
-<p><strong>Examples</strong>::</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>validate_os_compatibility(&quot;Windows/Linux/macOS&quot;)
-# Returns: &quot;Windows/Linux/macOS&quot;
-
-validate_os_compatibility([&quot;Windows&quot;, &quot;Linux&quot;, &quot;macOS&quot;])
-# Returns: [&quot;Windows&quot;, &quot;Linux&quot;, &quot;macOS&quot;]
-
-validate_os_compatibility(123)
-# Raises: TypeError
-</pre></div>
-</div>
 </dd></dl>
 
 </section>
@@ -950,12 +1015,18 @@ validate_os_compatibility(123)
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#data">Data</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#api">API</a><ul class="visible nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.BASE_DIR"><code class="docutils literal notranslate"><span class="pre">BASE_DIR</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DEFAULT_CONFIG"><code class="docutils literal notranslate"><span class="pre">DEFAULT_CONFIG</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DEFAULT_SITE_DIR"><code class="docutils literal notranslate"><span class="pre">DEFAULT_SITE_DIR</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DOCS_BUILD_DIR"><code class="docutils literal notranslate"><span class="pre">DOCS_BUILD_DIR</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.DOCS_SRC_DIR"><code class="docutils literal notranslate"><span class="pre">DOCS_SRC_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.ENTITY_SECTIONS"><code class="docutils literal notranslate"><span class="pre">ENTITY_SECTIONS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.OUTPUT_DIR"><code class="docutils literal notranslate"><span class="pre">OUTPUT_DIR</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PIPELINE_THEME"><code class="docutils literal notranslate"><span class="pre">PIPELINE_THEME</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PROJECT_DEFAULTS"><code class="docutils literal notranslate"><span class="pre">PROJECT_DEFAULTS</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.PUBLISH_DIR"><code class="docutils literal notranslate"><span class="pre">PUBLISH_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.RESERVED_PIPELINES_KEYS"><code class="docutils literal notranslate"><span class="pre">RESERVED_PIPELINES_KEYS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.V1FormatError"><code class="docutils literal notranslate"><span class="pre">V1FormatError</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.V1_MARKER_SECTIONS"><code class="docutils literal notranslate"><span class="pre">V1_MARKER_SECTIONS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.detect_v1_format"><code class="docutils literal notranslate"><span class="pre">detect_v1_format()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.find_latest_source_modification"><code class="docutils literal notranslate"><span class="pre">find_latest_source_modification()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_default_asset_path"><code class="docutils literal notranslate"><span class="pre">get_default_asset_path()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.get_favicon_path"><code class="docutils literal notranslate"><span class="pre">get_favicon_path()</span></code></a></li>
@@ -966,8 +1037,9 @@ validate_os_compatibility(123)
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.load_manifest"><code class="docutils literal notranslate"><span class="pre">load_manifest()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.normalize_tags"><code class="docutils literal notranslate"><span class="pre">normalize_tags()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.resolve_platform_path"><code class="docutils literal notranslate"><span class="pre">resolve_platform_path()</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_config_file"><code class="docutils literal notranslate"><span class="pre">validate_config_file()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.resolve_project_type"><code class="docutils literal notranslate"><span class="pre">resolve_project_type()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_doc_fields"><code class="docutils literal notranslate"><span class="pre">validate_doc_fields()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_manifest_file"><code class="docutils literal notranslate"><span class="pre">validate_manifest_file()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#chartbook.manifest.validate_os_compatibility"><code class="docutils literal notranslate"><span class="pre">validate_os_compatibility()</span></code></a></li>
 </ul>
 </li>
@@ -997,7 +1069,7 @@ By Jeremiah Bejarano
 
   <p class="copyright">
     
-      © Copyright 2025, Jeremiah Bejarano.
+      © Copyright 2026, Jeremiah Bejarano.
       <br/>
     
   </p>

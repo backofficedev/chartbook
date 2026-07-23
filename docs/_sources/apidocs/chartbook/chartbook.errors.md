@@ -216,10 +216,26 @@ Bases: {py:obj}`Exception`
 
 ````
 
+````{py:method} format_skip_warnings() -> list[str]
+:canonical: chartbook.errors.MissingSourceFilesError.format_skip_warnings
+
+```{autodoc2-docstring} chartbook.errors.MissingSourceFilesError.format_skip_warnings
+```
+
+````
+
 ````{py:method} format_warnings() -> list[str]
 :canonical: chartbook.errors.MissingSourceFilesError.format_warnings
 
 ```{autodoc2-docstring} chartbook.errors.MissingSourceFilesError.format_warnings
+```
+
+````
+
+````{py:method} get_pipelines_to_skip() -> set[str]
+:canonical: chartbook.errors.MissingSourceFilesError.get_pipelines_to_skip
+
+```{autodoc2-docstring} chartbook.errors.MissingSourceFilesError.get_pipelines_to_skip
 ```
 
 ````

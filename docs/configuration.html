@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="_static/custom.css?v=c0169425" />
@@ -40,7 +40,7 @@
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="_static/documentation_options.js?v=d1237063"></script>
     <script src="_static/doctools.js?v=9a2dae69"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
@@ -51,7 +51,7 @@
     <link rel="icon" href="_static/logo.png"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="LLMs.txt" href="llms-txt.html" />
+    <link rel="next" title="Design: chartbook.toml Format v2" href="design/toml-format-v2.html" />
     <link rel="prev" title="Data Pipeline" href="examples/data-pipeline.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -268,6 +268,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="user-guide/notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide/build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="cli-reference.html">CLI Reference</a></li>
@@ -284,7 +285,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -294,6 +295,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="llms-txt.html">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
@@ -446,28 +448,24 @@ document.write(`
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-file-structure">Configuration File Structure</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-types">Project Types</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-project">Pipeline Project</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-project">Catalog Project</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-types">Project Types</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-project-table">The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> Table</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build-commands">Build commands</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-sections">Configuration Sections</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#config-project-configuration"><code class="docutils literal notranslate"><span class="pre">[config]</span></code> - Project Configuration</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#site-website-metadata"><code class="docutils literal notranslate"><span class="pre">[site]</span></code> - Website Metadata</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-pipeline-information"><code class="docutils literal notranslate"><span class="pre">[pipeline]</span></code> - Pipeline Information</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipelines-pipeline-references"><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> - Pipeline References</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#charts-chart-definitions"><code class="docutils literal notranslate"><span class="pre">[charts]</span></code> - Chart Definitions</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes-dataframe-definitions"><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> - Dataframe Definitions</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#notes-additional-documentation"><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> - Additional Documentation</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#notebooks-jupyter-notebooks"><code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code> - Jupyter Notebooks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-identity">Pipeline Identity</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipelines-catalog-registry"><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> — Catalog Registry</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#auto-discovery-with-members">Auto-discovery with <code class="docutils literal notranslate"><span class="pre">members</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#complete-example">Complete Example</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#global-configuration">Global Configuration</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#settings-file">Settings File</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#setting-up">Setting Up</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#policy-catalog-requiredness"><code class="docutils literal notranslate"><span class="pre">[policy]</span></code> — Catalog Requiredness</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#charts-chart-definitions"><code class="docutils literal notranslate"><span class="pre">[charts]</span></code> — Chart Definitions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes-dataframe-definitions"><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> — Dataframe Definitions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notebooks-jupyter-notebooks"><code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code> — Jupyter Notebooks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notes-additional-documentation"><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> — Additional Documentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#custom-site-pages">Custom Site Pages</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#migrating-from-v1">Migrating from v1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#global-configuration">Global Configuration</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#best-practices">Best Practices</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#validation">Validation</a></li>
 </ul>
@@ -483,283 +481,328 @@ document.write(`
                   
   <section class="tex2jax_ignore mathjax_ignore" id="configuration-guide">
 <h1>Configuration Guide<a class="headerlink" href="#configuration-guide" title="Link to this heading">#</a></h1>
-<p>chartbook uses a TOML configuration file (<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>) to define your project structure, charts, dataframes, and pipelines.</p>
+<p>chartbook uses a TOML configuration file (<code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code>) to define your project metadata, charts, dataframes, and pipelines. This page is the reference for <strong>format v2</strong>; the reasoning behind the design lives in <a class="reference internal" href="design/toml-format-v2.html"><span class="doc">Design: chartbook.toml Format v2</span></a>.</p>
 <section id="configuration-file-structure">
 <h2>Configuration File Structure<a class="headerlink" href="#configuration-file-structure" title="Link to this heading">#</a></h2>
-<p>The configuration file has several main sections:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[config]</span><span class="w">           </span><span class="c1"># Project type and version</span>
-<span class="k">[site]</span><span class="w">             </span><span class="c1"># Website metadata</span>
-<span class="k">[pipeline]</span><span class="w">         </span><span class="c1"># Pipeline information (for pipeline projects)</span>
-<span class="k">[pipelines]</span><span class="w">        </span><span class="c1"># Pipeline references (for catalog projects)</span>
+<p>A <strong>pipeline</strong> manifest has one metadata table plus entity sections:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span><span class="w">          </span><span class="c1"># Project metadata (all fields optional)</span>
 <span class="k">[charts]</span><span class="w">           </span><span class="c1"># Chart definitions</span>
 <span class="k">[dataframes]</span><span class="w">       </span><span class="c1"># Dataframe definitions</span>
-<span class="k">[notes]</span><span class="w">            </span><span class="c1"># Additional documentation notes</span>
 <span class="k">[notebooks]</span><span class="w">        </span><span class="c1"># Jupyter notebook references</span>
+<span class="k">[notes]</span><span class="w">            </span><span class="c1"># Additional documentation notes</span>
+</pre></div>
+</div>
+<p>A <strong>catalog</strong> manifest has the metadata table plus a registry:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span><span class="w">          </span><span class="c1"># Project metadata</span>
+<span class="k">[pipelines]</span><span class="w">        </span><span class="c1"># Registered pipelines (scoped keys)</span>
+<span class="k">[policy]</span><span class="w">           </span><span class="c1"># Optional: required-field policy for member pipelines</span>
 </pre></div>
 </div>
 </section>
 <section id="project-types">
 <h2>Project Types<a class="headerlink" href="#project-types" title="Link to this heading">#</a></h2>
-<p>chartbook supports two project types:</p>
-<section id="pipeline-project">
-<h3>Pipeline Project<a class="headerlink" href="#pipeline-project" title="Link to this heading">#</a></h3>
-<p>A single analytics pipeline with its own charts and dataframes:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[config]</span>
-<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pipeline&quot;</span>
-<span class="n">chartbook_format_version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.0.6&quot;</span>
+<p>You almost never need to declare the type — it is inferred from structure:</p>
+<ul class="simple">
+<li><p>A <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> registry table present → <strong>catalog</strong></p></li>
+<li><p>Otherwise → <strong>pipeline</strong></p></li>
+</ul>
+<p>An explicit <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;pipeline&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;catalog&quot;</span></code> in <code class="docutils literal notranslate"><span class="pre">[project]</span></code> is allowed. A file whose explicit type contradicts its structure (e.g. <code class="docutils literal notranslate"><span class="pre">type</span> <span class="pre">=</span> <span class="pre">&quot;pipeline&quot;</span></code> alongside <code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code>) is a hard error asking you to fix one or the other.</p>
+</section>
+<section id="the-project-table">
+<h2>The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> Table<a class="headerlink" href="#the-project-table" title="Link to this heading">#</a></h2>
+<p>Every field is optional. Types and defaults:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">type</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;pipeline&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;catalog&quot;</span></code></p></td>
+<td><p>inferred (see above)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">id</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">scope/name</span></code> or bare <code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>derived: scope from the git remote, name from the directory</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>string</p></td>
+<td><p>directory name</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">description</span></code></p></td>
+<td><p>string</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">maintainer</span></code></p></td>
+<td><p>string</p></td>
+<td><p>first entry of <code class="docutils literal notranslate"><span class="pre">contributors</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">contributors</span></code></p></td>
+<td><p>array of strings</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">repo_url</span></code></p></td>
+<td><p>string</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">site_url</span></code></p></td>
+<td><p>string</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">file://</span></code> path to the local built docs</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">readme</span></code></p></td>
+<td><p>path</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;./README.md&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">copyright</span></code></p></td>
+<td><p>string</p></td>
+<td><p>current year</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">logo</span></code></p></td>
+<td><p>path</p></td>
+<td><p>bundled default</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">favicon</span></code></p></td>
+<td><p>path</p></td>
+<td><p>bundled default</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">os_compatibility</span></code></p></td>
+<td><p>array of strings</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">build</span></code></p></td>
+<td><p>string (multi-line allowed)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">site_dir</span></code></p></td>
+<td><p>path</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;./docs_src/site/&quot;</span></code> when that directory exists</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">enable_data_download</span></code></p></td>
+<td><p>bool</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Unknown keys in <code class="docutils literal notranslate"><span class="pre">[project]</span></code> produce a warning naming the closest known key, so typos don’t silently become dead metadata.</p>
+<p>A fully populated pipeline:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;CRSP Treasury&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Treasury Securities Data from CRSP&quot;</span>
+<span class="n">maintainer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Jeremy Bejarano&quot;</span>
+<span class="n">contributors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Jeremy Bejarano&quot;</span><span class="p">]</span>
+<span class="n">repo_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://github.com/ftsfr/crsp_treasury&quot;</span>
+<span class="n">os_compatibility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Windows&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Linux&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;macOS&quot;</span><span class="p">]</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">doit</span>
+<span class="s2">&quot;&quot;&quot;</span>
 </pre></div>
 </div>
-</section>
-<section id="catalog-project">
-<h3>Catalog Project<a class="headerlink" href="#catalog-project" title="Link to this heading">#</a></h3>
-<p>A collection of multiple pipelines aggregated into a unified catalog:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[config]</span>
-<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;catalog&quot;</span>
-<span class="n">chartbook_format_version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.0.6&quot;</span>
+<p>The <strong>minimal</strong> valid pipeline manifest is an empty file — its presence alone marks a directory as a chartbook pipeline. In practice you’ll usually want at least:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Pipeline&quot;</span>
 </pre></div>
 </div>
-</section>
-</section>
-<section id="configuration-sections">
-<h2>Configuration Sections<a class="headerlink" href="#configuration-sections" title="Link to this heading">#</a></h2>
-<section id="config-project-configuration">
-<h3><code class="docutils literal notranslate"><span class="pre">[config]</span></code> - Project Configuration<a class="headerlink" href="#config-project-configuration" title="Link to this heading">#</a></h3>
-<p>Required fields for all projects:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[config]</span>
-<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pipeline&quot;</span><span class="w">  </span><span class="c1"># or &quot;catalog&quot;</span>
-<span class="n">chartbook_format_version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.0.6&quot;</span>
+<section id="build-commands">
+<h3>Build commands<a class="headerlink" href="#build-commands" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">build</span></code> is a single string with <strong>shell-script semantics</strong>: a multi-line value is one script, so environment state carries across lines:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">build</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">module load anaconda3/2024.02</span>
+<span class="s2">conda activate myenv</span>
+<span class="s2">doit</span>
+<span class="s2">&quot;&quot;&quot;</span>
 </pre></div>
 </div>
+<p>Today the field is rendered on the pipeline’s documentation page; the script semantics mean a future <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">run</span></code> can execute it as-is.</p>
 </section>
-<section id="site-website-metadata">
-<h3><code class="docutils literal notranslate"><span class="pre">[site]</span></code> - Website Metadata<a class="headerlink" href="#site-website-metadata" title="Link to this heading">#</a></h3>
-<p>Configure the generated website:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[site]</span>
-<span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Analytics Project&quot;</span>
-<span class="n">author</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Data Team&quot;</span>
-<span class="n">copyright</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025&quot;</span>
-<span class="n">logo_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./assets/logo.png&quot;</span><span class="w">    </span><span class="c1"># Optional</span>
-<span class="n">favicon_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./assets/icon.png&quot;</span><span class="w">  </span><span class="c1"># Optional</span>
+</section>
+<section id="pipeline-identity">
+<h2>Pipeline Identity<a class="headerlink" href="#pipeline-identity" title="Link to this heading">#</a></h2>
+<p>Every pipeline has a canonical ID, ideally scoped: <code class="docutils literal notranslate"><span class="pre">scope/name</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">ftsfr/crsp_treasury</span></code>). It is derived automatically — scope from the repo’s git <code class="docutils literal notranslate"><span class="pre">origin</span></code> remote (or <code class="docutils literal notranslate"><span class="pre">repo_url</span></code>), name from the directory name — or set explicitly with <code class="docutils literal notranslate"><span class="pre">id</span></code> in <code class="docutils literal notranslate"><span class="pre">[project]</span></code>. Anywhere a pipeline reference is accepted (<code class="docutils literal notranslate"><span class="pre">data.load</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">ls</span></code>, <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">data</span> <span class="pre">get-path</span></code>), three forms work:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                          <span class="c1"># bare, if unambiguous</span>
+<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;ftsfr/crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>                    <span class="c1"># canonical</span>
+<span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;https://github.com/ftsfr/crsp_treasury&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="c1"># URL, normalized</span>
 </pre></div>
 </div>
+<p>If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. <code class="docutils literal notranslate"><span class="pre">scope/name&#64;rev</span></code> is reserved syntax for future version pinning and is rejected for now. See <a class="reference internal" href="design/toml-format-v2.html"><span class="doc">Design: chartbook.toml Format v2</span></a> for why identity works this way.</p>
 </section>
-<section id="pipeline-pipeline-information">
-<h3><code class="docutils literal notranslate"><span class="pre">[pipeline]</span></code> - Pipeline Information<a class="headerlink" href="#pipeline-pipeline-information" title="Link to this heading">#</a></h3>
-<p>For pipeline projects only:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[pipeline]</span>
-<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;MYPROJ&quot;</span>
-<span class="n">pipeline_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Analytics Pipeline&quot;</span>
-<span class="n">pipeline_description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Comprehensive analytics for business metrics&quot;</span>
-<span class="n">lead_pipeline_developer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Jane Doe&quot;</span>
-<span class="n">contributors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Jane Doe&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;John Smith&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Alice Johnson&quot;</span><span class="p">]</span>
-<span class="n">software_modules_command</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;module load python/3.11&quot;</span><span class="w">  </span><span class="c1"># Optional</span>
-<span class="n">runs_on_grid_or_windows_or_other</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Windows/Linux/MacOS&quot;</span>
-<span class="n">git_repo_URL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://repository.yourcompany.org/scm/chart/repos/repo&quot;</span>
-<span class="n">README_file_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./README.md&quot;</span>
-</pre></div>
-</div>
-</section>
-<section id="pipelines-pipeline-references">
-<h3><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> - Pipeline References<a class="headerlink" href="#pipelines-pipeline-references" title="Link to this heading">#</a></h3>
-<p>For catalog projects only:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[pipelines]</span>
+<section id="pipelines-catalog-registry">
+<h2><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> — Catalog Registry<a class="headerlink" href="#pipelines-catalog-registry" title="Link to this heading">#</a></h2>
+<p>Catalog keys are pipeline IDs; scoped keys contain a <code class="docutils literal notranslate"><span class="pre">/</span></code> and must be quoted:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Catalog&quot;</span>
 
-<span class="k">[pipelines.EX]</span>
-<span class="n">path_to_pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;../pipelines/example&quot;</span>
+<span class="k">[pipelines.</span><span class="s2">&quot;ftsfr/crsp_treasury&quot;</span><span class="k">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;../crsp_treasury&quot;</span>
 
-<span class="k">[pipelines.ANALYTICS]</span>
-<span class="n">path_to_pipeline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;../pipelines/analytics&quot;</span>
+<span class="k">[pipelines.</span><span class="s2">&quot;ftsfr/fed_yield_curve&quot;</span><span class="k">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;../fed_yield_curve&quot;</span>
+<span class="n">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">                    </span><span class="c1"># kept but skipped during builds</span>
 
-<span class="c1"># Platform-specific paths</span>
-<span class="k">[pipelines.DATA.MONTHLY]</span>
-<span class="n">Unix</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/data/pipelines/monthly&quot;</span>
-<span class="n">Windows</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;T:/pipelines/monthly&quot;</span>
+<span class="k">[pipelines.</span><span class="s2">&quot;finm-33200/news_headlines&quot;</span><span class="k">]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">unix</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;/data/pipelines/news_headlines&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">windows</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;T:/pipelines/news_headlines&quot;</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
+<p>Entry keys: <code class="docutils literal notranslate"><span class="pre">path</span></code> (string, or a <code class="docutils literal notranslate"><span class="pre">{</span> <span class="pre">unix</span> <span class="pre">=</span> <span class="pre">...,</span> <span class="pre">windows</span> <span class="pre">=</span> <span class="pre">...</span> <span class="pre">}</span></code> table) and <code class="docutils literal notranslate"><span class="pre">disabled</span></code> (bool). A plain string value is shorthand for the path. <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">catalog</span> <span class="pre">add</span> <span class="pre">&lt;dir&gt;</span></code> writes the scoped key for you, derived from the target’s git remote.</p>
+<section id="auto-discovery-with-members">
+<h3>Auto-discovery with <code class="docutils literal notranslate"><span class="pre">members</span></code><a class="headerlink" href="#auto-discovery-with-members" title="Link to this heading">#</a></h3>
+<p>For a local catalog, skip per-pipeline entries entirely and declare membership as path patterns — new projects dropped into a matched directory join the catalog automatically:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[project]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;My Catalog&quot;</span>
+
+<span class="k">[pipelines]</span>
+<span class="n">members</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;../GitRepositories/ftsfr_repos/*&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;../GitRepositories/finm33200/news_headlines&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">disabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;ftsfr/sovereign_bonds&quot;</span><span class="p">]</span><span class="w">   </span><span class="c1"># switch members off by ID</span>
+<span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;../GitRepositories/ftsfr_repos/scratch_*&quot;</span><span class="p">]</span><span class="w">   </span><span class="c1"># optional</span>
+</pre></div>
+</div>
+<p>Each matched directory containing a pipeline <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> joins under its derived scoped ID. Glob matches skip non-pipeline directories and catalogs silently; a <em>literal</em> member path that’s broken is a hard error, as are v1-format members and two members deriving the same ID — all errors explain how to fix them. Explicit entries coexist with <code class="docutils literal notranslate"><span class="pre">members</span></code> and win when they point at the same directory (useful to rename a pipeline in your catalog). <code class="docutils literal notranslate"><span class="pre">members</span></code>, <code class="docutils literal notranslate"><span class="pre">exclude</span></code>, and <code class="docutils literal notranslate"><span class="pre">disabled</span></code> are reserved keys and can’t be used as bare pipeline IDs.</p>
+<p>This is designed for the <strong>local</strong> catalog — publishing to a shared catalog should stay an explicit act.</p>
+</section>
+</section>
+<section id="policy-catalog-requiredness">
+<h2><code class="docutils literal notranslate"><span class="pre">[policy]</span></code> — Catalog Requiredness<a class="headerlink" href="#policy-catalog-requiredness" title="Link to this heading">#</a></h2>
+<p>The format itself is permissive; <strong>which fields are required is your catalog’s policy</strong>:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[policy]</span>
+<span class="n">mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;warn&quot;</span><span class="w">          </span><span class="c1"># default; &quot;strict&quot; fails the catalog build instead</span>
+
+<span class="k">[policy.required]</span>
+<span class="n">project</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;maintainer&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;repo_url&quot;</span><span class="p">]</span>
+<span class="n">dataframes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;date_col&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pull_method&quot;</span><span class="p">]</span>
+<span class="n">charts</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;units&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;frequency&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Without a <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> section, chartbook’s default recommended-field lists drive the diagnostics page, warn-only. Policy is enforced only when the catalog builds; a pipeline built standalone is always permissive.</p>
 </section>
 <section id="charts-chart-definitions">
-<h3><code class="docutils literal notranslate"><span class="pre">[charts]</span></code> - Chart Definitions<a class="headerlink" href="#charts-chart-definitions" title="Link to this heading">#</a></h3>
-<p>Define individual charts:</p>
+<h2><code class="docutils literal notranslate"><span class="pre">[charts]</span></code> — Chart Definitions<a class="headerlink" href="#charts-chart-definitions" title="Link to this heading">#</a></h2>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[charts.revenue_trend]</span>
-<span class="n">chart_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue Trend Analysis&quot;</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue Trend Analysis&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly revenue trends with seasonal adjustments&quot;</span>
+<span class="n">dataframe</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;revenue_data&quot;</span><span class="w">           </span><span class="c1"># links to a [dataframes.*] entry</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Financial&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span><span class="p">]</span>
+<span class="n">frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span>
+<span class="n">observation_period</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Month-end&quot;</span>
+<span class="n">release_lag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;15 days&quot;</span>
+<span class="n">release_timing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Mid-month&quot;</span>
+<span class="n">seasonal_adjustment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;X-13ARIMA-SEATS&quot;</span>
+<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;USD Millions&quot;</span>
+<span class="n">series</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Gross Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Net Revenue&quot;</span><span class="p">]</span>
+<span class="n">start_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1/1/2020&quot;</span>
+<span class="n">mnemonic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;REV_TREND&quot;</span>
+<span class="n">publications</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;[Q4 Report 2024, p15](https://example.com/reports/q4-2024)&quot;</span><span class="p">,</span>
+<span class="p">]</span>
 <span class="n">date_cleared_by_iv_and_v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-01-15&quot;</span>
 <span class="n">last_legal_clearance_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-01-15&quot;</span>
 <span class="n">last_cleared_by</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Legal Team&quot;</span>
-<span class="n">past_publications</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">&quot;[Q4 Report 2024, p15](https://example.com/reports/q4-2024)&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;[Annual Report 2024, p45](https://example.com/reports/annual-2024)&quot;</span><span class="p">,</span>
-<span class="p">]</span>
-<span class="n">short_description_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly revenue trends with seasonal adjustments&quot;</span>
-<span class="n">dataframe_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;revenue_data&quot;</span>
-<span class="n">topic_tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Financial&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span><span class="p">]</span>
-<span class="n">data_series_start_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1/1/2020&quot;</span>
-<span class="n">data_frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span>
-<span class="n">observation_period</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Month-end&quot;</span>
-<span class="n">lag_in_data_release</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;15 days&quot;</span>
-<span class="n">data_release_timing</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Mid-month&quot;</span>
-<span class="n">seasonal_adjustment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;X-13ARIMA-SEATS&quot;</span>
-<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;USD Millions&quot;</span>
-<span class="n">data_series</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Gross Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Net Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Revenue Growth Rate&quot;</span><span class="p">]</span>
-<span class="n">mnemonic</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;REV_TREND&quot;</span>
-<span class="n">path_to_html_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/revenue_trend.html&quot;</span>
-<span class="n">path_to_excel_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./excel/revenue_trend.xlsx&quot;</span>
-<span class="n">chart_docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/revenue_trend.md&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/revenue_trend.html&quot;</span><span class="w">        </span><span class="c1"># the chart&#39;s HTML file</span>
+<span class="n">excel_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./excel/revenue_trend.xlsx&quot;</span><span class="w">    </span><span class="c1"># optional Excel version</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/revenue_trend.md&quot;</span>
 </pre></div>
 </div>
+<p>Exactly one of <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> (a markdown file) or <code class="docutils literal notranslate"><span class="pre">docs</span></code> (inline markdown, usually a multi-line string) is required per chart.</p>
 </section>
 <section id="dataframes-dataframe-definitions">
-<h3><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> - Dataframe Definitions<a class="headerlink" href="#dataframes-dataframe-definitions" title="Link to this heading">#</a></h3>
-<p>Define data sources:</p>
+<h2><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> — Dataframe Definitions<a class="headerlink" href="#dataframes-dataframe-definitions" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">path</span></code> points at the parquet artifact — a single file or a glob pattern for hive-partitioned data:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[dataframes.revenue_data]</span>
-<span class="n">dataframe_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue Dataset&quot;</span>
-<span class="n">short_description_df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Comprehensive revenue data with geographic breakdowns&quot;</span>
-<span class="n">data_sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Internal Sales System&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Finance Database&quot;</span><span class="p">]</span>
-<span class="n">data_providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Sales Team&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Finance Team&quot;</span><span class="p">]</span>
-<span class="n">need_to_contact_provider</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;No&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;No&quot;</span><span class="p">]</span>
-<span class="n">data_on_pre_approved_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Yes&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Yes&quot;</span><span class="p">]</span>
-<span class="n">links_to_data_providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="s2">&quot;https://internal.company.com/sales&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="s2">&quot;https://internal.company.com/finance&quot;</span>
-<span class="p">]</span>
-<span class="n">topic_tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Sales&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Financial&quot;</span><span class="p">]</span>
-<span class="n">type_of_data_access</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Internal&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Internal&quot;</span><span class="p">]</span>
-<span class="n">data_license</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Internal Use Only&quot;</span>
-<span class="n">license_expiration_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-12-31&quot;</span>
-<span class="n">provider_contact_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;data-team@company.com&quot;</span>
-<span class="n">restriction_on_use</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Internal analytics only&quot;</span>
-<span class="n">how_is_pulled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;SQL query via Python&quot;</span>
-<span class="n">path_to_parquet_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/revenue_data.parquet&quot;</span>
-<span class="n">path_to_excel_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/revenue_data.xlsx&quot;</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Revenue Dataset&quot;</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Comprehensive revenue data with geographic breakdowns&quot;</span>
+<span class="n">sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Internal Sales System&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Finance Database&quot;</span><span class="p">]</span>
+<span class="n">providers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Sales Team&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Finance Team&quot;</span><span class="p">]</span>
+<span class="n">provider_links</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;https://internal.company.com/sales&quot;</span><span class="p">]</span>
+<span class="n">access_types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Internal&quot;</span><span class="p">]</span>
+<span class="n">contact_required</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;No&quot;</span>
+<span class="n">pre_approved</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Yes&quot;</span>
+<span class="n">license</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Internal Use Only&quot;</span>
+<span class="n">license_expiration</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025-12-31&quot;</span>
+<span class="n">provider_contact</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;data-team@company.com&quot;</span>
+<span class="n">restrictions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Internal analytics only&quot;</span>
+<span class="n">pull_method</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;SQL query via Python&quot;</span>
+<span class="n">tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Revenue&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Sales&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Financial&quot;</span><span class="p">]</span>
 <span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;date&quot;</span>
-<span class="n">dataframe_docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/dataframes/revenue_data.md&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/revenue_data.parquet&quot;</span>
+<span class="n">excel_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/revenue_data.xlsx&quot;</span>
+<span class="n">docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/dataframes/revenue_data.md&quot;</span>
+</pre></div>
+</div>
+<p>Hive-partitioned data:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/revenue_data/**/*.parquet&quot;</span>
+</pre></div>
+</div>
+<p>Glob paths only support <code class="docutils literal notranslate"><span class="pre">format=&quot;polars&quot;</span></code> (LazyFrame) in <code class="docutils literal notranslate"><span class="pre">data.load</span></code>. As with charts, exactly one of <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> / <code class="docutils literal notranslate"><span class="pre">docs</span></code> is required.</p>
+</section>
+<section id="notebooks-jupyter-notebooks">
+<h2><code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code> — Jupyter Notebooks<a class="headerlink" href="#notebooks-jupyter-notebooks" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code> is inferred from the notebook’s first <code class="docutils literal notranslate"><span class="pre">#</span> <span class="pre">Heading</span></code>; set it explicitly to override. <code class="docutils literal notranslate"><span class="pre">publishable</span> <span class="pre">=</span> <span class="pre">true</span></code> includes the notebook in <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">publish</span></code> output.</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[notebooks.exploratory_analysis]</span>
+<span class="n">description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Initial exploration of revenue patterns and anomalies&quot;</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;_output/01_exploratory_analysis.ipynb&quot;</span>
+<span class="n">publishable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
 </pre></div>
 </div>
 </section>
 <section id="notes-additional-documentation">
-<h3><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> - Additional Documentation<a class="headerlink" href="#notes-additional-documentation" title="Link to this heading">#</a></h3>
-<p>Include extra documentation:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[notes]</span>
-
-<span class="k">[notes.methodology]</span>
-<span class="n">path_to_markdown_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/methodology.md&quot;</span>
-
-<span class="k">[notes.data_quality]</span>
-<span class="n">path_to_markdown_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/data_quality_notes.md&quot;</span>
+<h2><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> — Additional Documentation<a class="headerlink" href="#notes-additional-documentation" title="Link to this heading">#</a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[notes.methodology]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/methodology.md&quot;</span>
 </pre></div>
 </div>
 </section>
-<section id="notebooks-jupyter-notebooks">
-<h3><code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code> - Jupyter Notebooks<a class="headerlink" href="#notebooks-jupyter-notebooks" title="Link to this heading">#</a></h3>
-<p>Reference analytical notebooks:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[notebooks]</span>
-
-<span class="k">[notebooks.exploratory_analysis]</span>
-<span class="n">notebook_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Exploratory Data Analysis&quot;</span>
-<span class="n">notebook_description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Initial exploration of revenue patterns and anomalies&quot;</span>
-<span class="n">notebook_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;_output/01_exploratory_analysis.ipynb&quot;</span>
-
-<span class="k">[notebooks.model_development]</span>
-<span class="n">notebook_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Forecasting Model Development&quot;</span>
-<span class="n">notebook_description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Time series models for revenue forecasting&quot;</span>
-<span class="n">notebook_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;_output/02_model_development.ipynb&quot;</span>
+<section id="custom-site-pages">
+<h2>Custom Site Pages<a class="headerlink" href="#custom-site-pages" title="Link to this heading">#</a></h2>
+<p>Custom markdown pages merge into the generated site from <code class="docutils literal notranslate"><span class="pre">./docs_src/site/</span></code> — auto-detected, no configuration needed. Set <code class="docutils literal notranslate"><span class="pre">site_dir</span></code> in <code class="docutils literal notranslate"><span class="pre">[project]</span></code> only to use a different directory. Chart and dataframe doc fragments stay outside it (<code class="docutils literal notranslate"><span class="pre">docs_src/charts/</span></code>, <code class="docutils literal notranslate"><span class="pre">docs_src/dataframes/</span></code>) so they aren’t published twice. The built HTML output remains <code class="docutils literal notranslate"><span class="pre">./docs/</span></code>.</p>
+</section>
+<section id="migrating-from-v1">
+<h2>Migrating from v1<a class="headerlink" href="#migrating-from-v1" title="Link to this heading">#</a></h2>
+<p>The old <code class="docutils literal notranslate"><span class="pre">[config]</span></code>/<code class="docutils literal notranslate"><span class="pre">[site]</span></code>/<code class="docutils literal notranslate"><span class="pre">[pipeline]</span></code> format is not supported; loading a v1 file fails with a pointer to the migration script:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">python scripts/migrate_toml_v2.py /path/to/project</span>
 </pre></div>
 </div>
-</section>
-</section>
-<section id="complete-example">
-<h2>Complete Example<a class="headerlink" href="#complete-example" title="Link to this heading">#</a></h2>
-<p>Here’s a complete example for a pipeline project:</p>
-<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[config]</span>
-<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pipeline&quot;</span>
-<span class="n">chartbook_format_version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.0.6&quot;</span>
-
-<span class="k">[site]</span>
-<span class="n">title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Sales Analytics Pipeline&quot;</span>
-<span class="n">author</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Analytics Team&quot;</span>
-<span class="n">copyright</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;2025, My Company&quot;</span>
-<span class="n">logo_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./assets/company_logo.png&quot;</span>
-<span class="n">favicon_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./assets/favicon.ico&quot;</span>
-
-<span class="k">[pipeline]</span>
-<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;SALES&quot;</span>
-<span class="n">pipeline_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Sales Analytics Pipeline&quot;</span>
-<span class="n">pipeline_description</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;End-to-end sales analytics and reporting&quot;</span>
-<span class="n">lead_pipeline_developer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Jane Doe&quot;</span>
-<span class="n">contributors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Jane Doe&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;John Smith&quot;</span><span class="p">]</span>
-<span class="n">runs_on_grid_or_windows_or_other</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Windows/Linux&quot;</span>
-<span class="n">git_repo_URL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;https://github.com/yourorg/sales-analytics&quot;</span>
-<span class="n">README_file_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./README.md&quot;</span>
-
-<span class="k">[charts]</span>
-
-<span class="k">[charts.monthly_sales]</span>
-<span class="n">chart_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly Sales Overview&quot;</span>
-<span class="n">short_description_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Total sales by month with YoY comparison&quot;</span>
-<span class="n">dataframe_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sales_data&quot;</span>
-<span class="n">topic_tags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Sales&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Revenue&quot;</span><span class="p">]</span>
-<span class="n">data_frequency</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Monthly&quot;</span>
-<span class="n">units</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;USD&quot;</span>
-<span class="n">path_to_html_chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_output/monthly_sales.html&quot;</span>
-<span class="n">chart_docs_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./docs_src/charts/monthly_sales.md&quot;</span>
-
-<span class="k">[dataframes]</span>
-
-<span class="k">[dataframes.sales_data]</span>
-<span class="n">dataframe_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Sales Transactions&quot;</span>
-<span class="n">short_description_df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Detailed sales transaction data&quot;</span>
-<span class="n">data_sources</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;CRM System&quot;</span><span class="p">]</span>
-<span class="n">path_to_parquet_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;./_data/sales_data.parquet&quot;</span>
-<span class="n">date_col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;transaction_date&quot;</span>
-</pre></div>
-</div>
+<p>The full v1 → v2 field mapping is in the <a class="reference internal" href="design/toml-format-v2.html"><span class="doc">design doc</span></a>.</p>
 </section>
 <section id="global-configuration">
 <h2>Global Configuration<a class="headerlink" href="#global-configuration" title="Link to this heading">#</a></h2>
-<p>In addition to per-project <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> files, chartbook supports user-level configuration stored in <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code>. This file is managed by the <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code> command and currently stores the default catalog path for data loading.</p>
-<section id="settings-file">
-<h3>Settings File<a class="headerlink" href="#settings-file" title="Link to this heading">#</a></h3>
-<p>Location: <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code></p>
+<p>Per-user settings live in <code class="docutils literal notranslate"><span class="pre">~/.chartbook/settings.toml</span></code>, managed by the <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code> command:</p>
 <div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[catalog]</span>
 <span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/absolute/path/to/catalog/chartbook.toml&quot;</span>
 </pre></div>
 </div>
-<p>When a default catalog is configured, <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> and <code class="docutils literal notranslate"><span class="pre">data.get_path()</span></code> can be called without an explicit <code class="docutils literal notranslate"><span class="pre">catalog_path</span></code> argument:</p>
+<p>When a default catalog is configured (or <code class="docutils literal notranslate"><span class="pre">~/.chartbook/chartbook.toml</span></code> exists), <code class="docutils literal notranslate"><span class="pre">data.load()</span></code> and <code class="docutils literal notranslate"><span class="pre">data.get_path()</span></code> work without an explicit <code class="docutils literal notranslate"><span class="pre">catalog_path</span></code> argument:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">chartbook</span> <span class="kn">import</span> <span class="n">data</span>
 <span class="n">df</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="s2">&quot;yield_curve&quot;</span><span class="p">,</span> <span class="n">dataframe</span><span class="o">=</span><span class="s2">&quot;repo_public&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>An explicit <code class="docutils literal notranslate"><span class="pre">catalog_path</span></code> argument always takes priority over the global setting.</p>
-</section>
-<section id="setting-up">
-<h3>Setting Up<a class="headerlink" href="#setting-up" title="Link to this heading">#</a></h3>
-<p>Run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">config</span></code> to set (or update) the default catalog path:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">chartbook config</span>
-</pre></div>
-</div>
-<p>See the <a class="reference internal" href="cli-reference.html"><span class="doc">CLI Reference</span></a> for details.</p>
-</section>
+<p>An explicit <code class="docutils literal notranslate"><span class="pre">catalog_path</span></code> argument always takes priority over the global setting. See the <a class="reference internal" href="cli-reference.html"><span class="doc">CLI Reference</span></a> for details.</p>
 </section>
 <section id="best-practices">
 <h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
-<li><p><strong>Version Control</strong>: Always specify the <code class="docutils literal notranslate"><span class="pre">chartbook_format_version</span></code></p></li>
-<li><p><strong>File Paths</strong>: Use relative paths from the project root</p></li>
-<li><p><strong>Metadata</strong>: Provide comprehensive metadata for discoverability</p></li>
-<li><p><strong>Tags</strong>: Use consistent topic tags across charts and dataframes</p></li>
-<li><p><strong>Documentation</strong>: Link to markdown files for detailed documentation</p></li>
-<li><p><strong>Data Governance</strong>: Include licensing and access information</p></li>
+<li><p><strong>Let defaults work</strong>: omit fields whose defaults are right; the file stays small</p></li>
+<li><p><strong>File paths</strong>: use relative paths from the project root</p></li>
+<li><p><strong>Scoped IDs</strong>: keep pipelines in git repos with remotes so IDs derive automatically</p></li>
+<li><p><strong>Tags</strong>: use consistent tags across charts and dataframes</p></li>
+<li><p><strong>Policy over convention</strong>: encode required metadata in your catalog’s <code class="docutils literal notranslate"><span class="pre">[policy]</span></code> rather than in personal habit</p></li>
+<li><p><strong>Data governance</strong>: fill in licensing and access fields for anything shared</p></li>
 </ol>
 </section>
 <section id="validation">
 <h2>Validation<a class="headerlink" href="#validation" title="Link to this heading">#</a></h2>
-<p>chartbook validates your configuration file when running commands. Common validation errors:</p>
+<p>chartbook validates the manifest when running commands. Common errors:</p>
 <ul class="simple">
-<li><p>Missing required fields</p></li>
-<li><p>Invalid file paths</p></li>
-<li><p>Mismatched dataframe references</p></li>
-<li><p>Invalid date formats</p></li>
+<li><p>Both or neither of <code class="docutils literal notranslate"><span class="pre">docs_path</span></code> / <code class="docutils literal notranslate"><span class="pre">docs</span></code> provided</p></li>
+<li><p>A chart’s <code class="docutils literal notranslate"><span class="pre">dataframe</span></code> key referencing a missing dataframe</p></li>
+<li><p>Explicit <code class="docutils literal notranslate"><span class="pre">type</span></code> contradicting the file’s structure</p></li>
+<li><p>Referenced files that don’t exist (run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> to check)</p></li>
 </ul>
-<p>Run <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> to validate your configuration.</p>
+<p>Warnings (unknown <code class="docutils literal notranslate"><span class="pre">[project]</span></code> keys, missing policy-required fields) appear during <code class="docutils literal notranslate"><span class="pre">chartbook</span> <span class="pre">build</span></code> and on the catalog’s diagnostics page.</p>
 </section>
 </section>
 
@@ -784,11 +827,11 @@ document.write(`
       </div>
     </a>
     <a class="right-next"
-       href="llms-txt.html"
+       href="design/toml-format-v2.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">LLMs.txt</p>
+        <p class="prev-next-title">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -809,28 +852,24 @@ document.write(`
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-file-structure">Configuration File Structure</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-types">Project Types</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-project">Pipeline Project</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#catalog-project">Catalog Project</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-types">Project Types</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-project-table">The <code class="docutils literal notranslate"><span class="pre">[project]</span></code> Table</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build-commands">Build commands</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-sections">Configuration Sections</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#config-project-configuration"><code class="docutils literal notranslate"><span class="pre">[config]</span></code> - Project Configuration</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#site-website-metadata"><code class="docutils literal notranslate"><span class="pre">[site]</span></code> - Website Metadata</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-pipeline-information"><code class="docutils literal notranslate"><span class="pre">[pipeline]</span></code> - Pipeline Information</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipelines-pipeline-references"><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> - Pipeline References</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#charts-chart-definitions"><code class="docutils literal notranslate"><span class="pre">[charts]</span></code> - Chart Definitions</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes-dataframe-definitions"><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> - Dataframe Definitions</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#notes-additional-documentation"><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> - Additional Documentation</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#notebooks-jupyter-notebooks"><code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code> - Jupyter Notebooks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-identity">Pipeline Identity</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipelines-catalog-registry"><code class="docutils literal notranslate"><span class="pre">[pipelines]</span></code> — Catalog Registry</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#auto-discovery-with-members">Auto-discovery with <code class="docutils literal notranslate"><span class="pre">members</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#complete-example">Complete Example</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#global-configuration">Global Configuration</a><ul class="visible nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#settings-file">Settings File</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#setting-up">Setting Up</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#policy-catalog-requiredness"><code class="docutils literal notranslate"><span class="pre">[policy]</span></code> — Catalog Requiredness</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#charts-chart-definitions"><code class="docutils literal notranslate"><span class="pre">[charts]</span></code> — Chart Definitions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframes-dataframe-definitions"><code class="docutils literal notranslate"><span class="pre">[dataframes]</span></code> — Dataframe Definitions</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notebooks-jupyter-notebooks"><code class="docutils literal notranslate"><span class="pre">[notebooks]</span></code> — Jupyter Notebooks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#notes-additional-documentation"><code class="docutils literal notranslate"><span class="pre">[notes]</span></code> — Additional Documentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#custom-site-pages">Custom Site Pages</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#migrating-from-v1">Migrating from v1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#global-configuration">Global Configuration</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#best-practices">Best Practices</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#validation">Validation</a></li>
 </ul>

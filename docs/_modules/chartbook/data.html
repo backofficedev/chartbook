@@ -29,7 +29,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=a3416100" />
-    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=c0169425" />
@@ -39,7 +39,7 @@
 <link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../../_static/documentation_options.js?v=9cd9e4be"></script>
+    <script src="../../_static/documentation_options.js?v=d1237063"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -263,6 +263,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/gallery.html">ChartBook Plotting Gallery</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/notebooks.html">Notebooks</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../user-guide/myst-markdown.html">Writing with MyST Markdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../user-guide/build-pipeline.html">Build Pipeline Internals</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../cli-reference.html">CLI Reference</a></li>
@@ -279,7 +280,7 @@ document.write(`
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.errors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.errors</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.manifest.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.manifest</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.markdown_generator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.markdown_generator</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.validation</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../apidocs/chartbook/chartbook.conf_validation.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">chartbook.conf_validation</span></code></a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -289,6 +290,7 @@ document.write(`
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../configuration.html">Configuration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../design/toml-format-v2.html">Design: <code class="docutils literal notranslate"><span class="pre">chartbook.toml</span></code> Format v2</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../llms-txt.html">LLMs.txt</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
@@ -401,10 +403,14 @@ document.write(`
 
 <span class="sd">    from chartbook import data</span>
 
-<span class="sd">    df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)</span>
+<span class="sd">    # Load as Polars LazyFrame (default)</span>
+<span class="sd">    lf = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)</span>
 
-<span class="sd">    # Specify format</span>
-<span class="sd">    df_pl = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;, format=&quot;polars&quot;)</span>
+<span class="sd">    # Load as Polars eager DataFrame</span>
+<span class="sd">    df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;, format=&quot;polars_eager&quot;)</span>
+
+<span class="sd">    # Load as pandas DataFrame</span>
+<span class="sd">    df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;, format=&quot;pandas&quot;)</span>
 
 <span class="sd">    # Get just the data path</span>
 <span class="sd">    path = data.get_data_path(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;)</span>
@@ -421,6 +427,8 @@ document.write(`
 
 <span class="kn">from</span> <span class="nn">chartbook.config</span> <span class="kn">import</span> <span class="n">get_default_catalog_path</span><span class="p">,</span> <span class="n">get_global_settings_path</span>
 <span class="kn">from</span> <span class="nn">chartbook.errors</span> <span class="kn">import</span> <span class="n">CatalogNotConfiguredError</span>
+<span class="kn">from</span> <span class="nn">chartbook.identity</span> <span class="kn">import</span> <span class="n">resolve_pipeline_ref</span>
+<span class="kn">from</span> <span class="nn">chartbook.utils</span> <span class="kn">import</span> <span class="n">is_glob_pattern</span>
 
 
 <span class="k">def</span> <span class="nf">_resolve_catalog_path</span><span class="p">(</span>
@@ -461,7 +469,9 @@ document.write(`
 
 <span class="sd">    :param catalog_path: Path to the catalog&#39;s ``chartbook.toml``.</span>
 <span class="sd">    :type catalog_path: Path</span>
-<span class="sd">    :param pipeline: The pipeline identifier within the catalog.</span>
+<span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
@@ -473,22 +483,23 @@ document.write(`
 
     <span class="n">manifest</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">catalog_path</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
 
-    <span class="n">available_pipelines</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipelines&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-    <span class="k">if</span> <span class="n">pipeline</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipelines&quot;</span><span class="p">,</span> <span class="p">{}):</span>
-        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Pipeline </span><span class="si">{</span><span class="n">pipeline</span><span class="si">!r}</span><span class="s2"> not found in catalog. &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;Available pipelines: </span><span class="si">{</span><span class="n">available_pipelines</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
+    <span class="n">pipeline_key</span> <span class="o">=</span> <span class="n">resolve_pipeline_ref</span><span class="p">(</span><span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipelines&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">pipeline</span><span class="p">)</span>
 
-    <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline</span><span class="p">]</span>
+    <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_key</span><span class="p">]</span>
     <span class="n">available_dataframes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
     <span class="k">if</span> <span class="n">dataframe</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{}):</span>
         <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2"> not found in pipeline </span><span class="si">{</span><span class="n">pipeline</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2"> not found in pipeline </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">!r}</span><span class="s2">. &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;Available dataframes: </span><span class="si">{</span><span class="n">available_dataframes</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe</span><span class="p">][</span><span class="s2">&quot;dataframe_path&quot;</span><span class="p">])</span>
+    <span class="n">resolved</span> <span class="o">=</span> <span class="n">pipeline_manifest</span><span class="p">[</span><span class="s2">&quot;dataframes&quot;</span><span class="p">][</span><span class="n">dataframe</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_resolved_path&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">resolved</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2"> in pipeline </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">!r}</span><span class="s2"> has no &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&#39;path&#39; set in its chartbook.toml.&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">resolved</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_get_dataframe_docs_info_from_catalog</span><span class="p">(</span>
@@ -500,7 +511,9 @@ document.write(`
 
 <span class="sd">    :param catalog_path: Path to the catalog&#39;s ``chartbook.toml``.</span>
 <span class="sd">    :type catalog_path: Path</span>
-<span class="sd">    :param pipeline: The pipeline identifier within the catalog.</span>
+<span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
@@ -514,18 +527,13 @@ document.write(`
 
     <span class="n">manifest</span> <span class="o">=</span> <span class="n">load_manifest</span><span class="p">(</span><span class="n">base_dir</span><span class="o">=</span><span class="n">catalog_path</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
 
-    <span class="n">available_pipelines</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipelines&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-    <span class="k">if</span> <span class="n">pipeline</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipelines&quot;</span><span class="p">,</span> <span class="p">{}):</span>
-        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Pipeline </span><span class="si">{</span><span class="n">pipeline</span><span class="si">!r}</span><span class="s2"> not found in catalog. &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;Available pipelines: </span><span class="si">{</span><span class="n">available_pipelines</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
+    <span class="n">pipeline_key</span> <span class="o">=</span> <span class="n">resolve_pipeline_ref</span><span class="p">(</span><span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipelines&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">pipeline</span><span class="p">)</span>
 
-    <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline</span><span class="p">]</span>
+    <span class="n">pipeline_manifest</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;pipelines&quot;</span><span class="p">][</span><span class="n">pipeline_key</span><span class="p">]</span>
     <span class="n">available_dataframes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
     <span class="k">if</span> <span class="n">dataframe</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pipeline_manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataframes&quot;</span><span class="p">,</span> <span class="p">{}):</span>
         <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2"> not found in pipeline </span><span class="si">{</span><span class="n">pipeline</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Dataframe </span><span class="si">{</span><span class="n">dataframe</span><span class="si">!r}</span><span class="s2"> not found in pipeline </span><span class="si">{</span><span class="n">pipeline_key</span><span class="si">!r}</span><span class="s2">. &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;Available dataframes: </span><span class="si">{</span><span class="n">available_dataframes</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
 
@@ -546,7 +554,12 @@ document.write(`
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the resolved path to a dataframe&#39;s parquet file.</span>
 
-<span class="sd">    :param pipeline: The pipeline identifier within the catalog.</span>
+<span class="sd">    For glob patterns (e.g., ``**/*.parquet``), returns a ``Path`` containing</span>
+<span class="sd">    the glob pattern characters.</span>
+
+<span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
@@ -554,7 +567,7 @@ document.write(`
 <span class="sd">        directory.  If ``None``, the global default from</span>
 <span class="sd">        ``~/.chartbook/settings.toml`` is used.</span>
 <span class="sd">    :type catalog_path: Optional[Union[str, Path]]</span>
-<span class="sd">    :returns: The resolved path to the parquet file.</span>
+<span class="sd">    :returns: The resolved path to the parquet file (may contain glob characters).</span>
 <span class="sd">    :rtype: Path</span>
 <span class="sd">    :raises CatalogNotConfiguredError: If no catalog is configured.</span>
 <span class="sd">    :raises KeyError: If the pipeline or dataframe is not found.</span>
@@ -573,11 +586,13 @@ document.write(`
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the path to a dataframe&#39;s documentation source.</span>
 
-<span class="sd">    For dataframes using ``dataframe_docs_path``, returns the path to the</span>
-<span class="sd">    ``.md`` file. For dataframes using ``dataframe_docs_str`` (inline docs),</span>
-<span class="sd">    returns the path to the ``chartbook.toml`` file where the docs are defined.</span>
+<span class="sd">    For dataframes using ``docs_path``, returns the path to the ``.md``</span>
+<span class="sd">    file. For dataframes using ``docs`` (inline docs), returns the path to</span>
+<span class="sd">    the ``chartbook.toml`` file where the docs are defined.</span>
 
-<span class="sd">    :param pipeline: The pipeline identifier within the catalog.</span>
+<span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
@@ -612,12 +627,13 @@ document.write(`
 
 <span class="sd">    Works with both documentation modes:</span>
 
-<span class="sd">    - If the dataframe uses ``dataframe_docs_path``, reads and returns the</span>
-<span class="sd">      content of the ``.md`` file.</span>
-<span class="sd">    - If the dataframe uses ``dataframe_docs_str``, returns the inline string</span>
-<span class="sd">      directly.</span>
+<span class="sd">    - If the dataframe uses ``docs_path``, reads and returns the content of</span>
+<span class="sd">      the ``.md`` file.</span>
+<span class="sd">    - If the dataframe uses ``docs``, returns the inline string directly.</span>
 
-<span class="sd">    :param pipeline: The pipeline identifier within the catalog.</span>
+<span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
@@ -647,17 +663,21 @@ document.write(`
 <span class="k">def</span> <span class="nf">load</span><span class="p">(</span>
     <span class="n">pipeline</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">dataframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;pandas&quot;</span><span class="p">,</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;polars&quot;</span><span class="p">,</span>
     <span class="n">catalog_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a dataframe from a registered pipeline in a catalog.</span>
 
-<span class="sd">    :param pipeline: The pipeline identifier within the catalog.</span>
+<span class="sd">    :param pipeline: The pipeline reference — a bare name</span>
+<span class="sd">        (``&quot;crsp_treasury&quot;``, if unambiguous), a scoped ID</span>
+<span class="sd">        (``&quot;ftsfr/crsp_treasury&quot;``), or a repository URL.</span>
 <span class="sd">    :type pipeline: str</span>
 <span class="sd">    :param dataframe: The dataframe identifier within the pipeline.</span>
 <span class="sd">    :type dataframe: str</span>
-<span class="sd">    :param format: Output format — ``&quot;pandas&quot;`` (default), ``&quot;polars&quot;``,</span>
-<span class="sd">        or ``&quot;polars-lazyframe&quot;``.</span>
+<span class="sd">    :param format: Output format — ``&quot;polars&quot;`` (default, returns LazyFrame),</span>
+<span class="sd">        ``&quot;polars_eager&quot;``, ``&quot;pandas&quot;``, or ``&quot;polars-lazyframe&quot;`` (deprecated</span>
+<span class="sd">        alias for ``&quot;polars&quot;``).  Glob patterns in a dataframe&#39;s ``path`` only</span>
+<span class="sd">        support ``&quot;polars&quot;`` (LazyFrame).</span>
 <span class="sd">    :type format: str</span>
 <span class="sd">    :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent</span>
 <span class="sd">        directory.  If ``None``, the global default from</span>
@@ -667,45 +687,72 @@ document.write(`
 <span class="sd">    :rtype: pandas.DataFrame or polars.DataFrame or polars.LazyFrame</span>
 <span class="sd">    :raises CatalogNotConfiguredError: If no catalog is configured.</span>
 <span class="sd">    :raises KeyError: If the pipeline or dataframe is not found.</span>
-<span class="sd">    :raises ValueError: If *format* is not one of the supported values.</span>
+<span class="sd">    :raises ValueError: If *format* is not one of the supported values, or if</span>
+<span class="sd">        a glob path is used with a non-LazyFrame format.</span>
 
 <span class="sd">    **Examples**</span>
 
-<span class="sd">    Load as a pandas DataFrame (default):</span>
+<span class="sd">    Load as a Polars LazyFrame (default):</span>
 
 <span class="sd">    &gt;&gt;&gt; from chartbook import data</span>
-<span class="sd">    &gt;&gt;&gt; df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;,</span>
-<span class="sd">    ...               catalog_path=&quot;/path/to/catalog&quot;)  # doctest: +SKIP</span>
-
-<span class="sd">    Load as a polars DataFrame:</span>
-
-<span class="sd">    &gt;&gt;&gt; df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;,</span>
-<span class="sd">    ...               format=&quot;polars&quot;,</span>
-<span class="sd">    ...               catalog_path=&quot;/path/to/catalog&quot;)  # doctest: +SKIP</span>
-
-<span class="sd">    Load as a polars LazyFrame:</span>
-
 <span class="sd">    &gt;&gt;&gt; lf = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;,</span>
-<span class="sd">    ...               format=&quot;polars-lazyframe&quot;,</span>
+<span class="sd">    ...               catalog_path=&quot;/path/to/catalog&quot;)  # doctest: +SKIP</span>
+
+<span class="sd">    Load as a Polars eager DataFrame:</span>
+
+<span class="sd">    &gt;&gt;&gt; df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;,</span>
+<span class="sd">    ...               format=&quot;polars_eager&quot;,</span>
+<span class="sd">    ...               catalog_path=&quot;/path/to/catalog&quot;)  # doctest: +SKIP</span>
+
+<span class="sd">    Load as a pandas DataFrame:</span>
+
+<span class="sd">    &gt;&gt;&gt; df = data.load(pipeline=&quot;yield_curve&quot;, dataframe=&quot;repo_public&quot;,</span>
+<span class="sd">    ...               format=&quot;pandas&quot;,</span>
 <span class="sd">    ...               catalog_path=&quot;/path/to/catalog&quot;)  # doctest: +SKIP</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">file_path</span> <span class="o">=</span> <span class="n">get_data_path</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">catalog_path</span><span class="p">)</span>
+    <span class="n">_is_glob</span> <span class="o">=</span> <span class="n">is_glob_pattern</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;pandas&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">_is_glob</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Glob patterns in a dataframe&#39;s path only support format=&#39;polars&#39; &quot;</span>
+                <span class="s2">&quot;(LazyFrame). Use data.load(..., format=&#39;polars&#39;) and call .collect() &quot;</span>
+                <span class="s2">&quot;to materialize, then .to_pandas() if needed.&quot;</span>
+            <span class="p">)</span>
         <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;polars&quot;</span><span class="p">:</span>
         <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
 
-        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;polars-lazyframe&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">scan_parquet</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hive_partitioning</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;polars_eager&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">_is_glob</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Glob patterns in a dataframe&#39;s path only support format=&#39;polars&#39; &quot;</span>
+                <span class="s2">&quot;(LazyFrame). Use data.load(..., format=&#39;polars&#39;) and call .collect() &quot;</span>
+                <span class="s2">&quot;to materialize.&quot;</span>
+            <span class="p">)</span>
         <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
 
-        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">scan_parquet</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hive_partitioning</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;polars-lazyframe&quot;</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">warnings</span>
+
+        <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;format=&#39;polars-lazyframe&#39; is deprecated. Use format=&#39;polars&#39; instead &quot;</span>
+            <span class="s2">&quot;(polars format now returns LazyFrame by default).&quot;</span><span class="p">,</span>
+            <span class="ne">DeprecationWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">scan_parquet</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hive_partitioning</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Invalid format: </span><span class="si">{</span><span class="nb">format</span><span class="si">!r}</span><span class="s2">. Must be &#39;pandas&#39;, &#39;polars&#39;, or &#39;polars-lazyframe&#39;.&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid format: </span><span class="si">{</span><span class="nb">format</span><span class="si">!r}</span><span class="s2">. Must be &#39;polars&#39;, &#39;polars_eager&#39;, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&#39;pandas&#39;, or &#39;polars-lazyframe&#39;.&quot;</span>
         <span class="p">)</span></div>
 
 </pre></div>
