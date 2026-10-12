@@ -316,6 +316,26 @@ sphinx_targets = [
 ]
 
 
+def task_train_term_premium_ar1():
+    """Train the example model on the term premium dataframe"""
+    return {
+        "actions": [
+            "ipython ./src/train_term_premium_ar1.py",
+        ],
+        # The dataframe it is trained on and the model it writes are both
+        # declared in chartbook.toml, so both paths are asked for, not typed
+        "file_dep": [
+            "./src/train_term_premium_ar1.py",
+            data.path("term_premium"),
+        ],
+        "targets": [
+            assets.path("model/term_premium_ar1"),
+            OUTPUT_DIR / "term_premium_ar1_metrics.json",
+        ],
+        "clean": True,
+    }
+
+
 def task_compile_sphinx_docs():
     """Compile Sphinx Docs"""
     notebook_scripts = [
@@ -335,6 +355,7 @@ def task_compile_sphinx_docs():
         "file_dep": file_dep,
         "task_dep": [
             "run_notebooks",
+            "train_term_premium_ar1",
         ],
         "clean": True,
     }

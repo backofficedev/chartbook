@@ -493,9 +493,14 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     pipelines = [
         get_pipeline_manifest(manifest, pid) for pid in get_pipeline_ids(manifest)
     ]
+    # Models are counted only where there are some, so that the line for a
+    # project without them reads as it always has
+    sections = ["dataframes", "charts", "notebooks"]
+    if any(p.get("models") for p in pipelines):
+        sections.append("models")
     counts = ", ".join(
         f"{sum(len(p.get(section, {})) for p in pipelines)} {section}"
-        for section in ("dataframes", "charts", "notebooks")
+        for section in sections
     )
     shown = display_path(manifest_path, relative_to=Path.cwd())
     note = "; built outputs not checked" if skip_outputs else ""
@@ -527,6 +532,7 @@ def path_command(ref, kind, project_dir):
         chart/yield_curve       [charts.yield_curve]
         notebook/analysis       [notebooks.analysis]
         note/methodology        [notes.methodology]
+        model/rate_forecaster   [models.rate_forecaster]
 
     The path is printed absolute, whether or not the file exists yet, so a
     build tool can use it for inputs and outputs alike. This is

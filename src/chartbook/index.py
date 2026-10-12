@@ -8,10 +8,9 @@ search box, an exporter or a diff of two builds can read that one file and
 need nothing else.
 
 The format is specified in ``docs_src/design/index-schema.md``. This module
-writes what that document calls the first implementation: ``Catalog``,
-``Pipeline``, ``Dataframe``, ``Series``, ``Chart``, ``Notebook`` and
-``Note`` records. ``Build`` records, dependencies and models come with the
-parts of the asset graph that produce them.
+writes ``Catalog``, ``Pipeline``, ``Dataframe``, ``Series``, ``Chart``,
+``Notebook``, ``Note`` and ``Model`` records. ``Build`` records and
+dependencies come with the parts of the asset graph that produce them.
 
 Two forms of the same index are written:
 
@@ -61,7 +60,7 @@ SCHEMAS_DIR = Path(__file__).parent / "schemas" / "chartbook"
 
 #: The kinds of asset this module writes records for, in the order a
 #: pipeline's assets are listed.
-ASSET_KINDS = ("dataframe", "chart", "notebook", "note")
+ASSET_KINDS = ("dataframe", "chart", "notebook", "note", "model")
 
 # Manifest keys that the index states in another form, or not at all
 _STRUCTURAL_KEYS = frozenset(
@@ -149,9 +148,16 @@ def _docs(entry: dict) -> Optional[dict]:
 
 
 def _file_facts(
-    base_dir: Path, declared_path: Any, cache: Optional[hashing.HashCache]
+    base_dir: Path,
+    declared_path: Any,
+    cache: Optional[hashing.HashCache],
+    list_files: bool = False,
 ) -> dict:
-    """Where a declared file is, and its hash and size if it is there."""
+    """Where a declared file is, and its hash and size if it is there.
+
+    :param list_files: If True and the path is a directory, also list the
+        files in it, each with its own size and hash.
+    """
     if not isinstance(declared_path, str) or not declared_path.strip():
         return {}
     resolved = os.path.normpath(base_dir / declared_path)
@@ -170,6 +176,15 @@ def _file_facts(
     if content is not None:
         facts["content_hash"] = content.content_hash
         facts["size_bytes"] = content.size_bytes
+        if list_files and os.path.isdir(resolved):
+            facts["files"] = [
+                {
+                    "path": file.path,
+                    "size_bytes": file.size_bytes,
+                    "content_hash": file.content_hash,
+                }
+                for file in content.files
+            ]
     return facts
 
 
@@ -290,9 +305,12 @@ def _asset_records(
     """The record for one asset, followed by its series if it is a dataframe."""
     ref = AssetRef(kind=kind, name=name).in_pipeline(pipeline_id)
     record = _head(kind, ref, pipeline_id, entry)
-    facts = _file_facts(base_dir, entry.get("path"), cache)
+    facts = _file_facts(
+        base_dir, entry.get("path"), cache, list_files=(kind == "model")
+    )
     record.update(facts)
     series: list[dict] = []
+    skip: tuple = ()
 
     if kind == "dataframe":
         described = None
@@ -321,8 +339,40 @@ def _asset_records(
     elif kind == "note" and entry.get("path") and "docs" not in entry:
         # A note is its own write-up
         entry = {**entry, "docs_path": entry["path"]}
+    elif kind == "model":
+        # trained_on is this record's inputs, and the metrics file its metrics
+        skip = ("trained_on", "metrics_path")
+        if "trained_on" in entry:
+            record["inputs"] = [
+                str(AssetRef(name=dataframe).in_pipeline(pipeline_id))
+                for dataframe in entry.get("_trained_on", [])
+            ]
+        metrics = _model_metrics(base_dir, name, entry)
+        if metrics is not None:
+            record["metrics"] = metrics
 
-    return [_finish(record, entry), *series]
+    return [_finish(record, entry, skip=skip), *series]
+
+
+def _model_metrics(base_dir: Path, name: str, entry: dict) -> Optional[dict]:
+    """A model's scores, read from its metrics file if that is there and well formed."""
+    from chartbook.models import read_metrics
+
+    declared = entry.get("metrics_path")
+    if not declared:
+        return None
+    metrics_file = base_dir / declared
+    if not metrics_file.is_file():
+        return None
+    try:
+        return read_metrics(metrics_file)
+    except (OSError, ValueError) as error:
+        warnings.warn(
+            f"{base_dir / 'chartbook.toml'}: [models.{name}]: its metrics are "
+            f"left out of the index: {error}",
+            stacklevel=3,
+        )
+        return None
 
 
 def pipeline_records(
@@ -332,8 +382,8 @@ def pipeline_records(
 ) -> list[dict]:
     """The records for one pipeline: itself, then its assets.
 
-    Assets come in the order dataframes, charts, notebooks, notes, each by
-    name, and each dataframe is followed by its series.
+    Assets come in the order dataframes, charts, notebooks, notes, models,
+    each by name, and each dataframe is followed by its series.
 
     :param pipeline_id: The pipeline's ID in this build (a catalog's key).
     :param pipeline_manifest: Its loaded manifest.

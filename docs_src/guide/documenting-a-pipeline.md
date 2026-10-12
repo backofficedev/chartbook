@@ -99,6 +99,22 @@ publishable = true
 
 Notebooks render as pages, pre-executed — ChartBook does not run them. The title comes from the notebook's first `# Heading`; set `name` to override. `publishable = true` includes the notebook when you run `chartbook publish`.
 
+## Models
+
+If the pipeline trains a model, declare it, and it gets a page of its own: its write-up, its scores, and links to the data it was trained on.
+
+```toml
+[models.rate_forecaster]
+name = "Rate Forecaster"
+description = "Forecasts the 10-year Treasury yield one month ahead."
+path = "./_models/rate_forecaster.joblib"
+trained_on = ["treasury_rates"]
+metrics_path = "./_output/rate_forecaster_metrics.json"
+docs_path = "./docs_src/models/rate_forecaster.md"
+```
+
+Your training code writes the model file and a small JSON file of scores; ChartBook reads both and never looks inside the model. {doc}`../reference/configuration` has every field, and the `yield_curve` example trains a small one end to end.
+
 ## Notes and custom pages
 
 `[notes]` entries add standalone markdown documents to the site:
@@ -146,6 +162,7 @@ A dataframe is named by its key in `[dataframes]`, and nothing more. Any other a
 | `chart/rates_over_time` | `[charts.rates_over_time]` |
 | `notebook/analysis` | `[notebooks.analysis]` |
 | `note/methodology` | `[notes.methodology]` |
+| `model/rate_forecaster` | `[models.rate_forecaster]` |
 
 Data is what gets passed around most, so it gets the short spelling. Each kind has its own names: a dataframe and a chart may both be called `gdp`, and they are `gdp` and `chart/gdp`.
 
@@ -156,7 +173,7 @@ assets.path("rates_over_time", kind="chart")    # the same as "chart/rates_over_
 assets.path("chart/rates_over_time", kind="note")   # error: that names a chart
 ```
 
-`data.path(name)` is `assets.path(name, kind="dataframe")`. It answers for dataframes only, so a mistyped name cannot hand back a chart's HTML where a parquet file was meant.
+`data.path(name)` is `assets.path(name, kind="dataframe")`. It answers for dataframes only, so a mistyped name cannot hand back a chart's HTML where a parquet file was meant. `models.path(name)` is the same for models.
 
 The enclosing `chartbook.toml` is found by walking up from the calling file (then from the working directory), so the call works from a script, a `dodo.py` or a notebook alike. The path comes back absolute, and nothing checks that the file exists — which is what lets it name a target that has not been built yet.
 

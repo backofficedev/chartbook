@@ -36,7 +36,7 @@ chartbook browse            # Open project docs in default browser
 chartbook check             # CI gate: missing metadata, broken paths, expiring licenses
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
-chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>)
+chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook config            # Configure default catalog path (interactive)
@@ -136,6 +136,12 @@ df.to_parquet(data.path("my_data"))
 # (chart/, notebook/, note/). data.path(x) is assets.path(x, kind="dataframe").
 from chartbook import assets
 fig.write_html(assets.path("chart/my_chart"))
+
+# A trained model is declared in [models.<id>] (path, trained_on, metrics_path,
+# docs_path) and gets a page with its scores and lineage. ChartBook never loads
+# a model; it hands out the path.
+from chartbook import models
+joblib.dump(model, models.path("my_model"))
 
 # A throwaway directory for intermediates (<pipeline>/_data/_scratch/):
 # not an asset, git-ignored, safe to delete

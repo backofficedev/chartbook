@@ -151,9 +151,9 @@ def pipeline_input_files(pipeline_manifest: dict) -> list[Path]:
     # A Markdown file in the project root can override a page template
     files.update(p for p in base_dir.glob("*.md") if p.is_file())
 
-    for section in ("dataframes", "charts", "notebooks", "notes"):
+    for section in ("dataframes", "charts", "notebooks", "notes", "models"):
         for entry in (pipeline_manifest.get(section) or {}).values():
-            for key in ("path", "docs_path", "excel_path"):
+            for key in ("path", "docs_path", "excel_path", "metrics_path"):
                 declared = entry.get(key)
                 if not isinstance(declared, str) or not declared.strip():
                     continue
@@ -163,6 +163,9 @@ def pipeline_input_files(pipeline_manifest: dict) -> list[Path]:
                         Path(match)
                         for match in glob.glob(str(declared_path), recursive=True)
                     )
+                elif declared_path.is_dir():
+                    # A model may be a directory: every file in it counts
+                    files.update(_walk_files(declared_path))
                 else:
                     files.add(declared_path)
     return sorted(files)
@@ -237,6 +240,7 @@ def pipeline_owned_paths(pipeline_id: str, pipeline_manifest: dict) -> list[Path
     slug = _slug(pipeline_id)
     owned = [
         Path("cb") / "dataframes" / slug,
+        Path("cb") / "models" / slug,
         Path("cb") / "notebooks" / slug,
         Path("cb") / "download_chart" / slug,
         Path("cb") / "download_dataframe" / slug,
@@ -260,6 +264,10 @@ def _pages_exist(build_dir: Path, pipeline_id: str, pipeline_manifest: dict) -> 
     expected += [
         build_dir / "cb" / "charts" / f"{slug}.{chart_id}.md"
         for chart_id in pipeline_manifest.get("charts") or {}
+    ]
+    expected += [
+        build_dir / "cb" / "models" / slug / f"{model_id}.md"
+        for model_id in pipeline_manifest.get("models") or {}
     ]
     return all(page.is_file() for page in expected)
 

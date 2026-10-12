@@ -565,9 +565,11 @@ that is valid today.
   remote is turned into a web URL and any credentials in it are removed.
 - **`[dataframes.x.series.y]` is read** ({ref}`series-addressing`). It documents one column of
   a dataframe. The loader validates it, and each series is a record in the build's `index.json`.
+- **`[models.x]` is read** ({doc}`models`). It declares a trained model: `path`, `trained_on`,
+  `metrics_path` and a write-up. A manifest with only `[models]` is a pipeline.
 - **Tables that are designed and not yet read by the loader:** `[dependencies]` and `[scripts]`
-  ({doc}`asset-graph`), `[models.x]` ({doc}`models`), and `[sources.x]` with a dataframe's
-  `table` and `query` ({doc}`data-access`). A manifest that contains one of them today loads,
+  ({doc}`asset-graph`), and `[sources.x]` with a dataframe's `table` and `query`
+  ({doc}`data-access`). A manifest that contains one of them today loads,
   and the table is ignored.
 
 {doc}`overview` has the order in which these get built.

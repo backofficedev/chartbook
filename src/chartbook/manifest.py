@@ -1,8 +1,8 @@
 """Load and process ``chartbook.toml`` manifests (format v2).
 
 A v2 manifest has a single ``[project]`` metadata table plus the entity
-sections ``[charts]``, ``[dataframes]``, ``[notebooks]``, and ``[notes]``
-(pipelines), or a ``[pipelines]`` registry and optional ``[policy]``
+sections ``[charts]``, ``[dataframes]``, ``[notebooks]``, ``[notes]`` and
+``[models]`` (pipelines), or a ``[pipelines]`` registry and optional ``[policy]``
 (catalogs). Every ``[project]`` field is optional; defaults are filled at
 load time. See ``docs_src/design/toml-format-v2.md`` for the full
 specification.
@@ -65,7 +65,7 @@ PROJECT_DEFAULTS = {
 }
 
 #: Entity sections that mark a manifest as pipeline-shaped.
-ENTITY_SECTIONS = ("charts", "dataframes", "notebooks", "notes")
+ENTITY_SECTIONS = ("charts", "dataframes", "notebooks", "notes", "models")
 
 #: v1 sections whose presence identifies an unmigrated manifest.
 V1_MARKER_SECTIONS = ("config", "site", "pipeline")
@@ -360,6 +360,97 @@ def validate_series(dataframe_manifest: dict, dataframe_id: str) -> dict:
     return series
 
 
+def validate_models(manifest: dict, base_dir: Path) -> dict:
+    """Validate a pipeline's ``[models.<id>]`` tables.
+
+    A model is a file, or a directory of files, that the pipeline produces:
+    ``path`` says where. ``trained_on`` lists the dataframes it was trained
+    on, as references; ``metrics_path`` names a JSON file of scores; and
+    ``docs_path`` or ``docs`` is its write-up. See
+    ``docs_src/design/models.md``.
+
+    Each entry gains ``_resolved_path`` and ``_trained_on``, the names of
+    the dataframes it was trained on.
+
+    :param manifest: The pipeline's manifest, with ``dataframes`` loaded.
+    :param base_dir: The pipeline's root directory.
+    :returns: The model tables by key; empty if the pipeline declares none.
+    :raises ValueError: If a table is malformed, a key is not a legal name,
+        or ``trained_on`` names something that is not one of this
+        pipeline's dataframes.
+    """
+    from chartbook.refs import KindMismatchError
+    from chartbook.resolve import parse_local_ref
+
+    models = manifest.get("models")
+    if models is None:
+        return {}
+    if not isinstance(models, dict):
+        raise ValueError(
+            "[models] must be a table of tables, one per model, e.g. "
+            "[models.rate_forecaster]."
+        )
+    dataframes = manifest.get("dataframes") or {}
+    for model_id, entry in models.items():
+        where = f"[models.{model_id}]"
+        if not isinstance(entry, dict):
+            raise ValueError(f"{where} must be a table with at least a 'path'.")
+        if not ID_COMPONENT_PATTERN.match(model_id):
+            raise ValueError(
+                f"{where}: {model_id!r} is not a legal model key. A key becomes "
+                f"part of an address ('model/<key>'), so it must match "
+                f"[A-Za-z0-9._-]+."
+            )
+        declared_path = entry.get("path")
+        if not isinstance(declared_path, str) or not declared_path.strip():
+            raise ValueError(
+                f"{where} has no 'path'. Say where the model file, or the "
+                f'directory of its files, is: path = "./_models/{model_id}.joblib".'
+            )
+        entry["_resolved_path"] = Path(base_dir) / declared_path
+
+        for key in ("metrics_path", "docs_path"):
+            value = entry.get(key)
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"{where}: '{key}' must be a path.")
+        if entry.get("docs") and entry.get("docs_path"):
+            raise ValueError(
+                f"{where} has both docs_path and docs. Only one is allowed."
+            )
+        if "tags" in entry:
+            entry["tags"] = normalize_tags(entry["tags"])
+
+        trained_on = entry.get("trained_on", [])
+        if not isinstance(trained_on, list) or not all(
+            isinstance(item, str) for item in trained_on
+        ):
+            raise ValueError(
+                f"{where}: 'trained_on' must be a list of dataframes, e.g. "
+                f'trained_on = ["treasury_rates"].'
+            )
+        names = []
+        for text in trained_on:
+            try:
+                reference = parse_local_ref(text, kind="dataframe")
+            except KindMismatchError as error:
+                raise ValueError(
+                    f"{where}: trained_on: {error} A model is trained on dataframes."
+                ) from None
+            except ValueError as error:
+                # Keeps "reserved, not yet supported" distinct from "invalid"
+                raise type(error)(f"{where}: trained_on: {error}") from None
+            if reference.name not in dataframes:
+                declared = ", ".join(sorted(dataframes)) or "(none)"
+                raise ValueError(
+                    f"{where}: trained_on names the dataframe {reference.name!r}, "
+                    f"which this pipeline does not declare. Its dataframes are: "
+                    f"{declared}."
+                )
+            names.append(reference.name)
+        entry["_trained_on"] = names
+    return models
+
+
 def _warn_unknown_project_keys(project_raw: dict, source: str) -> None:
     """Warn about unrecognized keys in the [project] table.
 
@@ -464,6 +555,7 @@ def _load_pipeline_manifest(raw_manifest):
     manifest.setdefault("charts", {})
     manifest.setdefault("dataframes", {})
     manifest.setdefault("notebooks", {})
+    manifest.setdefault("models", {})
 
     # Infer notebook name from the notebook's H1 heading when not explicitly set
     for notebook_id in manifest.get("notebooks", {}):
@@ -535,6 +627,8 @@ def _load_pipeline_manifest(raw_manifest):
 
             for dataframe_id, chart_ids in dataframe_to_charts.items():
                 manifest["dataframes"][dataframe_id]["linked_charts"] = chart_ids
+
+    validate_models(manifest, base_dir)
 
     return manifest
 

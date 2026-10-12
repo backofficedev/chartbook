@@ -6,7 +6,7 @@ never seen this project and has to continue building it. It says what ChartBook 
 it uses, what is built, what to build next and in what order, and where every decision is
 written down.
 
-Last revised 2026-10-12, after version 0.2.0 and the first implementation of the index.
+Last revised 2026-10-12, after version 0.2.0, the index, and declared models.
 ```
 
 ## What ChartBook is
@@ -37,7 +37,7 @@ organization (scope)        ftsfr
     chart                   …:chart/curve_today            an HTML file
     notebook                …:notebook/analysis
     note                    …:note/methodology             a page of prose
-    model                   …:model/rate_forecaster        a trained model (planned)
+    model                   …:model/rate_forecaster        a trained model
 
 catalog                     many pipelines, browsed and searched as one site
 ```
@@ -62,7 +62,7 @@ assets alike.
 | **part** | Something inside an asset, addressed with `#`. A series is a dataframe's part; a file is a model's part |
 | **reference** | The address of an asset: `[registry/][scope/]pipeline:[kind/]name[#part][@rev]`. Specified in {doc}`references` |
 | **local reference** | A reference with no `pipeline:` in front. It means "in the pipeline I am in" |
-| **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.assets` for any kind |
+| **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.models` for models, `chartbook.assets` for any kind |
 | **location** | Where an asset physically is. A file today; a database table later ({doc}`data-access`) |
 | **index** | One JSON file describing everything a catalog contains. A build product. Planned ({doc}`index-schema`) |
 | **record** | One entry in the index. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
@@ -125,9 +125,9 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built; local resolution built |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Designed, not built |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Designed, not built. **Next to build** (step 3) |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
-| 6 | {doc}`models` | Models as assets | Direction accepted, not built. **Next to build** |
+| 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
@@ -135,7 +135,7 @@ and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
 
 ## What is built
 
-As of 0.2.0, plus the index, which is merged after it.
+As of 0.2.0, plus the index and declared models, which came after it.
 
 | Capability | Where | Notes |
 |---|---|---|
@@ -147,17 +147,18 @@ As of 0.2.0, plus the index, which is merged after it.
 | Resolving local references | `resolve.py`, `assets.py`, `data.py`, `chartbook path` | One resolver, typed locations |
 | The index, `index.json` | `index.py`, `hashing.py`, `schemas/` | Written by every build, beside the HTML. One hash rule; hashes cached in the build directory |
 | Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
+| Models | `models.py`, `manifest.py` (`validate_models`), `markdown_generator.py` (`generate_model_docs`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. No versions yet |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
 | Data glimpses | `create_data_glimpses.py` | Reads the manifest, not `dodo.py` |
 | Scaffolding | `scaffold.py`, `chartbook init --git/--github` | Renders the cookiecutter template |
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
-| Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | Cross-pipeline references, `#part`, `@rev`, registry prefixes, `model/…`, `chartbook push` |
+| Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | Cross-pipeline references, `#part`, `@rev`, registry prefixes, `chartbook push` |
 
 Not built: `[dependencies]`, the lockfile, the store, pinning, build records, `chartbook run`,
-`[scripts]`, `[models]`, `[sources]` and SQL access, any export, and anything that *reads* the
-index.
+`[scripts]`, model versions, `[sources]` and SQL access, any export, and anything that *reads*
+the index.
 
 ## What to build next, in order
 
@@ -188,12 +189,15 @@ it. The maintainer has decided three; six are listed there as *proposed*, still 
 Left for later steps, on purpose: `Build` records, `dependencies`, `Model` records, and
 rendering the site *from* the index.
 
-### Step 2. Declared models
+### Step 2. Declared models — built
 
-**Goal:** a pipeline can declare a model and get a page for it.
+A pipeline can declare a trained model in `[models.x]`, ask for its path
+(`chartbook path model/x`, `chartbook.models.path("x")`), check it, and get a page and a `Model`
+record in the index. This is slice M1 of {doc}`models`; its section "What is built" lists every
+file involved and eight things that were settled while building it, all *proposed*.
 
-This is slice M1 of {doc}`models`, which lists exactly what to build and gives a worked example
-that doubles as the acceptance test. No versions yet.
+Left for later steps, on purpose: versions and labels (`@v3`, `@champion`), parts
+(`model/x#file`), and anything that crosses a pipeline boundary.
 
 ### Step 3. Dependencies, the lockfile and the store
 

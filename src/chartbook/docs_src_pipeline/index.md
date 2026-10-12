@@ -47,6 +47,14 @@ cb/charts.md
 {{dataframe_file_list | sort | join("\n")}}
 ```
 
+{% if model_file_list %}
+```{toctree}
+:maxdepth: 1
+:caption: Pipeline Models 🤖
+{{model_file_list | sort | join("\n")}}
+```
+{% endif %}
+
 
 
 ## Pipeline Specs

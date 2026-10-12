@@ -288,6 +288,59 @@ publishable = true
 path = "./docs_src/methodology.md"
 ```
 
+## `[models]` — Trained Models
+
+A model is a file, or a directory of files, that the pipeline's own code produces. ChartBook records where it is, what it was trained on and how it scores, and gives it a page. It never loads, runs or serves a model.
+
+```toml
+[models.rate_forecaster]
+name = "Rate Forecaster"
+description = "Forecasts the 10-year Treasury yield one month ahead."
+path = "./_models/rate_forecaster.joblib"
+trained_on = ["treasury_rates"]
+metrics_path = "./_output/rate_forecaster_metrics.json"
+docs_path = "./docs_src/models/rate_forecaster.md"
+tags = ["Forecast", "Treasury"]
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `path` | yes | The model file, or the directory that holds its files |
+| `trained_on` | no | The dataframes it was trained on, by their keys in `[dataframes]`. For now they must be dataframes of the same pipeline |
+| `metrics_path` | no | A JSON file of scores, written by your training code (below) |
+| `docs_path` or `docs` | no | The model's write-up: what it is for, how it was built, where not to use it. Unlike a dataframe or a chart, a model may have none |
+| `name`, `description`, `tags` | no | As for dataframes and charts. You may add fields of your own |
+
+The key (`rate_forecaster`) is the model's address, `model/rate_forecaster`, so it may only contain letters, digits, `.`, `_` and `-`.
+
+**The metrics file** is one flat JSON object. Values are numbers, strings or `true`/`false`:
+
+```json
+{ "rmse": 0.214, "mae": 0.171, "n_train": 5120, "n_test": 1280 }
+```
+
+Scores live in a file, not in `chartbook.toml`, because they are an output: they change every time the model is retrained. A table or a curve does not belong here; declare it as a dataframe or a chart.
+
+**Getting the path.** Training code asks where to write, and anything that uses the model asks where to read:
+
+```python
+import joblib
+from chartbook import models
+
+joblib.dump(model, models.path("rate_forecaster"))       # in the training script
+model = joblib.load(models.path("rate_forecaster"))      # anywhere else in the pipeline
+```
+
+```console
+$ chartbook path model/rate_forecaster
+```
+
+There is no `models.load()`: loading is one line of your own code, and keeping it there keeps every machine-learning library out of ChartBook.
+
+**What you get.** A page for the model with its write-up, a table of its scores, links to the dataframes it was trained on, and its files if it is a directory. A `Model` record in `index.json` with its content hash. And `chartbook check` reports a missing model file, metrics file or write-up, a metrics file that is not a flat object, and (by default) a model with no `name`, `description` or `trained_on`. `--skip-outputs` leaves out the model and its metrics, which training produces.
+
+Not yet: versions of a model (`model/rate_forecaster@v3`), labels such as `@champion`, one file inside a directory model (`model/x#weights.pt`), and models or training data in another pipeline.
+
 ## Custom Site Pages
 
 Custom markdown pages merge into the generated site from `./docs_src/site/` — auto-detected, no configuration needed. Set `site_dir` in `[project]` only to use a different directory. Chart and dataframe doc fragments stay outside it (`docs_src/charts/`, `docs_src/dataframes/`) so they aren't published twice. The built HTML output remains `./docs/`.

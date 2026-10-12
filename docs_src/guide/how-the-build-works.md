@@ -133,7 +133,7 @@ Once all Markdown files are in place:
 
 ### The index: `index.json`
 
-After the HTML is in place, the build writes one more file beside it: `docs/index.json`. It describes everything the site contains, as a flat list of records: one for each pipeline, dataframe, chart, notebook and note, and one for each column of each dataframe.
+After the HTML is in place, the build writes one more file beside it: `docs/index.json`. It describes everything the site contains, as a flat list of records: one for each pipeline, dataframe, chart, notebook, note and model, and one for each column of each dataframe.
 
 ```json
 {

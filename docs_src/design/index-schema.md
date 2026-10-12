@@ -6,9 +6,9 @@ is specified before anything that depends on it. See {doc}`asset-graph` for the 
 serves.
 
 Status: **the first implementation is built** (`chartbook.index`, `chartbook.hashing`): every
-build writes `index.json` with `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`
-and `Note` records. `Build` records, dependencies and `Model` records are not written yet; they
-come with the parts of the {doc}`asset graph <asset-graph>` that produce them.
+build writes `index.json` with `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`,
+`Note` and `Model` records. `Build` records and dependencies are not written yet; they come with
+the parts of the {doc}`asset graph <asset-graph>` that produce them.
 {ref}`index-implementing` says exactly what is and is not there.
 
 Revised 2026-10-12, before any of it was built: IDs carry the asset's kind
@@ -413,7 +413,9 @@ A trained model that a pipeline declares. The record, its fields and what they a
 `metrics`, and `files` when the model is a directory. Its ID is
 `ftsfr/fed_yield_curve:model/rate_forecaster`.
 
-Models are not part of the first implementation of the index (step 1). They arrive with step 2.
+`Model` records are written (step 2), without `built_by`. A model's `location` has
+`"kind": "file"` whether its `path` is a file or a directory; `files` is what tells the two
+apart.
 
 ### Build
 
@@ -575,10 +577,10 @@ Built in `chartbook/index.py` and `chartbook/hashing.py`, with the JSON Schemas 
 `chartbook/schemas/`. `tests/test_index.py` and `tests/test_hashing.py` are the executable form
 of this section.
 
-**What is written.** `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook` and `Note`
-records. Not yet: `Build` records and `built_by`; `dependencies` on a `Pipeline`; `Model`
-records; `inputs` on a dataframe or a notebook (the manifest has no field to declare them);
-`rendered` in `docs`. A pipeline's `build` command is written as `"scripts": { "build": … }`,
+**What is written.** `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`, `Note`
+and `Model` records. Not yet: `Build` records and `built_by`; `dependencies` on a `Pipeline`;
+`inputs` on a dataframe or a notebook (the manifest has no field to declare them); `rendered`
+in `docs`. A pipeline's `build` command is written as `"scripts": { "build": … }`,
 ahead of the `[scripts]` table.
 
 **Where it is written.** The `_build/` layout at the top of this document is a destination, not
@@ -600,8 +602,8 @@ today's layout. `chartbook build` writes two files:
 
 **It is deterministic.** The same manifests and files give the same bytes, apart from
 `generated_at`. Records are in a fixed order: the catalog; then pipelines by ID; within one, the
-pipeline, then its dataframes, charts, notebooks and notes, each by name, and each dataframe
-followed by its series in column order. Declared metadata is in sorted key order, so reordering
+pipeline, then its dataframes, charts, notebooks, notes and models, each by name, and each
+dataframe followed by its series in column order. Declared metadata is in sorted key order, so reordering
 a `chartbook.toml` does not reorder the index.
 
 **Hashes are cached.** `chartbook.hashing.HashCache` remembers each file's hash against its size

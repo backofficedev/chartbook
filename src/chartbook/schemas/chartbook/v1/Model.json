@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Model.json",
+  "title": "Model record",
+  "description": "A trained model that a pipeline declares in [models]: a file, or a directory of files. Other fields the manifest declares for it are carried as they are.",
+  "type": "object",
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "ref",
+    "pipeline"
+  ],
+  "properties": {
+    "kind": {
+      "const": "Model"
+    },
+    "version": {
+      "const": "chartbook/v1"
+    },
+    "id": {
+      "type": "string",
+      "description": "The asset's fully qualified address."
+    },
+    "ref": {
+      "type": "object",
+      "description": "The record's address as named fields: the same address as `id`, with nothing to parse.",
+      "required": [
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "pipeline": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "model"
+        },
+        "name": {
+          "type": "string"
+        },
+        "part": {
+          "type": "string"
+        }
+      }
+    },
+    "pipeline": {
+      "type": "string",
+      "description": "The ID of the pipeline that declares the asset."
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "location": {
+      "type": "object",
+      "description": "Where the asset's content is.",
+      "required": [
+        "kind",
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "file"
+        },
+        "path": {
+          "type": "string",
+          "description": "As declared in chartbook.toml, relative to the pipeline's root. A file or a directory."
+        },
+        "resolved_path": {
+          "type": "string",
+          "description": "Absolute path on the machine that built the index. Absent from a published index."
+        }
+      }
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+      "description": "Hash of the asset's content. Absent when its file has not been built."
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "files": {
+      "type": "array",
+      "description": "The files of a model that is a directory, sorted by path.",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "size_bytes",
+          "content_hash"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative to the model's directory, with forward slashes."
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+            "description": "Hash of this file."
+          }
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of the dataframes the model was trained on."
+    },
+    "metrics": {
+      "type": "object",
+      "description": "The model's scores, from its metrics file: a flat object.",
+      "additionalProperties": {
+        "type": [
+          "number",
+          "string",
+          "boolean"
+        ]
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "docs": {
+      "type": "object",
+      "description": "The write-up: the file it is in, or the text itself when it was written inline.",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rendered": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

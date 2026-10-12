@@ -1,7 +1,7 @@
 """Assets: everything a pipeline declares, addressed one way.
 
 An asset is something ``chartbook.toml`` declares: a dataframe, a chart, a
-notebook or a note. Each is addressed by a *reference*. Within the pipeline
+notebook, a note or a model. Each is addressed by a *reference*. Within the pipeline
 you are in, that is the asset's name, with its kind in front unless it is a
 dataframe::
 
@@ -11,6 +11,7 @@ dataframe::
     assets.path("chart/yield_curve")     # [charts.yield_curve]
     assets.path("notebook/analysis")     # [notebooks.analysis]
     assets.path("note/methodology")      # [notes.methodology]
+    assets.path("model/rate_forecaster") # [models.rate_forecaster]
 
 The kind may be given as an argument instead, which reads better when the
 name is in a variable. It says what you expect: a reference that names no
@@ -22,7 +23,7 @@ kind takes it, and one that names a different kind is an error::
 
 Data is the common case, so it gets the short spelling here and its own
 front door: :func:`chartbook.data.path` is this function for dataframes
-only.
+only, and :func:`chartbook.models.path` is this function for models only.
 
 A reference can also be built and passed as an object, :class:`AssetRef`,
 which is what :func:`parse` returns and what ChartBook carries internally::
@@ -101,7 +102,7 @@ def path(
         ``"kind/name"`` for anything else, or an :class:`AssetRef`.
     :type ref: Union[str, AssetRef]
     :param kind: The kind of asset expected: ``"dataframe"``, ``"chart"``,
-        ``"notebook"`` or ``"note"``. A reference that names no kind takes
+        ``"notebook"``, ``"note"`` or ``"model"``. A reference that names no kind takes
         this one. By default, a reference that names no kind is a dataframe.
     :type kind: Optional[str]
     :param project_dir: Where to look for the pipeline. The enclosing

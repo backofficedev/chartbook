@@ -77,6 +77,21 @@ df.to_parquet(data.path("repo_public"))            # a dataframe
 fig.write_html(assets.path("chart/repo_rates"))    # anything else says its kind
 ```
 
+### Declare a trained model
+
+```toml
+[models.rate_forecaster]
+path = "./_models/rate_forecaster.joblib"
+trained_on = ["repo_public"]
+metrics_path = "./_output/rate_forecaster_metrics.json"
+```
+
+```python
+from chartbook import models
+
+joblib.dump(model, models.path("rate_forecaster"))  # the model gets a page: scores, lineage
+```
+
 ### Browse your catalog
 
 ```bash

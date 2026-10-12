@@ -5,10 +5,12 @@ A design document. It says how a trained model becomes an asset a pipeline can d
 document, version and hand to other code. Read {doc}`references` first, since a model is
 addressed in that grammar. New to the project? Start with {doc}`overview`.
 
-Status: **direction accepted 2026-10-12, nothing built.** The one thing that exists is the
-address: `model/name` parses and is refused as "not yet supported". Each section below says
-whether it is *decided* or *proposed*. Proposed parts are the author's best design and still
-need the maintainer's review when they are built.
+Status: **direction accepted 2026-10-12; the first slice, declared models, is built.** A
+pipeline can declare a model, ask for its path, check it, and get a page and an index record for
+it. Versions, labels, parts and other pipelines' models are not built. {ref}`models-built` says
+exactly what is there. Each section below says whether it is *decided* or *proposed*. Proposed
+parts are the author's best design and still need the maintainer's review, including the ones
+that are now implemented.
 ```
 
 ## The problem
@@ -82,7 +84,8 @@ for "what was this made from". The manifest keeps the friendlier word.
 
 ### The metrics file
 
-*Proposed.* One flat JSON object, names to numbers:
+*Proposed, and implemented.* One flat JSON object, names to numbers. A value may also be a
+string or `true`/`false`:
 
 ```json
 { "rmse": 0.214, "mae": 0.171, "n_train": 5120, "n_test": 1280 }
@@ -91,7 +94,8 @@ for "what was this made from". The manifest keeps the friendlier word.
 Scores live in a file, not in `chartbook.toml`, because they are an *output*. They change every
 time the model is retrained, and the manifest is source that a person edits. ChartBook reads the
 file when it builds, copies the numbers into the index, and shows them on the model's page.
-Anything that is not a flat object of numbers and strings is reported by `chartbook check`.
+Anything that is not such a flat object is reported by `chartbook check`, and a build leaves the
+scores off the page and out of the index (with a warning) instead of failing.
 
 ## Addressing a model
 
@@ -134,19 +138,26 @@ Code in any other language gets the path from `chartbook path`, as for dataframe
 
 ## The model's page
 
-*Proposed.* One page per model in the generated site, beside the dataframe and chart pages:
+*Proposed, and implemented.* One page per model in the generated site, beside the dataframe and
+chart pages, at `cb/models/<pipeline>/<model>.html`:
 
-- name, description and tags;
-- the write-up from `docs_path`;
-- **Trained on**: links to each dataframe's page;
-- **Scores**: the metrics file as a table;
-- **Files**: for a directory, each file and its size;
 - the freshness line ("Model updated 2 days ago"), as dataframe pages have;
+- the write-up from `docs_path` or `docs`, if there is one;
+- **Scores**: the metrics file as a table;
+- **Trained On**: links to each dataframe's page;
+- **Files**: for a directory, each file and its size;
+- **Model Manifest**: name, address, description, tags, the declared path, and the command that
+  prints its path. The page shows the path as declared, never the absolute path on the machine
+  that built the site;
 - once versions exist: a table of versions with their scores, and which labels point where.
+
+A pipeline's front page lists its models. A catalog gets a "Models" page and a card on its front
+page, but only when some pipeline declares a model, so a catalog without models is unchanged.
 
 ## In the index
 
-*Proposed.* A `Model` record, shaped like the other asset records in {doc}`index-schema`:
+*Proposed, and implemented.* A `Model` record, shaped like the other asset records in
+{doc}`index-schema` (it has no `built_by` yet, since build records do not exist):
 
 ```json
 {
@@ -246,11 +257,10 @@ stores.
 
 ## A worked example
 
-This is the example to build, and the test of whether the first slice works. It adds one small
-model to the existing `examples/yield_curve` pipeline. It needs no new dependency: the model is
-a two-number regression fitted with NumPy and saved as JSON.
+Built, in `examples/yield_curve`. It adds one small model to the pipeline and needs no new
+dependency: the model is a two-number regression fitted with NumPy and saved as JSON.
 
-**`examples/yield_curve/chartbook.toml`** gains:
+**`chartbook.toml`:**
 
 ```toml
 [models.term_premium_ar1]
@@ -263,54 +273,27 @@ docs_path = "./docs_src/models/term_premium_ar1.md"
 tags = ["Yield Curve", "Forecast"]
 ```
 
-**`examples/yield_curve/src/train_term_premium_ar1.py`** (new):
+**`src/train_term_premium_ar1.py`**, in outline:
 
 ```python
-import json
+from chartbook import data, models
 
-import numpy as np
-import pandas as pd
-
-from chartbook import assets, data
-
-COLUMN = "spread_10y_2y"
-
-spread = pd.read_parquet(data.path("term_premium"))[COLUMN].dropna()
-split = int(len(spread) * 0.8)
-train, test = spread.iloc[:split], spread.iloc[split:]
-
-# y[t] = intercept + slope * y[t-1]
+spread = pd.read_parquet(data.path("term_premium"))["spread_10y_2y"].dropna()
+train, test = ...                                       # first 80%, last 20%
 slope, intercept = np.polyfit(train.values[:-1], train.values[1:], 1)
-predicted = intercept + slope * test.values[:-1]
-errors = test.values[1:] - predicted
 
-model_path = assets.path("model/term_premium_ar1")
-model_path.parent.mkdir(parents=True, exist_ok=True)
-model_path.write_text(json.dumps({
-    "column": COLUMN,
-    "intercept": float(intercept),
-    "slope": float(slope),
-    "trained_through": str(train.index[-1].date()),
-}, indent=2))
-
-metrics = {
-    "rmse": float(np.sqrt(np.mean(errors**2))),
-    "mae": float(np.mean(np.abs(errors))),
-    "n_train": len(train),
-    "n_test": len(test),
-}
-(model_path.parents[1] / "_output" / "term_premium_ar1_metrics.json").write_text(
-    json.dumps(metrics, indent=2)
-)
+model_path = models.path("term_premium_ar1")            # ask the manifest where it goes
+model_path.write_text(json.dumps({"intercept": ..., "slope": ...}))
+metrics_path.write_text(json.dumps({"rmse": ..., "mae": ..., "n_train": ..., "n_test": ...}))
 ```
 
-**`examples/yield_curve/dodo.py`** gains a task whose `file_dep` is `data.path("term_premium")`
-and whose `targets` are `assets.path("model/term_premium_ar1")` and the metrics file.
+**`dodo.py`** has a task whose `file_dep` is `data.path("term_premium")` and whose `targets` are
+`assets.path("model/term_premium_ar1")` and the metrics file.
 
-**`examples/yield_curve/docs_src/models/term_premium_ar1.md`** (new): three short paragraphs.
-What the model is, what it is for (an example, not a forecast to trade on), and its limits.
+**`docs_src/models/term_premium_ar1.md`** is four short paragraphs: what the model is, what it is
+for (an example, not a forecast to act on), how it was trained, and its limits.
 
-**It works when:**
+**What you get:**
 
 ```console
 $ cd examples/yield_curve && doit
@@ -318,12 +301,13 @@ $ chartbook path model/term_premium_ar1
 /…/examples/yield_curve/_models/term_premium_ar1.json
 $ chartbook check
 chartbook.toml: OK (1 pipeline(s), 3 dataframes, 5 charts, 4 notebooks, 1 models)
-$ chartbook build -f
 ```
 
-and the built site has a page for the model that shows its description, its write-up, a
-"Trained on" link to the Term Premium dataframe's page, and a table with `rmse`, `mae`,
-`n_train` and `n_test`.
+On live data the fitted slope is 0.9988: a daily yield spread is so persistent that the model
+learns "tomorrow equals today", which is what its write-up says it will. The built site has a
+page for the model with its write-up, a "Trained On" link to the Term Premium dataframe's page,
+and a table with `rmse`, `mae`, `n_train` and `n_test`. The catalog built over the example has a
+Models page listing it, and `index.json` has its `Model` record.
 
 A second example comes later, once dependencies exist: a separate `examples/rate_forecast`
 pipeline whose model is `trained_on = ["yield_curve:fed_yield_curve"]`. That one is the first
@@ -335,10 +319,60 @@ Each slice is useful by itself. The step numbers are the {doc}`overview`'s build
 
 | Slice | Needs | What gets built |
 |---|---|---|
-| **M1. Declared models** (step 2) | The index | The `[models]` table in the loader, with validation. `model` added to `RESOLVABLE_KINDS`, so `chartbook path model/x` works. `chartbook.models.path()`. `chartbook check` covers `path`, `metrics_path` and `docs_path` (the first two are build outputs, so `--skip-outputs` skips them). The model page. The `Model` record. Policy support: `[policy.required] models = […]`. The worked example above. **No versions** |
+| **M1. Declared models** (step 2) — **built** | The index | The `[models]` table in the loader, with validation. `model` added to `RESOLVABLE_KINDS`, so `chartbook path model/x` works. `chartbook.models.path()`. `chartbook check` covers `path`, `metrics_path` and `docs_path` (the first two are build outputs, so `--skip-outputs` skips them). The model page. The `Model` record. Policy support: `[policy.required] models = […]`. The worked example above. **No versions** |
 | **M2. Parts** (with M1 or soon after) | M1 | `model/x#file` resolves to a file inside a directory model. Refuse a part that escapes the directory (`..`) |
 | **M3. Cross-pipeline** (step 3) | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. `trained_on` may name another pipeline's dataframe, and must be a declared dependency. The `examples/rate_forecast` pipeline |
 | **M4. Versions and labels** (step 4) | Build records | Versions on new content hashes, `@v3`, `[models.x.aliases]`, `@champion`, the versions table on the page, staleness when inputs move |
+
+(models-built)=
+## What is built
+
+Slice M1, in these places:
+
+| What | Where |
+|---|---|
+| The `[models]` table, validated when the manifest loads | `chartbook/manifest.py`, `validate_models()` |
+| `model/name` resolves; `chartbook path model/x` | `chartbook/resolve.py` (`RESOLVABLE_KINDS`) |
+| `chartbook.models.path()`, `chartbook.models.read_metrics()` | `chartbook/models.py` |
+| The model's page, and the lists that link to it | `chartbook/markdown_generator.py` (`generate_model_docs`), `model_manifest.md` and `models.md` in the two theme directories |
+| The `Model` record and its JSON Schema | `chartbook/index.py`, `chartbook/schemas/chartbook/v1/Model.json` |
+| `check`: missing model, metrics or write-up; a malformed metrics file; required fields | `chartbook/check.py`, `chartbook/conf_validation.py`, `chartbook/diagnostics.py` |
+| Incremental builds: a model's files are inputs, its page belongs to its pipeline | `chartbook/incremental.py` |
+| The example | `examples/yield_curve` |
+| The tests | `tests/test_models.py` |
+
+Not built: versions and labels (`@v3`, `@champion`, `[models.x.aliases]`), parts
+(`model/x#file`), and a model or a `trained_on` dataframe in another pipeline. Each is refused
+with "reserved syntax and not yet supported".
+
+### Decided while building it
+
+These were open or unstated. All are *proposed*: implemented, and waiting on the maintainer's
+yes.
+
+1. **The default policy asks a model for `name`, `description`, `trained_on` and `path`.**
+   Lineage is the point of declaring a model, so `chartbook check` reports a model that does not
+   say what it was trained on. A catalog can set its own list with
+   `[policy.required] models = […]`.
+2. **A model's write-up is optional.** Dataframes and charts must have one or the manifest does
+   not load. A model without one gets a page with everything else.
+3. **`trained_on` may only name dataframes of the same pipeline, for now.** Another pipeline's
+   dataframe, a series (`#`) or a version (`@`) is refused as not yet supported, as everywhere
+   else, until dependencies exist.
+4. **A metrics value may be a number, a string or true/false.** Nothing nested.
+5. **A declared model or metrics file that is missing stops a build**, as a missing data file
+   does. `chartbook check --skip-outputs` does not report them, since training produces them.
+6. **A model's key must be a legal name** (`[A-Za-z0-9._-]+`), or the manifest does not load. The
+   older tables are not held to that; a new one can be from its first day.
+7. **A catalog has a Models page only when a pipeline declares a model.**
+8. **The page shows the declared path, not the absolute one.** (The dataframe page shows the
+   absolute path; that is older behaviour and was left alone.)
+
+One thing is open and should be settled before models are used in earnest: **hashing a
+directory counts every file, hidden ones included.** A `.DS_Store` appearing in a model's
+directory changes the model's hash. That is the rule decided for the index, and the honest one
+("the directory is the asset"), but for a model with versions it would make a new version out of
+nothing.
 
 ## Not doing
 

@@ -46,6 +46,13 @@ CHART_FIELDS: list[str] = [
 
 NOTEBOOK_FIELDS: list[str] = []
 
+MODEL_FIELDS: list[str] = [
+    "name",
+    "description",
+    "trained_on",
+    "path",
+]
+
 # Mutually exclusive doc fields (exactly one required) for charts and dataframes
 DOCS_FIELDS: tuple[str, str] = ("docs_path", "docs")
 
@@ -56,6 +63,7 @@ DEFAULT_REQUIRED_FIELDS: dict[str, list[str]] = {
     "dataframes": DATAFRAME_FIELDS,
     "charts": CHART_FIELDS,
     "notebooks": NOTEBOOK_FIELDS,
+    "models": MODEL_FIELDS,
 }
 
 # Optional chart fields (not required for diagnostics)
@@ -142,6 +150,7 @@ def _build_page_link(object_type: str, identifier: str, pipeline_id: str) -> str
     Returns paths relative to the cb/ directory (where diagnostics.md lives):
     - ./charts/{pipeline_id}.{chart_id}.html
     - ./dataframes/{pipeline_id}/{dataframe_id}.html
+    - ./models/{pipeline_id}/{model_id}.html
     - ../index.html (for pipelines, from cb/ up to root)
     """
     pipeline_slug = pipeline_id.replace("/", "--")
@@ -149,6 +158,8 @@ def _build_page_link(object_type: str, identifier: str, pipeline_id: str) -> str
         return f"./charts/{pipeline_slug}.{identifier}.html"
     elif object_type == "dataframe":
         return f"./dataframes/{pipeline_slug}/{identifier}.html"
+    elif object_type == "model":
+        return f"./models/{pipeline_slug}/{identifier}.html"
     elif object_type == "pipeline":
         return "../index.html"
     else:
@@ -168,7 +179,7 @@ def get_active_policy(manifest: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
-    """Generate diagnostics rows for all pipelines, dataframes, and charts.
+    """Generate diagnostics rows for all pipelines, dataframes, charts and models.
 
     Required fields come from the manifest's [policy] section when present
     (catalogs), otherwise from the default lists in this module.
@@ -232,6 +243,22 @@ def build_diagnostics(manifest: dict[str, Any]) -> list[DiagnosticRow]:
                     pipeline_id=pipeline_id,
                     missing_fields=", ".join(chart_missing),
                     page_link=_build_page_link("chart", chart_id, pipeline_id),
+                )
+            )
+
+        for model_id, model_meta in (pipeline_manifest.get("models") or {}).items():
+            model_missing = _collect_missing_fields(
+                model_meta, required.get("models", [])
+            )
+            diagnostics.append(
+                DiagnosticRow(
+                    object_type="model",
+                    object_name=model_meta.get("name", model_id),
+                    metadata_complete=len(model_missing) == 0,
+                    identifier=model_id,
+                    pipeline_id=pipeline_id,
+                    missing_fields=", ".join(model_missing),
+                    page_link=_build_page_link("model", model_id, pipeline_id),
                 )
             )
 

@@ -85,7 +85,7 @@ class TestParseLocalRef:
     def test_bare_names_are_dataframes(self, ref):
         assert parse_local_ref(ref) == AssetRef(name=ref.strip())
 
-    @pytest.mark.parametrize("kind", ["dataframe", "chart", "notebook", "note"])
+    @pytest.mark.parametrize("kind", ["dataframe", "chart", "notebook", "note", "model"])
     def test_every_declarable_kind(self, kind):
         assert parse_local_ref(f"{kind}/x") == AssetRef(kind=kind, name="x")
         assert parse_local_ref("x", kind=kind) == AssetRef(kind=kind, name="x")
@@ -122,12 +122,19 @@ class TestParseLocalRef:
         assert "'charthub.example'" in str(e.value)
         assert "'ftsfr/fed_yield_curve:treasury_rates'" in str(e.value)
 
-    def test_models_are_reserved(self):
+    def test_models_are_local_references_like_any_other(self):
+        expected = AssetRef(kind="model", name="rate_forecaster")
+        assert parse_local_ref("model/rate_forecaster") == expected
+        assert parse_local_ref("rate_forecaster", kind="model") == expected
+
+    def test_a_part_of_a_model_is_reserved(self):
         with pytest.raises(UnsupportedReferenceError, match="not yet supported") as e:
-            parse_local_ref("model/rate_forecaster")
-        assert "names a model" in str(e.value)
-        with pytest.raises(UnsupportedReferenceError):
-            parse_local_ref("rate_forecaster", kind="model")
+            parse_local_ref("model/rate_forecaster#weights/best.pt")
+        assert "'model/rate_forecaster' to get the model that holds it" in str(e.value)
+
+    def test_a_version_of_a_model_is_reserved(self):
+        with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
+            parse_local_ref("model/rate_forecaster@champion")
 
     def test_a_pipeline_is_not_an_asset(self):
         with pytest.raises(ValueError, match="does not name an asset") as e:
@@ -602,9 +609,17 @@ class TestPathCommand:
         assert result.stdout == ""
         assert "refer to it as 'chart/chart_0_0'" in result.stderr
 
-    def test_models_are_not_yet_supported(self, project, monkeypatch):
+    def test_an_undeclared_model_names_the_table_to_add(self, project, monkeypatch):
         monkeypatch.chdir(project)
         result = self._invoke("model/rate_forecaster")
+        assert result.exit_code == 1
+        assert result.stdout == ""
+        assert "No model named 'rate_forecaster' is declared" in result.stderr
+        assert "[models.rate_forecaster]" in result.stderr
+
+    def test_a_version_of_a_model_is_not_yet_supported(self, project, monkeypatch):
+        monkeypatch.chdir(project)
+        result = self._invoke("model/rate_forecaster@champion")
         assert result.exit_code == 1
         assert "not yet supported" in result.stderr
 
