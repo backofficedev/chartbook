@@ -7,6 +7,8 @@ category: "{{tags | join(', ') | yaml_escape}}"
 # Chart: {{name}}
 {{description}}
 
+{% include "freshness.md" %}
+
 ## Chart
 ```{raw} html
 <iframe src="../../_static/{{pipeline_id | replace('/', '--')}}/{{chart_id}}.html" height="500px" width="100%"></iframe>
