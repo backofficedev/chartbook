@@ -254,7 +254,12 @@ def load_policy_dict():
     """The lenient policy in resolved form, as load_policy would return it."""
     return {
         "mode": "warn",
-        "required": {**LENIENT_POLICY["policy"]["required"], "notebooks": []},
+        "required": {
+            **LENIENT_POLICY["policy"]["required"],
+            "notebooks": [],
+            # Not in the file, so the default list for models
+            "models": ["name", "description", "trained_on", "docs", "path"],
+        },
     }
 
 

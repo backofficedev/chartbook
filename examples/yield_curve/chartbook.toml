@@ -112,6 +112,20 @@ description = "10-year zero-coupon yield minus the 3-year yield."
 units = "Percentage points"
 frequency = "Daily"
 
+[models.term_premium_ar1]
+name = "Term Premium AR(1)"
+description = "Predicts tomorrow's 10-year minus 2-year spread from today's."
+path = "./_models/term_premium_ar1.json"
+trained_on = [
+    "term_premium",
+]
+metrics_path = "./_output/term_premium_ar1_metrics.json"
+docs_path = "./docs_src/models/term_premium_ar1.md"
+tags = [
+    "Yield Curve",
+    "Forecast",
+]
+
 [charts.repo_rates]
 name = "Repo Rates"
 description = "SOFR, the Effective Funds Rate, and the Fed's Target Range"

@@ -7,8 +7,8 @@ design here writes addresses in this grammar, so read it before {doc}`asset-grap
 {doc}`overview`.
 
 Status: **accepted 2026-10-12.** The parser accepts the whole grammar (`chartbook.refs`, in
-0.2.0). Only *local* references resolve to a path today. Everything else parses and is refused
-as "reserved and not yet supported". See {ref}`refs-status`.
+0.2.0). Only *local* references resolve to a path today, for all five kinds. Everything else
+parses and is refused as "reserved and not yet supported". See {ref}`refs-status`.
 ```
 
 ## The idea in one picture
@@ -118,7 +118,7 @@ rules, minus the URL form.
 | `chart` | `[charts.x]` | `Chart` | Nothing yet | `chartbook.assets` |
 | `notebook` | `[notebooks.x]` | `Notebook` | Nothing yet | `chartbook.assets` |
 | `note` | `[notes.x]` | `Note` | Nothing yet | `chartbook.assets` |
-| `model` | `[models.x]` (not yet) | `Model` | A file inside the model | `chartbook.models` (not yet) |
+| `model` | `[models.x]` | `Model` | A file inside the model (not yet) | `chartbook.models` |
 
 **Why dataframe is the default.** Data is what gets passed between pipelines, loaded in
 notebooks and written in dependency lists. Charts, notebooks and notes are mostly looked at, not
@@ -134,7 +134,8 @@ way data is, and one namespace would have forced renames on existing projects.
 `chartbook/refs.py`; teach the manifest loader its table; add it to `RESOLVABLE_KINDS` in
 `chartbook/resolve.py`; add its record to the {doc}`index schema <index-schema>`; give it a
 page in the site; decide what `#part` means for it; and, if code will ask for it often, give it a
-front door module. `model` is the first kind to go through this; see {doc}`models`.
+front door module. `model` was the first kind to go through this; {doc}`models` lists every
+place it touched, under "What is built".
 
 ## One address, three spellings
 
@@ -274,11 +275,11 @@ first asset that needs them.
 | Local dataframe | `treasury_rates` | **Resolves** |
 | Local chart, notebook, note | `chart/curve_today` | **Resolves** |
 | A dataframe through a catalog | `data.load(pipeline="fed_yield_curve", dataframe="treasury_rates")` | **Resolves**, by the older two-argument call |
-| Another pipeline's asset | `fed_yield_curve:treasury_rates` | Parses. `UnsupportedReferenceError` |
+| Another pipeline's asset | `fed_yield_curve:treasury_rates` | Parses. Asking for its path raises `UnsupportedReferenceError`. It may be *stated* as a model's training data ({doc}`models`) |
 | A part | `treasury_rates#dgs10` | Parses. `UnsupportedReferenceError` |
 | A version | `treasury_rates@a1b2c3d` | Parses. `UnsupportedRevisionError` |
 | A registry | `charthub.example/acme/rates:gdp` | Parses. `UnsupportedRegistryError` |
-| A model | `model/rate_forecaster` | Parses. `UnsupportedReferenceError` |
+| Local model | `model/rate_forecaster` | **Resolves** |
 
 All three `Unsupported…` errors are `ValueError`s whose message contains "reserved syntax and not
 yet supported". A reference that breaks the grammar raises a plain `ValueError` instead. The
@@ -291,9 +292,10 @@ What unlocks each row is in the {doc}`overview`'s build order.
 | Module | What it does |
 |---|---|
 | `chartbook/refs.py` | The grammar. `AssetRef`, `parse_asset_ref()`, `KINDS`, `KIND_TABLES`, `KindMismatchError`. Parses and formats; knows nothing about what resolves |
-| `chartbook/resolve.py` | The one resolver. `resolve(ref, kind=…)` returns a typed `Location`. `parse_local_ref()` is where reserved forms are refused |
+| `chartbook/resolve.py` | The one resolver. `resolve(ref, kind=…)` returns a typed `Location`. Reserved forms are refused in two functions: `parse_declared_ref()` says what a manifest may *state* (this pipeline's assets and other pipelines'), and `parse_local_ref()` says what *resolves* (this pipeline's only) |
 | `chartbook/assets.py` | The general front door: `assets.path()`, `assets.parse()`, `assets.AssetRef` |
 | `chartbook/data.py` | The dataframe front door: `data.path()`, `data.load()`, `data.scratch()` |
+| `chartbook/models.py` | The model front door: `models.path()` |
 | `chartbook/identity.py` | Pipeline IDs: `scope/name`, the registry rule, deriving an ID from a git remote |
 | `chartbook/index.py` | Writes each asset's fully qualified `id` and `ref` into `index.json`, from one `AssetRef` (`ref.in_pipeline(pipeline_id)`) |
 | `chartbook/cli.py` | `chartbook path REF [--kind KIND]` |
@@ -308,8 +310,9 @@ Rules for whoever extends this:
   make dependencies unportable.
 - **Refuse, do not guess.** A form that cannot be resolved yet raises an `Unsupported…` error.
   It never falls back to something that happens to work.
-- **To unlock a form**, remove its refusal in `parse_local_ref()` and add the resolution next to
-  `_resolve_local()`. The grammar does not change.
+- **To unlock a form**, remove its refusal in `parse_local_ref()` (or `parse_declared_ref()`, for
+  parts, versions and registries) and add the resolution next to `_resolve_local()`. The
+  grammar does not change.
 
 ## Why this shape
 

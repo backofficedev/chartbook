@@ -203,6 +203,8 @@ def validate_source_files(manifest: dict, base_dir) -> list:
     - Chart documentation files (docs_path, when mode="path")
     - Notebook files (path)
     - Note markdown files (path)
+    - Model files or directories (path), metrics files (metrics_path) and
+      write-ups (docs_path)
     - Each pipeline's README (project.readme)
     - User-specified logo and favicon files
 
@@ -339,6 +341,26 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                             pipeline_id=pipeline_id,
                         )
                     )
+
+        # Check model files: the model, its metrics and its write-up
+        for model_id, model_config in (pipeline_manifest.get("models") or {}).items():
+            for key, file_type in (
+                ("path", "model"),
+                ("metrics_path", "model_metrics"),
+                ("docs_path", "model_docs"),
+            ):
+                declared = model_config.get(key)
+                if declared and declared.strip():
+                    full_path = (pipeline_base_dir / declared).resolve()
+                    if not full_path.exists():
+                        missing_files.append(
+                            MissingFile(
+                                file_path=full_path,
+                                file_type=file_type,
+                                item_id=model_id,
+                                pipeline_id=pipeline_id,
+                            )
+                        )
 
         # Check the README (project.readme; ./README.md unless set)
         readme = pipeline_manifest.get("project", {}).get("readme") or "README.md"

@@ -8,10 +8,9 @@ search box, an exporter or a diff of two builds can read that one file and
 need nothing else.
 
 The format is specified in ``docs_src/design/index-schema.md``. This module
-writes what that document calls the first implementation: ``Catalog``,
-``Pipeline``, ``Dataframe``, ``Series``, ``Chart``, ``Notebook`` and
-``Note`` records. ``Build`` records, dependencies and models come with the
-parts of the asset graph that produce them.
+writes ``Catalog``, ``Pipeline``, ``Dataframe``, ``Series``, ``Chart``,
+``Notebook``, ``Note`` and ``Model`` records. ``Build`` records and
+dependencies come with the parts of the asset graph that produce them.
 
 Two forms of the same index are written:
 
@@ -43,7 +42,7 @@ from typing import Any, Iterable, Optional, Union
 
 from chartbook import hashing
 from chartbook.__about__ import __version__
-from chartbook.identity import ID_COMPONENT_PATTERN
+from chartbook.identity import ID_COMPONENT_PATTERN, resolve_pipeline_ref
 from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest
 from chartbook.refs import KIND_TABLES, AssetRef, parse_asset_ref
 
@@ -61,7 +60,7 @@ SCHEMAS_DIR = Path(__file__).parent / "schemas" / "chartbook"
 
 #: The kinds of asset this module writes records for, in the order a
 #: pipeline's assets are listed.
-ASSET_KINDS = ("dataframe", "chart", "notebook", "note")
+ASSET_KINDS = ("dataframe", "chart", "notebook", "note", "model")
 
 # Manifest keys that the index states in another form, or not at all
 _STRUCTURAL_KEYS = frozenset(
@@ -149,9 +148,16 @@ def _docs(entry: dict) -> Optional[dict]:
 
 
 def _file_facts(
-    base_dir: Path, declared_path: Any, cache: Optional[hashing.HashCache]
+    base_dir: Path,
+    declared_path: Any,
+    cache: Optional[hashing.HashCache],
+    list_files: bool = False,
 ) -> dict:
-    """Where a declared file is, and its hash and size if it is there."""
+    """Where a declared file is, and its hash and size if it is there.
+
+    :param list_files: If True and the path is a directory, also list the
+        files in it, each with its own size and hash.
+    """
     if not isinstance(declared_path, str) or not declared_path.strip():
         return {}
     resolved = os.path.normpath(base_dir / declared_path)
@@ -170,6 +176,15 @@ def _file_facts(
     if content is not None:
         facts["content_hash"] = content.content_hash
         facts["size_bytes"] = content.size_bytes
+        if list_files and os.path.isdir(resolved):
+            facts["files"] = [
+                {
+                    "path": file.path,
+                    "size_bytes": file.size_bytes,
+                    "content_hash": file.content_hash,
+                }
+                for file in content.files
+            ]
     return facts
 
 
@@ -279,6 +294,23 @@ def _series_records(
     return records
 
 
+def _input_id(reference: AssetRef, pipeline_id: str, known_pipelines: Iterable[str]) -> str:
+    """The ID of an asset that another one was made from.
+
+    A local reference belongs to the pipeline that states it. One that
+    names another pipeline is written as that pipeline is known in this
+    build, if it is in it (a catalog knows ``rates`` as ``ftsfr/rates``),
+    and as stated otherwise.
+    """
+    if reference.is_local:
+        return str(reference.in_pipeline(pipeline_id))
+    try:
+        known_as = resolve_pipeline_ref(known_pipelines, reference.pipeline_id)
+    except (KeyError, ValueError):
+        return str(reference)
+    return str(reference.in_pipeline(known_as))
+
+
 def _asset_records(
     kind: str,
     name: str,
@@ -286,13 +318,17 @@ def _asset_records(
     pipeline_id: str,
     base_dir: Path,
     cache: Optional[hashing.HashCache],
+    known_pipelines: Iterable[str] = (),
 ) -> list[dict]:
     """The record for one asset, followed by its series if it is a dataframe."""
     ref = AssetRef(kind=kind, name=name).in_pipeline(pipeline_id)
     record = _head(kind, ref, pipeline_id, entry)
-    facts = _file_facts(base_dir, entry.get("path"), cache)
+    facts = _file_facts(
+        base_dir, entry.get("path"), cache, list_files=(kind == "model")
+    )
     record.update(facts)
     series: list[dict] = []
+    skip: tuple = ()
 
     if kind == "dataframe":
         described = None
@@ -321,25 +357,61 @@ def _asset_records(
     elif kind == "note" and entry.get("path") and "docs" not in entry:
         # A note is its own write-up
         entry = {**entry, "docs_path": entry["path"]}
+    elif kind == "model":
+        # trained_on is this record's inputs, and the metrics file its metrics
+        skip = ("trained_on", "metrics_path")
+        if "trained_on" in entry:
+            record["inputs"] = [
+                _input_id(reference, pipeline_id, known_pipelines)
+                for reference in entry.get("_trained_on", [])
+            ]
+        metrics = _model_metrics(base_dir, name, entry)
+        if metrics is not None:
+            record["metrics"] = metrics
 
-    return [_finish(record, entry), *series]
+    return [_finish(record, entry, skip=skip), *series]
+
+
+def _model_metrics(base_dir: Path, name: str, entry: dict) -> Optional[dict]:
+    """A model's scores, read from its metrics file if that is there and well formed."""
+    from chartbook.models import read_metrics
+
+    declared = entry.get("metrics_path")
+    if not declared:
+        return None
+    metrics_file = base_dir / declared
+    if not metrics_file.is_file():
+        return None
+    try:
+        return read_metrics(metrics_file)
+    except (OSError, ValueError) as error:
+        warnings.warn(
+            f"{base_dir / 'chartbook.toml'}: [models.{name}]: its metrics are "
+            f"left out of the index: {error}",
+            stacklevel=3,
+        )
+        return None
 
 
 def pipeline_records(
     pipeline_id: str,
     pipeline_manifest: dict,
     cache: Optional[hashing.HashCache] = None,
+    known_pipelines: Iterable[str] = (),
 ) -> list[dict]:
     """The records for one pipeline: itself, then its assets.
 
-    Assets come in the order dataframes, charts, notebooks, notes, each by
-    name, and each dataframe is followed by its series.
+    Assets come in the order dataframes, charts, notebooks, notes, models,
+    each by name, and each dataframe is followed by its series.
 
     :param pipeline_id: The pipeline's ID in this build (a catalog's key).
     :param pipeline_manifest: Its loaded manifest.
     :param cache: A hash cache, so unchanged files are not read again.
+    :param known_pipelines: The IDs of every pipeline in this build, so an
+        input in another one of them is written by the ID it has here.
     """
     base_dir = Path(pipeline_manifest["pipeline_base_dir"])
+    known_pipelines = list(known_pipelines)
     project = pipeline_manifest["project"]
 
     assets: list[dict] = []
@@ -349,7 +421,13 @@ def pipeline_records(
         for name in sorted(entries):
             try:
                 assets += _asset_records(
-                    kind, name, entries[name], pipeline_id, base_dir, cache
+                    kind,
+                    name,
+                    entries[name],
+                    pipeline_id,
+                    base_dir,
+                    cache,
+                    known_pipelines,
                 )
             except ValueError as error:
                 # A key that cannot be written as an address has no ID
@@ -426,7 +504,10 @@ def build_index(
 
     for pipeline_id in pipeline_ids:
         records += pipeline_records(
-            pipeline_id, get_pipeline_manifest(manifest, pipeline_id), cache
+            pipeline_id,
+            get_pipeline_manifest(manifest, pipeline_id),
+            cache,
+            known_pipelines=pipeline_ids,
         )
 
     moment = generated_at or datetime.now(timezone.utc)

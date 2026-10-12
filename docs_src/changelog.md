@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — models: `[models]` and `chartbook.models`
+
+A pipeline can now declare a trained model, the way it declares a dataframe or a chart:
+
+```toml
+[models.rate_forecaster]
+name = "Rate Forecaster"
+path = "./_models/rate_forecaster.joblib"
+trained_on = ["treasury_rates"]
+metrics_path = "./_output/rate_forecaster_metrics.json"
+docs_path = "./docs_src/models/rate_forecaster.md"
+```
+
+A model is a file, or a directory of files, that the pipeline's own code produces. Six months after training one, the questions that matter are where it is, what data it was trained on, and how good it is. Declaring it puts the answers in one place. ChartBook records them and never looks inside the file: it does not load, run or serve a model, and it imports no machine-learning library. It is a registry of the models a pipeline chooses to keep, not a tracker of training runs.
+
+What a declared model gets:
+
+- **An address**, `model/rate_forecaster`, in the same grammar as every other asset. `chartbook path model/rate_forecaster` prints its path; `chartbook.models.path("rate_forecaster")` returns it in Python, for training code that writes the model and for anything that reads it. `chartbook.models` answers for models only, as `chartbook.data` does for dataframes.
+- **A page** with its write-up, a table of its scores, links to the dataframes it was trained on, and its files if it is a directory. A pipeline's front page lists its models; a catalog gets a Models page when some pipeline declares one.
+- **A record in `index.json`**, with a content hash (for a directory, one hash over all its files, and each file listed), its scores, and the dataframes it was trained on as `inputs`.
+- **`chartbook check`** reports a missing model, metrics file or write-up; a metrics file that is not a flat JSON object; and, by default, a model with no `name`, `description`, `trained_on` or write-up. `--skip-outputs` leaves out the model and its metrics. A catalog sets its own list with `[policy.required] models = […]`, in which `docs` means a write-up given either way.
+
+**Training data may be in another pipeline.** `trained_on = ["ftsfr/fed_yield_curve:treasury_rates"]` is accepted now. It is stated lineage: recorded in the index, listed on the model's page, linked to the dataframe's page when both pipelines are in one catalog, and checked there against what the other pipeline declares. It is not yet a dependency. Nothing fetches the data or records which version of it was used; that is what dependencies between pipelines will add.
+
+Scores go in a small JSON file that the training code writes (`{"rmse": 0.21, "n_train": 5120}`), not in `chartbook.toml`, because they change with every retraining.
+
+The `yield_curve` example now trains a small model end to end. Not built yet, and refused as "not yet supported": versions and labels (`model/x@v3`, `@champion`), one file inside a directory model (`model/x#weights.pt`), and asking for the path of a model in another pipeline. The design is {doc}`design/models`.
+
 ### Added — the index: `index.json`
 
 Every build now writes one more file beside the HTML, `docs/index.json`: a description of everything the site contains, as a flat list of self-describing records. There is one record for each pipeline, dataframe, chart, notebook and note, and one for each column of each dataframe. Until now the only machine-readable description of a ChartBook project was its `chartbook.toml` files, which say what should exist; the index says what a build found. It is the first piece of the {doc}`asset graph <design/asset-graph>`, and the file that later pieces read and write.
@@ -34,6 +62,7 @@ The recommendation that goes with this: give columns code-friendly, SQL-compatib
 
 ### Fixed
 
+- A `[policy]` table in a *pipeline's* `chartbook.toml` crashed `chartbook build` and `chartbook check` with `KeyError`. It is now read the way a catalog's is, and says what that pipeline holds itself to when it is built or checked alone; inside a catalog, the catalog's policy still decides. A `strict` policy's message no longer says "Catalog policy" when the policy is a pipeline's.
 - Two example dataframes declared `date_col = "date"` when their date columns are `DATE` and `Date`. The page generator swallowed the mismatch, and their pages showed `None` for "Data available up to". The manifests now name the columns, and building the index warns when a `date_col` names no column. That warning then found a second problem: the FRED example's live download left its date index unnamed, so the column existed only in the test suite's stand-in data. The pull script now names it.
 
 ## [0.2.0] - 2026-10-12

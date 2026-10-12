@@ -171,8 +171,8 @@ def _write_sphinx_project(
         manifest=manifest, docs_build_dir=sources_dir
     )
 
-    # A catalog with policy.mode = "strict" fails the build on any
-    # missing required field
+    # policy.mode = "strict" fails the build on any missing required
+    # field. The policy is the catalog's, or a lone pipeline's own.
     policy = manifest.get("policy")
     if policy and policy["mode"] == "strict":
         incomplete = [r for r in diagnostic_rows if not r.metadata_complete]
@@ -180,7 +180,7 @@ def _write_sphinx_project(
             import click
 
             lines = [
-                "Catalog policy is 'strict' and required metadata is missing:"
+                "The policy is 'strict' and required metadata is missing:"
             ]
             for row in incomplete:
                 lines.append(
@@ -189,7 +189,7 @@ def _write_sphinx_project(
                 )
             lines.append(
                 "Fill in the fields above, relax [policy.required], or set "
-                "policy.mode = 'warn' in the catalog's chartbook.toml."
+                "policy.mode = 'warn' in the chartbook.toml that sets the policy."
             )
             click.echo(click.style("\n".join(lines), fg="red"), err=True)
             raise SystemExit(1)

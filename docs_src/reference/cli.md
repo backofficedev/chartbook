@@ -47,7 +47,7 @@ chartbook build [OPTIONS] [OUTPUT_DIR]
 
 Generate the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the current working directory itself). Works for both pipelines and catalogs — the project type comes from the manifest. Internals: {doc}`../guide/how-the-build-works`.
 
-Beside the HTML it writes `index.json`: one record for every pipeline, dataframe, column, chart, notebook and note the site contains, each with an ID and a content hash. See {doc}`"The index" <../guide/how-the-build-works>`.
+Beside the HTML it writes `index.json`: one record for every pipeline, dataframe, column, chart, notebook, note and model the site contains, each with an ID and a content hash. See {doc}`"The index" <../guide/how-the-build-works>`.
 
 | Option | Default | Effect |
 |--------|---------|--------|
@@ -151,7 +151,7 @@ chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/
 chartbook path REF [--kind KIND] [--project-dir PATH]
 ```
 
-Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook or note — and nothing else, so the output can be captured. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
+Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook, note or model — and nothing else, so the output can be captured. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
 
 `REF` names the asset. A dataframe is its key in `[dataframes]`; anything else has its kind in front:
 
@@ -161,6 +161,7 @@ Print the path that the enclosing `chartbook.toml` declares for an asset — a d
 | `chart/repo_rates` | `[charts.repo_rates]` |
 | `notebook/analysis` | `[notebooks.analysis]` |
 | `note/methodology` | `[notes.methodology]` |
+| `model/rate_forecaster` | `[models.rate_forecaster]` |
 
 ```console
 $ chartbook path repo_public

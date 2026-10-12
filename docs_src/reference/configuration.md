@@ -157,21 +157,26 @@ Each matched directory containing a pipeline `chartbook.toml` joins under its de
 This is designed for the **local** catalog — publishing to a shared catalog should stay an explicit act.
 
 (policy)=
-## `[policy]` — Catalog Requiredness
+## `[policy]` — Which Fields Are Required
 
-The format itself is permissive; **which fields are required is your catalog's policy**:
+The format itself is permissive; **which fields are required is a policy**, and usually your catalog's:
 
 ```toml
 [policy]
-mode = "warn"          # default; "strict" fails the catalog build instead
+mode = "warn"          # default; "strict" fails the build instead
 
 [policy.required]
 project    = ["description", "maintainer", "repo_url"]
 dataframes = ["date_col", "pull_method"]
 charts     = ["units", "frequency"]
+models     = ["name", "trained_on", "docs"]
 ```
 
-Without a `[policy]` section, chartbook's default recommended-field lists drive the diagnostics page, warn-only. A build enforces policy only for a catalog; a pipeline built standalone is always permissive. To enforce it in CI — for a catalog or a single pipeline — run {doc}`chartbook check <cli>`, which exits nonzero on any missing required field regardless of `mode`.
+Without a `[policy]` section, chartbook's default recommended-field lists apply, warn-only. A kind you leave out of `[policy.required]` keeps its default list. In a list, `docs` means "a write-up", and is satisfied by either `docs` or `docs_path`.
+
+A pipeline may have a `[policy]` section of its own. It says what that pipeline holds itself to when it is checked or built by itself. Inside a catalog, the catalog's policy applies and the pipeline's is ignored: whoever gathers the pipelines together decides what they must say.
+
+To enforce a policy in CI — for a catalog or a single pipeline — run {doc}`chartbook check <cli>`, which exits nonzero on any missing required field regardless of `mode`.
 
 ## `[charts]` — Chart Definitions
 
@@ -287,6 +292,67 @@ publishable = true
 [notes.methodology]
 path = "./docs_src/methodology.md"
 ```
+
+## `[models]` — Trained Models
+
+A model is a file, or a directory of files, that the pipeline's own code produces. ChartBook records where it is, what it was trained on and how it scores, and gives it a page. It never loads, runs or serves a model.
+
+```toml
+[models.rate_forecaster]
+name = "Rate Forecaster"
+description = "Forecasts the 10-year Treasury yield one month ahead."
+path = "./_models/rate_forecaster.joblib"
+trained_on = ["treasury_rates"]
+metrics_path = "./_output/rate_forecaster_metrics.json"
+docs_path = "./docs_src/models/rate_forecaster.md"
+tags = ["Forecast", "Treasury"]
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `path` | yes | The model file, or the directory that holds its files |
+| `trained_on` | no | The dataframes it was trained on. One of this pipeline's is its key in `[dataframes]`; another pipeline's is `pipeline:name` or `scope/pipeline:name` |
+| `metrics_path` | no | A JSON file of scores, written by your training code (below) |
+| `docs_path` or `docs` | no | The model's write-up: what it is for, how it was built, where not to use it. Strongly recommended: `chartbook check` reports a model without one unless your policy says otherwise |
+| `name`, `description`, `tags` | no | As for dataframes and charts. You may add fields of your own |
+
+The key (`rate_forecaster`) is the model's address, `model/rate_forecaster`, so it may only contain letters, digits, `.`, `_` and `-`.
+
+**The metrics file** is one flat JSON object. Values are numbers, strings or `true`/`false`:
+
+```json
+{ "rmse": 0.214, "mae": 0.171, "n_train": 5120, "n_test": 1280 }
+```
+
+Scores live in a file, not in `chartbook.toml`, because they are an output: they change every time the model is retrained. A table or a curve does not belong here; declare it as a dataframe or a chart.
+
+**Getting the path.** Training code asks where to write, and anything that uses the model asks where to read:
+
+```python
+import joblib
+from chartbook import models
+
+joblib.dump(model, models.path("rate_forecaster"))       # in the training script
+model = joblib.load(models.path("rate_forecaster"))      # anywhere else in the pipeline
+```
+
+```console
+$ chartbook path model/rate_forecaster
+```
+
+There is no `models.load()`: loading is one line of your own code, and keeping it there keeps every machine-learning library out of ChartBook.
+
+**Training data in another pipeline.** A model is often trained on data another pipeline produces. Say so:
+
+```toml
+trained_on = ["ftsfr/fed_yield_curve:treasury_rates", "local_features"]
+```
+
+Today this is a statement of lineage. It is recorded in `index.json`, listed on the model's page, and linked to the dataframe's page when both pipelines are in the same catalog, where `chartbook check` also verifies that the other pipeline declares that dataframe. ChartBook does not yet fetch that data or record which version of it the model was trained on; that arrives with dependencies between pipelines.
+
+**What you get.** A page for the model with its write-up, a table of its scores, links to the dataframes it was trained on, and its files if it is a directory. A `Model` record in `index.json` with its content hash. And `chartbook check` reports a missing model file, metrics file or write-up, a metrics file that is not a flat object, and (by default) a model with no `name`, `description`, `trained_on` or write-up. `--skip-outputs` leaves out the model and its metrics, which training produces.
+
+Not yet: versions of a model (`model/rate_forecaster@v3`), labels such as `@champion`, one file inside a directory model (`model/x#weights.pt`), and asking for the path of a model in another pipeline.
 
 ## Custom Site Pages
 

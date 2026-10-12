@@ -11,6 +11,7 @@ chartbook
 
 ../apidocs/chartbook/chartbook.data
 ../apidocs/chartbook/chartbook.assets
+../apidocs/chartbook/chartbook.models
 ../apidocs/chartbook/chartbook.env
 ../apidocs/chartbook/chartbook.plotting
 ../apidocs/chartbook/chartbook.cli

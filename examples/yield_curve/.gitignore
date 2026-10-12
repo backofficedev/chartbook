@@ -9,6 +9,9 @@
 # Exclude _output directory since it's should generated automatically
 /_output/*
 
+# Exclude trained models, which the pipeline produces
+/_models/*
+
 # Exclude PDFs generated from source LaTeX files, which are kept in the reports directory
 /reports/*.pdf
 

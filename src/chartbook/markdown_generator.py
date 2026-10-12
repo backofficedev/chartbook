@@ -256,6 +256,7 @@ def generate_all_pipeline_docs(
             docs_src_dir=docs_src_dir,
             size_threshold=size_threshold,
             enable_data_download=enable_data_download,
+            site_manifest=manifest,
         )
         if pipeline_theme == "catalog":
             # Copy pipeline README to pipelines directory
@@ -287,6 +288,12 @@ def generate_all_pipeline_docs(
     ## Dataframe and Pipeline List in index.md
     table_file_map = get_dataframes_and_dataframe_docs(base_dir=base_dir)
     dataframe_file_list = list(table_file_map.values())
+    # Models of every pipeline in the site, skipped ones aside
+    model_file_list = [
+        path
+        for model_ref, path in get_model_docs(manifest).items()
+        if model_ref.split(":model/")[0] not in (skip_pipelines or ())
+    ]
 
     # Get package templates directory
     package_templates_dir = get_package_templates_path()
@@ -329,6 +336,14 @@ def generate_all_pipeline_docs(
         file_path = docs_build_dir / "cb" / "dataframes.md"
         with open(file_path, mode="w", encoding="utf-8") as file:
             file.write(rendered_page)
+
+        # Render models.md, when some pipeline declares a model
+        if model_file_list:
+            rendered_page = environment.get_template("models.md").render(
+                model_file_list=[p.removeprefix("cb/") for p in model_file_list],
+            )
+            with open(docs_build_dir / "cb" / "models.md", mode="w", encoding="utf-8") as file:
+                file.write(rendered_page)
 
         # Render pipelines.md
         template_path = "pipelines.md"
@@ -403,6 +418,7 @@ def generate_all_pipeline_docs(
         index_page = template.render(
             manifest=manifest,
             dataframe_file_list=dataframe_file_list,
+            model_file_list=model_file_list,
             pipeline_manifest=pipeline_manifest,
             readme_text=readme_text,
             pipeline_page_link=f"cb/pipelines/{_fs_slug(pipeline_id)}_README.md",
@@ -462,6 +478,7 @@ def generate_all_pipeline_docs(
         index_page = template.render(
             manifest=manifest,
             dataframe_file_list=dataframe_file_list,
+            model_file_list=model_file_list,
             pipeline_manifest=pipeline_manifest,
             readme_text=readme_text,
             pipeline_page_link="./index.md",
@@ -497,6 +514,7 @@ def generate_pipeline_docs(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
     enable_data_download=False,
+    site_manifest=None,
 ):
     """Generate documentation for a single pipeline.
 
@@ -540,6 +558,18 @@ def generate_pipeline_docs(
             pipeline_theme=pipeline_theme,
             docs_src_dir=docs_src_dir,
             enable_data_download=enable_data_download,
+        )
+
+    for model_id in pipeline_manifest.get("models") or {}:
+        generate_model_docs(
+            model_id,
+            pipeline_id,
+            pipeline_manifest,
+            docs_build_dir,
+            pipeline_base_dir=pipeline_base_dir,
+            pipeline_theme=pipeline_theme,
+            docs_src_dir=docs_src_dir,
+            site_manifest=site_manifest,
         )
 
 
@@ -716,6 +746,287 @@ def generate_dataframe_docs(
     file_path = dataframe_docs_dir / filename
     with open(file_path, mode="w", encoding="utf-8") as file:
         file.write(table_page)
+
+
+def model_last_modified(model_path):
+    """Find when a model was last written, by file modification time.
+
+    For a model that is a directory this is its newest file.
+
+    :param model_path: Path to the model file, or the directory of its files.
+    :type model_path: str or Path
+    :returns: The modification time, or None if nothing is on disk.
+    :rtype: datetime or None
+    """
+    model_path = Path(model_path)
+    if model_path.is_dir():
+        files = [p for p in model_path.rglob("*") if p.is_file()]
+        if not files:
+            return None
+        return max(get_file_modified_datetime(f) for f in files)
+    return data_last_modified(model_path)
+
+
+def _format_size(size_bytes):
+    """A file size for a person: ``18.2 KB``, ``4.1 MB``."""
+    size = float(size_bytes)
+    for unit in ("bytes", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return f"{int(size)} {unit}" if unit == "bytes" else f"{size:.1f} {unit}"
+        size /= 1024
+
+
+def _format_metric(value):
+    """A score for a table: whole numbers whole, others to six significant digits."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if not isinstance(value, float):
+        return str(value)
+    return f"{value:.6g}"
+
+
+def get_model_docs(manifest):
+    """Get a mapping of model IDs to their page paths in the build tree.
+
+    :param manifest: The top-level loaded manifest.
+    :type manifest: dict
+    :returns: A dictionary mapping ``pipeline:model/name`` IDs to file paths.
+    :rtype: dict
+    """
+    model_file_map = {}
+    for pipeline_id in get_pipeline_ids(manifest):
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        for model_id in pipeline_manifest.get("models") or {}:
+            file_path = Path("cb/models") / _fs_slug(pipeline_id) / f"{model_id}.md"
+            model_file_map[f"{pipeline_id}:model/{model_id}"] = file_path.as_posix()
+    return model_file_map
+
+
+_MODEL_PAGE_HEAD = """# Model: `{{pipeline_id}}:model/{{model_id}}` - {{model_name}}
+
+{% include "freshness.md" %}
+
+"""
+
+_MODEL_PAGE_TAIL = """
+
+{% if metrics %}
+## Scores
+
+| Metric | Value |
+|--------|-------|
+{% for name, value in metrics.items() %}| `{{name}}` | {{value}} |
+{% endfor %}
+{% endif %}
+
+## Trained On
+
+{% if trained_on %}
+{% for dataframe in trained_on %}
+- {% if dataframe.link %}[{{dataframe.label}}]({{dataframe.link}}){% else %}`{{dataframe.label}}`{% endif %}{% if dataframe.name %} - {{dataframe.name}}{% endif %}{% if dataframe.note %} ({{dataframe.note}}){% endif %}
+
+{% endfor %}
+{% else %}
+- Not declared
+{% endif %}
+
+{% if model_files %}
+## Files
+
+| File | Size |
+|------|------|
+{% for file in model_files %}| `{{file.path}}` | {{file.size}} |
+{% endfor %}
+{% endif %}
+
+## Model Manifest
+
+{% include "model_manifest.md" %}
+
+## Pipeline Manifest
+
+{% include "pipeline_manifest.md" %}
+
+"""
+
+
+def _site_pipeline(site_manifest, pipeline_ref):
+    """Find a pipeline of the site being built, by any reference to it.
+
+    :returns: Tuple of (its ID in this site, its manifest), or (None, None)
+        if the site has no such pipeline.
+    """
+    from chartbook.identity import resolve_pipeline_ref
+
+    if not site_manifest:
+        return None, None
+    try:
+        known_as = resolve_pipeline_ref(get_pipeline_ids(site_manifest), pipeline_ref)
+    except (KeyError, ValueError):
+        return None, None
+    return known_as, get_pipeline_manifest(site_manifest, known_as)
+
+
+def _trained_on_entries(model_manifest, pipeline_id, pipeline_manifest, site_manifest):
+    """What a model's page lists under "Trained On".
+
+    A dataframe of this pipeline, or of another pipeline that is part of
+    the same site, is a link to its page. One in a pipeline the site does
+    not contain is named, as stated, without a link.
+    """
+    entries = []
+    for reference in model_manifest.get("_trained_on", []):
+        if reference.is_local:
+            owner_id, owner = pipeline_id, pipeline_manifest
+        else:
+            owner_id, owner = _site_pipeline(site_manifest, reference.pipeline_id)
+        dataframes = (owner or {}).get("dataframes") or {}
+        if reference.name in dataframes:
+            entries.append(
+                {
+                    "label": f"{owner_id}:{reference.name}",
+                    "name": dataframes[reference.name].get("name", ""),
+                    "link": f"../../dataframes/{_fs_slug(owner_id)}/{reference.name}.md",
+                    "note": "",
+                }
+            )
+        else:
+            entries.append(
+                {
+                    "label": str(reference),
+                    "name": "",
+                    "link": "",
+                    "note": "in another pipeline, which is not part of this site",
+                }
+            )
+    return entries
+
+
+def generate_model_docs(
+    model_id,
+    pipeline_id,
+    pipeline_manifest,
+    docs_build_dir=DOCS_BUILD_DIR,
+    pipeline_base_dir=BASE_DIR,
+    pipeline_theme="pipeline",
+    docs_src_dir=DOCS_SRC_DIR,
+    site_manifest=None,
+):
+    """Generate the page for one model a pipeline declares.
+
+    The page has the model's write-up, its scores (from its metrics file),
+    links to the dataframes it was trained on, and its files if it is a
+    directory. Nothing is loaded: ChartBook does not know what is inside a
+    model.
+
+    :param model_id: The model's key in ``[models]``.
+    :type model_id: str
+    :param pipeline_id: The identifier for the pipeline.
+    :type pipeline_id: str
+    :param pipeline_manifest: Manifest for the pipeline.
+    :type pipeline_manifest: dict
+    :param docs_build_dir: The directory where the docs will be built.
+    :type docs_build_dir: Path
+    :param pipeline_base_dir: The base directory of the pipeline project folder.
+    :type pipeline_base_dir: Path
+    :param pipeline_theme: The theme of the pipeline ("pipeline" or "catalog").
+    :type pipeline_theme: str
+    :param docs_src_dir: The directory containing documentation source files and templates.
+    :type docs_src_dir: Path
+    :param site_manifest: The manifest of the whole site being built, so that
+        training data in another of its pipelines can be linked to.
+    :type site_manifest: dict or None
+    """
+    from chartbook.models import read_metrics
+
+    model_manifest = pipeline_manifest["models"][model_id]
+    pipeline_base_dir = Path(pipeline_base_dir)
+    slug = _fs_slug(pipeline_id)
+
+    model_docs_dir = docs_build_dir / "cb" / "models" / slug
+    model_docs_dir.mkdir(parents=True, exist_ok=True)
+
+    package_path = importlib.resources.files("chartbook")
+    if pipeline_theme == "catalog":
+        theme_template_dir = Path(str(package_path)) / "docs_src_catalog"
+        pipeline_page_link = f"../../pipelines/{slug}_README.md"
+    elif pipeline_theme == "pipeline":
+        theme_template_dir = Path(str(package_path)) / "docs_src_pipeline"
+        pipeline_page_link = "../../../index.md"
+    else:
+        raise ValueError(f"Invalid pipeline theme: {pipeline_theme}")
+
+    environment = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(
+            [
+                pipeline_base_dir,
+                docs_src_dir,
+                docs_src_dir / "_templates",
+                get_package_templates_path(),
+                theme_template_dir,
+                theme_template_dir / "_templates",
+            ]
+        )
+    )
+
+    # The write-up: a file, the text itself, or nothing
+    if model_manifest.get("docs_path"):
+        write_up = environment.loader.get_source(
+            environment, Path(model_manifest["docs_path"]).as_posix()
+        )[0]
+    else:
+        write_up = model_manifest.get("docs") or ""
+
+    model_path = Path(os.path.normpath(pipeline_base_dir / model_manifest["path"]))
+
+    metrics = {}
+    metrics_path = model_manifest.get("metrics_path")
+    if metrics_path and (pipeline_base_dir / metrics_path).is_file():
+        try:
+            scores = read_metrics(pipeline_base_dir / metrics_path)
+        except ValueError:
+            scores = {}  # `chartbook check` reports a malformed metrics file
+        metrics = {name: _format_metric(value) for name, value in scores.items()}
+
+    trained_on = _trained_on_entries(
+        model_manifest, pipeline_id, pipeline_manifest, site_manifest
+    )
+
+    model_files = []
+    if model_path.is_dir():
+        model_files = [
+            {
+                "path": file.relative_to(model_path).as_posix(),
+                "size": _format_size(file.stat().st_size),
+            }
+            for file in sorted(p for p in model_path.rglob("*") if p.is_file())
+        ]
+
+    template = environment.from_string(_MODEL_PAGE_HEAD + write_up + _MODEL_PAGE_TAIL)
+    page = template.render(
+        model_manifest,
+        model_manifest=model_manifest,
+        model_id=model_id,
+        model_name=model_manifest.get("name", model_id),
+        link_to_model_docs=f"../../models/{slug}/{model_id}.md",
+        pipeline_id=pipeline_id,
+        pipeline_manifest=pipeline_manifest,
+        pipeline_page_link=pipeline_page_link,
+        dot_or_dotdot="../..",
+        metrics=metrics,
+        trained_on=trained_on,
+        model_files=model_files,
+        freshness=[
+            fact
+            for fact in [
+                freshness_fact("Model updated", model_last_modified(model_path))
+            ]
+            if fact
+        ],
+    )
+
+    with open(model_docs_dir / f"{model_id}.md", mode="w", encoding="utf-8") as file:
+        file.write(page)
 
 
 def find_most_recent_valid_datapoints(
@@ -1000,6 +1311,8 @@ def copy_docs_src_to_build(docs_src_dir, docs_build_dir, exclude_list=None):
             "index.md",
             "pipelines.md",
             "dataframes.md",
+            "models",
+            "models.md",
             "diagnostics.md",
             "charts.md",
             "site",

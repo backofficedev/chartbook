@@ -38,9 +38,12 @@ DEFAULT_WITHIN_DAYS = 30
 NO_EXPIRATION_VALUES = frozenset({"", "n/a", "na", "none", "never"})
 
 #: Kinds of missing file that are things a pipeline *builds*: data, rendered
-#: charts and executed notebooks. They are normally git-ignored, so on a
-#: fresh checkout that has not run the pipeline they are all absent.
-OUTPUT_FILE_TYPES = frozenset({"dataframe", "chart", "notebook"})
+#: charts, executed notebooks, and trained models with their scores. They
+#: are normally git-ignored, so on a fresh checkout that has not run the
+#: pipeline they are all absent.
+OUTPUT_FILE_TYPES = frozenset(
+    {"dataframe", "chart", "notebook", "model", "model_metrics"}
+)
 
 # MissingFile.file_type -> (manifest section, field) for per-entity files
 _FILE_TYPE_FIELDS = {
@@ -50,6 +53,9 @@ _FILE_TYPE_FIELDS = {
     "chart_docs": ("charts", "docs_path"),
     "notebook": ("notebooks", "path"),
     "note": ("notes", "path"),
+    "model": ("models", "path"),
+    "model_metrics": ("models", "metrics_path"),
+    "model_docs": ("models", "docs_path"),
 }
 
 
@@ -206,6 +212,75 @@ def check_paths(
     return problems
 
 
+def check_model_metrics(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Report every model metrics file that is there and is not well formed.
+
+    A metrics file is one flat JSON object of scores. A missing file is
+    :func:`check_paths`'s business, not this function's.
+    """
+    from chartbook.models import read_metrics
+
+    problems = []
+    for pipeline_id in get_pipeline_ids(manifest):
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        pipeline_dir = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
+        for model_id, model in (pipeline_manifest.get("models") or {}).items():
+            declared = model.get("metrics_path")
+            if not declared or not (pipeline_dir / declared).is_file():
+                continue
+            try:
+                read_metrics(pipeline_dir / declared)
+            except (OSError, ValueError) as error:
+                problems.append(
+                    Problem(
+                        pipeline_dir / "chartbook.toml",
+                        f"models.{model_id}",
+                        "metrics_path",
+                        str(error),
+                    )
+                )
+    return problems
+
+
+def check_model_lineage(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Report training data that names a dataframe which is known not to exist.
+
+    A model may be trained on another pipeline's dataframe. When that
+    pipeline is part of the same catalog, its manifest is at hand, and a
+    dataframe it does not declare is a mistake. When it is not, nothing can
+    be said, and nothing is.
+    """
+    from chartbook.identity import resolve_pipeline_ref
+
+    problems = []
+    pipeline_ids = get_pipeline_ids(manifest)
+    for pipeline_id in pipeline_ids:
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        pipeline_dir = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
+        for model_id, model in (pipeline_manifest.get("models") or {}).items():
+            for reference in model.get("_trained_on", []):
+                if reference.is_local:
+                    continue  # the loader has already checked it
+                try:
+                    known_as = resolve_pipeline_ref(pipeline_ids, reference.pipeline_id)
+                except (KeyError, ValueError):
+                    continue
+                other = get_pipeline_manifest(manifest, known_as)
+                if reference.name not in (other.get("dataframes") or {}):
+                    declared = ", ".join(sorted(other.get("dataframes") or {})) or "(none)"
+                    problems.append(
+                        Problem(
+                            pipeline_dir / "chartbook.toml",
+                            f"models.{model_id}",
+                            "trained_on",
+                            f"{str(reference)!r} names a dataframe that the "
+                            f"pipeline {known_as!r} does not declare. Its "
+                            f"dataframes are: {declared}",
+                        )
+                    )
+    return problems
+
+
 def parse_expiration(value: Any) -> Optional[date]:
     """Interpret a ``license_expiration`` value.
 
@@ -310,6 +385,8 @@ def run_checks(
     problems = [
         *check_required_fields(manifest, base_dir, policy_label=policy_label),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
+        *check_model_metrics(manifest, base_dir),
+        *check_model_lineage(manifest, base_dir),
         *check_licenses(manifest, base_dir, within_days=within_days, today=today),
     ]
     return sorted(problems, key=lambda p: (str(p.file), p.table, p.field))
