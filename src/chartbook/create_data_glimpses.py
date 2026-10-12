@@ -18,7 +18,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
-from xml.sax import saxutils
 
 import polars as pl
 
@@ -396,9 +395,11 @@ def create_txt_report(
             output_lines.append("### Numeric Column Statistics")
             output_lines.append("```")
             for stat in report["numeric_stats"]:
+                # A column with no non-null values has no mean to format
+                mean = "None" if stat["mean"] is None else f"{stat['mean']:.2f}"
                 output_lines.append(
                     f"{stat['name']}: min={stat['min']}, max={stat['max']}, "
-                    f"mean={stat['mean']:.2f}, median={stat['median']}"
+                    f"mean={mean}, median={stat['median']}"
                 )
             output_lines.append("```")
             output_lines.append("")
@@ -412,106 +413,6 @@ def create_txt_report(
         # Also remove the empty line before it if it exists
         if output_lines and output_lines[-1] == "":
             output_lines.pop()
-
-    return "\n".join(output_lines)
-
-
-def create_xml_report(
-    dataframes, include_stats=True, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB
-):
-    """Create a machine-readable XML format Data Glimpses Report.
-
-    :param dataframes: The declared dataframes to include, each with its data on disk.
-    :type dataframes: list[DeclaredDataframe]
-    :param include_stats: If True, include numeric column statistics.
-    :type include_stats: bool
-    :param size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
-    :type size_threshold_mb: float
-    :returns: The XML report content as a string.
-    :rtype: str
-    """
-    output_lines = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        "<data_glimpses_report>",
-        "  <summary>",
-    ]
-
-    def dataset_attributes(dataframe):
-        return (
-            f'pipeline={saxutils.quoteattr(dataframe.pipeline_id)} '
-            f'id={saxutils.quoteattr(dataframe.dataframe_id)} '
-            f'filename={saxutils.quoteattr(dataframe.path.name)} '
-            f'path={saxutils.quoteattr(str(dataframe.path))}'
-        )
-
-    # Add summary section
-    for dataframe in dataframes:
-        output_lines.append(f"    <dataset {dataset_attributes(dataframe)}/>")
-    output_lines.append("  </summary>")
-    output_lines.append("  <datasets>")
-
-    # Add each dataset
-    for dataframe in dataframes:
-        report = get_dataset_report(
-            dataframe.path,
-            include_stats=include_stats,
-            size_threshold_mb=size_threshold_mb,
-        )
-        output_lines.append(f"    <dataset {dataset_attributes(dataframe)}>")
-
-        # File info
-        if "error" in report:
-            output_lines.append(
-                f"      <error>{saxutils.escape(report['error'])}</error>"
-            )
-            output_lines.append("    </dataset>")
-            continue
-
-        output_lines.append(
-            f'      <file_info size_mb="{report["file_size_mb"]:.1f}" type="{report["file_type"]}"/>'
-        )
-        output_lines.append(
-            f'      <shape rows="{report["n_rows"]}" cols="{report["n_cols"]}"/>'
-        )
-
-        # Columns
-        output_lines.append("      <columns>")
-        for col in report["columns"]:
-            pct_null_str = (
-                f"{col['pct_null']:.1f}" if col["pct_null"] is not None else "N/A"
-            )
-            output_lines.append(
-                f'        <column name="{saxutils.escape(col["name"])}" dtype="{saxutils.escape(col["dtype"])}" pct_null="{pct_null_str}"/>'
-            )
-        output_lines.append("      </columns>")
-
-        # Sample values
-        output_lines.append("      <sample_values>")
-        for row in report["sample_values"]:
-            # Show as dict string, truncate if too long
-            row_str = str(row)
-            if len(row_str) > 300:
-                row_str = row_str[:297] + "..."
-            output_lines.append(f"        <row>{saxutils.escape(row_str)}</row>")
-        output_lines.append("      </sample_values>")
-
-        # Numeric stats
-        if report["numeric_stats"]:
-            output_lines.append("      <numeric_stats>")
-            for stat in report["numeric_stats"]:
-                output_lines.append(
-                    f'        <column name="{saxutils.escape(stat["name"])}" min="{stat["min"]}" max="{stat["max"]}" mean="{stat["mean"]}" median="{stat["median"]}"/>'
-                )
-            output_lines.append("      </numeric_stats>")
-
-        # Glimpse
-        output_lines.append("      <glimpse><![CDATA[")
-        output_lines.append(report["glimpse"].rstrip())
-        output_lines.append("      ]]></glimpse>")
-        output_lines.append("    </dataset>")
-
-    output_lines.append("  </datasets>")
-    output_lines.append("</data_glimpses_report>")
 
     return "\n".join(output_lines)
 

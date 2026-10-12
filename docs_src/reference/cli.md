@@ -51,7 +51,7 @@ Generate the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the cur
 |--------|---------|--------|
 | `-f, --force-write` | off | Delete and recreate an existing output directory |
 | `--project-dir PATH` | `.` | Project to build |
-| `--strict / --no-strict` | `--strict` | Strict: a `path`/`docs_path` pointing at a missing file fails the build, naming the file and the manifest entry. `--no-strict` warns and skips the affected pipeline |
+| `--strict / --no-strict` | `--strict` | Strict: a `path`/`docs_path` pointing at a missing file fails the build, naming the file and the manifest entry. `--no-strict` warns and skips the affected pipeline of a catalog (a single pipeline still fails: there would be nothing left to build) |
 | `--size-threshold FLOAT` | `50` | File size (MB) above which parquet glimpses use memory-efficient loading |
 | `--strip-mathjax2 / --no-strip-mathjax2` | on | Strip Plotly's MathJax 2 scripts from notebook outputs so they don't clash with Sphinx's MathJax 3 |
 | `--incremental` | off | Keep the intermediate `_docs/` directory between builds and redo only what changed since the last incremental build |

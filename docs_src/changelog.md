@@ -93,6 +93,19 @@ A plain `chartbook build` is unchanged: a clean build that leaves nothing behind
 
 Fixed along the way, because it defeated Sphinx's cache: the generated `conf.py` now sets `fontawesome_included` explicitly. The themes switched it on mid-build, which Sphinx read as a changed configuration and answered by re-reading every page on every run.
 
+### Fixed
+
+- `chartbook build --no-strict` on a single pipeline with a missing file crashed with `UnboundLocalError`. It now reports the missing files and exits cleanly; skipping only makes sense in a catalog, which has other pipelines left to build.
+- Sphinx is now run as `python -m sphinx` with the interpreter that is running ChartBook. It used to run whichever `sphinx-build` came first on `PATH`, which could be a different Sphinx from a different environment.
+- `project.readme` is honoured by `build` and `check`. Only `publish` read it; the others always looked for `README.md`.
+- Importing `chartbook` no longer replaces `shutil.copy2`, `shutil.copystat` and `shutil.copymode` for the whole Python process. ChartBook still copies file contents without metadata, for the sake of shared drives, but does so in its own helpers.
+- A pipeline site's front page listed two appendix documents that do not exist in a generated site, producing two Sphinx warnings on every build and forcing that page to be re-read on every run. The entries are gone.
+- `chartbook create-data-glimpses` crashed on a numeric column with no non-null values.
+
+### Removed
+
+- `create_data_glimpses.create_xml_report()`, which nothing called.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level

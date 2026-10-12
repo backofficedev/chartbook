@@ -163,6 +163,17 @@ class TestCheckPaths:
         found = {(p.table, p.field) for p in check_paths(manifest, project)}
         assert found == {("notes.note1", "path"), ("project", "readme")}
 
+    def test_readme_setting_is_what_gets_checked(self, pipeline_project):
+        (pipeline_project / "README.md").rename(pipeline_project / "ABOUT.md")
+        manifest = load_manifest(pipeline_project)
+        (problem,) = check_paths(manifest, pipeline_project)
+        assert (problem.table, problem.field) == ("project", "readme")
+        assert "README.md" in problem.message
+
+        _edit_toml(pipeline_project, lambda c: c["project"].update(readme="./ABOUT.md"))
+        manifest = load_manifest(pipeline_project)
+        assert check_paths(manifest, pipeline_project) == []
+
     def test_missing_notebook(self, pipeline_project):
         def edit(config):
             config["notebooks"]["analysis"] = {

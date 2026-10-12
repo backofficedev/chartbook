@@ -1746,7 +1746,7 @@ def install_skill(force, project):
 
     copied = 0
     for src_file in skill_files:
-        shutil.copy2(src_file, target_dir / src_file.name)
+        shutil.copyfile(src_file, target_dir / src_file.name)
         click.echo(f"  {src_file.name}")
         copied += 1
 

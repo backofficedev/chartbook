@@ -261,7 +261,7 @@ def generate_all_pipeline_docs(
             pipeline_readme_dir = docs_build_dir / "cb" / "pipelines"
             pipeline_readme_dir.mkdir(parents=True, exist_ok=True)
 
-            source_path = pipeline_base_dir / "README.md"
+            source_path = pipeline_base_dir / pipeline_manifest["project"]["readme"]
             with open(source_path) as file:
                 readme_content = file.readlines()
 
@@ -411,7 +411,7 @@ def generate_all_pipeline_docs(
             file.write(index_page)
 
     elif pipeline_theme == "pipeline":
-        source_path = base_dir / "README.md"
+        source_path = base_dir / pipeline_manifest["project"]["readme"]
         with open(source_path) as file:
             readme_content = file.readlines()
 
@@ -438,7 +438,7 @@ def generate_all_pipeline_docs(
                 cb_dir = docs_build_dir / "cb"
                 cb_dir.mkdir(parents=True, exist_ok=True)
                 dest_file = cb_dir / f"{note_id}.md"
-                shutil.copy(source_file, dest_file)
+                shutil.copyfile(source_file, dest_file)
 
                 # Add to notes list for template
                 notes_list.append(f"cb/{note_id}.md")

@@ -174,7 +174,7 @@ API_KEY = chartbook.env.get("FRED_API_KEY", default="")  # .env file or environm
 
 While you are writing, `chartbook build -f --watch` rebuilds the site each time you save, redoing only the pages that changed; refresh the browser to see it. ({doc}`how-the-build-works` explains what it skips.)
 
-`chartbook build` is strict by default: if a `path` or `docs_path` points at a file that doesn't exist, the build fails and names both the missing file and the manifest entry referencing it. `--no-strict` downgrades this to a warning that skips the affected pipeline. Two more inspection tools:
+`chartbook build` is strict by default: if a `path` or `docs_path` points at a file that doesn't exist, the build fails and names both the missing file and the manifest entry referencing it. In a catalog, `--no-strict` downgrades this to a warning that skips the affected pipeline; a single pipeline has nothing left to build once skipped, so there it is still an error. Two more inspection tools:
 
 - Unknown `[project]` keys warn with a did-you-mean suggestion rather than becoming silently dead metadata.
 - `chartbook create-data-glimpses` writes `data_glimpses.md` — schema, null rates, sample rows, and summary stats for every dataframe declared in `chartbook.toml`, whatever tool builds them.
