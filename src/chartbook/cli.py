@@ -448,11 +448,15 @@ def path_command(ref, project_dir):
     default=50,
     help="File size threshold in MB above which to use memory-efficient loading (default: 50)",
 )
-def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold):
-    """Create a data glimpses report from dodo.py tasks.
+@click.option("--project-dir", type=click.Path(), help="Path to project directory")
+def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold, project_dir):
+    """Create a data glimpses report for the project's declared dataframes.
 
-    This command parses the dodo.py file in the current directory to find all
-    CSV/Parquet files and creates a comprehensive data glimpse report in Markdown format.
+    This command reads chartbook.toml, takes every dataframe it declares, and
+    creates a comprehensive data glimpse report in Markdown format. The list
+    comes from the manifest alone, so it works the same whether the project
+    is built with doit, Snakemake, Make or plain scripts. Declared dataframes
+    whose files do not exist yet are skipped.
 
     :param no_samples: If True, exclude sample values sections from the report.
     :type no_samples: bool
@@ -462,6 +466,8 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold):
     :type output_dir: str, optional
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param project_dir: Directory holding the project's chartbook.toml.
+    :type project_dir: str, optional
 
     Example usage:
         chartbook create-data-glimpses
@@ -478,6 +484,7 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold):
             no_samples=no_samples,
             no_stats=no_stats,
             size_threshold=size_threshold,
+            project_dir=resolve_project_dir(project_dir),
         )
     except FileNotFoundError as e:
         click.echo(f"Error: {e}", err=True)

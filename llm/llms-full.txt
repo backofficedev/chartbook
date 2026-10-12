@@ -51,7 +51,7 @@ pip install -e ".[dev]"
 | `catalog init/add/disable/enable/build/browse` | Manage a catalog and build/browse its site |
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
 | `data` | Data operations (get paths, docs) |
-| `create-data-glimpses` | Create data glimpse reports from dodo.py targets |
+| `create-data-glimpses` | Create a data glimpse report for the dataframes declared in chartbook.toml |
 | `config` | Configure the default catalog path for data loading |
 | `install skill` | Install the bundled Claude Code skill (user-level by default; `--project` for the repo) |
 
@@ -123,7 +123,7 @@ chartbook publish [OPTIONS]
 
 ### chartbook create-data-glimpses
 
-Create a comprehensive data glimpse report from pipeline dataframes.
+Create a comprehensive data glimpse report for the dataframes declared in `chartbook.toml`. The manifest is the only source of the list: no build file (`dodo.py`, `Snakefile`, `Makefile`) is read, and undeclared data files are not included.
 
 ```bash
 chartbook create-data-glimpses [OPTIONS]
@@ -134,6 +134,7 @@ chartbook create-data-glimpses [OPTIONS]
 - `--no-stats`: Exclude numeric statistics from report
 - `-o, --output-dir PATH`: Directory to save output file
 - `--size-threshold FLOAT`: File size threshold in MB (default: 50)
+- `--project-dir PATH`: Directory holding chartbook.toml (default: current directory)
 
 ### chartbook config
 

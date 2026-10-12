@@ -175,6 +175,6 @@ API_KEY = chartbook.env.get("FRED_API_KEY", default="")  # .env file or environm
 `chartbook build` is strict by default: if a `path` or `docs_path` points at a file that doesn't exist, the build fails and names both the missing file and the manifest entry referencing it. `--no-strict` downgrades this to a warning that skips the affected pipeline. Two more inspection tools:
 
 - Unknown `[project]` keys warn with a did-you-mean suggestion rather than becoming silently dead metadata.
-- `chartbook create-data-glimpses` scans your `dodo.py` targets and writes `data_glimpses.md` — schema, null rates, sample rows, and summary stats for every data file your tasks produce.
+- `chartbook create-data-glimpses` writes `data_glimpses.md` — schema, null rates, sample rows, and summary stats for every dataframe declared in `chartbook.toml`, whatever tool builds them.
 
 Once the pipeline builds cleanly, register it in a catalog: {doc}`catalogs-and-data`.
