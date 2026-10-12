@@ -66,3 +66,6 @@ docs_src/apidocs/
 docs/
 
 _build/
+
+# Scratch / working notes
+_temp/
