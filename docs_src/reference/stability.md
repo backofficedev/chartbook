@@ -6,7 +6,7 @@ What you can rely on in ChartBook, what you cannot, and what will happen before 
 
 ChartBook is pre-1.0. Until now that has meant breaking changes arrived whole: the `chartbook.toml` format was replaced outright in 0.1.0, with a one-time migration script and no loader for the old format, and the install extras were flattened in the same release. That was a reasonable way to run a project whose every user could be migrated in an afternoon. It stops being reasonable as soon as anything outside the project depends on a manifest, a command, or a file ChartBook writes.
 
-So from the release in which this page first appears, breaking changes follow the process below. They will still happen before 1.0 — several are already designed, and are [listed here](#the-path-to-10) — but not without notice.
+So from 0.2.0, the release in which this page first appears, breaking changes follow the process below. They will still happen before 1.0 — several are already designed, and are [listed here](#the-path-to-10) — but not without notice.
 
 ## What is covered
 
@@ -106,5 +106,5 @@ Still working, and warning. May be removed in any minor release.
 
 | What | Deprecated in | Removed | Use instead |
 |---|---|---|---|
-| The `[all]`, `[data]`, `[plotting]` and `[sphinx]` install extras | 0.1.0, as no-op aliases | The release after 0.1.1 | `pip install chartbook`, which installs everything |
+| The `[all]`, `[data]`, `[plotting]` and `[sphinx]` install extras | 0.1.0, as no-op aliases | 0.2.0 | `pip install chartbook`, which installs everything |
 | The v1 `chartbook.toml` format (`[config]` / `[site]` / `[pipeline]`) | — | 0.1.0 | Format v2; `python scripts/migrate_toml_v2.py <project>` rewrites a v1 file |
