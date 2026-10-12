@@ -57,13 +57,7 @@ Thank you for your interest in contributing to chartbook!
 
 ## Changing Something Users Rely On
 
-The {doc}`stability policy <reference/stability>` names four covered surfaces: the manifest format, the index schema, the Python API (`chartbook.data`, `chartbook.env`, `chartbook.plotting`), and the CLI. Before changing one of them incompatibly:
-
-1. Keep the old behaviour working for at least one minor release, with a warning that names the replacement — a `DeprecationWarning` in Python, a `warning:` line on stderr in the CLI, a load-time warning for a manifest key.
-2. If old and new cannot coexist, detect the old form and refuse it with the fix. Never read it as something else.
-3. Mark the changelog entry **breaking**, and add the item to the "Currently deprecated" table in the policy (moving it to "Removed" when it goes).
-
-Everything else — internal modules, generated HTML, message wording — can change freely.
+ChartBook is {doc}`experimental <reference/stability>`, so things may change. When you change something a user would notice — a manifest field, a command or option, a public function — add a changelog entry marked **breaking** that says what to do instead. If a file format changes, make the loader recognize the old form and refuse it with the fix; never read it as something else.
 
 ## Submitting Changes
 

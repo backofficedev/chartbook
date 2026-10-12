@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] - 2026-10-12
 
-Tools around the manifest: a CI gate, paths you can ask for, freshness on every page, incremental builds, and a scaffolder that can put a new project on GitHub. Two changes are breaking and are marked so. This is also the release in which the {doc}`stability policy <reference/stability>` starts to apply.
+Tools around the manifest: a CI gate, paths you can ask for, freshness on every page, incremental builds, and a scaffolder that can put a new project on GitHub. The breaking changes are marked as such. ChartBook is still {doc}`experimental <reference/stability>`.
 
 ### Added — `chartbook check`, the CI gate
 
@@ -81,11 +81,9 @@ It also corrects what the code and the old "Plugin System" paragraph implied. An
 
 The four install extras that became no-op aliases in 0.1.0 are gone, after the one release of notice they were given. `pip install chartbook` has installed everything since 0.1.0 and still does; drop the bracket from any requirement that has one (`chartbook[all]>=0.0.14` → `chartbook>=0.0.14`). pip and uv both still install the package for such a requirement rather than failing — uv warns that the extra does not exist — so nothing breaks at install time, but the bracket no longer names anything. The `[dev]` extra for contributors is unchanged.
 
-### Added — a stability and deprecation policy
+### Added — a note on stability
 
-{doc}`reference/stability` says what ChartBook commits to and what it does not. Four surfaces are covered: the manifest format, the index schema, the Python API (`chartbook.data`, `chartbook.env`, `chartbook.plotting`) and the CLI. A breaking change to any of them is now announced by a deprecation warning for at least one minor release; where old and new cannot coexist, the old form is detected and refused with the fix rather than misread; such changes land only in minor releases before 1.0 and major releases after; and the changelog marks them. The index's per-record `kind` and `version` is the mechanism for changing one record type without a coordinated upgrade.
-
-The page also lists what is explicitly *not* covered (internal modules, the generated site's HTML and templates, message wording), the breaking changes already designed and still to come before 1.0, and what is currently deprecated. No migration tooling is promised.
+{doc}`reference/stability` says plainly that ChartBook is experimental and anything can change between releases. It makes three small promises: breaking changes are listed in this changelog with what to do; a manifest in an old format is refused with instructions rather than misread; and breaking changes come in minor releases, not patch releases. A firmer policy will come with 1.0.
 
 ### Added — incremental builds and a watch mode
 
