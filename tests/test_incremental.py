@@ -493,12 +493,8 @@ class TestIncrementalBuild:
 
         assert second.rendered
         assert second.sources_written == 0
-        # In a catalog it re-reads nothing at all. A pipeline's index page is
-        # the one exception: its template lists two appendix documents that
-        # do not exist, and Sphinx re-reads a page with a dangling toctree
-        # entry on every run.
-        assert second.pages_read == (0 if theme == "catalog" else 1)
-        assert second.pages_read < first.pages_read
+        assert second.pages_read == 0
+        assert first.pages_read > 0
         assert (project / "docs" / "index.html").is_file()
 
     def test_failed_render_is_retried(self, pipeline_project, monkeypatch):

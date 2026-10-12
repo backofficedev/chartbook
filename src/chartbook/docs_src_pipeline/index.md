@@ -46,13 +46,6 @@ cb/charts.md
 ```
 
 
-```{toctree}
-:maxdepth: 1
-:caption: Appendix 💡
-myst_markdown_demos.md
-apidocs/index
-```
-
 
 ## Pipeline Specs
 {% include "_docs_src/_templates/pipeline_manifest.md" with context %}

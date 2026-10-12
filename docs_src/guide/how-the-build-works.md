@@ -3,7 +3,7 @@
 The `chartbook build` command uses a **two-stage pipeline** to generate your documentation site:
 
 1. **Markdown generation** — reads your `chartbook.toml` manifest and project files, then produces intermediate Markdown files (and copies static assets) into a temporary `_docs/` directory.
-2. **Sphinx build** — runs `sphinx-build` to convert those intermediate Markdown files into a static HTML site.
+2. **Sphinx build** — runs Sphinx (`python -m sphinx`, with the same Python that is running ChartBook) to convert those intermediate Markdown files into a static HTML site.
 
 By default, the temporary directories are deleted when the build finishes — whether it succeeded or failed. Using the `--keep-build-dirs` flag preserves them so you can inspect the intermediate output, which is exactly what you want when debugging a failed build.
 
@@ -33,7 +33,7 @@ chartbook build [OUTPUT_DIR]
     |
     |-- Stage 2: Sphinx Build
     |   Render conf.py.j2 -> conf.py
-    |   Run: sphinx-build -M html _docs _docs/_build
+    |   Run: python -m sphinx -M html _docs _docs/_build
     |   Copy _docs/_build/html/ to OUTPUT_DIR
     |
     |-- Cleanup (unless --keep-build-dirs; --incremental keeps _docs/)
@@ -125,7 +125,7 @@ Once all Markdown files are in place:
 
 2. **Sphinx execution**: ChartBook runs:
    ```
-   sphinx-build -M html _docs _docs/_build
+   python -m sphinx -M html _docs _docs/_build
    ```
    This processes all `.md` files using extensions like `myst-nb` (notebook rendering), `ablog` (blog-style chart pages), `sphinx_design` (grid cards), and `sphinx_copybutton`.
 

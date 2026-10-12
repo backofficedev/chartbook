@@ -1,6 +1,8 @@
 import importlib.resources
 import re
+import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,7 +12,7 @@ from chartbook import markdown_generator
 from chartbook.diagnostics import generate_metadata_diagnostics
 from chartbook.errors import MissingSourceFilesError, ValidationError, handle_validation_error
 from chartbook.manifest import get_favicon_path, get_logo_path, load_manifest
-from chartbook.utils import shutil
+from chartbook.utils import copy_file, copy_tree, move_tree
 from chartbook.conf_validation import validate_conf_py_values, validate_source_files
 
 
@@ -90,8 +92,12 @@ def run_sphinx_build(_docs_dir: Path):
     :rtype: str
     :raises RuntimeError: If the sphinx-build command fails.
     """
+    # The Sphinx installed alongside this interpreter, not whichever
+    # sphinx-build happens to be first on PATH
     build_cmd = [
-        "sphinx-build",
+        sys.executable,
+        "-m",
+        "sphinx",
         "-M",
         "html",
         str(_docs_dir),
@@ -289,6 +295,17 @@ def generate_docs(
             import click
             for warning in error.format_skip_warnings():
                 click.echo(click.style(warning, fg="yellow"), err=True)
+            if pipeline_theme == "pipeline":
+                # Skipping only helps a catalog, which has other pipelines
+                # left to build. A pipeline on its own has nothing left.
+                click.echo(
+                    click.style("Error: ", fg="red", bold=True)
+                    + "This project is a single pipeline, so there is nothing "
+                    "left to build once it is skipped. Create the missing "
+                    "files, or remove their entries from chartbook.toml.",
+                    err=True,
+                )
+                raise SystemExit(1)
 
     if incremental:
         return _generate_docs_incremental(
@@ -334,12 +351,12 @@ def generate_docs(
 
                 temp_output_dir = Path(tempfile.mkdtemp(prefix="chartbook_output_"))
                 try:
-                    shutil.copytree(html_build_dir, temp_output_dir, dirs_exist_ok=True)
+                    copy_tree(html_build_dir, temp_output_dir)
                     (temp_output_dir / ".nojekyll").touch()
 
                     # Remove existing directory and replace with new one
                     shutil.rmtree(output_dir)
-                    shutil.move(str(temp_output_dir), str(output_dir))
+                    move_tree(temp_output_dir, output_dir)
                 except Exception:
                     # Clean up temp directory if something went wrong
                     if temp_output_dir.exists():
@@ -348,7 +365,7 @@ def generate_docs(
             else:
                 # Standard copy operation for new directories
                 output_dir.mkdir(parents=True, exist_ok=True)
-                shutil.copytree(html_build_dir, output_dir, dirs_exist_ok=True)
+                copy_tree(html_build_dir, output_dir)
                 (output_dir / ".nojekyll").touch()
 
     finally:
@@ -560,21 +577,21 @@ def _retrieve_correct_docs_src_dir(
         dest = temp_docs_src_dir / item.name
 
         if item.is_file():
-            shutil.copy(item, temp_docs_src_dir)
+            copy_file(item, temp_docs_src_dir / item.name)
         elif item.is_dir():
             if dest.exists():
                 shutil.rmtree(
                     dest, ignore_errors=True
                 )  # manually delete first to avoid permission errors
-            shutil.copytree(item, dest)
+            copy_tree(item, dest)
 
     (temp_docs_src_dir / "_static").mkdir(exist_ok=True)
     (temp_docs_src_dir / "assets").mkdir(exist_ok=True)
 
     logo_path = get_logo_path(manifest, project_dir)
     for dest_dir in ["_static", "assets"]:
-        shutil.copy(logo_path, temp_docs_src_dir / dest_dir / "logo.png")
+        copy_file(logo_path, temp_docs_src_dir / dest_dir / "logo.png")
 
     favicon_path = get_favicon_path(manifest, project_dir)
     for dest_dir in ["_static", "assets"]:
-        shutil.copy(favicon_path, temp_docs_src_dir / dest_dir / "favicon.ico")
+        copy_file(favicon_path, temp_docs_src_dir / dest_dir / "favicon.ico")

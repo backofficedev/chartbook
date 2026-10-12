@@ -203,7 +203,7 @@ def validate_source_files(manifest: dict, base_dir) -> list:
     - Chart documentation files (docs_path, when mode="path")
     - Notebook files (path)
     - Note markdown files (path)
-    - README.md per pipeline
+    - Each pipeline's README (project.readme)
     - User-specified logo and favicon files
 
     :param manifest: The manifest dictionary from chartbook.toml.
@@ -340,14 +340,15 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                         )
                     )
 
-        # Check README.md
-        readme_path = (pipeline_base_dir / "README.md").resolve()
+        # Check the README (project.readme; ./README.md unless set)
+        readme = pipeline_manifest.get("project", {}).get("readme") or "README.md"
+        readme_path = (pipeline_base_dir / readme).resolve()
         if not readme_path.exists():
             missing_files.append(
                 MissingFile(
                     file_path=readme_path,
                     file_type="readme",
-                    item_id="README.md",
+                    item_id=readme,
                     pipeline_id=pipeline_id,
                 )
             )

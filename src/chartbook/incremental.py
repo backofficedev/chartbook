@@ -140,7 +140,8 @@ def pipeline_input_files(pipeline_manifest: dict) -> list[Path]:
     :returns: Absolute paths, sorted and without duplicates.
     """
     base_dir = Path(pipeline_manifest["pipeline_base_dir"])
-    files = {base_dir / "chartbook.toml", base_dir / "README.md"}
+    readme = pipeline_manifest.get("project", {}).get("readme") or "README.md"
+    files = {base_dir / "chartbook.toml", base_dir / readme}
 
     for tree in _SOURCE_TREES:
         files.update(_walk_inputs(base_dir / tree))

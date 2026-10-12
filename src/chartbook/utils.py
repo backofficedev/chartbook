@@ -39,27 +39,53 @@ def fix_glimpse_row_count(glimpse_text: str, actual_row_count: int) -> str:
     return re.sub(r"^Rows: \d+", f"Rows: {actual_row_count}", glimpse_text)
 
 
-# --------------------------------------------------------------------
-#  SAFER FILE-COPY PATCHES  - drop these near the top of generator.py
-# --------------------------------------------------------------------
-# This patch allows for safer copying on shared directories.
-def _noop(*_a, **_k):
-    """Do nothing - used to replace chmod/chown/timestamp operations.
+def copy_file(source, destination):
+    """Copy a file's contents, and nothing else, to a destination path.
 
-    :param _a: Positional arguments (ignored).
-    :type _a: Any
-    :param _k: Keyword arguments (ignored).
-    :type _k: Any
+    Permissions, ownership and timestamps are deliberately not carried over.
+    On shared and network drives the calls that set them are often refused,
+    and a build should not fail over metadata.
+
+    :param source: The file to copy.
+    :type source: str or Path
+    :param destination: The file to write (not a directory).
+    :type destination: str or Path
     """
+    shutil.copyfile(source, destination)
 
 
-# 1. Disable metadata copying that needs chmod/chown
-shutil.copymode = _noop  # used by shutil.copy
-shutil.copystat = _noop  # used by shutil.copy2 / copytree
+def copy_tree(source, destination):
+    """Copy a directory tree's contents into a destination, merging with it.
 
-# 2. Make copy2 behave like copy (now metadata-free as well)
-shutil.copy2 = shutil.copy
-# --------------------------------------------------------------------
+    Like :func:`copy_file`, this copies file contents only. Existing files in
+    the destination are overwritten; others are left in place.
+
+    :param source: The directory to copy.
+    :type source: str or Path
+    :param destination: The directory to copy into; created if missing.
+    :type destination: str or Path
+    """
+    source, destination = Path(source), Path(destination)
+    for root, _, files in os.walk(source, followlinks=True):
+        target_dir = destination / Path(root).relative_to(source)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        for name in files:
+            shutil.copyfile(Path(root) / name, target_dir / name)
+
+
+def move_tree(source, destination):
+    """Move a directory, falling back to copy-and-delete across file systems.
+
+    :param source: The directory to move.
+    :type source: str or Path
+    :param destination: Where it should end up; must not already exist.
+    :type destination: str or Path
+    """
+    try:
+        os.rename(source, destination)
+    except OSError:
+        copy_tree(source, destination)
+        shutil.rmtree(source)
 
 
 def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):

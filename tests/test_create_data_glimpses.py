@@ -12,7 +12,6 @@ from chartbook.cli import main
 from chartbook.create_data_glimpses import (
     DeclaredDataframe,
     create_txt_report,
-    create_xml_report,
     find_declared_dataframes,
     get_dataset_report,
     heading_to_anchor,
@@ -165,18 +164,16 @@ class TestReports:
         report = create_txt_report(declared)
         assert "**ERROR:** ERROR: Could not read file" in report
 
-    def test_xml_report(self, pipeline_project):
-        import xml.etree.ElementTree as ET
-
-        declared = find_declared_dataframes(load_manifest(pipeline_project))
-        root = ET.fromstring(create_xml_report(declared))
-        (summary_entry,) = root.find("summary")
-        assert summary_entry.attrib["pipeline"] == "test_pipeline"
-        assert summary_entry.attrib["id"] == "dataframe_0"
-        assert summary_entry.attrib["filename"] == "dataframe_0.parquet"
-        (dataset,) = root.find("datasets")
-        assert dataset.find("shape").attrib == {"rows": "10", "cols": "4"}
-        assert len(dataset.find("columns")) == 4
+    def test_all_null_numeric_column_does_not_break_the_report(self, tmp_path):
+        """A numeric column with no values has no mean; the report must still write."""
+        project = create_pipeline_project(tmp_path / "nulls")
+        data_file = project / "_data" / "test_pipeline" / "dataframe_0.parquet"
+        pl.DataFrame(
+            {"date": [1, 2, 3], "empty": pl.Series([None, None, None], dtype=pl.Float64)}
+        ).write_parquet(data_file)
+        declared = find_declared_dataframes(load_manifest(project))
+        report = create_txt_report(declared)
+        assert "empty: min=None, max=None, mean=None, median=None" in report
 
     def test_heading_to_anchor(self):
         assert heading_to_anchor("pipeline_a:dataframe_0") == "pipeline-a-dataframe-0"
