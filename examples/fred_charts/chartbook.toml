@@ -39,7 +39,7 @@ tags = [
 ]
 pull_method = "Web API via Python"
 path = "./_data/fred.parquet"
-date_col = "date"
+date_col = "DATE"
 docs_path = "./docs_src/dataframes/fred.md"
 
 [charts.gdp_chart]

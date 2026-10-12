@@ -70,7 +70,7 @@ tags = [
 ]
 pull_method = "Web API via Python"
 path = "./_data/fed_yield_curve.parquet"
-date_col = "date"
+date_col = "Date"
 docs_path = "./docs_src/dataframes/fed_yield_curve.md"
 
 [dataframes.term_premium]
