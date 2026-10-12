@@ -31,6 +31,8 @@ chartbook build -f          # Force overwrite existing docs
 chartbook build -f --incremental  # Keep _docs/ and redo only what changed since last time
 chartbook build -f --watch  # Incremental build, then rebuild on every file change (Ctrl-C to stop)
 chartbook browse            # Open project docs in default browser
+# every build also writes docs/index.json: one record per pipeline, dataframe, column,
+# chart, notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash
 chartbook check             # CI gate: missing metadata, broken paths, expiring licenses
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe

@@ -5,6 +5,35 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — the index: `index.json`
+
+Every build now writes one more file beside the HTML, `docs/index.json`: a description of everything the site contains, as a flat list of self-describing records. There is one record for each pipeline, dataframe, chart, notebook and note, and one for each column of each dataframe. Until now the only machine-readable description of a ChartBook project was its `chartbook.toml` files, which say what should exist; the index says what a build found. It is the first piece of the {doc}`asset graph <design/asset-graph>`, and the file that later pieces read and write.
+
+Each asset record has a fully qualified ID in the same grammar as `chartbook path` (`scope/pipeline:name`, `scope/pipeline:chart/name`), the same address as named fields (`ref`), a `content_hash` of its file, and every field its manifest entry declares. A dataframe record also has its columns and row count, read from the parquet footer without loading data, and a chart record names the dataframe it was made from in `inputs`. A dataframe stored as many files has one hash that covers all of them, computed in a way that can be reproduced with `sha256sum`.
+
+The published file holds no path from the machine that built it. A fuller copy with absolute paths is written to the build directory (`_docs/index.json`). The same index is available from Python as `chartbook.index.build_index(manifest)`. An incremental build remembers file hashes and reads only the files that changed.
+
+The format is specified in {doc}`design/index-schema`, and a JSON Schema for each kind of record ships in the package under `chartbook/schemas/` and is published with this documentation. Nothing reads the index yet: the site is still rendered from the manifests.
+
+### Added — `[dataframes.<id>.series.<key>]`: documenting a column
+
+A column of a dataframe can now be given a name, units, a frequency and a write-up of its own:
+
+```toml
+[dataframes.treasury_rates.series.dgs10]
+name = "10-Year Treasury Constant Maturity"
+column = "DGS10"
+units = "Percent"
+```
+
+The key is the series' address inside the dataframe (`treasury_rates#dgs10`). The index lists every column as a series whether or not it has a table; a table documents one, and gives an address to a column whose own name could not be one (`10Y 2Y Spread`). The loader rejects a malformed table, an illegal key, and two series that name one column. `chartbook check` reports a series `docs_path` that points at no file. Series are not shown on pages yet, and a series address does not resolve yet.
+
+### Fixed
+
+- Two example dataframes declared `date_col = "date"` when their date columns are `DATE` and `Date`. The page generator swallowed the mismatch, and their pages showed `None` for "Data available up to". The manifests now name the columns, and building the index warns when a `date_col` names no column. That warning then found a second problem: the FRED example's live download left its date index unnamed, so the column existed only in the test suite's stand-in data. The pull script now names it.
+
 ## [0.2.0] - 2026-10-12
 
 Tools around the manifest: a CI gate, paths you can ask for, freshness on every page, incremental builds, and a scaffolder that can put a new project on GitHub. The breaking changes are marked as such. ChartBook is still {doc}`experimental <reference/stability>`.

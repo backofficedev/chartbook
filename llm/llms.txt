@@ -32,6 +32,8 @@ chartbook build -f        # Force overwrite existing docs
 chartbook build -f --watch  # Rebuild incrementally on every file change
 chartbook browse          # Open the generated site
 chartbook check              # CI gate: missing metadata, broken paths, expiring licenses
+# every build also writes docs/index.json: a record per pipeline, dataframe, column, chart,
+# notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash
 chartbook path <name>        # Print the path chartbook.toml declares for a dataframe
 chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>)
 chartbook publish            # Stage publishable files to a directory

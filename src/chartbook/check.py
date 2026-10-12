@@ -185,6 +185,24 @@ def check_paths(
         else:
             message = f"file not found: {missing.file_path}"
         problems.append(Problem(toml_file, table, field, message))
+
+    # A series' write-up. The build does not render these yet, so nothing
+    # else notices when one is missing.
+    for pipeline_id in get_pipeline_ids(manifest):
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        pipeline_dir = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
+        for dataframe_id, dataframe in (pipeline_manifest.get("dataframes") or {}).items():
+            for key, series in (dataframe.get("series") or {}).items():
+                docs_path = series.get("docs_path")
+                if docs_path and not (pipeline_dir / docs_path).is_file():
+                    problems.append(
+                        Problem(
+                            pipeline_dir / "chartbook.toml",
+                            f"dataframes.{dataframe_id}.series.{key}",
+                            "docs_path",
+                            f"file not found: {pipeline_dir / docs_path}",
+                        )
+                    )
     return problems
 
 

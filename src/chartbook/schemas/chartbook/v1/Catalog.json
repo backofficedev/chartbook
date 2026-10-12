@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Catalog.json",
+  "title": "Catalog record",
+  "description": "The root of a catalog's index. Exactly one per catalog; an index of a single pipeline has none.",
+  "type": "object",
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "name",
+    "pipelines"
+  ],
+  "properties": {
+    "kind": {
+      "const": "Catalog"
+    },
+    "version": {
+      "const": "chartbook/v1"
+    },
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "pipelines": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of the pipelines in this build."
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "warn",
+            "strict"
+          ]
+        },
+        "required": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

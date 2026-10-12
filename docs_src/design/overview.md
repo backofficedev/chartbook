@@ -6,7 +6,7 @@ never seen this project and has to continue building it. It says what ChartBook 
 it uses, what is built, what to build next and in what order, and where every decision is
 written down.
 
-Last revised 2026-10-12, for version 0.2.0.
+Last revised 2026-10-12, after version 0.2.0 and the first implementation of the index.
 ```
 
 ## What ChartBook is
@@ -113,8 +113,8 @@ graph. Read it before proposing a feature.
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built; local resolution built |
 | 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Designed, not built |
-| 5 | {doc}`index-schema` | The index file, record by record | Designed, not built. **Next to build** |
-| 6 | {doc}`models` | Models as assets | Direction accepted, not built |
+| 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
+| 6 | {doc}`models` | Models as assets | Direction accepted, not built. **Next to build** |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
@@ -122,7 +122,7 @@ and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
 
 ## What is built
 
-As of 0.2.0.
+As of 0.2.0, plus the index, which is merged after it.
 
 | Capability | Where | Notes |
 |---|---|---|
@@ -132,6 +132,8 @@ As of 0.2.0.
 | `chartbook check`, the CI gate | `check.py` | Required fields, broken paths, expiring licenses. `--skip-outputs` for CI that does not build data |
 | The reference grammar | `refs.py` | All of it parses |
 | Resolving local references | `resolve.py`, `assets.py`, `data.py`, `chartbook path` | One resolver, typed locations |
+| The index, `index.json` | `index.py`, `hashing.py`, `schemas/` | Written by every build, beside the HTML. One hash rule; hashes cached in the build directory |
+| Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
@@ -140,8 +142,9 @@ As of 0.2.0.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | Cross-pipeline references, `#part`, `@rev`, registry prefixes, `model/…`, `chartbook push` |
 
-Not built: the index, `[dependencies]`, the lockfile, the store, pinning, build records,
-`chartbook run`, `[scripts]`, `[models]`, `[sources]` and SQL access, any export.
+Not built: `[dependencies]`, the lockfile, the store, pinning, build records, `chartbook run`,
+`[scripts]`, `[models]`, `[sources]` and SQL access, any export, and anything that *reads* the
+index.
 
 ## What to build next, in order
 
@@ -157,34 +160,20 @@ person to work on this. Change them if a better cut appears, and say so here.
 Each step ends with something a user can run. Do them one at a time, each as its own branch and
 pull request.
 
-### Step 1. The index
+### Step 1. The index — built
 
-**Goal:** `chartbook build` also writes one JSON file that describes everything.
+`chartbook build` also writes one JSON file that describes everything: `index.json`, beside the
+HTML. It has `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook` and `Note`
+records, each asset with a fully qualified `id`, a structured `ref` and a content hash. The code
+is `chartbook/index.py` and `chartbook/hashing.py`; the JSON Schemas are in `chartbook/schemas/`;
+the loader reads `[dataframes.x.series.y]`.
 
-- Read {doc}`index-schema` whole. It is the specification.
-- A new module (suggested: `chartbook/index.py`) that takes a loaded manifest and returns the
-  records: `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`, `Note`.
-- Every asset record has a fully qualified `id` and a structured `ref`, both made from an
-  `AssetRef`. Never build an ID by joining strings.
-- A new module for hashing (suggested: `chartbook/hashing.py`): the hash of a file, of a glob
-  and of a directory. There must be exactly one. Cache results by file size and time, because
-  data files are large and builds are frequent.
-- `columns` on each `Dataframe` record, read from the parquet schema.
-- Series: teach the manifest loader the `[dataframes.x.series.y]` table ({ref}`series-addressing`),
-  and write a `Series` record per value column, `declared: true` where a table documents it.
-- JSON Schemas under `schemas/chartbook/v1/`, one per record kind, and a test that every
-  generated record validates.
-- Leave `chartbook ls` alone. It exists and reads the manifests; moving it onto the index is
-  part of step 6.
-- Leave out for now: `Build` records, `dependencies`, `built_by`, and `inputs` beyond what a
-  chart's `dataframe` field already says.
+{doc}`index-schema` is the specification, and its last section, "What the first implementation
+does", says exactly what is written and what is not. Nine things were settled while building
+it and are listed there as *proposed*, for the maintainer to confirm.
 
-**Done when:** `chartbook build` in `examples/catalog` writes an index that validates against
-the schemas, lists every asset of both example pipelines with a hash, and is identical when the
-build is run twice (apart from `generated_at`).
-
-**Do not** make the site render *from* the index in this step. That is a later, separate change;
-doing both at once makes neither reviewable.
+Left for later steps, on purpose: `Build` records, `dependencies`, `Model` records, and
+rendering the site *from* the index.
 
 ### Step 2. Declared models
 
@@ -252,6 +241,9 @@ are easy to miss:
 - **Build the docs with `hatch run docs:build`.** One warning is expected, about a plotly MIME
   type in `gallery.ipynb`. Any other warning is yours.
 - **A new module needs a line in `docs_src/reference/api.md`**, or the docs build warns.
+- **The index is a contract.** A change to what `chartbook/index.py` writes needs the same change
+  in {doc}`index-schema` and in the JSON Schema for that record, in one commit. A change to how
+  anything is hashed needs a new algorithm prefix.
 - **Every user-visible change needs a changelog entry** in `docs_src/changelog.md`, in
   paragraphs that say why. A breaking change is marked **breaking** and says what to do instead.
 - **The agent skill is in two places.** Edit `src/chartbook/skills/`, then copy to

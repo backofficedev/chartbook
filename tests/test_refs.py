@@ -303,3 +303,37 @@ class TestDictForm:
     def test_is_checked(self):
         with pytest.raises(ValueError, match="Unknown kind"):
             AssetRef.from_dict({"name": "gdp", "kind": "figure"})
+
+
+class TestInPipeline:
+    """Qualifying a local reference with the pipeline that declares it."""
+
+    def test_scoped_pipeline(self):
+        ref = AssetRef(kind="chart", name="gdp").in_pipeline("ftsfr/rates")
+        assert str(ref) == "ftsfr/rates:chart/gdp"
+        assert (ref.scope, ref.pipeline) == ("ftsfr", "rates")
+
+    def test_bare_pipeline(self):
+        assert str(AssetRef(name="gdp").in_pipeline("rates")) == "rates:gdp"
+
+    def test_registry_qualified_pipeline(self):
+        ref = AssetRef(name="gdp").in_pipeline("charthub.example/acme/rates")
+        assert ref.registry == "charthub.example"
+
+    def test_keeps_part_and_revision(self):
+        ref = parse_asset_ref("gdp#real@v2").in_pipeline("acme/rates")
+        assert str(ref) == "acme/rates:gdp#real@v2"
+
+    def test_replaces_an_earlier_pipeline(self):
+        ref = parse_asset_ref("old/place:gdp").in_pipeline("rates")
+        assert str(ref) == "rates:gdp"
+
+    def test_leaves_the_original_alone(self):
+        local = AssetRef(name="gdp")
+        local.in_pipeline("acme/rates")
+        assert local.is_local
+
+    @pytest.mark.parametrize("pipeline_id", ["a/b/c", "two words", ""])
+    def test_rejects_what_is_not_a_pipeline_id(self, pipeline_id):
+        with pytest.raises(ValueError):
+            AssetRef(name="gdp").in_pipeline(pipeline_id)

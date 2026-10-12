@@ -63,6 +63,8 @@ Generate HTML documentation in the specified output directory.
 chartbook build [OPTIONS] [OUTPUT_DIR]
 ```
 
+Beside the HTML, every build writes `index.json`: a flat list of records, one per pipeline, dataframe, column ("Series"), chart, notebook and note. Each has `kind`, `version`, a fully qualified `id` (`scope/pipeline:name` for a dataframe, `scope/pipeline:chart/name` for a chart, `scope/pipeline:name#column` for a series), the same address as named fields in `ref`, a `content_hash` (`sha256:<hex>`) of its file, and every field its `chartbook.toml` entry declares. A dataframe record also has `columns` (name and dtype) and `row_count`; a chart record has `inputs`. The published file holds no machine-specific path. From Python: `chartbook.index.build_index(load_manifest("."))`. A column is documented with a `[dataframes.<id>.series.<key>]` table (`name`, `column`, `units`, `frequency`, `docs_path`).
+
 **Arguments:**
 - `OUTPUT_DIR`: Directory where HTML will be generated (default: `./docs`)
 
