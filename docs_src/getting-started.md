@@ -26,6 +26,8 @@ chartbook browse
 
 You already have a documentation site.
 
+To start under version control as well, `chartbook init --git` makes the new project a git repository with its first commit, and `chartbook init --github` goes on to create a private GitHub repository for it and push (it needs the [GitHub CLI](https://cli.github.com), logged in). See {doc}`reference/cli`.
+
 ## Or build one by hand
 
 The scaffold is convenience, not magic. A pipeline is any directory with a `chartbook.toml` — here is the whole thing from scratch.

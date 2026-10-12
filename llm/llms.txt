@@ -25,6 +25,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 ```bash
 chartbook init            # Scaffold a new pipeline project
+chartbook init --github   # ...then git init, commit, create a private GitHub repo with gh, and push
 chartbook build           # Generate HTML documentation website
 chartbook build -f        # Force overwrite existing docs
 chartbook browse          # Open the generated site
