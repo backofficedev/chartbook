@@ -46,10 +46,12 @@ CHART_FIELDS: list[str] = [
 
 NOTEBOOK_FIELDS: list[str] = []
 
+#: "docs" means a write-up, however it is given: ``docs`` or ``docs_path``.
 MODEL_FIELDS: list[str] = [
     "name",
     "description",
     "trained_on",
+    "docs",
     "path",
 ]
 
@@ -119,7 +121,11 @@ def _collect_missing_fields(
 ) -> list[str]:
     missing: list[str] = []
     for field in required_fields:
-        if field not in spec or _value_is_missing(spec[field]):
+        if field == "docs":
+            # A write-up counts whichever way it is given
+            if all(_value_is_missing(spec.get(key)) for key in DOCS_FIELDS):
+                missing.append(field)
+        elif field not in spec or _value_is_missing(spec[field]):
             missing.append(field)
     return missing
 

@@ -23,6 +23,7 @@ from chartbook.resolve import (
     Location,
     UnsupportedReferenceError,
     find_manifest_dir,
+    parse_declared_ref,
     parse_local_ref,
     resolve,
 )
@@ -152,6 +153,28 @@ class TestParseLocalRef:
 
     def test_reserved_syntax_errors_are_value_errors(self):
         assert issubclass(UnsupportedReferenceError, ValueError)
+
+
+class TestParseDeclaredRef:
+    """What a manifest may *state*, which is more than what resolves."""
+
+    @pytest.mark.parametrize(
+        "ref", ["treasury_rates", "rates:treasury_rates", "ftsfr/rates:treasury_rates"]
+    )
+    def test_this_pipelines_assets_and_other_pipelines(self, ref):
+        assert str(parse_declared_ref(ref)) == ref
+
+    def test_kind_is_still_checked(self):
+        with pytest.raises(KindMismatchError):
+            parse_declared_ref("rates:chart/curve", kind="dataframe")
+
+    def test_parts_versions_and_registries_are_still_reserved(self):
+        with pytest.raises(UnsupportedReferenceError, match="not yet supported"):
+            parse_declared_ref("rates:treasury_rates#dgs10")
+        with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
+            parse_declared_ref("rates:treasury_rates@v2")
+        with pytest.raises(UnsupportedRegistryError, match="not yet supported"):
+            parse_declared_ref("charthub.example/ftsfr/rates:treasury_rates")
 
 
 class TestResolveLocal:

@@ -369,18 +369,24 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
     ``docs_path`` or ``docs`` is its write-up. See
     ``docs_src/design/models.md``.
 
-    Each entry gains ``_resolved_path`` and ``_trained_on``, the names of
-    the dataframes it was trained on.
+    A dataframe in ``trained_on`` may belong to this pipeline
+    (``"treasury_rates"``) or to another (``"ftsfr/rates:treasury_rates"``).
+    One of this pipeline's must be declared here. Another pipeline's is
+    taken as stated: it is lineage, and nothing fetches or checks it until
+    dependencies exist.
+
+    Each entry gains ``_resolved_path`` and ``_trained_on``, the parsed
+    references to the dataframes it was trained on.
 
     :param manifest: The pipeline's manifest, with ``dataframes`` loaded.
     :param base_dir: The pipeline's root directory.
     :returns: The model tables by key; empty if the pipeline declares none.
     :raises ValueError: If a table is malformed, a key is not a legal name,
-        or ``trained_on`` names something that is not one of this
-        pipeline's dataframes.
+        or ``trained_on`` names something that is not a dataframe, or a
+        dataframe of this pipeline that it does not declare.
     """
     from chartbook.refs import KindMismatchError
-    from chartbook.resolve import parse_local_ref
+    from chartbook.resolve import parse_declared_ref
 
     models = manifest.get("models")
     if models is None:
@@ -428,10 +434,10 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
                 f"{where}: 'trained_on' must be a list of dataframes, e.g. "
                 f'trained_on = ["treasury_rates"].'
             )
-        names = []
+        references = []
         for text in trained_on:
             try:
-                reference = parse_local_ref(text, kind="dataframe")
+                reference = parse_declared_ref(text, kind="dataframe")
             except KindMismatchError as error:
                 raise ValueError(
                     f"{where}: trained_on: {error} A model is trained on dataframes."
@@ -439,15 +445,16 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
             except ValueError as error:
                 # Keeps "reserved, not yet supported" distinct from "invalid"
                 raise type(error)(f"{where}: trained_on: {error}") from None
-            if reference.name not in dataframes:
+            if reference.is_local and reference.name not in dataframes:
                 declared = ", ".join(sorted(dataframes)) or "(none)"
                 raise ValueError(
                     f"{where}: trained_on names the dataframe {reference.name!r}, "
                     f"which this pipeline does not declare. Its dataframes are: "
-                    f"{declared}."
+                    f"{declared}. To name another pipeline's dataframe, write "
+                    f"'<pipeline>:{reference.name}'."
                 )
-            names.append(reference.name)
-        entry["_trained_on"] = names
+            references.append(reference)
+        entry["_trained_on"] = references
     return models
 
 
@@ -550,6 +557,12 @@ def _load_pipeline_manifest(raw_manifest):
 
     manifest["project"] = _resolve_project(raw_manifest, base_dir, "pipeline")
     _resolve_site_dir(manifest["project"], base_dir)
+    if "policy" in raw_manifest:
+        # A pipeline's own policy: what it holds itself to when it is
+        # checked or built alone. Inside a catalog, the catalog's applies.
+        manifest["policy"] = _resolve_policy(
+            raw_manifest, str(Path(base_dir) / "chartbook.toml")
+        )
 
     # Ensure optional sections have defaults
     manifest.setdefault("charts", {})

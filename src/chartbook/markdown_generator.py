@@ -256,6 +256,7 @@ def generate_all_pipeline_docs(
             docs_src_dir=docs_src_dir,
             size_threshold=size_threshold,
             enable_data_download=enable_data_download,
+            site_manifest=manifest,
         )
         if pipeline_theme == "catalog":
             # Copy pipeline README to pipelines directory
@@ -513,6 +514,7 @@ def generate_pipeline_docs(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
     enable_data_download=False,
+    site_manifest=None,
 ):
     """Generate documentation for a single pipeline.
 
@@ -567,6 +569,7 @@ def generate_pipeline_docs(
             pipeline_base_dir=pipeline_base_dir,
             pipeline_theme=pipeline_theme,
             docs_src_dir=docs_src_dir,
+            site_manifest=site_manifest,
         )
 
 
@@ -820,7 +823,7 @@ _MODEL_PAGE_TAIL = """
 
 {% if trained_on %}
 {% for dataframe in trained_on %}
-- [{{pipeline_id}}:{{dataframe.id}}]({{dataframe.link}}){% if dataframe.name %} - {{dataframe.name}}{% endif %}
+- {% if dataframe.link %}[{{dataframe.label}}]({{dataframe.link}}){% else %}`{{dataframe.label}}`{% endif %}{% if dataframe.name %} - {{dataframe.name}}{% endif %}{% if dataframe.note %} ({{dataframe.note}}){% endif %}
 
 {% endfor %}
 {% else %}
@@ -847,6 +850,58 @@ _MODEL_PAGE_TAIL = """
 """
 
 
+def _site_pipeline(site_manifest, pipeline_ref):
+    """Find a pipeline of the site being built, by any reference to it.
+
+    :returns: Tuple of (its ID in this site, its manifest), or (None, None)
+        if the site has no such pipeline.
+    """
+    from chartbook.identity import resolve_pipeline_ref
+
+    if not site_manifest:
+        return None, None
+    try:
+        known_as = resolve_pipeline_ref(get_pipeline_ids(site_manifest), pipeline_ref)
+    except (KeyError, ValueError):
+        return None, None
+    return known_as, get_pipeline_manifest(site_manifest, known_as)
+
+
+def _trained_on_entries(model_manifest, pipeline_id, pipeline_manifest, site_manifest):
+    """What a model's page lists under "Trained On".
+
+    A dataframe of this pipeline, or of another pipeline that is part of
+    the same site, is a link to its page. One in a pipeline the site does
+    not contain is named, as stated, without a link.
+    """
+    entries = []
+    for reference in model_manifest.get("_trained_on", []):
+        if reference.is_local:
+            owner_id, owner = pipeline_id, pipeline_manifest
+        else:
+            owner_id, owner = _site_pipeline(site_manifest, reference.pipeline_id)
+        dataframes = (owner or {}).get("dataframes") or {}
+        if reference.name in dataframes:
+            entries.append(
+                {
+                    "label": f"{owner_id}:{reference.name}",
+                    "name": dataframes[reference.name].get("name", ""),
+                    "link": f"../../dataframes/{_fs_slug(owner_id)}/{reference.name}.md",
+                    "note": "",
+                }
+            )
+        else:
+            entries.append(
+                {
+                    "label": str(reference),
+                    "name": "",
+                    "link": "",
+                    "note": "in another pipeline, which is not part of this site",
+                }
+            )
+    return entries
+
+
 def generate_model_docs(
     model_id,
     pipeline_id,
@@ -855,6 +910,7 @@ def generate_model_docs(
     pipeline_base_dir=BASE_DIR,
     pipeline_theme="pipeline",
     docs_src_dir=DOCS_SRC_DIR,
+    site_manifest=None,
 ):
     """Generate the page for one model a pipeline declares.
 
@@ -877,6 +933,9 @@ def generate_model_docs(
     :type pipeline_theme: str
     :param docs_src_dir: The directory containing documentation source files and templates.
     :type docs_src_dir: Path
+    :param site_manifest: The manifest of the whole site being built, so that
+        training data in another of its pipelines can be linked to.
+    :type site_manifest: dict or None
     """
     from chartbook.models import read_metrics
 
@@ -929,15 +988,9 @@ def generate_model_docs(
             scores = {}  # `chartbook check` reports a malformed metrics file
         metrics = {name: _format_metric(value) for name, value in scores.items()}
 
-    dataframes = pipeline_manifest.get("dataframes") or {}
-    trained_on = [
-        {
-            "id": dataframe_id,
-            "name": dataframes.get(dataframe_id, {}).get("name", ""),
-            "link": f"../../dataframes/{slug}/{dataframe_id}.md",
-        }
-        for dataframe_id in model_manifest.get("_trained_on", [])
-    ]
+    trained_on = _trained_on_entries(
+        model_manifest, pipeline_id, pipeline_manifest, site_manifest
+    )
 
     model_files = []
     if model_path.is_dir():

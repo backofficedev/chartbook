@@ -258,7 +258,7 @@ def load_policy_dict():
             **LENIENT_POLICY["policy"]["required"],
             "notebooks": [],
             # Not in the file, so the default list for models
-            "models": ["name", "description", "trained_on", "path"],
+            "models": ["name", "description", "trained_on", "docs", "path"],
         },
     }
 

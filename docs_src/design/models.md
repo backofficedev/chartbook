@@ -73,7 +73,7 @@ tags = ["Forecast", "Treasury"]
 | Field | Required | Meaning |
 |---|---|---|
 | `path` | yes | The model file, or a directory holding the model's files. Relative to the pipeline root. *Decided* |
-| `trained_on` | no | A list of {doc}`references <references>` to the data it was trained on. The default kind is dataframe, so `"treasury_rates"` is a local dataframe and `"ftsfr/fed_yield_curve:treasury_rates"` is another pipeline's. *Decided* |
+| `trained_on` | no | A list of {doc}`references <references>` to the data it was trained on. The default kind is dataframe, so `"treasury_rates"` is a local dataframe and `"ftsfr/fed_yield_curve:treasury_rates"` is another pipeline's. Both work today; see "What is built" for what the second one does and does not do yet. *Decided* |
 | `metrics_path` | no | A JSON file of scores, written by the training code. See below. *Decided* |
 | `docs_path` or `docs` | no | The model's write-up (a "model card"): what it is for, how it was built, where it should not be used. Same convention as every other table. *Decided* |
 | `name`, `description`, `tags` | no | As for dataframes and charts. *Proposed* |
@@ -321,7 +321,7 @@ Each slice is useful by itself. The step numbers are the {doc}`overview`'s build
 |---|---|---|
 | **M1. Declared models** (step 2) — **built** | The index | The `[models]` table in the loader, with validation. `model` added to `RESOLVABLE_KINDS`, so `chartbook path model/x` works. `chartbook.models.path()`. `chartbook check` covers `path`, `metrics_path` and `docs_path` (the first two are build outputs, so `--skip-outputs` skips them). The model page. The `Model` record. Policy support: `[policy.required] models = […]`. The worked example above. **No versions** |
 | **M2. Parts** (with M1 or soon after) | M1 | `model/x#file` resolves to a file inside a directory model. Refuse a part that escapes the directory (`..`) |
-| **M3. Cross-pipeline** (step 3) | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. `trained_on` may name another pipeline's dataframe, and must be a declared dependency. The `examples/rate_forecast` pipeline |
+| **M3. Cross-pipeline** (step 3) | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. Training data in another pipeline, which can already be *stated*, becomes a real dependency: declared, fetched, pinned, and recorded by hash. The `examples/rate_forecast` pipeline |
 | **M4. Versions and labels** (step 4) | Build records | Versions on new content hashes, `@v3`, `[models.x.aliases]`, `@champion`, the versions table on the page, staleness when inputs move |
 
 (models-built)=
@@ -342,23 +342,48 @@ Slice M1, in these places:
 | The tests | `tests/test_models.py` |
 
 Not built: versions and labels (`@v3`, `@champion`, `[models.x.aliases]`), parts
-(`model/x#file`), and a model or a `trained_on` dataframe in another pipeline. Each is refused
-with "reserved syntax and not yet supported".
+(`model/x#file`), and *asking for* a model in another pipeline. Each is refused with "reserved
+syntax and not yet supported".
+
+```{admonition} Training data in another pipeline is the point, not an edge case
+:class: important
+
+Decided by the maintainer, 2026-10-12: a model's training data **can** be another pipeline's
+dataframe, and it is allowed now, not held back until dependencies exist.
+
+`trained_on = ["ftsfr/fed_yield_curve:treasury_rates"]` loads today. It is **stated lineage**:
+
+- the index records it as an input, by the ID that pipeline has in the build if it is part of
+  it, and as written otherwise;
+- the model's page lists it, and links to the dataframe's page when the other pipeline is in the
+  same catalog;
+- `chartbook check`, run on a catalog, reports a dataframe that the other pipeline does not
+  declare. Where the other pipeline cannot be seen, nothing is checked.
+
+What it is not yet: a dependency. Nothing fetches the data, pins a version of it, or records
+which bytes the model was trained on. **Making it one is the reason step 3 exists**, and
+whoever builds step 3 should treat "a model trained on another pipeline's data, reproducibly"
+as its headline case. When that lands, a `trained_on` that names another pipeline must be backed
+by an entry in `[dependencies]`; until then it is taken on trust.
+```
 
 ### Decided while building it
 
-These were open or unstated. All are *proposed*: implemented, and waiting on the maintainer's
-yes.
+These were open or unstated when the slice was built.
 
-1. **The default policy asks a model for `name`, `description`, `trained_on` and `path`.**
-   Lineage is the point of declaring a model, so `chartbook check` reports a model that does not
-   say what it was trained on. A catalog can set its own list with
-   `[policy.required] models = […]`.
-2. **A model's write-up is optional.** Dataframes and charts must have one or the manifest does
-   not load. A model without one gets a page with everything else.
-3. **`trained_on` may only name dataframes of the same pipeline, for now.** Another pipeline's
-   dataframe, a series (`#`) or a version (`@`) is refused as not yet supported, as everywhere
-   else, until dependencies exist.
+**Decided by the maintainer, 2026-10-12:**
+
+1. **By default `chartbook check` reports a model that does not say what it was trained on.**
+   The default policy asks a model for `name`, `description`, `trained_on`, a write-up and
+   `path`. A catalog can set its own list with `[policy.required] models = […]`.
+2. **`trained_on` may name another pipeline's dataframe, now.** See the box above. (The first
+   version of this slice refused it until dependencies existed. That was reversed.)
+3. **A model's write-up is strongly recommended, not required.** A model without one loads and
+   gets a page; `check` reports it under the default policy. In a policy list the field is
+   written `docs`, and is satisfied by either `docs` or `docs_path`.
+
+**Proposed: implemented, and waiting on the maintainer's yes:**
+
 4. **A metrics value may be a number, a string or true/false.** Nothing nested.
 5. **A declared model or metrics file that is missing stops a build**, as a missing data file
    does. `chartbook check --skip-outputs` does not report them, since training produces them.
@@ -367,6 +392,16 @@ yes.
 7. **A catalog has a Models page only when a pipeline declares a model.**
 8. **The page shows the declared path, not the absolute one.** (The dataframe page shows the
    absolute path; that is older behaviour and was left alone.)
+9. **A series or a version in `trained_on` is still refused** (`treasury_rates#dgs10`,
+   `treasury_rates@v2`). Each needs the store to mean anything.
+
+**Asked, not answered: should a dataframe or a chart still be *required* to have a write-up?**
+Today the manifest does not load without one, while a model's is only recommended. The
+maintainer raised making all three the same. The recommendation is to do so: never refuse to
+load a manifest over a missing write-up; put `docs` in the default policy list for dataframes
+and charts as it now is for models; and let a catalog, or a pipeline, drop it. Not done, because
+it loosens something existing projects rely on being checked, and it was a question, not an
+instruction.
 
 One thing is open and should be settled before models are used in earnest: **hashing a
 directory counts every file, hidden ones included.** A `.DS_Store` appearing in a model's

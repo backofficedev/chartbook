@@ -42,7 +42,7 @@ from typing import Any, Iterable, Optional, Union
 
 from chartbook import hashing
 from chartbook.__about__ import __version__
-from chartbook.identity import ID_COMPONENT_PATTERN
+from chartbook.identity import ID_COMPONENT_PATTERN, resolve_pipeline_ref
 from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest
 from chartbook.refs import KIND_TABLES, AssetRef, parse_asset_ref
 
@@ -294,6 +294,23 @@ def _series_records(
     return records
 
 
+def _input_id(reference: AssetRef, pipeline_id: str, known_pipelines: Iterable[str]) -> str:
+    """The ID of an asset that another one was made from.
+
+    A local reference belongs to the pipeline that states it. One that
+    names another pipeline is written as that pipeline is known in this
+    build, if it is in it (a catalog knows ``rates`` as ``ftsfr/rates``),
+    and as stated otherwise.
+    """
+    if reference.is_local:
+        return str(reference.in_pipeline(pipeline_id))
+    try:
+        known_as = resolve_pipeline_ref(known_pipelines, reference.pipeline_id)
+    except (KeyError, ValueError):
+        return str(reference)
+    return str(reference.in_pipeline(known_as))
+
+
 def _asset_records(
     kind: str,
     name: str,
@@ -301,6 +318,7 @@ def _asset_records(
     pipeline_id: str,
     base_dir: Path,
     cache: Optional[hashing.HashCache],
+    known_pipelines: Iterable[str] = (),
 ) -> list[dict]:
     """The record for one asset, followed by its series if it is a dataframe."""
     ref = AssetRef(kind=kind, name=name).in_pipeline(pipeline_id)
@@ -344,8 +362,8 @@ def _asset_records(
         skip = ("trained_on", "metrics_path")
         if "trained_on" in entry:
             record["inputs"] = [
-                str(AssetRef(name=dataframe).in_pipeline(pipeline_id))
-                for dataframe in entry.get("_trained_on", [])
+                _input_id(reference, pipeline_id, known_pipelines)
+                for reference in entry.get("_trained_on", [])
             ]
         metrics = _model_metrics(base_dir, name, entry)
         if metrics is not None:
@@ -379,6 +397,7 @@ def pipeline_records(
     pipeline_id: str,
     pipeline_manifest: dict,
     cache: Optional[hashing.HashCache] = None,
+    known_pipelines: Iterable[str] = (),
 ) -> list[dict]:
     """The records for one pipeline: itself, then its assets.
 
@@ -388,8 +407,11 @@ def pipeline_records(
     :param pipeline_id: The pipeline's ID in this build (a catalog's key).
     :param pipeline_manifest: Its loaded manifest.
     :param cache: A hash cache, so unchanged files are not read again.
+    :param known_pipelines: The IDs of every pipeline in this build, so an
+        input in another one of them is written by the ID it has here.
     """
     base_dir = Path(pipeline_manifest["pipeline_base_dir"])
+    known_pipelines = list(known_pipelines)
     project = pipeline_manifest["project"]
 
     assets: list[dict] = []
@@ -399,7 +421,13 @@ def pipeline_records(
         for name in sorted(entries):
             try:
                 assets += _asset_records(
-                    kind, name, entries[name], pipeline_id, base_dir, cache
+                    kind,
+                    name,
+                    entries[name],
+                    pipeline_id,
+                    base_dir,
+                    cache,
+                    known_pipelines,
                 )
             except ValueError as error:
                 # A key that cannot be written as an address has no ID
@@ -476,7 +504,10 @@ def build_index(
 
     for pipeline_id in pipeline_ids:
         records += pipeline_records(
-            pipeline_id, get_pipeline_manifest(manifest, pipeline_id), cache
+            pipeline_id,
+            get_pipeline_manifest(manifest, pipeline_id),
+            cache,
+            known_pipelines=pipeline_ids,
         )
 
     moment = generated_at or datetime.now(timezone.utc)

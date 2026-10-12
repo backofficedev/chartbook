@@ -169,23 +169,25 @@ def _read_raw_manifest(manifest_path: Path) -> dict:
     return raw
 
 
-def parse_local_ref(
+def parse_declared_ref(
     ref: Union[str, AssetRef], kind: Optional[str] = None
 ) -> AssetRef:
-    """Parse a reference and check that it is one that resolves today.
+    """Parse a reference that a manifest may *declare* today.
 
-    That is a local reference, ``name`` or ``kind/name``. Everything else
-    the grammar allows is refused as reserved, so the message can say "not
-    yet" where the syntax is right.
+    That is an asset of this pipeline or of another one: ``name``,
+    ``kind/name``, ``pipeline:name`` or ``scope/pipeline:name``. A manifest
+    can say that a model was trained on another pipeline's dataframe before
+    ChartBook can fetch that dataframe; saying so is lineage, and needs no
+    resolution. Parts, revisions and registries are still refused, since
+    each means something only once there is a store to look in.
 
-    :param ref: The reference, e.g. ``"treasury_rates"`` or ``"chart/gdp"``.
+    :param ref: The reference.
     :param kind: The kind the caller expects; see
         :func:`chartbook.refs.parse_asset_ref`.
     :returns: The parsed reference.
     :raises UnsupportedRevisionError: If the reference carries ``@rev``.
     :raises UnsupportedRegistryError: If it carries a registry prefix.
-    :raises UnsupportedReferenceError: If it names a part or another
-        pipeline.
+    :raises UnsupportedReferenceError: If it names a part.
     :raises ValueError: If it does not follow the grammar, or names a kind
         other than *kind*.
     """
@@ -209,16 +211,7 @@ def parse_local_ref(
         raise UnsupportedRegistryError(
             f"Reference {str(asset)!r} is qualified with the registry "
             f"{asset.registry!r}. Registry prefixes are reserved syntax and "
-            f"not yet supported (and neither, yet, is the cross-pipeline "
-            f"reference {str(without)!r} that remains without it)."
-        )
-    if not asset.is_local:
-        raise UnsupportedReferenceError(
-            f"Reference {str(asset)!r} names an asset in another pipeline. "
-            f"Cross-pipeline references are reserved syntax and not yet "
-            f"supported; only an asset declared in the current pipeline's "
-            f"{MANIFEST_NAME} resolves. To locate a dataframe through a "
-            f"catalog, use data.get_data_path(pipeline=..., dataframe=...)."
+            f"not yet supported; use {str(without)!r} instead."
         )
     if asset.kind not in RESOLVABLE_KINDS:
         raise UnsupportedReferenceError(
@@ -226,6 +219,38 @@ def parse_local_ref(
             f"kind are reserved syntax and not yet supported: a "
             f"{MANIFEST_NAME} cannot declare one yet. The kinds that resolve "
             f"are: {', '.join(RESOLVABLE_KINDS)}."
+        )
+    return asset
+
+
+def parse_local_ref(
+    ref: Union[str, AssetRef], kind: Optional[str] = None
+) -> AssetRef:
+    """Parse a reference and check that it is one that *resolves* today.
+
+    That is a local reference, ``name`` or ``kind/name``. Everything else
+    the grammar allows is refused as reserved, so the message can say "not
+    yet" where the syntax is right.
+
+    :param ref: The reference, e.g. ``"treasury_rates"`` or ``"chart/gdp"``.
+    :param kind: The kind the caller expects; see
+        :func:`chartbook.refs.parse_asset_ref`.
+    :returns: The parsed reference.
+    :raises UnsupportedRevisionError: If the reference carries ``@rev``.
+    :raises UnsupportedRegistryError: If it carries a registry prefix.
+    :raises UnsupportedReferenceError: If it names a part or another
+        pipeline.
+    :raises ValueError: If it does not follow the grammar, or names a kind
+        other than *kind*.
+    """
+    asset = parse_declared_ref(ref, kind=kind)
+    if not asset.is_local:
+        raise UnsupportedReferenceError(
+            f"Reference {str(asset)!r} names an asset in another pipeline. "
+            f"Cross-pipeline references are reserved syntax and not yet "
+            f"supported; only an asset declared in the current pipeline's "
+            f"{MANIFEST_NAME} resolves. To locate a dataframe through a "
+            f"catalog, use data.get_data_path(pipeline=..., dataframe=...)."
         )
     return asset
 

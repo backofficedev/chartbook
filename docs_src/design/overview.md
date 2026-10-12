@@ -203,19 +203,38 @@ Left for later steps, on purpose: versions and labels (`@v3`, `@champion`), part
 
 **Goal:** `data.path("fed_yield_curve:treasury_rates")` works, and returns a frozen copy.
 
-- `[dependencies]` in the manifest, with `path` and `git` + `rev` forms ({doc}`asset-graph`,
-  "Identity and location").
-- The resolution chain, in one place: an explicit location in `[dependencies]`, then the local
-  catalog, then (reserved) registries, then an error that lists candidates.
-- The store: objects named by content hash, with the link ladder and garbage collection roots.
-- `chartbook.lock`, `chartbook pin`, `chartbook update`.
-- Cross-pipeline references resolve **through the lockfile into the store**, never to the
-  upstream's working directory. Remove the cross-pipeline refusal in `resolve.parse_local_ref()`.
-- Loading from a pipeline that is not a declared dependency fails, and says what to add.
-- A second example pipeline that depends on `yield_curve`.
+```{admonition} The case this step is for
+:class: important
 
-**Done when:** the second example builds from a clean clone with no catalog configured, and
-editing the upstream's data does not change what the downstream reads until `chartbook update`.
+**A model in one pipeline, trained on data from another, reproducibly.** The maintainer was
+explicit: cross-pipeline training data is what ChartBook is going for, not a later refinement,
+and it is one reason all of this is being built as one change with no release in between.
+
+Today a model can *state* that it was trained on another pipeline's dataframe ({doc}`models`).
+Nothing fetches that data, pins a version of it, or records which bytes were used. This step
+makes it real. Judge every design choice in it against that case first, and against "a chart of
+another pipeline's data" second.
+```
+
+It is the largest step, and the first where the design has never met code. Build it as five
+pull requests, in this order. Each leaves `main` working.
+
+| | Pull request | What a user gets | What it does not do |
+|---|---|---|---|
+| **3a** | **Declared dependencies.** `[dependencies]` in the manifest (`path` first). One resolution chain in one function: an explicit location in `[dependencies]`, then the local catalog, then (reserved) registries, then an error that lists candidates. `dependencies` on the `Pipeline` record. `check` verifies each one resolves | A pipeline says what it depends on, and `check` says whether that can be found. A cross-pipeline `trained_on` or chart input must name a declared dependency (a warning first, an error once 3d lands) | Nothing is fetched, copied or pinned |
+| **3b** | **The store.** Objects named by content hash, behind four operations (has, get, put, delete). Links, not copies: reflink, hardlink, symlink, copy, in that order. `chartbook store verify` | Nothing visible. This is the piece everything after sits on, and it can be tested alone | Nothing uses it yet |
+| **3c** | **Pinning.** `chartbook.lock`, written in the index's record schemas. `chartbook pin` snapshots each dependency's declared assets into the store and records their hashes. `chartbook update` moves pins forward. `chartbook store gc`, with the lockfile as its roots | A project can freeze what it depends on, and see in a diff when that changes | References still do not resolve across pipelines |
+| **3d** | **Cross-pipeline references resolve.** `assets.path("pipeline:asset")`, `data.path`, `chartbook path` and `data.load("pipeline:asset")` resolve through the lockfile into the store, never to the upstream's working directory. Loading from an undeclared pipeline fails and says what to add. A model's cross-pipeline `trained_on` is recorded by pinned hash. A second example pipeline, `examples/rate_forecast`, whose model is trained on `yield_curve`'s data | **The payoff.** The case in the box above works end to end | `git` dependencies |
+| **3e** | **`git` dependencies.** `{ git = "…", rev = "…" }`: fetch at a revision into a cache, then as for `path` | A dependency that is not on your disk | — |
+
+**Done when:** `examples/rate_forecast` builds from a clean clone with no catalog configured, its
+model's index record names the exact bytes of the dataframe it was trained on, and editing the
+upstream's data does not change what the downstream reads until `chartbook update`.
+
+**To settle before 3b and 3c, with the maintainer:** where the store lives on disk; the
+lockfile's exact shape; what `pin` does when an upstream has not been built; where a `git`
+checkout is kept; and whether a directory's hash should skip hidden files ({doc}`models`, the
+open question at the end of "What is built").
 
 ### Step 4. Running, build records and versions
 
@@ -295,6 +314,8 @@ maintainer.
 | 2026-10-12 | No minor version per step: the asset graph is one change, built under 0.2.0 and wrapped up at the end | "Versions", above |
 | 2026-10-12 | How a directory or glob is hashed; an unchanged index is not rewritten, so `generated_at` is when it last changed | {doc}`index-schema` |
 | 2026-10-12 | Columns should have SQL-compatible names; a readable name is metadata. A column whose name is not a legal address has no series until a table names it | {doc}`index-schema`, {doc}`../reference/configuration` |
+| 2026-10-12 | A model's training data may be another pipeline's dataframe, and may be declared now, ahead of dependencies. Making it a real, pinned dependency is the headline case for step 3 | {doc}`models`, step 3 above |
+| 2026-10-12 | By default `check` reports a model that does not say what it was trained on. A model's write-up is strongly recommended, not required | {doc}`models` |
 | 2026-10-12 | Models are assets. ChartBook is a model registry, not an experiment tracker. ML operations is a central use case | {doc}`models` |
 
 ## Open questions, collected
@@ -303,6 +324,11 @@ Each is explained where it lives.
 
 - How `@rev` is looked up; how model versions are numbered across branches; which builds make a
   version; retention. ({doc}`references`, {doc}`models`)
+- Whether dataframes and charts should still be *required* to have a write-up, or only strongly
+  recommended, as models are. ({doc}`models`, "Decided while building it")
+- Whether a pipeline's own `[policy]` table is wanted. It is honoured today, as a *proposed*
+  answer to a crash. ({doc}`toml-format-v2`, "Since this was written")
+- Whether hashing a directory should skip hidden files. ({doc}`models`)
 - Whether the site should render from the index, and when. (Step 6)
 - `plotting.line()` and its siblings can only use the two built-in backends, although third
   parties can register others. ({doc}`../guide/plotting-backends`)

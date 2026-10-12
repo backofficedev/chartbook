@@ -24,7 +24,7 @@ from chartbook.errors import AssetNotDeclaredError
 from chartbook.identity import UnsupportedRevisionError
 from chartbook.incremental import pipeline_fingerprint, pipeline_owned_paths
 from chartbook.manifest import load_manifest, resolve_project_type
-from chartbook.refs import KindMismatchError
+from chartbook.refs import AssetRef, KindMismatchError
 from chartbook.resolve import UnsupportedReferenceError
 from tests.fixtures import create_catalog_project, create_pipeline_project
 
@@ -107,9 +107,22 @@ class TestModelsTable:
 
     def test_trained_on_names_this_pipelines_dataframes(self, pipeline_project):
         model = self._load_with(pipeline_project, trained_on=["dataframe_0"])
-        assert model["_trained_on"] == ["dataframe_0"]
+        assert model["_trained_on"] == [AssetRef(name="dataframe_0")]
         explicit = self._load_with(pipeline_project, trained_on=["dataframe/dataframe_0"])
-        assert explicit["_trained_on"] == ["dataframe_0"]
+        assert explicit["_trained_on"] == [AssetRef(name="dataframe_0")]
+
+    def test_trained_on_another_pipelines_dataframe(self, pipeline_project):
+        """Stated lineage: taken as written, with nothing to check it against."""
+        model = self._load_with(
+            pipeline_project,
+            trained_on=["dataframe_0", "rates:treasury", "acme/rates:treasury"],
+        )
+        assert [str(ref) for ref in model["_trained_on"]] == [
+            "dataframe_0",
+            "rates:treasury",
+            "acme/rates:treasury",
+        ]
+        assert [ref.is_local for ref in model["_trained_on"]] == [True, False, False]
 
     def test_tags_are_normalized_like_everything_else(self, pipeline_project):
         assert self._load_with(pipeline_project, tags=["yield curve"])["tags"] == [
@@ -145,18 +158,21 @@ class TestModelsTable:
         message = str(excinfo.value)
         assert "[models.m]: trained_on names the dataframe 'nope'" in message
         assert "dataframe_0" in message
+        assert "write '<pipeline>:nope'" in message
 
     def test_trained_on_something_that_is_not_a_dataframe(self, pipeline_project):
         with pytest.raises(ValueError, match="A model is trained on dataframes"):
             self._load_with(pipeline_project, trained_on=["chart/chart_0_0"])
 
-    @pytest.mark.parametrize(
-        "reference", ["other_pipeline:rates", "acme/rates:treasury", "dataframe_0#value"]
-    )
-    def test_trained_on_what_does_not_resolve_yet(self, pipeline_project, reference):
+    @pytest.mark.parametrize("reference", ["dataframe_0#value", "rates:treasury#dgs10"])
+    def test_trained_on_a_series_is_reserved(self, pipeline_project, reference):
         with pytest.raises(UnsupportedReferenceError, match="not yet supported") as e:
             self._load_with(pipeline_project, trained_on=[reference])
         assert str(e.value).startswith("[models.m]: trained_on:")
+
+    def test_trained_on_another_pipelines_chart_is_refused(self, pipeline_project):
+        with pytest.raises(ValueError, match="A model is trained on dataframes"):
+            self._load_with(pipeline_project, trained_on=["rates:chart/curve"])
 
     def test_trained_on_a_version_is_reserved(self, pipeline_project):
         with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
@@ -539,8 +555,13 @@ class TestCheck:
         missing = sorted(
             field for table, field, _ in self._problems(project) if table == "models.encoder"
         )
-        assert missing == ["description", "name", "trained_on"]
+        assert missing == ["description", "docs", "name", "trained_on"]
         assert not [p for p in self._problems(project) if p[0] == "models.forecaster"]
+
+    def test_a_write_up_counts_whichever_way_it_is_given(self, project):
+        _edit_toml(project, lambda c: c["models"]["encoder"].update(docs="An encoder."))
+        missing = [f for t, f, _ in self._problems(project) if t == "models.encoder"]
+        assert "docs" not in missing
 
     def test_a_catalog_policy_can_set_what_models_require(self, tmp_path):
         catalog = create_catalog_project(tmp_path / "cat")
@@ -589,7 +610,7 @@ class TestCheck:
         _edit_toml(
             pipeline_project,
             lambda c: c["models"]["encoder"].update(
-                name="Encoder", description="d", trained_on=["dataframe_0"]
+                name="Encoder", description="d", trained_on=["dataframe_0"], docs="An encoder."
             ),
         )
         with_models = CliRunner().invoke(main, ["check"])
@@ -608,7 +629,7 @@ class TestCheck:
         assert rows["forecaster"].metadata_complete
         assert rows["forecaster"].object_name == "Rate Forecaster"
         assert rows["forecaster"].page_link == "./models/test_pipeline/forecaster.html"
-        assert rows["encoder"].missing_fields == "name, description, trained_on"
+        assert rows["encoder"].missing_fields == "name, description, trained_on, docs"
 
 
 class TestIncremental:
@@ -680,3 +701,190 @@ class TestIncremental:
         built = json.loads((project / "docs" / "index.json").read_text())
         (record,) = [r for r in built["records"] if r.get("id", "").endswith("forecaster")]
         assert record["metrics"] == {"rmse": 0.05}
+
+
+def _scoped_catalog(tmp_path) -> Path:
+    """A catalog that knows its two pipelines as ``acme/pipeline_a`` and ``acme/pipeline_b``."""
+    catalog = create_catalog_project(tmp_path / "cat")
+
+    def scope(config):
+        for name in ("pipeline_a", "pipeline_b"):
+            config["pipelines"][f"acme/{name}"] = config["pipelines"].pop(name)
+
+    _edit_toml(catalog, scope)
+    return catalog
+
+
+class TestTrainedOnAnotherPipeline:
+    """A model's training data may be another pipeline's dataframe.
+
+    For now that is stated lineage: recorded, shown, linked where the other
+    pipeline is in the same site, and checked where it can be. Fetching and
+    pinning it comes with dependencies.
+    """
+
+    def _add_model(self, pipeline_dir, trained_on):
+        (pipeline_dir / "_models").mkdir(exist_ok=True)
+        (pipeline_dir / "_models" / "m.json").write_text("{}")
+        _edit_toml(
+            pipeline_dir,
+            lambda c: c.update(
+                models={"m": {"path": "./_models/m.json", "trained_on": trained_on}}
+            ),
+        )
+
+    def _model_record(self, built) -> dict:
+        (record,) = [r for r in built["records"] if r["kind"] == "Model"]
+        return record
+
+    def test_alone_the_input_is_recorded_as_stated(self, pipeline_project):
+        self._add_model(pipeline_project, ["dataframe_0", "rates:treasury", "acme/x:y"])
+        record = self._model_record(index.build_index(load_manifest(pipeline_project)))
+        assert record["inputs"] == [
+            "test_pipeline:dataframe_0",
+            "rates:treasury",
+            "acme/x:y",
+        ]
+
+    def test_in_a_catalog_the_input_gets_the_id_it_has_there(self, tmp_path):
+        catalog = _scoped_catalog(tmp_path)
+        self._add_model(
+            catalog / "pipelines" / "pipeline_a",
+            ["pipeline_b:dataframe_0", "acme/pipeline_b:dataframe_0", "elsewhere:rates"],
+        )
+        built = index.build_index(load_manifest(catalog))
+        record = self._model_record(built)
+        assert record["id"] == "acme/pipeline_a:model/m"
+        assert record["inputs"] == [
+            "acme/pipeline_b:dataframe_0",
+            "acme/pipeline_b:dataframe_0",
+            "elsewhere:rates",
+        ]
+        # ...which is the ID of a record in the same index
+        assert "acme/pipeline_b:dataframe_0" in [r.get("id") for r in built["records"]]
+
+    def test_a_catalog_page_links_to_the_other_pipelines_dataframe(
+        self, tmp_path, monkeypatch
+    ):
+        catalog = _scoped_catalog(tmp_path)
+        self._add_model(
+            catalog / "pipelines" / "pipeline_a", ["pipeline_b:dataframe_0", "elsewhere:rates"]
+        )
+        monkeypatch.chdir(catalog)
+        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        assert result.exit_code == 0, result.output
+
+        page_file = catalog / "docs" / "cb" / "models" / "acme--pipeline_a" / "m.html"
+        page = page_file.read_text()
+        assert 'href="../../dataframes/acme--pipeline_b/dataframe_0.html"' in page
+        assert (
+            catalog / "docs" / "cb" / "dataframes" / "acme--pipeline_b" / "dataframe_0.html"
+        ).is_file()
+        text = _page_text(page_file)
+        assert "acme/pipeline_b:dataframe_0 - Dataframe 0" in text
+        assert "elsewhere:rates (in another pipeline, which is not part of this site)" in text
+
+    def test_alone_the_page_names_it_without_a_link(self, pipeline_project, monkeypatch):
+        self._add_model(pipeline_project, ["rates:treasury"])
+        monkeypatch.chdir(pipeline_project)
+        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        assert result.exit_code == 0, result.output
+        page_file = pipeline_project / "docs" / "cb" / "models" / "test_pipeline" / "m.html"
+        assert "rates:treasury (in another pipeline" in _page_text(page_file)
+        assert "dataframes/rates" not in page_file.read_text()
+
+    def test_check_catches_a_dataframe_the_other_pipeline_does_not_have(self, tmp_path):
+        catalog = _scoped_catalog(tmp_path)
+        self._add_model(catalog / "pipelines" / "pipeline_a", ["pipeline_b:no_such_table"])
+        problems = [
+            p
+            for p in run_checks(load_manifest(catalog), catalog)
+            if p.field == "trained_on" and "does not declare" in p.message
+        ]
+        (problem,) = problems
+        assert problem.table == "models.m"
+        assert "'pipeline_b:no_such_table'" in problem.message
+        assert "'acme/pipeline_b'" in problem.message
+        assert "dataframe_0" in problem.message
+
+    def test_check_says_nothing_about_a_pipeline_it_cannot_see(self, tmp_path, pipeline_project):
+        catalog = _scoped_catalog(tmp_path)
+        self._add_model(catalog / "pipelines" / "pipeline_a", ["elsewhere:rates"])
+        assert not [
+            p
+            for p in run_checks(load_manifest(catalog), catalog)
+            if "does not declare" in p.message
+        ]
+        self._add_model(pipeline_project, ["rates:treasury"])
+        assert not [
+            p
+            for p in run_checks(load_manifest(pipeline_project), pipeline_project)
+            if "does not declare" in p.message
+        ]
+
+    def test_resolving_another_pipelines_asset_is_still_refused(self, pipeline_project):
+        """Stating lineage is allowed; asking for the path is not, yet."""
+        with pytest.raises(UnsupportedReferenceError, match="not yet supported"):
+            data.path("rates:treasury", project_dir=pipeline_project)
+        with pytest.raises(UnsupportedReferenceError, match="not yet supported"):
+            models.path("rates:m", project_dir=pipeline_project)
+
+
+class TestPolicy:
+    """Who decides what a model must say: the defaults, a catalog, or the pipeline."""
+
+    def _model_problems(self, project):
+        return sorted(
+            (p.table, p.field)
+            for p in run_checks(load_manifest(project), project)
+            if p.table.startswith("models.") and "required by" in p.message
+        )
+
+    def test_a_catalog_can_drop_the_write_up(self, tmp_path):
+        catalog = create_catalog_project(tmp_path / "cat")
+        add_models(catalog / "pipelines" / "pipeline_a")
+        _edit_toml(
+            catalog,
+            lambda c: c.setdefault("policy", {}).update(required={"models": ["name"]}),
+        )
+        assert self._model_problems(catalog) == [("models.encoder", "name")]
+
+    def test_a_pipeline_may_set_its_own_policy(self, project):
+        """It applies when the pipeline is checked alone."""
+        _edit_toml(project, lambda c: c.update(policy={"required": {"models": ["path"]}}))
+        manifest = load_manifest(project)
+        assert manifest["policy"]["mode"] == "warn"
+        assert manifest["policy"]["required"]["models"] == ["path"]
+        # Kinds it does not mention keep the default lists
+        assert "sources" in manifest["policy"]["required"]["dataframes"]
+        assert self._model_problems(project) == []
+
+    def test_a_pipelines_policy_does_not_bind_the_catalog(self, tmp_path):
+        catalog = create_catalog_project(tmp_path / "cat")
+        pipeline = add_models(catalog / "pipelines" / "pipeline_a")
+        _edit_toml(pipeline, lambda c: c.update(policy={"required": {"models": []}}))
+        assert ("models.encoder", "name") in self._model_problems(catalog)
+
+    def test_a_pipeline_with_a_policy_builds(self, project, monkeypatch):
+        _edit_toml(project, lambda c: c.update(policy={"required": {"models": ["path"]}}))
+        monkeypatch.chdir(project)
+        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        assert result.exit_code == 0, result.output
+
+    def test_a_strict_pipeline_policy_fails_its_own_build(self, project, monkeypatch):
+        _edit_toml(
+            project,
+            lambda c: c.update(
+                policy={"mode": "strict", "required": {"models": ["name"]}}
+            ),
+        )
+        monkeypatch.chdir(project)
+        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        assert result.exit_code == 1
+        assert "The policy is 'strict'" in result.output
+        assert "model 'test_pipeline:encoder' missing: name" in result.output
+
+    def test_an_invalid_pipeline_policy_is_refused(self, project):
+        _edit_toml(project, lambda c: c.update(policy={"mode": "loud"}))
+        with pytest.raises(ValueError, match="invalid policy.mode 'loud'"):
+            load_manifest(project)

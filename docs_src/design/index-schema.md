@@ -413,7 +413,10 @@ A trained model that a pipeline declares. The record, its fields and what they a
 `metrics`, and `files` when the model is a directory. Its ID is
 `ftsfr/fed_yield_curve:model/rate_forecaster`.
 
-`Model` records are written (step 2), without `built_by`. A model's `location` has
+`Model` records are written (step 2), without `built_by`. An entry of a model's `inputs` that
+is in another pipeline is written by the ID that pipeline has in this build when it is part of
+it (a catalog knows `rates` as `ftsfr/rates`), and as the manifest states it otherwise. So in a
+catalog's index an input is the `id` of another record in the same file whenever it can be. A model's `location` has
 `"kind": "file"` whether its `path` is a file or a directory; `files` is what tells the two
 apart.
 
