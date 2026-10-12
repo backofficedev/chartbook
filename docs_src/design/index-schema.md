@@ -5,7 +5,13 @@ A design document. The index is the artifact every other part of ChartBook reads
 is specified before anything that depends on it. See {doc}`asset-graph` for the mechanism this
 serves.
 
-Status: specification proposed, implementation pending.
+Status: specification proposed, implementation pending. **This is the next thing to build**:
+step 1 in {doc}`overview`, with notes for whoever builds it in {ref}`index-implementing` below.
+
+Revised 2026-10-12, before any of it was built: IDs carry the asset's kind
+(`…:chart/curve_today`), every asset record has a structured `ref`, an asset's whereabouts is a
+typed `location` object, a `Model` record was added, and the `Build` record gained `code`. The
+reasons are in {doc}`references`, {doc}`models` and {doc}`data-access`.
 ```
 
 ## What the index is
@@ -84,24 +90,79 @@ publication is what makes third-party consumers possible.
 
 ## Conventions
 
-**Identifiers** follow the reference grammar in {doc}`asset-graph`:
+**Identifiers** follow the reference grammar in {doc}`references`:
 
 ```text
-[registry/]scope/name[:asset[#series]][@rev]
+[registry/][scope/]pipeline:[kind/]name[#part][@rev]
 ```
 
-Every record's `id` is fully qualified — never bare, never relative — so an ID is meaningful
-wherever it is copied to.
+Every record's `id` is fully qualified — never local, never relative — so an ID is meaningful
+wherever it is copied to. An asset's ID carries its kind, unless it is a dataframe:
+
+```text
+ftsfr/fed_yield_curve                          Pipeline
+ftsfr/fed_yield_curve:treasury_rates           Dataframe
+ftsfr/fed_yield_curve:treasury_rates#dgs10     Series
+ftsfr/fed_yield_curve:chart/curve_today        Chart
+ftsfr/fed_yield_curve:notebook/analysis        Notebook
+ftsfr/fed_yield_curve:note/methodology         Note
+ftsfr/fed_yield_curve:model/rate_forecaster    Model
+```
+
+An ID never carries `@rev`. Which version a record describes is said by its `content_hash`.
+
+Each kind has its own names, so the kind is what keeps `…:gdp` (a dataframe) and `…:chart/gdp`
+(a chart) apart. An earlier draft of this document gave both the ID `…:gdp`.
+
+**`ref`.** Every asset record, and every `Series` record, also carries the same address as named
+fields, so that no consumer ever has to parse an ID:
+
+```json
+"id":  "ftsfr/fed_yield_curve:chart/curve_today",
+"ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve", "kind": "chart", "name": "curve_today" }
+```
+
+`kind` and `name` are always present; `registry`, `scope`, `pipeline` and `part` appear when
+set. This is exactly `chartbook.refs.AssetRef.to_dict()`, and `str()` of the same object is the
+`id`. Build both from one `AssetRef`; never assemble an ID by joining strings.
+
+**Record kinds and asset kinds.** A record's `kind` is capitalized (`Chart`). The kind in a
+reference is lowercase (`chart`). For the five asset kinds one is the other, capitalized:
+`dataframe`/`Dataframe`, `chart`/`Chart`, `notebook`/`Notebook`, `note`/`Note`, `model`/`Model`.
+`Catalog`, `Pipeline`, `Series` and `Build` are records that are not assets.
 
 **Hashes** are `"<algorithm>:<hex>"`, e.g. `"sha256:7f3a9c…"`. Never a bare hex string, so the
 algorithm can change without ambiguity.
 
-**Paths** appear in two forms, both present:
+What gets hashed is fixed, because hash computation is one of the three things that must have
+exactly one implementation ({ref}`not-doing`):
+
+- **A file:** SHA-256 of its bytes.
+- **A glob of files, or a directory:** SHA-256 of a listing with one line per file,
+  `<hex of the file's SHA-256>`, two spaces, `<path relative to the directory or to the glob's
+  fixed prefix, with forward slashes>`, newline; lines sorted by path. This is the output format
+  of `sha256sum`, so anyone can reproduce it by hand. *(Proposed 2026-10-12; settle it in step 1
+  and then never change it without a new algorithm prefix.)*
+
+**Location.** Where an asset's content is, as a typed object. Today there is one kind:
+
+```json
+"location": { "kind": "file",
+              "path": "./_data/treasury_rates.parquet",
+              "resolved_path": "/Users/x/repos/fed_yield_curve/_data/treasury_rates.parquet" }
+```
 
 - `path` — exactly as declared in the manifest, relative to the pipeline root. Stable across
   machines. This is what a human compares against their TOML.
 - `resolved_path` — absolute, machine-specific. Convenient for a local consumer; meaningless to a
-  remote one, and therefore never the field a registry stores.
+  remote one, and therefore never the field a registry stores, and never published to a website.
+
+{doc}`data-access` adds `"kind": "table"` and `"kind": "query"` for dataframes that live in a
+database. That a location is a typed object and not a bare path was settled there; this document
+used to show `path` and `resolved_path` at the top level of each record.
+
+A `Pipeline` record also has a `location`, with a different vocabulary: `"path"` or `"git"`,
+saying where the pipeline's *source* comes from.
 
 **Timestamps** are RFC 3339 with an explicit offset, in UTC.
 
@@ -152,7 +213,8 @@ An index for a single pipeline omits the `Catalog` record and sets `root` to tha
       "pinned_hash": "sha256:…"
     }
   ],
-  "assets": ["ftsfr/fed_yield_curve:treasury_rates"],
+  "assets": ["ftsfr/fed_yield_curve:treasury_rates",
+             "ftsfr/fed_yield_curve:chart/curve_today"],
   "docs": { "path": "./README.md", "rendered": "content/ftsfr/fed_yield_curve/readme.md" }
 }
 ```
@@ -167,11 +229,14 @@ upstream?" answerable.
 {
   "kind": "Dataframe", "version": "chartbook/v1",
   "id": "ftsfr/fed_yield_curve:treasury_rates",
+  "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+           "kind": "dataframe", "name": "treasury_rates" },
   "pipeline": "ftsfr/fed_yield_curve",
   "name": "Treasury Rates",
   "description": "Constant-maturity yields from H.15.",
-  "path": "./_data/treasury_rates.parquet",
-  "resolved_path": "/Users/x/repos/fed_yield_curve/_data/treasury_rates.parquet",
+  "location": { "kind": "file",
+                "path": "./_data/treasury_rates.parquet",
+                "resolved_path": "/Users/x/repos/fed_yield_curve/_data/treasury_rates.parquet" },
   "content_hash": "sha256:…",
   "size_bytes": 2148374,
   "row_count": 15842,
@@ -207,6 +272,8 @@ and metadata can attach to one column.
 {
   "kind": "Series", "version": "chartbook/v1",
   "id": "ftsfr/fed_yield_curve:treasury_rates#dgs10",
+  "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+           "kind": "dataframe", "name": "treasury_rates", "part": "dgs10" },
   "dataframe": "ftsfr/fed_yield_curve:treasury_rates",
   "column": "DGS10",
   "declared": true,
@@ -224,15 +291,23 @@ from day one without anyone filling in metadata.
 
 An explicit `column` is what lets the address survive a column rename.
 
+A series is the **part** of a dataframe, in the reference grammar's word: what follows `#`. For
+an undeclared series the part is the column's own name. A column whose name is not a legal part
+(it contains a space, say) gets no `Series` record until a `[dataframes.x.series.y]` table gives
+it a key; it still appears in the dataframe's `columns`. *(Proposed 2026-10-12.)*
+
 ### Chart
 
 ```json
 {
   "kind": "Chart", "version": "chartbook/v1",
-  "id": "ftsfr/fed_yield_curve:curve_today",
+  "id": "ftsfr/fed_yield_curve:chart/curve_today",
+  "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+           "kind": "chart", "name": "curve_today" },
   "pipeline": "ftsfr/fed_yield_curve",
   "name": "Yield Curve, Latest",
-  "path": "./_output/curve_today.html",
+  "location": { "kind": "file", "path": "./_output/curve_today.html",
+                "resolved_path": "/Users/x/repos/fed_yield_curve/_output/curve_today.html" },
   "content_hash": "sha256:…",
   "inputs": ["ftsfr/fed_yield_curve:treasury_rates#dgs10",
              "ftsfr/fed_yield_curve:treasury_rates#dgs2"],
@@ -249,26 +324,46 @@ An explicit `column` is what lets the address survive a column rename.
 with series now addressable it may name individual series. This is a breaking change to the manifest
 and worth taking while nothing external depends on it.
 
+Until the manifest changes, a chart's `dataframe = "x"` becomes `"inputs": ["<pipeline>:x"]` in
+the index. The entries of `inputs` are IDs, so they are always fully qualified, whatever was
+written in the manifest.
+
 ### Notebook and Note
 
 ```json
 { "kind": "Notebook", "version": "chartbook/v1",
-  "id": "ftsfr/fed_yield_curve:analysis",
+  "id": "ftsfr/fed_yield_curve:notebook/analysis",
+  "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+           "kind": "notebook", "name": "analysis" },
   "pipeline": "ftsfr/fed_yield_curve",
   "name": "Initial exploration",
-  "path": "./_output/analysis.ipynb",
+  "location": { "kind": "file", "path": "./_output/analysis.ipynb", "resolved_path": "…" },
   "content_hash": "sha256:…",
   "inputs": ["ftsfr/fed_yield_curve:treasury_rates"] }
 ```
 
 ```json
 { "kind": "Note", "version": "chartbook/v1",
-  "id": "ftsfr/fed_yield_curve:methodology",
+  "id": "ftsfr/fed_yield_curve:note/methodology",
+  "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+           "kind": "note", "name": "methodology" },
   "pipeline": "ftsfr/fed_yield_curve",
+  "location": { "kind": "file", "path": "./docs_src/methodology.md", "resolved_path": "…" },
+  "content_hash": "sha256:…",
   "docs": { "path": "./docs_src/methodology.md", "rendered": "…" } }
 ```
 
 A notebook's `name` is inferred from its first level-one heading when not declared, as today.
+
+### Model
+
+A trained model that a pipeline declares. The record, its fields and what they are for are in
+{doc}`models` ("In the index"). It has the same skeleton as the other asset records — `id`,
+`ref`, `pipeline`, `name`, `location`, `content_hash`, `inputs`, `docs`, `built_by` — plus
+`metrics`, and `files` when the model is a directory. Its ID is
+`ftsfr/fed_yield_curve:model/rate_forecaster`.
+
+Models are not part of the first implementation of the index (step 1). They arrive with step 2.
 
 ### Build
 
@@ -290,12 +385,22 @@ build plan, cache key and provenance record.
       "location": "https://gitlab.internal/ftsfr/crsp_compustat@a1b2c3d"
     }
   },
+  "code": { "rev": "a1b2c3d4e5f6…", "dirty": false },
   "tools": { "chartbook": "0.2.0", "python": "3.12.4", "polars": "1.9.0" },
   "built_at": "2026-10-11T21:58:09Z",
   "duration_seconds": 412.6,
   "impure": ["wrds_fetch"]
 }
 ```
+
+`asset` is the ID of what was built, so for a chart it is `…:chart/curve_today` and for a model
+`…:model/rate_forecaster`.
+
+`code` is the pipeline's git commit when the asset was built, and whether the working tree had
+uncommitted changes. It answers "what code made this?" in a form a person can check out. It is a
+label for people, not an input to any hash: `recipe_hash` is what the cache uses. *(Added
+2026-10-12, proposed. It is what lets a {doc}`model <models>` version say which code trained
+it.)*
 
 `input_hash` is the store's lookup key — computable *before* building, which is what lets a cache be
 asked and the work skipped. `output_hash` is what downstream consumers compare, so a rebuild
@@ -347,13 +452,15 @@ The smallest useful index — one pipeline, one dataframe, one documented series
       "scripts": { "build": "doit" },
       "dependencies": [],
       "assets": ["ftsfr/fed_yield_curve:treasury_rates",
-                 "ftsfr/fed_yield_curve:curve_today"] },
+                 "ftsfr/fed_yield_curve:chart/curve_today"] },
 
     { "kind": "Dataframe", "version": "chartbook/v1",
       "id": "ftsfr/fed_yield_curve:treasury_rates",
+      "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+               "kind": "dataframe", "name": "treasury_rates" },
       "pipeline": "ftsfr/fed_yield_curve",
       "name": "Treasury Rates",
-      "path": "./_data/treasury_rates.parquet",
+      "location": { "kind": "file", "path": "./_data/treasury_rates.parquet" },
       "content_hash": "sha256:4b1f…",
       "date_col": "date",
       "columns": [ { "name": "date", "dtype": "date" },
@@ -363,16 +470,20 @@ The smallest useful index — one pipeline, one dataframe, one documented series
 
     { "kind": "Series", "version": "chartbook/v1",
       "id": "ftsfr/fed_yield_curve:treasury_rates#dgs10",
+      "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+               "kind": "dataframe", "name": "treasury_rates", "part": "dgs10" },
       "dataframe": "ftsfr/fed_yield_curve:treasury_rates",
       "column": "DGS10", "declared": true,
       "name": "10-Year Treasury Constant Maturity",
       "units": "Percent", "frequency": "Daily" },
 
     { "kind": "Chart", "version": "chartbook/v1",
-      "id": "ftsfr/fed_yield_curve:curve_today",
+      "id": "ftsfr/fed_yield_curve:chart/curve_today",
+      "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+               "kind": "chart", "name": "curve_today" },
       "pipeline": "ftsfr/fed_yield_curve",
       "name": "Yield Curve, Latest",
-      "path": "./_output/curve_today.html",
+      "location": { "kind": "file", "path": "./_output/curve_today.html" },
       "content_hash": "sha256:cc71…",
       "inputs": ["ftsfr/fed_yield_curve:treasury_rates#dgs10"] },
 
@@ -389,8 +500,9 @@ The smallest useful index — one pipeline, one dataframe, one documented series
 }
 ```
 
-Note the `Series` record for `DGS10` but none for `date`, and that a hypothetical `DGS2` column
-would appear as `declared: false` — addressable, undocumented. Note also that the chart's `inputs`
+The asset records here leave `resolved_path` out of `location`, as a published copy of the index
+does. Note the `Series` record for `DGS10` but none for `date`, and that a hypothetical
+`DGS2` column would appear as `declared: false` — addressable, undocumented. Note also that the chart's `inputs`
 names a *series*, so "what does this chart depend on" is answerable at column granularity even
 though the build graph remains coarse.
 
@@ -405,3 +517,49 @@ Once the index exists, several things stop being subsystems and become readers o
 - A **build diff** for reviewing what changed, including changes made by automated tooling.
 
 Which is the reason this document comes first.
+
+(index-implementing)=
+## Notes for whoever builds it
+
+These are not part of the specification. They are what the first implementer needs to know and
+would otherwise have to rediscover. The scope of the first implementation is step 1 in
+{doc}`overview`.
+
+**Where the file goes.** The `_build/` layout at the top of this document is a destination, not
+today's layout. Today `chartbook build` writes generated Markdown and a Sphinx project into an
+intermediate directory (`_docs/`, kept between incremental builds) and the HTML into the output
+directory (`docs/` by default). Do not restructure those in the same change. Recommended: write
+the full index to `_docs/index.json`, and a copy into the HTML output as `index.json`, so that it
+is published with the site and a browser can fetch it. The published copy drops every
+`resolved_path`, and the `value` of a pipeline `location` whose kind is `path`: local absolute
+paths must never reach a published site.
+
+**Build records from one object.** `chartbook.refs.AssetRef` gives the `id` (`str(ref)`) and the
+`ref` (`ref.to_dict()`). A local reference from a manifest becomes an ID by adding the
+pipeline's scope and name to it.
+
+**Make it deterministic.** Same manifests and same files must give the same bytes, apart from
+`generated_at`. Sort records (the catalog, then per pipeline: the pipeline, then its assets by
+kind and name, each dataframe followed by its series). Keep key order fixed. Without this, a
+diff of two indexes is noise.
+
+**Hashing is slow; cache it.** Data files are large and builds are frequent. Cache each file's
+hash against its size and modification time, in the build's state file. The incremental build
+already keeps such a file (`chartbook/incremental.py`); read that module first, since it also
+decides which pipelines need regenerating at all.
+
+**Files that are not built yet.** A declared asset whose file is missing still gets a record,
+with `content_hash` omitted. The index describes what the manifest declares; `chartbook check`
+is what complains about missing files.
+
+**What to leave out at first.** `Build` records, `built_by`, `dependencies` on a `Pipeline`, and
+`scripts` (which do not exist in the manifest yet; emit the `build` string as
+`"scripts": { "build": … }` when it is set). `Model` records come with step 2.
+
+**Schemas and tests.** Publish a JSON Schema per record kind under `schemas/chartbook/v1/` and
+test that every record the example catalog produces validates against its schema. Then test the
+worked example above, field by field, against a fixture project.
+
+**Do not render the site from the index yet.** Sphinx keeps reading the manifests as it does
+today. Switching the renderer to the index is its own change, after the index has been stable
+for a while.
