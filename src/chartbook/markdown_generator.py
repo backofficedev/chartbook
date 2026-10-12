@@ -19,6 +19,7 @@ import yaml
 
 from chartbook.errors import ChartBookError
 from chartbook.manifest import (
+    apply_code_change_times,
     get_file_modified_datetime,
     get_pipeline_ids,
     get_pipeline_manifest,
@@ -1164,6 +1165,7 @@ def build_all(
     size_threshold=50,
     skip_pipelines=None,
     reuse_pipelines=None,
+    code_times=None,
 ):
     """Build all documentation.
 
@@ -1184,6 +1186,9 @@ def build_all(
     :param reuse_pipelines: Set of pipeline IDs whose pages and copied files
         are not regenerated (see ``generate_all_pipeline_docs``).
     :type reuse_pipelines: set[str] | None
+    :param code_times: Code-change times already known, by pipeline ID (see
+        ``manifest.apply_code_change_times``). Others are worked out here.
+    :type code_times: dict[str, str] | None
     """
     docs_build_dir.mkdir(parents=True, exist_ok=True)
     # Neither a skipped nor a reused pipeline has its files copied or written
@@ -1191,6 +1196,8 @@ def build_all(
 
     ## Align files for use by Sphinx
     manifest = load_manifest(base_dir=base_dir)
+    # Pages say when the code changed according to git, not the file system
+    apply_code_change_times(manifest, known=code_times)
 
     # Extract enable_data_download setting (defaults to False)
     enable_data_download = manifest["project"].get("enable_data_download", False)

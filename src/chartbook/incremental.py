@@ -279,6 +279,8 @@ class BuildPlan:
         rendered: True when the previous build's sources were rendered by
             Sphinx without error, so that an unchanged project needs no
             render at all.
+        code_times: When each reused pipeline's code last changed, as the
+            previous build recorded it. The build fills in the rest.
     """
 
     global_fingerprint: str
@@ -288,6 +290,7 @@ class BuildPlan:
     fresh: bool
     reason: str = ""
     rendered: bool = False
+    code_times: dict[str, str] = field(default_factory=dict)
 
     def preserved_paths(self, manifest: dict) -> list[Path]:
         """Build-tree paths that belong to reused pipelines."""
@@ -321,6 +324,7 @@ def write_state(build_dir: Path, plan: BuildPlan, rendered: bool = False) -> Non
         "version": STATE_VERSION,
         "global": plan.global_fingerprint,
         "pipelines": plan.fingerprints,
+        "code_times": plan.code_times,
         "rendered": rendered,
     }
     with open(Path(build_dir) / STATE_FILE, "w", encoding="utf-8") as f:
@@ -374,6 +378,7 @@ def plan_build(
             reuse.append(pipeline_id)
         else:
             regenerate.append(pipeline_id)
+    recorded_times = state.get("code_times") or {}
     return BuildPlan(
         current_global,
         fingerprints,
@@ -381,6 +386,7 @@ def plan_build(
         reuse,
         fresh=False,
         rendered=bool(state.get("rendered")),
+        code_times={p: recorded_times[p] for p in reuse if p in recorded_times},
     )
 
 

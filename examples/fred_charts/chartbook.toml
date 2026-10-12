@@ -1,7 +1,6 @@
 [project]
 name = "Example Charts from FRED"
 description = "Example Charts from FRED"
-repo_url = "https://github.com/backofficedev/chartbook"
 contributors = [
     "backofficedev",
 ]

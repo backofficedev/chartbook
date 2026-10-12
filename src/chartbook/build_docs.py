@@ -11,7 +11,12 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from chartbook import markdown_generator
 from chartbook.diagnostics import generate_metadata_diagnostics
 from chartbook.errors import MissingSourceFilesError, ValidationError, handle_validation_error
-from chartbook.manifest import get_favicon_path, get_logo_path, load_manifest
+from chartbook.manifest import (
+    get_favicon_path,
+    get_logo_path,
+    get_pipeline_manifest,
+    load_manifest,
+)
 from chartbook.utils import copy_file, copy_tree, move_tree
 from chartbook.conf_validation import validate_conf_py_values, validate_source_files
 
@@ -42,6 +47,7 @@ def run_build_markdown(
     size_threshold: float = 50,
     skip_pipelines: set[str] | None = None,
     reuse_pipelines: set[str] | None = None,
+    code_times: dict[str, str] | None = None,
 ):
     """Run the pipeline publish script to generate markdown files.
 
@@ -62,6 +68,8 @@ def run_build_markdown(
     :param reuse_pipelines: Set of pipeline IDs whose existing pages an
         incremental build is keeping, so they are not regenerated.
     :type reuse_pipelines: set[str] | None
+    :param code_times: Code-change times already known, by pipeline ID.
+    :type code_times: dict[str, str] | None
     """
     project_dir = Path(project_dir).resolve()
     publish_dir = Path(publish_dir).resolve()
@@ -76,6 +84,7 @@ def run_build_markdown(
         size_threshold=size_threshold,
         skip_pipelines=skip_pipelines,
         reuse_pipelines=reuse_pipelines,
+        code_times=code_times,
     )
 
 
@@ -133,6 +142,7 @@ def _write_sphinx_project(
     strip_mathjax2: bool,
     skip_pipelines: set[str],
     reuse_pipelines: set[str] | None = None,
+    code_times: dict[str, str] | None = None,
 ):
     """Write the complete Sphinx project for a site into a directory.
 
@@ -194,6 +204,7 @@ def _write_sphinx_project(
         size_threshold=size_threshold,
         skip_pipelines=skip_pipelines,
         reuse_pipelines=reuse_pipelines,
+        code_times=code_times,
     )
 
     # Strip MathJax 2 from notebook outputs (prevents Plotly/Sphinx conflict)
@@ -472,6 +483,17 @@ def _generate_docs_incremental(
     )
     incremental.prepare_build_tree(_docs_dir, fresh=plan.fresh)
 
+    # When each pipeline's code changed. Asking git costs two calls per
+    # pipeline, so the answer recorded for a reused pipeline is used again.
+    from chartbook.manifest import CODE_TIME_FORMAT, find_latest_code_change
+
+    for pipeline_id in plan.regenerate + plan.reuse:
+        if pipeline_id not in plan.code_times:
+            base_dir = get_pipeline_manifest(manifest, pipeline_id)["pipeline_base_dir"]
+            plan.code_times[pipeline_id] = find_latest_code_change(base_dir).strftime(
+                CODE_TIME_FORMAT
+            )
+
     # FULLY clean temp_docs_src_dir first
     if temp_docs_src_dir.exists():
         shutil.rmtree(temp_docs_src_dir)
@@ -491,6 +513,7 @@ def _generate_docs_incremental(
                 strip_mathjax2=strip_mathjax2,
                 skip_pipelines=skip_pipelines,
                 reuse_pipelines=set(plan.reuse),
+                code_times=plan.code_times,
             )
             sources = incremental.sync_tree(
                 staging_dir,

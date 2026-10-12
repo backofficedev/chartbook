@@ -43,7 +43,7 @@ Every field is optional. Types and defaults:
 | `description` | string | `""` |
 | `maintainer` | string | first entry of `contributors` |
 | `contributors` | array of strings | `[]` |
-| `repo_url` | string | `""` |
+| `repo_url` | string | the repo's git `origin` remote, as a web address; `""` if there is none |
 | `site_url` | string | `file://` path to the local built docs |
 | `readme` | path | `"./README.md"` |
 | `copyright` | string | current year |
