@@ -1,4 +1,12 @@
-"""Backend loading and plugin management for chartbook.plotting."""
+"""Backend loading and plugin management for chartbook.plotting.
+
+A backend is any object satisfying the ``PlottingBackend`` protocol: a
+``name`` and the ``create_*`` methods. Backends are kept in a pluggy plugin
+manager, which is used as a registry and as the loader for the
+``chartbook_plotting`` entry-point group; they are called directly, by
+method, not through pluggy hooks. The interface is documented for
+third-party authors in ``docs_src/guide/plotting-backends.md``.
+"""
 
 from __future__ import annotations
 
@@ -93,10 +101,12 @@ def register_backend(backend: PlottingBackend, name: str | None = None) -> None:
 
     Examples
     --------
-    Third-party packages can also register via entry points:
+    Third-party packages can also register via entry points. The entry point
+    must name a backend *instance*, not the class: whatever it resolves to is
+    registered as-is.
 
         [project.entry-points.chartbook_plotting]
-        my_backend = "mypackage.backend:MyBackend"
+        my_backend = "mypackage.backend:backend"
     """
     pm = get_plugin_manager()
     backend_name = name or backend.name

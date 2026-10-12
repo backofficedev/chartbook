@@ -19,11 +19,17 @@ hookimpl = pluggy.HookimplMarker("chartbook_plotting")
 class PlottingHookSpec:
     """Hook specifications for chartbook.plotting backends.
 
-    Third-party packages can implement these hooks to provide custom
-    plotting backends. Register via entry points:
+    These hooks are declared but not called: nothing invokes them, and the
+    built-in backends do not implement them. Backends are dispatched by
+    calling the methods of the ``PlottingBackend`` protocol directly, so a
+    third-party backend should implement that protocol (see
+    ``chartbook.plotting.backends.BaseBackend``) rather than these hooks.
+
+    Backends register through the same entry-point group this class is
+    attached to, naming a backend instance:
 
         [project.entry-points.chartbook_plotting]
-        my_backend = "mypackage.backend:MyBackend"
+        my_backend = "mypackage.backend:backend"
     """
 
     @hookspec

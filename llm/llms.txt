@@ -14,6 +14,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 - [Documenting a Pipeline](docs_src/guide/documenting-a-pipeline.md): Describe charts, dataframes, and notebooks in `chartbook.toml`
 - [Catalogs and Data Access](docs_src/guide/catalogs-and-data.md): Aggregate pipelines; load any cataloged dataset with `data.load()`
 - [Plotting](docs_src/guide/plotting.md): One call produces interactive HTML plus static PNG/PDF
+- [Writing a Plotting Backend](docs_src/guide/plotting-backends.md): The `PlottingBackend` contract, the `chartbook_plotting` entry-point group, and a complete example
 - [How the Build Works](docs_src/guide/how-the-build-works.md): Two-stage build internals and template overrides
 
 ## Reference
