@@ -55,6 +55,10 @@ Thank you for your interest in contributing to chartbook!
    hatch fmt
    ```
 
+## Changing Something Users Rely On
+
+ChartBook is {doc}`experimental <reference/stability>`, so things may change. When you change something a user would notice — a manifest field, a command or option, a public function — add a changelog entry marked **breaking** that says what to do instead. If a file format changes, make the loader recognize the old form and refuse it with the fix; never read it as something else.
+
 ## Submitting Changes
 
 1. **Commit Your Changes**

@@ -4,11 +4,14 @@ This module provides structured error types and formatting utilities
 that produce readable, actionable error messages for CLI users.
 """
 
+import difflib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 import click
+
+from chartbook.refs import DEFAULT_KIND, KIND_TABLES
 
 
 @dataclass
@@ -162,6 +165,83 @@ class CatalogNotConfiguredError(Exception):
             f"No catalog configured. Either pass catalog_path= to data.load() "
             f"or run 'chartbook config' to set a default catalog in {settings_path}"
         )
+
+
+class ManifestNotFoundError(FileNotFoundError):
+    """Raised when no chartbook.toml encloses the place a lookup started from.
+
+    A bare asset name resolves against the manifest of the pipeline the
+    caller is in, found by walking up the directory tree.
+
+    Attributes:
+        start_dirs: The directories the upward search started from.
+    """
+
+    def __init__(self, start_dirs: list[Path]):
+        self.start_dirs = list(start_dirs)
+        searched = " or ".join(str(d) for d in self.start_dirs)
+        super().__init__(
+            f"No chartbook.toml found in {searched}, or in any parent "
+            f"directory. A bare asset name resolves against the chartbook.toml "
+            f"of the pipeline you are in: run from inside a pipeline, or say "
+            f"which one with project_dir (--project-dir on the command line)."
+        )
+
+
+class AssetNotDeclaredError(LookupError):
+    """Raised when a pipeline's chartbook.toml declares no such asset.
+
+    The manifest is the single source of truth for where assets live, so a
+    path is only handed out for a name it declares. The message says which
+    table to add, or, if the name is declared as another kind of asset, how
+    to refer to that.
+
+    Attributes:
+        name: The asset name that was asked for.
+        kind: The kind of asset that was asked for.
+        manifest_path: The chartbook.toml that was searched.
+        declared: The asset names it does declare, by table.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        manifest_path: Path,
+        declared: dict[str, list[str]],
+        kind: str = DEFAULT_KIND,
+        example_path: Optional[str] = None,
+    ):
+        self.name = name
+        self.kind = kind
+        self.manifest_path = manifest_path
+        self.declared = declared
+
+        table = KIND_TABLES[kind]
+        kind_of = {t: k for k, t in KIND_TABLES.items()}
+        lines = [f"No {kind} named {name!r} is declared in {manifest_path}."]
+
+        other_kinds = [
+            kind_of[t] for t, names in declared.items() if t != table and name in names
+        ]
+        if other_kinds:
+            other = other_kinds[0]
+            lines.append(
+                f"It is declared as a {other}: refer to it as {other + '/' + name!r} "
+                f"(in Python, chartbook.assets.path({other + '/' + name!r}))."
+            )
+        else:
+            close = difflib.get_close_matches(name, declared.get(table, []), n=1)
+            if close:
+                lines.append(f"Did you mean {close[0]!r}?")
+            lines += ["", "To register it, add a table to that file, for example:", ""]
+            lines.append(f"    [{table}.{name}]")
+            lines.append(f'    path = "{example_path or "..."}"')
+
+        listing = "; ".join(
+            f"{t}: {', '.join(names)}" for t, names in declared.items() if names
+        )
+        lines += ["", f"Declared assets: {listing or '(none)'}"]
+        super().__init__("\n".join(lines))
 
 
 def handle_validation_error(error: ValidationError, config_path: Path) -> None:

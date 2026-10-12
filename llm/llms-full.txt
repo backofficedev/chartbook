@@ -42,14 +42,16 @@ pip install -e ".[dev]"
 
 | Command | Description |
 |---------|-------------|
-| `init` | Scaffold a new pipeline project from the cookiecutter template (via cruft) |
+| `init` | Scaffold a new pipeline project from the cookiecutter template (via cruft); `--git` adds `git init` and a first commit, `--github` also creates a GitHub repo with `gh` and pushes (`--public`/`--private`, default private) |
 | `build` | Generate HTML documentation website |
 | `browse` | Open the generated site in the default browser |
+| `check` | CI gate: exit nonzero on missing required metadata, broken paths, or expiring licenses |
+| `path` | Print the path the enclosing chartbook.toml declares for an asset |
 | `publish` | Stage a pipeline's publishable files into a directory |
 | `catalog init/add/disable/enable/build/browse` | Manage a catalog and build/browse its site |
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
 | `data` | Data operations (get paths, docs) |
-| `create-data-glimpses` | Create data glimpse reports from dodo.py targets |
+| `create-data-glimpses` | Create a data glimpse report for the dataframes declared in chartbook.toml |
 | `config` | Configure the default catalog path for data loading |
 | `install skill` | Install the bundled Claude Code skill (user-level by default; `--project` for the repo) |
 
@@ -81,6 +83,33 @@ chartbook build ./my-docs -f       # Custom directory
 chartbook build --keep-build-dirs  # Debug mode
 ```
 
+### chartbook check
+
+Check a project's metadata and paths; exit nonzero on any problem. Meant for CI.
+
+```bash
+chartbook check [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH`: Project to check — a pipeline or a catalog (default: current directory)
+- `--within DAYS`: Fail on licenses that expire within this many days (default: 30)
+- `--policy PATH`: Take required fields from the `[policy]` table of this catalog `chartbook.toml` (or any TOML file with a `[policy]` table)
+
+Reports, one per line as `file: [table] field: message`: fields the policy requires that are missing or empty; declared paths (`path`, `docs_path`, `readme`, `logo`, `favicon`) whose file does not exist; and dataframes whose `license_expiration` (ISO date; `"N/A"` means no expiry) has passed or is inside the window. A catalog is checked against its own `[policy.required]`; a standalone pipeline against the built-in recommended lists unless `--policy` is given. `policy.mode` is ignored — it governs builds. No data file is opened.
+
+### chartbook path
+
+Print the path the enclosing `chartbook.toml` declares for an asset of the current pipeline.
+
+```bash
+chartbook path REF [--kind KIND] [--project-dir PATH]
+```
+
+`REF` names the asset. A dataframe is its key in `[dataframes]` (`repo_public`); any other asset has its kind in front: `chart/repo_rates`, `notebook/analysis`, `note/methodology`. `--kind chart` is the same as writing `chart/` in front. Each kind has its own names. The manifest is found by walking up from the current directory (or `--project-dir`). The absolute path is the only thing printed, whether or not the file exists, so Make, shell, R and Stata can capture it for inputs and outputs. An undeclared name exits 1 and names the table to add. The rest of the reference grammar, `[registry/][scope/]pipeline:[kind/]name[#part][@rev]` — another pipeline's asset, `#part`, `@rev`, `model/name` — parses and is refused as not yet supported.
+
+Python equivalents, both returning a `pathlib.Path`: `chartbook.assets.path("chart/repo_rates")` (or `assets.path("repo_rates", kind="chart")`) for any asset, and `chartbook.data.path("repo_public")` for dataframes only.
+
 ### chartbook publish
 
 Publish the documentation to a specified directory.
@@ -96,7 +125,7 @@ chartbook publish [OPTIONS]
 
 ### chartbook create-data-glimpses
 
-Create a comprehensive data glimpse report from pipeline dataframes.
+Create a comprehensive data glimpse report for the dataframes declared in `chartbook.toml`. The manifest is the only source of the list: no build file (`dodo.py`, `Snakefile`, `Makefile`) is read, and undeclared data files are not included.
 
 ```bash
 chartbook create-data-glimpses [OPTIONS]
@@ -107,6 +136,7 @@ chartbook create-data-glimpses [OPTIONS]
 - `--no-stats`: Exclude numeric statistics from report
 - `-o, --output-dir PATH`: Directory to save output file
 - `--size-threshold FLOAT`: File size threshold in MB (default: 50)
+- `--project-dir PATH`: Directory holding chartbook.toml (default: current directory)
 
 ### chartbook config
 
@@ -279,7 +309,7 @@ enable_data_download = false       # Default
 
 ### Pipeline Identity
 
-Canonical pipeline identity is a scoped name `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically: explicit `[project] id` if set, else scope from the git `origin` remote plus the directory name, else the bare directory name. `data.load`, `chartbook ls`, and `chartbook data` accept a bare name (when unambiguous), a scoped name, or a repo URL (normalized). An `@rev` suffix is reserved but not yet supported.
+Canonical pipeline identity is a scoped name `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically: explicit `[project] id` if set, else scope from the git `origin` remote plus the directory name, else the bare directory name. `data.load`, `chartbook ls`, and `chartbook data` accept a bare name (when unambiguous), a scoped name, or a repo URL (normalized). An `@rev` suffix and a registry prefix (`registry.example/scope/name` — three components, the first a host) are reserved: recognized, and refused as not yet supported. `chartbook publish` only stages files into a directory; `chartbook push` is the reserved, unimplemented verb for sending a pipeline to a registry.
 
 ### [pipelines] - Pipeline Registry
 

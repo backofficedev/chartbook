@@ -6,6 +6,7 @@ generate_docs() -> load_manifest() -> _retrieve_correct_docs_src_dir() ->
 run_build_markdown() -> run_sphinx_build()
 """
 
+import sys
 import json
 from pathlib import Path
 from unittest.mock import patch
@@ -69,10 +70,11 @@ class TestRunSphinxBuild:
         # Should not raise
         run_sphinx_build(docs_dir)
 
-        # Verify sphinx-build was called with correct arguments
+        # Verify Sphinx was called with correct arguments: this interpreter's
+        # own Sphinx, not whichever sphinx-build is first on PATH
         mock_run.assert_called_once()
         call_args = mock_run.call_args[0][0]
-        assert "sphinx-build" in call_args
+        assert call_args[:3] == [sys.executable, "-m", "sphinx"]
         assert "-M" in call_args
         assert "html" in call_args
 
@@ -592,3 +594,99 @@ class TestMathjax2Pattern:
         """Test that pattern does not match other script tags."""
         other_script = '<script src="https://cdn.example.com/plotly.min.js"></script>'
         assert not MATHJAX2_PATTERN.search(other_script)
+
+
+class TestSmallFixes:
+    """Regressions for bugs found while building P0."""
+
+    def test_no_strict_on_a_single_pipeline_is_a_clean_error(
+        self, pipeline_project, monkeypatch, capsys
+    ):
+        """Used to crash with UnboundLocalError once the only pipeline was skipped."""
+        monkeypatch.chdir(pipeline_project)
+        (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
+        with pytest.raises(SystemExit) as excinfo:
+            generate_docs(
+                output_dir=pipeline_project / "docs",
+                project_dir=pipeline_project,
+                strict=False,
+            )
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "Skipping pipeline 'test_pipeline'" in err
+        assert "nothing left to build" in err
+
+    def test_importing_chartbook_leaves_shutil_alone(self):
+        """chartbook used to replace shutil.copy2 and friends process-wide."""
+        import subprocess
+
+        code = (
+            "import shutil\n"
+            "before = (shutil.copy2, shutil.copystat, shutil.copymode)\n"
+            "import chartbook, chartbook.utils, chartbook.build_docs\n"
+            "assert before == (shutil.copy2, shutil.copystat, shutil.copymode)\n"
+            "assert shutil.copy2 is not shutil.copy\n"
+        )
+        result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+
+    def test_copy_tree_merges_and_copies_contents(self, tmp_path):
+        from chartbook.utils import copy_file, copy_tree, move_tree
+
+        source = tmp_path / "source"
+        (source / "nested").mkdir(parents=True)
+        (source / "a.txt").write_text("a")
+        (source / "nested" / "b.txt").write_text("b")
+        destination = tmp_path / "destination"
+        destination.mkdir()
+        (destination / "kept.txt").write_text("kept")
+        (destination / "a.txt").write_text("old")
+
+        copy_tree(source, destination)
+        assert (destination / "a.txt").read_text() == "a"
+        assert (destination / "nested" / "b.txt").read_text() == "b"
+        assert (destination / "kept.txt").read_text() == "kept"
+
+        copy_file(source / "a.txt", tmp_path / "copy.txt")
+        assert (tmp_path / "copy.txt").read_text() == "a"
+
+        move_tree(destination, tmp_path / "moved")
+        assert not destination.exists()
+        assert (tmp_path / "moved" / "nested" / "b.txt").read_text() == "b"
+
+    def test_readme_setting_is_honoured_by_the_build(self, pipeline_project, monkeypatch):
+        """project.readme used to be read only by `publish`."""
+        import tomli
+        import tomli_w
+
+        monkeypatch.chdir(pipeline_project)
+        (pipeline_project / "README.md").rename(pipeline_project / "ABOUT.md")
+        (pipeline_project / "ABOUT.md").write_text(
+            "# Test Pipeline\n\nText from the configured readme.\n"
+        )
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["project"]["readme"] = "./ABOUT.md"
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+
+        output_dir = pipeline_project / "docs"
+        generate_docs(output_dir=output_dir, project_dir=pipeline_project)
+        assert "Text from the configured readme." in (output_dir / "index.html").read_text()
+
+    def test_pipeline_site_builds_without_dangling_toctree_warnings(
+        self, pipeline_project, monkeypatch
+    ):
+        from chartbook import build_docs
+
+        monkeypatch.chdir(pipeline_project)
+        captured = {}
+        real_run = build_docs.subprocess.run
+
+        def spy(cmd, **kwargs):
+            result = real_run(cmd, **kwargs)
+            captured["stderr"] = result.stderr
+            return result
+
+        monkeypatch.setattr(build_docs.subprocess, "run", spy)
+        generate_docs(output_dir=pipeline_project / "docs", project_dir=pipeline_project)
+        assert "nonexisting document" not in captured["stderr"]

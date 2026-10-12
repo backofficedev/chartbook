@@ -62,7 +62,7 @@ Two rules:
 - `dataframe` names the entry in `[dataframes]` that feeds the chart; referencing a missing one is an error.
 - Exactly one of `docs_path` (a markdown file) or `docs` (inline markdown) supplies the write-up.
 
-The write-up is the part only you can provide: what the chart shows, how to read it, caveats. The generated chart page assembles the interactive chart, your write-up, and auto-generated spec tables (chart metadata, dataframe manifest, pipeline manifest). Fields you leave out simply don't appear; the full metadata vocabulary — publication tracking, clearance dates, release timing — is in {doc}`../reference/configuration`.
+The write-up is the part only you can provide: what the chart shows, how to read it, caveats. The generated chart page assembles the interactive chart, your write-up, and auto-generated spec tables (chart metadata, dataframe manifest, pipeline manifest). Under its title it says how fresh it is — "Chart updated 2 days ago · Data updated 2 days ago" — so a reader can tell a stale chart from a current one without asking. (When the pipeline's code last changed is on the pipeline's front page.) Fields you leave out simply don't appear; the full metadata vocabulary — publication tracking, clearance dates, release timing — is in {doc}`../reference/configuration`.
 
 ## Dataframes
 
@@ -78,7 +78,7 @@ date_col = "date"
 docs_path = "./docs_src/dataframes/repo_public.md"
 ```
 
-The same `docs_path`/`docs` rule applies. The generated page shows your write-up, a **glimpse** (schema and row count read from the parquet at build time), and a manifest table. Provenance fields — `providers`, `license`, `access_types`, `pull_method`, and friends — exist for governance-minded catalogs; see the reference.
+The same `docs_path`/`docs` rule applies. The generated page shows when the data was last updated, your write-up, a **glimpse** (schema and row count read from the parquet at build time), and a manifest table. Provenance fields — `providers`, `license`, `access_types`, `pull_method`, and friends — exist for governance-minded catalogs; see the reference.
 
 For hive-partitioned datasets, `path` takes a glob:
 
@@ -110,9 +110,97 @@ path = "./docs_src/methodology.md"
 
 And any markdown placed in `docs_src/site/` merges into the site automatically (that's the default `site_dir`; auto-generated pages live in a separate `cb/` directory, so nothing collides). Write-ups and site pages are MyST markdown — regular markdown plus admonitions, math, and cross-references; see the [MyST syntax guide](https://myst-parser.readthedocs.io/en/latest/syntax/typography.html).
 
+## Asking the manifest for a path
+
+Once `chartbook.toml` says where a dataframe or chart lives, your code does not have to say it again. `data.path()` returns the `path` declared for a dataframe of the current pipeline, and `assets.path()` does the same for anything the pipeline declares:
+
+```python
+# dodo.py — declaring what each task reads and writes
+from chartbook import assets, data
+
+def task_merge():
+    return {
+        "file_dep": [data.path("treasury_rates")],
+        "targets": [data.path("merged_rates")],
+        "actions": ["python src/merge.py"],
+    }
+
+def task_chart():
+    return {
+        "file_dep": [data.path("merged_rates")],
+        "targets": [assets.path("chart/rates_over_time")],
+        "actions": ["python src/chart.py"],
+    }
+
+# src/merge.py — doing the work
+df.to_parquet(data.path("merged_rates"))
+```
+
+### How an asset is named
+
+A dataframe is named by its key in `[dataframes]`, and nothing more. Any other asset has its kind in front:
+
+| You write | It means |
+|---|---|
+| `merged_rates` | `[dataframes.merged_rates]` |
+| `chart/rates_over_time` | `[charts.rates_over_time]` |
+| `notebook/analysis` | `[notebooks.analysis]` |
+| `note/methodology` | `[notes.methodology]` |
+
+Data is what gets passed around most, so it gets the short spelling. Each kind has its own names: a dataframe and a chart may both be called `gdp`, and they are `gdp` and `chart/gdp`.
+
+In Python the kind can be an argument instead, which reads better when the name is in a variable. It says what you expect, so it fills in a missing kind and rejects a different one:
+
+```python
+assets.path("rates_over_time", kind="chart")    # the same as "chart/rates_over_time"
+assets.path("chart/rates_over_time", kind="note")   # error: that names a chart
+```
+
+`data.path(name)` is `assets.path(name, kind="dataframe")`. It answers for dataframes only, so a mistyped name cannot hand back a chart's HTML where a parquet file was meant.
+
+The enclosing `chartbook.toml` is found by walking up from the calling file (then from the working directory), so the call works from a script, a `dodo.py` or a notebook alike. The path comes back absolute, and nothing checks that the file exists — which is what lets it name a target that has not been built yet.
+
+Asking for a name the manifest does not declare fails on the spot, with the table to add:
+
+```text
+No dataframe named 'merged_rates' is declared in /work/repo/chartbook.toml.
+
+To register it, add a table to that file, for example:
+
+    [dataframes.merged_rates]
+    path = "./_data/merged_rates.parquet"
+```
+
+`chartbook path` gives the same answer on the command line, which is how Make, R, Stata or a shell script reach it:
+
+```makefile
+TREASURY := $(shell chartbook path treasury_rates)
+MERGED   := $(shell chartbook path merged_rates)
+CHART    := $(shell chartbook path chart/rates_over_time)
+
+$(MERGED): $(TREASURY)
+	Rscript src/merge.R
+```
+
+```{note}
+This is a convenience, never a requirement. A pipeline that writes straight to `_data/merged_rates.parquet` — from Python, R, Stata or a shell script — works exactly as before. The manifest is the contract; `data.path()` and `assets.path()` only save you from stating it twice.
+```
+
+These names are the local end of a longer address — `scope/pipeline:kind/name#part@rev` — that will also reach other pipelines' assets, columns inside a dataframe, and versions. Only the local form works today; {doc}`../design/references` has the whole grammar.
+
+For files that are *not* assets — a partial download, a cache between two steps — `data.scratch()` gives you a throwaway directory instead:
+
+```python
+tmp = data.scratch() / "raw_download.csv"     # <pipeline>/_data/_scratch/raw_download.csv
+```
+
+It is created on first use, ignores itself in git, and is never documented, published or treated as an input. Delete it whenever you like. (Avoid declaring a dataframe whose `path` is a glob over all of `_data/`, such as `./_data/**/*.parquet`; it would sweep scratch files in.)
+
+Only names declared in the current pipeline resolve today. References to another pipeline's assets (`other_pipeline:asset`) are reserved syntax; to locate one through a catalog, use `data.get_data_path()` ({doc}`catalogs-and-data`).
+
 ## Finding project paths from code
 
-Pipeline scripts often need paths that work from any working directory, including notebooks. `chartbook.env` helps:
+Pipeline scripts often need paths that work from any working directory, including notebooks. For files the manifest does not declare, `chartbook.env` helps:
 
 ```python
 import chartbook
@@ -124,9 +212,11 @@ API_KEY = chartbook.env.get("FRED_API_KEY", default="")  # .env file or environm
 
 ## Checking your work
 
-`chartbook build` is strict by default: if a `path` or `docs_path` points at a file that doesn't exist, the build fails and names both the missing file and the manifest entry referencing it. `--no-strict` downgrades this to a warning that skips the affected pipeline. Two more inspection tools:
+While you are writing, `chartbook build -f --watch` rebuilds the site each time you save, redoing only the pages that changed; refresh the browser to see it. ({doc}`how-the-build-works` explains what it skips.)
+
+`chartbook build` is strict by default: if a `path` or `docs_path` points at a file that doesn't exist, the build fails and names both the missing file and the manifest entry referencing it. In a catalog, `--no-strict` downgrades this to a warning that skips the affected pipeline; a single pipeline has nothing left to build once skipped, so there it is still an error. Two more inspection tools:
 
 - Unknown `[project]` keys warn with a did-you-mean suggestion rather than becoming silently dead metadata.
-- `chartbook create-data-glimpses` scans your `dodo.py` targets and writes `data_glimpses.md` — schema, null rates, sample rows, and summary stats for every data file your tasks produce.
+- `chartbook create-data-glimpses` writes `data_glimpses.md` — schema, null rates, sample rows, and summary stats for every dataframe declared in `chartbook.toml`, whatever tool builds them.
 
 Once the pipeline builds cleanly, register it in a catalog: {doc}`catalogs-and-data`.

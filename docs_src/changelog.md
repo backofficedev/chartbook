@@ -5,6 +5,133 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-10-12
+
+Tools around the manifest: a CI gate, paths you can ask for, freshness on every page, incremental builds, and a scaffolder that can put a new project on GitHub. The breaking changes are marked as such. ChartBook is still {doc}`experimental <reference/stability>`.
+
+### Added — `chartbook check`, the CI gate
+
+`chartbook check` exits nonzero when a project is broken or non-compliant, and zero when it is healthy. It reports fields the policy requires that are missing or empty, declared paths (`path`, `docs_path`, `readme`, `logo`, `favicon`) that point at no file, and dataframes whose `license_expiration` has passed or falls within `--within` days (default 30). Every finding is one line naming the `chartbook.toml`, the table and the field.
+
+Run in a catalog, it checks every member pipeline against the catalog's `[policy.required]`. Run in a standalone pipeline, it uses the built-in recommended-field lists; `--policy PATH` substitutes the `[policy]` table of a catalog (or of any TOML file), so a pipeline's own CI can hold it to the catalog it is published to without that catalog's other members being present. `policy.mode` still governs builds only — `check` always fails on a missing required field.
+
+`--skip-outputs` is for CI that checks a project without building it. Data files, charts and notebooks are what a pipeline produces and are rarely in git, so on a fresh checkout they are all "missing"; with the flag they are left out, and required fields, license dates and the files that do live in the repository are still checked.
+
+`license_expiration` is read as an ISO date. Empty, `"N/A"`, `"None"` and `"Never"` mean no expiry; any other unreadable value is reported rather than passed. Only metadata and file existence are checked — no data file is opened.
+
+The example projects now set `repo_url` (required by the default policy), and `examples/dodo.py` runs `chartbook check` on the example catalog.
+
+### Added — `chartbook path`, `chartbook.assets` and `data.path()`
+
+A build definition or a script can now ask the manifest where an asset belongs instead of repeating the path. There is one general function and one for the common case:
+
+- `chartbook.assets.path(ref)` returns the `path` declared in the enclosing `chartbook.toml` for any asset — a dataframe, chart, notebook or note — as an absolute `Path`.
+- `chartbook.data.path(name)` is the same thing for dataframes only: `assets.path(name, kind="dataframe")`.
+- `chartbook path REF` prints the same answer, which is how Make, R, Stata and shell scripts reach it.
+
+An asset is named by a *reference*. A dataframe is its key in `[dataframes]`; anything else has its kind in front: `merged_rates`, `chart/rates_over_time`, `notebook/analysis`, `note/methodology`. Each kind has its own names, so a dataframe and a chart may share one. In Python the kind may be the argument `kind="chart"` instead (`--kind chart` on the command line); it states what you expect, so it fills in a missing kind and rejects a different one. A reference can also be handled as an object, `assets.AssetRef`, which is what `assets.parse()` returns.
+
+The manifest is found by walking up from the calling file, then from the working directory. The file need not exist, so the same call names a `dodo.py` target and the place a script writes to. A name the manifest does not declare raises `AssetNotDeclaredError` immediately, naming the table to add — or, if the name is declared as another kind of asset, saying how to refer to it — rather than surfacing later as a missing file. It is a convenience, never a requirement: a pipeline that hardcodes its paths, in any language, is unaffected.
+
+These names are the local end of one address grammar, `[registry/][scope/]pipeline:[kind/]name[#part][@rev]`, specified in {doc}`design/references`. All of it parses now. Only the local form resolves: another pipeline's asset, a `#part` (a column of a dataframe, a file in a model), an `@rev` and the `model` kind are refused as "reserved syntax and not yet supported".
+
+`data.get_data_path(pipeline=, dataframe=)` keeps working and remains the way to locate another pipeline's dataframe through a catalog. It, the `path()` functions and `data.load()` share one internal resolver (`chartbook.resolve`) that returns a typed location, which is the seam table- and query-backed dataframes will later plug into; no behaviour changes.
+
+Both example pipelines use `data.path()` and `assets.path()` for the declared targets in their `dodo.py`.
+
+The folder of default logos inside the package moved from `chartbook/assets/` to `chartbook/branding/`, to free the name for the module.
+
+`data.scratch()` completes the set: it returns `_data/_scratch/` inside the current pipeline, created on first use, for throwaway files that are not assets. The directory ignores itself in git, and nothing documents, publishes or depends on what is in it.
+
+### Changed — **breaking: data glimpses come from the manifest, not `dodo.py`**
+
+`chartbook create-data-glimpses` no longer imports `dodo.py` and calls its task functions to find data files. It reads `chartbook.toml` and summarizes the dataframes declared there, so a project built with Snakemake, Make or plain scripts gets the same report as one built with doit — previously the command failed with `No dodo.py file found`.
+
+What this changes for existing users:
+
+- **Only declared dataframes are summarized.** A CSV or parquet file that appeared as a doit target but has no `[dataframes.*]` entry is no longer in the report. Declare it to include it.
+- **The report is organized by dataframe.** Sections are titled by dataframe ID (`pipeline:dataframe` in a catalog) and show the declared name; the summary groups by pipeline instead of by doit task.
+- **Partitioned dataframes work.** A glob `path` is summarized as one dataset across its part files.
+- **Catalogs work.** Run in a catalog, the report covers every member pipeline.
+- New `--project-dir` option. Declared dataframes whose files are not built yet are skipped with a note.
+
+`create_data_glimpses.parse_dodo_tasks()` and its helpers are removed.
+
+### Changed — registry-prefixed IDs and `chartbook push` are reserved
+
+Two pieces of future syntax are claimed now, while claiming them costs nothing.
+
+A pipeline ID qualified with a registry — `charthub.example/acme/rates`, `localhost:5000/acme/rates` — is now recognized and refused with `UnsupportedRegistryError` ("reserved syntax and not yet supported; use 'acme/rates' instead"), wherever an ID or pipeline reference is accepted: `[project] id`, catalog keys, `data.load(pipeline=...)`, `chartbook data`, `data.path()`. Previously it failed with a generic "Invalid pipeline id" grammar error. A registry is the first of exactly three components and looks like a host (contains `.` or `:`, or is `localhost`), which is Docker's rule. No existing ID changes meaning: a bare `name` and a `scope/name` are untouched, including a `scope` that contains a dot.
+
+`chartbook publish` keeps its one meaning, staging a pipeline's files into a directory, and its help now says so. Sending a pipeline to a registry will be a separate verb, `chartbook push`; the command exists (hidden from `--help`) only to say it is reserved and to point at `publish`.
+
+### Added — `chartbook init --git` and `--github`
+
+`chartbook init` can now leave you with a repository rather than just a directory. `--git` runs `git init` in the new project and makes an initial commit, on a branch named `main` unless your git configuration says otherwise. `--github` does that, then creates a GitHub repository for it with `gh repo create`, adds it as `origin`, and pushes — private by default, `--public` to override. Both are off by default.
+
+`--github` uses your existing `gh` login and never prompts for one. Everything it depends on is checked before the template is rendered — `git` and `gh` on `PATH`, a git identity for the commit, `gh` logged in — so a missing piece stops the command with the fix named and nothing created. The new project's directory is identified after `cruft` returns (it is named by an answer at the prompt), not guessed. After `--github` the `origin` remote exists, so the pipeline's ID is scoped (`owner/project`) from its first build; the command prints it.
+
+### Added — data freshness on every asset page
+
+Dataframe and chart pages now say how fresh they are, directly under the title, in plain relative wording: a dataframe page says "Data updated 2 days ago", and a chart page says "Chart updated 2 days ago · Data updated 2 days ago", so a chart rendered before its data was last refreshed is visible at a glance. Hovering shows the exact time. A chart's date in listings is now when the chart itself was written.
+
+A page says only things about its own asset. When the pipeline's *code* last changed is shown once, on the pipeline's front page ("Code updated 3 weeks ago") and on a catalog's Pipelines page, and no longer in the table at the foot of every chart and dataframe page. Besides being the right place for it, this means a code edit no longer alters every page of the pipeline.
+
+The data and chart times are file modification times: the dataframe's file (the newest part file of a partitioned dataframe) and the chart's HTML. The dataframe's time was previously computed and never rendered.
+
+Because the site is static, the page carries the timestamp and a small bundled script (`chartbook-freshness.js`) turns it into "2 days ago" when the page is read, so the wording is never stale. With scripts off, the date is shown. The line is a template, `freshness.md`, and can be overridden like the others.
+
+Fixed along the way: a chart backed by a partitioned (glob-path) dataframe had its data time stamped with the moment of the build.
+
+### Added — documentation for writing a plotting backend
+
+A new guide, *Writing a Plotting Backend*, documents the interface a third-party plotting backend implements: the `PlottingBackend` protocol and its `BaseBackend` starting point, what each `create_*` method is handed (`ChartConfig`, `OverlayConfig` and `DualAxisConfig`, field by field), the `chartbook_plotting` entry-point group, and a complete Vega-Lite backend in one dependency-free file that ChartBook's own tests run through a real entry point.
+
+Three things about the machinery itself were fixed or removed along the way. An entry point (or `register_backend()`) may now name a backend **class** as well as an instance; naming a class used to register something unusable. A third-party entry point that is not a backend is skipped with a warning instead of breaking the built-in ones. And two pieces of dead code are gone: the pluggy hook specifications in `PlottingHookSpec`, which nothing ever called, and `configure(default_backend=...)`, which nothing ever read. A registered backend is still reachable through `get_backend()` and not yet selectable from `plotting.line()` and friends, which always use the built-in `plotly` and `matplotlib` backends.
+
+### Removed — **breaking: the `[all]`, `[data]`, `[plotting]` and `[sphinx]` extras**
+
+The four install extras that became no-op aliases in 0.1.0 are gone, after the one release of notice they were given. `pip install chartbook` has installed everything since 0.1.0 and still does; drop the bracket from any requirement that has one (`chartbook[all]>=0.0.14` → `chartbook>=0.0.14`). pip and uv both still install the package for such a requirement rather than failing — uv warns that the extra does not exist — so nothing breaks at install time, but the bracket no longer names anything. The `[dev]` extra for contributors is unchanged.
+
+### Added — a note on stability
+
+{doc}`reference/stability` says plainly that ChartBook is experimental and anything can change between releases. Breaking changes are listed in this changelog with what to do about each. A real stability promise will come with 1.0.
+
+### Added — incremental builds and a watch mode
+
+`chartbook build --incremental` keeps the intermediate Sphinx project in `_docs/` and makes the next build redo only what changed. **`chartbook catalog build` now does this by default** — its working files live beside the catalog in `~/.chartbook/`, not in anyone's repository — and takes `--clean` to discard them and rebuild everything. A pipeline none of whose files changed — its manifest, `src/`, `docs_src/`, README, and every data file, chart and notebook it declares, compared by modification time and size — is not regenerated. A page whose content comes out the same is left untouched, so Sphinx, whose cache is now kept, does not read it again. If no page changed, Sphinx is not run at all. Each build prints one line saying what it redid.
+
+On a synthetic catalog of 40 pipelines and 411 pages, a clean build took about 20 seconds; an incremental build took 0.4 seconds when nothing had changed and about 5 seconds after one write-up or one data file changed. Within a pipeline, editing one chart's write-up re-renders that chart's page and the front page, not every page.
+
+`chartbook build --watch` is the same thing in a loop: build, check the project's files once a second (`--watch-interval`), rebuild on any change, report a failed build and keep going until Ctrl-C. It is a single polling process — no server, no live reload, no new dependency. Refresh the browser to see a rebuild.
+
+A plain `chartbook build` is unchanged: a clean build that leaves nothing behind. Adding or removing a page re-renders every page from Sphinx's cache, so navigation stays right; upgrading ChartBook, Sphinx or a theme starts over from nothing. The kept `_docs/` carries its own `.gitignore`.
+
+Fixed along the way, because it defeated Sphinx's cache: the generated `conf.py` now sets `fontawesome_included` explicitly. The themes switched it on mid-build, which Sphinx read as a changed configuration and answered by re-reading every page on every run.
+
+### Changed — `repo_url` and "code updated" come from git
+
+Two things that should never have needed filling in by hand now come from the repository.
+
+`[project] repo_url` defaults to the repo's `origin` remote, turned into a web address: `git@github.com:acme/rates.git` becomes `https://github.com/acme/rates`. Credentials embedded in a remote (`https://user:token@…`) are always dropped, and a remote that is a path on disk gives no URL. An explicit `repo_url` still wins. One consequence: a project with a remote no longer fails `chartbook check` for a missing `repo_url`.
+
+The "Code updated" time on a pipeline's front page (and "Date of Last Code Update") is the time of the last commit that touched `src/`, `docs_src/` or `chartbook.toml`, when those are committed and unmodified. It was the newest file modification time, which on a fresh clone is the moment of the checkout — so every site built in CI claimed its code had changed just now. With uncommitted changes, or outside a git repository, the modification time is still used. Only a docs build asks git; loading a manifest (`data.load()`, `chartbook ls`) does not.
+
+### Fixed
+
+- `chartbook build --no-strict` on a single pipeline with a missing file crashed with `UnboundLocalError`. It now reports the missing files and exits cleanly; skipping only makes sense in a catalog, which has other pipelines left to build.
+- Sphinx is now run as `python -m sphinx` with the interpreter that is running ChartBook. It used to run whichever `sphinx-build` came first on `PATH`, which could be a different Sphinx from a different environment.
+- `project.readme` is honoured by `build` and `check`. Only `publish` read it; the others always looked for `README.md`.
+- Importing `chartbook` no longer replaces `shutil.copy2`, `shutil.copystat` and `shutil.copymode` for the whole Python process. ChartBook still copies file contents without metadata, for the sake of shared drives, but does so in its own helpers.
+- A pipeline site's front page listed two appendix documents that do not exist in a generated site, producing two Sphinx warnings on every build and forcing that page to be re-read on every run. The entries are gone.
+- `chartbook create-data-glimpses` crashed on a numeric column with no non-null values.
+- A pipeline loaded from the relative path `.` derived the name `pipeline` instead of its directory's name, because `Path(".")` has no name. The directory is now resolved first.
+- `chartbook build --project-dir PATH` failed with `TemplateNotFound` unless it was run from inside the project, and `--temp-docs-src-dir` failed with any name other than the default. The pipeline's front page included a template by a path that spelled out `_docs_src/`, which only resolved when a directory of that name sat inside the project. It now asks for the template by name, as the guide already told people writing their own templates to do.
+
+### Removed
+
+- `create_data_glimpses.create_xml_report()`, which nothing called.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level

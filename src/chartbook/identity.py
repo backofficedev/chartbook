@@ -5,8 +5,18 @@ The canonical identity of a pipeline is a scoped name ``scope/name``
 URLs are accepted as *input* wherever a pipeline reference is taken and are
 normalized to scoped names; they are never stored as identity.
 
+Two extensions of the grammar are reserved: recognized by the parser, and
+refused with a "not yet supported" error rather than a grammar error, so
+that they can be given meaning later without changing what any existing ID
+means.
+
+- ``scope/name@rev`` — a pinned revision.
+- ``registry/scope/name`` — an ID qualified with the registry that resolves
+  it, Docker-style, e.g. ``charthub.example/acme/rates``.
+
 See the format design doc (``docs_src/design/toml-format-v2.md``) for the
-rationale behind this scheme.
+rationale behind this scheme, and "Reserving a future global namespace" in
+``docs_src/design/asset-graph.md`` for the registry prefix.
 """
 
 from __future__ import annotations
@@ -28,15 +38,64 @@ class UnsupportedRevisionError(ValueError):
     """
 
 
+class UnsupportedRegistryError(ValueError):
+    """Raised when a pipeline ID or reference carries a registry prefix.
+
+    The ``registry/scope/name`` grammar is reserved for a future registry
+    and is recognized but not yet supported.
+    """
+
+
+def looks_like_registry(component: str) -> bool:
+    """Tell whether an ID's leading component names a registry, not a scope.
+
+    The rule is Docker's: a component containing ``.`` or ``:``, or equal to
+    ``localhost``, is a host. ``charthub.example`` and ``localhost:5000`` are
+    registries; ``acme`` is a scope.
+
+    :param component: The leading component of a three-component ID.
+    """
+    return "." in component or ":" in component or component == "localhost"
+
+
+def split_registry(pipeline_id: str) -> tuple[Optional[str], str]:
+    """Split a registry prefix off a fully qualified pipeline ID.
+
+    A registry-qualified ID has exactly three components,
+    ``registry/scope/name``, and its first looks like a host (see
+    :func:`looks_like_registry`). Anything else has no registry: a bare
+    ``name`` and a ``scope/name`` are returned whole, whatever characters the
+    scope contains, so no ID that was valid before the prefix was reserved
+    changes meaning.
+
+    :param pipeline_id: A pipeline ID, or a reference that starts with one
+        (a trailing ``:asset`` does not affect the split).
+    :returns: Tuple of (registry or None, the ID without it).
+    """
+    parts = pipeline_id.split("/")
+    if len(parts) == 3 and looks_like_registry(parts[0]):
+        return parts[0], "/".join(parts[1:])
+    return None, pipeline_id
+
+
 def validate_pipeline_id(pipeline_id: str) -> str:
     """Validate a pipeline ID against the ``[scope/]name`` grammar.
 
     :param pipeline_id: The candidate ID, e.g. ``"ftsfr/crsp_treasury"``
         or a bare ``"crsp_treasury"``.
     :returns: The validated ID, unchanged.
+    :raises UnsupportedRegistryError: If the ID is qualified with a registry
+        (``registry/scope/name``), which is reserved syntax.
     :raises ValueError: If the ID has more than two components or a
         component contains disallowed characters.
     """
+    registry, unqualified = split_registry(pipeline_id)
+    if registry is not None:
+        raise UnsupportedRegistryError(
+            f"Pipeline id {pipeline_id!r} is qualified with the registry "
+            f"{registry!r}. Registry prefixes are reserved syntax and not yet "
+            f"supported; use {unqualified!r} instead."
+        )
     parts = pipeline_id.split("/")
     if len(parts) > 2 or not all(ID_COMPONENT_PATTERN.match(p) for p in parts):
         raise ValueError(
@@ -75,6 +134,8 @@ def normalize_ref_to_id(ref: str) -> str:
     :param ref: The pipeline reference.
     :returns: A bare or scoped pipeline ID.
     :raises UnsupportedRevisionError: If the reference carries ``@rev``.
+    :raises UnsupportedRegistryError: If the reference is qualified with a
+        registry, e.g. ``charthub.example/acme/rates``.
     :raises ValueError: If nothing ID-like can be extracted.
     """
     ref, rev = split_rev(ref.strip())
@@ -143,6 +204,51 @@ def get_git_remote_url(base_dir: Path | str) -> Optional[str]:
     return url
 
 
+def remote_to_web_url(remote: Optional[str]) -> str:
+    """Turn a git remote into the web address of the repository it names.
+
+    A remote is written for git, not for a browser, and may carry things
+    that must not be published. This reduces it to ``https://host/path``:
+
+    - ``git@github.com:acme/rates.git`` → ``https://github.com/acme/rates``
+    - ``ssh://git@gitlab.internal:2222/acme/rates.git`` → ``https://gitlab.internal/acme/rates``
+    - ``https://user:token@github.com/acme/rates.git`` → ``https://github.com/acme/rates``
+
+    Credentials embedded in the remote are always dropped. A remote that is
+    a path on disk has no web address and gives an empty string.
+
+    :param remote: The remote URL, as ``git config remote.origin.url`` prints it.
+    :returns: A web URL, or ``""`` if the remote does not name a host.
+    """
+    if not remote:
+        return ""
+    remote = remote.strip()
+
+    scp_like = re.match(r"^(?:[^@/\s]+@)?([^:/\s]+):(?!/)(.+)$", remote)
+    url_like = re.match(
+        r"^(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://(?:[^@/]*@)?"
+        r"(?P<host>[^/:]+)(?P<port>:\d+)?/(?P<path>.+)$",
+        remote,
+    )
+    if url_like and url_like["scheme"].lower() != "file":
+        scheme = url_like["scheme"].lower()
+        host, path = url_like["host"], url_like["path"]
+        if scheme in ("http", "https"):
+            # A web port is part of the address; an ssh or git port is not
+            host += url_like["port"] or ""
+        else:
+            scheme = "https"
+    elif scp_like and not url_like and "://" not in remote:
+        scheme, host, path = "https", scp_like.group(1), scp_like.group(2)
+    else:
+        return ""
+
+    path = path.strip("/")
+    if path.endswith(".git"):
+        path = path[: -len(".git")]
+    return f"{scheme}://{host}/{path}" if path else ""
+
+
 def clear_git_remote_cache() -> None:
     """Clear the cached git remote lookups (mainly for tests)."""
     _git_remote_cache.clear()
@@ -178,7 +284,9 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
     if explicit:
         return validate_pipeline_id(explicit)
 
-    base_dir = Path(base_dir)
+    # Resolved, because the name comes from the directory's own name and a
+    # relative "." does not have one
+    base_dir = Path(base_dir).resolve()
     name_part = _sanitize_component(base_dir.name)
 
     source_url = project.get("repo_url", "") or get_git_remote_url(base_dir)
@@ -209,6 +317,8 @@ def resolve_pipeline_ref(keys: Iterable[str], ref: str) -> str:
     :param ref: The reference to resolve (bare, scoped, or URL).
     :returns: The matching catalog key.
     :raises UnsupportedRevisionError: If the reference carries ``@rev``.
+    :raises UnsupportedRegistryError: If the reference carries a registry
+        prefix.
     :raises KeyError: If no key matches, or a bare name is ambiguous.
     """
     keys = list(keys)

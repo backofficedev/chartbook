@@ -5,10 +5,12 @@ NOTES:
 
 """
 
+import glob
 import importlib.resources  # Add this at the top with other imports
 import json
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 import jinja2
@@ -17,6 +19,7 @@ import yaml
 
 from chartbook.errors import ChartBookError
 from chartbook.manifest import (
+    apply_code_change_times,
     get_file_modified_datetime,
     get_pipeline_ids,
     get_pipeline_manifest,
@@ -42,6 +45,63 @@ def _fs_slug(pipeline_id):
 def _yaml_escape_filter(value):
     """Escape double quotes in a string for safe use inside YAML double-quoted scalars."""
     return str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def data_last_modified(data_path):
+    """Find when the data at a path was last written, by file modification time.
+
+    For a partitioned dataframe (a glob path) this is its newest part file.
+
+    :param data_path: Path to a data file, or a glob pattern over part files.
+    :type data_path: str or Path
+    :returns: The modification time, or None if nothing is on disk.
+    :rtype: datetime or None
+    """
+    if is_glob_pattern(str(data_path)):
+        part_files = glob.glob(str(data_path), recursive=True)
+        if not part_files:
+            return None
+        return max(get_file_modified_datetime(f) for f in part_files)
+    if not Path(data_path).exists():
+        return None
+    return get_file_modified_datetime(data_path)
+
+
+def freshness_fact(label, moment):
+    """Describe one "<label> <when>" fact for a page's freshness line.
+
+    The page says *when*, not *how long ago*: a generated page is static, so
+    "2 days ago" worked out at build time would be wrong the next day, and
+    would also make every page differ from one build to the next. The
+    timestamp goes into a ``<time>`` element and ``chartbook-freshness.js``
+    turns it into relative wording when the page is read.
+
+    :param label: The plain-language lead-in, e.g. ``"Data updated"``.
+    :type label: str
+    :param moment: When it happened, in local time. None if unknown.
+    :type moment: datetime or None
+    :returns: Template fields ``label``, ``iso`` (ISO 8601 with UTC offset),
+        ``title`` (for the hover text) and ``date`` (the fallback text), or
+        None when *moment* is None.
+    :rtype: dict or None
+    """
+    if moment is None:
+        return None
+    local = moment.astimezone()
+    return {
+        "label": label,
+        "iso": local.isoformat(timespec="seconds"),
+        "title": local.strftime("%Y-%m-%d %H:%M %Z").strip(),
+        "date": local.strftime("%Y-%m-%d"),
+    }
+
+
+def _code_last_modified(pipeline_manifest):
+    """When the pipeline's source last changed, from its loaded manifest."""
+    stamp = pipeline_manifest.get("source_last_modified_date")
+    if not stamp:
+        return None
+    return datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S")
 
 
 def get_sphinx_file_alignment_plan(
@@ -148,6 +208,7 @@ def generate_all_pipeline_docs(
     size_threshold=50,
     enable_data_download=False,
     skip_pipelines=None,
+    reuse_pipelines=None,
 ):
     """Generate documentation for all pipelines in the manifest.
 
@@ -168,6 +229,10 @@ def generate_all_pipeline_docs(
     :type enable_data_download: bool
     :param skip_pipelines: Set of pipeline IDs to skip.
     :type skip_pipelines: set[str] | None
+    :param reuse_pipelines: Set of pipeline IDs that are part of the site but
+        whose own pages are not regenerated, because an incremental build is
+        keeping the ones it already has. The site-wide pages still list them.
+    :type reuse_pipelines: set[str] | None
     """
     base_dir = Path(base_dir).resolve()
     docs_src_dir = Path(docs_src_dir)
@@ -179,6 +244,8 @@ def generate_all_pipeline_docs(
             continue
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         pipeline_base_dir = Path(pipeline_manifest["pipeline_base_dir"])
+        if reuse_pipelines and pipeline_id in reuse_pipelines:
+            continue
 
         generate_pipeline_docs(
             pipeline_id,
@@ -195,7 +262,7 @@ def generate_all_pipeline_docs(
             pipeline_readme_dir = docs_build_dir / "cb" / "pipelines"
             pipeline_readme_dir.mkdir(parents=True, exist_ok=True)
 
-            source_path = pipeline_base_dir / "README.md"
+            source_path = pipeline_base_dir / pipeline_manifest["project"]["readme"]
             with open(source_path) as file:
                 readme_content = file.readlines()
 
@@ -270,6 +337,7 @@ def generate_all_pipeline_docs(
             manifest=manifest,
             dot_or_dotdot=".",
             docs_src_dir=docs_src_dir.relative_to(base_dir),  # Pass relative path
+            show_code_updated=True,
         )
         # Copy to build directory
         file_path = docs_build_dir / "cb" / "pipelines.md"
@@ -345,7 +413,7 @@ def generate_all_pipeline_docs(
             file.write(index_page)
 
     elif pipeline_theme == "pipeline":
-        source_path = base_dir / "README.md"
+        source_path = base_dir / pipeline_manifest["project"]["readme"]
         with open(source_path) as file:
             readme_content = file.readlines()
 
@@ -372,7 +440,7 @@ def generate_all_pipeline_docs(
                 cb_dir = docs_build_dir / "cb"
                 cb_dir.mkdir(parents=True, exist_ok=True)
                 dest_file = cb_dir / f"{note_id}.md"
-                shutil.copy(source_file, dest_file)
+                shutil.copyfile(source_file, dest_file)
 
                 # Add to notes list for template
                 notes_list.append(f"cb/{note_id}.md")
@@ -403,6 +471,14 @@ def generate_all_pipeline_docs(
             notes_list=notes_list,
             site_pages_list=site_pages_list,
             index_toc_content=index_toc_content,
+            show_code_updated=True,
+            freshness=[
+                fact
+                for fact in [
+                    freshness_fact("Code updated", _code_last_modified(pipeline_manifest))
+                ]
+                if fact
+            ],
         )
         file_path = docs_build_dir / "index.md"
         with open(file_path, mode="w", encoding="utf-8") as file:
@@ -553,6 +629,7 @@ def generate_dataframe_docs(
     # Use filenames instead of paths for includes, so they can be found in any of our search locations
     modified_source = (
         """# Dataframe: `{{pipeline_id}}:{{dataframe_id}}` - {{name}}\n\n"""
+        + """{% include "freshness.md" %}\n\n"""
         + source
         + """\n\n
 ## DataFrame Glimpse
@@ -610,6 +687,13 @@ def generate_dataframe_docs(
         parquet_path, size_threshold_mb=size_threshold
     )
 
+    # How fresh the page's data is, shown under the title. Only facts about
+    # this dataframe: when the pipeline's code changed is said once, on the
+    # pipeline's own page, so that a code edit does not alter every page.
+    freshness = [
+        freshness_fact("Data updated", data_last_modified(parquet_path)),
+    ]
+
     # Render the template with the new variables
     table_page = template.render(
         dataframe_manifest,
@@ -624,6 +708,7 @@ def generate_dataframe_docs(
         dot_or_dotdot="../..",
         dataframe_glimpse=dataframe_glimpse,
         enable_data_download=enable_data_download,
+        freshness=[fact for fact in freshness if fact],
     )
     # print(table_page)
 
@@ -793,16 +878,21 @@ def generate_chart_docs(
             pipeline_base_dir / raw_parquet_path
         ).resolve()
 
-    # Fetch the last modified datetime of the parquet file
-    if is_glob_pattern(str(parquet_path)):
-        from datetime import datetime
-
-        dataframe_last_updated = datetime.now()
-    else:
-        dataframe_last_updated = get_file_modified_datetime(parquet_path)
-
     # Get and format paths to charts
     path_to_html_chart_unix = pipeline_base_dir / Path(chart_manifest["path"])
+
+    # How fresh the chart and its data are, shown under the title. Like a
+    # dataframe page, this says nothing about the pipeline's code.
+    chart_updated = data_last_modified(path_to_html_chart_unix)
+    freshness = [
+        freshness_fact("Chart updated", chart_updated),
+        freshness_fact("Data updated", data_last_modified(parquet_path)),
+    ]
+    # The chart's date in listings is when the chart itself was last written
+    if chart_updated is not None:
+        chart_date = chart_updated.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        chart_date = pipeline_manifest["source_last_modified_date"]
 
     link_to_dataframe_docs = (
         Path(dataframe_path_prefix) / _fs_slug(pipeline_id) / f"{dataframe_id}.md"
@@ -820,7 +910,8 @@ def generate_chart_docs(
         pipeline_manifest=pipeline_manifest,
         path_to_html_chart_unix=path_to_html_chart_unix,
         pipeline_page_link=pipeline_page_link,
-        dataframe_last_updated=dataframe_last_updated.strftime("%Y-%m-%d %H:%M:%S"),
+        freshness=[fact for fact in freshness if fact],
+        chart_date=chart_date,
         dot_or_dotdot="..",
         enable_data_download=enable_data_download,
     )
@@ -1090,6 +1181,8 @@ def build_all(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
     skip_pipelines=None,
+    reuse_pipelines=None,
+    code_times=None,
 ):
     """Build all documentation.
 
@@ -1107,11 +1200,21 @@ def build_all(
     :type size_threshold: float
     :param skip_pipelines: Set of pipeline IDs to skip.
     :type skip_pipelines: set[str] | None
+    :param reuse_pipelines: Set of pipeline IDs whose pages and copied files
+        are not regenerated (see ``generate_all_pipeline_docs``).
+    :type reuse_pipelines: set[str] | None
+    :param code_times: Code-change times already known, by pipeline ID (see
+        ``manifest.apply_code_change_times``). Others are worked out here.
+    :type code_times: dict[str, str] | None
     """
     docs_build_dir.mkdir(parents=True, exist_ok=True)
+    # Neither a skipped nor a reused pipeline has its files copied or written
+    not_generated = set(skip_pipelines or ()) | set(reuse_pipelines or ())
 
     ## Align files for use by Sphinx
     manifest = load_manifest(base_dir=base_dir)
+    # Pages say when the code changed according to git, not the file system
+    apply_code_change_times(manifest, known=code_times)
 
     # Extract enable_data_download setting (defaults to False)
     enable_data_download = manifest["project"].get("enable_data_download", False)
@@ -1125,7 +1228,7 @@ def build_all(
         base_dir=base_dir,
         docs_build_dir=docs_build_dir,
         enable_data_download=enable_data_download,
-        skip_pipelines=skip_pipelines,
+        skip_pipelines=not_generated,
     )
 
     copy_according_to_plan(dataset_plan)
@@ -1135,7 +1238,7 @@ def build_all(
 
     # Inject title cells into notebooks that lack top-level headings
     # (Sphinx requires every document to have a title for toctree links)
-    ensure_notebook_titles(manifest, docs_build_dir, skip_pipelines=skip_pipelines)
+    ensure_notebook_titles(manifest, docs_build_dir, skip_pipelines=not_generated)
 
     generate_all_pipeline_docs(
         manifest,
@@ -1146,6 +1249,7 @@ def build_all(
         size_threshold=size_threshold,
         enable_data_download=enable_data_download,
         skip_pipelines=skip_pipelines,
+        reuse_pipelines=reuse_pipelines,
     )
 
     # Copy remaining docs_src files to build directory

@@ -30,7 +30,7 @@ For personal use there's a ready-made location, `~/.chartbook/chartbook.toml`, w
 ```console
 chartbook catalog init            # create it
 chartbook catalog add ../my-repo  # register a pipeline
-chartbook catalog build           # build its site into ~/.chartbook/docs/
+chartbook catalog build           # build its site into ~/.chartbook/docs/ (only what changed since last time)
 chartbook catalog browse          # open that site
 ```
 
@@ -74,7 +74,20 @@ dataframes = ["date_col", "pull_method"]
 charts     = ["units", "frequency"]
 ```
 
-With no `[policy]` section, a built-in recommended-field list drives the diagnostics page, warn-only. Policy is enforced only when the catalog builds; a pipeline built standalone is always permissive.
+With no `[policy]` section, a built-in recommended-field list drives the diagnostics page, warn-only. A build enforces policy only for a catalog; a pipeline built standalone is always permissive.
+
+### Enforcing it in CI
+
+`chartbook check` is the gate. It exits nonzero when a required field is missing, a declared path points at nothing, or a dataframe's `license_expiration` has passed or is within 30 days — naming the manifest and field each time.
+
+```console
+chartbook check                        # in a catalog: every member, against its [policy]
+chartbook check --policy ../catalog    # in a pipeline: against that catalog's [policy]
+chartbook check --within 90            # widen the license window
+chartbook check --skip-outputs         # in CI, without building the data first
+```
+
+A pipeline with no `--policy` is checked against the built-in recommended list. Details: {doc}`../reference/cli`.
 
 ## Loading data
 
@@ -98,7 +111,7 @@ text = data.get_docs(pipeline="yield_curve", dataframe="repo_public")       # th
 where = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public") # the write-up's source file
 ```
 
-All of these accept `catalog_path="/path/to/catalog"` to bypass the global setting. Hive-partitioned (glob-path) dataframes support only the LazyFrame default — call `.collect()` to materialize.
+All of these accept `catalog_path="/path/to/catalog"` to bypass the global setting. Inside a pipeline, `data.path("repo_public")` gives the path of one of its *own* dataframes straight from its `chartbook.toml`, with no catalog involved (and `assets.path("chart/repo_rates")` that of a chart, notebook or note) — see {doc}`documenting-a-pipeline`. Hive-partitioned (glob-path) dataframes support only the LazyFrame default — call `.collect()` to materialize.
 
 The same lookups exist on the command line, for shell scripts and quick checks:
 
@@ -119,4 +132,4 @@ data.load(pipeline="ftsfr/crsp_treasury", ...)                    # canonical sc
 data.load(pipeline="https://github.com/ftsfr/crsp_treasury", ...) # repo URL, normalized on input
 ```
 
-A bare name resolves if exactly one catalog entry matches; if several scopes share it, the error lists the candidates so you can qualify. How IDs are derived — and why URLs are accepted as input but never stored — is covered in {doc}`../reference/configuration`.
+A bare name resolves if exactly one catalog entry matches; if several scopes share it, the error lists the candidates so you can qualify. A registry-qualified form (`charthub.example/ftsfr/crsp_treasury`) and a pinned one (`ftsfr/crsp_treasury@a1b2c3d`) are reserved syntax, refused as not yet supported. How IDs are derived — and why URLs are accepted as input but never stored — is covered in {doc}`../reference/configuration`.

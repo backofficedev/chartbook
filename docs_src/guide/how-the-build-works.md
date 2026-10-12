@@ -3,7 +3,7 @@
 The `chartbook build` command uses a **two-stage pipeline** to generate your documentation site:
 
 1. **Markdown generation** — reads your `chartbook.toml` manifest and project files, then produces intermediate Markdown files (and copies static assets) into a temporary `_docs/` directory.
-2. **Sphinx build** — runs `sphinx-build` to convert those intermediate Markdown files into a static HTML site.
+2. **Sphinx build** — runs Sphinx (`python -m sphinx`, with the same Python that is running ChartBook) to convert those intermediate Markdown files into a static HTML site.
 
 By default, the temporary directories are deleted when the build finishes — whether it succeeded or failed. Using the `--keep-build-dirs` flag preserves them so you can inspect the intermediate output, which is exactly what you want when debugging a failed build.
 
@@ -33,10 +33,10 @@ chartbook build [OUTPUT_DIR]
     |
     |-- Stage 2: Sphinx Build
     |   Render conf.py.j2 -> conf.py
-    |   Run: sphinx-build -M html _docs _docs/_build
+    |   Run: python -m sphinx -M html _docs _docs/_build
     |   Copy _docs/_build/html/ to OUTPUT_DIR
     |
-    |-- Cleanup (unless --keep-build-dirs)
+    |-- Cleanup (unless --keep-build-dirs; --incremental keeps _docs/)
         Delete _docs/ and _docs_src/
 ```
 
@@ -58,8 +58,10 @@ _docs_src/
 │   ├── logo.png
 │   ├── favicon.ico
 │   ├── custom.css
+│   ├── chartbook-freshness.js       # turns page timestamps into "2 days ago"
 │   └── chartbook-custom.js          # catalog theme only
 ├── _templates/
+│   ├── freshness.md                  # "Data updated ..." line under a page title
 │   ├── chart_entry_top.md            # chart page header + iframe
 │   ├── chart_entry_bottom.md         # chart specs table + manifests
 │   ├── dataframe_entry_top.md        # dataframe page heading
@@ -123,7 +125,7 @@ Once all Markdown files are in place:
 
 2. **Sphinx execution**: ChartBook runs:
    ```
-   sphinx-build -M html _docs _docs/_build
+   python -m sphinx -M html _docs _docs/_build
    ```
    This processes all `.md` files using extensions like `myst-nb` (notebook rendering), `ablog` (blog-style chart pages), `sphinx_design` (grid cards), and `sphinx_copybutton`.
 
@@ -142,6 +144,49 @@ The command prints the path to the preserved directory:
 Keeping temporary build directory: /path/to/project/_docs
 ```
 
+
+## Incremental Builds and Watch Mode
+
+Everything above describes a **clean build**: both directories start empty, every page is generated, Sphinx reads and renders all of them, and the directories are deleted afterwards. That is the default, and the right thing in CI.
+
+`chartbook build --incremental` keeps `_docs/` instead and makes the next build do less, in three places.
+
+**1. Unchanged pipelines are not regenerated.** Before generating anything, the build takes a *fingerprint* of each pipeline: a hash over the modification time and size of every file its pages are made from —
+
+- its `chartbook.toml` and `README.md`;
+- everything under `src/` and `docs_src/` (and its `site_dir`), and any Markdown file in its root, which may be a template override;
+- every file its manifest declares: each dataframe's data (every part file of a glob path), each chart's HTML, each notebook and note, and each `docs_path`.
+
+A pipeline whose fingerprint matches the one recorded by the previous build is skipped, and the pages and copied files it already has in `_docs/` stay exactly as they are. Editor swap files, `.DS_Store` and `__pycache__` do not count.
+
+**2. Unchanged pages are not touched.** Pipelines that did change, and the handful of site-wide pages (the index, the catalog listings, `conf.py`), are generated into a temporary staging directory and then *synced* into `_docs/`: a file is copied only if its content differs, and a file nothing produces any more is deleted. Sphinx decides what to re-read from modification times, so a page rewritten with identical content would be re-read for nothing, and a page left alone is not.
+
+**3. Sphinx keeps its cache.** `_docs/_build/` survives between builds, so Sphinx re-reads only the pages whose source changed and re-renders only those. If no source changed at all, Sphinx is not run.
+
+The fingerprints live in `_docs/.chartbook-build-state.json`. Deleting `_docs/` is always safe; the next incremental build is simply a full one.
+
+```{admonition} What starts over from nothing
+:class: note
+
+An upgrade to ChartBook, Sphinx, a theme or a rendering extension; an edit to a packaged theme template; or a different `--size-threshold` or `--strip-mathjax2`. Any of these can change every page, so the whole of `_docs/` is rebuilt.
+```
+
+Two cases are handled specially because of how Sphinx works:
+
+- **A page is added or removed.** Sphinx never deletes the HTML of a page that no longer exists, and does not redraw the navigation of pages that did not themselves change. So when the *set* of pages changes, the rendered site inside `_docs/_build/` is dropped and every page is written again. Sphinx does this from its cache; nothing is re-read.
+- **Nothing in the Sphinx configuration may change between runs**, or Sphinx discards its cache. The themes switch on a setting (`fontawesome_included`) during a build if it is left unset, which Sphinx then sees as a changed configuration on the next run. The generated `conf.py` therefore sets it explicitly.
+
+### How "changed" is decided, and its limits
+
+By modification time and size — the same notion of change the rest of ChartBook uses for now. That is cheap enough to check every second in watch mode, and it has the usual blind spot: a file replaced by different content of the same size and timestamp is not noticed. A clean build never is wrong; when in doubt, run one.
+
+Within one pipeline, the pages are regenerated together but only the ones that come out different are rendered again. Edit one chart's write-up and two pages change: that chart's, and the pipeline's front page, which shows when the code last changed. Chart and dataframe pages carry no pipeline-wide facts, precisely so that one edit does not alter all of them.
+
+### Watch mode
+
+`chartbook build --watch` is the incremental build in a loop: build, then check the project's files once a second (`--watch-interval`), and rebuild when any of them differs. A build that fails — typically because a file was caught half-saved — is reported, and the loop carries on. Ctrl-C stops it.
+
+There is deliberately nothing else to it: no server, no live reload, no file-system notification service, no process besides the one in your terminal. Open the site with `chartbook browse` and refresh the page after a rebuild.
 
 ## Inspecting Intermediate Files
 
@@ -258,6 +303,8 @@ Each dataframe page is assembled from your user-authored documentation (specifie
 ```markdown
 # Dataframe: `acme/yield_curve:repo_public` - Public Repo Data
 
+Data updated 2 days ago
+
 [Your user-authored documentation from docs_path]
 
 ## DataFrame Glimpse
@@ -284,6 +331,12 @@ Each dataframe page is assembled from your user-authored documentation (specifie
 | Pipeline ID     | acme/yield_curve                       |
 | ...             | ...                                    |
 ```
+
+The line under the title is the page's **freshness**: when the dataframe's file was last written. A chart page shows two facts — when the chart file was written, and when its dataframe was. These are file modification times; a partitioned dataframe uses its newest part file.
+
+An asset page says only things about that asset. When the pipeline's *code* last changed is a fact about the whole pipeline, so it is shown once, on the pipeline's front page (and on the catalog's Pipelines page), not repeated on every chart and dataframe. That time comes from git when it can: the last commit that touched `src/`, `docs_src/` or `chartbook.toml`, as long as none of them has uncommitted changes. A fresh clone stamps every file with the moment it was checked out, so on a build server modification times would report year-old code as changed just now. With uncommitted edits, or outside a repository, the newest modification time is used.
+
+The build writes each one as a timestamp in a `<time>` element, and a small script (`chartbook-freshness.js`) rewords it as "2 days ago" when the page is opened — the page is static, so anything computed at build time would be stale the next day, and would make every page differ from one build to the next. Hover for the exact time; with scripts off, the date is shown.
 
 The DataFrame Glimpse is generated by reading a single sample row of the parquet file with Polars — the last row for normal-sized files (and glob/partitioned paths), or the first row for files above the size threshold (50 MB by default, where reading the head avoids a full scan). The total row count shown is always the true count, corrected after sampling. If the file is missing, an error message is shown instead.
 
@@ -365,7 +418,8 @@ This means you can override any built-in template by placing a file with the sam
 
 | Template File | What It Controls |
 |---|---|
-| `chart_entry_top.md` | Chart page header: ABlog frontmatter, title, iframe embed, sources line, download link |
+| `freshness.md` | The "Data updated …" line under an asset page's title, and "Code updated …" on a pipeline's front page |
+| `chart_entry_top.md` | Chart page header: ABlog frontmatter, title, freshness line, iframe embed, sources line, download link |
 | `chart_entry_bottom.md` | Chart page footer: specs table, dataframe manifest, pipeline manifest |
 | `dataframe_manifest.md` | Dataframe metadata table (shown on dataframe and chart pages) |
 | `pipeline_manifest.md` | Pipeline metadata table (shown on multiple page types) |

@@ -24,9 +24,17 @@ ChartBook is a developer platform for data science teams to discover, document, 
 
 ```bash
 chartbook init              # Scaffold new project from the cookiecutter template
+chartbook init --git        # ...and git init + initial commit
+chartbook init --github     # ...and create a private GitHub repo with gh, then push (--public to override)
 chartbook build             # Generate HTML documentation website
 chartbook build -f          # Force overwrite existing docs
+chartbook build -f --incremental  # Keep _docs/ and redo only what changed since last time
+chartbook build -f --watch  # Incremental build, then rebuild on every file change (Ctrl-C to stop)
 chartbook browse            # Open project docs in default browser
+chartbook check             # CI gate: missing metadata, broken paths, expiring licenses
+chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
+chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
+chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook config            # Configure default catalog path (interactive)
@@ -114,8 +122,22 @@ df = data.load(pipeline="crsp_treasury", dataframe="my_data", format="pandas")
 # Load with explicit catalog path
 lf = data.load(pipeline="crsp_treasury", dataframe="my_data", catalog_path="/path/to/catalog")
 
-# Get data file path
+# Get data file path (through the catalog)
 path = data.get_data_path(pipeline="crsp_treasury", dataframe="my_data")
+
+# Inside a pipeline: the path its own chartbook.toml declares for a dataframe.
+# No catalog needed; the file need not exist yet, so use it for dodo.py targets
+# and for writing outputs.
+df.to_parquet(data.path("my_data"))
+
+# The same for any other asset: put its kind in front of the name
+# (chart/, notebook/, note/). data.path(x) is assets.path(x, kind="dataframe").
+from chartbook import assets
+fig.write_html(assets.path("chart/my_chart"))
+
+# A throwaway directory for intermediates (<pipeline>/_data/_scratch/):
+# not an asset, git-ignored, safe to delete
+tmp = data.scratch() / "raw_download.csv"
 
 # Get documentation content as a string
 docs = data.get_docs(pipeline="crsp_treasury", dataframe="my_data")
@@ -124,7 +146,7 @@ docs = data.get_docs(pipeline="crsp_treasury", dataframe="my_data")
 docs_path = data.get_docs_path(pipeline="crsp_treasury", dataframe="my_data")
 ```
 
-The `pipeline` argument accepts a bare name (resolved against the catalog when unambiguous), a scoped name (`scope/name`), or a repo URL (normalized to a scoped name). An `@rev` suffix is reserved but not yet supported.
+The `pipeline` argument accepts a bare name (resolved against the catalog when unambiguous), a scoped name (`scope/name`), or a repo URL (normalized to a scoped name). An `@rev` suffix and a registry prefix (`registry.example/scope/name`) are reserved but not yet supported.
 
 For advanced loading options, format details, and catalog setup, see **catalog_system.md**.
 

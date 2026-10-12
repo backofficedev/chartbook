@@ -25,6 +25,7 @@ from colorama import Fore, Style, init
 # to easily see the task lines printed by PyDoit. I want them to stand out
 # from among all the other lines printed to the console.
 from doit.reporter import ConsoleReporter
+from chartbook import assets, data
 from chartbook.env import get, get_os_type, get_project_root
 
 try:
@@ -65,6 +66,13 @@ DATA_DIR = BASE_DIR / "_data"
 MANUAL_DATA_DIR = BASE_DIR / "data_manual"
 OUTPUT_DIR = BASE_DIR / "_output"
 OS_TYPE = get_os_type()
+
+# Where a declared dataframe or chart lives is stated once, in chartbook.toml.
+# data.path("name") reads a dataframe's path from there, and
+# assets.path("chart/name") a chart's (they are the Python forms of the
+# `chartbook path name` and `chartbook path chart/name` commands), so the
+# targets below cannot drift from the manifest. Files the manifest does not
+# declare are still spelled out by hand.
 USER = get("USER", default="")
 
 ## Helpers for handling Jupyter Notebook tasks
@@ -165,7 +173,7 @@ def task_pull():
         "actions": [
             "ipython ./src/load_fed_yield_curve.py",
         ],
-        "targets": [DATA_DIR / "fed_yield_curve.parquet"],
+        "targets": [data.path("fed_yield_curve")],
         "file_dep": ["./src/load_fed_yield_curve.py"],
         "clean": [],
     }
@@ -194,11 +202,11 @@ def task_chart_repo_rates():
         "./src/chart_relative_repo_rates.py",
     ]
     targets = [
-        DATA_DIR / "repo_public.parquet",
+        data.path("repo_public"),
         DATA_DIR / "repo_public.xlsx",
         DATA_DIR / "repo_public_relative_fed.parquet",
         DATA_DIR / "repo_public_relative_fed.xlsx",
-        OUTPUT_DIR / "repo_rates.html",
+        assets.path("chart/repo_rates"),
         OUTPUT_DIR / "repo_rates_normalized.html",
         OUTPUT_DIR / "repo_rates_normalized_w_balance_sheet.html",
     ]
@@ -222,7 +230,7 @@ def task_chart_yield_curve():
     targets = [
         DATA_DIR / "fed_yield_curve_current.parquet",
         DATA_DIR / "fed_yield_curve_current.xlsx",
-        OUTPUT_DIR / "yield_curve_current.html",
+        assets.path("chart/yield_curve_current"),
     ]
 
     return {
@@ -256,10 +264,10 @@ notebook_tasks = {
         "path": "./src/04_term_premium_charts_ipynb.py",
         "file_dep": ["./src/load_fed_yield_curve.py"],
         "targets": [
-            OUTPUT_DIR / "term_premium_10y_1y.html",
-            OUTPUT_DIR / "term_premium_10y_2y.html",
-            OUTPUT_DIR / "term_premium_10y_3y.html",
-            DATA_DIR / "term_premium.parquet",
+            assets.path("chart/term_premium_10y_1y"),
+            assets.path("chart/term_premium_10y_2y"),
+            assets.path("chart/term_premium_10y_3y"),
+            data.path("term_premium"),
             DATA_DIR / "term_premium.xlsx",
         ],
         "task_dep": ["pull:fed_yield_curve"],

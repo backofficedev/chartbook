@@ -547,6 +547,30 @@ Kept on the table, explicitly out of scope for v2:
   The script semantics of `build` were chosen so this needs no format change.
 - **A global registry** mapping `scope/name` → repo URL + metadata.
 
+## Since this was written
+
+*Added 2026-10-12.* This document specifies the v2 format as designed in July 2026, and that
+format is what the loader implements. Later designs build on it. Nothing below changes a file
+that is valid today.
+
+- **Names inside a pipeline are per table.** `[dataframes.gdp]` and `[charts.gdp]` are two
+  different assets. Each table is its own namespace, and an asset is addressed by its key with
+  its kind in front, unless it is a dataframe: `gdp`, `chart/gdp`, `notebook/analysis`,
+  `note/methodology`. The tables are plural and the kinds are singular. The whole address
+  grammar, including other pipelines' assets, is in {doc}`references`.
+- **Fields that name another asset hold a reference in that grammar.** Today the only one is a
+  chart's `dataframe = "repo_public"`, a local dataframe. Planned ones are a chart's `inputs`
+  ({doc}`index-schema`) and a model's `trained_on` ({doc}`models`).
+- **`[project] repo_url` now does default to the git remote**, as this document always said. The
+  remote is turned into a web URL and any credentials in it are removed.
+- **Tables that are designed and not yet read by the loader:** `[dependencies]` and `[scripts]`
+  ({doc}`asset-graph`), `[models.x]` ({doc}`models`), `[sources.x]` with a dataframe's `table`
+  and `query` ({doc}`data-access`), and `[dataframes.x.series.y]`
+  ({ref}`series-addressing`). A manifest that contains one of them today loads, and the table
+  is ignored.
+
+{doc}`overview` has the order in which these get built.
+
 ## Open questions
 
 *(none — the entity field de-prefixing question was resolved in favor of

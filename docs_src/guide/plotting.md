@@ -377,17 +377,17 @@ docs = "Quarterly real GDP growth, seasonally adjusted."
 
 See {doc}`documenting-a-pipeline` for the manifest side.
 
-## Plugin System
+## Custom backends
 
-The plotting module uses [pluggy](https://pluggy.readthedocs.io/) for extensibility. Third-party packages can provide custom backends:
+The two libraries above are **backends**, and a third-party package can register more — for Altair, Bokeh, or a house plotting library — through the `chartbook_plotting` entry-point group:
 
 ```toml
-# In third-party package's pyproject.toml
+# In the third-party package's pyproject.toml
 [project.entry-points.chartbook_plotting]
 altair = "mypackage.backend:AltairBackend"
 ```
 
-See the API reference for details on implementing custom backends.
+{doc}`plotting-backends` is the full interface: the methods a backend implements, what it is handed, a complete working example, and what a registered backend is and is not used for today.
 
 ## Dependencies
 
@@ -396,7 +396,7 @@ Everything the plotting module needs ships with `pip install chartbook`:
 - `matplotlib` — Static chart generation
 - `plotly` — Interactive chart generation
 - `kaleido` — Plotly static export
-- `pluggy` — Plugin system
+- `pluggy` — Backend registry ({doc}`plotting-backends`)
 - `pandas-datareader` — NBER recession data from FRED
 - `fredapi` — FRED API client, available for pipeline code
 

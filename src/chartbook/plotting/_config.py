@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib.resources
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
 
 
 @dataclass
@@ -15,9 +14,6 @@ class PlottingConfig:
     # Default output settings
     default_output_dir: Path = field(default_factory=lambda: Path("./_output"))
     default_interactive: bool = True
-
-    # Default backend
-    default_backend: Literal["plotly", "matplotlib"] = "plotly"
 
     # Overlay defaults
     nber_recessions: bool = False
@@ -55,7 +51,6 @@ def configure(
     *,
     default_output_dir: str | Path | None = None,
     default_interactive: bool | None = None,
-    default_backend: Literal["plotly", "matplotlib"] | None = None,
     nber_recessions: bool | None = None,
     matplotlib_style: str | Path | None = None,
     plotly_template: str | None = None,
@@ -69,8 +64,6 @@ def configure(
     :type default_output_dir: str or Path, optional
     :param default_interactive: Whether to generate interactive HTML by default.
     :type default_interactive: bool, optional
-    :param default_backend: Default backend: "plotly" or "matplotlib".
-    :type default_backend: str, optional
     :param nber_recessions: Whether to show NBER recession shading by default.
     :type nber_recessions: bool, optional
     :param matplotlib_style: Matplotlib style name or path to .mplstyle file.
@@ -102,8 +95,6 @@ def configure(
         _config.default_output_dir = Path(default_output_dir)
     if default_interactive is not None:
         _config.default_interactive = default_interactive
-    if default_backend is not None:
-        _config.default_backend = default_backend
     if nber_recessions is not None:
         _config.nber_recessions = nber_recessions
     if matplotlib_style is not None:

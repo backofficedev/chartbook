@@ -77,4 +77,14 @@
   .bd-content-container {
     max-width: none !important;
     width: 100% !important;
-  } 
+  }
+
+/* The "Data updated 2 days ago" line under an asset page's title */
+.cb-freshness {
+    color: var(--pst-color-text-muted, #6c757d);
+    font-size: 0.9em;
+}
+
+.cb-freshness time {
+    cursor: help;
+}

@@ -1,8 +1,22 @@
-"""Catalog-aware data loading for chartbook.
+"""Data access for chartbook: where dataframes live, and loading them.
 
-Load dataframes from registered pipelines in a catalog::
+This is the front door for **dataframes**. Every function here takes a
+dataframe and nothing else; :mod:`chartbook.assets` is the general module,
+for charts, notebooks and notes as well.
+
+Ask the manifest where a dataframe of the current pipeline belongs, instead
+of repeating its path in code::
 
     from chartbook import data
+
+    # The path declared for [dataframes.repo_public] in the enclosing
+    # chartbook.toml; works before the file exists, so it can name a target
+    df.to_parquet(data.path("repo_public"))
+
+    # A throwaway directory for intermediates: _data/_scratch/ in the pipeline
+    raw.to_csv(data.scratch() / "raw_download.csv")
+
+Load dataframes from registered pipelines in a catalog::
 
     # Load as Polars LazyFrame (default)
     lf = data.load(pipeline="yield_curve", dataframe="repo_public")
@@ -23,84 +37,120 @@ Load dataframes from registered pipelines in a catalog::
     docs_path = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public")
 """
 
+import sys
 from pathlib import Path
 from typing import Optional, Union
 
-from chartbook.config import get_default_catalog_path, get_global_settings_path
-from chartbook.errors import CatalogNotConfiguredError
+from chartbook import assets as _assets
 from chartbook.identity import resolve_pipeline_ref
+from chartbook.refs import AssetRef, KindMismatchError
+from chartbook.resolve import (
+    FileLocation,
+    caller_start_dirs,
+    find_manifest_dir,
+    require_file,
+    resolve,
+)
+from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 from chartbook.utils import is_glob_pattern
 
 
-def _resolve_catalog_path(
-    catalog_path: Optional[Union[str, Path]] = None,
+def path(
+    ref: Union[str, AssetRef],
+    project_dir: Optional[Union[str, Path]] = None,
 ) -> Path:
-    """Resolve the catalog path from an explicit argument or global settings.
+    """Get the path the manifest declares for a dataframe of the current pipeline.
 
-    Priority:
-    1. Explicit *catalog_path* argument
-    2. Global settings (``~/.chartbook/settings.toml``)
-    3. Raise :class:`CatalogNotConfiguredError`
+    The enclosing ``chartbook.toml`` is the single source of truth for where
+    a dataframe lives, so code can ask for the path rather than repeat it:
 
-    :param catalog_path: Explicit path to a catalog ``chartbook.toml`` or its parent directory.
-    :type catalog_path: Optional[Union[str, Path]]
-    :returns: Resolved path to the catalog's ``chartbook.toml``.
+    >>> from chartbook import data
+    >>> df.to_parquet(data.path("merged_rates"))  # doctest: +SKIP
+
+    and a build definition can use the same call for what it reads and what
+    it writes — ``file_dep`` and ``targets`` in a ``dodo.py``, say. The path
+    is whatever ``path`` the entry declares, made absolute; nothing checks
+    that the file exists, so a target can be named before it is built.
+
+    This is :func:`chartbook.assets.path` with ``kind="dataframe"``: it
+    answers for dataframes and nothing else, so a typo cannot hand back a
+    chart's HTML where a parquet file was meant. For a chart, a notebook or
+    a note, use :func:`chartbook.assets.path`. Asking for a name that
+    ``[dataframes]`` does not declare raises immediately, naming the table
+    to add, rather than surfacing later as a missing file.
+
+    This is a convenience, never a requirement. A script that hardcodes the
+    same path, in any language, works just as well; ``chartbook path`` on the
+    command line gives the same answer to a shell, Make, R or Stata.
+
+    Only local references resolve today. The rest of the reference grammar —
+    ``other_pipeline:asset``, ``asset#part``, ``@rev`` — is reserved and
+    raises "not yet supported".
+
+    :param ref: The dataframe's name: its key in ``[dataframes]``.
+    :type ref: str
+    :param project_dir: Where to look for the pipeline. The enclosing
+        ``chartbook.toml`` is found by walking up from here. By default the
+        search starts at the calling file's directory, then falls back to the
+        current working directory.
+    :type project_dir: Optional[Union[str, Path]]
+    :returns: The absolute path declared for the dataframe (it may contain
+        glob characters for partitioned data).
     :rtype: Path
-    :raises CatalogNotConfiguredError: If no catalog is configured.
+    :raises AssetNotDeclaredError: If the manifest declares no such dataframe.
+    :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
+        starting directory.
+    :raises ValueError: If the reference names another kind of asset, uses
+        reserved syntax, or the entry has no ``path``.
     """
-    if catalog_path is not None:
-        catalog_path = Path(catalog_path)
-        if catalog_path.is_dir():
-            catalog_path = catalog_path / "chartbook.toml"
-        return catalog_path.resolve()
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    try:
+        return _assets._path(ref, "dataframe", start_dirs)
+    except KindMismatchError as e:
+        raise KindMismatchError(
+            str(ref), e.found, e.expected, hint=(
+                f"data.path() answers for dataframes only; use "
+                f"chartbook.assets.path({str(ref)!r}) for a {e.found}."
+            )
+        ) from None
 
-    default_path = get_default_catalog_path()
-    if default_path is not None:
-        return default_path
 
-    raise CatalogNotConfiguredError(get_global_settings_path())
+#: Where :func:`scratch` puts throwaway files, relative to the pipeline root.
+SCRATCH_DIR = Path("_data") / "_scratch"
 
 
-def _get_dataframe_path_from_catalog(
-    catalog_path: Path,
-    pipeline: str,
-    dataframe: str,
-) -> Path:
-    """Look up the parquet path for a dataframe inside a catalog manifest.
+def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
+    """Get the current pipeline's directory for throwaway files.
 
-    :param catalog_path: Path to the catalog's ``chartbook.toml``.
-    :type catalog_path: Path
-    :param pipeline: The pipeline reference — a bare name
-        (``"crsp_treasury"``, if unambiguous), a scoped ID
-        (``"ftsfr/crsp_treasury"``), or a repository URL.
-    :type pipeline: str
-    :param dataframe: The dataframe identifier within the pipeline.
-    :type dataframe: str
-    :returns: Resolved path to the parquet file.
+    Use it for intermediates that nothing else depends on: a partial
+    download, a cache between two steps, a file you only want to look at.
+
+    >>> from chartbook import data
+    >>> tmp = data.scratch() / "raw_download.csv"  # doctest: +SKIP
+
+    The directory is ``_data/_scratch/`` inside the pipeline, created on
+    first use. What goes in it is not an asset: it is not declared in the
+    manifest, not documented, not published, and it ignores itself in git.
+    It is safe to delete at any time. Because it lives inside the project,
+    two checkouts or worktrees of the same pipeline each get their own.
+
+    One thing to avoid: a dataframe whose ``path`` is a glob over all of
+    ``_data/`` (``./_data/**/*.parquet``) would pick up scratch files too.
+
+    :param project_dir: Where to look for the pipeline, as for :func:`path`.
+    :type project_dir: Optional[Union[str, Path]]
+    :returns: The absolute path of the scratch directory, which exists.
     :rtype: Path
-    :raises KeyError: If the pipeline or dataframe is not found.
+    :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
+        starting directory.
     """
-    from chartbook.manifest import load_manifest
-
-    manifest = load_manifest(base_dir=catalog_path.parent)
-
-    pipeline_key = resolve_pipeline_ref(manifest.get("pipelines", {}).keys(), pipeline)
-
-    pipeline_manifest = manifest["pipelines"][pipeline_key]
-    available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())
-    if dataframe not in pipeline_manifest.get("dataframes", {}):
-        raise KeyError(
-            f"Dataframe {dataframe!r} not found in pipeline {pipeline_key!r}. "
-            f"Available dataframes: {available_dataframes}"
-        )
-
-    resolved = pipeline_manifest["dataframes"][dataframe].get("_resolved_path")
-    if resolved is None:
-        raise KeyError(
-            f"Dataframe {dataframe!r} in pipeline {pipeline_key!r} has no "
-            f"'path' set in its chartbook.toml."
-        )
-    return Path(resolved)
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    directory = find_manifest_dir(*start_dirs) / SCRATCH_DIR
+    directory.mkdir(parents=True, exist_ok=True)
+    gitignore = directory / ".gitignore"
+    if not gitignore.exists():
+        gitignore.write_text("*\n")
+    return directory
 
 
 def _get_dataframe_docs_info_from_catalog(
@@ -151,10 +201,14 @@ def get_data_path(
     dataframe: str,
     catalog_path: Optional[Union[str, Path]] = None,
 ) -> Path:
-    """Get the resolved path to a dataframe's parquet file.
+    """Get the resolved path to a dataframe's parquet file, through a catalog.
 
     For glob patterns (e.g., ``**/*.parquet``), returns a ``Path`` containing
     the glob pattern characters.
+
+    :func:`path` supersedes this for assets of the current pipeline, and will
+    for other pipelines' once cross-pipeline references resolve. Until then
+    this remains the way to locate another pipeline's dataframe.
 
     :param pipeline: The pipeline reference — a bare name
         (``"crsp_treasury"``, if unambiguous), a scoped ID
@@ -171,8 +225,8 @@ def get_data_path(
     :raises CatalogNotConfiguredError: If no catalog is configured.
     :raises KeyError: If the pipeline or dataframe is not found.
     """
-    resolved_catalog = _resolve_catalog_path(catalog_path)
-    return _get_dataframe_path_from_catalog(resolved_catalog, pipeline, dataframe)
+    location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path)
+    return require_file(location, f"Dataframe {dataframe!r}")
 
 
 def get_docs_path(
@@ -300,7 +354,13 @@ def load(
     ...               format="pandas",
     ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
     """
-    file_path = get_data_path(pipeline, dataframe, catalog_path)
+    location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path)
+    if not isinstance(location, FileLocation):
+        raise NotImplementedError(
+            f"Dataframe {dataframe!r} is {location.kind}-backed; only "
+            f"file-backed dataframes can be loaded."
+        )
+    file_path = location.path
     _is_glob = is_glob_pattern(file_path)
 
     if format == "pandas":

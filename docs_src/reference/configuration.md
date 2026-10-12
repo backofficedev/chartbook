@@ -43,7 +43,7 @@ Every field is optional. Types and defaults:
 | `description` | string | `""` |
 | `maintainer` | string | first entry of `contributors` |
 | `contributors` | array of strings | `[]` |
-| `repo_url` | string | `""` |
+| `repo_url` | string | the repo's git `origin` remote, as a web address; `""` if there is none |
 | `site_url` | string | `file://` path to the local built docs |
 | `readme` | path | `"./README.md"` |
 | `copyright` | string | current year |
@@ -103,7 +103,16 @@ data.load(pipeline="ftsfr/crsp_treasury", ...)                    # canonical
 data.load(pipeline="https://github.com/ftsfr/crsp_treasury", ...) # URL, normalized
 ```
 
-If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. `scope/name@rev` is reserved syntax for future version pinning and is rejected for now. See {doc}`../design/toml-format-v2` for why identity works this way.
+If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. See {doc}`../design/toml-format-v2` for why identity works this way.
+
+Two extensions of the ID grammar are **reserved**: the parser recognizes them and refuses them with a "not yet supported" error, so they can be given meaning later without changing what any existing ID means.
+
+| Reserved form | Example | For |
+|---|---|---|
+| `scope/name@rev` | `ftsfr/crsp_treasury@a1b2c3d` | Pinning a revision |
+| `registry/scope/name` | `charthub.example/ftsfr/crsp_treasury` | Naming the registry that resolves an ID |
+
+A registry prefix is the first of exactly three components, and looks like a host — it contains `.` or `:`, or is `localhost` (the rule Docker uses). `acme/rates` therefore means the same thing whether or not a registry ever exists, and a two-component ID is always `scope/name`, even if the scope contains a dot. See {doc}`../design/asset-graph`.
 
 ## `[pipelines]` — Catalog Registry
 
@@ -147,6 +156,7 @@ Each matched directory containing a pipeline `chartbook.toml` joins under its de
 
 This is designed for the **local** catalog — publishing to a shared catalog should stay an explicit act.
 
+(policy)=
 ## `[policy]` — Catalog Requiredness
 
 The format itself is permissive; **which fields are required is your catalog's policy**:
@@ -161,7 +171,7 @@ dataframes = ["date_col", "pull_method"]
 charts     = ["units", "frequency"]
 ```
 
-Without a `[policy]` section, chartbook's default recommended-field lists drive the diagnostics page, warn-only. Policy is enforced only when the catalog builds; a pipeline built standalone is always permissive.
+Without a `[policy]` section, chartbook's default recommended-field lists drive the diagnostics page, warn-only. A build enforces policy only for a catalog; a pipeline built standalone is always permissive. To enforce it in CI — for a catalog or a single pipeline — run {doc}`chartbook check <cli>`, which exits nonzero on any missing required field regardless of `mode`.
 
 ## `[charts]` — Chart Definitions
 
@@ -293,6 +303,6 @@ chartbook validates the manifest when running commands. Common errors:
 - Both or neither of `docs_path` / `docs` provided
 - A chart's `dataframe` key referencing a missing dataframe
 - Explicit `type` contradicting the file's structure
-- Referenced files that don't exist (run `chartbook build` to check)
+- Referenced files that don't exist (run `chartbook check`, or `chartbook build`)
 
-Warnings (unknown `[project]` keys, missing policy-required fields) appear during `chartbook build` and on the catalog's diagnostics page.
+Warnings (unknown `[project]` keys, missing policy-required fields) appear during `chartbook build` and on the catalog's diagnostics page. `chartbook check` turns missing required fields, missing files and expiring licenses into a nonzero exit code for CI.

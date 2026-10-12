@@ -1,26 +1,28 @@
 """
 create_data_glimpses.py
 
-Parses dodo.py to find all CSV/Parquet files and creates comprehensive
-data glimpse reports in both XML (machine-readable) and TXT (human-readable) formats.
+Summarizes every dataframe a project declares in its chartbook.toml: file
+metadata, column types, null rates, sample rows and numeric statistics.
+
+The list of data files comes from the manifest and nowhere else. Whatever
+builds the project (doit, Snakemake, Make, plain scripts) is not consulted,
+and a data file the manifest does not declare is not a catalogued asset.
 """
 
 import argparse
+import glob
 import os
 import re
 from contextlib import redirect_stdout
+from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
-from xml.sax import saxutils
 
 import polars as pl
 
-from chartbook.env import get
-
-DATA_DIR = Path(get("DATA_DIR"))
-OUTPUT_DIR = Path(get("OUTPUT_DIR"))
-BASE_DIR = Path(get("BASE_DIR"))
+from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_manifest
+from chartbook.utils import is_glob_pattern
 
 # Default file size threshold (in MB) above which to use memory-efficient loading
 DEFAULT_SIZE_THRESHOLD_MB = 50
@@ -42,100 +44,61 @@ def fix_glimpse_row_count(glimpse_text: str, actual_row_count: int) -> str:
     return re.sub(r"^Rows: \d+", f"Rows: {actual_row_count}", glimpse_text)
 
 
-def parse_dodo_tasks():
-    """Use doit's internal API to get all tasks and their associated data files.
+@dataclass(frozen=True)
+class DeclaredDataframe:
+    """A dataframe as a manifest declares it.
 
-    :returns: A dictionary mapping task names to lists of associated data files.
-    :rtype: dict
+    Attributes:
+        pipeline_id: The pipeline that declares it.
+        dataframe_id: Its key in that pipeline's ``[dataframes]`` table.
+        name: Its display name (the ID when no ``name`` is set).
+        path: Where its data lives, absolute. Contains glob characters for
+            partitioned data.
     """
-    import sys
-    from pathlib import Path
 
-    # Add the current working directory to the Python path
-    cwd = Path.cwd()
-    if str(cwd) not in sys.path:
-        sys.path.insert(0, str(cwd))
+    pipeline_id: str
+    dataframe_id: str
+    name: str
+    path: Path
 
-    # Import dodo from the current directory
-    import importlib.util
+    @property
+    def is_glob(self) -> bool:
+        return is_glob_pattern(self.path)
 
-    dodo_path = cwd / "dodo.py"
-    if not dodo_path.exists():
-        raise FileNotFoundError(f"No dodo.py file found in {cwd}")
-
-    spec = importlib.util.spec_from_file_location("dodo", dodo_path)
-    dodo = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dodo)
-
-    # Get all task functions from the dodo module
-    task_functions = [
-        getattr(dodo, name) for name in dir(dodo) if name.startswith("task_")
-    ]
-
-    # Dictionary to store task_name -> list of files
-    task_files = {}
-
-    # Generate tasks from each task function
-    for task_func in task_functions:
-        try:
-            # Call the task function to get task(s)
-            result = task_func()
-
-            # Handle both single tasks and generators
-            if hasattr(result, "__iter__") and not isinstance(result, (str, dict)):
-                # It's a generator or list of tasks
-                for task_dict in result:
-                    if isinstance(task_dict, dict):
-                        process_task_dict(task_dict, task_func.__name__, task_files)
-            elif isinstance(result, dict):
-                # It's a single task dictionary
-                process_task_dict(result, task_func.__name__, task_files)
-        except Exception as e:
-            print(f"Warning: Could not process task function {task_func.__name__}: {e}")
-            continue
-
-    return task_files
+    def data_files(self) -> list[str]:
+        """The files on disk behind this dataframe; empty if not built yet."""
+        if self.is_glob:
+            return sorted(glob.glob(str(self.path), recursive=True))
+        return [str(self.path)] if self.path.exists() else []
 
 
-def process_task_dict(task_dict, base_name, task_files):
-    """Process a single task dictionary to extract files.
+def find_declared_dataframes(manifest):
+    """List the dataframes a manifest declares, in manifest order.
 
-    :param task_dict: A doit task dictionary containing targets and file_dep.
-    :type task_dict: dict
-    :param base_name: The base name of the task function.
-    :type base_name: str
-    :param task_files: Dictionary to populate with task names and their files.
-    :type task_files: dict
+    For a catalog this covers every member pipeline. A dataframe declared
+    without a ``path`` has no data to summarize and is left out.
+
+    :param manifest: A manifest from :func:`chartbook.manifest.load_manifest`.
+    :type manifest: dict
+    :returns: One entry per declared dataframe that has a path.
+    :rtype: list[DeclaredDataframe]
     """
-    # Get the task name
-    if "name" in task_dict:
-        # For subtasks, combine base name with task name
-        if base_name.startswith("task_"):
-            base_name = base_name[5:]  # Remove 'task_' prefix
-        task_name = f"{base_name}:{task_dict['name']}"
-    elif base_name.startswith("task_"):
-        task_name = base_name[5:]  # Remove 'task_' prefix
-    else:
-        task_name = base_name
-
-    files = set()
-
-    # Extract files from targets
-    if task_dict.get("targets"):
-        for target in task_dict["targets"]:
-            target_str = str(target)
-            if target_str.endswith((".csv", ".parquet")):
-                files.add(target_str)
-
-    # Extract files from file_dep
-    if task_dict.get("file_dep"):
-        for dep in task_dict["file_dep"]:
-            dep_str = str(dep)
-            if dep_str.endswith((".csv", ".parquet")):
-                files.add(dep_str)
-
-    if files:
-        task_files[task_name] = sorted(files)
+    declared = []
+    for pipeline_id in get_pipeline_ids(manifest):
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        for dataframe_id, dataframe in pipeline_manifest.get("dataframes", {}).items():
+            resolved_path = dataframe.get("_resolved_path")
+            if resolved_path is None:
+                continue
+            declared.append(
+                DeclaredDataframe(
+                    pipeline_id=pipeline_id,
+                    dataframe_id=dataframe_id,
+                    name=dataframe.get("name", dataframe_id),
+                    path=Path(resolved_path),
+                )
+            )
+    return declared
 
 
 def get_dataset_report(
@@ -146,7 +109,8 @@ def get_dataset_report(
     For files larger than size_threshold_mb, uses memory-efficient loading by only
     collecting sampled data and correcting the row count in glimpse output.
 
-    :param filepath: Path to the CSV or Parquet file.
+    :param filepath: Path to the CSV or Parquet file, or a glob pattern
+        matching the parquet files of a partitioned dataset.
     :type filepath: str or Path
     :param include_stats: If True, include numeric column statistics.
     :type include_stats: bool
@@ -156,9 +120,14 @@ def get_dataset_report(
     :rtype: dict
     """
     report = {}
+    filepath = str(filepath)
     try:
-        # File info
-        report["file_size_bytes"] = os.path.getsize(filepath)
+        # File info; a glob pattern is one dataset spread over many files
+        if is_glob_pattern(filepath):
+            part_files = glob.glob(filepath, recursive=True)
+            report["file_size_bytes"] = sum(os.path.getsize(f) for f in part_files)
+        else:
+            report["file_size_bytes"] = os.path.getsize(filepath)
         report["file_size_mb"] = report["file_size_bytes"] / (1024 * 1024)
         report["file_type"] = Path(filepath).suffix.replace(".", "").upper()
 
@@ -166,7 +135,9 @@ def get_dataset_report(
         is_large_file = report["file_size_mb"] > size_threshold_mb
 
         # Load data lazily
-        if filepath.endswith(".csv"):
+        if is_glob_pattern(filepath):
+            lf = pl.scan_parquet(filepath, hive_partitioning=True)
+        elif filepath.endswith(".csv"):
             lf = pl.scan_csv(filepath)
         else:
             lf = pl.scan_parquet(filepath)
@@ -280,41 +251,6 @@ def get_dataset_report(
     return report
 
 
-def format_task_name(task_name):
-    """Format task name for display.
-
-    :param task_name: The task name to format.
-    :type task_name: str
-    :returns: The formatted task name.
-    :rtype: str
-    """
-    # Handle subtask names like "pull:cds_bond_basis"
-    if ":" in task_name:
-        main_task, sub_task = task_name.split(":", 1)
-        # Format both parts
-        main_formatted = main_task.replace("_", " ").title()
-        sub_formatted = sub_task.replace("_", " ").title()
-        return f"{main_formatted}: {sub_formatted}"
-    else:
-        # Handle simple task names
-        formatted = task_name.replace("_", " ").title()
-        return formatted
-
-
-def get_task_category(task_name):
-    """Extract the main task category from a task name.
-
-    :param task_name: The task name to extract the category from.
-    :type task_name: str
-    :returns: The main task category.
-    :rtype: str
-    """
-    if ":" in task_name:
-        return task_name.split(":", 1)[0]
-    else:
-        return task_name
-
-
 def format_file_size(size_bytes):
     """Format file size in human-readable format.
 
@@ -332,17 +268,16 @@ def format_file_size(size_bytes):
         return f"{size_mb / 1024:.1f} GB"
 
 
-def filename_to_anchor(filename):
-    """Convert a filename to a markdown anchor link format.
+def heading_to_anchor(heading):
+    """Convert a section heading to its markdown anchor.
 
-    :param filename: The filename to convert.
-    :type filename: str
+    :param heading: The heading text to convert.
+    :type heading: str
     :returns: The markdown anchor link.
     :rtype: str
     """
     # Convert to lowercase and replace non-alphanumeric characters with hyphens
-    # Keep the full filename including extension since section headers include it
-    anchor = filename.lower()
+    anchor = heading.lower()
     anchor = "".join(c if c.isalnum() else "-" for c in anchor)
     # Remove multiple consecutive hyphens and leading/trailing hyphens
     while "--" in anchor:
@@ -351,16 +286,29 @@ def filename_to_anchor(filename):
     return anchor
 
 
+def _section_headings(dataframes):
+    """Map each dataframe to a unique section heading.
+
+    A dataframe's own ID is enough within one pipeline. Across the pipelines
+    of a catalog, IDs can repeat, so each is qualified as ``pipeline:dataframe``.
+    """
+    qualify = len({d.pipeline_id for d in dataframes}) > 1
+    return {
+        d: f"{d.pipeline_id}:{d.dataframe_id}" if qualify else d.dataframe_id
+        for d in dataframes
+    }
+
+
 def create_txt_report(
-    existing_files,
+    dataframes,
     include_samples=True,
     include_stats=True,
     size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB,
 ):
     """Create a human-readable TXT format Data Glimpses Report.
 
-    :param existing_files: Set of file paths that exist and should be included.
-    :type existing_files: set
+    :param dataframes: The declared dataframes to include, each with its data on disk.
+    :type dataframes: list[DeclaredDataframe]
     :param include_samples: If True, include sample values sections.
     :type include_samples: bool
     :param include_stats: If True, include numeric column statistics sections.
@@ -371,75 +319,45 @@ def create_txt_report(
     :rtype: str
     """
     output_lines = []
-
-    # Parse dodo tasks to group files
-    task_files = parse_dodo_tasks()
-
-    # Create a mapping of files to tasks
-    file_to_tasks = {}
-    for task, files in task_files.items():
-        for f in files:
-            if f in existing_files:
-                if f not in file_to_tasks:
-                    file_to_tasks[f] = []
-                file_to_tasks[f].append(task)
+    headings = _section_headings(dataframes)
 
     # Header
     output_lines.append("# Data Glimpses Report")
     output_lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    output_lines.append(f"Total files: {len(existing_files)}")
+    output_lines.append(f"Total dataframes: {len(dataframes)}")
     output_lines.append("")
 
-    # Summary section grouped by task categories and subtasks
-    output_lines.append("## Summary of Datasets by Task")
+    # Summary section grouped by the pipeline that declares each dataframe
+    output_lines.append("## Summary of Dataframes by Pipeline")
     output_lines.append("")
 
-    # Group files by their task categories
-    task_grouped = {}
-    for f in sorted(existing_files):
-        tasks = file_to_tasks.get(f, ["Unknown"])
-        for task in tasks:
-            category = get_task_category(task)
-            if category not in task_grouped:
-                task_grouped[category] = {}
-            if task not in task_grouped[category]:
-                task_grouped[category][task] = []
-            task_grouped[category][task].append(f)
+    by_pipeline = {}
+    for dataframe in dataframes:
+        by_pipeline.setdefault(dataframe.pipeline_id, []).append(dataframe)
 
-    # Output the summary
-    for category in sorted(task_grouped.keys()):
-        category_formatted = format_task_name(category)
-        output_lines.append(f"### {category_formatted}")
-
-        for task in sorted(task_grouped[category].keys()):
-            if ":" in task:
-                # This is a subtask, show it as a subheading
-                task_formatted = format_task_name(task)
-                output_lines.append(f"#### {task_formatted}")
-                for f in sorted(task_grouped[category][task]):
-                    filename = Path(f).name
-                    anchor = filename_to_anchor(filename)
-                    output_lines.append(f"- [`{filename}`](#{anchor})")
-            else:
-                # This is a main task without subtasks
-                for f in sorted(task_grouped[category][task]):
-                    filename = Path(f).name
-                    anchor = filename_to_anchor(filename)
-                    output_lines.append(f"- [`{filename}`](#{anchor})")
+    for pipeline_id, pipeline_dataframes in by_pipeline.items():
+        output_lines.append(f"### {pipeline_id}")
+        for dataframe in pipeline_dataframes:
+            anchor = heading_to_anchor(headings[dataframe])
+            output_lines.append(
+                f"- [`{dataframe.dataframe_id}`](#{anchor}): {dataframe.name}"
+            )
         output_lines.append("")
 
     output_lines.append("---")
 
-    # Process each file
-    for i, f in enumerate(sorted(existing_files), 1):
-        filename = Path(f).name
+    # Process each dataframe
+    for dataframe in dataframes:
         report = get_dataset_report(
-            f, include_stats=include_stats, size_threshold_mb=size_threshold_mb
+            dataframe.path,
+            include_stats=include_stats,
+            size_threshold_mb=size_threshold_mb,
         )
 
         output_lines.append("")
-        output_lines.append(f"## {filename}")
-        output_lines.append(f"**Path:** `{f}`")
+        output_lines.append(f"## {headings[dataframe]}")
+        output_lines.append(f"**Name:** {dataframe.name}")
+        output_lines.append(f"**Path:** `{dataframe.path}`")
 
         if "error" in report:
             output_lines.append(f"**ERROR:** {report['error']}")
@@ -477,9 +395,11 @@ def create_txt_report(
             output_lines.append("### Numeric Column Statistics")
             output_lines.append("```")
             for stat in report["numeric_stats"]:
+                # A column with no non-null values has no mean to format
+                mean = "None" if stat["mean"] is None else f"{stat['mean']:.2f}"
                 output_lines.append(
                     f"{stat['name']}: min={stat['min']}, max={stat['max']}, "
-                    f"mean={stat['mean']:.2f}, median={stat['median']}"
+                    f"mean={mean}, median={stat['median']}"
                 )
             output_lines.append("```")
             output_lines.append("")
@@ -497,109 +417,14 @@ def create_txt_report(
     return "\n".join(output_lines)
 
 
-def create_xml_report(
-    existing_files, include_stats=True, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB
-):
-    """Create a machine-readable XML format Data Glimpses Report.
-
-    :param existing_files: Set of file paths that exist and should be included.
-    :type existing_files: set
-    :param include_stats: If True, include numeric column statistics.
-    :type include_stats: bool
-    :param size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
-    :type size_threshold_mb: float
-    :returns: The XML report content as a string.
-    :rtype: str
-    """
-    output_lines = [
-        '<?xml version="1.0" encoding="UTF-8"?>',
-        "<data_glimpses_report>",
-        "  <summary>",
-    ]
-
-    # Add summary section
-    for f in sorted(existing_files):
-        filename = Path(f).name
-        output_lines.append(
-            f'    <dataset filename="{saxutils.escape(filename)}" path="{saxutils.escape(str(f))}"/>'
-        )
-    output_lines.append("  </summary>")
-    output_lines.append("  <datasets>")
-
-    # Add each dataset
-    for f in sorted(existing_files):
-        filename = Path(f).name
-        report = get_dataset_report(
-            f, include_stats=include_stats, size_threshold_mb=size_threshold_mb
-        )
-        output_lines.append(
-            f'    <dataset filename="{saxutils.escape(filename)}" path="{saxutils.escape(str(f))}">'
-        )
-
-        # File info
-        if "error" in report:
-            output_lines.append(
-                f"      <error>{saxutils.escape(report['error'])}</error>"
-            )
-            output_lines.append("    </dataset>")
-            continue
-
-        output_lines.append(
-            f'      <file_info size_mb="{report["file_size_mb"]:.1f}" type="{report["file_type"]}"/>'
-        )
-        output_lines.append(
-            f'      <shape rows="{report["n_rows"]}" cols="{report["n_cols"]}"/>'
-        )
-
-        # Columns
-        output_lines.append("      <columns>")
-        for col in report["columns"]:
-            pct_null_str = (
-                f"{col['pct_null']:.1f}" if col["pct_null"] is not None else "N/A"
-            )
-            output_lines.append(
-                f'        <column name="{saxutils.escape(col["name"])}" dtype="{saxutils.escape(col["dtype"])}" pct_null="{pct_null_str}"/>'
-            )
-        output_lines.append("      </columns>")
-
-        # Sample values
-        output_lines.append("      <sample_values>")
-        for row in report["sample_values"]:
-            # Show as dict string, truncate if too long
-            row_str = str(row)
-            if len(row_str) > 300:
-                row_str = row_str[:297] + "..."
-            output_lines.append(f"        <row>{saxutils.escape(row_str)}</row>")
-        output_lines.append("      </sample_values>")
-
-        # Numeric stats
-        if report["numeric_stats"]:
-            output_lines.append("      <numeric_stats>")
-            for stat in report["numeric_stats"]:
-                output_lines.append(
-                    f'        <column name="{saxutils.escape(stat["name"])}" min="{stat["min"]}" max="{stat["max"]}" mean="{stat["mean"]}" median="{stat["median"]}"/>'
-                )
-            output_lines.append("      </numeric_stats>")
-
-        # Glimpse
-        output_lines.append("      <glimpse><![CDATA[")
-        output_lines.append(report["glimpse"].rstrip())
-        output_lines.append("      ]]></glimpse>")
-        output_lines.append("    </dataset>")
-
-    output_lines.append("  </datasets>")
-    output_lines.append("</data_glimpses_report>")
-
-    return "\n".join(output_lines)
-
-
 def main(
     output_dir=None,
     no_samples=False,
     no_stats=False,
     size_threshold=DEFAULT_SIZE_THRESHOLD_MB,
+    project_dir=None,
 ):
-    """Main function to create the data glimpses files in both XML and TXT formats.
+    """Main function to create the data glimpses report for a project.
 
     :param output_dir: Directory to save the output file. If None, saves to current directory.
     :type output_dir: str or Path, optional
@@ -609,28 +434,28 @@ def main(
     :type no_stats: bool
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param project_dir: Directory holding the project's chartbook.toml. If None, uses the
+        current directory.
+    :type project_dir: str or Path, optional
+    :raises FileNotFoundError: If the project directory has no chartbook.toml.
     """
-    print("Parsing dodo.py for tasks and data files...")
+    project_dir = Path(project_dir) if project_dir is not None else Path.cwd()
+    print(f"Reading declared dataframes from {project_dir / 'chartbook.toml'}...")
 
-    # Check if dodo.py exists in current directory
-    dodo_path = Path.cwd() / "dodo.py"
-    if not dodo_path.exists():
-        raise FileNotFoundError(
-            f"No dodo.py file found in current directory: {Path.cwd()}"
-        )
-
-    task_files = parse_dodo_tasks()
-
-    # Collect all files and check which exist
-    all_files = set()
-    for files in task_files.values():
-        all_files.update(files)
-
-    existing_files = {f for f in all_files if Path(f).exists()}
+    manifest = load_manifest(base_dir=project_dir)
+    declared = find_declared_dataframes(manifest)
+    dataframes = [d for d in declared if d.data_files()]
 
     print(
-        f"Found {len(task_files)} tasks with {len(existing_files)} existing data files"
+        f"Found {len(declared)} declared dataframes, "
+        f"{len(dataframes)} with data on disk"
     )
+    for dataframe in declared:
+        if dataframe not in dataframes:
+            print(
+                f"  - Skipping {dataframe.pipeline_id}:{dataframe.dataframe_id} "
+                f"(no data at {dataframe.path})"
+            )
 
     # Determine output directory
     if output_dir is None:
@@ -655,7 +480,7 @@ def main(
         print("  - Excluding numeric statistics sections")
 
     txt_content = create_txt_report(
-        existing_files,
+        dataframes,
         include_samples=include_samples,
         include_stats=include_stats,
         size_threshold_mb=size_threshold,
@@ -665,14 +490,21 @@ def main(
         f.write(txt_content)
     print(f"Report saved to: {output_path}")
 
-    print(f"\nProcessed {len(existing_files)} files from {len(task_files)} tasks")
+    print(f"\nProcessed {len(dataframes)} dataframes")
     print("Report generated successfully!")
 
 
 if __name__ == "__main__":
     # Parse command line arguments for standalone usage
     parser = argparse.ArgumentParser(
-        description="Generate data glimpses report from dodo.py tasks"
+        description="Generate a data glimpses report for the dataframes "
+        "declared in chartbook.toml"
+    )
+    parser.add_argument(
+        "--project-dir",
+        type=str,
+        default=None,
+        help="Directory holding chartbook.toml (default: current directory)",
     )
     parser.add_argument(
         "--no-samples",
@@ -704,4 +536,5 @@ if __name__ == "__main__":
         no_samples=args.no_samples,
         no_stats=args.no_stats,
         size_threshold=args.size_threshold,
+        project_dir=args.project_dir,
     )

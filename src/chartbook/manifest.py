@@ -14,6 +14,7 @@ supported; loading one raises an error pointing at the migration script.
 import difflib
 import importlib.resources
 import os
+import subprocess
 import warnings
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +22,12 @@ from typing import Union
 
 import tomli
 
-from chartbook.identity import derive_pipeline_id, validate_pipeline_id
+from chartbook.identity import (
+    derive_pipeline_id,
+    get_git_remote_url,
+    remote_to_web_url,
+    validate_pipeline_id,
+)
 from chartbook.utils import extract_notebook_title, is_glob_pattern
 
 BASE_DIR = Path(".").resolve()
@@ -337,6 +343,11 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
         project["maintainer"] = project["contributors"][0]
 
     project["id"] = derive_pipeline_id(project_raw, base_dir)
+
+    if not project["repo_url"]:
+        # The repository's own remote, as a web address with any credentials
+        # removed. Looked up once per directory, and already needed above.
+        project["repo_url"] = remote_to_web_url(get_git_remote_url(base_dir))
 
     if not project["site_url"]:
         webpage_path = Path(base_dir) / "docs" / "index.html"
@@ -825,6 +836,82 @@ def find_latest_source_modification(
     return latest
 
 
+#: The parts of a pipeline that count as its source.
+SOURCE_PATHS = ("src", "docs_src", "chartbook.toml")
+
+CODE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def _git(base_dir: Path, *args: str) -> Union[str, None]:
+    """Run a read-only git command in a directory; None if it fails."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(base_dir), *args],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout if result.returncode == 0 else None
+
+
+def find_latest_code_change(base_dir: Union[str, Path]) -> datetime:
+    """Find when a pipeline's source last changed, asking git where it can.
+
+    File modification times say when a file last landed on *this disk*. A
+    fresh clone stamps every file with the moment of the checkout, so on a
+    build server they report code that is a year old as changed just now.
+
+    When the pipeline's source is committed and unmodified, the answer is
+    the time of the last commit that touched it. With uncommitted changes,
+    or outside a git repository, it is the newest modification time, as
+    :func:`find_latest_source_modification` gives.
+
+    :param base_dir: The base directory of the pipeline.
+    :type base_dir: Union[str, Path]
+    :returns: The time of the last change, in local time.
+    :rtype: datetime
+    """
+    base_dir = Path(base_dir)
+    uncommitted = _git(base_dir, "status", "--porcelain", "--", *SOURCE_PATHS)
+    if uncommitted is not None and not uncommitted.strip():
+        committed = _git(base_dir, "log", "-1", "--format=%ct", "--", *SOURCE_PATHS)
+        if committed and committed.strip().isdigit():
+            return datetime.fromtimestamp(int(committed.strip()))
+    return find_latest_source_modification(base_dir)
+
+
+def apply_code_change_times(manifest: dict, known: Union[dict, None] = None) -> dict:
+    """Replace each pipeline's modification-time stamp with its code-change time.
+
+    Loading a manifest records ``source_last_modified_date`` from file
+    modification times, which is cheap and is all most callers need.
+    Building pages calls this first, so that what a page shows comes from
+    :func:`find_latest_code_change`.
+
+    :param manifest: A loaded manifest, pipeline or catalog. Updated in place.
+    :param known: Times already worked out, by pipeline ID, to use as they
+        are. An incremental build passes the ones it recorded for pipelines
+        it is not regenerating, which spares git a call for each.
+    :returns: The time now set for every pipeline, by pipeline ID.
+    """
+    known = known or {}
+    times = {}
+    for pipeline_id in get_pipeline_ids(manifest):
+        if manifest["project"]["type"] == "catalog":
+            pipeline_manifest = manifest["pipelines"][pipeline_id]
+        else:
+            pipeline_manifest = manifest
+        stamp = known.get(pipeline_id)
+        if stamp is None:
+            changed = find_latest_code_change(pipeline_manifest["pipeline_base_dir"])
+            stamp = changed.strftime(CODE_TIME_FORMAT)
+        pipeline_manifest["source_last_modified_date"] = stamp
+        times[pipeline_id] = stamp
+    return times
+
+
 def get_file_modified_datetime(file_path: Union[Path, str]) -> datetime:
     """Returns the datetime that a file was last modified.
 
@@ -838,23 +925,27 @@ def get_file_modified_datetime(file_path: Union[Path, str]) -> datetime:
     return datetime.fromtimestamp(mtime)
 
 
-def get_default_asset_path(filename: str) -> Path:
-    """Get path to default asset from package resources.
+def get_default_branding_path(filename: str) -> Path:
+    """Get the path to a default logo or favicon shipped with the package.
 
-    :param filename: The name of the asset file.
+    These live in ``chartbook/branding/``. (They are not *assets* in
+    ChartBook's sense of the word, which is what :mod:`chartbook.assets` is
+    about: things a pipeline declares.)
+
+    :param filename: The name of the file, e.g. ``"logo.png"``.
     :type filename: str
-    :returns: The path to the asset file.
+    :returns: The path to the file.
     :rtype: Path
     """
     package_path = importlib.resources.files("chartbook")
     try:
         with importlib.resources.as_file(
-            package_path / "assets" / filename
-        ) as asset_path:
-            return Path(str(asset_path))
+            package_path / "branding" / filename
+        ) as branding_path:
+            return Path(str(branding_path))
     except (TypeError, FileNotFoundError):
         # Fallback for development mode
-        return Path(str(package_path)).parent / "assets" / filename
+        return Path(str(package_path)).parent / "branding" / filename
 
 
 def get_pipeline_ids(manifest):
@@ -884,7 +975,7 @@ def get_logo_path(config: dict, project_dir: Path) -> Path:
     """
     if config.get("project", {}).get("logo", ""):
         return project_dir / config["project"]["logo"]
-    return get_default_asset_path("logo.png")
+    return get_default_branding_path("logo.png")
 
 
 def get_favicon_path(config: dict, project_dir: Path) -> Path:
@@ -899,7 +990,7 @@ def get_favicon_path(config: dict, project_dir: Path) -> Path:
     """
     if config.get("project", {}).get("favicon", ""):
         return project_dir / config["project"]["favicon"]
-    return get_default_asset_path("favicon.ico")
+    return get_default_branding_path("favicon.ico")
 
 
 def get_pipeline_manifest(manifest: dict, pipeline_id: str) -> dict:

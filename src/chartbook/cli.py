@@ -82,6 +82,25 @@ def main():
     default=True,
     help="Strip Plotly's MathJax 2 scripts from notebook outputs to prevent conflicts with Sphinx's MathJax 3 (default: enabled)",
 )
+@click.option(
+    "--incremental",
+    is_flag=True,
+    default=False,
+    help="Keep the build directory between builds and redo only what changed since the last incremental build",
+)
+@click.option(
+    "--watch",
+    is_flag=True,
+    default=False,
+    help="Build incrementally, then rebuild whenever the project's files change, until Ctrl-C",
+)
+@click.option(
+    "--watch-interval",
+    type=click.FloatRange(min=0.1),
+    default=None,
+    metavar="SECONDS",
+    help="How often --watch checks for changes (default: 1)",
+)
 def build(
     output_dir,
     project_dir,
@@ -93,8 +112,17 @@ def build(
     size_threshold,
     strict,
     strip_mathjax2,
+    incremental,
+    watch,
+    watch_interval,
 ):
     """Generate HTML documentation in the specified output directory.
+
+    By default every build starts from nothing. With --incremental the
+    intermediate build directory (--docs-build-dir) is kept, pipelines whose
+    files have not changed are not regenerated, and only pages that differ
+    are rendered again. --watch does that in a loop: build, then rebuild each
+    time a file changes. Open the site with `chartbook browse` and refresh.
 
     :param output_dir: Directory where output will be generated.
     :type output_dir: str
@@ -116,6 +144,12 @@ def build(
     :type strict: bool
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
     :type strip_mathjax2: bool
+    :param incremental: If True, keep the build directory and redo only what changed.
+    :type incremental: bool
+    :param watch: If True, build incrementally and rebuild on every change.
+    :type watch: bool
+    :param watch_interval: Seconds between checks for changes in watch mode.
+    :type watch_interval: float
     """
     # Validate paths for shell/platform mismatches
     from chartbook.path_validation import detect_shell_environment, validate_cli_paths
@@ -127,9 +161,6 @@ def build(
 
     # Check for Sphinx dependencies
     _check_sphinx_installed()
-
-    # Import here to avoid loading Sphinx deps at module level
-    from chartbook.build_docs import generate_docs
 
     # Convert output_dir to Path
     output_dir = Path(output_dir).resolve()
@@ -160,23 +191,71 @@ def build(
     # Store whether we need to remove existing directory after successful generation
     should_remove_existing = output_dir.exists() and force_write
 
-    try:
-        generate_docs(
-            output_dir=output_dir,
-            project_dir=project_dir,
-            publish_dir=publish_dir,
-            _docs_dir=docs_build_dir,
-            temp_docs_src_dir=temp_docs_src_dir,
-            keep_build_dirs=keep_build_dirs,
-            should_remove_existing=should_remove_existing,
-            size_threshold=size_threshold,
-            strict=strict,
-            strip_mathjax2=strip_mathjax2,
-        )
-    except (ValueError, FileNotFoundError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
-        raise SystemExit(1)
-    click.echo(f"Successfully generated documentation in {output_dir}")
+    _run_docs_build(
+        project_dir,
+        incremental=incremental,
+        watch=watch,
+        watch_interval=watch_interval,
+        output_dir=output_dir,
+        project_dir=project_dir,
+        publish_dir=publish_dir,
+        _docs_dir=docs_build_dir,
+        temp_docs_src_dir=temp_docs_src_dir,
+        keep_build_dirs=keep_build_dirs,
+        should_remove_existing=should_remove_existing,
+        size_threshold=size_threshold,
+        strict=strict,
+        strip_mathjax2=strip_mathjax2,
+    )
+    if not watch:
+        click.echo(f"Successfully generated documentation in {output_dir}")
+
+
+def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kwargs):
+    """Run a documentation build once, or keep rebuilding it on change.
+
+    :param manifest_dir: The directory holding the project's chartbook.toml.
+    :param incremental: Keep the build directory and redo only what changed.
+    :param watch: Build incrementally, then rebuild whenever inputs change.
+    :param watch_interval: Seconds between checks in watch mode, or None.
+    :param build_kwargs: Passed to ``generate_docs``.
+    """
+    from chartbook.build_docs import generate_docs
+
+    if watch_interval is not None and not watch:
+        raise click.UsageError("--watch-interval only applies with --watch.")
+
+    def report(error):
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(error), err=True)
+
+    if not watch:
+        try:
+            summary = generate_docs(incremental=incremental, **build_kwargs)
+        except (ValueError, FileNotFoundError) as e:
+            report(e)
+            raise SystemExit(1)
+        if summary is not None:
+            click.echo(summary.describe())
+        return
+
+    from chartbook import incremental as incremental_builds
+    from chartbook.manifest import load_manifest
+
+    def build_once():
+        try:
+            summary = generate_docs(incremental=True, **build_kwargs)
+        except (ValueError, FileNotFoundError) as e:
+            report(e)
+            raise SystemExit(1)
+        click.echo(summary.describe())
+
+    def snapshot():
+        manifest = load_manifest(base_dir=manifest_dir)
+        return incremental_builds.snapshot_inputs(manifest, manifest_dir)
+
+    incremental_builds.watch(
+        build_once, snapshot, interval=watch_interval or 1.0, echo=click.echo
+    )
 
 
 @main.command()
@@ -235,9 +314,13 @@ def browse(output_dir, project_dir):
     help="Enable verbose output",
 )
 def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bool):
-    """Publish the documentation to the specified output directory.
+    """Stage a pipeline's publishable files into a directory.
 
     If no publish directory is provided, a default local directory will be used.
+
+    Publishing copies files and does nothing else: no network, no registry.
+    Sending a pipeline to a registry is a different act with a different
+    verb, `chartbook push`, which is reserved and not yet implemented.
 
     :param publish_dir: Directory where files will be published.
     :type publish_dir: Path or str, optional
@@ -277,6 +360,24 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     publish_pipeline(publish_dir=publish_dir, base_dir=project_dir, verbose=verbose)
 
 
+@main.command(hidden=True)
+def push():
+    """Reserved: send a pipeline to a registry. Not yet supported.
+
+    `publish` already means "stage files into a directory", so the registry
+    gets its own verb rather than a second meaning for that one. The name is
+    claimed here so that nothing else takes it first.
+    """
+    click.echo(
+        click.style("Error: ", fg="red", bold=True)
+        + "'chartbook push' is reserved for sending a pipeline to a registry, "
+        "which is not yet supported. To stage a pipeline's files into a "
+        "directory, use 'chartbook publish'.",
+        err=True,
+    )
+    raise SystemExit(1)
+
+
 def resolve_project_dir(project_dir: Path | None):
     """Resolve the project directory to an absolute path.
 
@@ -290,6 +391,170 @@ def resolve_project_dir(project_dir: Path | None):
     else:
         project_dir = Path(project_dir).resolve()
     return project_dir
+
+
+@main.command()
+@click.option("--project-dir", type=click.Path(), help="Path to project directory")
+@click.option(
+    "--within",
+    "within_days",
+    type=click.IntRange(min=0),
+    default=30,
+    show_default=True,
+    metavar="DAYS",
+    help="Fail on licenses that expire within this many days",
+)
+@click.option(
+    "--policy",
+    "policy_path",
+    type=click.Path(),
+    default=None,
+    help="Check required fields against the [policy] of this catalog "
+    "chartbook.toml (or its directory) instead of the project's own",
+)
+@click.option(
+    "--skip-outputs",
+    is_flag=True,
+    default=False,
+    help="Do not require data files, charts and notebooks to exist. For CI "
+    "that checks a project without building it",
+)
+def check(project_dir, within_days, policy_path, skip_outputs):
+    """Check a project's metadata and paths; exit nonzero on any problem.
+
+    Meant for CI. Works on a pipeline or a catalog and reports three things,
+    each naming the chartbook.toml and field to edit:
+
+    \b
+    - fields the policy requires that are missing or empty
+    - declared paths that point at files that do not exist
+    - dataframe licenses that are expired, or expire within --within days
+
+    Required fields come from a catalog's [policy.required], or from the
+    default recommended lists for a standalone pipeline. Pass --policy to
+    check a pipeline against the catalog it is published to.
+
+    Only metadata and paths are checked; no data file is opened.
+
+    Data files, charts and notebooks are things a pipeline builds, and are
+    usually not in git. A CI job that has not run the pipeline will find
+    them all missing; --skip-outputs leaves them out and checks the rest.
+
+    Examples:
+        chartbook check
+        chartbook check --within 90
+        chartbook check --policy ../catalog
+        chartbook check --skip-outputs
+    """
+    import warnings
+
+    from chartbook.check import display_path, load_policy, run_checks
+    from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_manifest
+
+    project_dir = resolve_project_dir(project_dir)
+    manifest_path = project_dir / "chartbook.toml"
+    try:
+        # Manifest warnings (e.g. unknown [project] keys) belong in the
+        # report, not in Python's warning format
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            manifest = load_manifest(base_dir=project_dir)
+        if policy_path is not None:
+            manifest["policy"] = load_policy(policy_path)
+            policy_label = f"the policy in {policy_path}"
+        elif manifest["project"]["type"] == "catalog":
+            policy_label = "the catalog policy"
+        else:
+            policy_label = "the default policy"
+    except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+
+    for warning in caught:
+        click.echo(f"warning: {warning.message}", err=True)
+
+    problems = run_checks(
+        manifest,
+        project_dir,
+        within_days=within_days,
+        policy_label=policy_label,
+        skip_outputs=skip_outputs,
+    )
+    for problem in problems:
+        click.echo(problem.format(relative_to=Path.cwd()))
+
+    if problems:
+        files = len({p.file for p in problems})
+        click.echo(
+            f"\n{len(problems)} problem(s) found in {files} manifest(s).", err=True
+        )
+        raise SystemExit(1)
+
+    pipelines = [
+        get_pipeline_manifest(manifest, pid) for pid in get_pipeline_ids(manifest)
+    ]
+    counts = ", ".join(
+        f"{sum(len(p.get(section, {})) for p in pipelines)} {section}"
+        for section in ("dataframes", "charts", "notebooks")
+    )
+    shown = display_path(manifest_path, relative_to=Path.cwd())
+    note = "; built outputs not checked" if skip_outputs else ""
+    click.echo(f"{shown}: OK ({len(pipelines)} pipeline(s), {counts}{note})")
+
+
+@main.command("path")
+@click.argument("ref")
+@click.option(
+    "--kind",
+    type=click.Choice(["dataframe", "chart", "notebook", "note", "model"]),
+    help="The kind of asset REF names, when REF does not say "
+    "(default: dataframe). The same as writing KIND/REF.",
+)
+@click.option(
+    "--project-dir",
+    type=click.Path(),
+    help="Where to look for the pipeline: its chartbook.toml is found by "
+    "walking up from here (default: the current directory)",
+)
+def path_command(ref, kind, project_dir):
+    """Print the path the manifest declares for an asset.
+
+    REF names an asset declared in the enclosing chartbook.toml. A dataframe
+    is named by its key alone; anything else has its kind in front:
+
+    \b
+        treasury_rates          [dataframes.treasury_rates]
+        chart/yield_curve       [charts.yield_curve]
+        notebook/analysis       [notebooks.analysis]
+        note/methodology        [notes.methodology]
+
+    The path is printed absolute, whether or not the file exists yet, so a
+    build tool can use it for inputs and outputs alike. This is
+    `chartbook.assets.path()` for Make, shell, R and Stata:
+
+    \b
+        MERGED := $(shell chartbook path merged_rates)
+
+    Only assets of the current pipeline resolve. An undeclared name fails,
+    naming the table to add.
+
+    Examples:
+        chartbook path repo_public
+        chartbook path chart/repo_rates
+        chartbook path repo_rates --kind chart --project-dir ../yield_curve
+    """
+    from chartbook.assets import path as resolve_path
+    from chartbook.errors import AssetNotDeclaredError
+
+    try:
+        asset_path = resolve_path(
+            ref, kind=kind, project_dir=project_dir or Path.cwd()
+        )
+    except (AssetNotDeclaredError, FileNotFoundError, ValueError, TypeError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+    # Nothing but the path on stdout: this output gets captured
+    click.echo(str(asset_path))
 
 
 @main.command()
@@ -318,11 +583,15 @@ def resolve_project_dir(project_dir: Path | None):
     default=50,
     help="File size threshold in MB above which to use memory-efficient loading (default: 50)",
 )
-def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold):
-    """Create a data glimpses report from dodo.py tasks.
+@click.option("--project-dir", type=click.Path(), help="Path to project directory")
+def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold, project_dir):
+    """Create a data glimpses report for the project's declared dataframes.
 
-    This command parses the dodo.py file in the current directory to find all
-    CSV/Parquet files and creates a comprehensive data glimpse report in Markdown format.
+    This command reads chartbook.toml, takes every dataframe it declares, and
+    creates a comprehensive data glimpse report in Markdown format. The list
+    comes from the manifest alone, so it works the same whether the project
+    is built with doit, Snakemake, Make or plain scripts. Declared dataframes
+    whose files do not exist yet are skipped.
 
     :param no_samples: If True, exclude sample values sections from the report.
     :type no_samples: bool
@@ -332,6 +601,8 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold):
     :type output_dir: str, optional
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
     :type size_threshold: float
+    :param project_dir: Directory holding the project's chartbook.toml.
+    :type project_dir: str, optional
 
     Example usage:
         chartbook create-data-glimpses
@@ -348,6 +619,7 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold):
             no_samples=no_samples,
             no_stats=no_stats,
             size_threshold=size_threshold,
+            project_dir=resolve_project_dir(project_dir),
         )
     except FileNotFoundError as e:
         click.echo(f"Error: {e}", err=True)
@@ -1059,15 +1331,40 @@ def catalog_enable(pipeline_id, catalog_path):
     default=False,
     help="Skip pipelines with missing source files (default). Use --strict to fail on any missing file.",
 )
-def catalog_build(force_write, strict):
+@click.option(
+    "--clean",
+    is_flag=True,
+    default=False,
+    help="Throw away what was kept from earlier builds and rebuild everything",
+)
+@click.option(
+    "--watch",
+    is_flag=True,
+    default=False,
+    help="After building, rebuild whenever a pipeline's files change, until Ctrl-C",
+)
+@click.option(
+    "--watch-interval",
+    type=click.FloatRange(min=0.1),
+    default=None,
+    metavar="SECONDS",
+    help="How often --watch checks for changes (default: 1)",
+)
+def catalog_build(force_write, strict, clean, watch, watch_interval):
     """Build HTML documentation for the global catalog.
 
     Uses the catalog path from ``~/.chartbook/settings.toml`` if configured,
     otherwise falls back to ``~/.chartbook/chartbook.toml``.
+
+    The build is incremental. Its working files are kept next to the catalog
+    (in ``_docs/``), and the next build redoes only the pipelines whose files
+    changed since: for most of a large catalog, most of the time, nothing.
+    Nothing runs in between; it is a record on disk that the next build
+    reads. --clean discards it and rebuilds everything. --watch keeps
+    rebuilding as files change.
     """
     _check_sphinx_installed()
 
-    from chartbook.build_docs import generate_docs
     from chartbook.config import get_default_catalog_path
 
     catalog_path = get_default_catalog_path()
@@ -1086,7 +1383,19 @@ def catalog_build(force_write, strict):
     click.echo(f"Building catalog from: {catalog_path}")
     click.echo(f"Output directory: {output_dir}")
 
-    generate_docs(
+    if clean:
+        from chartbook.incremental import looks_like_build_tree
+
+        if looks_like_build_tree(_docs_dir):
+            import shutil
+
+            shutil.rmtree(_docs_dir)
+
+    _run_docs_build(
+        project_dir,
+        incremental=True,
+        watch=watch,
+        watch_interval=watch_interval,
         output_dir=output_dir,
         project_dir=project_dir,
         _docs_dir=_docs_dir,
@@ -1094,6 +1403,8 @@ def catalog_build(force_write, strict):
         should_remove_existing=force_write,
         strict=strict,
     )
+    if watch:
+        return
 
     click.echo("")
     click.echo(f"Catalog built successfully: {output_dir / 'index.html'}")
@@ -1220,8 +1531,44 @@ def data_get_docs_path(pipeline, dataframe, catalog):
 
 
 @main.command()
-def init():
-    """Initialize a new chartbook project from the cookiecutter template."""
+@click.option(
+    "--git",
+    "use_git",
+    is_flag=True,
+    default=False,
+    help="Run git init in the new project and make an initial commit",
+)
+@click.option(
+    "--github",
+    "use_github",
+    is_flag=True,
+    default=False,
+    help="Also create a GitHub repository for it with gh and push the commit "
+    "(implies --git)",
+)
+@click.option(
+    "--public/--private",
+    "public",
+    default=None,
+    help="Visibility of the repository --github creates (default: private)",
+)
+def init(use_git, use_github, public):
+    """Initialize a new chartbook project from the cookiecutter template.
+
+    With --git, the new project is also made a git repository with one
+    commit. With --github, a GitHub repository is then created for it under
+    the account `gh` is logged in as, and the commit is pushed. Both are off
+    by default.
+
+    --github needs the GitHub CLI installed and logged in (`gh auth login`).
+    That is checked first, so if it is missing nothing is created.
+
+    Examples:
+        chartbook init
+        chartbook init --git
+        chartbook init --github
+        chartbook init --github --public
+    """
     try:
         import cruft  # noqa: F401
     except ImportError:
@@ -1236,10 +1583,69 @@ def init():
 
     import subprocess
 
-    subprocess.run(
-        ["cruft", "create", "https://github.com/backofficedev/cookiecutter_chartbook"],
-        check=True,
-    )
+    from chartbook import scaffold
+
+    if public is not None and not use_github:
+        raise click.UsageError("--public/--private only applies with --github.")
+    use_git = use_git or use_github
+    cwd = Path.cwd()
+
+    def fail(error):
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(error), err=True)
+        raise SystemExit(1)
+
+    if use_git:
+        # Before the template is rendered, so a missing tool or login
+        # leaves nothing behind
+        try:
+            scaffold.preflight(cwd, use_github=use_github)
+        except scaffold.ScaffoldError as e:
+            fail(e)
+        outer_repo = scaffold.enclosing_repository(cwd)
+        if outer_repo:
+            click.echo(
+                f"Note: {cwd} is inside the git repository {outer_repo}; the "
+                f"new project will be its own repository nested in it.",
+                err=True,
+            )
+
+    template = "https://github.com/backofficedev/cookiecutter_chartbook"
+    if not use_git:
+        subprocess.run(["cruft", "create", template], check=True)
+        return
+
+    # The project's directory is named from an answer at cruft's prompt, so
+    # it is identified afterwards as the one that was not here before
+    before = scaffold.rendered_projects(cwd)
+    rendered = subprocess.run(["cruft", "create", template])
+    if rendered.returncode != 0:
+        raise SystemExit(rendered.returncode)
+
+    try:
+        project_dir = scaffold.find_new_project(cwd, before)
+        scaffold.git_init_and_commit(project_dir)
+        click.echo(f"Initialized a git repository in {project_dir} with one commit.")
+        if use_github:
+            created = scaffold.github_create_and_push(project_dir, public=bool(public))
+            visibility = "public" if public else "private"
+            click.echo(f"Created a {visibility} GitHub repository and pushed:")
+            click.echo(f"  {created}")
+    except scaffold.ScaffoldError as e:
+        fail(e)
+
+    if use_github:
+        # With the remote in place, the pipeline's scope comes from it
+        import tomli
+
+        from chartbook.identity import clear_git_remote_cache, derive_pipeline_id
+
+        clear_git_remote_cache()
+        manifest_path = project_dir / "chartbook.toml"
+        project_table = {}
+        if manifest_path.is_file():
+            with open(manifest_path, "rb") as f:
+                project_table = tomli.load(f).get("project", {})
+        click.echo(f"Pipeline ID: {derive_pipeline_id(project_table, project_dir)}")
 
 
 @main.command()
@@ -1385,7 +1791,7 @@ def install_skill(force, project):
 
     copied = 0
     for src_file in skill_files:
-        shutil.copy2(src_file, target_dir / src_file.name)
+        shutil.copyfile(src_file, target_dir / src_file.name)
         click.echo(f"  {src_file.name}")
         copied += 1
 
