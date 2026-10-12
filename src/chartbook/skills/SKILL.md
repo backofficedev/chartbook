@@ -128,6 +128,10 @@ path = data.get_data_path(pipeline="crsp_treasury", dataframe="my_data")
 # exist yet, so use it for dodo.py targets and for writing outputs.
 df.to_parquet(data.path("my_data"))
 
+# A throwaway directory for intermediates (<pipeline>/_data/_scratch/):
+# not an asset, git-ignored, safe to delete
+tmp = data.scratch() / "raw_download.csv"
+
 # Get documentation content as a string
 docs = data.get_docs(pipeline="crsp_treasury", dataframe="my_data")
 

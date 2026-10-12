@@ -156,6 +156,14 @@ $(MERGED): $(TREASURY)
 This is a convenience, never a requirement. A pipeline that writes straight to `_data/merged_rates.parquet` — from Python, R, Stata or a shell script — works exactly as before. The manifest is the contract; `data.path()` only saves you from stating it twice.
 ```
 
+For files that are *not* assets — a partial download, a cache between two steps — `data.scratch()` gives you a throwaway directory instead:
+
+```python
+tmp = data.scratch() / "raw_download.csv"     # <pipeline>/_data/_scratch/raw_download.csv
+```
+
+It is created on first use, ignores itself in git, and is never documented, published or treated as an input. Delete it whenever you like. (Avoid declaring a dataframe whose `path` is a glob over all of `_data/`, such as `./_data/**/*.parquet`; it would sweep scratch files in.)
+
 Only names declared in the current pipeline resolve today. References to another pipeline's assets (`other_pipeline:asset`) are reserved syntax; to locate one through a catalog, use `data.get_data_path()` ({doc}`catalogs-and-data`).
 
 ## Finding project paths from code
