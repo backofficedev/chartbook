@@ -554,6 +554,27 @@ class TestIncrementalBuild:
         html = (catalog_project / "docs" / "cb" / "charts" / "pipeline_b.chart_0_0.html")
         assert "A freshly rewritten explanation." in html.read_text()
 
+    def test_editing_one_write_up_re_renders_one_asset_page(
+        self, pipeline_project_multi_dataframes, monkeypatch
+    ):
+        """Within a pipeline, an edit touches the page it is about, not all of them."""
+        project = pipeline_project_multi_dataframes
+        monkeypatch.chdir(project)
+        _build(project)
+        before = _mtimes(project / "_docs")
+
+        write_up = project / "docs_src" / "charts" / "chart_1_0.md"
+        write_up.write_text("# Chart\n\nOnly this chart's text changed.\n")
+        _bump(write_up)
+        summary = _build(project)
+
+        after = _mtimes(project / "_docs")
+        touched = sorted(name for name in after if after[name] != before.get(name))
+        # The chart's own page, and the front page that dates the code
+        assert touched == ["cb/charts/multi_df.chart_1_0.md", "index.md"]
+        assert summary.sources_written == 2
+        assert summary.pages_read == 2
+
     def test_refreshed_data_is_picked_up(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
         _build(pipeline_project)

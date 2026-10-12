@@ -223,13 +223,17 @@ class TestPagesUseTheCommitTime:
             project_dir=pipeline_project,
             keep_build_dirs=True,
         )
+        front_page = (pipeline_project / "_docs" / "index.md").read_text()
+        assert (
+            'Code updated <time class="cb-relative-time" datetime="2025-03-14T09:26:53'
+            in front_page
+        )
+        assert "| Date of Last Code Update        | 2025-03-14 09:26:53" in front_page
+        # Asset pages say nothing about the code, so a commit does not touch them
         page = (
             pipeline_project / "_docs" / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.md"
         ).read_text()
-        assert 'Code updated <time class="cb-relative-time" datetime="2025-03-14T09:26:53' in page
-        assert "| Date of Last Code Update        | 2025-03-14 09:26:53" in page
-        chart = (pipeline_project / "_docs" / "cb" / "charts" / "test_pipeline.chart_0_0.md").read_text()
-        assert chart.startswith('---\ndate: "2025-03-14 09:26:53"')
+        assert "2025-03-14" not in page
 
     def test_loading_a_manifest_does_not_ask_git_about_commits(
         self, pipeline_project, git_env, monkeypatch

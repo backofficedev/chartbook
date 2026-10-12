@@ -63,9 +63,11 @@ A pipeline ID qualified with a registry — `charthub.example/acme/rates`, `loca
 
 ### Added — data freshness on every asset page
 
-Dataframe and chart pages now say how fresh they are, directly under the title, in plain relative wording: "Data updated 2 days ago · Code updated 3 weeks ago". A chart page adds when the chart file itself was written, so a chart rendered before its data was last refreshed is visible at a glance. Hovering shows the exact time.
+Dataframe and chart pages now say how fresh they are, directly under the title, in plain relative wording: a dataframe page says "Data updated 2 days ago", and a chart page says "Chart updated 2 days ago · Data updated 2 days ago", so a chart rendered before its data was last refreshed is visible at a glance. Hovering shows the exact time. A chart's date in listings is now when the chart itself was written.
 
-The times are file modification times: the dataframe's file (the newest part file of a partitioned dataframe), the chart's HTML, and the pipeline's source (`src/`, `docs_src/`, `chartbook.toml`) — the last of which was already computed and shown only as "Date of Last Code Update" in the pipeline table at the foot of the page. The dataframe's time was computed and never rendered.
+A page says only things about its own asset. When the pipeline's *code* last changed is shown once, on the pipeline's front page ("Code updated 3 weeks ago") and on a catalog's Pipelines page, and no longer in the table at the foot of every chart and dataframe page. Besides being the right place for it, this means a code edit no longer alters every page of the pipeline.
+
+The data and chart times are file modification times: the dataframe's file (the newest part file of a partitioned dataframe) and the chart's HTML. The dataframe's time was previously computed and never rendered.
 
 Because the site is static, the page carries the timestamp and a small bundled script (`chartbook-freshness.js`) turns it into "2 days ago" when the page is read, so the wording is never stale. With scripts off, the date is shown. The line is a template, `freshness.md`, and can be overridden like the others.
 
@@ -89,7 +91,7 @@ The four install extras that became no-op aliases in 0.1.0 are gone, after the o
 
 `chartbook build --incremental` keeps the intermediate Sphinx project in `_docs/` and makes the next build redo only what changed. **`chartbook catalog build` now does this by default** — its working files live beside the catalog in `~/.chartbook/`, not in anyone's repository — and takes `--clean` to discard them and rebuild everything. A pipeline none of whose files changed — its manifest, `src/`, `docs_src/`, README, and every data file, chart and notebook it declares, compared by modification time and size — is not regenerated. A page whose content comes out the same is left untouched, so Sphinx, whose cache is now kept, does not read it again. If no page changed, Sphinx is not run at all. Each build prints one line saying what it redid.
 
-On a synthetic catalog of 40 pipelines and 411 pages, a clean build took about 20 seconds; an incremental build took 0.4 seconds when nothing had changed and about 5 seconds after one write-up or one data file changed.
+On a synthetic catalog of 40 pipelines and 411 pages, a clean build took about 20 seconds; an incremental build took 0.4 seconds when nothing had changed and about 5 seconds after one write-up or one data file changed. Within a pipeline, editing one chart's write-up re-renders that chart's page and the front page, not every page.
 
 `chartbook build --watch` is the same thing in a loop: build, check the project's files once a second (`--watch-interval`), rebuild on any change, report a failed build and keep going until Ctrl-C. It is a single polling process — no server, no live reload, no new dependency. Refresh the browser to see a rebuild.
 
@@ -103,7 +105,7 @@ Two things that should never have needed filling in by hand now come from the re
 
 `[project] repo_url` defaults to the repo's `origin` remote, turned into a web address: `git@github.com:acme/rates.git` becomes `https://github.com/acme/rates`. Credentials embedded in a remote (`https://user:token@…`) are always dropped, and a remote that is a path on disk gives no URL. An explicit `repo_url` still wins. One consequence: a project with a remote no longer fails `chartbook check` for a missing `repo_url`.
 
-The "Code updated" time on pages (and "Date of Last Code Update", and a chart's `date`) is the time of the last commit that touched `src/`, `docs_src/` or `chartbook.toml`, when those are committed and unmodified. It was the newest file modification time, which on a fresh clone is the moment of the checkout — so every site built in CI claimed its code had changed just now. With uncommitted changes, or outside a git repository, the modification time is still used. Only a docs build asks git; loading a manifest (`data.load()`, `chartbook ls`) does not.
+The "Code updated" time on a pipeline's front page (and "Date of Last Code Update") is the time of the last commit that touched `src/`, `docs_src/` or `chartbook.toml`, when those are committed and unmodified. It was the newest file modification time, which on a fresh clone is the moment of the checkout — so every site built in CI claimed its code had changed just now. With uncommitted changes, or outside a git repository, the modification time is still used. Only a docs build asks git; loading a manifest (`data.load()`, `chartbook ls`) does not.
 
 ### Fixed
 
