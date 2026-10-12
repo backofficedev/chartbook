@@ -7,9 +7,9 @@
 
 | Column | Description |
 |--------|-------------|
-| 10Y 1Y Spread | 10-year yield minus 1-year yield (percentage points) |
-| 10Y 2Y Spread | 10-year yield minus 2-year yield (percentage points) |
-| 10Y 3Y Spread | 10-year yield minus 3-year yield (percentage points) |
+| `spread_10y_1y` | 10Y-1Y Spread: 10-year yield minus 1-year yield (percentage points) |
+| `spread_10y_2y` | 10Y-2Y Spread: 10-year yield minus 2-year yield (percentage points) |
+| `spread_10y_3y` | 10Y-3Y Spread: 10-year yield minus 3-year yield (percentage points) |
 
 **Methodology:**
 

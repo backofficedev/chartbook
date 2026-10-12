@@ -28,7 +28,9 @@ column = "DGS10"
 units = "Percent"
 ```
 
-The key is the series' address inside the dataframe (`treasury_rates#dgs10`). The index lists every column as a series whether or not it has a table; a table documents one, and gives an address to a column whose own name could not be one (`10Y 2Y Spread`). The loader rejects a malformed table, an illegal key, and two series that name one column. `chartbook check` reports a series `docs_path` that points at no file. Series are not shown on pages yet, and a series address does not resolve yet.
+The key is the series' address inside the dataframe (`treasury_rates#dgs10`). The index lists every column as a series whether or not it has a table; a table documents one, and gives an address to a column whose own name could not be one (`10Y 2Y Spread`).
+
+The recommendation that goes with this: give columns code-friendly, SQL-compatible names (`spread_10y_2y`: letters, digits and underscores, starting with a letter), and put the name people read ("10Y-2Y Spread") in the series table. The `yield_curve` example's term premium dataframe now does exactly that; its columns used to be `10Y 2Y Spread` and the like. The loader rejects a malformed table, an illegal key, and two series that name one column. `chartbook check` reports a series `docs_path` that points at no file. Series are not shown on pages yet, and a series address does not resolve yet.
 
 ### Fixed
 

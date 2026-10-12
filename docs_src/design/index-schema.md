@@ -157,9 +157,9 @@ exactly one implementation ({ref}`not-doing`):
   what `LC_ALL=C sort` gives). The fixed prefix of a glob is its leading directories that
   contain no wildcard: `_data/rates` for `_data/rates/**/*.parquet`. This is the output format
   of `sha256sum`, so anyone can reproduce it by hand, and a test does. Every file counts,
-  hidden ones included. A glob that matches one file is still a listing. *(Proposed 2026-10-12
-  and implemented as written in `chartbook.hashing`. Once a release carries it, it must not
-  change without a new algorithm prefix.)*
+  hidden ones included. A glob that matches one file is still a listing. *(Decided 2026-10-12;
+  implemented in `chartbook.hashing`. Once a release carries it, it must not change without a
+  new algorithm prefix.)*
 
 **Location.** Where an asset's content is, as a typed object. Today there is one kind:
 
@@ -196,8 +196,7 @@ dates become ISO strings. What the index states in another form is left out: `pa
 
 `generated_at` is when the index last *changed*. A build that finds nothing different from the
 `index.json` already there leaves the file as it is, timestamp included, so that a build which
-changes nothing writes nothing and a published site does not churn. *(Added 2026-10-12 with the
-implementation.)*
+changes nothing writes nothing and a published site does not churn. *(Decided 2026-10-12.)*
 
 **Absent versus empty.** A field that was not declared is omitted. A field declared as empty is
 present and empty. A consumer can therefore tell "no tags were given" from "tags were explicitly
@@ -336,8 +335,13 @@ An explicit `column` is what lets the address survive a column rename.
 A series is the **part** of a dataframe, in the reference grammar's word: what follows `#`. For
 an undeclared series the part is the column's own name. A column whose name is not a legal part
 (it contains a space, say) gets no `Series` record until a `[dataframes.x.series.y]` table gives
-it a key; it still appears in the dataframe's `columns`. *(Proposed 2026-10-12, and implemented
-as written.)*
+it a key; it still appears in the dataframe's `columns`. *(Decided 2026-10-12.)*
+
+That is deliberate, and comes with a recommendation the maintainer made when deciding it:
+**columns should have code-friendly, SQL-compatible names**, letters, digits and underscores,
+starting with a letter (`spread_10y_2y`). The readable name ("10Y-2Y Spread") is metadata, and
+belongs in the series table's `name`, not in the data. {doc}`data-access` makes the same
+names appear in SQL, which is one more reason.
 
 The dataframe's `date_col` is not a series. A declared series whose `column` the data does not
 have is still recorded, and the build warns.
@@ -621,15 +625,20 @@ been stable for a while.
 
 ### Decided while building it
 
-Each of these was open or unstated when the build began. All are *proposed*: implemented, and
-waiting on the maintainer's yes.
+Each of these was open or unstated when the build began.
+
+**Decided by the maintainer, 2026-10-12:**
 
 1. The hashing rule for a glob or a directory, as written under "Conventions".
-2. Two files, with the published one free of local paths.
-3. Columns whose names are not legal parts have no `Series` record until a table names them.
-4. The `dtype` vocabulary.
-5. `docs.text` for inline write-ups, and no `rendered` for now.
-6. An asset record carries all declared metadata, not a fixed list of fields.
-7. `policy.required` keeps the manifest's plural keys.
-8. Pipelines that a `--no-strict` build skips are left out of the index.
-9. `generated_at` is when the index last changed; an unchanged index is not rewritten.
+2. Columns whose names are not legal parts have no `Series` record until a table names them.
+   Columns should have SQL-compatible names; the readable name is metadata.
+3. `generated_at` is when the index last changed; an unchanged index is not rewritten.
+
+**Proposed: implemented, and waiting on the maintainer's yes:**
+
+4. Two files, with the published one free of local paths.
+5. The `dtype` vocabulary.
+6. `docs.text` for inline write-ups, and no `rendered` for now.
+7. An asset record carries all declared metadata, not a fixed list of fields.
+8. `policy.required` keeps the manifest's plural keys.
+9. Pipelines that a `--no-strict` build skips are left out of the index.

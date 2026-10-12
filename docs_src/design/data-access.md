@@ -118,6 +118,11 @@ another kind (`chart/gdp`, `model/x`) is refused, and a `{ref}` inside `sql()` m
 dataframe. Cross-pipeline references need the resolution chain (step 3 in {doc}`overview`); the
 first implementation of this design is local-only.
 
+Because `sql()` puts dataframes' columns into SQL that the user writes, column names should be
+SQL-compatible: letters, digits and underscores, starting with a letter. ChartBook recommends
+that for every dataframe; a readable name is metadata, given in a series table
+({doc}`index-schema`, "Series").
+
 Two words to keep apart: the *kind of an asset* (`dataframe`, `chart`, …) is part of its
 address. The *kind of a location* (`file`, `table`, `query`) is where a dataframe's content is,
 and is what this document adds to.

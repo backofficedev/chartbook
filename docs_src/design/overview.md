@@ -105,6 +105,19 @@ they decide it.
 The full list of things that will be declined is {ref}`"Not doing" <not-doing>` in the asset
 graph. Read it before proposing a feature.
 
+## Versions
+
+Decided by the maintainer, 2026-10-12.
+
+- **The asset graph is one change, not a release per step.** The steps under "What to build
+  next" do not each get a minor version. Do not bump the version in a pull request.
+- **0.2.0 is the working state** while that change is under way. What lands goes under
+  "Unreleased" in the changelog.
+- **When all of it is finished it is wrapped up, probably as 0.3.0.** When, and whether that is
+  the number, is the maintainer's call.
+- **1.0 is a long way off**, on purpose: there is room for many more changes before any promise
+  of stability. Nothing here should be planned as "the last thing before 1.0".
+
 ## The documents, and the order to read them
 
 | Order | Document | What it settles | State |
@@ -170,7 +183,7 @@ the loader reads `[dataframes.x.series.y]`.
 
 {doc}`index-schema` is the specification, and its last section, "What the first implementation
 does", says exactly what is written and what is not. Nine things were settled while building
-it and are listed there as *proposed*, for the maintainer to confirm.
+it. The maintainer has decided three; six are listed there as *proposed*, still to confirm.
 
 Left for later steps, on purpose: `Build` records, `dependencies`, `Model` records, and
 rendering the site *from* the index.
@@ -275,6 +288,9 @@ maintainer.
 | 2026-10-12 | Asset names are **per kind**, not one namespace. Data is the spine | {doc}`references` |
 | 2026-10-12 | The kind goes in the address (`chart/gdp`), dataframe is the default, the four separators stay, and one parser produces a structured object | {doc}`references` |
 | 2026-10-12 | `chartbook.assets` is the general module. `chartbook.data` is dataframes only. `chartbook.models` will follow the same pattern | {doc}`references` |
+| 2026-10-12 | No minor version per step: the asset graph is one change, built under 0.2.0 and wrapped up at the end | "Versions", above |
+| 2026-10-12 | How a directory or glob is hashed; an unchanged index is not rewritten, so `generated_at` is when it last changed | {doc}`index-schema` |
+| 2026-10-12 | Columns should have SQL-compatible names; a readable name is metadata. A column whose name is not a legal address has no series until a table names it | {doc}`index-schema`, {doc}`../reference/configuration` |
 | 2026-10-12 | Models are assets. ChartBook is a model registry, not an experiment tracker. ML operations is a central use case | {doc}`models` |
 
 ## Open questions, collected

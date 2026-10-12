@@ -94,6 +94,24 @@ path = "./_data/term_premium.parquet"
 date_col = "date"
 docs_path = "./docs_src/dataframes/term_premium.md"
 
+[dataframes.term_premium.series.spread_10y_1y]
+name = "10Y-1Y Spread"
+description = "10-year zero-coupon yield minus the 1-year yield."
+units = "Percentage points"
+frequency = "Daily"
+
+[dataframes.term_premium.series.spread_10y_2y]
+name = "10Y-2Y Spread"
+description = "10-year zero-coupon yield minus the 2-year yield."
+units = "Percentage points"
+frequency = "Daily"
+
+[dataframes.term_premium.series.spread_10y_3y]
+name = "10Y-3Y Spread"
+description = "10-year zero-coupon yield minus the 3-year yield."
+units = "Percentage points"
+frequency = "Daily"
+
 [charts.repo_rates]
 name = "Repo Rates"
 description = "SOFR, the Effective Funds Rate, and the Fed's Target Range"
