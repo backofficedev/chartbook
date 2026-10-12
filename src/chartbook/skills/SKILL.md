@@ -32,6 +32,7 @@ chartbook build -f --incremental  # Keep _docs/ and redo only what changed since
 chartbook build -f --watch  # Incremental build, then rebuild on every file change (Ctrl-C to stop)
 chartbook browse            # Open project docs in default browser
 chartbook check             # CI gate: missing metadata, broken paths, expiring licenses
+chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
 chartbook path <name>       # Print the path chartbook.toml declares for an asset
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report

@@ -84,6 +84,7 @@ With no `[policy]` section, a built-in recommended-field list drives the diagnos
 chartbook check                        # in a catalog: every member, against its [policy]
 chartbook check --policy ../catalog    # in a pipeline: against that catalog's [policy]
 chartbook check --within 90            # widen the license window
+chartbook check --skip-outputs         # in CI, without building the data first
 ```
 
 A pipeline with no `--policy` is checked against the built-in recommended list. Details: {doc}`../reference/cli`.
