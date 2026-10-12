@@ -45,6 +45,7 @@ pip install -e ".[dev]"
 | `init` | Scaffold a new pipeline project from the cookiecutter template (via cruft) |
 | `build` | Generate HTML documentation website |
 | `browse` | Open the generated site in the default browser |
+| `check` | CI gate: exit nonzero on missing required metadata, broken paths, or expiring licenses |
 | `publish` | Stage a pipeline's publishable files into a directory |
 | `catalog init/add/disable/enable/build/browse` | Manage a catalog and build/browse its site |
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
@@ -80,6 +81,21 @@ chartbook build -f                 # Force overwrite
 chartbook build ./my-docs -f       # Custom directory
 chartbook build --keep-build-dirs  # Debug mode
 ```
+
+### chartbook check
+
+Check a project's metadata and paths; exit nonzero on any problem. Meant for CI.
+
+```bash
+chartbook check [OPTIONS]
+```
+
+**Options:**
+- `--project-dir PATH`: Project to check — a pipeline or a catalog (default: current directory)
+- `--within DAYS`: Fail on licenses that expire within this many days (default: 30)
+- `--policy PATH`: Take required fields from the `[policy]` table of this catalog `chartbook.toml` (or any TOML file with a `[policy]` table)
+
+Reports, one per line as `file: [table] field: message`: fields the policy requires that are missing or empty; declared paths (`path`, `docs_path`, `readme`, `logo`, `favicon`) whose file does not exist; and dataframes whose `license_expiration` (ISO date; `"N/A"` means no expiry) has passed or is inside the window. A catalog is checked against its own `[policy.required]`; a standalone pipeline against the built-in recommended lists unless `--policy` is given. `policy.mode` is ignored — it governs builds. No data file is opened.
 
 ### chartbook publish
 

@@ -5,6 +5,18 @@ All notable changes to chartbook will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — `chartbook check`, the CI gate
+
+`chartbook check` exits nonzero when a project is broken or non-compliant, and zero when it is healthy. It reports fields the policy requires that are missing or empty, declared paths (`path`, `docs_path`, `readme`, `logo`, `favicon`) that point at no file, and dataframes whose `license_expiration` has passed or falls within `--within` days (default 30). Every finding is one line naming the `chartbook.toml`, the table and the field.
+
+Run in a catalog, it checks every member pipeline against the catalog's `[policy.required]`. Run in a standalone pipeline, it uses the built-in recommended-field lists; `--policy PATH` substitutes the `[policy]` table of a catalog (or of any TOML file), so a pipeline's own CI can hold it to the catalog it is published to without that catalog's other members being present. `policy.mode` still governs builds only — `check` always fails on a missing required field.
+
+`license_expiration` is read as an ISO date. Empty, `"N/A"`, `"None"` and `"Never"` mean no expiry; any other unreadable value is reported rather than passed. Only metadata and file existence are checked — no data file is opened.
+
+The example projects now set `repo_url` (required by the default policy), and `examples/dodo.py` runs `chartbook check` on the example catalog.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level

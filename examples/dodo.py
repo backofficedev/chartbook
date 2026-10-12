@@ -81,3 +81,14 @@ def task_copy_docs():
         "task_dep": ["generate_catalog"],
         "verbosity": 2,
     }
+
+
+def task_check():
+    """Gate the catalog: required metadata, declared paths, license dates"""
+    catalog_dir = BASE_DIR / "catalog"
+    return {
+        # Checking the catalog checks every member pipeline against its policy
+        "actions": [f"chartbook check --project-dir {catalog_dir}"],
+        "task_dep": ["build_yield_curve", "build_fred_charts"],
+        "verbosity": 2,
+    }

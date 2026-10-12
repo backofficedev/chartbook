@@ -1,6 +1,7 @@
 [project]
 name = "Yield Curve"
 description = "Analyze yield curve"
+repo_url = "https://github.com/backofficedev/chartbook"
 contributors = [
     "Jeremy Bejarano",
 ]

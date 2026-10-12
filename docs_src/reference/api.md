@@ -16,6 +16,7 @@ chartbook
 ../apidocs/chartbook/chartbook.config
 ../apidocs/chartbook/chartbook.identity
 ../apidocs/chartbook/chartbook.build_docs
+../apidocs/chartbook/chartbook.check
 ../apidocs/chartbook/chartbook.diagnostics
 ../apidocs/chartbook/chartbook.errors
 ../apidocs/chartbook/chartbook.manifest

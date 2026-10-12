@@ -7,6 +7,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook init` | Scaffold a new pipeline project |
 | `chartbook build` | Generate the documentation site |
 | `chartbook browse` | Open the generated site in a browser |
+| `chartbook check` | Fail CI on missing metadata, broken paths, or expiring licenses |
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
 | `chartbook catalog init/add/disable/enable/build/browse` | Manage a catalog and its site |
 | `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
@@ -56,6 +57,43 @@ Open the generated site (default `./docs/index.html`) in your default browser.
 ```console
 chartbook browse [OUTPUT_DIR] [--project-dir PATH]
 ```
+
+## chartbook check
+
+```console
+chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH]
+```
+
+The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
+
+- **a missing required field** — a field the policy requires that is absent or empty;
+- **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing);
+- **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days.
+
+Each finding is one line naming the manifest, the table and the field, so a CI log is enough to fix it:
+
+```console
+$ chartbook check
+chartbook.toml: [charts.repo_rates] units: required by the default policy, but missing or empty
+chartbook.toml: [dataframes.crsp_bonds] license_expiration: license expires on 2026-11-02 (in 22 days, inside the 30-day window)
+chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/repo_public.parquet
+
+3 problem(s) found in 1 manifest(s).
+```
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `--project-dir PATH` | `.` | Project to check — a pipeline or a catalog |
+| `--within DAYS` | `30` | How far ahead a license expiration counts as a failure. `0` fails only on licenses already expired or expiring today |
+| `--policy PATH` | — | Take required fields from the `[policy]` table of this file (a catalog's `chartbook.toml`, its directory, or any TOML file with a `[policy]` table) |
+
+**Which fields are required.** Run in a catalog, `check` applies the catalog's {ref}`[policy.required] <policy>` to every member pipeline. Run in a standalone pipeline, it applies the built-in recommended-field lists — the same ones that drive the diagnostics page. To hold a pipeline to the policy of the catalog it is published to, or to a list of your own, pass `--policy`; only the `[policy]` table is read, so the catalog's other pipelines need not be checked out.
+
+`policy.mode` is not consulted. It decides what a *build* does about missing metadata; `check` always reports it.
+
+**License dates** are ISO dates (`license_expiration = "2026-12-31"`, or a bare TOML date). An empty value, `"N/A"`, `"None"` and `"Never"` mean the license does not expire. Anything else that is not a date is itself reported, because a gate that cannot read a date cannot vouch for it.
+
+`check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
 ## chartbook publish
 

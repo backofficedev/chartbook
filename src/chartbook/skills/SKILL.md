@@ -27,6 +27,7 @@ chartbook init              # Scaffold new project from the cookiecutter templat
 chartbook build             # Generate HTML documentation website
 chartbook build -f          # Force overwrite existing docs
 chartbook browse            # Open project docs in default browser
+chartbook check             # CI gate: missing metadata, broken paths, expiring licenses
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook config            # Configure default catalog path (interactive)
