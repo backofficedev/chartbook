@@ -50,6 +50,6 @@ cb/charts.md
 
 
 ## Pipeline Specs
-{% include "_docs_src/_templates/pipeline_manifest.md" with context %}
+{% include "pipeline_manifest.md" with context %}
 
 {{readme_text}}
