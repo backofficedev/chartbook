@@ -42,7 +42,7 @@ pip install -e ".[dev]"
 
 | Command | Description |
 |---------|-------------|
-| `init` | Scaffold a new pipeline project from the cookiecutter template (via cruft) |
+| `init` | Scaffold a new pipeline project from the cookiecutter template (via cruft); `--git` adds `git init` and a first commit, `--github` also creates a GitHub repo with `gh` and pushes (`--public`/`--private`, default private) |
 | `build` | Generate HTML documentation website |
 | `browse` | Open the generated site in the default browser |
 | `check` | CI gate: exit nonzero on missing required metadata, broken paths, or expiring licenses |

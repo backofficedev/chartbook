@@ -1379,8 +1379,44 @@ def data_get_docs_path(pipeline, dataframe, catalog):
 
 
 @main.command()
-def init():
-    """Initialize a new chartbook project from the cookiecutter template."""
+@click.option(
+    "--git",
+    "use_git",
+    is_flag=True,
+    default=False,
+    help="Run git init in the new project and make an initial commit",
+)
+@click.option(
+    "--github",
+    "use_github",
+    is_flag=True,
+    default=False,
+    help="Also create a GitHub repository for it with gh and push the commit "
+    "(implies --git)",
+)
+@click.option(
+    "--public/--private",
+    "public",
+    default=None,
+    help="Visibility of the repository --github creates (default: private)",
+)
+def init(use_git, use_github, public):
+    """Initialize a new chartbook project from the cookiecutter template.
+
+    With --git, the new project is also made a git repository with one
+    commit. With --github, a GitHub repository is then created for it under
+    the account `gh` is logged in as, and the commit is pushed. Both are off
+    by default.
+
+    --github needs the GitHub CLI installed and logged in (`gh auth login`).
+    That is checked first, so if it is missing nothing is created.
+
+    Examples:
+        chartbook init
+        chartbook init --git
+        chartbook init --github
+        chartbook init --github --public
+    """
     try:
         import cruft  # noqa: F401
     except ImportError:
@@ -1395,10 +1431,69 @@ def init():
 
     import subprocess
 
-    subprocess.run(
-        ["cruft", "create", "https://github.com/backofficedev/cookiecutter_chartbook"],
-        check=True,
-    )
+    from chartbook import scaffold
+
+    if public is not None and not use_github:
+        raise click.UsageError("--public/--private only applies with --github.")
+    use_git = use_git or use_github
+    cwd = Path.cwd()
+
+    def fail(error):
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(error), err=True)
+        raise SystemExit(1)
+
+    if use_git:
+        # Before the template is rendered, so a missing tool or login
+        # leaves nothing behind
+        try:
+            scaffold.preflight(cwd, use_github=use_github)
+        except scaffold.ScaffoldError as e:
+            fail(e)
+        outer_repo = scaffold.enclosing_repository(cwd)
+        if outer_repo:
+            click.echo(
+                f"Note: {cwd} is inside the git repository {outer_repo}; the "
+                f"new project will be its own repository nested in it.",
+                err=True,
+            )
+
+    template = "https://github.com/backofficedev/cookiecutter_chartbook"
+    if not use_git:
+        subprocess.run(["cruft", "create", template], check=True)
+        return
+
+    # The project's directory is named from an answer at cruft's prompt, so
+    # it is identified afterwards as the one that was not here before
+    before = scaffold.rendered_projects(cwd)
+    rendered = subprocess.run(["cruft", "create", template])
+    if rendered.returncode != 0:
+        raise SystemExit(rendered.returncode)
+
+    try:
+        project_dir = scaffold.find_new_project(cwd, before)
+        scaffold.git_init_and_commit(project_dir)
+        click.echo(f"Initialized a git repository in {project_dir} with one commit.")
+        if use_github:
+            created = scaffold.github_create_and_push(project_dir, public=bool(public))
+            visibility = "public" if public else "private"
+            click.echo(f"Created a {visibility} GitHub repository and pushed:")
+            click.echo(f"  {created}")
+    except scaffold.ScaffoldError as e:
+        fail(e)
+
+    if use_github:
+        # With the remote in place, the pipeline's scope comes from it
+        import tomli
+
+        from chartbook.identity import clear_git_remote_cache, derive_pipeline_id
+
+        clear_git_remote_cache()
+        manifest_path = project_dir / "chartbook.toml"
+        project_table = {}
+        if manifest_path.is_file():
+            with open(manifest_path, "rb") as f:
+                project_table = tomli.load(f).get("project", {})
+        click.echo(f"Pipeline ID: {derive_pipeline_id(project_table, project_dir)}")
 
 
 @main.command()

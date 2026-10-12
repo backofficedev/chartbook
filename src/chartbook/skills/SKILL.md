@@ -24,6 +24,8 @@ ChartBook is a developer platform for data science teams to discover, document, 
 
 ```bash
 chartbook init              # Scaffold new project from the cookiecutter template
+chartbook init --git        # ...and git init + initial commit
+chartbook init --github     # ...and create a private GitHub repo with gh, then push (--public to override)
 chartbook build             # Generate HTML documentation website
 chartbook build -f          # Force overwrite existing docs
 chartbook browse            # Open project docs in default browser

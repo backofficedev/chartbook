@@ -22,8 +22,22 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/cookiecutter_chartbook), via [cruft](https://cruft.github.io/cruft/) — so `cruft update` can pull template improvements later. Prompts for project name and author.
 
 ```console
-chartbook init
+chartbook init [--git] [--github [--public | --private]]
 ```
+
+| Option | Effect |
+|--------|--------|
+| `--git` | Run `git init` in the new project and make one initial commit of everything its `.gitignore` allows |
+| `--github` | Do that, then create a GitHub repository named after the project directory with `gh repo create`, add it as `origin`, and push the commit. Implies `--git` |
+| `--public` / `--private` | Visibility of the repository `--github` creates. Private unless you say `--public` |
+
+Both are off by default; plain `chartbook init` only renders the template.
+
+`--github` uses your existing [GitHub CLI](https://cli.github.com) login — it never asks for credentials. Whether `git` and `gh` are installed, whether git knows your name and email, and whether `gh` is logged in are all checked **before** the template is rendered, so if something is missing the command stops with the fix (`gh auth login`, say) and nothing has been created. The repository is created under the account `gh` is logged in as.
+
+Once the remote exists, the pipeline's ID is scoped from it: a project `my_pipeline` pushed to `github.com/octo/my_pipeline` is `octo/my_pipeline` from its first build, with nothing to configure. The command prints the ID when it finishes.
+
+If a later step fails — a commit hook rejects the commit, or the repository name is taken — the project is left as far as it got and the error names the command that finishes the job by hand.
 
 ## chartbook build
 
