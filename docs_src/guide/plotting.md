@@ -384,7 +384,7 @@ The two libraries above are **backends**, and a third-party package can register
 ```toml
 # In the third-party package's pyproject.toml
 [project.entry-points.chartbook_plotting]
-altair = "mypackage.backend:backend"    # an instance, not the class
+altair = "mypackage.backend:AltairBackend"
 ```
 
 {doc}`plotting-backends` is the full interface: the methods a backend implements, what it is handed, a complete working example, and what a registered backend is and is not used for today.
