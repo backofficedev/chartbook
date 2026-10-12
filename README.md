@@ -66,13 +66,15 @@ chartbook check               # fails on missing metadata, broken paths, expirin
 ### Ask the manifest where a file belongs
 
 ```bash
-chartbook path repo_public    # the path chartbook.toml declares for that dataframe
+chartbook path repo_public          # the path chartbook.toml declares for that dataframe
+chartbook path chart/repo_rates     # ...and for that chart
 ```
 
 ```python
-from chartbook import data
+from chartbook import assets, data
 
-df.to_parquet(data.path("repo_public"))
+df.to_parquet(data.path("repo_public"))            # a dataframe
+fig.write_html(assets.path("chart/repo_rates"))    # anything else says its kind
 ```
 
 ### Browse your catalog

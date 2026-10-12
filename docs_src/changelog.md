@@ -21,15 +21,25 @@ Run in a catalog, it checks every member pipeline against the catalog's `[policy
 
 The example projects now set `repo_url` (required by the default policy), and `examples/dodo.py` runs `chartbook check` on the example catalog.
 
-### Added — `chartbook path` and `data.path()`
+### Added — `chartbook path`, `chartbook.assets` and `data.path()`
 
-A build definition or a script can now ask the manifest where an asset belongs instead of repeating the path. `data.path("merged_rates")` returns the `path` declared for that name in the enclosing `chartbook.toml` — for a dataframe, chart, notebook or note — as an absolute `Path`; `chartbook path merged_rates` prints the same thing, which is how Make, R, Stata and shell scripts reach it. The manifest is found by walking up from the calling file, then from the working directory. The file need not exist, so the same call names a `dodo.py` target and the place a script writes to.
+A build definition or a script can now ask the manifest where an asset belongs instead of repeating the path. There is one general function and one for the common case:
 
-A name the manifest does not declare raises `AssetNotDeclaredError` immediately, naming the table to add, rather than surfacing later as a missing file. Only local names resolve: `other_pipeline:asset`, `asset#series` and `@rev` are reserved and refused as not yet supported. It is a convenience, never a requirement — a pipeline that hardcodes its paths, in any language, is unaffected.
+- `chartbook.assets.path(ref)` returns the `path` declared in the enclosing `chartbook.toml` for any asset — a dataframe, chart, notebook or note — as an absolute `Path`.
+- `chartbook.data.path(name)` is the same thing for dataframes only: `assets.path(name, kind="dataframe")`.
+- `chartbook path REF` prints the same answer, which is how Make, R, Stata and shell scripts reach it.
 
-`data.get_data_path(pipeline=, dataframe=)` keeps working and remains the way to locate another pipeline's dataframe through a catalog. It, `data.path()` and `data.load()` now share one internal resolver (`chartbook.resolve`) that returns a typed location, which is the seam table- and query-backed dataframes will later plug into; no behaviour changes.
+An asset is named by a *reference*. A dataframe is its key in `[dataframes]`; anything else has its kind in front: `merged_rates`, `chart/rates_over_time`, `notebook/analysis`, `note/methodology`. Each kind has its own names, so a dataframe and a chart may share one. In Python the kind may be the argument `kind="chart"` instead (`--kind chart` on the command line); it states what you expect, so it fills in a missing kind and rejects a different one. A reference can also be handled as an object, `assets.AssetRef`, which is what `assets.parse()` returns.
 
-Both example pipelines use `data.path()` for the declared targets in their `dodo.py`.
+The manifest is found by walking up from the calling file, then from the working directory. The file need not exist, so the same call names a `dodo.py` target and the place a script writes to. A name the manifest does not declare raises `AssetNotDeclaredError` immediately, naming the table to add — or, if the name is declared as another kind of asset, saying how to refer to it — rather than surfacing later as a missing file. It is a convenience, never a requirement: a pipeline that hardcodes its paths, in any language, is unaffected.
+
+These names are the local end of one address grammar, `[registry/][scope/]pipeline:[kind/]name[#part][@rev]`, specified in {doc}`design/references`. All of it parses now. Only the local form resolves: another pipeline's asset, a `#part` (a column of a dataframe, a file in a model), an `@rev` and the `model` kind are refused as "reserved syntax and not yet supported".
+
+`data.get_data_path(pipeline=, dataframe=)` keeps working and remains the way to locate another pipeline's dataframe through a catalog. It, the `path()` functions and `data.load()` share one internal resolver (`chartbook.resolve`) that returns a typed location, which is the seam table- and query-backed dataframes will later plug into; no behaviour changes.
+
+Both example pipelines use `data.path()` and `assets.path()` for the declared targets in their `dodo.py`.
+
+The folder of default logos inside the package moved from `chartbook/assets/` to `chartbook/branding/`, to free the name for the module.
 
 `data.scratch()` completes the set: it returns `_data/_scratch/` inside the current pipeline, created on first use, for throwaway files that are not assets. The directory ignores itself in git, and nothing documents, publishes or depends on what is in it.
 

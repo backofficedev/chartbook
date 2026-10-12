@@ -11,6 +11,8 @@ from typing import Optional
 
 import click
 
+from chartbook.refs import DEFAULT_KIND, KIND_TABLES
+
 
 @dataclass
 class ChartBookError:
@@ -187,40 +189,53 @@ class ManifestNotFoundError(FileNotFoundError):
 
 
 class AssetNotDeclaredError(LookupError):
-    """Raised when a name is not declared in the pipeline's chartbook.toml.
+    """Raised when a pipeline's chartbook.toml declares no such asset.
 
     The manifest is the single source of truth for where assets live, so a
     path is only handed out for a name it declares. The message says which
-    table to add.
+    table to add, or, if the name is declared as another kind of asset, how
+    to refer to that.
 
     Attributes:
         name: The asset name that was asked for.
+        kind: The kind of asset that was asked for.
         manifest_path: The chartbook.toml that was searched.
         declared: The asset names it does declare, by table.
     """
 
-    def __init__(self, name: str, manifest_path: Path, declared: dict[str, list[str]]):
+    def __init__(
+        self,
+        name: str,
+        manifest_path: Path,
+        declared: dict[str, list[str]],
+        kind: str = DEFAULT_KIND,
+        example_path: Optional[str] = None,
+    ):
         self.name = name
+        self.kind = kind
         self.manifest_path = manifest_path
         self.declared = declared
 
-        lines = [f"{name!r} is not declared in {manifest_path}."]
-        every_name = [n for names in declared.values() for n in names]
-        close = difflib.get_close_matches(name, every_name, n=1)
-        if close:
-            lines.append(f"Did you mean {close[0]!r}?")
+        table = KIND_TABLES[kind]
+        kind_of = {t: k for k, t in KIND_TABLES.items()}
+        lines = [f"No {kind} named {name!r} is declared in {manifest_path}."]
 
-        tables = list(declared)
-        table = tables[0] if tables else "dataframes"
-        lines += ["", "To register it, add a table to that file, for example:", ""]
-        lines.append(f"    [{table}.{name}]")
-        if table == "dataframes":
-            lines.append(f'    path = "./_data/{name}.parquet"')
+        other_kinds = [
+            kind_of[t] for t, names in declared.items() if t != table and name in names
+        ]
+        if other_kinds:
+            other = other_kinds[0]
+            lines.append(
+                f"It is declared as a {other}: refer to it as {other + '/' + name!r} "
+                f"(in Python, chartbook.assets.path({other + '/' + name!r}))."
+            )
         else:
-            lines.append('    path = "..."')
-        others = ", ".join(f"[{t}.{name}]" for t in tables[1:])
-        if others:
-            lines += ["", f"(or {others}, for another kind of asset)"]
+            close = difflib.get_close_matches(name, declared.get(table, []), n=1)
+            if close:
+                lines.append(f"Did you mean {close[0]!r}?")
+            lines += ["", "To register it, add a table to that file, for example:", ""]
+            lines.append(f"    [{table}.{name}]")
+            lines.append(f'    path = "{example_path or "..."}"')
 
         listing = "; ".join(
             f"{t}: {', '.join(names)}" for t, names in declared.items() if names

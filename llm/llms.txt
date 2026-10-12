@@ -32,7 +32,8 @@ chartbook build -f        # Force overwrite existing docs
 chartbook build -f --watch  # Rebuild incrementally on every file change
 chartbook browse          # Open the generated site
 chartbook check              # CI gate: missing metadata, broken paths, expiring licenses
-chartbook path <name>        # Print the path chartbook.toml declares for an asset
+chartbook path <name>        # Print the path chartbook.toml declares for a dataframe
+chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>)
 chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook config             # Configure default catalog path

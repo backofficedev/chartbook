@@ -111,7 +111,7 @@ text = data.get_docs(pipeline="yield_curve", dataframe="repo_public")       # th
 where = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public") # the write-up's source file
 ```
 
-All of these accept `catalog_path="/path/to/catalog"` to bypass the global setting. Inside a pipeline, `data.path("repo_public")` gives the path of one of its *own* assets straight from its `chartbook.toml`, with no catalog involved — see {doc}`documenting-a-pipeline`. Hive-partitioned (glob-path) dataframes support only the LazyFrame default — call `.collect()` to materialize.
+All of these accept `catalog_path="/path/to/catalog"` to bypass the global setting. Inside a pipeline, `data.path("repo_public")` gives the path of one of its *own* dataframes straight from its `chartbook.toml`, with no catalog involved (and `assets.path("chart/repo_rates")` that of a chart, notebook or note) — see {doc}`documenting-a-pipeline`. Hive-partitioned (glob-path) dataframes support only the LazyFrame default — call `.collect()` to materialize.
 
 The same lookups exist on the command line, for shell scripts and quick checks:
 
