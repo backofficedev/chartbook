@@ -20,6 +20,9 @@ from typing import Optional
 
 INITIAL_COMMIT_MESSAGE = "Initial commit from chartbook init"
 
+#: The first branch's name when the user's git configuration does not set one.
+DEFAULT_BRANCH = "main"
+
 #: A project rendered by cruft carries this file at its root.
 CRUFT_MARKER = ".cruft.json"
 
@@ -139,20 +142,38 @@ def git_init_and_commit(project_dir: Path) -> None:
 
     :raises ScaffoldError: If a git command fails, saying which.
     """
-    steps = [
-        ["git", "init"],
+    # Name the first branch "main" unless the user has said what they want.
+    # Unconfigured, git still calls it "master" and prints a hint about it,
+    # and a repository pushed to GitHub keeps whatever name it arrives with.
+    chosen = _run(["git", "config", "--get", "init.defaultBranch"], cwd=project_dir)
+    if chosen.returncode == 0 and chosen.stdout.strip():
+        init_attempts = [["git", "init"]]
+    else:
+        # The second is for a git too old to know the option
+        init_attempts = [["git", "init", f"--initial-branch={DEFAULT_BRANCH}"], ["git", "init"]]
+
+    def failed(command, result):
+        return ScaffoldError(
+            f"'{' '.join(command[:2])}' failed in {project_dir}:\n"
+            f"{_detail(result)}\n"
+            f"The project itself was created. Fix the problem above and "
+            f"finish by hand with: git init && git add --all && git commit"
+        )
+
+    for command in init_attempts:
+        result = _run(command, cwd=project_dir)
+        if result.returncode == 0:
+            break
+    else:
+        raise failed(command, result)
+
+    for command in (
         ["git", "add", "--all"],
         ["git", "commit", "-m", INITIAL_COMMIT_MESSAGE],
-    ]
-    for command in steps:
+    ):
         result = _run(command, cwd=project_dir)
         if result.returncode != 0:
-            raise ScaffoldError(
-                f"'{' '.join(command[:2])}' failed in {project_dir}:\n"
-                f"{_detail(result)}\n"
-                f"The project itself was created. Fix the problem above and "
-                f"finish by hand with: git init && git add --all && git commit"
-            )
+            raise failed(command, result)
 
 
 def github_create_and_push(project_dir: Path, public: bool = False) -> str:
@@ -163,7 +184,7 @@ def github_create_and_push(project_dir: Path, public: bool = False) -> str:
 
     :param project_dir: A git repository with at least one commit.
     :param public: Create a public repository. Private by default.
-    :returns: What gh printed, which includes the new repository's URL.
+    :returns: The new repository's URL.
     :raises ScaffoldError: If gh fails, with the command to finish by hand.
     """
     command = [
@@ -187,4 +208,7 @@ def github_create_and_push(project_dir: Path, public: bool = False) -> str:
             f"problem above and finish from that directory with:\n"
             f"    {' '.join(command)}"
         )
-    return result.stdout.strip()
+    # gh prints the URL, then whatever git said while pushing
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    urls = [line for line in lines if line.startswith(("https://", "http://"))]
+    return urls[0] if urls else (lines[0] if lines else "")

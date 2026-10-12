@@ -27,7 +27,7 @@ chartbook init [--git] [--github [--public | --private]]
 
 | Option | Effect |
 |--------|--------|
-| `--git` | Run `git init` in the new project and make one initial commit of everything its `.gitignore` allows |
+| `--git` | Run `git init` in the new project and make one initial commit of everything its `.gitignore` allows. The branch is `main` unless your git configuration sets `init.defaultBranch` |
 | `--github` | Do that, then create a GitHub repository named after the project directory with `gh repo create`, add it as `origin`, and push the commit. Implies `--git` |
 | `--public` / `--private` | Visibility of the repository `--github` creates. Private unless you say `--public` |
 

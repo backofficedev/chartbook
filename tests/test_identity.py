@@ -235,3 +235,18 @@ class TestPublishIsNotOverloaded:
         assert "push" in listed
         assert "\n  push " not in result.output
         assert "\n  publish " in result.output
+
+
+class TestDerivedNameFromARelativePath:
+    def test_dot_takes_the_name_of_the_directory_it_refers_to(self, tmp_path, monkeypatch):
+        """Path('.') has no name of its own; the ID used to come out as 'pipeline'."""
+        project_dir = tmp_path / "term_premium"
+        project_dir.mkdir()
+        (project_dir / "chartbook.toml").write_text("")
+        monkeypatch.chdir(project_dir)
+
+        from pathlib import Path
+
+        assert derive_pipeline_id({}, Path(".")) == "term_premium"
+        assert load_manifest(Path("."))["project"]["id"] == "term_premium"
+        assert load_manifest(".")["project"]["id"] == "term_premium"

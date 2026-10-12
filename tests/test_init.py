@@ -38,6 +38,8 @@ class FakeTools:
         self.remote_url = None
         # The repository the working directory is inside, if any
         self.outer_repo = None
+        # The user's init.defaultBranch, if they have set one
+        self.configured_branch = None
 
     # -- the two things the code under test calls -------------------------
 
@@ -71,9 +73,20 @@ class FakeTools:
             )
         if command[:3] == ["gh", "repo", "create"]:
             self.remote_url = f"https://github.com/octo/{command[3]}.git"
+            # As the real gh prints: the URL, then git's note about the push
             return subprocess.CompletedProcess(
-                command, 0, stdout=f"https://github.com/octo/{command[3]}\n", stderr=""
+                command,
+                0,
+                stdout=f"https://github.com/octo/{command[3]}\n"
+                "branch 'main' set up to track 'origin/main'.\n",
+                stderr="",
             )
+        if command[:3] == ["git", "config", "--get"] and "init.defaultBranch" in command:
+            if self.configured_branch:
+                return subprocess.CompletedProcess(
+                    command, 0, stdout=f"{self.configured_branch}\n", stderr=""
+                )
+            return subprocess.CompletedProcess(command, 1, stdout="", stderr="")
         # What chartbook.identity asks git when deriving a pipeline's scope
         if command[:2] == ["git", "-C"] and "remote.origin.url" in command:
             if self.remote_url:
@@ -147,12 +160,30 @@ class TestGit:
         assert result.exit_code == 0, result.output
         in_project = [c for c, cwd in tools.calls if cwd == tools.project]
         assert in_project == [
-            ["git", "init"],
+            ["git", "config", "--get", "init.defaultBranch"],
+            ["git", "init", "--initial-branch=main"],
             ["git", "add", "--all"],
             ["git", "commit", "-m", "Initial commit from chartbook init"],
         ]
         assert f"Initialized a git repository in {tools.project}" in result.output
         assert tools.commands("gh") == []
+
+    def test_first_branch_is_main_unless_the_user_configured_one(self, tools):
+        _init("--git")
+        assert tools.ran("git", "init", "--initial-branch=main")
+
+    def test_a_configured_default_branch_is_respected(self, tools):
+        tools.configured_branch = "trunk"
+        _init("--git")
+        inits = [c for c in tools.commands("git") if c[1] == "init"]
+        assert inits == [["git", "init"]]
+
+    def test_old_git_without_the_branch_option_still_works(self, tools):
+        tools.failing[("git", "init", "--initial-branch=main")] = "unknown option"
+        result = _init("--git")
+        assert result.exit_code == 0, result.output
+        assert ["git", "init"] in tools.commands("git")
+        assert tools.ran("git", "commit")
 
     def test_project_directory_is_found_not_guessed(self, tools):
         """The directory is named by an answer at cruft's prompt."""
@@ -236,6 +267,8 @@ class TestGitHub:
         assert create_cwd == tools.project
         assert "Created a private GitHub repository and pushed" in result.output
         assert "https://github.com/octo/my_data_science_project" in result.output
+        # Only the address; not git's chatter about the push
+        assert "set up to track" not in result.output
 
     def test_implies_git_and_pushes_after_the_commit(self, tools):
         _init("--github")
@@ -374,6 +407,7 @@ def test_real_git_init_and_commit(tmp_path, real_git):
     assert _git(project, "log", "--format=%s").splitlines() == [
         "Initial commit from chartbook init"
     ]
+    assert _git(project, "branch", "--show-current").strip() == "main"
     # The project's own .gitignore decides what is committed
     assert sorted(_git(project, "ls-files").split()) == [
         ".gitignore",
