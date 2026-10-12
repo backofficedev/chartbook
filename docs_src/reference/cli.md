@@ -8,6 +8,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook build` | Generate the documentation site |
 | `chartbook browse` | Open the generated site in a browser |
 | `chartbook check` | Fail CI on missing metadata, broken paths, or expiring licenses |
+| `chartbook path` | Print the path the manifest declares for an asset |
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
 | `chartbook catalog init/add/disable/enable/build/browse` | Manage a catalog and its site |
 | `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
@@ -94,6 +95,30 @@ chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/
 **License dates** are ISO dates (`license_expiration = "2026-12-31"`, or a bare TOML date). An empty value, `"N/A"`, `"None"` and `"Never"` mean the license does not expire. Anything else that is not a date is itself reported, because a gate that cannot read a date cannot vouch for it.
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
+
+## chartbook path
+
+```console
+chartbook path REF [--project-dir PATH]
+```
+
+Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook or note — and nothing else, so the output can be captured. `REF` is the asset's key in the manifest. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
+
+```console
+$ chartbook path repo_public
+/work/yield_curve/_data/repo_public.parquet
+
+$ chartbook path repo_rates
+/work/yield_curve/_output/repo_rates.html
+```
+
+The path is absolute and is printed whether or not the file exists, so a build tool can use it for outputs as well as inputs. This is the command-line form of `data.path()` in Python: one rule for where things live, reachable from Make, a shell, R (`system2`) or Stata (`shell`).
+
+```makefile
+MERGED := $(shell chartbook path merged_rates)
+```
+
+A name the manifest does not declare exits `1` and says which table to add; nothing is printed to standard output. Only names declared in the current pipeline resolve: `other_pipeline:asset`, `asset#series` and `@rev` are reserved syntax and are refused as not yet supported. To locate another pipeline's dataframe through a catalog, use `chartbook data get-path`.
 
 ## chartbook publish
 

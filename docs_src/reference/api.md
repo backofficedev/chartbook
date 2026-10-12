@@ -20,6 +20,7 @@ chartbook
 ../apidocs/chartbook/chartbook.diagnostics
 ../apidocs/chartbook/chartbook.errors
 ../apidocs/chartbook/chartbook.manifest
+../apidocs/chartbook/chartbook.resolve
 ../apidocs/chartbook/chartbook.markdown_generator
 ../apidocs/chartbook/chartbook.conf_validation
 ../apidocs/chartbook/chartbook.path_validation

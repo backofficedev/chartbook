@@ -17,6 +17,16 @@ Run in a catalog, it checks every member pipeline against the catalog's `[policy
 
 The example projects now set `repo_url` (required by the default policy), and `examples/dodo.py` runs `chartbook check` on the example catalog.
 
+### Added — `chartbook path` and `data.path()`
+
+A build definition or a script can now ask the manifest where an asset belongs instead of repeating the path. `data.path("merged_rates")` returns the `path` declared for that name in the enclosing `chartbook.toml` — for a dataframe, chart, notebook or note — as an absolute `Path`; `chartbook path merged_rates` prints the same thing, which is how Make, R, Stata and shell scripts reach it. The manifest is found by walking up from the calling file, then from the working directory. The file need not exist, so the same call names a `dodo.py` target and the place a script writes to.
+
+A name the manifest does not declare raises `AssetNotDeclaredError` immediately, naming the table to add, rather than surfacing later as a missing file. Only local names resolve: `other_pipeline:asset`, `asset#series` and `@rev` are reserved and refused as not yet supported. It is a convenience, never a requirement — a pipeline that hardcodes its paths, in any language, is unaffected.
+
+`data.get_data_path(pipeline=, dataframe=)` keeps working and remains the way to locate another pipeline's dataframe through a catalog. It, `data.path()` and `data.load()` now share one internal resolver (`chartbook.resolve`) that returns a typed location, which is the seam table- and query-backed dataframes will later plug into; no behaviour changes.
+
+Both example pipelines use `data.path()` for the declared targets in their `dodo.py`.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level

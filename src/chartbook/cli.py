@@ -384,6 +384,44 @@ def check(project_dir, within_days, policy_path):
     click.echo(f"{shown}: OK ({len(pipelines)} pipeline(s), {counts})")
 
 
+@main.command("path")
+@click.argument("ref")
+@click.option(
+    "--project-dir",
+    type=click.Path(),
+    help="Where to look for the pipeline: its chartbook.toml is found by "
+    "walking up from here (default: the current directory)",
+)
+def path_command(ref, project_dir):
+    """Print the path the manifest declares for an asset.
+
+    REF is the name of a dataframe, chart, notebook or note declared in the
+    enclosing chartbook.toml. The path is printed absolute, whether or not
+    the file exists yet, so a build tool can use it for inputs and outputs
+    alike. This is `data.path()` for Make, shell, R and Stata:
+
+    \b
+        MERGED := $(shell chartbook path merged_rates)
+
+    Only names declared in the current pipeline resolve. An undeclared name
+    fails, naming the table to add.
+
+    Examples:
+        chartbook path repo_public
+        chartbook path repo_rates --project-dir ../yield_curve
+    """
+    from chartbook.data import path as resolve_path
+    from chartbook.errors import AssetNotDeclaredError
+
+    try:
+        asset_path = resolve_path(ref, project_dir=project_dir or Path.cwd())
+    except (AssetNotDeclaredError, FileNotFoundError, ValueError, TypeError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+    # Nothing but the path on stdout: this output gets captured
+    click.echo(str(asset_path))
+
+
 @main.command()
 @click.option(
     "--no-samples",

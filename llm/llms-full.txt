@@ -46,6 +46,7 @@ pip install -e ".[dev]"
 | `build` | Generate HTML documentation website |
 | `browse` | Open the generated site in the default browser |
 | `check` | CI gate: exit nonzero on missing required metadata, broken paths, or expiring licenses |
+| `path` | Print the path the enclosing chartbook.toml declares for an asset |
 | `publish` | Stage a pipeline's publishable files into a directory |
 | `catalog init/add/disable/enable/build/browse` | Manage a catalog and build/browse its site |
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
@@ -96,6 +97,16 @@ chartbook check [OPTIONS]
 - `--policy PATH`: Take required fields from the `[policy]` table of this catalog `chartbook.toml` (or any TOML file with a `[policy]` table)
 
 Reports, one per line as `file: [table] field: message`: fields the policy requires that are missing or empty; declared paths (`path`, `docs_path`, `readme`, `logo`, `favicon`) whose file does not exist; and dataframes whose `license_expiration` (ISO date; `"N/A"` means no expiry) has passed or is inside the window. A catalog is checked against its own `[policy.required]`; a standalone pipeline against the built-in recommended lists unless `--policy` is given. `policy.mode` is ignored — it governs builds. No data file is opened.
+
+### chartbook path
+
+Print the path the enclosing `chartbook.toml` declares for an asset of the current pipeline.
+
+```bash
+chartbook path REF [--project-dir PATH]
+```
+
+`REF` is the key of a `[dataframes]`, `[charts]`, `[notebooks]` or `[notes]` entry. The manifest is found by walking up from the current directory (or `--project-dir`). The absolute path is the only thing printed, whether or not the file exists, so Make, shell, R and Stata can capture it for inputs and outputs. An undeclared name exits 1 and names the table to add. Cross-pipeline references (`pipeline:asset`), `#series` and `@rev` are reserved and refused. Python equivalent: `data.path("name")`, which returns a `pathlib.Path`.
 
 ### chartbook publish
 
