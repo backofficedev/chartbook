@@ -62,7 +62,7 @@ Two rules:
 - `dataframe` names the entry in `[dataframes]` that feeds the chart; referencing a missing one is an error.
 - Exactly one of `docs_path` (a markdown file) or `docs` (inline markdown) supplies the write-up.
 
-The write-up is the part only you can provide: what the chart shows, how to read it, caveats. The generated chart page assembles the interactive chart, your write-up, and auto-generated spec tables (chart metadata, dataframe manifest, pipeline manifest). Fields you leave out simply don't appear; the full metadata vocabulary — publication tracking, clearance dates, release timing — is in {doc}`../reference/configuration`.
+The write-up is the part only you can provide: what the chart shows, how to read it, caveats. The generated chart page assembles the interactive chart, your write-up, and auto-generated spec tables (chart metadata, dataframe manifest, pipeline manifest). Under its title it says how fresh it is — "Chart updated 2 days ago · Data updated 2 days ago · Code updated 3 weeks ago" — so a reader can tell a stale chart from a current one without asking. Fields you leave out simply don't appear; the full metadata vocabulary — publication tracking, clearance dates, release timing — is in {doc}`../reference/configuration`.
 
 ## Dataframes
 
@@ -78,7 +78,7 @@ date_col = "date"
 docs_path = "./docs_src/dataframes/repo_public.md"
 ```
 
-The same `docs_path`/`docs` rule applies. The generated page shows your write-up, a **glimpse** (schema and row count read from the parquet at build time), and a manifest table. Provenance fields — `providers`, `license`, `access_types`, `pull_method`, and friends — exist for governance-minded catalogs; see the reference.
+The same `docs_path`/`docs` rule applies. The generated page shows when the data was last updated, your write-up, a **glimpse** (schema and row count read from the parquet at build time), and a manifest table. Provenance fields — `providers`, `license`, `access_types`, `pull_method`, and friends — exist for governance-minded catalogs; see the reference.
 
 For hive-partitioned datasets, `path` takes a glob:
 

@@ -55,6 +55,16 @@ A pipeline ID qualified with a registry — `charthub.example/acme/rates`, `loca
 
 `--github` uses your existing `gh` login and never prompts for one. Everything it depends on is checked before the template is rendered — `git` and `gh` on `PATH`, a git identity for the commit, `gh` logged in — so a missing piece stops the command with the fix named and nothing created. The new project's directory is identified after `cruft` returns (it is named by an answer at the prompt), not guessed. After `--github` the `origin` remote exists, so the pipeline's ID is scoped (`owner/project`) from its first build; the command prints it.
 
+### Added — data freshness on every asset page
+
+Dataframe and chart pages now say how fresh they are, directly under the title, in plain relative wording: "Data updated 2 days ago · Code updated 3 weeks ago". A chart page adds when the chart file itself was written, so a chart rendered before its data was last refreshed is visible at a glance. Hovering shows the exact time.
+
+The times are file modification times: the dataframe's file (the newest part file of a partitioned dataframe), the chart's HTML, and the pipeline's source (`src/`, `docs_src/`, `chartbook.toml`) — the last of which was already computed and shown only as "Date of Last Code Update" in the pipeline table at the foot of the page. The dataframe's time was computed and never rendered.
+
+Because the site is static, the page carries the timestamp and a small bundled script (`chartbook-freshness.js`) turns it into "2 days ago" when the page is read, so the wording is never stale. With scripts off, the date is shown. The line is a template, `freshness.md`, and can be overridden like the others.
+
+Fixed along the way: a chart backed by a partitioned (glob-path) dataframe had its data time stamped with the moment of the build.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level

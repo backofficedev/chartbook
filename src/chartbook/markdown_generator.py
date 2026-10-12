@@ -5,10 +5,12 @@ NOTES:
 
 """
 
+import glob
 import importlib.resources  # Add this at the top with other imports
 import json
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 import jinja2
@@ -42,6 +44,63 @@ def _fs_slug(pipeline_id):
 def _yaml_escape_filter(value):
     """Escape double quotes in a string for safe use inside YAML double-quoted scalars."""
     return str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def data_last_modified(data_path):
+    """Find when the data at a path was last written, by file modification time.
+
+    For a partitioned dataframe (a glob path) this is its newest part file.
+
+    :param data_path: Path to a data file, or a glob pattern over part files.
+    :type data_path: str or Path
+    :returns: The modification time, or None if nothing is on disk.
+    :rtype: datetime or None
+    """
+    if is_glob_pattern(str(data_path)):
+        part_files = glob.glob(str(data_path), recursive=True)
+        if not part_files:
+            return None
+        return max(get_file_modified_datetime(f) for f in part_files)
+    if not Path(data_path).exists():
+        return None
+    return get_file_modified_datetime(data_path)
+
+
+def freshness_fact(label, moment):
+    """Describe one "<label> <when>" fact for a page's freshness line.
+
+    The page says *when*, not *how long ago*: a generated page is static, so
+    "2 days ago" worked out at build time would be wrong the next day, and
+    would also make every page differ from one build to the next. The
+    timestamp goes into a ``<time>`` element and ``chartbook-freshness.js``
+    turns it into relative wording when the page is read.
+
+    :param label: The plain-language lead-in, e.g. ``"Data updated"``.
+    :type label: str
+    :param moment: When it happened, in local time. None if unknown.
+    :type moment: datetime or None
+    :returns: Template fields ``label``, ``iso`` (ISO 8601 with UTC offset),
+        ``title`` (for the hover text) and ``date`` (the fallback text), or
+        None when *moment* is None.
+    :rtype: dict or None
+    """
+    if moment is None:
+        return None
+    local = moment.astimezone()
+    return {
+        "label": label,
+        "iso": local.isoformat(timespec="seconds"),
+        "title": local.strftime("%Y-%m-%d %H:%M %Z").strip(),
+        "date": local.strftime("%Y-%m-%d"),
+    }
+
+
+def _code_last_modified(pipeline_manifest):
+    """When the pipeline's source last changed, from its loaded manifest."""
+    stamp = pipeline_manifest.get("source_last_modified_date")
+    if not stamp:
+        return None
+    return datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S")
 
 
 def get_sphinx_file_alignment_plan(
@@ -553,6 +612,7 @@ def generate_dataframe_docs(
     # Use filenames instead of paths for includes, so they can be found in any of our search locations
     modified_source = (
         """# Dataframe: `{{pipeline_id}}:{{dataframe_id}}` - {{name}}\n\n"""
+        + """{% include "freshness.md" %}\n\n"""
         + source
         + """\n\n
 ## DataFrame Glimpse
@@ -610,6 +670,12 @@ def generate_dataframe_docs(
         parquet_path, size_threshold_mb=size_threshold
     )
 
+    # How fresh the page's data is, shown under the title
+    freshness = [
+        freshness_fact("Data updated", data_last_modified(parquet_path)),
+        freshness_fact("Code updated", _code_last_modified(pipeline_manifest)),
+    ]
+
     # Render the template with the new variables
     table_page = template.render(
         dataframe_manifest,
@@ -624,6 +690,7 @@ def generate_dataframe_docs(
         dot_or_dotdot="../..",
         dataframe_glimpse=dataframe_glimpse,
         enable_data_download=enable_data_download,
+        freshness=[fact for fact in freshness if fact],
     )
     # print(table_page)
 
@@ -793,16 +860,15 @@ def generate_chart_docs(
             pipeline_base_dir / raw_parquet_path
         ).resolve()
 
-    # Fetch the last modified datetime of the parquet file
-    if is_glob_pattern(str(parquet_path)):
-        from datetime import datetime
-
-        dataframe_last_updated = datetime.now()
-    else:
-        dataframe_last_updated = get_file_modified_datetime(parquet_path)
-
     # Get and format paths to charts
     path_to_html_chart_unix = pipeline_base_dir / Path(chart_manifest["path"])
+
+    # How fresh the chart, its data and its code are, shown under the title
+    freshness = [
+        freshness_fact("Chart updated", data_last_modified(path_to_html_chart_unix)),
+        freshness_fact("Data updated", data_last_modified(parquet_path)),
+        freshness_fact("Code updated", _code_last_modified(pipeline_manifest)),
+    ]
 
     link_to_dataframe_docs = (
         Path(dataframe_path_prefix) / _fs_slug(pipeline_id) / f"{dataframe_id}.md"
@@ -820,7 +886,7 @@ def generate_chart_docs(
         pipeline_manifest=pipeline_manifest,
         path_to_html_chart_unix=path_to_html_chart_unix,
         pipeline_page_link=pipeline_page_link,
-        dataframe_last_updated=dataframe_last_updated.strftime("%Y-%m-%d %H:%M:%S"),
+        freshness=[fact for fact in freshness if fact],
         dot_or_dotdot="..",
         enable_data_download=enable_data_download,
     )
