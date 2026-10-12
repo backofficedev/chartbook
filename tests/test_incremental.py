@@ -869,12 +869,41 @@ class TestCommands:
         config.set_default_catalog_path(catalog_project)
         runner = CliRunner()
 
-        first = runner.invoke(main, ["catalog", "build", "--incremental", "-f"])
+        # A catalog build is incremental without being asked
+        first = runner.invoke(main, ["catalog", "build", "-f"])
         assert first.exit_code == 0, first.output
         assert "regenerated 2 of 2 pipeline(s)" in first.output
+        assert (catalog_project / "_docs" / STATE_FILE).is_file()
 
-        second = runner.invoke(main, ["catalog", "build", "--incremental", "-f"])
+        second = runner.invoke(main, ["catalog", "build", "-f"])
         assert second.exit_code == 0, second.output
         assert "Incremental build: regenerated 0 of 2 pipeline(s)" in second.output
         assert "nothing to render" in second.output
         assert "Catalog built successfully" in second.output
+
+        # --clean starts over, and leaves a fresh record for next time
+        cleaned = runner.invoke(main, ["catalog", "build", "-f", "--clean"])
+        assert cleaned.exit_code == 0, cleaned.output
+        assert "Full build (no previous incremental build)" in cleaned.output
+        assert "regenerated 2 of 2 pipeline(s)" in cleaned.output
+        after_clean = runner.invoke(main, ["catalog", "build"])
+        assert "Incremental build: regenerated 0 of 2 pipeline(s)" in after_clean.output
+
+    def test_catalog_build_clean_leaves_unrelated_directories_alone(
+        self, catalog_project, tmp_path, monkeypatch
+    ):
+        fake_dir = tmp_path / ".chartbook_incremental_tests"
+        monkeypatch.setattr(config, "get_global_config_dir", lambda: fake_dir)
+        monkeypatch.setattr(
+            config, "get_global_settings_path", lambda: fake_dir / "settings.toml"
+        )
+        config.set_default_catalog_path(catalog_project)
+        precious = catalog_project / "_docs"
+        precious.mkdir()
+        (precious / "notes.txt").write_text("not a build tree")
+
+        result = CliRunner().invoke(main, ["catalog", "build", "--clean"])
+
+        assert result.exit_code == 1
+        assert "not a ChartBook build directory" in result.output
+        assert (precious / "notes.txt").read_text() == "not a build tree"

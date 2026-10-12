@@ -207,10 +207,12 @@ chartbook catalog enable ftsfr/sovereign_bonds
 Build the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike top-level `build`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
 
 ```console
-chartbook catalog build [-f] [--strict/--no-strict] [--incremental] [--watch [--watch-interval SECONDS]]
+chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [--watch-interval SECONDS]]
 ```
 
-`--incremental` and `--watch` work as they do for [`chartbook build`](#chartbook-build), and matter most here: in a large catalog, most pipelines have not changed since the last build, and an incremental build skips each of those entirely.
+A catalog build is **incremental by default**. Its working files are kept beside the catalog, in `_docs/`, and the next build reads them and redoes only the pipelines whose files have changed since — in a large catalog, usually a handful or none. Nothing runs between builds: there is no server or background process, only that directory. See [Incremental builds](#chartbook-build).
+
+`--clean` throws the kept files away and rebuilds everything, which is also what happens automatically after ChartBook, Sphinx or a theme is upgraded. `--watch` rebuilds whenever a member pipeline's files change, until Ctrl-C.
 
 ### catalog browse
 

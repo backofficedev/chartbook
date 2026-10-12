@@ -145,8 +145,8 @@ Without a `[policy]` section, a default warn-only list of recommended fields is 
 ### Build Catalog Documentation
 
 ```bash
-chartbook catalog build              # Build HTML docs to ~/.chartbook/docs/
-chartbook catalog build --incremental  # Skip pipelines whose files have not changed
+chartbook catalog build              # Build HTML docs to ~/.chartbook/docs/ (incremental: only changed pipelines)
+chartbook catalog build --clean      # Discard what earlier builds kept and rebuild everything
 chartbook catalog build -f           # Force overwrite existing docs
 chartbook catalog build --strict     # Error on missing files instead of skipping
 ```
