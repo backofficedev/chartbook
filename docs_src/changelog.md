@@ -15,6 +15,8 @@ Tools around the manifest: a CI gate, paths you can ask for, freshness on every 
 
 Run in a catalog, it checks every member pipeline against the catalog's `[policy.required]`. Run in a standalone pipeline, it uses the built-in recommended-field lists; `--policy PATH` substitutes the `[policy]` table of a catalog (or of any TOML file), so a pipeline's own CI can hold it to the catalog it is published to without that catalog's other members being present. `policy.mode` still governs builds only — `check` always fails on a missing required field.
 
+`--skip-outputs` is for CI that checks a project without building it. Data files, charts and notebooks are what a pipeline produces and are rarely in git, so on a fresh checkout they are all "missing"; with the flag they are left out, and required fields, license dates and the files that do live in the repository are still checked.
+
 `license_expiration` is read as an ISO date. Empty, `"N/A"`, `"None"` and `"Never"` mean no expiry; any other unreadable value is reported rather than passed. Only metadata and file existence are checked — no data file is opened.
 
 The example projects now set `repo_url` (required by the default policy), and `examples/dodo.py` runs `chartbook check` on the example catalog.

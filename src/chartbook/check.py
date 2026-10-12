@@ -37,6 +37,11 @@ DEFAULT_WITHIN_DAYS = 30
 #: Compared case-insensitively. Anything else must parse as a date.
 NO_EXPIRATION_VALUES = frozenset({"", "n/a", "na", "none", "never"})
 
+#: Kinds of missing file that are things a pipeline *builds*: data, rendered
+#: charts and executed notebooks. They are normally git-ignored, so on a
+#: fresh checkout that has not run the pipeline they are all absent.
+OUTPUT_FILE_TYPES = frozenset({"dataframe", "chart", "notebook"})
+
 # MissingFile.file_type -> (manifest section, field) for per-entity files
 _FILE_TYPE_FIELDS = {
     "dataframe": ("dataframes", "path"),
@@ -150,10 +155,20 @@ def check_required_fields(
     return problems
 
 
-def check_paths(manifest: dict, base_dir: Path) -> list[Problem]:
-    """Report every declared file that does not exist on disk."""
+def check_paths(
+    manifest: dict, base_dir: Path, skip_outputs: bool = False
+) -> list[Problem]:
+    """Report every declared file that does not exist on disk.
+
+    :param skip_outputs: If True, do not report missing data files, charts
+        or notebooks. These are what a pipeline builds, so a checkout that
+        has not run it has none of them. Files kept in the repository are
+        still checked: write-ups, notes, the README, the logo and favicon.
+    """
     problems = []
     for missing in validate_source_files(manifest, base_dir):
+        if skip_outputs and missing.file_type in OUTPUT_FILE_TYPES:
+            continue
         if missing.file_type in ("logo", "favicon"):
             toml_file = Path(base_dir) / "chartbook.toml"
             table, field = "project", missing.file_type
@@ -258,6 +273,7 @@ def run_checks(
     within_days: int = DEFAULT_WITHIN_DAYS,
     today: Optional[date] = None,
     policy_label: str = "the active policy",
+    skip_outputs: bool = False,
 ) -> list[Problem]:
     """Run every check over a loaded manifest.
 
@@ -267,13 +283,15 @@ def run_checks(
     :param within_days: The license-expiration window, in days.
     :param today: The date to measure license expiration from.
     :param policy_label: How to name the policy in required-field messages.
+    :param skip_outputs: If True, built files (data, charts, notebooks) need
+        not exist; see :func:`check_paths`.
     :returns: Every problem found, sorted by file then table; empty for a
         healthy project.
     """
     base_dir = Path(base_dir).resolve()
     problems = [
         *check_required_fields(manifest, base_dir, policy_label=policy_label),
-        *check_paths(manifest, base_dir),
+        *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
         *check_licenses(manifest, base_dir, within_days=within_days, today=today),
     ]
     return sorted(problems, key=lambda p: (str(p.file), p.table, p.field))

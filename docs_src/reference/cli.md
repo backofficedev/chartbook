@@ -100,7 +100,7 @@ chartbook browse [OUTPUT_DIR] [--project-dir PATH]
 ## chartbook check
 
 ```console
-chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH]
+chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH] [--skip-outputs]
 ```
 
 The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
@@ -125,12 +125,21 @@ chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/
 | `--project-dir PATH` | `.` | Project to check — a pipeline or a catalog |
 | `--within DAYS` | `30` | How far ahead a license expiration counts as a failure. `0` fails only on licenses already expired or expiring today |
 | `--policy PATH` | — | Take required fields from the `[policy]` table of this file (a catalog's `chartbook.toml`, its directory, or any TOML file with a `[policy]` table) |
+| `--skip-outputs` | off | Do not require data files, charts and notebooks to exist |
 
 **Which fields are required.** Run in a catalog, `check` applies the catalog's {ref}`[policy.required] <policy>` to every member pipeline. Run in a standalone pipeline, it applies the built-in recommended-field lists — the same ones that drive the diagnostics page. To hold a pipeline to the policy of the catalog it is published to, or to a list of your own, pass `--policy`; only the `[policy]` table is read, so the catalog's other pipelines need not be checked out.
 
 `policy.mode` is not consulted. It decides what a *build* does about missing metadata; `check` always reports it.
 
 **License dates** are ISO dates (`license_expiration = "2026-12-31"`, or a bare TOML date). An empty value, `"N/A"`, `"None"` and `"Never"` mean the license does not expire. Anything else that is not a date is itself reported, because a gate that cannot read a date cannot vouch for it.
+
+**In CI, on a project that has not been built.** Data files, rendered charts and executed notebooks are what a pipeline *produces*, and they are usually not in git. A CI job that checks out the repository without running the pipeline — which is every job for a pipeline whose data needs a subscription — would see all of them as broken paths. `--skip-outputs` leaves those three out and still checks everything that lives in the repository: required fields, license dates, write-ups, notes, the README, the logo.
+
+```yaml
+# .github/workflows/check.yml
+- run: pip install chartbook
+- run: chartbook check --skip-outputs
+```
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 

@@ -423,6 +423,64 @@ class TestCheckCommand:
         assert "warning: " in result.output
         assert "unknown key 'maintaner'" in result.output
 
+    def test_skip_outputs_passes_a_project_that_has_not_been_built(
+        self, pipeline_project_with_notes, lenient_policy
+    ):
+        """A fresh checkout in CI: sources are there, nothing has been built."""
+        import shutil
+
+        project = pipeline_project_with_notes
+        shutil.rmtree(project / "_data")
+        shutil.rmtree(project / "_output")
+        args = ("--project-dir", project, "--policy", lenient_policy)
+
+        without = _invoke(*args)
+        assert without.exit_code == 1
+        assert "[dataframes.dataframe_0] path: file not found" in without.output
+        assert "[charts.chart_0_0] path: file not found" in without.output
+
+        result = _invoke(*args, "--skip-outputs")
+        assert result.exit_code == 0, result.output
+        assert "built outputs not checked" in result.output
+
+    def test_skip_outputs_still_checks_files_kept_in_the_repository(
+        self, pipeline_project_with_notes, lenient_policy
+    ):
+        project = pipeline_project_with_notes
+        (project / "docs_src" / "charts" / "chart_0_0.md").unlink()
+        (project / "docs_src" / "note1.md").unlink()
+        (project / "README.md").unlink()
+        result = _invoke(
+            "--project-dir", project, "--policy", lenient_policy, "--skip-outputs"
+        )
+        assert result.exit_code == 1
+        assert "[charts.chart_0_0] docs_path: file not found" in result.output
+        assert "[notes.note1] path: file not found" in result.output
+        assert "[project] readme: file not found" in result.output
+
+    def test_skip_outputs_still_checks_fields_and_licenses(self, pipeline_project):
+        expired = date.today() - timedelta(days=3)
+        _set_license_expiration(pipeline_project, expired.isoformat())
+        result = _invoke("--project-dir", pipeline_project, "--skip-outputs")
+        assert result.exit_code == 1
+        assert "[project] repo_url: required by the default policy" in result.output
+        assert "license expired on" in result.output
+
+    def test_skip_outputs_covers_notebooks_and_globs(self, tmp_path, lenient_policy):
+        from tests.fixtures import create_pipeline_project
+
+        project = create_pipeline_project(tmp_path / "glob", use_glob_paths=True)
+        for parquet in (project / "_data").rglob("*.parquet"):
+            parquet.unlink()
+
+        def edit(config):
+            config["notebooks"]["analysis"] = {"path": "_output/analysis.ipynb"}
+
+        _edit_toml(project, edit)
+        args = ("--project-dir", project, "--policy", lenient_policy)
+        assert _invoke(*args).exit_code == 1
+        assert _invoke(*args, "--skip-outputs").exit_code == 0
+
     def test_negative_window_is_a_usage_error(self, pipeline_project):
         result = _invoke("--project-dir", pipeline_project, "--within", "-1")
         assert result.exit_code == 2

@@ -412,7 +412,14 @@ def resolve_project_dir(project_dir: Path | None):
     help="Check required fields against the [policy] of this catalog "
     "chartbook.toml (or its directory) instead of the project's own",
 )
-def check(project_dir, within_days, policy_path):
+@click.option(
+    "--skip-outputs",
+    is_flag=True,
+    default=False,
+    help="Do not require data files, charts and notebooks to exist. For CI "
+    "that checks a project without building it",
+)
+def check(project_dir, within_days, policy_path, skip_outputs):
     """Check a project's metadata and paths; exit nonzero on any problem.
 
     Meant for CI. Works on a pipeline or a catalog and reports three things,
@@ -429,10 +436,15 @@ def check(project_dir, within_days, policy_path):
 
     Only metadata and paths are checked; no data file is opened.
 
+    Data files, charts and notebooks are things a pipeline builds, and are
+    usually not in git. A CI job that has not run the pipeline will find
+    them all missing; --skip-outputs leaves them out and checks the rest.
+
     Examples:
         chartbook check
         chartbook check --within 90
         chartbook check --policy ../catalog
+        chartbook check --skip-outputs
     """
     import warnings
 
@@ -462,7 +474,11 @@ def check(project_dir, within_days, policy_path):
         click.echo(f"warning: {warning.message}", err=True)
 
     problems = run_checks(
-        manifest, project_dir, within_days=within_days, policy_label=policy_label
+        manifest,
+        project_dir,
+        within_days=within_days,
+        policy_label=policy_label,
+        skip_outputs=skip_outputs,
     )
     for problem in problems:
         click.echo(problem.format(relative_to=Path.cwd()))
@@ -482,7 +498,8 @@ def check(project_dir, within_days, policy_path):
         for section in ("dataframes", "charts", "notebooks")
     )
     shown = display_path(manifest_path, relative_to=Path.cwd())
-    click.echo(f"{shown}: OK ({len(pipelines)} pipeline(s), {counts})")
+    note = "; built outputs not checked" if skip_outputs else ""
+    click.echo(f"{shown}: OK ({len(pipelines)} pipeline(s), {counts}{note})")
 
 
 @main.command("path")
