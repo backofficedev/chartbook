@@ -63,16 +63,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Deprecated no-op aliases from the old extras layout — every install now
-# includes everything, so these resolve to the same full package. Kept so
-# existing specs like "chartbook[all]" or "chartbook[data]" don't break;
-# remove after one release.
-all = []
-data = []
-plotting = []
-sphinx = []
-
-# Contributor tooling only (tests + build automation)
+# Contributor tooling only (tests + build automation). There are no user-facing
+# extras: `pip install chartbook` installs everything. The old [all], [data],
+# [plotting] and [sphinx] aliases were removed after their one release of
+# notice; see docs_src/reference/stability.md.
 dev = [
     "pytest",
     "colorama",
