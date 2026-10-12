@@ -284,7 +284,9 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
     if explicit:
         return validate_pipeline_id(explicit)
 
-    base_dir = Path(base_dir)
+    # Resolved, because the name comes from the directory's own name and a
+    # relative "." does not have one
+    base_dir = Path(base_dir).resolve()
     name_part = _sanitize_component(base_dir.name)
 
     source_url = project.get("repo_url", "") or get_git_remote_url(base_dir)

@@ -53,7 +53,7 @@ A pipeline ID qualified with a registry — `charthub.example/acme/rates`, `loca
 
 ### Added — `chartbook init --git` and `--github`
 
-`chartbook init` can now leave you with a repository rather than just a directory. `--git` runs `git init` in the new project and makes an initial commit. `--github` does that, then creates a GitHub repository for it with `gh repo create`, adds it as `origin`, and pushes — private by default, `--public` to override. Both are off by default.
+`chartbook init` can now leave you with a repository rather than just a directory. `--git` runs `git init` in the new project and makes an initial commit, on a branch named `main` unless your git configuration says otherwise. `--github` does that, then creates a GitHub repository for it with `gh repo create`, adds it as `origin`, and pushes — private by default, `--public` to override. Both are off by default.
 
 `--github` uses your existing `gh` login and never prompts for one. Everything it depends on is checked before the template is rendered — `git` and `gh` on `PATH`, a git identity for the commit, `gh` logged in — so a missing piece stops the command with the fix named and nothing created. The new project's directory is identified after `cruft` returns (it is named by an answer at the prompt), not guessed. After `--github` the `origin` remote exists, so the pipeline's ID is scoped (`owner/project`) from its first build; the command prints it.
 
@@ -111,6 +111,7 @@ The "Code updated" time on pages (and "Date of Last Code Update", and a chart's 
 - Importing `chartbook` no longer replaces `shutil.copy2`, `shutil.copystat` and `shutil.copymode` for the whole Python process. ChartBook still copies file contents without metadata, for the sake of shared drives, but does so in its own helpers.
 - A pipeline site's front page listed two appendix documents that do not exist in a generated site, producing two Sphinx warnings on every build and forcing that page to be re-read on every run. The entries are gone.
 - `chartbook create-data-glimpses` crashed on a numeric column with no non-null values.
+- A pipeline loaded from the relative path `.` derived the name `pipeline` instead of its directory's name, because `Path(".")` has no name. The directory is now resolved first.
 
 ### Removed
 
