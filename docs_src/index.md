@@ -39,6 +39,7 @@ chartbook browse          # open it in your browser
 - {doc}`guide/documenting-a-pipeline` — describe your charts, dataframes, and notebooks
 - {doc}`guide/catalogs-and-data` — aggregate pipelines and load data from anywhere
 - {doc}`guide/plotting` — one call, five output files (interactive HTML plus static PNG/PDF)
+- {doc}`guide/plotting-backends` — write a plotting backend for another library
 - {doc}`reference/configuration` — every `chartbook.toml` field, type, and default
 - {doc}`reference/cli` — every command
 
@@ -52,6 +53,7 @@ getting-started
 guide/documenting-a-pipeline
 guide/catalogs-and-data
 guide/plotting
+guide/plotting-backends
 guide/gallery
 guide/how-the-build-works
 examples

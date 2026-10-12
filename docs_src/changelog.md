@@ -65,6 +65,12 @@ Because the site is static, the page carries the timestamp and a small bundled s
 
 Fixed along the way: a chart backed by a partitioned (glob-path) dataframe had its data time stamped with the moment of the build.
 
+### Added — documentation for writing a plotting backend
+
+A new guide, *Writing a Plotting Backend*, documents the interface a third-party plotting backend implements: the `PlottingBackend` protocol and its `BaseBackend` starting point, what each `create_*` method is handed (`ChartConfig`, `OverlayConfig` and `DualAxisConfig`, field by field), the `chartbook_plotting` entry-point group, and a complete Vega-Lite backend in one dependency-free file that ChartBook's own tests run through a real entry point.
+
+It also corrects what the code and the old "Plugin System" paragraph implied. An entry point must name a backend **instance** — the previously documented `"mypackage.backend:MyBackend"` registers an unusable class. The pluggy hook specifications in `PlottingHookSpec` are declared but never called, so implementing them does nothing. And a registered backend is reachable through `get_backend()` but is not yet selectable from `plotting.line()` and friends, which always use the built-in `plotly` and `matplotlib` backends. No behaviour changed; three docstrings did.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level
