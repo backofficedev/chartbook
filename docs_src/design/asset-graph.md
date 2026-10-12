@@ -491,8 +491,8 @@ and it is why every orchestrator has a dbt integration dbt did not write.
 :class: tip
 
 A team should be able to adopt Dagster without editing a single `chartbook.toml`. The same test
-applies downward: moving parquet files to a warehouse should require editing only `path`, with
-`data.load()` unchanged.
+applies downward: moving parquet files to a warehouse should require replacing `path` with `source`
+and `table` in the manifest, with `data.load()` unchanged. See {doc}`data-access`.
 ```
 
 Dagster is the natural target, because its software-defined asset and a `[dataframes.x]` entry are
@@ -542,7 +542,7 @@ structure. And some things are **singular by design**.
 | Where cached bytes live | seam | Four operations: has, get, put, delete. Local now; shared or hosted later |
 | Export formats | seam → plugin | An exporter is a pure function from index to bytes |
 | Site renderers | seam | Publishing the index is what lets something else render it |
-| Storage backends for `path` | seam | Local, object store, warehouse table |
+| Storage backends behind `data.load()` | seam | Parquet now; DuckDB, warehouse tables later. See {doc}`data-access` |
 | Hash computation | **singular** | Two implementations hashing differently makes nothing comparable |
 | Name resolution | **singular** | Projects disagreeing about a name makes dependencies unportable |
 | The index schema | **singular** | It is the contract. A pluggable contract is no contract |

@@ -75,4 +75,5 @@ contributing
 design/toml-format-v2
 design/asset-graph
 design/index-schema
+design/data-access
 ```
