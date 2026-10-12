@@ -54,6 +54,25 @@ df = data.load(pipeline="fred_charts", dataframe="interest_rates")
 
 ```bash
 chartbook build
+chartbook build -f --watch    # rebuild as you edit; refresh the browser
+```
+
+### Check a project in CI
+
+```bash
+chartbook check               # fails on missing metadata, broken paths, expiring licenses
+```
+
+### Ask the manifest where a file belongs
+
+```bash
+chartbook path repo_public    # the path chartbook.toml declares for that dataframe
+```
+
+```python
+from chartbook import data
+
+df.to_parquet(data.path("repo_public"))
 ```
 
 ### Browse your catalog
