@@ -75,7 +75,7 @@ Fixed along the way: a chart backed by a partitioned (glob-path) dataframe had i
 
 A new guide, *Writing a Plotting Backend*, documents the interface a third-party plotting backend implements: the `PlottingBackend` protocol and its `BaseBackend` starting point, what each `create_*` method is handed (`ChartConfig`, `OverlayConfig` and `DualAxisConfig`, field by field), the `chartbook_plotting` entry-point group, and a complete Vega-Lite backend in one dependency-free file that ChartBook's own tests run through a real entry point.
 
-It also corrects what the code and the old "Plugin System" paragraph implied. An entry point must name a backend **instance** — the previously documented `"mypackage.backend:MyBackend"` registers an unusable class. The pluggy hook specifications in `PlottingHookSpec` are declared but never called, so implementing them does nothing. And a registered backend is reachable through `get_backend()` but is not yet selectable from `plotting.line()` and friends, which always use the built-in `plotly` and `matplotlib` backends. No behaviour changed; three docstrings did.
+Three things about the machinery itself were fixed or removed along the way. An entry point (or `register_backend()`) may now name a backend **class** as well as an instance; naming a class used to register something unusable. A third-party entry point that is not a backend is skipped with a warning instead of breaking the built-in ones. And two pieces of dead code are gone: the pluggy hook specifications in `PlottingHookSpec`, which nothing ever called, and `configure(default_backend=...)`, which nothing ever read. A registered backend is still reachable through `get_backend()` and not yet selectable from `plotting.line()` and friends, which always use the built-in `plotly` and `matplotlib` backends.
 
 ### Removed — **breaking: the `[all]`, `[data]`, `[plotting]` and `[sphinx]` extras**
 
@@ -83,7 +83,7 @@ The four install extras that became no-op aliases in 0.1.0 are gone, after the o
 
 ### Added — a note on stability
 
-{doc}`reference/stability` says plainly that ChartBook is experimental and anything can change between releases. It makes three small promises: breaking changes are listed in this changelog with what to do; a manifest in an old format is refused with instructions rather than misread; and breaking changes come in minor releases, not patch releases. A firmer policy will come with 1.0.
+{doc}`reference/stability` says plainly that ChartBook is experimental and anything can change between releases. Breaking changes are listed in this changelog with what to do about each. A real stability promise will come with 1.0.
 
 ### Added — incremental builds and a watch mode
 

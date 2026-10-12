@@ -9,7 +9,7 @@ This page is the whole interface. It is written so that you can build and ship a
 
 A backend you register is **discoverable and callable**: `get_backend("yours")` returns it, and you (or your users) call its `create_*` methods.
 
-It is **not yet selectable from the chart functions**. `chartbook.plotting.line()` and its siblings always build the interactive figure with the built-in `plotly` backend and the static PNG/PDF files with the built-in `matplotlib` backend; there is no `backend=` argument, and `configure(default_backend=...)` is stored but not read. So today a third-party backend adds a way to render the same chart description with another library — it does not replace what `.save()` writes. See [Using a backend](#using-a-backend).
+It is **not yet selectable from the chart functions**. `chartbook.plotting.line()` and its siblings always build the interactive figure with the built-in `plotly` backend and the static PNG/PDF files with the built-in `matplotlib` backend; there is no `backend=` argument. So today a third-party backend adds a way to render the same chart description with another library — it does not replace what `.save()` writes. See [Using a backend](#using-a-backend).
 ```
 
 ## The contract
@@ -65,9 +65,7 @@ Backends are found through the **`chartbook_plotting`** entry-point group. In yo
 vegalite = "chartbook_vegalite:backend"
 ```
 
-```{warning}
-The entry point must name a backend **instance** (`backend = VegaLiteBackend()` above), not the class. Whatever object the entry point resolves to is registered as-is; a class is registered uninstantiated, `get_backend()` hands it back, and every method call on it fails for want of `self`.
-```
+The entry point may name a backend instance, as here, or the class itself (`chartbook_vegalite:VegaLiteBackend`), which is instantiated with no arguments. An entry point that resolves to something that is not a backend is skipped with a warning, and the built-in backends keep working.
 
 Once the package is installed, nothing else is needed — the first call to `get_backend()` loads every installed entry point in the group:
 
@@ -85,7 +83,7 @@ To register a backend without packaging it — in a script, a notebook or a test
 ```python
 from chartbook.plotting.backends import register_backend
 
-register_backend(VegaLiteBackend())
+register_backend(VegaLiteBackend())     # or the class: register_backend(VegaLiteBackend)
 ```
 
 (using-a-backend)=
@@ -160,8 +158,6 @@ These are plain dataclasses. A field left at its default was not set by the call
 
 ## What is not part of the interface
 
-A few things in `chartbook.plotting.backends` look like extension points and are not. Knowing which saves time.
+One thing in the built-in backends looks like part of the interface and is not.
 
-- **`PlottingHookSpec` and the `hookimpl` marker.** The module declares [pluggy](https://pluggy.readthedocs.io/) hook specifications (`chartbook_create_line` and so on). Nothing calls those hooks, and neither built-in backend implements them; pluggy is used only as the registry and the entry-point loader. Decorating methods with `@hookimpl` has no effect. Implement the methods in [The contract](#the-contract) instead.
 - **`build_line`, `build_bar`, … on the `plotly` backend, and `build_figure` on the `matplotlib` backend.** These return a figure object without saving it. `ChartResult` uses them to give you `.figure`, `.mpl_figure` and `.mpl_axes`. They are internal to the two built-ins and no other backend is asked for them.
-- **`configure(default_backend=...)`.** Accepted and stored; not consulted.

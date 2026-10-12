@@ -121,7 +121,7 @@ class TestContract:
 
 class TestEntryPointRegistration:
     def test_installed_backend_is_discovered(self, installed_example):
-        assert "vegalite" in list_backends()
+        assert list_backends() == ["matplotlib", "plotly", "vegalite"]
         backend = get_backend("vegalite")
         assert type(backend).__name__ == "VegaLiteBackend"
         assert backend.name == "vegalite"
@@ -140,7 +140,69 @@ class TestEntryPointRegistration:
             get_backend("vegalite")
 
 
+class TestClassesAndBrokenPlugins:
+    def _install(self, tmp_path, monkeypatch, module_source, target):
+        site = tmp_path / "site-packages"
+        dist_info = site / "chartbook_other-0.1.dist-info"
+        dist_info.mkdir(parents=True)
+        (site / "chartbook_other.py").write_text(module_source)
+        (dist_info / "METADATA").write_text(
+            "Metadata-Version: 2.1\nName: chartbook-other\nVersion: 0.1\n"
+        )
+        (dist_info / "entry_points.txt").write_text(
+            f"[{ENTRY_POINT_GROUP}]\nother = chartbook_other:{target}\n"
+        )
+        monkeypatch.syspath_prepend(str(site))
+
+    def test_entry_point_may_name_the_class(self, tmp_path, monkeypatch, fresh_registry):
+        """The natural thing to write; it used to register an unusable class."""
+        source = EXAMPLE.read_text().replace('return "vegalite"', 'return "other"')
+        self._install(tmp_path, monkeypatch, source, "VegaLiteBackend")
+        try:
+            backend = get_backend("other")
+            assert not isinstance(backend, type)
+            assert backend.name == "other"
+            assert list_backends() == ["matplotlib", "other", "plotly"]
+        finally:
+            sys.modules.pop("chartbook_other", None)
+
+    def test_broken_plugin_is_ignored_with_a_warning(
+        self, tmp_path, monkeypatch, fresh_registry
+    ):
+        """A bad third-party package must not take plotly and matplotlib down."""
+        self._install(tmp_path, monkeypatch, "not_a_backend = object()\n", "not_a_backend")
+        try:
+            with pytest.warns(UserWarning, match="is not a plotting backend"):
+                assert list_backends() == ["matplotlib", "plotly"]
+            assert get_backend("plotly").name == "plotly"
+        finally:
+            sys.modules.pop("chartbook_other", None)
+
+
 class TestRegisterBackend:
+    def test_register_a_class(self, fresh_registry):
+        register_backend(_load_example().VegaLiteBackend)
+        backend = get_backend("vegalite")
+        assert not isinstance(backend, type)
+        assert backend.name == "vegalite"
+
+    def test_rejects_something_that_is_not_a_backend(self, fresh_registry):
+        with pytest.raises(TypeError, match="is not a plotting backend"):
+            register_backend(object())
+
+    def test_dead_hook_machinery_is_gone(self):
+        assert not hasattr(backends, "hookimpl")
+        assert not hasattr(backends, "PlottingHookSpec")
+        with pytest.raises(ImportError):
+            import chartbook.plotting.backends._hookspecs  # noqa: F401
+
+    def test_configure_no_longer_accepts_an_unused_backend_setting(self):
+        from chartbook.plotting import configure, get_config
+
+        with pytest.raises(TypeError):
+            configure(default_backend="plotly")
+        assert not hasattr(get_config(), "default_backend")
+
     def test_register_an_instance_directly(self, fresh_registry):
         register_backend(_load_example().VegaLiteBackend())
         assert get_backend("vegalite").name == "vegalite"
