@@ -90,7 +90,7 @@ class TestFreshnessFact:
 
 
 class TestGeneratedPages:
-    def test_dataframe_page_says_when_its_data_and_code_changed(self, pipeline_project, tmp_path):
+    def test_dataframe_page_says_when_its_data_changed(self, pipeline_project, tmp_path):
         data_moment = datetime(2024, 3, 5, 12, 0, 0)
         _set_mtime(
             pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet",
@@ -102,13 +102,12 @@ class TestGeneratedPages:
         ).read_text()
 
         facts = _facts(page)
-        assert list(facts) == ["Data updated", "Code updated"]
+        # Only facts about this dataframe. When the pipeline's code changed is
+        # said once, on the pipeline's own page.
+        assert list(facts) == ["Data updated"]
         assert facts["Data updated"].replace(tzinfo=None) == data_moment
-        code_moment = datetime.strptime(
-            load_manifest(pipeline_project)["source_last_modified_date"],
-            "%Y-%m-%d %H:%M:%S",
-        )
-        assert facts["Code updated"].replace(tzinfo=None) == code_moment
+        assert "Code updated" not in page
+        assert "Date of Last Code Update" not in page
 
     def test_freshness_sits_directly_under_the_title(self, pipeline_project, tmp_path):
         pipeline_id = _generate(pipeline_project, tmp_path / "_docs")
@@ -120,7 +119,9 @@ class TestGeneratedPages:
         assert lines[1] == "```{raw} html"
         assert 'class="cb-freshness"' in lines[2]
 
-    def test_chart_page_says_when_chart_data_and_code_changed(self, pipeline_project, tmp_path):
+    def test_chart_page_says_when_the_chart_and_its_data_changed(
+        self, pipeline_project, tmp_path
+    ):
         chart_moment = datetime(2024, 4, 1, 8, 30, 0)
         data_moment = datetime(2024, 3, 5, 12, 0, 0)
         _set_mtime(pipeline_project / "_output" / "charts" / "chart_0_0.html", chart_moment)
@@ -132,11 +133,31 @@ class TestGeneratedPages:
         page = (tmp_path / "_docs" / "cb" / "charts" / f"{pipeline_id}.chart_0_0.md").read_text()
 
         facts = _facts(page)
-        assert list(facts) == ["Chart updated", "Data updated", "Code updated"]
+        assert list(facts) == ["Chart updated", "Data updated"]
         assert facts["Chart updated"].replace(tzinfo=None) == chart_moment
         assert facts["Data updated"].replace(tzinfo=None) == data_moment
+        assert "Code updated" not in page
+        assert "Date of Last Code Update" not in page
         # Shown before the chart itself, not in the tables at the bottom
         assert page.index('class="cb-freshness"') < page.index("## Chart")
+        # In chart listings, a chart is dated by when it was itself written
+        assert page.startswith('---\ndate: "2024-04-01 08:30:00"')
+
+    def test_asset_pages_do_not_change_when_only_the_code_does(
+        self, pipeline_project, tmp_path
+    ):
+        """What keeps one edit from re-rendering every page of a pipeline."""
+        first, second = tmp_path / "first", tmp_path / "second"
+        pipeline_id = _generate(pipeline_project, first)
+        source_file = pipeline_project / "src" / "dummy.py"
+        source_file.write_text("# edited\n")
+        os.utime(source_file, (source_file.stat().st_atime, source_file.stat().st_mtime + 3600))
+        _generate(pipeline_project, second)
+        for relative in (
+            Path("cb") / "dataframes" / pipeline_id / "dataframe_0.md",
+            Path("cb") / "charts" / f"{pipeline_id}.chart_0_0.md",
+        ):
+            assert (first / relative).read_text() == (second / relative).read_text()
 
     def test_absolute_time_is_available_on_hover(self, pipeline_project, tmp_path):
         _set_mtime(
@@ -210,6 +231,17 @@ class TestBuiltSite:
             assert '<p class="cb-freshness">' in html
             assert TIME_TAG.search(html), page
             assert "_static/chartbook-freshness.js" in html
+            assert "Code updated" not in html
+
+        # The pipeline's own page is where the code's date is given
+        if theme == "pipeline":
+            front_page = (output_dir / "index.html").read_text()
+            assert 'Code updated <time class="cb-relative-time"' in front_page
+            assert "Date of Last Code Update" in front_page
+        else:
+            assert "Date of Last Code Update" in (
+                output_dir / "cb" / "pipelines.html"
+            ).read_text()
 
     def test_script_is_identical_in_both_themes(self):
         scripts = [

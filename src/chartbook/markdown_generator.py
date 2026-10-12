@@ -337,6 +337,7 @@ def generate_all_pipeline_docs(
             manifest=manifest,
             dot_or_dotdot=".",
             docs_src_dir=docs_src_dir.relative_to(base_dir),  # Pass relative path
+            show_code_updated=True,
         )
         # Copy to build directory
         file_path = docs_build_dir / "cb" / "pipelines.md"
@@ -470,6 +471,14 @@ def generate_all_pipeline_docs(
             notes_list=notes_list,
             site_pages_list=site_pages_list,
             index_toc_content=index_toc_content,
+            show_code_updated=True,
+            freshness=[
+                fact
+                for fact in [
+                    freshness_fact("Code updated", _code_last_modified(pipeline_manifest))
+                ]
+                if fact
+            ],
         )
         file_path = docs_build_dir / "index.md"
         with open(file_path, mode="w", encoding="utf-8") as file:
@@ -678,10 +687,11 @@ def generate_dataframe_docs(
         parquet_path, size_threshold_mb=size_threshold
     )
 
-    # How fresh the page's data is, shown under the title
+    # How fresh the page's data is, shown under the title. Only facts about
+    # this dataframe: when the pipeline's code changed is said once, on the
+    # pipeline's own page, so that a code edit does not alter every page.
     freshness = [
         freshness_fact("Data updated", data_last_modified(parquet_path)),
-        freshness_fact("Code updated", _code_last_modified(pipeline_manifest)),
     ]
 
     # Render the template with the new variables
@@ -871,12 +881,18 @@ def generate_chart_docs(
     # Get and format paths to charts
     path_to_html_chart_unix = pipeline_base_dir / Path(chart_manifest["path"])
 
-    # How fresh the chart, its data and its code are, shown under the title
+    # How fresh the chart and its data are, shown under the title. Like a
+    # dataframe page, this says nothing about the pipeline's code.
+    chart_updated = data_last_modified(path_to_html_chart_unix)
     freshness = [
-        freshness_fact("Chart updated", data_last_modified(path_to_html_chart_unix)),
+        freshness_fact("Chart updated", chart_updated),
         freshness_fact("Data updated", data_last_modified(parquet_path)),
-        freshness_fact("Code updated", _code_last_modified(pipeline_manifest)),
     ]
+    # The chart's date in listings is when the chart itself was last written
+    if chart_updated is not None:
+        chart_date = chart_updated.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        chart_date = pipeline_manifest["source_last_modified_date"]
 
     link_to_dataframe_docs = (
         Path(dataframe_path_prefix) / _fs_slug(pipeline_id) / f"{dataframe_id}.md"
@@ -895,6 +911,7 @@ def generate_chart_docs(
         path_to_html_chart_unix=path_to_html_chart_unix,
         pipeline_page_link=pipeline_page_link,
         freshness=[fact for fact in freshness if fact],
+        chart_date=chart_date,
         dot_or_dotdot="..",
         enable_data_download=enable_data_download,
     )

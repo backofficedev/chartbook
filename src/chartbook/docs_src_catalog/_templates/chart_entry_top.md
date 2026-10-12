@@ -1,5 +1,5 @@
 ---
-date: "{{pipeline_manifest.source_last_modified_date | yaml_escape}}"
+date: "{{chart_date | default(pipeline_manifest.source_last_modified_date) | yaml_escape}}"
 tags: "{{dataframe_manifest.sources | join(', ') | yaml_escape}}"
 category: "{{tags | join(', ') | yaml_escape}}"
 ---

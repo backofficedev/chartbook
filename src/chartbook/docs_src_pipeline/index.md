@@ -1,5 +1,7 @@
 # {{pipeline_manifest.project.name}}
 
+{% include "freshness.md" %}
+
 Last updated: {sub-ref}`today`
 
 {% if index_toc_content %}
