@@ -204,6 +204,51 @@ def get_git_remote_url(base_dir: Path | str) -> Optional[str]:
     return url
 
 
+def remote_to_web_url(remote: Optional[str]) -> str:
+    """Turn a git remote into the web address of the repository it names.
+
+    A remote is written for git, not for a browser, and may carry things
+    that must not be published. This reduces it to ``https://host/path``:
+
+    - ``git@github.com:acme/rates.git`` → ``https://github.com/acme/rates``
+    - ``ssh://git@gitlab.internal:2222/acme/rates.git`` → ``https://gitlab.internal/acme/rates``
+    - ``https://user:token@github.com/acme/rates.git`` → ``https://github.com/acme/rates``
+
+    Credentials embedded in the remote are always dropped. A remote that is
+    a path on disk has no web address and gives an empty string.
+
+    :param remote: The remote URL, as ``git config remote.origin.url`` prints it.
+    :returns: A web URL, or ``""`` if the remote does not name a host.
+    """
+    if not remote:
+        return ""
+    remote = remote.strip()
+
+    scp_like = re.match(r"^(?:[^@/\s]+@)?([^:/\s]+):(?!/)(.+)$", remote)
+    url_like = re.match(
+        r"^(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://(?:[^@/]*@)?"
+        r"(?P<host>[^/:]+)(?P<port>:\d+)?/(?P<path>.+)$",
+        remote,
+    )
+    if url_like and url_like["scheme"].lower() != "file":
+        scheme = url_like["scheme"].lower()
+        host, path = url_like["host"], url_like["path"]
+        if scheme in ("http", "https"):
+            # A web port is part of the address; an ssh or git port is not
+            host += url_like["port"] or ""
+        else:
+            scheme = "https"
+    elif scp_like and not url_like and "://" not in remote:
+        scheme, host, path = "https", scp_like.group(1), scp_like.group(2)
+    else:
+        return ""
+
+    path = path.strip("/")
+    if path.endswith(".git"):
+        path = path[: -len(".git")]
+    return f"{scheme}://{host}/{path}" if path else ""
+
+
 def clear_git_remote_cache() -> None:
     """Clear the cached git remote lookups (mainly for tests)."""
     _git_remote_cache.clear()

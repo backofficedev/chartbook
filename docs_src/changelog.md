@@ -93,6 +93,14 @@ A plain `chartbook build` is unchanged: a clean build that leaves nothing behind
 
 Fixed along the way, because it defeated Sphinx's cache: the generated `conf.py` now sets `fontawesome_included` explicitly. The themes switched it on mid-build, which Sphinx read as a changed configuration and answered by re-reading every page on every run.
 
+### Changed — `repo_url` and "code updated" come from git
+
+Two things that should never have needed filling in by hand now come from the repository.
+
+`[project] repo_url` defaults to the repo's `origin` remote, turned into a web address: `git@github.com:acme/rates.git` becomes `https://github.com/acme/rates`. Credentials embedded in a remote (`https://user:token@…`) are always dropped, and a remote that is a path on disk gives no URL. An explicit `repo_url` still wins. One consequence: a project with a remote no longer fails `chartbook check` for a missing `repo_url`.
+
+The "Code updated" time on pages (and "Date of Last Code Update", and a chart's `date`) is the time of the last commit that touched `src/`, `docs_src/` or `chartbook.toml`, when those are committed and unmodified. It was the newest file modification time, which on a fresh clone is the moment of the checkout — so every site built in CI claimed its code had changed just now. With uncommitted changes, or outside a git repository, the modification time is still used. Only a docs build asks git; loading a manifest (`data.load()`, `chartbook ls`) does not.
+
 ### Fixed
 
 - `chartbook build --no-strict` on a single pipeline with a missing file crashed with `UnboundLocalError`. It now reports the missing files and exits cleanly; skipping only makes sense in a catalog, which has other pipelines left to build.
