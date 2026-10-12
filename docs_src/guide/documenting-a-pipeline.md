@@ -110,9 +110,57 @@ path = "./docs_src/methodology.md"
 
 And any markdown placed in `docs_src/site/` merges into the site automatically (that's the default `site_dir`; auto-generated pages live in a separate `cb/` directory, so nothing collides). Write-ups and site pages are MyST markdown — regular markdown plus admonitions, math, and cross-references; see the [MyST syntax guide](https://myst-parser.readthedocs.io/en/latest/syntax/typography.html).
 
+## Asking the manifest for a path
+
+Once `chartbook.toml` says where a dataframe or chart lives, your code does not have to say it again. `data.path()` returns the `path` declared for any asset of the current pipeline:
+
+```python
+# dodo.py — declaring what each task reads and writes
+from chartbook import data
+
+def task_merge():
+    return {
+        "file_dep": [data.path("treasury_rates")],
+        "targets": [data.path("merged_rates")],
+        "actions": ["python src/merge.py"],
+    }
+
+# src/merge.py — doing the work
+df.to_parquet(data.path("merged_rates"))
+```
+
+The name is the asset's key in `[dataframes]`, `[charts]`, `[notebooks]` or `[notes]`. The enclosing `chartbook.toml` is found by walking up from the calling file (then from the working directory), so the call works from a script, a `dodo.py` or a notebook alike. The path comes back absolute, and nothing checks that the file exists — which is what lets it name a target that has not been built yet.
+
+Asking for a name the manifest does not declare fails on the spot, with the table to add:
+
+```text
+'merged_rates' is not declared in /work/repo/chartbook.toml.
+
+To register it, add a table to that file, for example:
+
+    [dataframes.merged_rates]
+    path = "./_data/merged_rates.parquet"
+```
+
+`chartbook path` gives the same answer on the command line, which is how Make, R, Stata or a shell script reach it:
+
+```makefile
+TREASURY := $(shell chartbook path treasury_rates)
+MERGED   := $(shell chartbook path merged_rates)
+
+$(MERGED): $(TREASURY)
+	Rscript src/merge.R
+```
+
+```{note}
+This is a convenience, never a requirement. A pipeline that writes straight to `_data/merged_rates.parquet` — from Python, R, Stata or a shell script — works exactly as before. The manifest is the contract; `data.path()` only saves you from stating it twice.
+```
+
+Only names declared in the current pipeline resolve today. References to another pipeline's assets (`other_pipeline:asset`) are reserved syntax; to locate one through a catalog, use `data.get_data_path()` ({doc}`catalogs-and-data`).
+
 ## Finding project paths from code
 
-Pipeline scripts often need paths that work from any working directory, including notebooks. `chartbook.env` helps:
+Pipeline scripts often need paths that work from any working directory, including notebooks. For files the manifest does not declare, `chartbook.env` helps:
 
 ```python
 import chartbook

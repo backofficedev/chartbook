@@ -24,10 +24,10 @@
 # yield and shorter maturities (1-year, 2-year, and 3-year).
 
 # %%
+from chartbook import data
 from chartbook.env import get_project_root
 
 BASE_DIR = get_project_root()
-OUTPUT_DIR = BASE_DIR / "_output"
 DATA_DIR = BASE_DIR / "_data"
 
 import load_fed_yield_curve
@@ -87,7 +87,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(OUTPUT_DIR / "term_premium_10y_1y.html", include_plotlyjs="cdn")
+fig.write_html(data.path("term_premium_10y_1y"), include_plotlyjs="cdn")
 
 # %% [markdown]
 # ## Chart 2: 10-Year minus 2-Year Spread
@@ -116,7 +116,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(OUTPUT_DIR / "term_premium_10y_2y.html", include_plotlyjs="cdn")
+fig.write_html(data.path("term_premium_10y_2y"), include_plotlyjs="cdn")
 
 # %% [markdown]
 # ## Chart 3: 10-Year minus 3-Year Spread
@@ -145,7 +145,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(OUTPUT_DIR / "term_premium_10y_3y.html", include_plotlyjs="cdn")
+fig.write_html(data.path("term_premium_10y_3y"), include_plotlyjs="cdn")
 
 # %% [markdown]
 # ## Save Data
@@ -157,10 +157,10 @@ df_premium_formatted.columns = df_premium_formatted.columns.str.replace("_", " "
 df_premium_formatted.index.name = "date"
 
 # Save to parquet and excel
-filepath = DATA_DIR / "term_premium.parquet"
+filepath = data.path("term_premium")
 df_premium_formatted.to_parquet(filepath)
 
 filepath = DATA_DIR / "term_premium.xlsx"
 df_premium_formatted.to_excel(filepath)
 
-print(f"Data saved to {DATA_DIR / 'term_premium.parquet'}")
+print(f"Data saved to {data.path('term_premium')}")

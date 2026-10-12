@@ -28,6 +28,7 @@ chartbook build             # Generate HTML documentation website
 chartbook build -f          # Force overwrite existing docs
 chartbook browse            # Open project docs in default browser
 chartbook check             # CI gate: missing metadata, broken paths, expiring licenses
+chartbook path <name>       # Print the path chartbook.toml declares for an asset
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook config            # Configure default catalog path (interactive)
@@ -115,8 +116,13 @@ df = data.load(pipeline="crsp_treasury", dataframe="my_data", format="pandas")
 # Load with explicit catalog path
 lf = data.load(pipeline="crsp_treasury", dataframe="my_data", catalog_path="/path/to/catalog")
 
-# Get data file path
+# Get data file path (through the catalog)
 path = data.get_data_path(pipeline="crsp_treasury", dataframe="my_data")
+
+# Inside a pipeline: the path its own chartbook.toml declares for an asset
+# (dataframe, chart, notebook or note). No catalog needed; the file need not
+# exist yet, so use it for dodo.py targets and for writing outputs.
+df.to_parquet(data.path("my_data"))
 
 # Get documentation content as a string
 docs = data.get_docs(pipeline="crsp_treasury", dataframe="my_data")
