@@ -293,6 +293,98 @@ def resolve_project_dir(project_dir: Path | None):
 
 
 @main.command()
+@click.option("--project-dir", type=click.Path(), help="Path to project directory")
+@click.option(
+    "--within",
+    "within_days",
+    type=click.IntRange(min=0),
+    default=30,
+    show_default=True,
+    metavar="DAYS",
+    help="Fail on licenses that expire within this many days",
+)
+@click.option(
+    "--policy",
+    "policy_path",
+    type=click.Path(),
+    default=None,
+    help="Check required fields against the [policy] of this catalog "
+    "chartbook.toml (or its directory) instead of the project's own",
+)
+def check(project_dir, within_days, policy_path):
+    """Check a project's metadata and paths; exit nonzero on any problem.
+
+    Meant for CI. Works on a pipeline or a catalog and reports three things,
+    each naming the chartbook.toml and field to edit:
+
+    \b
+    - fields the policy requires that are missing or empty
+    - declared paths that point at files that do not exist
+    - dataframe licenses that are expired, or expire within --within days
+
+    Required fields come from a catalog's [policy.required], or from the
+    default recommended lists for a standalone pipeline. Pass --policy to
+    check a pipeline against the catalog it is published to.
+
+    Only metadata and paths are checked; no data file is opened.
+
+    Examples:
+        chartbook check
+        chartbook check --within 90
+        chartbook check --policy ../catalog
+    """
+    import warnings
+
+    from chartbook.check import display_path, load_policy, run_checks
+    from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_manifest
+
+    project_dir = resolve_project_dir(project_dir)
+    manifest_path = project_dir / "chartbook.toml"
+    try:
+        # Manifest warnings (e.g. unknown [project] keys) belong in the
+        # report, not in Python's warning format
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            manifest = load_manifest(base_dir=project_dir)
+        if policy_path is not None:
+            manifest["policy"] = load_policy(policy_path)
+            policy_label = f"the policy in {policy_path}"
+        elif manifest["project"]["type"] == "catalog":
+            policy_label = "the catalog policy"
+        else:
+            policy_label = "the default policy"
+    except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+
+    for warning in caught:
+        click.echo(f"warning: {warning.message}", err=True)
+
+    problems = run_checks(
+        manifest, project_dir, within_days=within_days, policy_label=policy_label
+    )
+    for problem in problems:
+        click.echo(problem.format(relative_to=Path.cwd()))
+
+    if problems:
+        files = len({p.file for p in problems})
+        click.echo(
+            f"\n{len(problems)} problem(s) found in {files} manifest(s).", err=True
+        )
+        raise SystemExit(1)
+
+    pipelines = [
+        get_pipeline_manifest(manifest, pid) for pid in get_pipeline_ids(manifest)
+    ]
+    counts = ", ".join(
+        f"{sum(len(p.get(section, {})) for p in pipelines)} {section}"
+        for section in ("dataframes", "charts", "notebooks")
+    )
+    shown = display_path(manifest_path, relative_to=Path.cwd())
+    click.echo(f"{shown}: OK ({len(pipelines)} pipeline(s), {counts})")
+
+
+@main.command()
 @click.option(
     "--no-samples",
     is_flag=True,

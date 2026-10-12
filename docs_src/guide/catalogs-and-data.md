@@ -74,7 +74,19 @@ dataframes = ["date_col", "pull_method"]
 charts     = ["units", "frequency"]
 ```
 
-With no `[policy]` section, a built-in recommended-field list drives the diagnostics page, warn-only. Policy is enforced only when the catalog builds; a pipeline built standalone is always permissive.
+With no `[policy]` section, a built-in recommended-field list drives the diagnostics page, warn-only. A build enforces policy only for a catalog; a pipeline built standalone is always permissive.
+
+### Enforcing it in CI
+
+`chartbook check` is the gate. It exits nonzero when a required field is missing, a declared path points at nothing, or a dataframe's `license_expiration` has passed or is within 30 days — naming the manifest and field each time.
+
+```console
+chartbook check                        # in a catalog: every member, against its [policy]
+chartbook check --policy ../catalog    # in a pipeline: against that catalog's [policy]
+chartbook check --within 90            # widen the license window
+```
+
+A pipeline with no `--policy` is checked against the built-in recommended list. Details: {doc}`../reference/cli`.
 
 ## Loading data
 
