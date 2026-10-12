@@ -294,5 +294,4 @@ Each is explained where it lives.
 - Whether the site should render from the index, and when. (Step 6)
 - `plotting.line()` and its siblings can only use the two built-in backends, although third
   parties can register others. ({doc}`../guide/plotting-backends`)
-- `--temp-docs-src-dir` cannot really be changed, because a template hardcodes `_docs_src/`.
 - The project template's CI should run `chartbook check --skip-outputs`, once 0.2.0 is on PyPI.

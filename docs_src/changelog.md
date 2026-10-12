@@ -126,6 +126,7 @@ The "Code updated" time on a pipeline's front page (and "Date of Last Code Updat
 - A pipeline site's front page listed two appendix documents that do not exist in a generated site, producing two Sphinx warnings on every build and forcing that page to be re-read on every run. The entries are gone.
 - `chartbook create-data-glimpses` crashed on a numeric column with no non-null values.
 - A pipeline loaded from the relative path `.` derived the name `pipeline` instead of its directory's name, because `Path(".")` has no name. The directory is now resolved first.
+- `chartbook build --project-dir PATH` failed with `TemplateNotFound` unless it was run from inside the project, and `--temp-docs-src-dir` failed with any name other than the default. The pipeline's front page included a template by a path that spelled out `_docs_src/`, which only resolved when a directory of that name sat inside the project. It now asks for the template by name, as the guide already told people writing their own templates to do.
 
 ### Removed
 
