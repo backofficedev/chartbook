@@ -25,7 +25,7 @@ from colorama import Fore, Style, init
 # to easily see the task lines printed by PyDoit. I want them to stand out
 # from among all the other lines printed to the console.
 from doit.reporter import ConsoleReporter
-from chartbook import data
+from chartbook import assets, data
 from chartbook.env import get, get_os_type, get_project_root
 
 try:
@@ -147,8 +147,9 @@ def task_pull():
             "ipython ./src/pull_fred.py",
         ],
         # data.path() asks chartbook.toml where [dataframes.fred] lives; it is
-        # the Python form of `chartbook path fred`. The scripts in src/ still
-        # hardcode the same location, which works just as well.
+        # the Python form of `chartbook path fred`. Charts are asked for with
+        # assets.path("chart/..."), below. The scripts in src/ still hardcode
+        # the same locations, which works just as well.
         "targets": [data.path("fred")],
         "file_dep": ["./src/pull_fred.py"],
         "clean": [],
@@ -175,12 +176,12 @@ notebook_tasks = {
     "01_example_notebook_interactive_ipynb": {
         "path": "./src/01_example_notebook_interactive_ipynb.py",
         "file_dep": ["./src/pull_fred.py"],
-        "targets": [data.path("gdp_chart")],
+        "targets": [assets.path("chart/gdp_chart")],
     },
     "02_example_with_dependencies_ipynb": {
         "path": "./src/02_example_with_dependencies_ipynb.py",
         "file_dep": ["./src/pull_fred.py"],
-        "targets": [data.path("unemployment_chart")],
+        "targets": [assets.path("chart/unemployment_chart")],
     },
 }
 
@@ -224,10 +225,10 @@ def task_plot_charts():
             "ipython ./src/plotting_charts.py",
         ],
         "targets": [
-            data.path("cpi_inflation_chart"),
-            data.path("fedfunds_chart"),
-            data.path("gdp_unemployment_dual_chart"),
-            data.path("inflation_gdp_scatter"),
+            assets.path("chart/cpi_inflation_chart"),
+            assets.path("chart/fedfunds_chart"),
+            assets.path("chart/gdp_unemployment_dual_chart"),
+            assets.path("chart/inflation_gdp_scatter"),
         ],
         "file_dep": [
             "./src/plotting_charts.py",

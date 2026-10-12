@@ -24,7 +24,7 @@
 # yield and shorter maturities (1-year, 2-year, and 3-year).
 
 # %%
-from chartbook import data
+from chartbook import assets, data
 from chartbook.env import get_project_root
 
 BASE_DIR = get_project_root()
@@ -87,7 +87,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(data.path("term_premium_10y_1y"), include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/term_premium_10y_1y"), include_plotlyjs="cdn")
 
 # %% [markdown]
 # ## Chart 2: 10-Year minus 2-Year Spread
@@ -116,7 +116,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(data.path("term_premium_10y_2y"), include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/term_premium_10y_2y"), include_plotlyjs="cdn")
 
 # %% [markdown]
 # ## Chart 3: 10-Year minus 3-Year Spread
@@ -145,7 +145,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(data.path("term_premium_10y_3y"), include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/term_premium_10y_3y"), include_plotlyjs="cdn")
 
 # %% [markdown]
 # ## Save Data

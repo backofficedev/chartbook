@@ -1,6 +1,10 @@
-"""Data access for chartbook: where assets live, and loading them.
+"""Data access for chartbook: where dataframes live, and loading them.
 
-Ask the manifest where an asset of the current pipeline belongs, instead
+This is the front door for **dataframes**. Every function here takes a
+dataframe and nothing else; :mod:`chartbook.assets` is the general module,
+for charts, notebooks and notes as well.
+
+Ask the manifest where a dataframe of the current pipeline belongs, instead
 of repeating its path in code::
 
     from chartbook import data
@@ -33,35 +37,32 @@ Load dataframes from registered pipelines in a catalog::
     docs_path = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public")
 """
 
-import os
 import sys
 from pathlib import Path
 from typing import Optional, Union
 
+from chartbook import assets as _assets
 from chartbook.identity import resolve_pipeline_ref
-from chartbook.resolve import FileLocation, Location, find_manifest_dir, resolve
+from chartbook.refs import AssetRef, KindMismatchError
+from chartbook.resolve import (
+    FileLocation,
+    caller_start_dirs,
+    find_manifest_dir,
+    require_file,
+    resolve,
+)
 from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 from chartbook.utils import is_glob_pattern
 
 
-def _file_path(location: Location, what: str) -> Path:
-    """Return a file location's path; no other kind of location has one."""
-    if isinstance(location, FileLocation):
-        return location.path
-    raise TypeError(
-        f"{what} is {location.kind}-backed, so it has no file path. "
-        f"Use data.load() to read it."
-    )
-
-
 def path(
-    ref: str,
+    ref: Union[str, AssetRef],
     project_dir: Optional[Union[str, Path]] = None,
 ) -> Path:
-    """Get the path the manifest declares for an asset of the current pipeline.
+    """Get the path the manifest declares for a dataframe of the current pipeline.
 
     The enclosing ``chartbook.toml`` is the single source of truth for where
-    an asset lives, so code can ask for the path rather than repeat it:
+    a dataframe lives, so code can ask for the path rather than repeat it:
 
     >>> from chartbook import data
     >>> df.to_parquet(data.path("merged_rates"))  # doctest: +SKIP
@@ -71,54 +72,47 @@ def path(
     is whatever ``path`` the entry declares, made absolute; nothing checks
     that the file exists, so a target can be named before it is built.
 
-    Any declared asset resolves: a dataframe, a chart, a notebook or a note.
-    Asking for a name the manifest does not declare raises immediately,
-    naming the table to add, rather than surfacing later as a missing file.
+    This is :func:`chartbook.assets.path` with ``kind="dataframe"``: it
+    answers for dataframes and nothing else, so a typo cannot hand back a
+    chart's HTML where a parquet file was meant. For a chart, a notebook or
+    a note, use :func:`chartbook.assets.path`. Asking for a name that
+    ``[dataframes]`` does not declare raises immediately, naming the table
+    to add, rather than surfacing later as a missing file.
 
     This is a convenience, never a requirement. A script that hardcodes the
     same path, in any language, works just as well; ``chartbook path`` on the
     command line gives the same answer to a shell, Make, R or Stata.
 
     Only local references resolve today. The rest of the reference grammar —
-    ``other_pipeline:asset``, ``asset#series``, ``@rev`` — is reserved and
+    ``other_pipeline:asset``, ``asset#part``, ``@rev`` — is reserved and
     raises "not yet supported".
 
-    :param ref: The asset's name: its key in ``[dataframes]``, ``[charts]``,
-        ``[notebooks]`` or ``[notes]``.
+    :param ref: The dataframe's name: its key in ``[dataframes]``.
     :type ref: str
     :param project_dir: Where to look for the pipeline. The enclosing
         ``chartbook.toml`` is found by walking up from here. By default the
         search starts at the calling file's directory, then falls back to the
         current working directory.
     :type project_dir: Optional[Union[str, Path]]
-    :returns: The absolute path declared for the asset (it may contain glob
-        characters for partitioned data).
+    :returns: The absolute path declared for the dataframe (it may contain
+        glob characters for partitioned data).
     :rtype: Path
-    :raises AssetNotDeclaredError: If the manifest declares no such asset.
+    :raises AssetNotDeclaredError: If the manifest declares no such dataframe.
     :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
         starting directory.
-    :raises ValueError: If the reference uses reserved syntax, the name is
-        declared in more than one table, or the entry has no ``path``.
+    :raises ValueError: If the reference names another kind of asset, uses
+        reserved syntax, or the entry has no ``path``.
     """
-    start_dirs = _start_dirs(project_dir, sys._getframe(1))
-    return _file_path(resolve(ref, start_dirs=start_dirs), f"Asset {ref!r}")
-
-
-def _start_dirs(project_dir, caller_frame) -> list:
-    """Where to start looking for the pipeline a call belongs to.
-
-    "Walking up from the caller": the calling file first, so a script run
-    from another directory still finds its own pipeline, then the working
-    directory for callers with no file (a notebook, a REPL, ``python -c``).
-    An explicit *project_dir* replaces both.
-    """
-    if project_dir is not None:
-        return [project_dir]
-    start_dirs = [Path.cwd()]
-    caller_file = caller_frame.f_globals.get("__file__")
-    if caller_file:
-        start_dirs.insert(0, os.path.dirname(os.path.abspath(caller_file)))
-    return start_dirs
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    try:
+        return _assets._path(ref, "dataframe", start_dirs)
+    except KindMismatchError as e:
+        raise KindMismatchError(
+            str(ref), e.found, e.expected, hint=(
+                f"data.path() answers for dataframes only; use "
+                f"chartbook.assets.path({str(ref)!r}) for a {e.found}."
+            )
+        ) from None
 
 
 #: Where :func:`scratch` puts throwaway files, relative to the pipeline root.
@@ -150,7 +144,7 @@ def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
     :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
         starting directory.
     """
-    start_dirs = _start_dirs(project_dir, sys._getframe(1))
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     directory = find_manifest_dir(*start_dirs) / SCRATCH_DIR
     directory.mkdir(parents=True, exist_ok=True)
     gitignore = directory / ".gitignore"
@@ -232,7 +226,7 @@ def get_data_path(
     :raises KeyError: If the pipeline or dataframe is not found.
     """
     location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path)
-    return _file_path(location, f"Dataframe {dataframe!r}")
+    return require_file(location, f"Dataframe {dataframe!r}")
 
 
 def get_docs_path(

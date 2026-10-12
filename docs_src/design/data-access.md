@@ -5,9 +5,14 @@ A design document, not a user guide. It records how `data.load()` grows from "a 
 resolves to a parquet file" into "a name that resolves to a location, which may be a database
 table", and why ChartBook stays a thin layer over the database rather than becoming one.
 
-Status: design agreed, implementation after the {doc}`index <index-schema>`. One P0 item
-(a shared resolver behind `path()` and `load()`) prepares the seam; see "Phasing".
+Status: design agreed, implementation after the {doc}`index <index-schema>` (step 5 in
+{doc}`overview`; GitHub issue 9). The seam it plugs into is built: one resolver behind `path()`
+and `load()` that returns a typed location (`chartbook.resolve`); see "Phasing".
 Companion to the {doc}`asset graph <asset-graph>`, whose rules and "not doing" list apply here.
+
+Revised 2026-10-12: `chartbook.data` is now the front door for **dataframes only**. Everything
+in this document is about dataframes, so nothing here changed in substance; the wording about
+references and about the index was brought up to date.
 ```
 
 ## The problem
@@ -106,9 +111,16 @@ cb.connect("warehouse")                          # -> the raw duckdb / snowflake
 - **`ref`** exists so a user can paste the identifier into SQL they run with their own tooling.
 - **`connect`** hands back the client object. Anything ChartBook does not expose is reachable here.
 
-Reference grammar is the asset graph's: `treasury_rates` is local, `fed_yield_curve:treasury_rates`
-is another pipeline, `ftsfr/fed_yield_curve:treasury_rates` is fully scoped. Cross-pipeline
-references need the P1 resolution chain; the first implementation is local-only.
+The reference grammar is the one in {doc}`references`: `treasury_rates` is local,
+`fed_yield_curve:treasury_rates` is another pipeline, `ftsfr/fed_yield_curve:treasury_rates` is
+fully scoped. Every function in `chartbook.data` takes dataframes only, so a reference that names
+another kind (`chart/gdp`, `model/x`) is refused, and a `{ref}` inside `sql()` must be a
+dataframe. Cross-pipeline references need the resolution chain (step 3 in {doc}`overview`); the
+first implementation of this design is local-only.
+
+Two words to keep apart: the *kind of an asset* (`dataframe`, `chart`, …) is part of its
+address. The *kind of a location* (`file`, `table`, `query`) is where a dataframe's content is,
+and is what this document adds to.
 
 ## Backends
 
@@ -140,12 +152,13 @@ The plotting backends stay pluggy because many renderers legitimately answer the
 
 ## Index consequences
 
-The {doc}`Dataframe record <index-schema>` is file-shaped: `path`, `resolved_path`,
-`content_hash`, `size_bytes`. A table-backed dataframe needs:
+The {doc}`Dataframe record <index-schema>` carries a typed `location` object, which for a file
+is `{ "kind": "file", "path", "resolved_path" }`. (The index schema was revised on 2026-10-12 to
+have this from its first version, so that this design is an addition and not a migration.) A
+table-backed dataframe needs:
 
-- a typed `location` sub-object, `{ "kind": "file", "path", "resolved_path" }` or
-  `{ "kind": "table", "source", "backend", "identifier" }` or `{ "kind": "query", "source",
-  "backend", "sql" }`;
+- two more kinds of `location`: `{ "kind": "table", "source", "backend", "identifier" }` and
+  `{ "kind": "query", "source", "backend", "sql" }`;
 - `columns` populated from `describe()` rather than from reading parquet;
 - an honest hash. A warehouse table cannot be content-hashed cheaply. Record
   `content_hash: null`, hash the *definition* (identifier or query text plus the described schema),
@@ -153,8 +166,8 @@ The {doc}`Dataframe record <index-schema>` is file-shaped: `path`, `resolved_pat
   Build record lists the source as impure, exactly as it does for a FRED fetch. Hash what you can,
   record what you cannot.
 
-Settle the exact field names when the index is implemented. The requirement that a dataframe's
-location be a typed object, not a bare path, is settled now.
+Settle the exact field names of the `table` and `query` kinds when this is implemented. That a
+dataframe's location is a typed object, not a bare path, is settled, and the index schema shows it.
 
 ## Vocabulary
 
@@ -185,9 +198,12 @@ location be a typed object, not a bare path, is settled now.
 
 ## Phasing
 
-1. **P0, issue 3.** `data.path()` and `data.load()` call one internal resolver that returns a
-   typed location. Only the file kind exists. `path()` returns a `Path` for file locations and
-   raises for anything else. This is the seam; it adds no behaviour.
+1. **Built (0.2.0).** `data.path()` and `data.load()` call one internal resolver,
+   `chartbook.resolve.resolve()`, that returns a typed `Location`. Only `FileLocation` exists.
+   `path()` returns a `Path` for file locations and raises `TypeError` for anything else
+   (`resolve.require_file()`); `load()` raises `NotImplementedError`. This is the seam; it adds no
+   behaviour. To add a location kind: subclass `Location`, return it from the resolver, and teach
+   `load()` to scan it.
 2. **After the index.** `[sources]`, `table`, `query`; the `duckdb` backend; `sql()`, `ref()`,
    `connect()`; local references only; the index's typed `location`. Worked example: the
    `yield_curve` example pipeline gains one `query`-backed dataframe over a DuckDB file.

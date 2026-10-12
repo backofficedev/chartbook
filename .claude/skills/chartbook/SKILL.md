@@ -33,7 +33,8 @@ chartbook build -f --watch  # Incremental build, then rebuild on every file chan
 chartbook browse            # Open project docs in default browser
 chartbook check             # CI gate: missing metadata, broken paths, expiring licenses
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
-chartbook path <name>       # Print the path chartbook.toml declares for an asset
+chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
+chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook config            # Configure default catalog path (interactive)
@@ -124,10 +125,15 @@ lf = data.load(pipeline="crsp_treasury", dataframe="my_data", catalog_path="/pat
 # Get data file path (through the catalog)
 path = data.get_data_path(pipeline="crsp_treasury", dataframe="my_data")
 
-# Inside a pipeline: the path its own chartbook.toml declares for an asset
-# (dataframe, chart, notebook or note). No catalog needed; the file need not
-# exist yet, so use it for dodo.py targets and for writing outputs.
+# Inside a pipeline: the path its own chartbook.toml declares for a dataframe.
+# No catalog needed; the file need not exist yet, so use it for dodo.py targets
+# and for writing outputs.
 df.to_parquet(data.path("my_data"))
+
+# The same for any other asset: put its kind in front of the name
+# (chart/, notebook/, note/). data.path(x) is assets.path(x, kind="dataframe").
+from chartbook import assets
+fig.write_html(assets.path("chart/my_chart"))
 
 # A throwaway directory for intermediates (<pipeline>/_data/_scratch/):
 # not an asset, git-ignored, safe to delete

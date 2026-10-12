@@ -146,26 +146,40 @@ chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/
 ## chartbook path
 
 ```console
-chartbook path REF [--project-dir PATH]
+chartbook path REF [--kind KIND] [--project-dir PATH]
 ```
 
-Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook or note — and nothing else, so the output can be captured. `REF` is the asset's key in the manifest. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
+Print the path that the enclosing `chartbook.toml` declares for an asset — a dataframe, chart, notebook or note — and nothing else, so the output can be captured. The manifest is found by walking up from the current directory (or from `--project-dir`), as git finds a repository.
+
+`REF` names the asset. A dataframe is its key in `[dataframes]`; anything else has its kind in front:
+
+| `REF` | Table in `chartbook.toml` |
+|---|---|
+| `repo_public` | `[dataframes.repo_public]` |
+| `chart/repo_rates` | `[charts.repo_rates]` |
+| `notebook/analysis` | `[notebooks.analysis]` |
+| `note/methodology` | `[notes.methodology]` |
 
 ```console
 $ chartbook path repo_public
 /work/yield_curve/_data/repo_public.parquet
 
-$ chartbook path repo_rates
+$ chartbook path chart/repo_rates
+/work/yield_curve/_output/repo_rates.html
+
+$ chartbook path repo_rates --kind chart
 /work/yield_curve/_output/repo_rates.html
 ```
 
-The path is absolute and is printed whether or not the file exists, so a build tool can use it for outputs as well as inputs. This is the command-line form of `data.path()` in Python: one rule for where things live, reachable from Make, a shell, R (`system2`) or Stata (`shell`).
+`--kind` is the same as writing the kind in front, for when the name comes from a variable. If `REF` already names a kind, `--kind` must agree with it.
+
+The path is absolute and is printed whether or not the file exists, so a build tool can use it for outputs as well as inputs. This is the command-line form of `chartbook.assets.path()` in Python: one rule for where things live, reachable from Make, a shell, R (`system2`) or Stata (`shell`).
 
 ```makefile
 MERGED := $(shell chartbook path merged_rates)
 ```
 
-A name the manifest does not declare exits `1` and says which table to add; nothing is printed to standard output. Only names declared in the current pipeline resolve: `other_pipeline:asset`, `asset#series` and `@rev` are reserved syntax and are refused as not yet supported. To locate another pipeline's dataframe through a catalog, use `chartbook data get-path`.
+A name the manifest does not declare exits `1` and says which table to add (or, if the name is declared as another kind of asset, how to refer to it); nothing is printed to standard output. Only assets of the current pipeline resolve. The rest of the {doc}`reference grammar <../design/references>` — `other_pipeline:asset`, `asset#part`, `asset@rev`, `model/name` — is reserved and refused as not yet supported. To locate another pipeline's dataframe through a catalog, use `chartbook data get-path`.
 
 ## chartbook publish
 

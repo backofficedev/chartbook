@@ -925,23 +925,27 @@ def get_file_modified_datetime(file_path: Union[Path, str]) -> datetime:
     return datetime.fromtimestamp(mtime)
 
 
-def get_default_asset_path(filename: str) -> Path:
-    """Get path to default asset from package resources.
+def get_default_branding_path(filename: str) -> Path:
+    """Get the path to a default logo or favicon shipped with the package.
 
-    :param filename: The name of the asset file.
+    These live in ``chartbook/branding/``. (They are not *assets* in
+    ChartBook's sense of the word, which is what :mod:`chartbook.assets` is
+    about: things a pipeline declares.)
+
+    :param filename: The name of the file, e.g. ``"logo.png"``.
     :type filename: str
-    :returns: The path to the asset file.
+    :returns: The path to the file.
     :rtype: Path
     """
     package_path = importlib.resources.files("chartbook")
     try:
         with importlib.resources.as_file(
-            package_path / "assets" / filename
-        ) as asset_path:
-            return Path(str(asset_path))
+            package_path / "branding" / filename
+        ) as branding_path:
+            return Path(str(branding_path))
     except (TypeError, FileNotFoundError):
         # Fallback for development mode
-        return Path(str(package_path)).parent / "assets" / filename
+        return Path(str(package_path)).parent / "branding" / filename
 
 
 def get_pipeline_ids(manifest):
@@ -971,7 +975,7 @@ def get_logo_path(config: dict, project_dir: Path) -> Path:
     """
     if config.get("project", {}).get("logo", ""):
         return project_dir / config["project"]["logo"]
-    return get_default_asset_path("logo.png")
+    return get_default_branding_path("logo.png")
 
 
 def get_favicon_path(config: dict, project_dir: Path) -> Path:
@@ -986,7 +990,7 @@ def get_favicon_path(config: dict, project_dir: Path) -> Path:
     """
     if config.get("project", {}).get("favicon", ""):
         return project_dir / config["project"]["favicon"]
-    return get_default_asset_path("favicon.ico")
+    return get_default_branding_path("favicon.ico")
 
 
 def get_pipeline_manifest(manifest: dict, pipeline_id: str) -> dict:

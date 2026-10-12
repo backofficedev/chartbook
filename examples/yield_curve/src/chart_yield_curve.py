@@ -5,7 +5,7 @@ This script creates an interactive Plotly chart showing the U.S. Treasury
 zero-coupon yield curve based on the Gurkaynak, Sack, and Wright (2007) model.
 """
 
-from chartbook import data
+from chartbook import assets
 from chartbook.env import get_project_root
 
 BASE_DIR = get_project_root()
@@ -64,7 +64,7 @@ fig.update_xaxes(
 )
 
 # The chart's location comes from [charts.yield_curve_current] in chartbook.toml
-fig.write_html(data.path("yield_curve_current"), include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/yield_curve_current"), include_plotlyjs="cdn")
 
 ##################################
 ## Save data
@@ -76,5 +76,5 @@ df_current.to_parquet(filepath, index=False)
 filepath = DATA_DIR / "fed_yield_curve_current.xlsx"
 df_current.to_excel(filepath, index=False)
 
-print(f"Chart saved to: {data.path('yield_curve_current')}")
+print(f"Chart saved to: {assets.path('chart/yield_curve_current')}")
 print(f"Data saved to: {DATA_DIR / 'fed_yield_curve_current.parquet'}")

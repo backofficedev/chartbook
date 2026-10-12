@@ -1,5 +1,8 @@
-"""Tests for name resolution: ``chartbook.resolve``, ``data.path()`` and
-``chartbook path``."""
+"""Tests for name resolution: ``chartbook.resolve``, ``assets.path()``,
+``data.path()`` and ``chartbook path``.
+
+The reference grammar itself is tested in ``test_refs.py``.
+"""
 
 import runpy
 from pathlib import Path
@@ -9,11 +12,13 @@ import tomli
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import data, resolve as resolve_module
+from chartbook import assets, data, resolve as resolve_module
 from chartbook.cli import main
 from chartbook.errors import AssetNotDeclaredError, ManifestNotFoundError
 from chartbook.identity import UnsupportedRegistryError, UnsupportedRevisionError
+from chartbook.refs import AssetRef, KindMismatchError
 from chartbook.resolve import (
+    ASSET_TABLES,
     FileLocation,
     Location,
     UnsupportedReferenceError,
@@ -74,25 +79,37 @@ class TestFindManifestDir:
 
 
 class TestParseLocalRef:
+    """Which references resolve today; the rest is reserved, not invalid."""
+
     @pytest.mark.parametrize("ref", ["treasury_rates", "a.b-c_1", "  padded  "])
-    def test_bare_names(self, ref):
-        assert parse_local_ref(ref) == ref.strip()
+    def test_bare_names_are_dataframes(self, ref):
+        assert parse_local_ref(ref) == AssetRef(name=ref.strip())
+
+    @pytest.mark.parametrize("kind", ["dataframe", "chart", "notebook", "note"])
+    def test_every_declarable_kind(self, kind):
+        assert parse_local_ref(f"{kind}/x") == AssetRef(kind=kind, name="x")
+        assert parse_local_ref("x", kind=kind) == AssetRef(kind=kind, name="x")
+
+    def test_accepts_a_parsed_reference(self):
+        asset = AssetRef(kind="chart", name="x")
+        assert parse_local_ref(asset) is asset
 
     def test_revision_is_reserved(self):
-        with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
-            parse_local_ref("treasury_rates@a1b2c3d")
+        with pytest.raises(UnsupportedRevisionError, match="not yet supported") as e:
+            parse_local_ref("chart/curve@a1b2c3d")
+        assert "use 'chart/curve' instead" in str(e.value)
 
-    def test_series_is_reserved(self):
+    def test_part_is_reserved(self):
         with pytest.raises(UnsupportedReferenceError, match="not yet supported") as e:
             parse_local_ref("treasury_rates#dgs10")
-        assert "'treasury_rates'" in str(e.value)
+        assert "'treasury_rates' to get the dataframe that holds it" in str(e.value)
 
     @pytest.mark.parametrize(
         "ref",
         [
             "fed_yield_curve:treasury_rates",
             "ftsfr/fed_yield_curve:treasury_rates",
-            "ftsfr/fed_yield_curve",
+            "ftsfr/fed_yield_curve:chart/curve",
         ],
     )
     def test_cross_pipeline_is_reserved(self, ref):
@@ -103,8 +120,25 @@ class TestParseLocalRef:
         with pytest.raises(UnsupportedRegistryError, match="not yet supported") as e:
             parse_local_ref("charthub.example/ftsfr/fed_yield_curve:treasury_rates")
         assert "'charthub.example'" in str(e.value)
+        assert "'ftsfr/fed_yield_curve:treasury_rates'" in str(e.value)
 
-    @pytest.mark.parametrize("ref", ["", "two words", "semi;colon", "quo'te"])
+    def test_models_are_reserved(self):
+        with pytest.raises(UnsupportedReferenceError, match="not yet supported") as e:
+            parse_local_ref("model/rate_forecaster")
+        assert "names a model" in str(e.value)
+        with pytest.raises(UnsupportedReferenceError):
+            parse_local_ref("rate_forecaster", kind="model")
+
+    def test_a_pipeline_is_not_an_asset(self):
+        with pytest.raises(ValueError, match="does not name an asset") as e:
+            parse_local_ref("ftsfr/fed_yield_curve")
+        assert not isinstance(e.value, UnsupportedReferenceError)
+
+    def test_kind_mismatch(self):
+        with pytest.raises(KindMismatchError):
+            parse_local_ref("chart/curve", kind="dataframe")
+
+    @pytest.mark.parametrize("ref", ["two words", "semi;colon", "quo'te"])
     def test_invalid_names(self, ref):
         with pytest.raises(ValueError, match="Invalid asset name"):
             parse_local_ref(ref)
@@ -123,17 +157,30 @@ class TestResolveLocal:
         )
 
     def test_chart_and_note(self, project):
-        chart = resolve("chart_0_0", start_dirs=[project])
+        chart = resolve("chart/chart_0_0", start_dirs=[project])
         assert chart.path == project / "_output" / "charts" / "chart_0_0.html"
-        note = resolve("note1", start_dirs=[project])
+        note = resolve("note/note1", start_dirs=[project])
         assert note.path == project / "docs_src" / "note1.md"
+
+    def test_kind_argument_is_the_same_as_the_prefix(self, project):
+        by_prefix = resolve("chart/chart_0_0", start_dirs=[project])
+        by_argument = resolve("chart_0_0", kind="chart", start_dirs=[project])
+        by_both = resolve("chart/chart_0_0", kind="chart", start_dirs=[project])
+        by_object = resolve(
+            AssetRef(kind="chart", name="chart_0_0"), start_dirs=[project]
+        )
+        assert by_prefix == by_argument == by_both == by_object
+
+    def test_kind_argument_must_agree_with_the_prefix(self, project):
+        with pytest.raises(KindMismatchError, match="names a chart, but a note"):
+            resolve("chart/chart_0_0", kind="note", start_dirs=[project])
 
     def test_notebook(self, project):
         def edit(config):
             config["notebooks"]["analysis"] = {"path": "_output/analysis.ipynb"}
 
         _edit_toml(project, edit)
-        location = resolve("analysis", start_dirs=[project])
+        location = resolve("notebook/analysis", start_dirs=[project])
         assert location.path == project / "_output" / "analysis.ipynb"
 
     def test_resolves_from_a_subdirectory(self, project):
@@ -187,14 +234,28 @@ class TestResolveLocal:
         with pytest.raises(AssetNotDeclaredError) as excinfo:
             resolve("merged_rates", start_dirs=[project])
         message = str(excinfo.value)
-        assert f"'merged_rates' is not declared in {project / 'chartbook.toml'}" in message
+        assert (
+            f"No dataframe named 'merged_rates' is declared in "
+            f"{project / 'chartbook.toml'}"
+        ) in message
         assert "[dataframes.merged_rates]" in message
         assert 'path = "./_data/merged_rates.parquet"' in message
         assert "dataframes: dataframe_0" in message
         assert "charts: chart_0_0" in message
         assert excinfo.value.name == "merged_rates"
+        assert excinfo.value.kind == "dataframe"
         assert excinfo.value.declared["notes"] == ["note1"]
+        assert list(excinfo.value.declared) == list(ASSET_TABLES)
         assert isinstance(excinfo.value, LookupError)
+
+    def test_undeclared_chart_says_which_table_to_add(self, project):
+        with pytest.raises(AssetNotDeclaredError) as excinfo:
+            resolve("chart/yield_curve", start_dirs=[project])
+        message = str(excinfo.value)
+        assert "No chart named 'yield_curve' is declared" in message
+        assert "[charts.yield_curve]" in message
+        assert 'path = "./_output/yield_curve.html"' in message
+        assert excinfo.value.kind == "chart"
 
     def test_undeclared_name_suggests_a_close_match(self, project):
         with pytest.raises(AssetNotDeclaredError, match="Did you mean 'dataframe_0'"):
@@ -205,19 +266,39 @@ class TestResolveLocal:
         with pytest.raises(AssetNotDeclaredError, match=r"Declared assets: \(none\)"):
             resolve("anything", start_dirs=[tmp_path])
 
-    def test_name_declared_in_two_tables_is_ambiguous(self, project):
+    def test_close_match_is_looked_for_among_assets_of_the_same_kind(self, project):
+        with pytest.raises(AssetNotDeclaredError) as excinfo:
+            resolve("chart/dataframe_O", start_dirs=[project])
+        assert "Did you mean" not in str(excinfo.value)
+
+    def test_same_name_in_two_tables_is_two_assets(self, project):
+        """Each kind has its own names: the kind in the address says which."""
+
         def edit(config):
             config["charts"]["dataframe_0"] = dict(config["charts"]["chart_0_0"])
 
         _edit_toml(project, edit)
-        with pytest.raises(ValueError, match="ambiguous") as excinfo:
-            resolve("dataframe_0", start_dirs=[project])
-        assert "[dataframes.dataframe_0] and [charts.dataframe_0]" in str(excinfo.value)
+        dataframe = resolve("dataframe_0", start_dirs=[project])
+        chart = resolve("chart/dataframe_0", start_dirs=[project])
+        assert dataframe.path.name == "dataframe_0.parquet"
+        assert chart.path.name == "chart_0_0.html"
 
-    def test_tables_can_be_restricted(self, project):
+    def test_name_of_another_kind_says_how_to_refer_to_it(self, project):
         with pytest.raises(AssetNotDeclaredError) as excinfo:
-            resolve("chart_0_0", start_dirs=[project], tables=("dataframes",))
-        assert list(excinfo.value.declared) == ["dataframes"]
+            resolve("chart_0_0", start_dirs=[project])
+        message = str(excinfo.value)
+        assert "No dataframe named 'chart_0_0' is declared" in message
+        assert "It is declared as a chart: refer to it as 'chart/chart_0_0'" in message
+        assert "To register it" not in message
+
+    def test_only_dataframes_resolve_through_a_catalog(self, catalog_project):
+        with pytest.raises(UnsupportedReferenceError, match="Only dataframes"):
+            resolve(
+                "chart_0_0",
+                kind="chart",
+                pipeline="pipeline_a",
+                catalog_path=catalog_project,
+            )
 
     def test_entry_without_path(self, project):
         def edit(config):
@@ -263,8 +344,8 @@ class TestResolveLocal:
             return real_load(f)
 
         monkeypatch.setattr(resolve_module.tomli, "load", counting_load)
-        for name in ("dataframe_0", "chart_0_0", "note1", "dataframe_0"):
-            resolve(name, start_dirs=[project])
+        for ref in ("dataframe_0", "chart/chart_0_0", "note/note1", "dataframe_0"):
+            resolve(ref, start_dirs=[project])
         assert len(calls) == 1
 
     def test_edits_to_the_manifest_are_picked_up(self, project):
@@ -293,7 +374,70 @@ class TestResolveInCatalog:
             resolve("nope", pipeline="pipeline_a", catalog_path=catalog_project)
 
 
+class TestAssetsPath:
+    def test_resolves_against_cwd(self, project, monkeypatch):
+        monkeypatch.chdir(project / "src")
+        result = assets.path("chart/chart_0_0")
+        assert isinstance(result, Path)
+        assert result == project / "_output" / "charts" / "chart_0_0.html"
+
+    def test_every_kind(self, project):
+        assert assets.path("dataframe_0", project_dir=project) == (
+            project / "_data" / "notes_pipeline" / "dataframe_0.parquet"
+        )
+        assert assets.path("note/note1", project_dir=project) == (
+            project / "docs_src" / "note1.md"
+        )
+        assert assets.path("chart_0_0", kind="chart", project_dir=project) == (
+            assets.path("chart/chart_0_0", project_dir=project)
+        )
+
+    def test_takes_a_parsed_reference(self, project):
+        ref = assets.parse("chart/chart_0_0")
+        assert ref == assets.AssetRef(kind="chart", name="chart_0_0")
+        assert assets.path(ref, project_dir=project) == (
+            project / "_output" / "charts" / "chart_0_0.html"
+        )
+
+    def test_a_bare_name_is_a_dataframe(self, project):
+        with pytest.raises(AssetNotDeclaredError, match="declared as a chart"):
+            assets.path("chart_0_0", project_dir=project)
+
+    def test_kind_must_agree(self, project):
+        with pytest.raises(assets.KindMismatchError):
+            assets.path("chart/chart_0_0", kind="dataframe", project_dir=project)
+
+    def test_calling_file_wins_over_cwd(self, tmp_path, monkeypatch):
+        """A script finds its own pipeline even when run from another one."""
+        mine = create_pipeline_project(tmp_path / "mine", pipeline_id="mine").resolve()
+        other = create_pipeline_project(tmp_path / "other", pipeline_id="other").resolve()
+        script = mine / "src" / "where.py"
+        script.write_text(
+            "from chartbook import assets\n"
+            "RESULT = assets.path('chart/chart_0_0')\n"
+        )
+        monkeypatch.chdir(other)
+        result = runpy.run_path(str(script))["RESULT"]
+        assert result == mine / "_output" / "charts" / "chart_0_0.html"
+
+    def test_is_exported_from_the_package(self):
+        import chartbook
+
+        assert chartbook.assets is assets
+        assert assets.KINDS == ("dataframe", "chart", "notebook", "note", "model")
+
+    def test_raises_for_a_location_that_is_not_a_file(self, project, monkeypatch):
+        class TableLocation(Location):
+            kind = "table"
+
+        monkeypatch.setattr(assets, "resolve", lambda *a, **k: TableLocation())
+        with pytest.raises(TypeError, match="table-backed, so it has no file path"):
+            assets.path("dataframe_0", project_dir=project)
+
+
 class TestDataPath:
+    """``data.path`` is ``assets.path`` for dataframes, and only dataframes."""
+
     def test_resolves_against_cwd(self, project, monkeypatch):
         monkeypatch.chdir(project / "src")
         result = data.path("dataframe_0")
@@ -302,8 +446,16 @@ class TestDataPath:
 
     def test_project_dir_overrides_cwd(self, project, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        assert data.path("chart_0_0", project_dir=project) == (
-            project / "_output" / "charts" / "chart_0_0.html"
+        assert data.path("dataframe_0", project_dir=project) == (
+            project / "_data" / "notes_pipeline" / "dataframe_0.parquet"
+        )
+
+    def test_agrees_with_assets_path(self, project):
+        assert data.path("dataframe_0", project_dir=project) == assets.path(
+            "dataframe_0", kind="dataframe", project_dir=project
+        )
+        assert data.path("dataframe/dataframe_0", project_dir=project) == assets.path(
+            "dataframe_0", project_dir=project
         )
 
     def test_calling_file_wins_over_cwd(self, tmp_path, monkeypatch):
@@ -323,6 +475,19 @@ class TestDataPath:
         with pytest.raises(AssetNotDeclaredError, match=r"\[dataframes.merged_rates\]"):
             data.path("merged_rates")
 
+    def test_a_chart_is_not_a_dataframe(self, project):
+        """A chart's name is not found, and the message says where it is."""
+        with pytest.raises(AssetNotDeclaredError) as excinfo:
+            data.path("chart_0_0", project_dir=project)
+        assert "chartbook.assets.path('chart/chart_0_0')" in str(excinfo.value)
+
+    def test_another_kind_is_refused(self, project):
+        with pytest.raises(KindMismatchError) as excinfo:
+            data.path("chart/chart_0_0", project_dir=project)
+        message = str(excinfo.value)
+        assert "data.path() answers for dataframes only" in message
+        assert "chartbook.assets.path('chart/chart_0_0')" in message
+
     def test_cross_pipeline_reference_is_refused(self, project, monkeypatch):
         monkeypatch.chdir(project)
         with pytest.raises(UnsupportedReferenceError):
@@ -332,13 +497,13 @@ class TestDataPath:
         class TableLocation(Location):
             kind = "table"
 
-        monkeypatch.setattr(data, "resolve", lambda *a, **k: TableLocation())
+        monkeypatch.setattr(assets, "resolve", lambda *a, **k: TableLocation())
         with pytest.raises(TypeError, match="table-backed, so it has no file path"):
             data.path("dataframe_0", project_dir=project)
 
 
 class TestSharedResolver:
-    """path(), get_data_path() and load() each go through resolve()."""
+    """get_data_path() and load() each go through resolve(), as path() does."""
 
     @pytest.fixture
     def spy(self, catalog_project, monkeypatch):
@@ -402,15 +567,50 @@ class TestPathCommand:
         assert result.stdout == f"{expected}\n"
         assert result.stderr == ""
 
-    def test_matches_data_path(self, project, monkeypatch):
+    def test_matches_assets_path(self, project, monkeypatch):
         monkeypatch.chdir(project / "src")
-        for name in ("dataframe_0", "chart_0_0", "note1"):
-            result = self._invoke(name)
-            assert result.stdout.strip() == str(data.path(name, project_dir=project))
+        for ref in ("dataframe_0", "chart/chart_0_0", "note/note1"):
+            result = self._invoke(ref)
+            assert result.exit_code == 0, result.output
+            assert result.stdout.strip() == str(assets.path(ref, project_dir=project))
+        assert self._invoke("dataframe_0").stdout.strip() == str(
+            data.path("dataframe_0", project_dir=project)
+        )
+
+    def test_kind_option(self, project, monkeypatch):
+        monkeypatch.chdir(project)
+        by_option = self._invoke("chart_0_0", "--kind", "chart")
+        by_prefix = self._invoke("chart/chart_0_0")
+        assert by_option.exit_code == 0, by_option.output
+        assert by_option.stdout == by_prefix.stdout
+
+    def test_kind_option_must_agree_with_the_reference(self, project, monkeypatch):
+        monkeypatch.chdir(project)
+        result = self._invoke("chart/chart_0_0", "--kind", "note")
+        assert result.exit_code == 1
+        assert result.stdout == ""
+        assert "names a chart, but a note was expected" in result.stderr
+
+    def test_kind_option_rejects_an_unknown_kind(self, project, monkeypatch):
+        monkeypatch.chdir(project)
+        assert self._invoke("chart_0_0", "--kind", "charts").exit_code == 2
+
+    def test_a_chart_asked_for_as_a_dataframe(self, project, monkeypatch):
+        monkeypatch.chdir(project)
+        result = self._invoke("chart_0_0")
+        assert result.exit_code == 1
+        assert result.stdout == ""
+        assert "refer to it as 'chart/chart_0_0'" in result.stderr
+
+    def test_models_are_not_yet_supported(self, project, monkeypatch):
+        monkeypatch.chdir(project)
+        result = self._invoke("model/rate_forecaster")
+        assert result.exit_code == 1
+        assert "not yet supported" in result.stderr
 
     def test_project_dir_option(self, project, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        result = self._invoke("chart_0_0", "--project-dir", project / "src")
+        result = self._invoke("chart/chart_0_0", "--project-dir", project / "src")
         assert result.exit_code == 0, result.output
         assert result.stdout.strip() == str(
             project / "_output" / "charts" / "chart_0_0.html"
@@ -423,7 +623,7 @@ class TestPathCommand:
         result = self._invoke("merged_rates")
         assert result.exit_code == 1
         assert result.stdout == ""
-        assert "Error: 'merged_rates' is not declared" in result.stderr
+        assert "Error: No dataframe named 'merged_rates' is declared" in result.stderr
         assert "[dataframes.merged_rates]" in result.stderr
 
     def test_cross_pipeline_reference_is_refused(self, project, monkeypatch):

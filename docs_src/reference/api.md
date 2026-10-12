@@ -10,6 +10,7 @@ chartbook
 :maxdepth: 2
 
 ../apidocs/chartbook/chartbook.data
+../apidocs/chartbook/chartbook.assets
 ../apidocs/chartbook/chartbook.env
 ../apidocs/chartbook/chartbook.plotting
 ../apidocs/chartbook/chartbook.cli
@@ -21,6 +22,7 @@ chartbook
 ../apidocs/chartbook/chartbook.diagnostics
 ../apidocs/chartbook/chartbook.errors
 ../apidocs/chartbook/chartbook.manifest
+../apidocs/chartbook/chartbook.refs
 ../apidocs/chartbook/chartbook.resolve
 ../apidocs/chartbook/chartbook.scaffold
 ../apidocs/chartbook/chartbook.markdown_generator

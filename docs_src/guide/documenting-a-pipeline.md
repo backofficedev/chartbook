@@ -112,11 +112,11 @@ And any markdown placed in `docs_src/site/` merges into the site automatically (
 
 ## Asking the manifest for a path
 
-Once `chartbook.toml` says where a dataframe or chart lives, your code does not have to say it again. `data.path()` returns the `path` declared for any asset of the current pipeline:
+Once `chartbook.toml` says where a dataframe or chart lives, your code does not have to say it again. `data.path()` returns the `path` declared for a dataframe of the current pipeline, and `assets.path()` does the same for anything the pipeline declares:
 
 ```python
 # dodo.py — declaring what each task reads and writes
-from chartbook import data
+from chartbook import assets, data
 
 def task_merge():
     return {
@@ -125,16 +125,45 @@ def task_merge():
         "actions": ["python src/merge.py"],
     }
 
+def task_chart():
+    return {
+        "file_dep": [data.path("merged_rates")],
+        "targets": [assets.path("chart/rates_over_time")],
+        "actions": ["python src/chart.py"],
+    }
+
 # src/merge.py — doing the work
 df.to_parquet(data.path("merged_rates"))
 ```
 
-The name is the asset's key in `[dataframes]`, `[charts]`, `[notebooks]` or `[notes]`. The enclosing `chartbook.toml` is found by walking up from the calling file (then from the working directory), so the call works from a script, a `dodo.py` or a notebook alike. The path comes back absolute, and nothing checks that the file exists — which is what lets it name a target that has not been built yet.
+### How an asset is named
+
+A dataframe is named by its key in `[dataframes]`, and nothing more. Any other asset has its kind in front:
+
+| You write | It means |
+|---|---|
+| `merged_rates` | `[dataframes.merged_rates]` |
+| `chart/rates_over_time` | `[charts.rates_over_time]` |
+| `notebook/analysis` | `[notebooks.analysis]` |
+| `note/methodology` | `[notes.methodology]` |
+
+Data is what gets passed around most, so it gets the short spelling. Each kind has its own names: a dataframe and a chart may both be called `gdp`, and they are `gdp` and `chart/gdp`.
+
+In Python the kind can be an argument instead, which reads better when the name is in a variable. It says what you expect, so it fills in a missing kind and rejects a different one:
+
+```python
+assets.path("rates_over_time", kind="chart")    # the same as "chart/rates_over_time"
+assets.path("chart/rates_over_time", kind="note")   # error: that names a chart
+```
+
+`data.path(name)` is `assets.path(name, kind="dataframe")`. It answers for dataframes only, so a mistyped name cannot hand back a chart's HTML where a parquet file was meant.
+
+The enclosing `chartbook.toml` is found by walking up from the calling file (then from the working directory), so the call works from a script, a `dodo.py` or a notebook alike. The path comes back absolute, and nothing checks that the file exists — which is what lets it name a target that has not been built yet.
 
 Asking for a name the manifest does not declare fails on the spot, with the table to add:
 
 ```text
-'merged_rates' is not declared in /work/repo/chartbook.toml.
+No dataframe named 'merged_rates' is declared in /work/repo/chartbook.toml.
 
 To register it, add a table to that file, for example:
 
@@ -147,14 +176,17 @@ To register it, add a table to that file, for example:
 ```makefile
 TREASURY := $(shell chartbook path treasury_rates)
 MERGED   := $(shell chartbook path merged_rates)
+CHART    := $(shell chartbook path chart/rates_over_time)
 
 $(MERGED): $(TREASURY)
 	Rscript src/merge.R
 ```
 
 ```{note}
-This is a convenience, never a requirement. A pipeline that writes straight to `_data/merged_rates.parquet` — from Python, R, Stata or a shell script — works exactly as before. The manifest is the contract; `data.path()` only saves you from stating it twice.
+This is a convenience, never a requirement. A pipeline that writes straight to `_data/merged_rates.parquet` — from Python, R, Stata or a shell script — works exactly as before. The manifest is the contract; `data.path()` and `assets.path()` only save you from stating it twice.
 ```
+
+These names are the local end of a longer address — `scope/pipeline:kind/name#part@rev` — that will also reach other pipelines' assets, columns inside a dataframe, and versions. Only the local form works today; {doc}`../design/references` has the whole grammar.
 
 For files that are *not* assets — a partial download, a cache between two steps — `data.scratch()` gives you a throwaway directory instead:
 

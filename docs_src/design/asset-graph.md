@@ -5,8 +5,16 @@ A design document, not a user guide. It records what the asset graph is, why eac
 went the way it did, and — in the {ref}`not-doing` section — which additions will be declined.
 For how to use ChartBook today, start with {doc}`../getting-started`.
 
-Status: design agreed, implementation pending. The {doc}`index schema <index-schema>` is the
-first deliverable, because everything else here reads or writes it.
+Status: design agreed. The groundwork is built (0.2.0): the reference grammar, local name
+resolution, `chartbook path`, `chartbook check`, and the reserved syntax. The graph itself —
+dependencies, the lockfile, the store, build records, `chartbook run` — is not. {doc}`overview`
+says what is built and gives the order to build the rest. The {doc}`index schema <index-schema>`
+is the first deliverable, because everything else here reads or writes it.
+
+Revised 2026-10-12: the reference grammar moved to its own document, {doc}`references`, and
+gained asset kinds (`chart/…`, `model/…`). Models became assets ({doc}`models`). The registry
+rule, the scratch directory and the surface table below were brought in line with what was
+decided while building the groundwork. Each change is marked where it was made.
 ```
 
 ## The problem
@@ -126,8 +134,8 @@ both have `acme/rates` forever and never notice. And the escape hatch is simple:
 ### Reserving a future global namespace
 
 A future registry must not break anything written today, so the grammar reserves an *optional*
-registry prefix, Docker-style. A leading component containing `.` or `:`, or equal to `localhost`,
-is a registry.
+registry prefix, Docker-style. The registry is the first of **exactly three** components, and
+only when it looks like a host: it contains `.` or `:`, or equals `localhost`.
 
 ```text
 rates                                   # bare — local catalog, must be unambiguous
@@ -136,10 +144,20 @@ charthub.example/acme/rates             # fully qualified
 registry.internal.bank.org/acme/rates   # another registry
 ```
 
+```{admonition} Why "exactly three" (revised 2026-10-12)
+:class: note
+
+This document first said that *any* leading component with a `.` was a registry. That
+contradicted the next sentence, because `my.group/rates` is a valid scoped ID today and would
+have changed meaning. With the three-component rule it stays a scope with a dot in it, and a
+registry-qualified ID always has all three parts. A registry therefore cannot be combined with a
+bare pipeline name. Implemented in `chartbook.identity.split_registry`.
+```
+
 `acme/rates` means the same thing before and after any registry exists. Five things keep that true:
 
 1. **Parse three components now**, rejecting the registry slot with "not yet supported" — the same
-   treatment `@rev` gets.
+   treatment `@rev` gets. *(Built: `UnsupportedRegistryError`.)*
 2. **One resolution chain, written down, with a hole in it**: explicit location in
    `[dependencies]`, then the local catalog, then *(reserved)* configured registries, then an error
    listing candidates. Implement one, two and four in one place and step three is a drop-in.
@@ -149,7 +167,7 @@ registry.internal.bank.org/acme/rates   # another registry
 4. **The lockfile records the resolved location, not just the ID**, or old lockfiles change meaning
    the day a registry starts resolving a name somewhere new.
 5. **`publish` is not overloaded.** It already means "stage files to a directory"; pushing to a
-   registry is a different verb.
+   registry is a different verb. *(Built: `chartbook push` exists only to say it is reserved.)*
 
 (series-addressing)=
 ### Addressing a series inside a dataframe
@@ -173,13 +191,16 @@ frequency = "Daily"
 docs_path = "./docs_src/series/dgs10.md"
 ```
 
-The reference grammar gains one optional segment, separated by `#`:
+The reference grammar has an optional segment for this, separated by `#`:
 
 ```text
-[registry/]scope/name[:asset[#series]][@rev]
+[registry/][scope/]pipeline:[kind/]name[#part][@rev]
 
 ftsfr/fed_yield_curve:treasury_rates#dgs10
 ```
+
+The full grammar is specified in {doc}`references`. There the segment is called a **part**: a
+series is the part of a dataframe, and a file is the part of a {doc}`model <models>`.
 
 `#` is chosen over `.`, `/` and `:` for three reasons. It maps directly onto the URL fragment of
 the generated page (`…/treasury_rates.html#dgs10`), which is the primary consumer. It is not legal
@@ -369,13 +390,20 @@ functions would only repeat what their position already says.
   up from the caller, as git and cargo find their roots. The grammar then layers consistently:
   `treasury_rates` is local, `fed_yield_curve:treasury_rates` is another pipeline,
   `ftsfr/fed_yield_curve:treasury_rates` is fully scoped.
+- **A bare name is a dataframe.** Anything else says its kind: `chart/curve_today`,
+  `notebook/analysis`, `model/rate_forecaster`. Each kind has its own names. See {doc}`references`.
 - **`scratch()` is for throwaway files** — not indexed, not hashed, not published, safe to delete, and
   *worktree-local* so parallel work in separate worktrees cannot collide. Scratch is private; the
-  store is shared.
+  store is shared. *(Built: it is `_data/_scratch/` inside the pipeline, which ignores itself in
+  git. Being inside the project is what makes it worktree-local.)*
 - **Writing to an unregistered name fails immediately**, naming the table to add, rather than
   surfacing as a missing file during a build an hour later.
-- **`path()` must be cheap, offline and incapable of failing.** A `dodo.py` is evaluated at the start
-  of every run.
+- **`path()` must be cheap and offline, and must fail only for a reason in the manifest.** A
+  `dodo.py` is evaluated at the start of every run. So `path()` reads the raw `chartbook.toml` and
+  nothing else: it opens no data file, touches no network, does not validate the rest of the
+  manifest, and does not care whether the asset has been built. It raises only when the name is not
+  declared or its entry has no `path`. *(This sentence used to say "incapable of failing", which
+  contradicted the bullet above it.)*
 
 ### Reachable from any language
 
@@ -403,15 +431,25 @@ that can capture command output.
 
 ### The whole surface
 
-| Call | Gives you | Used by |
-|---|---|---|
-| `data.path(ref)` | The file path of any declared asset | Build definitions; code that reads or writes |
-| `data.load(ref)` | The data itself | Code doing analysis |
-| `data.scratch()` | A throwaway directory — unindexed, worktree-local | Intermediates nothing depends on |
-| `chartbook path <ref>` | What `data.path()` gives, on stdout | Make, shell, R, Stata |
+| Call | Gives you | Used by | Today |
+|---|---|---|---|
+| `assets.path(ref)` | The file path of any declared asset | Build definitions; code that reads or writes | Local references |
+| `data.path(ref)` | The same, for dataframes only | The common case | Local references |
+| `data.load(ref)` | The data itself | Code doing analysis | Only the older `load(pipeline=, dataframe=)` |
+| `data.scratch()` | A throwaway directory — unindexed, worktree-local | Intermediates nothing depends on | Built |
+| `chartbook path <ref>` | What `assets.path()` gives, on stdout | Make, shell, R, Stata | Local references |
 
-Four calls, one reference grammar, no overlap. `path` matches the manifest field it reads, and it
-supersedes `data.get_data_path()` rather than sitting beside it.
+Five calls, one reference grammar. `path` matches the manifest field it reads, and it supersedes
+`data.get_data_path()` rather than sitting beside it.
+
+*(Revised 2026-10-12. This table used to have `data.path()` hand out every kind of asset. The
+general call is now `chartbook.assets.path()`, and `chartbook.data` is the front door for
+dataframes alone: `data.path(x)` is `assets.path(x, kind="dataframe")`. A `chartbook.models`
+module will follow the same pattern. The reasons are in {doc}`references`.)*
+
+`data.load(ref)` taking a single reference is the destination. Until cross-pipeline references
+resolve, `data.load(pipeline="fed_yield_curve", dataframe="treasury_rates")` through a catalog
+remains the way to load another pipeline's data, and `data.get_data_path()` the way to find it.
 
 ## Running things
 
@@ -461,6 +499,11 @@ chartbook install ...        # skill
 This resolves an overload: `chartbook build` currently means "render the website," while `build` in a
 manifest means "make this pipeline's data." Under the surface above, each word means the obvious
 thing — `run` runs a script, `docs` builds docs, `build` builds everything.
+
+Of these, `check`, `path`, `browse`, `ls`, `catalog` and `install` exist. `build` still means
+"render the website" and keeps doing so until `run` exists; the rename is one breaking change,
+made once, in the same release as `run`. `docs`, `run`, `pin`, `update` and `store` do not exist
+yet.
 
 `pin` and `update` stay top-level rather than sitting under `build`, because they change the
 project's dependency state rather than performing a build step — the same level as `cargo update` or
@@ -528,6 +571,9 @@ contributor might otherwise add, and each would cost something named above.
   gets the abstraction wrong. Leave a seam, write the second implementation, then extract.
 - **No swappable hashing, name resolution, or index schema.** These three are what make assets
   comparable, dependencies portable, and the index a contract.
+- **No experiment tracking, model serving or model loading.** A {doc}`model <models>` is a declared
+  asset with versions. Logging every training run is an experiment tracker's job; ChartBook records
+  the models a pipeline chooses to keep, and hands out their paths. *(Added 2026-10-12.)*
 
 ## Seams, plugins, and what stays singular
 
@@ -544,7 +590,7 @@ structure. And some things are **singular by design**.
 | Site renderers | seam | Publishing the index is what lets something else render it |
 | Storage backends behind `data.load()` | seam | Parquet now; DuckDB, warehouse tables later. See {doc}`data-access` |
 | Hash computation | **singular** | Two implementations hashing differently makes nothing comparable |
-| Name resolution | **singular** | Projects disagreeing about a name makes dependencies unportable |
+| Name resolution | **singular** | Projects disagreeing about a name makes dependencies unportable. One parser (`chartbook.refs`), one resolver (`chartbook.resolve`) |
 | The index schema | **singular** | It is the contract. A pluggable contract is no contract |
 
 ## Prior art
