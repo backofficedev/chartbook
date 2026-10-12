@@ -33,7 +33,7 @@ The specification, with the reasoning and the prior art, is
 from __future__ import annotations
 
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from typing import Optional, Union
 
 from chartbook.identity import (
@@ -173,6 +173,30 @@ class AssetRef:
     def local_name(self) -> str:
         """The asset within its pipeline: ``name``, or ``kind/name``."""
         return self.name if self.kind == DEFAULT_KIND else f"{self.kind}/{self.name}"
+
+    def in_pipeline(self, pipeline_id: str) -> "AssetRef":
+        """This reference, qualified with the pipeline that declares the asset.
+
+        Turns a local reference from a manifest into the fully qualified one
+        an index or a lockfile holds.
+
+        :param pipeline_id: The pipeline's ID: ``name``, ``scope/name`` or
+            ``registry/scope/name``.
+        :raises ValueError: If *pipeline_id* is not a pipeline ID.
+        """
+        registry, unqualified = split_registry(pipeline_id)
+        components = unqualified.split("/")
+        if len(components) > 2:
+            raise ValueError(
+                f"Invalid pipeline id {pipeline_id!r}. Expected 'name', "
+                f"'scope/name' or 'registry/scope/name'."
+            )
+        return replace(
+            self,
+            registry=registry,
+            scope=components[0] if len(components) == 2 else None,
+            pipeline=components[-1],
+        )
 
     def __str__(self) -> str:
         """The canonical text of the reference.

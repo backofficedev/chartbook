@@ -1,5 +1,6 @@
 """Tests for incremental builds and watch mode."""
 
+import json
 import os
 import time
 from pathlib import Path
@@ -66,15 +67,24 @@ def _mtimes(directory: Path) -> dict:
 
 
 def _sources(build_dir: Path) -> dict:
-    """The generated Sphinx project, without Sphinx's own output or our state."""
+    """The generated Sphinx project, without Sphinx's own output or our state.
+
+    The index is compared without the time it was generated at, which two
+    builds of the same thing do not share.
+    """
     ignored = {STATE_FILE, GITIGNORE_FILE}
-    return {
+    sources = {
         p.relative_to(build_dir).as_posix(): p.read_bytes()
         for p in build_dir.rglob("*")
         if p.is_file()
         and "_build" not in p.relative_to(build_dir).parts
         and p.name not in ignored
     }
+    if "index.json" in sources:
+        index = json.loads(sources["index.json"])
+        index.pop("generated_at")
+        sources["index.json"] = json.dumps(index).encode()
+    return sources
 
 
 # --------------------------------------------------------------------------

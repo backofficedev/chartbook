@@ -295,6 +295,7 @@ What unlocks each row is in the {doc}`overview`'s build order.
 | `chartbook/assets.py` | The general front door: `assets.path()`, `assets.parse()`, `assets.AssetRef` |
 | `chartbook/data.py` | The dataframe front door: `data.path()`, `data.load()`, `data.scratch()` |
 | `chartbook/identity.py` | Pipeline IDs: `scope/name`, the registry rule, deriving an ID from a git remote |
+| `chartbook/index.py` | Writes each asset's fully qualified `id` and `ref` into `index.json`, from one `AssetRef` (`ref.in_pipeline(pipeline_id)`) |
 | `chartbook/cli.py` | `chartbook path REF [--kind KIND]` |
 | `tests/test_refs.py` | Every example in this document, as a test |
 

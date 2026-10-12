@@ -379,12 +379,40 @@ def generate_docs(
                 copy_tree(html_build_dir, output_dir)
                 (output_dir / ".nojekyll").touch()
 
+            _write_index(manifest, _docs_dir, output_dir, skip_pipelines)
+
     finally:
         if not keep_build_dirs:
             shutil.rmtree(_docs_dir, ignore_errors=True)
             shutil.rmtree(temp_docs_src_dir, ignore_errors=True)
         else:
             print(f"Keeping temporary build directory: {_docs_dir.resolve()}")
+
+
+def _write_index(
+    manifest: dict, _docs_dir: Path, output_dir: Path, skip_pipelines: set[str]
+) -> None:
+    """Write the build's index: everything the site contains, as one JSON file.
+
+    The full index goes in the build directory. The published one, with no
+    path that is specific to this machine, goes beside the HTML so that it
+    travels with the site. File hashes are remembered in the build
+    directory, so a kept one means unchanged files are not read again.
+
+    See :mod:`chartbook.index`.
+    """
+    from chartbook import hashing, index
+
+    cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
+    built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+    # An index that differs only in when it was generated is left alone, so
+    # a build that changes nothing writes nothing.
+    if _docs_dir.is_dir():
+        cache.save()
+        index.write_index(built, _docs_dir / index.INDEX_FILE, only_if_changed=True)
+    index.write_index(
+        index.published(built), output_dir / index.INDEX_FILE, only_if_changed=True
+    )
 
 
 @dataclass
@@ -470,7 +498,7 @@ def _generate_docs_incremental(
     """
     import tempfile
 
-    from chartbook import incremental
+    from chartbook import hashing, incremental, index
 
     pipeline_theme = manifest["project"]["type"]
     options = {"size_threshold": size_threshold, "strip_mathjax2": strip_mathjax2}
@@ -522,6 +550,8 @@ def _generate_docs_incremental(
                     Path(incremental.SPHINX_BUILD_DIR),
                     Path(incremental.STATE_FILE),
                     Path(incremental.GITIGNORE_FILE),
+                    Path(index.INDEX_FILE),
+                    Path(hashing.CACHE_FILE),
                     *plan.preserved_paths(manifest),
                 ],
             )
@@ -555,11 +585,12 @@ def _generate_docs_incremental(
             output = incremental.sync_tree(
                 html_build_dir,
                 output_dir,
-                preserve=[Path(".nojekyll")],
+                preserve=[Path(".nojekyll"), Path(index.INDEX_FILE)],
                 same=incremental.same_size_and_not_newer,
             )
             (output_dir / ".nojekyll").touch()
             output_written = len(output.written)
+            _write_index(manifest, _docs_dir, output_dir, skip_pipelines)
     finally:
         # The theme copy is rebuilt every time; only the Sphinx project is kept
         if not keep_build_dirs:

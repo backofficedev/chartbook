@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Pipeline.json",
+  "title": "Pipeline record",
+  "description": "One pipeline: a project with a chartbook.toml that declares assets.",
+  "type": "object",
+  "required": [
+    "kind",
+    "version",
+    "id",
+    "name",
+    "location",
+    "assets"
+  ],
+  "properties": {
+    "kind": {
+      "const": "Pipeline"
+    },
+    "version": {
+      "const": "chartbook/v1"
+    },
+    "id": {
+      "type": "string",
+      "description": "scope/name, or a bare name."
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "maintainer": {
+      "type": "string"
+    },
+    "contributors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "repo_url": {
+      "type": "string"
+    },
+    "os_compatibility": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "location": {
+      "type": "object",
+      "description": "Where the pipeline's source comes from. `value` is a local directory and is absent from a published index.",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "path",
+            "git"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "string"
+        }
+      }
+    },
+    "scripts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of the pipeline's assets. Series are listed under their dataframe, not here."
+    },
+    "docs": {
+      "type": "object",
+      "description": "The write-up: the file it is in, or the text itself when it was written inline.",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "rendered": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

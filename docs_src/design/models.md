@@ -273,7 +273,7 @@ import pandas as pd
 
 from chartbook import assets, data
 
-COLUMN = "10Y 2Y Spread"
+COLUMN = "spread_10y_2y"
 
 spread = pd.read_parquet(data.path("term_premium"))[COLUMN].dropna()
 split = int(len(spread) * 0.8)

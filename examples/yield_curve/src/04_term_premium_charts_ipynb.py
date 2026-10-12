@@ -53,9 +53,9 @@ print(f"Shape: {df.shape}")
 # %%
 # Calculate term premium measures
 df_premium = pd.DataFrame(index=df.index)
-df_premium["10Y_1Y_Spread"] = df["SVENY10"] - df["SVENY01"]
-df_premium["10Y_2Y_Spread"] = df["SVENY10"] - df["SVENY02"]
-df_premium["10Y_3Y_Spread"] = df["SVENY10"] - df["SVENY03"]
+df_premium["spread_10y_1y"] = df["SVENY10"] - df["SVENY01"]
+df_premium["spread_10y_2y"] = df["SVENY10"] - df["SVENY02"]
+df_premium["spread_10y_3y"] = df["SVENY10"] - df["SVENY03"]
 
 # Display summary statistics
 df_premium.describe()
@@ -69,7 +69,7 @@ fig = go.Figure()
 fig.add_trace(
     go.Scatter(
         x=df_premium.index,
-        y=df_premium["10Y_1Y_Spread"],
+        y=df_premium["spread_10y_1y"],
         mode="lines",
         name="10Y - 1Y Spread",
         line=dict(width=1),
@@ -98,7 +98,7 @@ fig = go.Figure()
 fig.add_trace(
     go.Scatter(
         x=df_premium.index,
-        y=df_premium["10Y_2Y_Spread"],
+        y=df_premium["spread_10y_2y"],
         mode="lines",
         name="10Y - 2Y Spread",
         line=dict(width=1, color="orange"),
@@ -127,7 +127,7 @@ fig = go.Figure()
 fig.add_trace(
     go.Scatter(
         x=df_premium.index,
-        y=df_premium["10Y_3Y_Spread"],
+        y=df_premium["spread_10y_3y"],
         mode="lines",
         name="10Y - 3Y Spread",
         line=dict(width=1, color="green"),
@@ -151,9 +151,11 @@ fig.write_html(assets.path("chart/term_premium_10y_3y"), include_plotlyjs="cdn")
 # ## Save Data
 
 # %%
-# Format column names for export
+# Column names stay code-friendly (spread_10y_1y): letters, digits and
+# underscores, so they work unquoted in SQL and as attribute names. The
+# readable names ("10Y-1Y Spread") are metadata, and live in chartbook.toml
+# under [dataframes.term_premium.series.*].
 df_premium_formatted = df_premium.copy()
-df_premium_formatted.columns = df_premium_formatted.columns.str.replace("_", " ")
 df_premium_formatted.index.name = "date"
 
 # Save to parquet and excel

@@ -47,6 +47,8 @@ chartbook build [OPTIONS] [OUTPUT_DIR]
 
 Generate the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the current working directory itself). Works for both pipelines and catalogs — the project type comes from the manifest. Internals: {doc}`../guide/how-the-build-works`.
 
+Beside the HTML it writes `index.json`: one record for every pipeline, dataframe, column, chart, notebook and note the site contains, each with an ID and a content hash. See {doc}`"The index" <../guide/how-the-build-works>`.
+
 | Option | Default | Effect |
 |--------|---------|--------|
 | `-f, --force-write` | off | Delete and recreate an existing output directory |

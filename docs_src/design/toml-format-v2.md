@@ -563,11 +563,12 @@ that is valid today.
   ({doc}`index-schema`) and a model's `trained_on` ({doc}`models`).
 - **`[project] repo_url` now does default to the git remote**, as this document always said. The
   remote is turned into a web URL and any credentials in it are removed.
+- **`[dataframes.x.series.y]` is read** ({ref}`series-addressing`). It documents one column of
+  a dataframe. The loader validates it, and each series is a record in the build's `index.json`.
 - **Tables that are designed and not yet read by the loader:** `[dependencies]` and `[scripts]`
-  ({doc}`asset-graph`), `[models.x]` ({doc}`models`), `[sources.x]` with a dataframe's `table`
-  and `query` ({doc}`data-access`), and `[dataframes.x.series.y]`
-  ({ref}`series-addressing`). A manifest that contains one of them today loads, and the table
-  is ignored.
+  ({doc}`asset-graph`), `[models.x]` ({doc}`models`), and `[sources.x]` with a dataframe's
+  `table` and `query` ({doc}`data-access`). A manifest that contains one of them today loads,
+  and the table is ignored.
 
 {doc}`overview` has the order in which these get built.
 

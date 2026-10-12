@@ -1,0 +1,495 @@
+"""The index: one JSON description of everything a build contains.
+
+``chartbook build`` produces a website and, beside it, ``index.json``: the
+resolved, composed view of the manifests, as a flat list of self-describing
+records. Every pipeline and every asset is in it once, with a fully
+qualified ID, a content hash, and what it was made from. A renderer, a
+search box, an exporter or a diff of two builds can read that one file and
+need nothing else.
+
+The format is specified in ``docs_src/design/index-schema.md``. This module
+writes what that document calls the first implementation: ``Catalog``,
+``Pipeline``, ``Dataframe``, ``Series``, ``Chart``, ``Notebook`` and
+``Note`` records. ``Build`` records, dependencies and models come with the
+parts of the asset graph that produce them.
+
+Two forms of the same index are written:
+
+- the **full** index, in the build directory, in which each ``location``
+  also has the absolute ``resolved_path`` on this machine;
+- the **published** index, beside the HTML, with every machine-specific
+  path removed (:func:`published`), since it goes wherever the site goes.
+
+::
+
+    from chartbook import index
+    from chartbook.manifest import load_manifest
+
+    idx = index.build_index(load_manifest("."))
+    index.write_index(index.published(idx), "docs/index.json")
+
+The index schema is singular by design: there is one writer, this one.
+"""
+
+from __future__ import annotations
+
+import copy
+import json
+import os
+import warnings
+from datetime import date, datetime, time, timezone
+from pathlib import Path
+from typing import Any, Iterable, Optional, Union
+
+from chartbook import hashing
+from chartbook.__about__ import __version__
+from chartbook.identity import ID_COMPONENT_PATTERN
+from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest
+from chartbook.refs import KIND_TABLES, AssetRef, parse_asset_ref
+
+#: The version of the file's envelope.
+SCHEMA = "chartbook/index/v1"
+
+#: The version every record written by this module carries.
+RECORD_VERSION = "chartbook/v1"
+
+#: The file's name, in the build directory and beside the HTML.
+INDEX_FILE = "index.json"
+
+#: Where the JSON Schemas for the envelope and for each record kind live.
+SCHEMAS_DIR = Path(__file__).parent / "schemas" / "chartbook"
+
+#: The kinds of asset this module writes records for, in the order a
+#: pipeline's assets are listed.
+ASSET_KINDS = ("dataframe", "chart", "notebook", "note")
+
+# Manifest keys that the index states in another form, or not at all
+_STRUCTURAL_KEYS = frozenset(
+    {"path", "docs", "docs_path", "series", "dataframe", "linked_charts"}
+)
+
+
+def record_kind(kind: str) -> str:
+    """The record kind for an asset kind: ``chart`` is recorded as ``Chart``."""
+    return kind.capitalize()
+
+
+def schema_path(name: str) -> Path:
+    """The JSON Schema file for a record kind, or for the envelope.
+
+    :param name: A record kind (``"Dataframe"``), or ``"index"`` for the
+        file's envelope.
+    """
+    if name == "index":
+        return SCHEMAS_DIR / "index" / "v1.json"
+    return SCHEMAS_DIR / "v1" / f"{name}.json"
+
+
+def dtype_name(dtype: Any) -> str:
+    """Name a column's type the way the index writes it.
+
+    The name is the Polars type, lower-cased, with its parameters in square
+    brackets: ``float64``, ``int32``, ``string``, ``boolean``, ``date``,
+    ``datetime[ns]``, ``datetime[us, UTC]``, ``duration[ms]``,
+    ``decimal[10,2]``, ``list[int64]``, ``categorical``, ``struct``. Polars
+    is what ``data.load()`` returns, so this is the type a reader gets.
+    """
+    import polars as pl
+
+    base = dtype.base_type().__name__.lower()
+    if isinstance(dtype, pl.Datetime):
+        zone = f", {dtype.time_zone}" if dtype.time_zone else ""
+        return f"{base}[{dtype.time_unit}{zone}]"
+    if isinstance(dtype, pl.Duration):
+        return f"{base}[{dtype.time_unit}]"
+    if isinstance(dtype, pl.Decimal):
+        return f"{base}[{dtype.precision},{dtype.scale}]"
+    if isinstance(dtype, (pl.List, pl.Array)):
+        return f"{base}[{dtype_name(dtype.inner)}]"
+    return base
+
+
+def _jsonable(value: Any) -> Any:
+    """Turn a manifest value into something JSON can hold.
+
+    TOML has dates and JSON does not; they become ISO strings.
+    """
+    if isinstance(value, dict):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonable(item) for item in value]
+    if isinstance(value, (date, datetime, time)):
+        return value.isoformat()
+    if isinstance(value, Path):
+        return value.as_posix()
+    return value
+
+
+def _declared_fields(entry: dict, skip: Iterable[str] = ()) -> dict:
+    """The metadata an entry declares, as it is: absent stays absent.
+
+    Keys are sorted, so that reordering a ``chartbook.toml`` does not
+    reorder the index.
+    """
+    skip = _STRUCTURAL_KEYS | set(skip)
+    return {
+        key: _jsonable(entry[key])
+        for key in sorted(entry)
+        if not key.startswith("_") and key not in skip
+    }
+
+
+def _docs(entry: dict) -> Optional[dict]:
+    """An entry's write-up: the file it is in, or the text itself if inline."""
+    if entry.get("docs_path"):
+        return {"path": entry["docs_path"]}
+    if entry.get("docs"):
+        return {"text": entry["docs"]}
+    return None
+
+
+def _file_facts(
+    base_dir: Path, declared_path: Any, cache: Optional[hashing.HashCache]
+) -> dict:
+    """Where a declared file is, and its hash and size if it is there."""
+    if not isinstance(declared_path, str) or not declared_path.strip():
+        return {}
+    resolved = os.path.normpath(base_dir / declared_path)
+    facts: dict = {
+        "location": {
+            "kind": "file",
+            "path": declared_path,
+            "resolved_path": resolved,
+        }
+    }
+    try:
+        content = hashing.hash_path(resolved, cache)
+    except OSError as error:
+        warnings.warn(f"Could not hash {resolved}: {error}", stacklevel=2)
+        content = None
+    if content is not None:
+        facts["content_hash"] = content.content_hash
+        facts["size_bytes"] = content.size_bytes
+    return facts
+
+
+def _describe_parquet(resolved_path: str) -> Optional[tuple[list[dict], int]]:
+    """A dataframe's columns and row count, read the way ``data.load()`` reads it.
+
+    Only the parquet footers are read. Returns None when there is nothing
+    readable there, which includes "not built yet".
+    """
+    import polars as pl
+
+    try:
+        frame = pl.scan_parquet(resolved_path, hive_partitioning=True)
+        schema = frame.collect_schema()
+        rows = frame.select(pl.len()).collect().item()
+    except Exception:  # noqa: BLE001 - polars raises many types for "not readable"
+        return None
+    columns = [
+        {"name": name, "dtype": dtype_name(dtype)} for name, dtype in schema.items()
+    ]
+    return columns, int(rows)
+
+
+def _head(kind: str, ref: AssetRef, pipeline_id: str, entry: dict) -> dict:
+    """The fields every asset record starts with, in their fixed order."""
+    record = {
+        "kind": record_kind(kind),
+        "version": RECORD_VERSION,
+        "id": str(ref),
+        "ref": ref.to_dict(),
+        "pipeline": pipeline_id,
+    }
+    for key in ("name", "description"):
+        if key in entry:
+            record[key] = _jsonable(entry[key])
+    return record
+
+
+def _finish(record: dict, entry: dict, skip: Iterable[str] = ()) -> dict:
+    """Add an entry's remaining declared metadata, then its write-up, last."""
+    for key, value in _declared_fields(entry, skip=skip).items():
+        record.setdefault(key, value)
+    docs = _docs(entry)
+    if docs is not None:
+        record["docs"] = docs
+    return record
+
+
+def _series_records(
+    dataframe_ref: AssetRef,
+    entry: dict,
+    columns: Optional[list[dict]],
+    where: str,
+) -> list[dict]:
+    """One record per series of a dataframe: every column but the date.
+
+    A column documented by a ``[dataframes.x.series.y]`` table is addressed
+    by that table's key and marked ``declared``. Any other column is
+    addressed by its own name, if its name can be part of an address.
+    """
+    declared = entry.get("series") or {}
+    key_of_column = {table.get("column", key): key for key, table in declared.items()}
+    records = []
+
+    def record(key: str, column: str, table: Optional[dict]) -> dict:
+        ref = AssetRef(**{**dataframe_ref.to_dict(), "part": key})
+        made = {
+            "kind": "Series",
+            "version": RECORD_VERSION,
+            "id": str(ref),
+            "ref": ref.to_dict(),
+            "dataframe": str(dataframe_ref),
+            "column": column,
+            "declared": table is not None,
+        }
+        if table is not None:
+            for field in ("name", "description"):
+                if field in table:
+                    made[field] = _jsonable(table[field])
+            _finish(made, table, skip=("column",))
+        return made
+
+    seen = set()
+    for column in [c["name"] for c in columns or []]:
+        if column == entry.get("date_col"):
+            continue
+        if column in key_of_column:
+            key = key_of_column[column]
+            seen.add(key)
+            records.append(record(key, column, declared[key]))
+        elif ID_COMPONENT_PATTERN.match(column) and column not in declared:
+            records.append(record(column, column, None))
+        # Otherwise the column's name cannot be part of an address. It is
+        # still listed in the dataframe's `columns`; a series table that
+        # names it with `column = "..."` gives it one.
+
+    for key in sorted(set(declared) - seen):
+        table = declared[key]
+        column = table.get("column", key)
+        if columns is not None:
+            warnings.warn(
+                f"{where}: series {key!r} names the column {column!r}, which "
+                f"the dataframe does not have.",
+                stacklevel=3,
+            )
+        records.append(record(key, column, table))
+    return records
+
+
+def _asset_records(
+    kind: str,
+    name: str,
+    entry: dict,
+    pipeline_id: str,
+    base_dir: Path,
+    cache: Optional[hashing.HashCache],
+) -> list[dict]:
+    """The record for one asset, followed by its series if it is a dataframe."""
+    ref = AssetRef(kind=kind, name=name).in_pipeline(pipeline_id)
+    record = _head(kind, ref, pipeline_id, entry)
+    facts = _file_facts(base_dir, entry.get("path"), cache)
+    record.update(facts)
+    series: list[dict] = []
+
+    if kind == "dataframe":
+        described = None
+        if "content_hash" in facts:
+            described = _describe_parquet(facts["location"]["resolved_path"])
+        columns = None
+        where = f"{base_dir / 'chartbook.toml'}: [dataframes.{name}]"
+        if described is not None:
+            columns, record["row_count"] = described
+            record["columns"] = columns
+            date_col = entry.get("date_col")
+            if date_col and date_col not in {c["name"] for c in columns}:
+                warnings.warn(
+                    f"{where}: date_col is {date_col!r}, which the dataframe "
+                    f"does not have. Its columns are: "
+                    f"{', '.join(c['name'] for c in columns[:12])}"
+                    f"{', ...' if len(columns) > 12 else ''}.",
+                    stacklevel=2,
+                )
+        series = _series_records(ref, entry, columns, where)
+    elif kind == "chart" and entry.get("dataframe"):
+        source = parse_asset_ref(entry["dataframe"], kind="dataframe")
+        if source.is_local:
+            source = source.in_pipeline(pipeline_id)
+        record["inputs"] = [str(source)]
+    elif kind == "note" and entry.get("path") and "docs" not in entry:
+        # A note is its own write-up
+        entry = {**entry, "docs_path": entry["path"]}
+
+    return [_finish(record, entry), *series]
+
+
+def pipeline_records(
+    pipeline_id: str,
+    pipeline_manifest: dict,
+    cache: Optional[hashing.HashCache] = None,
+) -> list[dict]:
+    """The records for one pipeline: itself, then its assets.
+
+    Assets come in the order dataframes, charts, notebooks, notes, each by
+    name, and each dataframe is followed by its series.
+
+    :param pipeline_id: The pipeline's ID in this build (a catalog's key).
+    :param pipeline_manifest: Its loaded manifest.
+    :param cache: A hash cache, so unchanged files are not read again.
+    """
+    base_dir = Path(pipeline_manifest["pipeline_base_dir"])
+    project = pipeline_manifest["project"]
+
+    assets: list[dict] = []
+    for kind in ASSET_KINDS:
+        table = KIND_TABLES[kind]
+        entries = pipeline_manifest.get(table) or {}
+        for name in sorted(entries):
+            try:
+                assets += _asset_records(
+                    kind, name, entries[name], pipeline_id, base_dir, cache
+                )
+            except ValueError as error:
+                # A key that cannot be written as an address has no ID
+                warnings.warn(
+                    f"{base_dir / 'chartbook.toml'}: [{table}.{name}] is left "
+                    f"out of the index: {error}",
+                    stacklevel=2,
+                )
+
+    record: dict = {
+        "kind": "Pipeline",
+        "version": RECORD_VERSION,
+        "id": pipeline_id,
+        "name": project["name"],
+    }
+    for key in ("description", "maintainer", "contributors", "repo_url"):
+        if project.get(key):
+            record[key] = _jsonable(project[key])
+    compatibility = project.get("os_compatibility")
+    if compatibility:
+        record["os_compatibility"] = (
+            [compatibility] if isinstance(compatibility, str) else list(compatibility)
+        )
+    record["location"] = {"kind": "path", "value": base_dir.as_posix()}
+    if project.get("build"):
+        record["scripts"] = {"build": project["build"]}
+    record["assets"] = [a["id"] for a in assets if a["kind"] != "Series"]
+    record["docs"] = {"path": project.get("readme") or "./README.md"}
+    return [record, *assets]
+
+
+def build_index(
+    manifest: dict,
+    *,
+    cache: Optional[hashing.HashCache] = None,
+    skip_pipelines: Iterable[str] = (),
+    generated_at: Optional[datetime] = None,
+) -> dict:
+    """Build the index for a loaded manifest, pipeline or catalog.
+
+    Same manifests and same files give the same index, apart from
+    ``generated_at``: records are in a fixed order and so are their keys.
+
+    A declared asset whose file does not exist still has a record; it has
+    no ``content_hash``. The index says what the manifest declares, and
+    ``chartbook check`` is what complains about missing files.
+
+    :param manifest: The manifest, from :func:`chartbook.manifest.load_manifest`.
+    :param cache: A hash cache, so unchanged files are not read again.
+    :param skip_pipelines: Pipelines left out of this build altogether.
+    :param generated_at: The time to record; defaults to now.
+    :returns: The full index, with ``resolved_path`` in each location. Pass
+        it through :func:`published` before it leaves this machine.
+    """
+    cache = cache if cache is not None else hashing.HashCache()
+    skipped = set(skip_pipelines)
+    pipeline_ids = sorted(p for p in get_pipeline_ids(manifest) if p not in skipped)
+    project = manifest["project"]
+
+    records: list[dict] = []
+    if project["type"] == "catalog":
+        catalog: dict = {
+            "kind": "Catalog",
+            "version": RECORD_VERSION,
+            "id": project["id"],
+            "name": project["name"],
+        }
+        if project.get("description"):
+            catalog["description"] = project["description"]
+        catalog["pipelines"] = pipeline_ids
+        if manifest.get("policy"):
+            catalog["policy"] = _jsonable(manifest["policy"])
+        records.append(catalog)
+
+    for pipeline_id in pipeline_ids:
+        records += pipeline_records(
+            pipeline_id, get_pipeline_manifest(manifest, pipeline_id), cache
+        )
+
+    moment = generated_at or datetime.now(timezone.utc)
+    return {
+        "schema": SCHEMA,
+        "generated_at": moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generator": {"name": "chartbook", "version": __version__},
+        "root": project["id"],
+        "records": records,
+    }
+
+
+def published(index: dict) -> dict:
+    """The index as it may leave this machine: no local absolute paths.
+
+    Drops ``resolved_path`` from every asset's ``location``, and the
+    ``value`` of a pipeline's ``location`` when it is a local directory.
+    Everything else, hashes included, is unchanged.
+    """
+    public = copy.deepcopy(index)
+    for record in public.get("records", []):
+        location = record.get("location")
+        if not isinstance(location, dict):
+            continue
+        location.pop("resolved_path", None)
+        if record.get("kind") == "Pipeline" and location.get("kind") == "path":
+            location.pop("value", None)
+    return public
+
+
+def write_index(
+    index: dict, path: Union[str, Path], only_if_changed: bool = False
+) -> Path:
+    """Write an index as JSON.
+
+    :param only_if_changed: If True, and the file already holds this index
+        in everything but ``generated_at``, leave the file as it is. A build
+        that finds nothing different then touches nothing, and
+        ``generated_at`` stays the time the index last changed.
+    :returns: The path of the file.
+    """
+    path = Path(path)
+    if only_if_changed and _same_but_for_time(index, path):
+        return path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(index, f, indent=2, ensure_ascii=False, default=str)
+        f.write("\n")
+    return path
+
+
+def _same_but_for_time(index: dict, path: Path) -> bool:
+    """Whether a file already holds an index, ignoring when it was generated."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            existing = json.load(f)
+    except (OSError, ValueError):
+        return False
+    if not isinstance(existing, dict):
+        return False
+
+    def timeless(value: dict) -> dict:
+        return {key: item for key, item in value.items() if key != "generated_at"}
+
+    # Through JSON, so that the comparison is of what would be written
+    return timeless(existing) == timeless(json.loads(json.dumps(index, default=str)))

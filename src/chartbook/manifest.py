@@ -23,6 +23,7 @@ from typing import Union
 import tomli
 
 from chartbook.identity import (
+    ID_COMPONENT_PATTERN,
     derive_pipeline_id,
     get_git_remote_url,
     remote_to_web_url,
@@ -302,6 +303,63 @@ def validate_doc_fields(
     return ("str", manifest["docs"])
 
 
+def validate_series(dataframe_manifest: dict, dataframe_id: str) -> dict:
+    """Validate a dataframe's ``[dataframes.<id>.series.<key>]`` tables.
+
+    A series is one column of a dataframe, given an address
+    (``dataframe#key``) so that a name, units, a frequency and a write-up can
+    be attached to it. Declaring one is how a column is documented, not how
+    it comes to exist: every column is in the index whether or not it has a
+    table here. See "Addressing a series inside a dataframe" in
+    ``docs_src/design/asset-graph.md``.
+
+    Each table's ``column`` is filled in with its key when it is not given.
+
+    :param dataframe_manifest: The dataframe's manifest entry.
+    :param dataframe_id: Its key, for error messages.
+    :returns: The series tables by key; empty if the dataframe declares none.
+    :raises ValueError: If the tables are malformed, a key is not a legal
+        name, or two series claim one column.
+    """
+    series = dataframe_manifest.get("series")
+    if series is None:
+        return {}
+    where = f"[dataframes.{dataframe_id}.series]"
+    if not isinstance(series, dict):
+        raise ValueError(
+            f"{where} must be a table of tables, one per series, e.g. "
+            f"[dataframes.{dataframe_id}.series.dgs10]."
+        )
+    claimed: dict[str, str] = {}
+    for key, entry in series.items():
+        if not isinstance(entry, dict):
+            raise ValueError(
+                f"{where}: {key!r} must be a table, e.g. "
+                f"[dataframes.{dataframe_id}.series.{key}] with a 'name'."
+            )
+        if not ID_COMPONENT_PATTERN.match(key):
+            raise ValueError(
+                f"{where}: {key!r} is not a legal series key. A key becomes "
+                f"part of an address ('{dataframe_id}#<key>'), so it must match "
+                f"[A-Za-z0-9._-]+. Name the column itself with "
+                f"column = {key!r}."
+            )
+        column = entry.setdefault("column", key)
+        if not isinstance(column, str) or not column:
+            raise ValueError(f"{where}: {key!r} has a 'column' that is not a name.")
+        if column in claimed:
+            raise ValueError(
+                f"{where}: {claimed[column]!r} and {key!r} both name the column "
+                f"{column!r}. A column is one series."
+            )
+        claimed[column] = key
+        if entry.get("docs") and entry.get("docs_path"):
+            raise ValueError(
+                f"{where}: {key!r} has both docs_path and docs. Only one is allowed."
+            )
+    return series
+
+
 def _warn_unknown_project_keys(project_raw: dict, source: str) -> None:
     """Warn about unrecognized keys in the [project] table.
 
@@ -449,6 +507,7 @@ def _load_pipeline_manifest(raw_manifest):
             )
             dataframe_manifest["_doc_mode"] = doc_mode
             dataframe_manifest["_doc_value"] = doc_value
+            validate_series(dataframe_manifest, dataframe_id)
 
         if "charts" in manifest:
             for chart_id in manifest["charts"]:

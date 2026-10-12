@@ -208,6 +208,10 @@ inside an ID component, so the grammar stays unambiguous — whereas `.` is lega
 already separates scope. And it costs only a pair of shell quotes, with nothing to escape in TOML
 strings or Python.
 
+*(Built: the loader reads and validates these tables, and the {doc}`index <index-schema>` has a
+`Series` record for every column. A series address does not resolve yet, and pages do not show
+series yet.)*
+
 Two properties worth noting. An explicit `column` means the **address survives a column rename** —
 change one line and every reference still resolves. And because the index records each dataframe's
 column list from the parquet schema anyway, *which* series exist is known without any declaration;

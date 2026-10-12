@@ -237,6 +237,39 @@ path = "./_data/revenue_data/**/*.parquet"
 
 Glob paths only support `format="polars"` (LazyFrame) in `data.load`. As with charts, exactly one of `docs_path` / `docs` is required.
 
+`date_col` must be the column's name exactly as it is in the data, capitals included. The build warns when the data has no such column.
+
+### Naming columns
+
+Give columns code-friendly names: letters, digits and underscores, starting with a letter, such as `spread_10y_2y` or `dgs10`. Lowercase is safest. Such a name works unquoted in SQL, as an attribute in Python and R, and as part of an address (`term_premium#spread_10y_2y`).
+
+A name for people to read, such as "10Y-2Y Spread", is metadata. Put it in a series table (next section), not in the data. A column called `10Y 2Y Spread` still loads and is still listed, but it has no address of its own until a series table gives it one.
+
+### Documenting a column: `[dataframes.<id>.series.<key>]`
+
+A dataframe with a date column and several value columns holds several time series. To give one of them a name, units and a write-up of its own, add a series table under the dataframe:
+
+```toml
+[dataframes.treasury_rates.series.dgs10]
+name = "10-Year Treasury Constant Maturity"
+column = "DGS10"              # the column in the data; defaults to the key
+units = "Percent"
+frequency = "Daily"
+docs_path = "./docs_src/series/dgs10.md"
+```
+
+The key (`dgs10`) is the series' address inside the dataframe, `treasury_rates#dgs10`, so it may only contain letters, digits, `.`, `_` and `-`. If the column already has a code-friendly name, use it as the key and leave `column` out:
+
+```toml
+[dataframes.term_premium.series.spread_10y_2y]
+name = "10Y-2Y Spread"
+units = "Percentage points"
+```
+
+The column a table names may be spelled any way at all, which is how one called `10Y 2Y Spread` gets an address when the data cannot be changed. Every field is optional, and you may add fields of your own.
+
+You do not have to declare a series for it to exist. Every column except the `date_col` is listed in the build's `index.json` whether or not it has a table; a table only documents one. Series are not shown on the dataframe's page yet, and `data.load()` does not take a series address yet. `chartbook check` reports a `docs_path` that points at no file.
+
 ## `[notebooks]` — Jupyter Notebooks
 
 `name` is inferred from the notebook's first `# Heading`; set it explicitly to override. `publishable = true` includes the notebook in `chartbook publish` output.

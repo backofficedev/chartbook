@@ -5,8 +5,11 @@ A design document. The index is the artifact every other part of ChartBook reads
 is specified before anything that depends on it. See {doc}`asset-graph` for the mechanism this
 serves.
 
-Status: specification proposed, implementation pending. **This is the next thing to build**:
-step 1 in {doc}`overview`, with notes for whoever builds it in {ref}`index-implementing` below.
+Status: **the first implementation is built** (`chartbook.index`, `chartbook.hashing`): every
+build writes `index.json` with `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`
+and `Note` records. `Build` records, dependencies and `Model` records are not written yet; they
+come with the parts of the {doc}`asset graph <asset-graph>` that produce them.
+{ref}`index-implementing` says exactly what is and is not there.
 
 Revised 2026-10-12, before any of it was built: IDs carry the asset's kind
 (`…:chart/curve_today`), every asset record has a structured `ref`, an asset's whereabouts is a
@@ -64,6 +67,9 @@ One JSON object: an envelope, then a flat array of self-describing records.
 }
 ```
 
+(Today the file is not under `_build/`. It is written beside the HTML, as `docs/index.json`, and
+in the build directory. See {ref}`index-implementing`.)
+
 `schema` versions the *file*; each record versions *itself*. This is the shape Kubernetes uses — a
 list with its own version, holding items that each carry `kind` and `version` — and it has survived
 a decade and hundreds of resource types.
@@ -87,6 +93,13 @@ breaking things before 1.0.
 
 A JSON Schema is published per `kind` per version, under `schemas/chartbook/v1/<Kind>.json`. That
 publication is what makes third-party consumers possible.
+
+They are in the package, at `chartbook/schemas/chartbook/v1/`, with one for the envelope at
+`chartbook/schemas/chartbook/index/v1.json`, and they are published with this documentation at
+the URL each one's `$id` gives, e.g.
+`https://backofficedev.github.io/chartbook/schemas/chartbook/v1/Dataframe.json`. Each schema
+fixes the fields this document names and allows others, because an asset record also carries
+whatever else its manifest entry declares.
 
 ## Conventions
 
@@ -140,9 +153,13 @@ exactly one implementation ({ref}`not-doing`):
 - **A file:** SHA-256 of its bytes.
 - **A glob of files, or a directory:** SHA-256 of a listing with one line per file,
   `<hex of the file's SHA-256>`, two spaces, `<path relative to the directory or to the glob's
-  fixed prefix, with forward slashes>`, newline; lines sorted by path. This is the output format
-  of `sha256sum`, so anyone can reproduce it by hand. *(Proposed 2026-10-12; settle it in step 1
-  and then never change it without a new algorithm prefix.)*
+  fixed prefix, with forward slashes>`, newline; lines sorted by path (by code point, which is
+  what `LC_ALL=C sort` gives). The fixed prefix of a glob is its leading directories that
+  contain no wildcard: `_data/rates` for `_data/rates/**/*.parquet`. This is the output format
+  of `sha256sum`, so anyone can reproduce it by hand, and a test does. Every file counts,
+  hidden ones included. A glob that matches one file is still a listing. *(Decided 2026-10-12;
+  implemented in `chartbook.hashing`. Once a release carries it, it must not change without a
+  new algorithm prefix.)*
 
 **Location.** Where an asset's content is, as a typed object. Today there is one kind:
 
@@ -164,7 +181,22 @@ used to show `path` and `resolved_path` at the top level of each record.
 A `Pipeline` record also has a `location`, with a different vocabulary: `"path"` or `"git"`,
 saying where the pipeline's *source* comes from.
 
+**Docs.** An asset's write-up is `"docs": { "path": "./docs_src/…md" }` when the manifest gives
+`docs_path`, and `"docs": { "text": "…" }` when it gives the text inline with `docs`. The
+`rendered` key shown in the examples below points into the `content/` directory of the target
+layout; it is not written until that layout exists.
+
+**Declared metadata.** An asset record carries every field its manifest entry declares
+(`sources`, `tags`, `license`, `units`, a field of your own), as declared, with keys sorted. TOML
+dates become ISO strings. What the index states in another form is left out: `path` (it is in
+`location`), `docs` and `docs_path` (in `docs`), a chart's `dataframe` (in `inputs`), and
+`series` (they are records of their own).
+
 **Timestamps** are RFC 3339 with an explicit offset, in UTC.
+
+`generated_at` is when the index last *changed*. A build that finds nothing different from the
+`index.json` already there leaves the file as it is, timestamp included, so that a build which
+changes nothing writes nothing and a published site does not churn. *(Decided 2026-10-12.)*
 
 **Absent versus empty.** A field that was not declared is omitted. A field declared as empty is
 present and empty. A consumer can therefore tell "no tags were given" from "tags were explicitly
@@ -184,10 +216,14 @@ The root. Exactly one per index.
   "pipelines": ["ftsfr/fed_yield_curve", "ftsfr/crsp_treasury"],
   "policy": {
     "mode": "warn",
-    "required": { "dataframe": ["name", "description", "sources"] }
+    "required": { "dataframes": ["name", "description", "sources"] }
   }
 }
 ```
+
+`policy` is the catalog's resolved `[policy]`, so the keys of `required` are the manifest's:
+`project`, `dataframes`, `charts`, `notebooks`. *(An earlier version of this example wrote
+`dataframe`.)*
 
 An index for a single pipeline omits the `Catalog` record and sets `root` to that pipeline's ID.
 
@@ -260,7 +296,12 @@ upstream?" answerable.
 ```
 
 `columns` carries the physical schema read from the parquet file. This is what makes **which series
-exist knowable without any declaration** — see below. `inputs` carries the asset-level edges;
+exist knowable without any declaration** — see below. The schema is read the way `data.load()`
+reads it, so it includes the partition columns of a hive-partitioned dataset, and a `dtype` is
+the Polars type in lower case with its parameters in square brackets: `float64`, `int32`,
+`string`, `boolean`, `date`, `datetime[ns]`, `datetime[us, UTC]`, `duration[ms]`,
+`decimal[10,2]`, `list[int64]`, `categorical`, `struct`. *(The dtype vocabulary was added
+2026-10-12 with the implementation; this document had only shown `date` and `float64`.)* `inputs` carries the asset-level edges;
 `built_by` points at the `Build` record whose `output_hash` matches.
 
 ### Series
@@ -294,7 +335,16 @@ An explicit `column` is what lets the address survive a column rename.
 A series is the **part** of a dataframe, in the reference grammar's word: what follows `#`. For
 an undeclared series the part is the column's own name. A column whose name is not a legal part
 (it contains a space, say) gets no `Series` record until a `[dataframes.x.series.y]` table gives
-it a key; it still appears in the dataframe's `columns`. *(Proposed 2026-10-12.)*
+it a key; it still appears in the dataframe's `columns`. *(Decided 2026-10-12.)*
+
+That is deliberate, and comes with a recommendation the maintainer made when deciding it:
+**columns should have code-friendly, SQL-compatible names**, letters, digits and underscores,
+starting with a letter (`spread_10y_2y`). The readable name ("10Y-2Y Spread") is metadata, and
+belongs in the series table's `name`, not in the data. {doc}`data-access` makes the same
+names appear in SQL, which is one more reason.
+
+The dataframe's `date_col` is not a series. A declared series whose `column` the data does not
+have is still recorded, and the build warns.
 
 ### Chart
 
@@ -519,47 +569,76 @@ Once the index exists, several things stop being subsystems and become readers o
 Which is the reason this document comes first.
 
 (index-implementing)=
-## Notes for whoever builds it
+## What the first implementation does
 
-These are not part of the specification. They are what the first implementer needs to know and
-would otherwise have to rediscover. The scope of the first implementation is step 1 in
-{doc}`overview`.
+Built in `chartbook/index.py` and `chartbook/hashing.py`, with the JSON Schemas beside them in
+`chartbook/schemas/`. `tests/test_index.py` and `tests/test_hashing.py` are the executable form
+of this section.
 
-**Where the file goes.** The `_build/` layout at the top of this document is a destination, not
-today's layout. Today `chartbook build` writes generated Markdown and a Sphinx project into an
-intermediate directory (`_docs/`, kept between incremental builds) and the HTML into the output
-directory (`docs/` by default). Do not restructure those in the same change. Recommended: write
-the full index to `_docs/index.json`, and a copy into the HTML output as `index.json`, so that it
-is published with the site and a browser can fetch it. The published copy drops every
-`resolved_path`, and the `value` of a pipeline `location` whose kind is `path`: local absolute
-paths must never reach a published site.
+**What is written.** `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook` and `Note`
+records. Not yet: `Build` records and `built_by`; `dependencies` on a `Pipeline`; `Model`
+records; `inputs` on a dataframe or a notebook (the manifest has no field to declare them);
+`rendered` in `docs`. A pipeline's `build` command is written as `"scripts": { "build": … }`,
+ahead of the `[scripts]` table.
 
-**Build records from one object.** `chartbook.refs.AssetRef` gives the `id` (`str(ref)`) and the
-`ref` (`ref.to_dict()`). A local reference from a manifest becomes an ID by adding the
-pipeline's scope and name to it.
+**Where it is written.** The `_build/` layout at the top of this document is a destination, not
+today's layout. `chartbook build` writes two files:
 
-**Make it deterministic.** Same manifests and same files must give the same bytes, apart from
-`generated_at`. Sort records (the catalog, then per pipeline: the pipeline, then its assets by
-kind and name, each dataframe followed by its series). Keep key order fixed. Without this, a
-diff of two indexes is noise.
+- the **published** index, `index.json` beside the HTML (`docs/index.json`), so that it travels
+  with the site and a browser can fetch it. It has no `resolved_path` anywhere, and a pipeline's
+  `location` of kind `path` has no `value`: local absolute paths never reach a published site;
+- the **full** index, `index.json` in the build directory (`_docs/`), with those paths. A plain
+  build deletes that directory when it finishes, so the full index outlives the build only with
+  `--keep-build-dirs` or in an incremental build, which is the default for a catalog.
 
-**Hashing is slow; cache it.** Data files are large and builds are frequent. Cache each file's
-hash against its size and modification time, in the build's state file. The incremental build
-already keeps such a file (`chartbook/incremental.py`); read that module first, since it also
-decides which pipelines need regenerating at all.
+`chartbook.index.build_index(manifest)` returns the full index to a program, and
+`chartbook.index.published()` turns it into the other.
 
-**Files that are not built yet.** A declared asset whose file is missing still gets a record,
-with `content_hash` omitted. The index describes what the manifest declares; `chartbook check`
-is what complains about missing files.
+**Records come from one object.** `chartbook.refs.AssetRef` gives the `id` (`str(ref)`) and the
+`ref` (`ref.to_dict()`). A local name from a manifest becomes an ID with
+`ref.in_pipeline(pipeline_id)`. In a catalog, the pipeline's ID is the catalog's key for it.
 
-**What to leave out at first.** `Build` records, `built_by`, `dependencies` on a `Pipeline`, and
-`scripts` (which do not exist in the manifest yet; emit the `build` string as
-`"scripts": { "build": … }` when it is set). `Model` records come with step 2.
+**It is deterministic.** The same manifests and files give the same bytes, apart from
+`generated_at`. Records are in a fixed order: the catalog; then pipelines by ID; within one, the
+pipeline, then its dataframes, charts, notebooks and notes, each by name, and each dataframe
+followed by its series in column order. Declared metadata is in sorted key order, so reordering
+a `chartbook.toml` does not reorder the index.
 
-**Schemas and tests.** Publish a JSON Schema per record kind under `schemas/chartbook/v1/` and
-test that every record the example catalog produces validates against its schema. Then test the
-worked example above, field by field, against a fixture project.
+**Hashes are cached.** `chartbook.hashing.HashCache` remembers each file's hash against its size
+and modification time, in `.chartbook-hash-cache.json` in the build directory. An incremental
+build reads only the files that changed. A plain build starts from an empty build directory and
+hashes everything, as it does everything else.
 
-**Do not render the site from the index yet.** Sphinx keeps reading the manifests as it does
-today. Switching the renderer to the index is its own change, after the index has been stable
-for a while.
+**Files that are not built yet.** A declared asset whose file is missing still has a record,
+without `content_hash`, `size_bytes`, `row_count` or `columns`. The index describes what the
+manifest declares; `chartbook check` is what complains about missing files. (By default
+`chartbook build` stops on a missing file before it gets this far; the case arises through the
+Python API and with `--no-strict`, where the affected pipelines are left out of the site and of
+the index alike.)
+
+**A key that is not an address.** An asset whose key in `chartbook.toml` cannot be written in a
+reference (it contains a space, say) is left out, with a warning naming it.
+
+**The site does not read the index.** Sphinx still renders from the manifests. Moving the
+renderer onto the index is its own change (step 6 in {doc}`overview`), for when the index has
+been stable for a while.
+
+### Decided while building it
+
+Each of these was open or unstated when the build began.
+
+**Decided by the maintainer, 2026-10-12:**
+
+1. The hashing rule for a glob or a directory, as written under "Conventions".
+2. Columns whose names are not legal parts have no `Series` record until a table names them.
+   Columns should have SQL-compatible names; the readable name is metadata.
+3. `generated_at` is when the index last changed; an unchanged index is not rewritten.
+
+**Proposed: implemented, and waiting on the maintainer's yes:**
+
+4. Two files, with the published one free of local paths.
+5. The `dtype` vocabulary.
+6. `docs.text` for inline write-ups, and no `rendered` for now.
+7. An asset record carries all declared metadata, not a fixed list of fields.
+8. `policy.required` keeps the manifest's plural keys.
+9. Pipelines that a `--no-strict` build skips are left out of the index.

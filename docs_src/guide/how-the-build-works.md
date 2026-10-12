@@ -131,6 +131,55 @@ Once all Markdown files are in place:
 
 3. **Output copy**: The HTML output from `_docs/_build/html/` is copied to your output directory (default: `./docs`). A `.nojekyll` file is added for GitHub Pages compatibility.
 
+### The index: `index.json`
+
+After the HTML is in place, the build writes one more file beside it: `docs/index.json`. It describes everything the site contains, as a flat list of records: one for each pipeline, dataframe, chart, notebook and note, and one for each column of each dataframe.
+
+```json
+{
+  "schema": "chartbook/index/v1",
+  "generated_at": "2026-10-12T19:02:11Z",
+  "generator": { "name": "chartbook", "version": "0.2.0" },
+  "root": "ftsfr/fed_yield_curve",
+  "records": [
+    { "kind": "Pipeline", "version": "chartbook/v1", "id": "ftsfr/fed_yield_curve", "…": "…" },
+    { "kind": "Dataframe", "version": "chartbook/v1",
+      "id": "ftsfr/fed_yield_curve:treasury_rates",
+      "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+               "kind": "dataframe", "name": "treasury_rates" },
+      "name": "Treasury Rates",
+      "location": { "kind": "file", "path": "./_data/treasury_rates.parquet" },
+      "content_hash": "sha256:4b1f…",
+      "size_bytes": 2148374,
+      "row_count": 15842,
+      "columns": [ { "name": "date", "dtype": "date" }, { "name": "DGS10", "dtype": "float64" } ],
+      "sources": ["FRED"],
+      "docs": { "path": "./docs_src/dataframes/treasury_rates.md" } },
+    { "kind": "Series", "version": "chartbook/v1",
+      "id": "ftsfr/fed_yield_curve:treasury_rates#DGS10", "column": "DGS10", "declared": false, "…": "…" },
+    { "kind": "Chart", "version": "chartbook/v1",
+      "id": "ftsfr/fed_yield_curve:chart/curve_today",
+      "inputs": ["ftsfr/fed_yield_curve:treasury_rates"], "…": "…" }
+  ]
+}
+```
+
+What is in it:
+
+- **An ID for everything**, in the same form you pass to `chartbook path`, written out in full: `scope/pipeline:name` for a dataframe, `scope/pipeline:chart/name` for a chart. Each record also has the ID as named fields (`ref`), so a program never has to take one apart.
+- **A hash of every file** (`content_hash`), so two builds can be compared to see what changed. A dataframe spread over many files has one hash covering all of them.
+- **Each dataframe's columns and row count**, read from the parquet footer. No data is loaded.
+- **Whatever the manifest declares** for the asset: sources, tags, license, units, and any field of your own.
+- **What each chart was made from** (`inputs`).
+
+The file is safe to publish with the site: it holds no path from the machine that built it. A fuller copy, in which each `location` also has the absolute `resolved_path`, is written to `_docs/index.json`; keep it with `--keep-build-dirs` or an incremental build. From Python, `chartbook.index.build_index(load_manifest("."))` returns the same thing without building a site.
+
+Nothing reads the index yet; the pages are still rendered from `chartbook.toml`. It is there so that other tools can: a search box, an export to an orchestrator, a comparison of two builds. Its format is specified, record by record, in {doc}`../design/index-schema`, and there is a JSON Schema for each kind of record in the package under `chartbook/schemas/`.
+
+Hashing reads every declared file. An incremental build remembers each file's hash against its size and modification time and reads only the ones that changed; a plain build reads them all.
+
+If a build finds nothing different from the `index.json` already in the output directory, it leaves the file alone. So `generated_at` is when the index last changed, and rebuilding an unchanged project does not alter the file.
+
 ### Cleanup
 
 By default, both `_docs/` and `_docs_src/` are deleted when the build finishes, whether it succeeded or failed. To keep them — for example, to inspect the intermediate output after a *failed* build — pass `--keep-build-dirs`:

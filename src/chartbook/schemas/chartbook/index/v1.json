@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/index/v1.json",
+  "title": "ChartBook index",
+  "description": "The file a build writes as index.json: an envelope around a flat list of self-describing records. A reader keeps the records whose kind and version it understands and skips the rest.",
+  "type": "object",
+  "required": [
+    "schema",
+    "generated_at",
+    "generator",
+    "root",
+    "records"
+  ],
+  "properties": {
+    "schema": {
+      "const": "chartbook/index/v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "generator": {
+      "type": "object",
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "root": {
+      "type": "string",
+      "description": "The ID of the catalog, or of the pipeline when the index is of one pipeline."
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "version"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
