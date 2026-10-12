@@ -441,3 +441,51 @@ class TestPathCommand:
 
     def test_requires_a_reference(self):
         assert self._invoke().exit_code == 2
+
+
+class TestScratch:
+    def test_is_data_scratch_inside_the_pipeline_and_exists(self, project, monkeypatch):
+        monkeypatch.chdir(project / "src")
+        directory = data.scratch()
+        assert directory == project / "_data" / "_scratch"
+        assert directory.is_dir()
+        (directory / "intermediate.parquet").write_text("throwaway")
+
+    def test_ignores_itself_in_git(self, project):
+        directory = data.scratch(project_dir=project)
+        assert (directory / ".gitignore").read_text() == "*\n"
+
+    def test_calling_again_changes_nothing(self, project):
+        first = data.scratch(project_dir=project)
+        (first / "kept.txt").write_text("still here")
+        (first / ".gitignore").write_text("*\n!kept.txt\n")
+        second = data.scratch(project_dir=project)
+        assert second == first
+        assert (second / "kept.txt").read_text() == "still here"
+        assert (second / ".gitignore").read_text() == "*\n!kept.txt\n"
+
+    def test_calling_file_wins_over_cwd(self, tmp_path, monkeypatch):
+        mine = create_pipeline_project(tmp_path / "mine", pipeline_id="mine").resolve()
+        other = create_pipeline_project(tmp_path / "other", pipeline_id="other").resolve()
+        script = mine / "src" / "where.py"
+        script.write_text("from chartbook import data\nRESULT = data.scratch()\n")
+        monkeypatch.chdir(other)
+        assert runpy.run_path(str(script))["RESULT"] == mine / "_data" / "_scratch"
+
+    def test_outside_any_project(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(ManifestNotFoundError):
+            data.scratch()
+
+    def test_scratch_files_are_not_assets_or_inputs(self, project):
+        from chartbook.incremental import pipeline_fingerprint
+        from chartbook.manifest import load_manifest
+
+        manifest = load_manifest(project)
+        before = pipeline_fingerprint(manifest["project"]["id"], manifest)
+        (data.scratch(project_dir=project) / "intermediate.parquet").write_text("x")
+
+        with pytest.raises(AssetNotDeclaredError):
+            data.path("intermediate", project_dir=project)
+        manifest = load_manifest(project)
+        assert pipeline_fingerprint(manifest["project"]["id"], manifest) == before

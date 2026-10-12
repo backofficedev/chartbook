@@ -27,6 +27,8 @@ A name the manifest does not declare raises `AssetNotDeclaredError` immediately,
 
 Both example pipelines use `data.path()` for the declared targets in their `dodo.py`.
 
+`data.scratch()` completes the set: it returns `_data/_scratch/` inside the current pipeline, created on first use, for throwaway files that are not assets. The directory ignores itself in git, and nothing documents, publishes or depends on what is in it.
+
 ### Changed — **breaking: data glimpses come from the manifest, not `dodo.py`**
 
 `chartbook create-data-glimpses` no longer imports `dodo.py` and calls its task functions to find data files. It reads `chartbook.toml` and summarizes the dataframes declared there, so a project built with Snakemake, Make or plain scripts gets the same report as one built with doit — previously the command failed with `No dodo.py file found`.

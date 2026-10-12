@@ -9,6 +9,9 @@ of repeating its path in code::
     # chartbook.toml; works before the file exists, so it can name a target
     df.to_parquet(data.path("repo_public"))
 
+    # A throwaway directory for intermediates: _data/_scratch/ in the pipeline
+    raw.to_csv(data.scratch() / "raw_download.csv")
+
 Load dataframes from registered pipelines in a catalog::
 
     # Load as Polars LazyFrame (default)
@@ -36,7 +39,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 from chartbook.identity import resolve_pipeline_ref
-from chartbook.resolve import FileLocation, Location, resolve
+from chartbook.resolve import FileLocation, Location, find_manifest_dir, resolve
 from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 from chartbook.utils import is_glob_pattern
 
@@ -97,17 +100,63 @@ def path(
     :raises ValueError: If the reference uses reserved syntax, the name is
         declared in more than one table, or the entry has no ``path``.
     """
-    if project_dir is not None:
-        start_dirs = [project_dir]
-    else:
-        # "Walking up from the caller": the calling file first, so a script
-        # run from another directory still finds its own pipeline, then cwd
-        # for callers with no file (a notebook, a REPL, python -c)
-        start_dirs = [Path.cwd()]
-        caller_file = sys._getframe(1).f_globals.get("__file__")
-        if caller_file:
-            start_dirs.insert(0, os.path.dirname(os.path.abspath(caller_file)))
+    start_dirs = _start_dirs(project_dir, sys._getframe(1))
     return _file_path(resolve(ref, start_dirs=start_dirs), f"Asset {ref!r}")
+
+
+def _start_dirs(project_dir, caller_frame) -> list:
+    """Where to start looking for the pipeline a call belongs to.
+
+    "Walking up from the caller": the calling file first, so a script run
+    from another directory still finds its own pipeline, then the working
+    directory for callers with no file (a notebook, a REPL, ``python -c``).
+    An explicit *project_dir* replaces both.
+    """
+    if project_dir is not None:
+        return [project_dir]
+    start_dirs = [Path.cwd()]
+    caller_file = caller_frame.f_globals.get("__file__")
+    if caller_file:
+        start_dirs.insert(0, os.path.dirname(os.path.abspath(caller_file)))
+    return start_dirs
+
+
+#: Where :func:`scratch` puts throwaway files, relative to the pipeline root.
+SCRATCH_DIR = Path("_data") / "_scratch"
+
+
+def scratch(project_dir: Optional[Union[str, Path]] = None) -> Path:
+    """Get the current pipeline's directory for throwaway files.
+
+    Use it for intermediates that nothing else depends on: a partial
+    download, a cache between two steps, a file you only want to look at.
+
+    >>> from chartbook import data
+    >>> tmp = data.scratch() / "raw_download.csv"  # doctest: +SKIP
+
+    The directory is ``_data/_scratch/`` inside the pipeline, created on
+    first use. What goes in it is not an asset: it is not declared in the
+    manifest, not documented, not published, and it ignores itself in git.
+    It is safe to delete at any time. Because it lives inside the project,
+    two checkouts or worktrees of the same pipeline each get their own.
+
+    One thing to avoid: a dataframe whose ``path`` is a glob over all of
+    ``_data/`` (``./_data/**/*.parquet``) would pick up scratch files too.
+
+    :param project_dir: Where to look for the pipeline, as for :func:`path`.
+    :type project_dir: Optional[Union[str, Path]]
+    :returns: The absolute path of the scratch directory, which exists.
+    :rtype: Path
+    :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
+        starting directory.
+    """
+    start_dirs = _start_dirs(project_dir, sys._getframe(1))
+    directory = find_manifest_dir(*start_dirs) / SCRATCH_DIR
+    directory.mkdir(parents=True, exist_ok=True)
+    gitignore = directory / ".gitignore"
+    if not gitignore.exists():
+        gitignore.write_text("*\n")
+    return directory
 
 
 def _get_dataframe_docs_info_from_catalog(
