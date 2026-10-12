@@ -178,6 +178,10 @@ data.load(pipeline="https://github.com/ftsfr/crsp_treasury", ...) # URL, normali
   stripped).
 - The `@rev` suffix (e.g. `ftsfr/crsp_treasury@a1b2c3d`) is **reserved but not
   yet supported** — the parser rejects it with a "not yet supported" error.
+- A registry prefix (e.g. `charthub.example/ftsfr/crsp_treasury`) is likewise
+  **reserved but not yet supported**: the first of three components, when it
+  looks like a host (contains `.` or `:`, or is `localhost`). Write
+  `ftsfr/crsp_treasury`.
 
 ## Catalog Configuration
 

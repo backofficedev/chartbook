@@ -131,7 +131,7 @@ docs = data.get_docs(pipeline="crsp_treasury", dataframe="my_data")
 docs_path = data.get_docs_path(pipeline="crsp_treasury", dataframe="my_data")
 ```
 
-The `pipeline` argument accepts a bare name (resolved against the catalog when unambiguous), a scoped name (`scope/name`), or a repo URL (normalized to a scoped name). An `@rev` suffix is reserved but not yet supported.
+The `pipeline` argument accepts a bare name (resolved against the catalog when unambiguous), a scoped name (`scope/name`), or a repo URL (normalized to a scoped name). An `@rev` suffix and a registry prefix (`registry.example/scope/name`) are reserved but not yet supported.
 
 For advanced loading options, format details, and catalog setup, see **catalog_system.md**.
 

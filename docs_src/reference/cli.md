@@ -128,6 +128,10 @@ Copy the pipeline's publishable *source* files — README, `chartbook.toml`, par
 chartbook publish [--publish-dir PATH] [--project-dir PATH] [-v]
 ```
 
+```{note}
+`publish` copies files into a directory and does nothing else — no network, no registry. Sending a pipeline to a registry is a different act and will get a different verb, **`chartbook push`**. That name is reserved: the command exists only to say it is not yet supported, and `publish` will not grow a second meaning.
+```
+
 ## chartbook catalog
 
 Manage a catalog — by default the global one at `~/.chartbook/chartbook.toml` (`chartbook config` can point these commands at a different catalog). Concepts and the auto-discovery alternative: {doc}`../guide/catalogs-and-data`.

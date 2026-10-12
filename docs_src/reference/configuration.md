@@ -103,7 +103,16 @@ data.load(pipeline="ftsfr/crsp_treasury", ...)                    # canonical
 data.load(pipeline="https://github.com/ftsfr/crsp_treasury", ...) # URL, normalized
 ```
 
-If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. `scope/name@rev` is reserved syntax for future version pinning and is rejected for now. See {doc}`../design/toml-format-v2` for why identity works this way.
+If a bare name matches pipelines in more than one scope, chartbook errors and lists the candidates. See {doc}`../design/toml-format-v2` for why identity works this way.
+
+Two extensions of the ID grammar are **reserved**: the parser recognizes them and refuses them with a "not yet supported" error, so they can be given meaning later without changing what any existing ID means.
+
+| Reserved form | Example | For |
+|---|---|---|
+| `scope/name@rev` | `ftsfr/crsp_treasury@a1b2c3d` | Pinning a revision |
+| `registry/scope/name` | `charthub.example/ftsfr/crsp_treasury` | Naming the registry that resolves an ID |
+
+A registry prefix is the first of exactly three components, and looks like a host — it contains `.` or `:`, or is `localhost` (the rule Docker uses). `acme/rates` therefore means the same thing whether or not a registry ever exists, and a two-component ID is always `scope/name`, even if the scope contains a dot. See {doc}`../design/asset-graph`.
 
 ## `[pipelines]` — Catalog Registry
 
