@@ -47,8 +47,10 @@ def test_build_from_another_directory(pipeline_project, tmp_path, monkeypatch):
 
     assert result.exit_code == 0, f"Command failed with output: {result.output}"
     assert "Pipeline Specs" in (output_dir / "index.html").read_text()
-    # Nothing is left behind where the command was run
-    assert list(elsewhere.iterdir()) == []
+    # Nothing is left behind where the command was run. (Under `hatch test
+    # --cover` the Sphinx subprocess writes its coverage data file there.)
+    left_behind = [p.name for p in elsewhere.iterdir() if not p.name.startswith(".coverage")]
+    assert left_behind == []
 
 
 def test_build_with_a_renamed_intermediate_directory(pipeline_project, monkeypatch):
