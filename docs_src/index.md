@@ -42,6 +42,7 @@ chartbook browse          # open it in your browser
 - {doc}`guide/plotting-backends` — write a plotting backend for another library
 - {doc}`reference/configuration` — every `chartbook.toml` field, type, and default
 - {doc}`reference/cli` — every command
+- {doc}`reference/stability` — what is stable, and how breaking changes are handled
 
 Working with an AI assistant? The built docs site ships [llms.txt](https://llmstxt.org/) files (`llms.txt` and `llms-full.txt` at the site root), and `chartbook install skill` installs a ChartBook skill for Claude Code — user-level by default, or `--project` to vendor it into a repo.
 
@@ -66,6 +67,7 @@ examples
 reference/configuration
 reference/cli
 reference/api
+reference/stability
 ```
 
 ```{toctree}

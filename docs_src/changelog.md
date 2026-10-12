@@ -71,6 +71,16 @@ A new guide, *Writing a Plotting Backend*, documents the interface a third-party
 
 It also corrects what the code and the old "Plugin System" paragraph implied. An entry point must name a backend **instance** — the previously documented `"mypackage.backend:MyBackend"` registers an unusable class. The pluggy hook specifications in `PlottingHookSpec` are declared but never called, so implementing them does nothing. And a registered backend is reachable through `get_backend()` but is not yet selectable from `plotting.line()` and friends, which always use the built-in `plotly` and `matplotlib` backends. No behaviour changed; three docstrings did.
 
+### Removed — **breaking: the `[all]`, `[data]`, `[plotting]` and `[sphinx]` extras**
+
+The four install extras that became no-op aliases in 0.1.0 are gone, after the one release of notice they were given. `pip install chartbook` has installed everything since 0.1.0 and still does; drop the bracket from any requirement that has one (`chartbook[all]>=0.0.14` → `chartbook>=0.0.14`). pip and uv both still install the package for such a requirement rather than failing — uv warns that the extra does not exist — so nothing breaks at install time, but the bracket no longer names anything. The `[dev]` extra for contributors is unchanged.
+
+### Added — a stability and deprecation policy
+
+{doc}`reference/stability` says what ChartBook commits to and what it does not. Four surfaces are covered: the manifest format, the index schema, the Python API (`chartbook.data`, `chartbook.env`, `chartbook.plotting`) and the CLI. A breaking change to any of them is now announced by a deprecation warning for at least one minor release; where old and new cannot coexist, the old form is detected and refused with the fix rather than misread; such changes land only in minor releases before 1.0 and major releases after; and the changelog marks them. The index's per-record `kind` and `version` is the mechanism for changing one record type without a coordinated upgrade.
+
+The page also lists what is explicitly *not* covered (internal modules, the generated site's HTML and templates, message wording), the breaking changes already designed and still to come before 1.0, and what is currently deprecated. No migration tooling is promised.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level
