@@ -27,6 +27,20 @@ A name the manifest does not declare raises `AssetNotDeclaredError` immediately,
 
 Both example pipelines use `data.path()` for the declared targets in their `dodo.py`.
 
+### Changed — **breaking: data glimpses come from the manifest, not `dodo.py`**
+
+`chartbook create-data-glimpses` no longer imports `dodo.py` and calls its task functions to find data files. It reads `chartbook.toml` and summarizes the dataframes declared there, so a project built with Snakemake, Make or plain scripts gets the same report as one built with doit — previously the command failed with `No dodo.py file found`.
+
+What this changes for existing users:
+
+- **Only declared dataframes are summarized.** A CSV or parquet file that appeared as a doit target but has no `[dataframes.*]` entry is no longer in the report. Declare it to include it.
+- **The report is organized by dataframe.** Sections are titled by dataframe ID (`pipeline:dataframe` in a catalog) and show the declared name; the summary groups by pipeline instead of by doit task.
+- **Partitioned dataframes work.** A glob `path` is summarized as one dataset across its part files.
+- **Catalogs work.** Run in a catalog, the report covers every member pipeline.
+- New `--project-dir` option. Declared dataframes whose files are not built yet are skipped with a note.
+
+`create_data_glimpses.parse_dodo_tasks()` and its helpers are removed.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level

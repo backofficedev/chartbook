@@ -13,7 +13,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook catalog init/add/disable/enable/build/browse` | Manage a catalog and its site |
 | `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
-| `chartbook create-data-glimpses` | Summarize every data file your `dodo.py` produces |
+| `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install skill` | Install the bundled Claude Code skill (user-level by default) |
 
@@ -207,11 +207,13 @@ All three take `--catalog PATH` to override the configured catalog. The Python e
 
 ## chartbook create-data-glimpses
 
-Parse `dodo.py`, find every CSV/parquet target your tasks produce, and write `data_glimpses.md`: file metadata, column types, null percentages, sample rows, and numeric summary stats.
+Read `chartbook.toml`, take every dataframe it declares, and write `data_glimpses.md`: file metadata, column types, null percentages, sample rows, and numeric summary stats.
 
 ```console
-chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-threshold MB]
+chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-threshold MB] [--project-dir PATH]
 ```
+
+The manifest is the only source of the list. Nothing about how the project is built is consulted, so a pipeline built with doit, Snakemake, Make or plain scripts gets the same report, and a data file the manifest does not declare is not included. Partitioned dataframes (a glob `path`) are summarized as one dataset. Declared dataframes whose files do not exist yet are skipped with a note. Run in a catalog, the report covers every member pipeline.
 
 ## chartbook config
 
