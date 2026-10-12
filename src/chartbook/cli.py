@@ -82,6 +82,25 @@ def main():
     default=True,
     help="Strip Plotly's MathJax 2 scripts from notebook outputs to prevent conflicts with Sphinx's MathJax 3 (default: enabled)",
 )
+@click.option(
+    "--incremental",
+    is_flag=True,
+    default=False,
+    help="Keep the build directory between builds and redo only what changed since the last incremental build",
+)
+@click.option(
+    "--watch",
+    is_flag=True,
+    default=False,
+    help="Build incrementally, then rebuild whenever the project's files change, until Ctrl-C",
+)
+@click.option(
+    "--watch-interval",
+    type=click.FloatRange(min=0.1),
+    default=None,
+    metavar="SECONDS",
+    help="How often --watch checks for changes (default: 1)",
+)
 def build(
     output_dir,
     project_dir,
@@ -93,8 +112,17 @@ def build(
     size_threshold,
     strict,
     strip_mathjax2,
+    incremental,
+    watch,
+    watch_interval,
 ):
     """Generate HTML documentation in the specified output directory.
+
+    By default every build starts from nothing. With --incremental the
+    intermediate build directory (--docs-build-dir) is kept, pipelines whose
+    files have not changed are not regenerated, and only pages that differ
+    are rendered again. --watch does that in a loop: build, then rebuild each
+    time a file changes. Open the site with `chartbook browse` and refresh.
 
     :param output_dir: Directory where output will be generated.
     :type output_dir: str
@@ -116,6 +144,12 @@ def build(
     :type strict: bool
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
     :type strip_mathjax2: bool
+    :param incremental: If True, keep the build directory and redo only what changed.
+    :type incremental: bool
+    :param watch: If True, build incrementally and rebuild on every change.
+    :type watch: bool
+    :param watch_interval: Seconds between checks for changes in watch mode.
+    :type watch_interval: float
     """
     # Validate paths for shell/platform mismatches
     from chartbook.path_validation import detect_shell_environment, validate_cli_paths
@@ -127,9 +161,6 @@ def build(
 
     # Check for Sphinx dependencies
     _check_sphinx_installed()
-
-    # Import here to avoid loading Sphinx deps at module level
-    from chartbook.build_docs import generate_docs
 
     # Convert output_dir to Path
     output_dir = Path(output_dir).resolve()
@@ -160,23 +191,71 @@ def build(
     # Store whether we need to remove existing directory after successful generation
     should_remove_existing = output_dir.exists() and force_write
 
-    try:
-        generate_docs(
-            output_dir=output_dir,
-            project_dir=project_dir,
-            publish_dir=publish_dir,
-            _docs_dir=docs_build_dir,
-            temp_docs_src_dir=temp_docs_src_dir,
-            keep_build_dirs=keep_build_dirs,
-            should_remove_existing=should_remove_existing,
-            size_threshold=size_threshold,
-            strict=strict,
-            strip_mathjax2=strip_mathjax2,
-        )
-    except (ValueError, FileNotFoundError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
-        raise SystemExit(1)
-    click.echo(f"Successfully generated documentation in {output_dir}")
+    _run_docs_build(
+        project_dir,
+        incremental=incremental,
+        watch=watch,
+        watch_interval=watch_interval,
+        output_dir=output_dir,
+        project_dir=project_dir,
+        publish_dir=publish_dir,
+        _docs_dir=docs_build_dir,
+        temp_docs_src_dir=temp_docs_src_dir,
+        keep_build_dirs=keep_build_dirs,
+        should_remove_existing=should_remove_existing,
+        size_threshold=size_threshold,
+        strict=strict,
+        strip_mathjax2=strip_mathjax2,
+    )
+    if not watch:
+        click.echo(f"Successfully generated documentation in {output_dir}")
+
+
+def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kwargs):
+    """Run a documentation build once, or keep rebuilding it on change.
+
+    :param manifest_dir: The directory holding the project's chartbook.toml.
+    :param incremental: Keep the build directory and redo only what changed.
+    :param watch: Build incrementally, then rebuild whenever inputs change.
+    :param watch_interval: Seconds between checks in watch mode, or None.
+    :param build_kwargs: Passed to ``generate_docs``.
+    """
+    from chartbook.build_docs import generate_docs
+
+    if watch_interval is not None and not watch:
+        raise click.UsageError("--watch-interval only applies with --watch.")
+
+    def report(error):
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(error), err=True)
+
+    if not watch:
+        try:
+            summary = generate_docs(incremental=incremental, **build_kwargs)
+        except (ValueError, FileNotFoundError) as e:
+            report(e)
+            raise SystemExit(1)
+        if summary is not None:
+            click.echo(summary.describe())
+        return
+
+    from chartbook import incremental as incremental_builds
+    from chartbook.manifest import load_manifest
+
+    def build_once():
+        try:
+            summary = generate_docs(incremental=True, **build_kwargs)
+        except (ValueError, FileNotFoundError) as e:
+            report(e)
+            raise SystemExit(1)
+        click.echo(summary.describe())
+
+    def snapshot():
+        manifest = load_manifest(base_dir=manifest_dir)
+        return incremental_builds.snapshot_inputs(manifest, manifest_dir)
+
+    incremental_builds.watch(
+        build_once, snapshot, interval=watch_interval or 1.0, echo=click.echo
+    )
 
 
 @main.command()
@@ -1218,15 +1297,37 @@ def catalog_enable(pipeline_id, catalog_path):
     default=False,
     help="Skip pipelines with missing source files (default). Use --strict to fail on any missing file.",
 )
-def catalog_build(force_write, strict):
+@click.option(
+    "--incremental",
+    is_flag=True,
+    default=False,
+    help="Keep the build directory between builds and redo only what changed since the last incremental build",
+)
+@click.option(
+    "--watch",
+    is_flag=True,
+    default=False,
+    help="Build incrementally, then rebuild whenever a pipeline's files change, until Ctrl-C",
+)
+@click.option(
+    "--watch-interval",
+    type=click.FloatRange(min=0.1),
+    default=None,
+    metavar="SECONDS",
+    help="How often --watch checks for changes (default: 1)",
+)
+def catalog_build(force_write, strict, incremental, watch, watch_interval):
     """Build HTML documentation for the global catalog.
 
     Uses the catalog path from ``~/.chartbook/settings.toml`` if configured,
     otherwise falls back to ``~/.chartbook/chartbook.toml``.
+
+    With --incremental, pipelines whose files have not changed since the
+    last incremental build are not regenerated, which is most of the time
+    for most of a large catalog. --watch keeps rebuilding as files change.
     """
     _check_sphinx_installed()
 
-    from chartbook.build_docs import generate_docs
     from chartbook.config import get_default_catalog_path
 
     catalog_path = get_default_catalog_path()
@@ -1245,7 +1346,11 @@ def catalog_build(force_write, strict):
     click.echo(f"Building catalog from: {catalog_path}")
     click.echo(f"Output directory: {output_dir}")
 
-    generate_docs(
+    _run_docs_build(
+        project_dir,
+        incremental=incremental,
+        watch=watch,
+        watch_interval=watch_interval,
         output_dir=output_dir,
         project_dir=project_dir,
         _docs_dir=_docs_dir,
@@ -1253,6 +1358,8 @@ def catalog_build(force_write, strict):
         should_remove_existing=force_write,
         strict=strict,
     )
+    if watch:
+        return
 
     click.echo("")
     click.echo(f"Catalog built successfully: {output_dir / 'index.html'}")

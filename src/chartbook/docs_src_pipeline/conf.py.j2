@@ -144,6 +144,12 @@ html_js_files = [
     "chartbook-freshness.js",
 ]
 
+# The themes bundle Font Awesome and switch this on during a build if it is
+# left unset. Sphinx then finds the setting different from the one it cached,
+# takes the whole configuration to have changed, and re-reads every page on
+# every run, which defeats incremental builds. Stating it keeps it stable.
+fontawesome_included = True
+
 # -- Ablog options -----------------------------------------------------------
 html_css_files = [
     "custom.css",

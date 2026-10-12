@@ -29,6 +29,7 @@ chartbook init            # Scaffold a new pipeline project
 chartbook init --github   # ...then git init, commit, create a private GitHub repo with gh, and push
 chartbook build           # Generate HTML documentation website
 chartbook build -f        # Force overwrite existing docs
+chartbook build -f --watch  # Rebuild incrementally on every file change
 chartbook browse          # Open the generated site
 chartbook check              # CI gate: missing metadata, broken paths, expiring licenses
 chartbook path <name>        # Print the path chartbook.toml declares for an asset
