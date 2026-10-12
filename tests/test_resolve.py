@@ -12,7 +12,7 @@ from click.testing import CliRunner
 from chartbook import data, resolve as resolve_module
 from chartbook.cli import main
 from chartbook.errors import AssetNotDeclaredError, ManifestNotFoundError
-from chartbook.identity import UnsupportedRevisionError
+from chartbook.identity import UnsupportedRegistryError, UnsupportedRevisionError
 from chartbook.resolve import (
     FileLocation,
     Location,
@@ -92,13 +92,17 @@ class TestParseLocalRef:
         [
             "fed_yield_curve:treasury_rates",
             "ftsfr/fed_yield_curve:treasury_rates",
-            "charthub.example/ftsfr/fed_yield_curve:treasury_rates",
             "ftsfr/fed_yield_curve",
         ],
     )
     def test_cross_pipeline_is_reserved(self, ref):
         with pytest.raises(UnsupportedReferenceError, match="not yet supported"):
             parse_local_ref(ref)
+
+    def test_registry_prefix_is_reserved(self):
+        with pytest.raises(UnsupportedRegistryError, match="not yet supported") as e:
+            parse_local_ref("charthub.example/ftsfr/fed_yield_curve:treasury_rates")
+        assert "'charthub.example'" in str(e.value)
 
     @pytest.mark.parametrize("ref", ["", "two words", "semi;colon", "quo'te"])
     def test_invalid_names(self, ref):

@@ -235,9 +235,13 @@ def browse(output_dir, project_dir):
     help="Enable verbose output",
 )
 def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bool):
-    """Publish the documentation to the specified output directory.
+    """Stage a pipeline's publishable files into a directory.
 
     If no publish directory is provided, a default local directory will be used.
+
+    Publishing copies files and does nothing else: no network, no registry.
+    Sending a pipeline to a registry is a different act with a different
+    verb, `chartbook push`, which is reserved and not yet implemented.
 
     :param publish_dir: Directory where files will be published.
     :type publish_dir: Path or str, optional
@@ -275,6 +279,24 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     if not publish_dir.is_absolute():
         publish_dir = project_dir / Path(publish_dir)
     publish_pipeline(publish_dir=publish_dir, base_dir=project_dir, verbose=verbose)
+
+
+@main.command(hidden=True)
+def push():
+    """Reserved: send a pipeline to a registry. Not yet supported.
+
+    `publish` already means "stage files into a directory", so the registry
+    gets its own verb rather than a second meaning for that one. The name is
+    claimed here so that nothing else takes it first.
+    """
+    click.echo(
+        click.style("Error: ", fg="red", bold=True)
+        + "'chartbook push' is reserved for sending a pipeline to a registry, "
+        "which is not yet supported. To stage a pipeline's files into a "
+        "directory, use 'chartbook publish'.",
+        err=True,
+    )
+    raise SystemExit(1)
 
 
 def resolve_project_dir(project_dir: Path | None):

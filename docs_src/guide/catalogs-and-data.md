@@ -131,4 +131,4 @@ data.load(pipeline="ftsfr/crsp_treasury", ...)                    # canonical sc
 data.load(pipeline="https://github.com/ftsfr/crsp_treasury", ...) # repo URL, normalized on input
 ```
 
-A bare name resolves if exactly one catalog entry matches; if several scopes share it, the error lists the candidates so you can qualify. How IDs are derived — and why URLs are accepted as input but never stored — is covered in {doc}`../reference/configuration`.
+A bare name resolves if exactly one catalog entry matches; if several scopes share it, the error lists the candidates so you can qualify. A registry-qualified form (`charthub.example/ftsfr/crsp_treasury`) and a pinned one (`ftsfr/crsp_treasury@a1b2c3d`) are reserved syntax, refused as not yet supported. How IDs are derived — and why URLs are accepted as input but never stored — is covered in {doc}`../reference/configuration`.

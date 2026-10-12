@@ -5,8 +5,18 @@ The canonical identity of a pipeline is a scoped name ``scope/name``
 URLs are accepted as *input* wherever a pipeline reference is taken and are
 normalized to scoped names; they are never stored as identity.
 
+Two extensions of the grammar are reserved: recognized by the parser, and
+refused with a "not yet supported" error rather than a grammar error, so
+that they can be given meaning later without changing what any existing ID
+means.
+
+- ``scope/name@rev`` — a pinned revision.
+- ``registry/scope/name`` — an ID qualified with the registry that resolves
+  it, Docker-style, e.g. ``charthub.example/acme/rates``.
+
 See the format design doc (``docs_src/design/toml-format-v2.md``) for the
-rationale behind this scheme.
+rationale behind this scheme, and "Reserving a future global namespace" in
+``docs_src/design/asset-graph.md`` for the registry prefix.
 """
 
 from __future__ import annotations
@@ -28,15 +38,64 @@ class UnsupportedRevisionError(ValueError):
     """
 
 
+class UnsupportedRegistryError(ValueError):
+    """Raised when a pipeline ID or reference carries a registry prefix.
+
+    The ``registry/scope/name`` grammar is reserved for a future registry
+    and is recognized but not yet supported.
+    """
+
+
+def looks_like_registry(component: str) -> bool:
+    """Tell whether an ID's leading component names a registry, not a scope.
+
+    The rule is Docker's: a component containing ``.`` or ``:``, or equal to
+    ``localhost``, is a host. ``charthub.example`` and ``localhost:5000`` are
+    registries; ``acme`` is a scope.
+
+    :param component: The leading component of a three-component ID.
+    """
+    return "." in component or ":" in component or component == "localhost"
+
+
+def split_registry(pipeline_id: str) -> tuple[Optional[str], str]:
+    """Split a registry prefix off a fully qualified pipeline ID.
+
+    A registry-qualified ID has exactly three components,
+    ``registry/scope/name``, and its first looks like a host (see
+    :func:`looks_like_registry`). Anything else has no registry: a bare
+    ``name`` and a ``scope/name`` are returned whole, whatever characters the
+    scope contains, so no ID that was valid before the prefix was reserved
+    changes meaning.
+
+    :param pipeline_id: A pipeline ID, or a reference that starts with one
+        (a trailing ``:asset`` does not affect the split).
+    :returns: Tuple of (registry or None, the ID without it).
+    """
+    parts = pipeline_id.split("/")
+    if len(parts) == 3 and looks_like_registry(parts[0]):
+        return parts[0], "/".join(parts[1:])
+    return None, pipeline_id
+
+
 def validate_pipeline_id(pipeline_id: str) -> str:
     """Validate a pipeline ID against the ``[scope/]name`` grammar.
 
     :param pipeline_id: The candidate ID, e.g. ``"ftsfr/crsp_treasury"``
         or a bare ``"crsp_treasury"``.
     :returns: The validated ID, unchanged.
+    :raises UnsupportedRegistryError: If the ID is qualified with a registry
+        (``registry/scope/name``), which is reserved syntax.
     :raises ValueError: If the ID has more than two components or a
         component contains disallowed characters.
     """
+    registry, unqualified = split_registry(pipeline_id)
+    if registry is not None:
+        raise UnsupportedRegistryError(
+            f"Pipeline id {pipeline_id!r} is qualified with the registry "
+            f"{registry!r}. Registry prefixes are reserved syntax and not yet "
+            f"supported; use {unqualified!r} instead."
+        )
     parts = pipeline_id.split("/")
     if len(parts) > 2 or not all(ID_COMPONENT_PATTERN.match(p) for p in parts):
         raise ValueError(
@@ -75,6 +134,8 @@ def normalize_ref_to_id(ref: str) -> str:
     :param ref: The pipeline reference.
     :returns: A bare or scoped pipeline ID.
     :raises UnsupportedRevisionError: If the reference carries ``@rev``.
+    :raises UnsupportedRegistryError: If the reference is qualified with a
+        registry, e.g. ``charthub.example/acme/rates``.
     :raises ValueError: If nothing ID-like can be extracted.
     """
     ref, rev = split_rev(ref.strip())
@@ -209,6 +270,8 @@ def resolve_pipeline_ref(keys: Iterable[str], ref: str) -> str:
     :param ref: The reference to resolve (bare, scoped, or URL).
     :returns: The matching catalog key.
     :raises UnsupportedRevisionError: If the reference carries ``@rev``.
+    :raises UnsupportedRegistryError: If the reference carries a registry
+        prefix.
     :raises KeyError: If no key matches, or a bare name is ambiguous.
     """
     keys = list(keys)

@@ -42,8 +42,10 @@ from chartbook.errors import (
 )
 from chartbook.identity import (
     ID_COMPONENT_PATTERN,
+    UnsupportedRegistryError,
     UnsupportedRevisionError,
     resolve_pipeline_ref,
+    split_registry,
     split_rev,
 )
 
@@ -169,6 +171,7 @@ def parse_local_ref(ref: str) -> str:
     :param ref: The reference, e.g. ``"treasury_rates"``.
     :returns: The asset name.
     :raises UnsupportedRevisionError: If the reference carries ``@rev``.
+    :raises UnsupportedRegistryError: If it carries a registry prefix.
     :raises UnsupportedReferenceError: If it names a series or another
         pipeline.
     :raises ValueError: If it is not a valid asset name.
@@ -185,6 +188,14 @@ def parse_local_ref(ref: str) -> str:
             f"Reference {ref!r} addresses a series with '#'. Series addresses "
             f"are reserved syntax and not yet supported; use "
             f"{ref.split('#', 1)[0]!r} to get the dataframe that holds it."
+        )
+    registry, unqualified = split_registry(ref)
+    if registry is not None:
+        raise UnsupportedRegistryError(
+            f"Reference {ref!r} is qualified with the registry {registry!r}. "
+            f"Registry prefixes are reserved syntax and not yet supported "
+            f"(and neither, yet, is the cross-pipeline reference "
+            f"{unqualified!r} that remains without it)."
         )
     if ":" in ref or "/" in ref:
         raise UnsupportedReferenceError(

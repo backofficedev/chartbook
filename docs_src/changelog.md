@@ -41,6 +41,14 @@ What this changes for existing users:
 
 `create_data_glimpses.parse_dodo_tasks()` and its helpers are removed.
 
+### Changed — registry-prefixed IDs and `chartbook push` are reserved
+
+Two pieces of future syntax are claimed now, while claiming them costs nothing.
+
+A pipeline ID qualified with a registry — `charthub.example/acme/rates`, `localhost:5000/acme/rates` — is now recognized and refused with `UnsupportedRegistryError` ("reserved syntax and not yet supported; use 'acme/rates' instead"), wherever an ID or pipeline reference is accepted: `[project] id`, catalog keys, `data.load(pipeline=...)`, `chartbook data`, `data.path()`. Previously it failed with a generic "Invalid pipeline id" grammar error. A registry is the first of exactly three components and looks like a host (contains `.` or `:`, or is `localhost`), which is Docker's rule. No existing ID changes meaning: a bare `name` and a `scope/name` are untouched, including a `scope` that contains a dot.
+
+`chartbook publish` keeps its one meaning, staging a pipeline's files into a directory, and its help now says so. Sending a pipeline to a registry will be a separate verb, `chartbook push`; the command exists (hidden from `--help`) only to say it is reserved and to point at `publish`.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level

@@ -307,7 +307,7 @@ enable_data_download = false       # Default
 
 ### Pipeline Identity
 
-Canonical pipeline identity is a scoped name `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically: explicit `[project] id` if set, else scope from the git `origin` remote plus the directory name, else the bare directory name. `data.load`, `chartbook ls`, and `chartbook data` accept a bare name (when unambiguous), a scoped name, or a repo URL (normalized). An `@rev` suffix is reserved but not yet supported.
+Canonical pipeline identity is a scoped name `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically: explicit `[project] id` if set, else scope from the git `origin` remote plus the directory name, else the bare directory name. `data.load`, `chartbook ls`, and `chartbook data` accept a bare name (when unambiguous), a scoped name, or a repo URL (normalized). An `@rev` suffix and a registry prefix (`registry.example/scope/name` — three components, the first a host) are reserved: recognized, and refused as not yet supported. `chartbook publish` only stages files into a directory; `chartbook push` is the reserved, unimplemented verb for sending a pipeline to a registry.
 
 ### [pipelines] - Pipeline Registry
 

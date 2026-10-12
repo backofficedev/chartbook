@@ -231,7 +231,7 @@ The `pipeline` argument (and `--pipeline` CLI flag) accepts three forms:
 2. **Scoped name** (`ftsfr/crsp_treasury`) — matches its catalog key exactly
 3. **Repo URL** (`https://github.com/ftsfr/crsp_treasury`) — normalized to a scoped name
 
-An `@rev` suffix (e.g. `ftsfr/crsp_treasury@a1b2c3d`) is reserved for future version pinning and is rejected with a "not yet supported" error.
+An `@rev` suffix (e.g. `ftsfr/crsp_treasury@a1b2c3d`) is reserved for future version pinning and is rejected with a "not yet supported" error. So is a registry prefix (e.g. `charthub.example/ftsfr/crsp_treasury`): a leading component that looks like a host, in a three-component ID, is reserved for a future registry.
 
 ### Format Options
 
