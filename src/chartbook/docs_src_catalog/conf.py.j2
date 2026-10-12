@@ -222,6 +222,12 @@ html_css_files = [
     "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css",
 ]
 
+# The themes bundle Font Awesome and switch this on during a build if it is
+# left unset. Sphinx then finds the setting different from the one it cached,
+# takes the whole configuration to have changed, and re-reads every page on
+# every run, which defeats incremental builds. Stating it keeps it stable.
+fontawesome_included = True
+
 # -- Ablog options -----------------------------------------------------------
 blog_path = "cb/charts/index"
 blog_post_pattern = [

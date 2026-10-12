@@ -207,6 +207,7 @@ def generate_all_pipeline_docs(
     size_threshold=50,
     enable_data_download=False,
     skip_pipelines=None,
+    reuse_pipelines=None,
 ):
     """Generate documentation for all pipelines in the manifest.
 
@@ -227,6 +228,10 @@ def generate_all_pipeline_docs(
     :type enable_data_download: bool
     :param skip_pipelines: Set of pipeline IDs to skip.
     :type skip_pipelines: set[str] | None
+    :param reuse_pipelines: Set of pipeline IDs that are part of the site but
+        whose own pages are not regenerated, because an incremental build is
+        keeping the ones it already has. The site-wide pages still list them.
+    :type reuse_pipelines: set[str] | None
     """
     base_dir = Path(base_dir).resolve()
     docs_src_dir = Path(docs_src_dir)
@@ -238,6 +243,8 @@ def generate_all_pipeline_docs(
             continue
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         pipeline_base_dir = Path(pipeline_manifest["pipeline_base_dir"])
+        if reuse_pipelines and pipeline_id in reuse_pipelines:
+            continue
 
         generate_pipeline_docs(
             pipeline_id,
@@ -1156,6 +1163,7 @@ def build_all(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
     skip_pipelines=None,
+    reuse_pipelines=None,
 ):
     """Build all documentation.
 
@@ -1173,8 +1181,13 @@ def build_all(
     :type size_threshold: float
     :param skip_pipelines: Set of pipeline IDs to skip.
     :type skip_pipelines: set[str] | None
+    :param reuse_pipelines: Set of pipeline IDs whose pages and copied files
+        are not regenerated (see ``generate_all_pipeline_docs``).
+    :type reuse_pipelines: set[str] | None
     """
     docs_build_dir.mkdir(parents=True, exist_ok=True)
+    # Neither a skipped nor a reused pipeline has its files copied or written
+    not_generated = set(skip_pipelines or ()) | set(reuse_pipelines or ())
 
     ## Align files for use by Sphinx
     manifest = load_manifest(base_dir=base_dir)
@@ -1191,7 +1204,7 @@ def build_all(
         base_dir=base_dir,
         docs_build_dir=docs_build_dir,
         enable_data_download=enable_data_download,
-        skip_pipelines=skip_pipelines,
+        skip_pipelines=not_generated,
     )
 
     copy_according_to_plan(dataset_plan)
@@ -1201,7 +1214,7 @@ def build_all(
 
     # Inject title cells into notebooks that lack top-level headings
     # (Sphinx requires every document to have a title for toctree links)
-    ensure_notebook_titles(manifest, docs_build_dir, skip_pipelines=skip_pipelines)
+    ensure_notebook_titles(manifest, docs_build_dir, skip_pipelines=not_generated)
 
     generate_all_pipeline_docs(
         manifest,
@@ -1212,6 +1225,7 @@ def build_all(
         size_threshold=size_threshold,
         enable_data_download=enable_data_download,
         skip_pipelines=skip_pipelines,
+        reuse_pipelines=reuse_pipelines,
     )
 
     # Copy remaining docs_src files to build directory

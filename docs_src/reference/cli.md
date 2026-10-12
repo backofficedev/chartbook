@@ -54,6 +54,9 @@ Generate the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the cur
 | `--strict / --no-strict` | `--strict` | Strict: a `path`/`docs_path` pointing at a missing file fails the build, naming the file and the manifest entry. `--no-strict` warns and skips the affected pipeline |
 | `--size-threshold FLOAT` | `50` | File size (MB) above which parquet glimpses use memory-efficient loading |
 | `--strip-mathjax2 / --no-strip-mathjax2` | on | Strip Plotly's MathJax 2 scripts from notebook outputs so they don't clash with Sphinx's MathJax 3 |
+| `--incremental` | off | Keep the intermediate `_docs/` directory between builds and redo only what changed since the last incremental build |
+| `--watch` | off | Build incrementally, then rebuild each time a file of the project changes, until Ctrl-C |
+| `--watch-interval SECONDS` | `1` | How often `--watch` checks for changes |
 | `--keep-build-dirs` | off | Keep the intermediate `_docs/` and `_docs_src/` directories for inspection |
 | `--docs-build-dir PATH` | `./_docs` | Intermediate build directory |
 | `--temp-docs-src-dir PATH` | `./_docs_src` | Intermediate template directory |
@@ -63,7 +66,28 @@ Generate the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the cur
 chartbook build             # first build
 chartbook build -f          # rebuild
 chartbook build ./site -f   # custom output directory
+chartbook build -f --incremental   # rebuild only what changed
+chartbook build -f --watch         # ...and keep doing so as you edit
 ```
+
+**Incremental builds.** A plain `build` starts from nothing every time, which is what you want in CI. `--incremental` keeps the intermediate Sphinx project (`_docs/`) and uses it the next time:
+
+- a pipeline none of whose files changed is not regenerated at all — its `chartbook.toml`, `src/`, `docs_src/`, README, and every data file, chart and notebook it declares are compared by modification time and size;
+- a page whose content comes out the same is left untouched, so Sphinx does not read it again;
+- if no page changed, Sphinx is not run.
+
+Each build says what it did:
+
+```console
+$ chartbook build -f --incremental
+Incremental build: regenerated 1 of 40 pipeline(s); 10 source file(s) changed, 0 removed; Sphinx re-read 10 page(s).
+```
+
+When a page is added or removed, every page is rendered again — from Sphinx's cache, without re-reading anything — so that navigation stays right and no stale page is left behind. Upgrading ChartBook, Sphinx or a theme, or changing a build option, starts over from nothing. The kept `_docs/` directory ignores itself in git.
+
+Two things an incremental build does not promise, both fixed by one plain `chartbook build`: the "Last updated" date on the front page moves only when that page is rendered again, and a page whose *title* changed keeps its old title in other pages' sidebars until they are next rendered.
+
+**Watch mode.** `--watch` is an incremental build in a loop. It polls the project's files (once a second by default), rebuilds on any change, reports a failed build and carries on. There is no server and nothing to install: open the site with `chartbook browse` and refresh the page.
 
 ## chartbook browse
 
@@ -183,8 +207,10 @@ chartbook catalog enable ftsfr/sovereign_bonds
 Build the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike top-level `build`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
 
 ```console
-chartbook catalog build [-f] [--strict/--no-strict]
+chartbook catalog build [-f] [--strict/--no-strict] [--incremental] [--watch [--watch-interval SECONDS]]
 ```
+
+`--incremental` and `--watch` work as they do for [`chartbook build`](#chartbook-build), and matter most here: in a large catalog, most pipelines have not changed since the last build, and an incremental build skips each of those entirely.
 
 ### catalog browse
 

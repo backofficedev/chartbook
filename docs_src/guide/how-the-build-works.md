@@ -36,7 +36,7 @@ chartbook build [OUTPUT_DIR]
     |   Run: sphinx-build -M html _docs _docs/_build
     |   Copy _docs/_build/html/ to OUTPUT_DIR
     |
-    |-- Cleanup (unless --keep-build-dirs)
+    |-- Cleanup (unless --keep-build-dirs; --incremental keeps _docs/)
         Delete _docs/ and _docs_src/
 ```
 
@@ -144,6 +144,49 @@ The command prints the path to the preserved directory:
 Keeping temporary build directory: /path/to/project/_docs
 ```
 
+
+## Incremental Builds and Watch Mode
+
+Everything above describes a **clean build**: both directories start empty, every page is generated, Sphinx reads and renders all of them, and the directories are deleted afterwards. That is the default, and the right thing in CI.
+
+`chartbook build --incremental` keeps `_docs/` instead and makes the next build do less, in three places.
+
+**1. Unchanged pipelines are not regenerated.** Before generating anything, the build takes a *fingerprint* of each pipeline: a hash over the modification time and size of every file its pages are made from —
+
+- its `chartbook.toml` and `README.md`;
+- everything under `src/` and `docs_src/` (and its `site_dir`), and any Markdown file in its root, which may be a template override;
+- every file its manifest declares: each dataframe's data (every part file of a glob path), each chart's HTML, each notebook and note, and each `docs_path`.
+
+A pipeline whose fingerprint matches the one recorded by the previous build is skipped, and the pages and copied files it already has in `_docs/` stay exactly as they are. Editor swap files, `.DS_Store` and `__pycache__` do not count.
+
+**2. Unchanged pages are not touched.** Pipelines that did change, and the handful of site-wide pages (the index, the catalog listings, `conf.py`), are generated into a temporary staging directory and then *synced* into `_docs/`: a file is copied only if its content differs, and a file nothing produces any more is deleted. Sphinx decides what to re-read from modification times, so a page rewritten with identical content would be re-read for nothing, and a page left alone is not.
+
+**3. Sphinx keeps its cache.** `_docs/_build/` survives between builds, so Sphinx re-reads only the pages whose source changed and re-renders only those. If no source changed at all, Sphinx is not run.
+
+The fingerprints live in `_docs/.chartbook-build-state.json`. Deleting `_docs/` is always safe; the next incremental build is simply a full one.
+
+```{admonition} What starts over from nothing
+:class: note
+
+An upgrade to ChartBook, Sphinx, a theme or a rendering extension; an edit to a packaged theme template; or a different `--size-threshold` or `--strip-mathjax2`. Any of these can change every page, so the whole of `_docs/` is rebuilt.
+```
+
+Two cases are handled specially because of how Sphinx works:
+
+- **A page is added or removed.** Sphinx never deletes the HTML of a page that no longer exists, and does not redraw the navigation of pages that did not themselves change. So when the *set* of pages changes, the rendered site inside `_docs/_build/` is dropped and every page is written again. Sphinx does this from its cache; nothing is re-read.
+- **Nothing in the Sphinx configuration may change between runs**, or Sphinx discards its cache. The themes switch on a setting (`fontawesome_included`) during a build if it is left unset, which Sphinx then sees as a changed configuration on the next run. The generated `conf.py` therefore sets it explicitly.
+
+### How "changed" is decided, and its limits
+
+By modification time and size — the same notion of change the rest of ChartBook uses for now. That is cheap enough to check every second in watch mode, and it has the usual blind spot: a file replaced by different content of the same size and timestamp is not noticed. A clean build never is wrong; when in doubt, run one.
+
+Within one pipeline, an edit to any source file re-renders *all* of that pipeline's pages, not only the one you edited: every chart and dataframe page shows when the pipeline's code last changed, so every one of them really is different. Other pipelines, and notebooks, are left alone.
+
+### Watch mode
+
+`chartbook build --watch` is the incremental build in a loop: build, then check the project's files once a second (`--watch-interval`), and rebuild when any of them differs. A build that fails — typically because a file was caught half-saved — is reported, and the loop carries on. Ctrl-C stops it.
+
+There is deliberately nothing else to it: no server, no live reload, no file-system notification service, no process besides the one in your terminal. Open the site with `chartbook browse` and refresh the page after a rebuild.
 
 ## Inspecting Intermediate Files
 

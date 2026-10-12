@@ -81,6 +81,18 @@ The four install extras that became no-op aliases in 0.1.0 are gone, after the o
 
 The page also lists what is explicitly *not* covered (internal modules, the generated site's HTML and templates, message wording), the breaking changes already designed and still to come before 1.0, and what is currently deprecated. No migration tooling is promised.
 
+### Added — incremental builds and a watch mode
+
+`chartbook build --incremental` (and `chartbook catalog build --incremental`) keeps the intermediate Sphinx project in `_docs/` and makes the next build redo only what changed. A pipeline none of whose files changed — its manifest, `src/`, `docs_src/`, README, and every data file, chart and notebook it declares, compared by modification time and size — is not regenerated. A page whose content comes out the same is left untouched, so Sphinx, whose cache is now kept, does not read it again. If no page changed, Sphinx is not run at all. Each build prints one line saying what it redid.
+
+On a synthetic catalog of 40 pipelines and 411 pages, a clean build took about 20 seconds; an incremental build took 0.4 seconds when nothing had changed and about 5 seconds after one write-up or one data file changed.
+
+`chartbook build --watch` is the same thing in a loop: build, check the project's files once a second (`--watch-interval`), rebuild on any change, report a failed build and keep going until Ctrl-C. It is a single polling process — no server, no live reload, no new dependency. Refresh the browser to see a rebuild.
+
+A plain `chartbook build` is unchanged: a clean build that leaves nothing behind. Adding or removing a page re-renders every page from Sphinx's cache, so navigation stays right; upgrading ChartBook, Sphinx or a theme starts over from nothing. The kept `_docs/` carries its own `.gitignore`.
+
+Fixed along the way, because it defeated Sphinx's cache: the generated `conf.py` now sets `fontawesome_included` explicitly. The themes switched it on mid-build, which Sphinx read as a changed configuration and answered by re-reading every page on every run.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed — `install skill` defaults to user-level

@@ -28,6 +28,8 @@ chartbook init --git        # ...and git init + initial commit
 chartbook init --github     # ...and create a private GitHub repo with gh, then push (--public to override)
 chartbook build             # Generate HTML documentation website
 chartbook build -f          # Force overwrite existing docs
+chartbook build -f --incremental  # Keep _docs/ and redo only what changed since last time
+chartbook build -f --watch  # Incremental build, then rebuild on every file change (Ctrl-C to stop)
 chartbook browse            # Open project docs in default browser
 chartbook check             # CI gate: missing metadata, broken paths, expiring licenses
 chartbook path <name>       # Print the path chartbook.toml declares for an asset
