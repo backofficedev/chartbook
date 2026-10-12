@@ -30,7 +30,7 @@ For personal use there's a ready-made location, `~/.chartbook/chartbook.toml`, w
 ```console
 chartbook catalog init            # create it
 chartbook catalog add ../my-repo  # register a pipeline
-chartbook catalog build           # build its site into ~/.chartbook/docs/
+chartbook catalog build           # build its site into ~/.chartbook/docs/ (only what changed since last time)
 chartbook catalog browse          # open that site
 ```
 

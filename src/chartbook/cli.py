@@ -1298,16 +1298,16 @@ def catalog_enable(pipeline_id, catalog_path):
     help="Skip pipelines with missing source files (default). Use --strict to fail on any missing file.",
 )
 @click.option(
-    "--incremental",
+    "--clean",
     is_flag=True,
     default=False,
-    help="Keep the build directory between builds and redo only what changed since the last incremental build",
+    help="Throw away what was kept from earlier builds and rebuild everything",
 )
 @click.option(
     "--watch",
     is_flag=True,
     default=False,
-    help="Build incrementally, then rebuild whenever a pipeline's files change, until Ctrl-C",
+    help="After building, rebuild whenever a pipeline's files change, until Ctrl-C",
 )
 @click.option(
     "--watch-interval",
@@ -1316,15 +1316,18 @@ def catalog_enable(pipeline_id, catalog_path):
     metavar="SECONDS",
     help="How often --watch checks for changes (default: 1)",
 )
-def catalog_build(force_write, strict, incremental, watch, watch_interval):
+def catalog_build(force_write, strict, clean, watch, watch_interval):
     """Build HTML documentation for the global catalog.
 
     Uses the catalog path from ``~/.chartbook/settings.toml`` if configured,
     otherwise falls back to ``~/.chartbook/chartbook.toml``.
 
-    With --incremental, pipelines whose files have not changed since the
-    last incremental build are not regenerated, which is most of the time
-    for most of a large catalog. --watch keeps rebuilding as files change.
+    The build is incremental. Its working files are kept next to the catalog
+    (in ``_docs/``), and the next build redoes only the pipelines whose files
+    changed since: for most of a large catalog, most of the time, nothing.
+    Nothing runs in between; it is a record on disk that the next build
+    reads. --clean discards it and rebuilds everything. --watch keeps
+    rebuilding as files change.
     """
     _check_sphinx_installed()
 
@@ -1346,9 +1349,17 @@ def catalog_build(force_write, strict, incremental, watch, watch_interval):
     click.echo(f"Building catalog from: {catalog_path}")
     click.echo(f"Output directory: {output_dir}")
 
+    if clean:
+        from chartbook.incremental import looks_like_build_tree
+
+        if looks_like_build_tree(_docs_dir):
+            import shutil
+
+            shutil.rmtree(_docs_dir)
+
     _run_docs_build(
         project_dir,
-        incremental=incremental,
+        incremental=True,
         watch=watch,
         watch_interval=watch_interval,
         output_dir=output_dir,
