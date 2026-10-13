@@ -423,6 +423,11 @@ directory changes the model's hash. That is the rule decided for the index, and 
 ("the directory is the asset"), but for a model with versions it would make a new version out of
 nothing.
 
+*Decided by the maintainer, 2026-10-12:* a short, fixed list of files that operating systems
+create by themselves is skipped (`.DS_Store`, `Thumbs.db`, `desktop.ini`, `._*`), and every
+other file still counts. It is built with the store ({doc}`overview`, "Answers to the open
+questions").
+
 ## Not doing
 
 - **No experiment tracking.** Declared models only. Not every run.

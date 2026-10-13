@@ -235,10 +235,12 @@ pull requests, in this order. Each leaves `main` working.
 model's index record names the exact bytes of the dataframe it was trained on, and editing the
 upstream's data does not change what the downstream reads until `chartbook update`.
 
-**To settle before 3b and 3c, with the maintainer:** where the store lives on disk; the
-lockfile's exact shape; what `pin` does when an upstream has not been built; where a `git`
-checkout is kept; and whether a directory's hash should skip hidden files ({doc}`models`, the
-open question at the end of "What is built").
+**Settled with the maintainer, 2026-10-12:** where the store lives on disk and its layout;
+how it links to a file; the lockfile's shape; what `pin` does when an upstream has not been
+built; and which hidden files a directory's hash skips. **Still to settle:** how a `git`
+dependency is fetched and where its checkout is kept (before 3e), and whether
+`data.load("pipeline:asset")` arrives in 3d. All seven are under "Answers to the open
+questions" below.
 
 #### 3a, as built
 
@@ -317,13 +319,14 @@ load. So only `trained_on` is covered. A chart of another pipeline's data needs 
 `inputs` field ({doc}`index-schema`) or a looser `dataframe`, and a page that can render it;
 that is best decided with 3d.
 
-#### Recommended answers to the open questions
+#### Answers to the open questions
 
-*Proposed 2026-10-12 by whoever built 3a. None is agreed. Each needs the maintainer's yes before
-3b or 3c is built on it.*
+*The maintainer answered five of these on 2026-10-12, after 3a. Those are marked **decided**.
+The other two are still the recommendation of whoever built 3a, marked **proposed**, and need a
+yes before 3d and 3e.*
 
-1. **Where the store lives.** One store per user, at `~/.chartbook/store/`, beside the
-   settings file that is already there. `CHARTBOOK_STORE`, or a `store` line in
+1. **Where the store lives. Decided.** One store per user, at `~/.chartbook/store/`, beside the
+   settings file that is already there. `CHARTBOOK_STORE`, or `[store] path = "…"` in
    `settings.toml`, points it somewhere else: a bigger disk, or a drive a team shares. Not one
    store per project, because ten projects that pin the same upstream should hold one copy.
 
@@ -340,7 +343,22 @@ that is best decided with 3d.
    The file names are kept because the path handed to a reader has to still end in `.parquet`,
    and a partitioned dataset has to keep folders like `year=2024/`.
 
-2. **The lockfile's shape.** JSON, in the index's own format: the same envelope
+2. **How the store links to a file. Decided: all four kinds, in the designed order.** Reflink,
+   then hardlink, then symlink, then copy ({doc}`asset-graph`, "Links, not copies"). The
+   builder of 3a asked to drop the two middle ones, and the maintainer kept them: they are the
+   cheapest on every disk.
+
+   What that means, so that nobody is surprised later. A reflink or a copy is the store's own
+   bytes: nothing outside the store can change it. A hardlink *is* the upstream's file under a
+   second name, and a symlink only points at it. If the upstream pipeline rewrites
+   `_data/rates.parquet` in place, an object stored either of those ways changes with it, and
+   still sits under its old hash. **`chartbook store verify` is what catches that**, by hashing
+   every object again. So the step's "Done when" line, "editing the upstream's data does not
+   change what the downstream reads", holds on a disk with reflinks (APFS, btrfs, XFS) and
+   wherever the upstream replaces its files instead of rewriting them; elsewhere it holds only
+   until the upstream rebuilds, and `verify` says when it has stopped holding.
+
+3. **The lockfile's shape. Decided.** JSON, in the index's own format: the same envelope
    (`"schema": "chartbook/lock/v1"`) and a `records` list. It holds this pipeline's `Pipeline`
    record with only its `id` and `dependencies` (each now with a `pinned_hash`), and, for each
    pinned asset, the upstream's own record for it, cut down to `id`, `ref`, `pipeline`,
@@ -348,33 +366,33 @@ that is best decided with 3d.
    pinning twice with nothing changed writes the same bytes and shows no diff. `Build` records
    join it in step 4. This is what "no second format" in {doc}`index-schema` asks for.
 
-3. **`pin` when an upstream has not been built.** Pin what is there and say what is not. An
-   asset whose file is missing gets a record with no `content_hash`, exactly as the index
-   writes one today. Asking for its path later fails, and says to build it upstream and run
-   `chartbook update`. So an upstream with ten dataframes, one of which needs a subscription
-   you do not have, is still usable. The stricter choice, refusing to pin at all, is what
-   `--frozen` is for in step 4.
+4. **`pin` when an upstream has not been built. Decided.** Pin what is there and say what is
+   not. An asset whose file is missing gets a record with no `content_hash`, exactly as the
+   index writes one today. Asking for its path later fails, and says to build it upstream and
+   run `chartbook update`. So an upstream with ten dataframes, one of which needs a
+   subscription you do not have, is still usable. The stricter choice, refusing to pin at all,
+   is what `--frozen` is for in step 4.
 
-4. **A `git` dependency.** Clone once into `~/.chartbook/git/`, fetch on `update`, and check
-   the wanted commit out into a directory beside it. From there it is a `path` dependency. The
-   lockfile records the full commit hash that `rev` meant when it was pinned.
+5. **Hidden files when hashing a directory. Decided.** Skip a short, fixed list of files that
+   operating systems create by themselves: `.DS_Store`, `Thumbs.db`, `desktop.ini`, and any
+   name starting with `._`. Every other file counts, hidden or not. A Zarr dataset keeps its
+   real metadata in `.zarray` and `.zattrs`, and leaving those out would give two different
+   datasets one hash. No release carries the earlier rule, so this changes it without a new
+   algorithm prefix. It is built with the store (3b), which is keyed by it.
+
+6. **A `git` dependency. Proposed.** Clone once into `~/.chartbook/git/`, fetch on `update`,
+   and check the wanted commit out into a directory beside it. From there it is a `path`
+   dependency. The lockfile records the full commit hash that `rev` meant when it was pinned.
 
    The thing to decide first: a fresh clone has the upstream's *code*, not its data, because
    built data is usually git-ignored. So in 3e a `git` dependency can only be pinned if the
    upstream commits its outputs. Otherwise it needs step 4 (run the upstream's `build`) or a
    shared store to download from. 3e should say so plainly and not pretend otherwise.
 
-5. **`data.load("pipeline:asset")`.** Add it in 3d. `data.load("treasury_rates")` loads this
-   pipeline's own dataframe, `data.load("fed_yield_curve:treasury_rates")` loads the pinned
-   copy, and the two-argument `data.load(pipeline=…, dataframe=…)` keeps meaning "through a
-   catalog". One reference is the form every other call already takes.
-
-6. **Hidden files when hashing a directory.** Skip a short, fixed list of files that operating
-   systems create by themselves: `.DS_Store`, `Thumbs.db`, `desktop.ini`, and `._*`. Do not
-   skip every dotfile. A Zarr dataset keeps its real metadata in `.zarray` and `.zattrs`, and
-   leaving those out would give two different datasets one hash. No release carries the
-   current rule, so it can change now without a new algorithm prefix, and should before the
-   store is keyed by it.
+7. **`data.load("pipeline:asset")`. Proposed.** Add it in 3d. `data.load("treasury_rates")`
+   loads this pipeline's own dataframe, `data.load("fed_yield_curve:treasury_rates")` loads the
+   pinned copy, and the two-argument `data.load(pipeline=…, dataframe=…)` keeps meaning
+   "through a catalog". One reference is the form every other call already takes.
 
 ### Step 4. Running, build records and versions
 
@@ -457,6 +475,11 @@ maintainer.
 | 2026-10-12 | A model's training data may be another pipeline's dataframe, and may be declared now, ahead of dependencies. Making it a real, pinned dependency is the headline case for step 3 | {doc}`models`, step 3 above |
 | 2026-10-12 | By default `check` reports a model that does not say what it was trained on. A model's write-up is strongly recommended, not required | {doc}`models` |
 | 2026-10-12 | Models are assets. ChartBook is a model registry, not an experiment tracker. ML operations is a central use case | {doc}`models` |
+| 2026-10-12 | The store is one per user, at `~/.chartbook/store/`, movable with `CHARTBOOK_STORE` or `settings.toml`. One directory per asset, named by its hash, files under their own names | "Answers to the open questions", above |
+| 2026-10-12 | The store links by reflink, hardlink, symlink, copy, in that order, as designed. `chartbook store verify` is what catches an object changed from outside | "Answers to the open questions", above; {doc}`asset-graph` |
+| 2026-10-12 | `chartbook.lock` is JSON in the index's format: no timestamp, no absolute path | "Answers to the open questions", above |
+| 2026-10-12 | `chartbook pin` pins what is built and says what is not; asking for an unpinned asset is what fails | "Answers to the open questions", above |
+| 2026-10-12 | Hashing a directory skips `.DS_Store`, `Thumbs.db`, `desktop.ini` and `._*`, and nothing else | "Answers to the open questions", above; {doc}`index-schema` once built |
 
 ## Open questions, collected
 
@@ -468,9 +491,8 @@ Each is explained where it lives.
   recommended, as models are. ({doc}`models`, "Decided while building it")
 - Whether a pipeline's own `[policy]` table is wanted. It is honoured today, as a *proposed*
   answer to a crash. ({doc}`toml-format-v2`, "Since this was written")
-- Whether hashing a directory should skip hidden files. ({doc}`models`)
-- The twelve things settled while building declared dependencies, and the six recommended
-  answers for the store and the lockfile. (Step 3 above)
+- The twelve things settled while building declared dependencies, and the two answers still
+  proposed: how a `git` dependency is fetched, and `data.load("pipeline:asset")`. (Step 3 above)
 - How a chart says it was made from another pipeline's data. (Step 3 above)
 - Whether the site should render from the index, and when. (Step 6)
 - `plotting.line()` and its siblings can only use the two built-in backends, although third
