@@ -6,8 +6,8 @@ never seen this project and has to continue building it. It says what ChartBook 
 it uses, what is built, what to build next and in what order, and where every decision is
 written down.
 
-Last revised 2026-10-12, after version 0.2.0, the index, declared models, and declared
-dependencies (the first of five parts of step 3).
+Last revised 2026-10-12, after version 0.2.0, the index, declared models, and the first two
+of five parts of step 3: declared dependencies, and the store.
 ```
 
 ## What ChartBook is
@@ -67,7 +67,8 @@ assets alike.
 | **location** | Where an asset physically is. A file today; a database table later ({doc}`data-access`) |
 | **index** | One JSON file describing everything a catalog contains. A build product. Planned ({doc}`index-schema`) |
 | **record** | One entry in the index. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
-| **store** | A local folder of files named by their hash, used for caching and pinning. Planned ({doc}`asset-graph`) |
+| **store** | A local folder of files named by their hash, used for caching and pinning. Built, and not used by anything yet ({doc}`asset-graph`) |
+| **object** | One asset in the store: a directory named by the asset's content hash, holding its files under their own names |
 | **dependency** | Another pipeline that this one reads from, declared in `[dependencies]`: a name, and where to find it (`path` or `git`) |
 | **resolution chain** | The order in which a pipeline's location is looked for: `[dependencies]`, then the catalog. One function, `chartbook.resolve.locate_pipeline` |
 | **lockfile** | `chartbook.lock`: the exact versions of upstream assets a project uses. Planned |
@@ -128,7 +129,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built; local resolution built |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Declared dependencies built (step 3a). **Next to build**: the store (3b) |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Declared dependencies (3a) and the store (3b) built. **Next to build**: pinning (3c) |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -138,7 +139,8 @@ and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
 
 ## What is built
 
-As of 0.2.0, plus the index, declared models and declared dependencies, which came after it.
+As of 0.2.0, plus the index, declared models, declared dependencies and the store, which came
+after it.
 
 | Capability | Where | Notes |
 |---|---|---|
@@ -152,6 +154,7 @@ As of 0.2.0, plus the index, declared models and declared dependencies, which ca
 | Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
 | Models | `models.py`, `manifest.py` (`validate_models`), `markdown_generator.py` (`generate_model_docs`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. No versions yet |
 | Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked. Nothing is fetched or pinned, and `pipeline:asset` does not resolve yet |
+| The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link. Nothing uses it yet |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
@@ -160,7 +163,7 @@ As of 0.2.0, plus the index, declared models and declared dependencies, which ca
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | Cross-pipeline references, `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: the lockfile, the store, pinning, fetching a `git` dependency, build records,
+Not built: the lockfile, pinning, `chartbook store gc`, fetching a `git` dependency, build records,
 `chartbook run`, `[scripts]`, model versions, `[sources]` and SQL access, any export, and
 anything that *reads* the index.
 
@@ -226,7 +229,7 @@ pull requests, in this order. Each leaves `main` working.
 | | Pull request | What a user gets | What it does not do |
 |---|---|---|---|
 | **3a** *(built)* | **Declared dependencies.** `[dependencies]` in the manifest (`path` first). One resolution chain in one function: an explicit location in `[dependencies]`, then the local catalog, then (reserved) registries, then an error that lists candidates. `dependencies` on the `Pipeline` record. `check` verifies each one resolves | A pipeline says what it depends on, and `check` says whether that can be found. A cross-pipeline `trained_on` or chart input must name a declared dependency (a warning first, an error once 3d lands) | Nothing is fetched, copied or pinned |
-| **3b** | **The store.** Objects named by content hash, behind four operations (has, get, put, delete). Links, not copies: reflink, hardlink, symlink, copy, in that order. `chartbook store verify` | Nothing visible. This is the piece everything after sits on, and it can be tested alone | Nothing uses it yet |
+| **3b** *(built)* | **The store.** Objects named by content hash, behind four operations (has, get, put, delete). Links, not copies: reflink, hardlink, symlink, copy, in that order. `chartbook store verify` | Nothing visible. This is the piece everything after sits on, and it can be tested alone | Nothing uses it yet |
 | **3c** | **Pinning.** `chartbook.lock`, written in the index's record schemas. `chartbook pin` snapshots each dependency's declared assets into the store and records their hashes. `chartbook update` moves pins forward. `chartbook store gc`, with the lockfile as its roots | A project can freeze what it depends on, and see in a diff when that changes | References still do not resolve across pipelines |
 | **3d** | **Cross-pipeline references resolve.** `assets.path("pipeline:asset")`, `data.path`, `chartbook path` and `data.load("pipeline:asset")` resolve through the lockfile into the store, never to the upstream's working directory. Loading from an undeclared pipeline fails and says what to add. A model's cross-pipeline `trained_on` is recorded by pinned hash. A second example pipeline, `examples/rate_forecast`, whose model is trained on `yield_curve`'s data | **The payoff.** The case in the box above works end to end | `git` dependencies |
 | **3e** | **`git` dependencies.** `{ git = "…", rev = "…" }`: fetch at a revision into a cache, then as for `path` | A dependency that is not on your disk | — |
@@ -318,6 +321,83 @@ dataframe: its `dataframe` field must be one this pipeline declares, or the mani
 load. So only `trained_on` is covered. A chart of another pipeline's data needs the chart's
 `inputs` field ({doc}`index-schema`) or a looser `dataframe`, and a page that can render it;
 that is best decided with 3d.
+
+#### 3b, as built
+
+*Added 2026-10-12.* Nothing a user sees, apart from one command. The store is the piece that
+pinning sits on, and it is tested alone.
+
+```python
+from chartbook.store import Store
+
+store = Store("~/.chartbook/store")
+stored = store.put("_data/treasury_rates.parquet")   # the file stays where it is
+stored.content_hash                                  # "sha256:7f3a9c…", the object's name
+store.get(stored.content_hash)                       # …/objects/sha256/7f/3a9c…/
+store.has(stored.content_hash), store.delete(stored.content_hash)
+```
+
+```console
+$ chartbook store verify
+/Users/x/.chartbook/store: OK (14 object(s))
+```
+
+| What | Where |
+|---|---|
+| The store: `has`, `get`, `put`, `delete`, and `verify` | `chartbook/store.py`, `Store` |
+| The four kinds of link, and the one place they are tried in order | `chartbook/store.py`: `LINKS`, `_link()`, `_reflink()` |
+| Where the store is: `CHARTBOOK_STORE`, then `[store] path` in `settings.toml`, then `~/.chartbook/store/` | `chartbook/config.py`, `get_store_path()` |
+| `chartbook store verify` | `chartbook/cli.py` |
+| Which files make up an asset, for hashing and storing alike; the files that never do | `chartbook/hashing.py`: `find_files()`, `is_ignored()` |
+| The tests | `tests/test_store.py`, `tests/test_hashing.py` |
+
+**Not done in 3b, on purpose.** Nothing puts anything in the store: no `pin`, no lockfile, no
+`gc`. `builds/`, the index from a build's inputs to its output, is a name the layout keeps
+free and nothing writes to. The link kinds cannot be chosen in `settings.toml`; a caller in
+code can pass its own list.
+
+**Proposed: implemented in 3b, and waiting on the maintainer's yes.**
+
+1. **An object is hashed after it is stored, not before.** `put` links or copies the file into
+   the store first and then hashes what the store holds. So an object's name is right even if
+   the original was being rewritten while it was stored.
+2. **A clone or a copy is made read-only in the store. A hard link is not**, because it cannot
+   be: see the first correction below.
+3. **`put` takes the kinds of link to try.** The default is the designed four. A caller that
+   must have a frozen object passes `links=("reflink", "copy")`, and what comes back says
+   whether it is frozen (`stored.frozen`). So 3c can tell a user, when it pins, how many of the
+   pins are links to files that can still change. Nothing chooses for the user.
+4. **The same bytes under another file name are one object with both names in it.** A file's
+   hash does not include its name, and a path into the store has to end in the right one.
+5. **An empty directory is not stored.** There is nothing to pin, and its hash would be the
+   hash of an empty file.
+6. **The store says which layout it has**, in `store.json`. A store laid out by a later
+   ChartBook is refused, not misread.
+7. **A store comes into being when something is first put in it**, never by being looked at.
+   `chartbook store verify` on a machine with no store says "OK (0 object(s))" and creates
+   nothing.
+8. **An object is built in `tmp/` and moved into place with one rename**, so another process
+   sees all of it or none of it, and two that store the same content at once end with one
+   object.
+9. **`verify` exits 1 if any object has changed**, and prints `hash: what is wrong`. It
+   ignores the same operating-system files that hashing ignores, so Finder looking inside the
+   store does no harm.
+10. **A symlink in the store points at the real file**, with any links on the way resolved, so
+    the store never holds a link to a link.
+
+**Where the design was wrong about what a disk does.** Both are in {doc}`asset-graph`, "Links,
+not copies", and are marked there.
+
+1. *"Hardlink: make the store side read-only."* A hard link has no store side. Both names are
+   one file with one set of permissions, so making it read-only makes the upstream's own file
+   read-only, and its next build fails on a file it wrote itself. That would break rule 2,
+   "a pipeline that hardcodes its paths keeps working". So a hard-linked object is left
+   writable, and `verify` is what protects it.
+2. *"The copy rung will be exercised: a shared network mount is a different filesystem, so
+   neither reflinks nor hardlinks reach it."* A symlink comes before copy in the ladder, and a
+   symlink does reach across filesystems. So with the store on one disk and the data on
+   another, an object is a symlink, never a copy. Copy is reached only where symlinks are not
+   allowed, which in practice is Windows without the privilege.
 
 #### Answers to the open questions
 

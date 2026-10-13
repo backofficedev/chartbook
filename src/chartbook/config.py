@@ -9,19 +9,31 @@ The global config directory (``~/.chartbook/``) has this structure::
     ├── settings.toml        # user settings (catalog path override, etc.)
     ├── chartbook.toml       # default global catalog
     ├── artifacts/            # auxiliary files (e.g. cached data)
-    └── docs/                # rendered catalog HTML
+    ├── docs/                # rendered catalog HTML
+    └── store/               # pinned files, named by their hash
 
 Settings file format::
 
     [catalog]
     path = "/absolute/path/to/catalog/chartbook.toml"
+
+    [store]
+    path = "/a/bigger/disk/chartbook-store"
+
+The store (:mod:`chartbook.store`) is at ``~/.chartbook/store/`` unless
+``[store] path`` or the ``CHARTBOOK_STORE`` environment variable says
+otherwise.
 """
 
+import os
 from pathlib import Path
 from typing import Optional
 
 import tomli
 import tomli_w
+
+#: The environment variable that says where the store is, when it is set.
+STORE_ENV_VAR = "CHARTBOOK_STORE"
 
 
 def get_global_config_dir() -> Path:
@@ -107,6 +119,40 @@ def get_default_catalog_path() -> Optional[Path]:
         return global_catalog
 
     return None
+
+
+def get_store_path() -> Path:
+    """Get the directory of the store: the local folder of pinned files.
+
+    Resolution order:
+
+    1. The ``CHARTBOOK_STORE`` environment variable, for one shell or one
+       CI job.
+    2. ``store.path`` from ``~/.chartbook/settings.toml``, for a bigger disk
+       or a drive a team shares.
+    3. ``~/.chartbook/store``.
+
+    The directory need not exist yet.
+
+    :returns: The absolute path of the store.
+    :rtype: Path
+    :raises ValueError: If ``store.path`` in the settings file is not a path.
+    """
+    from_environment = os.environ.get(STORE_ENV_VAR, "").strip()
+    if from_environment:
+        return Path(os.path.abspath(Path(from_environment).expanduser()))
+
+    configured = read_global_settings().get("store")
+    if configured is not None:
+        path = configured.get("path") if isinstance(configured, dict) else None
+        if not isinstance(path, str) or not path.strip():
+            raise ValueError(
+                f"{get_global_settings_path()}: [store] needs a 'path', e.g. "
+                f'path = "/a/bigger/disk/chartbook-store".'
+            )
+        return Path(os.path.abspath(Path(path).expanduser()))
+
+    return get_global_config_dir() / "store"
 
 
 def write_global_settings(settings: dict) -> None:
