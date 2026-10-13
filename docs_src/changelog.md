@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `[scripts]` and `chartbook run`
+
+A pipeline can now say how it is built, and ChartBook can build the pipelines it depends on first.
+
+```toml
+[scripts]
+build = "doit"
+test = "pytest"
+```
+
+```console
+$ chartbook run
+ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
+ftsfr/rate_forecast: pinning what it depends on
+ftsfr/fed_yield_curve: 3 pinned
+Wrote chartbook.lock.
+ftsfr/rate_forecast: build
+Ran build in 2 pipeline(s).
+```
+
+Until now, a pipeline that read another's data had to be built by hand in the right order: build the other one, `chartbook pin`, build this one. `chartbook run` does those three things. It reads `[dependencies]` here and in each pipeline named there, puts the pipelines in order, and runs each one's `build` script in its own directory, dependencies first. It stops at the first that fails and exits with that script's exit code. `chartbook run test` does the same with another script, and in a catalog it runs over all the catalog's pipelines.
+
+`build` is the one script name with a meaning: it makes a pipeline's data current. A script is one string handed to a shell (`bash`, or `sh` where there is none), so one of several lines is one script and it stops at its first failing command.
+
+**It pins before it builds, and never moves a pin.** Before a pipeline's `build` runs, what it depends on and has not pinned yet is pinned, so a fresh clone needs only `chartbook run`. A pin that exists stays where it is. If the other pipeline's rebuild changed its data, this pipeline is still built against the copy it pinned, and the command says what has changed upstream; `chartbook update` moves the pins. The design had `run` picking up new upstream data by default. The maintainer decided against it (2026-10-13): a lockfile should change only in a commit someone meant to make.
+
+**It builds a `git` dependency.** `chartbook pin` can pin only what a repository commits, because a clone has no built data in it. `chartbook run` makes a writable copy of the checkout under `~/.chartbook/git/work/`, runs the dependency's `build` there, and pins what that produces. This is what the note under "`git` dependencies" below was waiting for. That build needs whatever it needs: its tools, its credentials, its network. `run` stays at the commit in the lockfile. `chartbook update` moves to a newer one, and when it does, data that was built at the old commit and is not built at the new one is let go from the lockfile, since it did not come from the commit now named; the next `chartbook run` builds it and pins it.
+
+**`[project] build` is now executed.** It has always been described as a script, and until now it was only shown on the pipeline's page. It is the same thing as `[scripts] build` and is still read; a manifest that gives both, differently, does not load. If yours holds a note and not the command that builds the pipeline (one of the examples here had `build = "module load anaconda3/3.11.4 TeXLive/2023"`), `chartbook run` will run that note. Make it the command. Nothing else reads the field differently, so this matters only once you use `chartbook run`.
+
+`index.json` lists all of a pipeline's scripts under `scripts`, where it had only `build`.
+
+Not built yet: skipping a pipeline whose inputs have not changed (every script runs every time, and the pipeline's own tool skips what it can), `--frozen` for CI, and running pipelines side by side. Scripts are not tasks, and that part is on purpose: one does not depend on another, and there are no retries, no schedule and no history.
+
 ### Added — `git` dependencies
 
 A dependency no longer has to be on your disk. It can be a git repository:

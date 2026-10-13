@@ -10,6 +10,9 @@ os_compatibility = [
     "Linux",
     "MacOS",
 ]
+
+# Named commands. `chartbook run` runs `build` in yield_curve, and then here.
+[scripts]
 build = "doit"
 
 # The pipelines this one reads from. The key is this pipeline's own name for

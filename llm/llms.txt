@@ -41,6 +41,7 @@ chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook pin                # Freeze what [dependencies] have now into the store and chartbook.lock
 chartbook update [dep...]    # Move pins forward to what the dependencies have now
+chartbook run [script]       # Run a [scripts] entry (default: build) in the pipelines this one depends on, in order, then here
 chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
 chartbook store gc           # Remove from the store what no lockfile names (asks first)
 chartbook config             # Configure default catalog path

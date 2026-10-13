@@ -23,6 +23,11 @@ store. And a reference to another pipeline's asset resolves through the lockfile
 copy. Build records and `chartbook run` are not built. The notes marked *(Built: …)* say
 exactly what, and {doc}`overview` ("3a, as built" to "3e, as built") lists what was settled on
 the way, as *proposed*.
+
+2026-10-13: `[scripts]` and `chartbook run` are built, the first of five parts of the second
+step. `run` puts the pipelines in order and runs a script in each. It skips nothing yet, and
+build records are still not built. One thing below was decided otherwise first: `run` never
+moves a pin ("Two verbs"). {doc}`overview`, "4a, as built".
 ```
 
 ## The problem
@@ -132,6 +137,11 @@ can be pinned only as far as its repository commits its outputs, and "someone wh
 repository can build it" is true of the code. Getting built data needs `chartbook run` on the
 clone, or a store to download from. Until one of those exists, `chartbook pin` says "not
 built" and says why. Decided by the maintainer 2026-10-12: build it this way now.)*
+
+*(2026-10-13: the first of those exists. Decided by the maintainer: `chartbook run` builds a
+`git` dependency. A checkout is read-only, so the build runs in a writable copy of it,
+`~/.chartbook/git/work/…/<commit>/`, and the dependency is pinned from that copy. `chartbook
+pin` alone still pins only what the repository commits.)*
 
 Because scope is captured from the owner path at `init`, the URL is usually inferable from the ID.
 That shortcut is a *configurable* default host, never a hardcoded one:
@@ -292,6 +302,16 @@ parallel automated work should use. This is the `npm ci` / `cargo build --locked
 a pin that exists; it pins what has none, and puts back in the store what the lockfile names
 and the store has lost. `update` is the one thing that moves a pin. There is no `run` yet, so
 `pin` is how to get started, and `update` rebuilds nothing. `--frozen` is not built.*
+
+*Added 2026-10-13, with `run` built. Decided by the maintainer before it was: **`chartbook
+run` never moves a pin.** The second sentence of the paragraph above ("By default it also
+refreshes `path` pins") is not how it works. `run` pins what has no pin, before each
+pipeline's `build`, so neither verb is needed to get started; and it leaves every pin that
+exists where it is, saying which have changed upstream. `update` is still the one thing that
+moves a pin, and still rebuilds nothing, so picking up a colleague's latest is `chartbook
+update` and then `chartbook run`. That leaves `--frozen` with less to do than this section
+gives it: there is no pin for it to refuse to move. What is left is failing when the lockfile
+is out of date, which is for the next part.*
 
 *The resolution rule at the top of this section is built: `chartbook.resolve._resolve_pinned`.
 A reference to another pipeline's asset goes to `[dependencies]` for the pipeline, to
@@ -566,6 +586,14 @@ pipelines. Letting scripts depend on each other would make ChartBook the orchest
 deliberately not.
 ```
 
+*(Built 2026-10-13: `chartbook.manifest.read_scripts` and `chartbook.run`. `[project] build`
+is read as the same thing as `[scripts] build`. `chartbook run [script]` works out the order
+from each pipeline's `[dependencies]`, runs the script in each pipeline's own directory with
+`bash -e`, dependencies first, and stops at the first failure. Every script runs every time:
+skipping a pipeline whose inputs have not changed needs build records. A `git` dependency is
+built as well, in a writable copy of its checkout, which is how its built data comes to be
+pinned. {doc}`overview`, "4a, as built", lists what was settled on the way, as *proposed*.)*
+
 ### The command surface
 
 Flat for what you type daily, grouped for what you type occasionally.
@@ -593,7 +621,10 @@ thing — `run` runs a script, `docs` builds docs, `build` builds everything.
 Of these, `check`, `path`, `browse`, `ls`, `catalog` and `install` exist. `build` still means
 "render the website" and keeps doing so until `run` exists; the rename is one breaking change,
 made once, in the same release as `run`. `docs` and `run` do not exist yet. *(`pin`, `update`,
-`store verify` and `store gc` were added 2026-10-12.)*
+`store verify` and `store gc` were added 2026-10-12. `run` was added 2026-10-13. The rename
+has not been made: it is its own part of the same step, so until then `chartbook build`
+renders the website and `[scripts] build` builds a pipeline's data. `docs` does not exist
+yet.)*
 
 `pin` and `update` stay top-level rather than sitting under `build`, because they change the
 project's dependency state rather than performing a build step — the same level as `cargo update` or

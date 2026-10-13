@@ -586,10 +586,18 @@ that is valid today.
   with no `git` is refused, because working out a repository from an ID needs a default host that
   is not built. And a `path` dependency is not "unpinned": the asset graph decided that both kinds
   are pinned. A catalog may not have the table.
-- **Tables that are designed and not yet read by the loader:** `[scripts]`
-  ({doc}`asset-graph`), and `[sources.x]` with a dataframe's `table` and `query`
-  ({doc}`data-access`). A manifest that contains one of them today loads,
-  and the table is ignored.
+- **Tables that are designed and not yet read by the loader:** `[sources.x]`
+  with a dataframe's `table` and `query` ({doc}`data-access`). A manifest that
+  contains one today loads, and the table is ignored.
+- **`[scripts]` is read, and `build` is executed** (2026-10-13). The `build`
+  field above "generalizes into a table of named commands", in the words of
+  {doc}`asset-graph`: `[scripts]`, with `build` as its one reserved name.
+  `[project] build` is the same thing and is still read; a manifest that
+  gives both, differently, does not load. `chartbook run` executes it. So
+  "today the field is documentation-only", above, is no longer so, and a
+  `build` that holds a note and not a command is now a mistake. The
+  `[project.build]` table floated above as "the natural extension" is not
+  what was built. A catalog may not have `[scripts]`.
 
 {doc}`overview` has the order in which these get built.
 

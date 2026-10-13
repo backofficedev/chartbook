@@ -1574,6 +1574,7 @@ def _echo_pin_report(report):
             "kept": "already pinned",
             "stale": "changed upstream since it was pinned",
             "not_built": "not built",
+            "let_go": "let go",
             "dropped": "no longer declared",
             "lost": "lost",
         }
@@ -1603,10 +1604,17 @@ def _echo_pin_report(report):
                 click.echo(f"  not built: {event.asset} ({event.detail})")
             elif event.status == "stale":
                 click.echo(f"  changed upstream: {event.asset}")
+            elif event.status == "let_go":
+                click.echo(f"  let go: {event.asset} ({event.detail})")
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
                 click.echo(f"  lost: {event.asset} ({event.old}): {event.detail}")
+        if dependency in report.git and counts.get("let_go"):
+            click.echo(
+                "  What was let go was built at the commit pinned before, and is "
+                "not built at this one. `chartbook run` builds it and pins it."
+            )
         if dependency in report.git and counts.get("not_built"):
             click.echo("  A git dependency has only what its repository commits.")
 
@@ -1691,6 +1699,71 @@ def update(dependencies, project_dir):
         chartbook update fed_yield_curve
     """
     _run_pin(project_dir, dependencies=list(dependencies))
+
+
+@main.command("run")
+@click.argument("script", required=False, default="build")
+@click.option(
+    "--project-dir",
+    type=click.Path(),
+    help="Path to the pipeline, or to a catalog (default: the current directory)",
+)
+def run_command(script, project_dir):
+    """Run a script in this pipeline, after the pipelines it depends on.
+
+    SCRIPT is a name from [scripts] in chartbook.toml; `build` if none is
+    given. It is run in every pipeline this one depends on that has a
+    script by that name, dependencies first, each in its own directory,
+    and then here. The first failure stops the run. In a catalog, it is run
+    in all the catalog's pipelines.
+
+    \b
+        [scripts]
+        build = "doit"
+        test = "pytest"
+
+    `build` is the script that makes a pipeline's data current. Before it
+    runs in a pipeline, whatever that pipeline depends on and has not
+    pinned yet is pinned, so its code can read it. A pin that exists is
+    never moved: you are told what has changed upstream, and `chartbook
+    update` moves pins.
+
+    A dependency that is a git repository is built in a writable copy of
+    its checkout, so what it builds can be pinned.
+
+    Nothing is skipped yet: each pipeline's script runs every time, and its
+    own tool (doit, make) skips what it can.
+
+    Examples:
+        chartbook run
+        chartbook run test
+        chartbook run --project-dir ../rate_forecast
+    """
+    from chartbook import lock
+    from chartbook import run as runner
+    from chartbook.store import StoreError
+
+    def show_pins(step, pins):
+        # Said only when there is something to say
+        if any(event.status != "kept" for event in pins.events):
+            click.echo(f"{step.id}: pinning what it depends on")
+            _echo_pin_report(pins)
+
+    project_dir = resolve_project_dir(project_dir)
+    try:
+        report = runner.run(project_dir, script, echo=click.echo, on_pin=show_pins)
+    except (runner.RunError, lock.LockError, StoreError, ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+
+    if report.failed is not None:
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"{report.failed.id}: {report.reason}. Nothing after it was run.",
+            err=True,
+        )
+        raise SystemExit(report.exit_code or 1)
+    click.echo(f"Ran {script} in {len(report.ran)} pipeline(s).")
 
 
 @main.group()

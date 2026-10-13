@@ -42,6 +42,8 @@ chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook pin               # Freeze what [dependencies] have now: files into the store, hashes into chartbook.lock (commit it); clones git dependencies
 chartbook update [dep...]   # Move pins forward to what the dependencies have now (pin never moves an existing pin)
+chartbook run               # Run [scripts] build in every pipeline this one depends on (in order), pin what has no pin, then build this one
+chartbook run <script>      # ...or another named script, e.g. `chartbook run test`. Never moves a pin; stops at the first failure
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, or CHARTBOOK_STORE); exit 1 if an object changed
 chartbook store gc          # Remove from the store what no lockfile names; lists and asks first (--dry-run, --yes)
 chartbook config            # Configure default catalog path (interactive)
@@ -151,7 +153,8 @@ joblib.dump(model, models.path("my_model"))
 # Another pipeline this one reads from is declared in chartbook.toml:
 #   [dependencies]
 #   "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
-# then pinned with `chartbook pin` (writes chartbook.lock; commit it). After that,
+# then pinned with `chartbook pin` (writes chartbook.lock; commit it), or by
+# `chartbook run`, which builds that pipeline first and pins what has no pin. After that,
 # "pipeline:name" is that pipeline's asset AS PINNED: a frozen copy in the store,
 # not its working directory. It changes only on `chartbook update`. Read-only.
 rates = data.load("fed_yield_curve:treasury_rates")           # LazyFrame, pinned copy

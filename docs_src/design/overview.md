@@ -131,7 +131,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built. Local references resolve live; another pipeline's resolve pinned |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. **Next to build**: step 4, `chartbook run` and build records |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Step 4a built: `[scripts]` and `chartbook run`. **Next to build**: step 4b, build records and skipping what is current |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -141,8 +141,8 @@ and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
 
 ## What is built
 
-As of 0.2.0, plus the index, declared models, declared dependencies, the store and pinning,
-which came after it.
+As of 0.2.0, plus the index, declared models, declared dependencies, the store, pinning,
+named scripts and `chartbook run`, which came after it.
 
 | Capability | Where | Notes |
 |---|---|---|
@@ -152,14 +152,15 @@ which came after it.
 | `chartbook check`, the CI gate | `check.py` | Required fields, broken paths, expiring licenses. `--skip-outputs` for CI that does not build data |
 | The reference grammar | `refs.py` | All of it parses |
 | Resolving local references | `resolve.py`, `assets.py`, `data.py`, `chartbook path` | One resolver, typed locations. Live: the declared `path` |
-| `git` dependencies | `gitcache.py`, `lock.py` | Cloned into `~/.chartbook/git/`, checked out at a commit, then pinned like a directory. Only what the repository commits |
+| `git` dependencies | `gitcache.py`, `lock.py` | Cloned into `~/.chartbook/git/`, checked out at a commit, then pinned like a directory. Only what the repository commits, until `chartbook run` builds it in a working copy |
+| Named scripts and `chartbook run` | `manifest.py` (`read_scripts`), `run.py`, `gitcache.py` (`work_copy`) | `[scripts]`, with `build` reserved. Runs a script in the pipelines this one depends on, in order, then in it. Pins what has no pin before a build; never moves a pin. Skips nothing yet |
 | Resolving another pipeline's assets | `resolve.py` (`_resolve_pinned`), `lock.py`, `store.py` | `pipeline:name`, for a declared dependency, resolves through `chartbook.lock` to the pinned copy in the store. Every kind, every front door, and `data.load("pipeline:name")` |
 | The index, `index.json` | `index.py`, `hashing.py`, `schemas/` | Written by every build, beside the HTML. One hash rule; hashes cached in the build directory |
 | Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
 | Models | `models.py`, `manifest.py` (`validate_models`), `markdown_generator.py` (`generate_model_docs`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. No versions yet |
-| Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked. Nothing is fetched or pinned, and `pipeline:asset` does not resolve yet |
+| Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked |
 | The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link |
-| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: a content hash for every asset of every `path` dependency. `pin` never moves a pin; `update` does. Nothing reads the lockfile to resolve a reference yet |
+| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: a content hash for every asset of every dependency. `pin` never moves a pin; `update` does |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
@@ -168,9 +169,9 @@ which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: build records,
-`chartbook run`, `[scripts]`, model versions, `[sources]` and SQL access, any export, and
-anything that *reads* the index.
+Not built: build records, skipping a pipeline that is current, `--frozen`, the command
+rename, model versions, `[sources]` and SQL access, any export, and anything that *reads* the
+index.
 
 ## What to build next, in order
 
@@ -467,6 +468,8 @@ pinned.
    not built.
 7. **An asset the other pipeline stops declaring keeps its pin under `pin`, and is dropped by
    `update`.** One it declares and no longer has on disk keeps its pin under both.
+   *(2026-10-13, proposed: one exception, for a `git` dependency that an update moves to
+   another commit. See "4a, as built", number 17.)*
 8. **A pinned dependency whose directory has gone is fine for `pin`.** The pins are in the
    store, which is the point. For `update` it is an error.
 9. **No lockfile is made for a pipeline with no dependencies.** Removing the last one leaves
@@ -797,6 +800,177 @@ with 3e. All seven are **decided**.*
 **Done when:** changing one upstream script and running `chartbook run` in the downstream
 example rebuilds exactly the pipelines that depend on it, and running it again does nothing.
 
+*(Added 2026-10-13.)* Step 4 is built in five parts, one pull request each:
+
+| Part | What | State |
+|---|---|---|
+| 4a | `[scripts]` and `chartbook run`: the order between pipelines, and a script run in each | Built |
+| 4b | `Build` records, skipping a pipeline whose inputs have not changed, `--frozen` | Next |
+| 4c | The command rename: `build` makes everything current, `docs` renders the site. Breaking | |
+| 4d | `@rev` resolves. Model versions and labels | |
+| 4e | Parts: `dataframe#series` for `data.load()` | |
+
+**Decided by the maintainer, 2026-10-13, before 4a was built:**
+
+1. **`chartbook run` never moves a pin.** It pins what has no pin, as `chartbook pin` does,
+   and leaves the rest. {doc}`asset-graph` says the opposite: *"By default it also refreshes
+   `path` pins, because the common case is 'pick up a colleague's latest.'"* The rule from 3c
+   holds for `run` too: `chartbook update` is the one thing that moves a pin, so a lockfile
+   changes only in a commit someone meant to make.
+2. **`chartbook run` builds a `git` dependency**, in a writable copy of its checkout. This is
+   the answer to the question 3e left open: how a `git` dependency's built data gets here.
+3. **Step 4 is cut into the five parts above**, 4a first.
+4. **The pull requests keep stacking**, each branch made from the one before it.
+
+**What decision 1 does to "Done when".** Example: `yield_curve` changes one script, and
+someone runs `chartbook run` in `rate_forecast`. `yield_curve` is rebuilt. `rate_forecast`
+reads its pins, and no pin moved, so nothing it reads has changed. The sentence above
+("rebuilds exactly the pipelines that depend on it") is therefore true after
+`chartbook update`, not before: `update`, then `run`, rebuilds what depends on what moved.
+*Proposed:* 4b is built to that reading. The sentence is left as written, with this note.
+
+#### 4a, as built
+
+*Added 2026-10-13.* A pipeline says how it is built, and one command builds what it depends
+on first.
+
+```toml
+[scripts]
+build = "doit"
+test  = "pytest"
+```
+
+```console
+$ chartbook run
+ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
+ftsfr/rate_forecast: pinning what it depends on
+ftsfr/fed_yield_curve: 3 pinned
+Wrote chartbook.lock.
+ftsfr/rate_forecast: build
+Ran build in 2 pipeline(s).
+```
+
+| What | Where |
+|---|---|
+| Reading `[scripts]`, and `[project] build` as the same thing | `chartbook/manifest.py`, `read_scripts()` |
+| The order between pipelines | `chartbook/run.py`, `plan()` |
+| Running one script | `chartbook/run.py`, `execute()` |
+| Pinning before a build, then running, then stopping at a failure | `chartbook/run.py`, `run()` |
+| The command | `chartbook/cli.py`, `run_command()` |
+| A writable copy of a git checkout, to build in | `chartbook/gitcache.py`, `GitCache.work_copy()` |
+| Pinning from that copy when there is one | `chartbook/lock.py`, `_fetch()` |
+| Letting go of what was built at a commit an update moved away from | `chartbook/lock.py`, `_pin_asset()` |
+| Every script in the index | `chartbook/index.py`, `pipeline_records()` |
+| The tests | `tests/test_run.py`; one end to end in `tests/test_integration.py` |
+
+**Not done in 4a, on purpose.** Nothing is skipped: every pipeline's script runs every time,
+and the pipeline's own tool skips what it can. There are no `Build` records and no
+`--frozen`. Pipelines run one at a time. `chartbook build` still renders the website, so the
+word still means two things until 4c. `chartbook update` still rebuilds nothing.
+
+**Proposed: implemented in 4a, and waiting on the maintainer's yes.**
+
+1. **`[project] build` and `[scripts] build` are one thing.** Both are read. A manifest that
+   gives both, with different text, does not load. Pages and the policy keep reading
+   `project.build`, which the loader fills from whichever was written.
+2. **A script's name matches `[A-Za-z0-9._-]+`**, the rule an ID component already has, because
+   it is typed after `chartbook run`. An empty script does not load.
+3. **A script is handed whole to `bash -e -c`**, to `sh` where there is no `bash`, and to `cmd`
+   on Windows. It runs in the pipeline's directory, with the environment `chartbook run` was
+   started in, and its output is not captured. `bash` because `module load` and
+   `conda activate` expect it.
+4. **The order.** Depth first. A pipeline's dependencies are taken in the order of their keys,
+   and a catalog's pipelines in the order the catalog lists them. A pipeline is the directory
+   it is in, so one that two others depend on is run once.
+5. **Two pipelines that depend on each other are an error** that shows the loop. Nothing is run.
+6. **The pipeline that was asked for must have the script.** One it depends on, or a member of
+   a catalog, that has no script by that name is passed over and named. A name that no
+   pipeline has is an error.
+7. **Only `build` pins.** `chartbook run test` pins nothing and writes no lockfile.
+8. **Each pipeline is pinned just before its own build**, after the pipelines it depends on
+   have been built, not all at once at the start. So a dependency that itself has
+   dependencies, a `build` script and no lockfile gets a `chartbook.lock` written in *its*
+   directory. For a `path` dependency that is someone else's working directory. A pipeline
+   with no `build` script is not pinned for.
+9. **What cannot be pinned stops the run before that pipeline's build**: a dependency that is
+   not there and has nothing pinned, a repository that cannot be fetched, a lost pin. A
+   dependency that has gone and *is* pinned is no trouble: it is named as not run, and the
+   build goes ahead on its pins.
+10. **The exit code is the failed script's.** One stopped by a signal gives 128 plus the
+    signal's number, as a shell reports it. What ChartBook printed is flushed before a script
+    starts, so a log has the lines in order.
+11. **A git dependency's working copy** is `~/.chartbook/git/work/<host>/<owner>/<name>/<commit>/`:
+    the checkout's files, made writable. It is made once and kept, so a second run finds the
+    first one's work. It is shared by every project of this user that depends on that commit.
+    The checkout itself is never written to.
+12. **`pin` and `update` pin a git dependency from its working copy when there is one**, and
+    from the checkout otherwise. Running `chartbook pin` after `chartbook run` therefore sees
+    the built data too.
+13. **Which commit is built.** The lockfile's, if it names one, since a pin does not move.
+    Otherwise what the `rev` means now.
+14. **The index lists every script** under `scripts`, sorted by name. The schema already
+    allowed it.
+15. **A catalog has no `[scripts]`.** A manifest that gives one does not load.
+16. **What it says.** One line per pipeline, `id: script    in <directory>`, with no directory
+    for the pipeline the command was run in. Pins are mentioned only when something happened:
+    a run where every pin was already in place says nothing about them.
+17. **An update that moves a `git` dependency's commit lets go of what was built at the old
+    one.** This changes one case of a rule proposed in 3c (number 7 there: an asset the other
+    pipeline "declares and no longer has on disk keeps its pin"). Example: `ref_data` is pinned
+    at commit A, with `daily_prices` built there by `run`. `update` moves it to commit B, where
+    nothing is built yet. Under the 3c rule the lockfile would then say commit B beside the
+    bytes built from A. Nobody else could get those back: a fresh clone builds B, gets other
+    bytes, and the pin is lost. And `run` could not fix it, because `run` moves no pin. So the
+    pin is removed, `update` says "let go", and the next `run` builds B and pins it. The rule
+    is unchanged for a `path` dependency, and for a `git` one whose commit did not move.
+
+**Known gaps in 4a.**
+
+1. **Nothing clears old working copies.** A branch that moves leaves one per commit, each with
+   whatever its build wrote. `chartbook store gc` does not touch the git cache.
+2. **Two runs at once in one working copy** are not kept apart. Two projects of one user that
+   depend on the same commit share it.
+3. **A `path` dependency of a `git` dependency** is looked for beside the working copy, where
+   it almost never is. It is named as not run.
+4. **On a first run, a `git` dependency is fetched twice**: once to choose the commit to build,
+   once by the pin. If the branch moves in between, the pin lands on a commit that was not
+   built, and says "not built". The next run builds that commit and pins it.
+
+**Where the design was wrong, or said less than it seemed to.**
+
+1. *"By default it also refreshes `path` pins."* ({doc}`asset-graph`, "Two verbs".) Decided
+   otherwise, above. It takes this step's "Done when" with it, also above.
+2. *"Today the field is documentation-only … choosing script semantics now means a future
+   `chartbook run` can execute the value as-is with no format change."*
+   ({doc}`toml-format-v2`.) True of the format and not of the values. Nothing ever ran the
+   field, so nothing ever checked that it held a command. This repository's own
+   `examples/yield_curve` had `build = "module load anaconda3/3.11.4 TeXLive/2023"`: a note
+   about the environment. `chartbook run` would have run it and failed. The example now says
+   `doit`. Other manifests may hold notes too, and the changelog says so.
+3. *"If variants are ever needed … the natural extension is a `[project.build]` table with
+   named keys."* ({doc}`toml-format-v2`.) {doc}`asset-graph`, written later, has `[scripts]`.
+   `[scripts]` is what is built.
+4. *"`chartbook update` — move pins forward to current upstream state, and rebuild what that
+   invalidates."* ({doc}`asset-graph`.) `update` rebuilds nothing. With pins that `run` does
+   not move, the pair is `update`, then `run`. Whether `update` should run the build itself
+   is a question for 4b.
+5. *"`chartbook run` pins anything not yet pinned, so neither verb is needed to get started."*
+   True as built, for `build`. Any other script pins nothing.
+6. *"`build` still means 'render the website' and keeps doing so until `run` exists; the
+   rename is one breaking change, made once, in the same release as `run`."*
+   ({doc}`asset-graph`.) `run` exists and the rename is 4c. Both are unreleased, so "the same
+   release" still holds, and until 4c `chartbook build` and `[scripts] build` mean different
+   things.
+7. *The `dodo.py` in {doc}`asset-graph` that reads another pipeline's asset at the top of the
+   file* failed until the dependency was pinned ("3d, as built"). Under `chartbook run` it
+   works, because the pin is made before `doit` starts. Run as plain `doit` in a fresh clone,
+   it still fails.
+
+**Seen while trying it by hand.** A pin is read-only (decided in 3d). A build script that
+copies a pinned file with `cp` gets a read-only copy, and cannot write over it on the next
+run. Nothing is wrong, and it will surprise someone. Reading the pinned file in place avoids
+it.
+
 ### Step 5. Data in databases
 
 **Goal:** a dataframe can be a table, and `data.load()` does not change.
@@ -874,6 +1048,9 @@ maintainer.
 | 2026-10-12 | `examples/rate_forecast` git-ignores its lockfile, because its upstream pulls live data | "3d, as built", above |
 | 2026-10-12 | `git` dependencies are built now, plainly: clone, check out, pin what the repository commits, and say that is all a clone has | "3e, as built", above |
 | 2026-10-12 | Clones of `git` dependencies are kept in `~/.chartbook/git/`, one per user, and ChartBook runs the user's own `git` | "3e, as built", above |
+| 2026-10-13 | `chartbook run` never moves a pin. It pins what has no pin and leaves the rest; `chartbook update` moves pins | Step 4 above; {doc}`asset-graph`, "Two verbs" |
+| 2026-10-13 | `chartbook run` builds a `git` dependency, in a writable copy of its checkout, and its built data is pinned from there | Step 4 above, "4a, as built" |
+| 2026-10-13 | Step 4 is built in five parts, 4a to 4e, one pull request each, stacked | Step 4 above |
 
 ## Open questions, collected
 
@@ -888,9 +1065,12 @@ Each is explained where it lives.
 - The things settled while building declared dependencies (twelve), the store (ten) and
   pinning (fourteen), cross-pipeline references (eleven) and `git` dependencies (twelve), each
   listed as *proposed* under its "as built" heading. (Step 3 above)
-- How a `git` dependency's built data gets here: by running its build (step 4), or from a
-  shared store. Until then it has only what its repository commits. (Step 3 above, "3e, as
-  built")
+- The seventeen things settled while building `chartbook run`, and the reading of step 4's
+  "Done when" now that `run` moves no pin. (Step 4 above, "4a, as built")
+- Whether `chartbook update` should run the build after it moves a pin, as {doc}`asset-graph`
+  says, or stay a command that only moves pins. (Step 4 above; a question for 4b)
+- A shared store, as a second way for a `git` dependency's built data to get here. The first
+  is built: `chartbook run` builds it. (Step 4 above, "4a, as built")
 - How a chart says it was made from another pipeline's data. (Step 3 above)
 - Whether the site should render from the index, and when. (Step 6)
 - `plotting.line()` and its siblings can only use the two built-in backends, although third

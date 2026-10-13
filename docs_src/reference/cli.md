@@ -16,6 +16,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
 | `chartbook pin` | Freeze what this pipeline depends on, in `chartbook.lock` |
 | `chartbook update` | Move pins forward to what the dependencies have now |
+| `chartbook run [SCRIPT]` | Run a named script here, after the pipelines this one depends on |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook store gc` | Remove from the store what no lockfile names |
 | `chartbook config` | Set the default catalog for data loading |
@@ -372,7 +373,7 @@ ftsfr/ref_data: 2 pinned, 1 not built
 Wrote chartbook.lock.
 ```
 
-That last line matters. A clone has the other pipeline's code and whatever data it keeps in git. Data that it builds and git-ignores is not in a clone, and ChartBook does not run another pipeline's build. So a `git` dependency suits reference data, small tables and models that are committed. For a pipeline whose data is built, depend on a `path` where it has been built.
+That last line matters. A clone has the other pipeline's code and whatever data it keeps in git. Data that it builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build. So with `pin` alone, a `git` dependency suits reference data, small tables and models that are committed. For a pipeline whose data is built, either depend on a `path` where it has been built, or use {ref}`chartbook run <chartbook-run>`, which builds the dependency in a copy of its checkout and pins what that produces.
 
 The lockfile records the commit. `pin` stays at that commit and uses the network only if this machine has lost its copy; `chartbook update` fetches again and asks what the `rev` means now, so a branch moves forward and a tag or a commit does not. If you change `rev` in `chartbook.toml`, `pin` says so and stays where it was, and `update` follows the change. ChartBook runs your own `git`, so your SSH keys and credential helpers work as they do by hand; it never asks for a password, and fails instead.
 
@@ -397,6 +398,81 @@ Wrote chartbook.lock.
 ```
 
 An asset the other pipeline no longer declares is dropped from the lockfile. One that it declares and no longer has on disk keeps its pin. Nothing of this pipeline is rebuilt. The object a pin moved away from stays in the store until `chartbook store gc`.
+
+**One exception, for a `git` dependency that `chartbook run` built.** When an update moves it to a new commit, data that was built at the old commit, and is not built at the new one yet, is let go: its pin is removed.
+
+```console
+$ chartbook update
+ftsfr/ref_data: fetched https://gitlab.example.org/ftsfr/ref_data at 9c1d2e3 (main)
+ftsfr/ref_data: 2 already pinned, 1 let go
+  let go: ftsfr/ref_data:daily_prices (./_data/daily_prices.parquet)
+  What was let go was built at the commit pinned before, and is not built at this one. `chartbook run` builds it and pins it.
+Wrote chartbook.lock.
+```
+
+Keeping it would leave the lockfile naming one commit beside data built from another, which nobody else could get back. `chartbook run` then builds the new commit and pins what it builds.
+
+(chartbook-run)=
+## chartbook run
+
+```console
+chartbook run [SCRIPT] [--project-dir PATH]
+```
+
+Run a script in this pipeline, after running it in the pipelines this one depends on. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
+
+```toml
+[scripts]
+build = "doit"
+```
+
+```console
+$ chartbook run
+ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
+ftsfr/rate_forecast: pinning what it depends on
+ftsfr/fed_yield_curve: 3 pinned
+Wrote chartbook.lock.
+ftsfr/rate_forecast: build
+Ran build in 2 pipeline(s).
+```
+
+What it does, in order:
+
+1. **Works out the order.** It reads `[dependencies]` here, then in each pipeline named there, and so on down. Each pipeline comes after the ones it depends on, and appears once however many depend on it.
+2. **Runs the script in each one**, in that pipeline's own directory. What the script prints is shown as it runs.
+3. **Stops at the first failure**, and exits with that script's exit code. Nothing after it is run.
+
+**It pins before it builds.** Before a pipeline's `build` runs, whatever that pipeline depends on and has not pinned yet is pinned, so its code can read it. In a fresh clone, `chartbook run` is the only command you need: there is no `chartbook pin` to remember first.
+
+**It never moves a pin.** Run it again next week. The other pipeline is rebuilt, and may have newer data. This pipeline is still built against the copy it pinned, and you are told:
+
+```console
+$ chartbook run
+ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
+ftsfr/rate_forecast: pinning what it depends on
+ftsfr/fed_yield_curve: 2 already pinned, 1 changed upstream since it was pinned
+  changed upstream: ftsfr/fed_yield_curve:treasury_rates
+chartbook.lock is unchanged.
+1 pinned asset(s) have changed upstream. `chartbook update` moves the pins.
+ftsfr/rate_forecast: build
+Ran build in 2 pipeline(s).
+```
+
+To build against the newer data, run `chartbook update` and then `chartbook run`. The lockfile changes only when you ask it to, so it only ever changes in a commit you meant to make.
+
+**Another script.** `chartbook run test` runs `test` in every pipeline in the order that has one. A pipeline without it is passed over, and named. The pipeline you are in must have it. Only `build` pins.
+
+**In a catalog**, the script is run in every pipeline of the catalog, and in what they depend on.
+
+**A `git` dependency is built too**, in a writable copy of its checkout under `~/.chartbook/git/work/`. That is how data the other pipeline builds, and does not commit, comes to be there to pin. Its build needs whatever it needs: its tools, its credentials, its network. The copy is kept, so a second run finds the first one's work. `run` stays at the commit in `chartbook.lock`; to move to a newer one, run `chartbook update` and then `chartbook run`.
+
+**What it does not do.**
+
+- **It skips nothing yet.** Every pipeline's script runs every time. That is usually cheap, because the pipeline's own tool (doit, Make, Snakemake) skips what is up to date. Skipping a whole pipeline whose inputs have not changed is not built.
+- **It is not a task runner.** A script is one string. Scripts do not depend on each other, and there are no retries, no schedule and no history. The only order is the one between pipelines.
+- **It runs one pipeline at a time.**
+
+A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`.
 
 ## chartbook store
 

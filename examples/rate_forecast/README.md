@@ -26,7 +26,24 @@ curve = data.load("yield_curve:fed_yield_curve", format="pandas")
 
 ## Quick Start
 
-Build `yield_curve` first, since this pipeline reads what it produces. Then:
+```bash
+chartbook run
+```
+
+That one command does three things, in order:
+
+1. Builds `yield_curve`, since this pipeline reads what it produces.
+2. Pins what `yield_curve` has now, and writes `chartbook.lock`.
+3. Builds this pipeline: trains the model on the pinned copy, and builds the site.
+
+"Builds" means it runs the `build` script each pipeline names in its `chartbook.toml`. Here both are `doit`:
+
+```toml
+[scripts]
+build = "doit"
+```
+
+The same by hand, if `yield_curve` is already built:
 
 ```bash
 chartbook pin      # freeze what yield_curve has now; writes chartbook.lock
@@ -48,6 +65,8 @@ backofficedev/yield_curve: 12 already pinned, 1 changed upstream since it was pi
 chartbook.lock is unchanged.
 1 pinned asset(s) have changed upstream. `chartbook update` moves the pins.
 ```
+
+`chartbook run` says the same, and does the same: it rebuilds `yield_curve`, and it never moves a pin.
 
 To train on the newer data, move the pin and build again:
 

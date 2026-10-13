@@ -152,7 +152,30 @@ $ chartbook update       # move the pins; chartbook.lock shows the change in a d
 
 The `rate_forecast` example does exactly this, with a model trained on the `yield_curve` example's data. {ref}`[dependencies] <dependencies>` has every detail.
 
-A dependency can also be a git repository, `{ git = "https://…", rev = "v1.2" }`, for one that is not on your disk. `chartbook pin` clones it. It can pin only what that repository keeps in git, so this suits reference data and models that are committed, not data that the other pipeline builds.
+### Building them in order
+
+Say how each pipeline is built, in its own `chartbook.toml`:
+
+```toml
+[scripts]
+build = "doit"
+```
+
+Then one command builds the other pipeline, pins what it has if nothing is pinned yet, and builds yours:
+
+```console
+$ chartbook run
+ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
+ftsfr/rate_forecast: pinning what it depends on
+ftsfr/fed_yield_curve: 3 pinned
+Wrote chartbook.lock.
+ftsfr/rate_forecast: build
+Ran build in 2 pipeline(s).
+```
+
+`chartbook run` never moves a pin. If the other pipeline's rebuild changed its data, yours is still built against the copy you pinned, and the command tells you so. `chartbook update` is what moves a pin. See {ref}`chartbook run <chartbook-run>`.
+
+A dependency can also be a git repository, `{ git = "https://…", rev = "v1.2" }`, for one that is not on your disk. `chartbook pin` clones it, and can pin only what that repository keeps in git: reference data and models that are committed. For data that the other pipeline builds, use `chartbook run`, which builds it in a copy of the clone first.
 
 ## Notes and custom pages
 

@@ -679,8 +679,9 @@ and `Model` records; `dependencies` on a `Pipeline` that declares some, each wit
 `pinned_hash` once pinned; and `pinned_inputs` on a `Model`. Not yet: `Build`
 records and `built_by`;
 `inputs` on a dataframe or a notebook (the manifest has no field to declare them); `rendered`
-in `docs`. A pipeline's `build` command is written as `"scripts": { "build": … }`,
-ahead of the `[scripts]` table.
+in `docs`. A pipeline's scripts are written as `"scripts": { "build": …, "test": … }`,
+sorted by name: all of `[scripts]`, with `[project] build` as `build` *(all of them since
+2026-10-13; before the table was read, only `build`)*.
 
 **Where it is written.** The `_build/` layout at the top of this document is a destination, not
 today's layout. `chartbook build` writes two files:

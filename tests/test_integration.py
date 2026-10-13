@@ -414,6 +414,53 @@ class TestExampleProjects:
             if lockfile.exists():
                 lockfile.unlink()
 
+    def test_chartbook_run_builds_the_example_and_what_it_depends_on(self, tmp_path):
+        """`chartbook run` in rate_forecast builds yield_curve, pins, and builds it.
+
+        One command, from nothing pinned: the first part of step 4 in
+        docs_src/design/overview.md. Each example's `build` script is `doit`.
+        """
+        yield_curve_path = Path("examples/yield_curve").resolve()
+        example_path = Path("examples/rate_forecast").resolve()
+        env = {**self._get_env_with_pythonpath(), "CHARTBOOK_STORE": str(tmp_path / "store")}
+        if not (yield_curve_path / "_data" / "fed_yield_curve.parquet").exists():
+            self._clean_example_dirs(yield_curve_path)
+            self._setup_mock_data_yield_curve(yield_curve_path)
+        self._clean_example_dirs(example_path)
+        lockfile = example_path / "chartbook.lock"
+        try:
+            result = subprocess.run(
+                ["chartbook", "run"],
+                cwd=example_path,
+                capture_output=True,
+                text=True,
+                timeout=900,
+                env=env,
+            )
+            assert result.returncode == 0, f"run failed: {result.stderr}\n{result.stdout}"
+
+            # The upstream first, where it is; then the pin; then this pipeline
+            said = result.stdout
+            upstream = f"backofficedev/yield_curve: build    in {yield_curve_path}"
+            pinning = "backofficedev/rate_forecast: pinning what it depends on"
+            itself = "backofficedev/rate_forecast: build\n"
+            assert upstream in said and pinning in said and itself in said, said
+            assert said.index(upstream) < said.index(pinning) < said.index(itself)
+            assert said.rstrip().endswith("Ran build in 2 pipeline(s).")
+
+            assert (yield_curve_path / "docs" / "index.html").exists()
+            assert lockfile.exists()
+            assert (example_path / "_models" / "rate_forecast.json").exists()
+            assert (example_path / "docs" / "index.html").exists()
+
+            # Both name their build script, and the index lists it
+            built = json.loads((example_path / "docs" / "index.json").read_text())
+            (pipeline,) = [r for r in built["records"] if r["kind"] == "Pipeline"]
+            assert pipeline["scripts"] == {"build": "doit"}
+        finally:
+            if lockfile.exists():
+                lockfile.unlink()
+
     def test_catalog_example(self, tmp_path):
         """Test that catalog example builds successfully.
 
