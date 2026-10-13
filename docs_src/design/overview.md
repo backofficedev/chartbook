@@ -131,7 +131,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built. Local references resolve live; another pipeline's resolve pinned |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Step 4a built: `[scripts]` and `chartbook run`. **Next to build**: step 4b, build records and skipping what is current |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Step 4a built: `[scripts]` and `chartbook run`. **Next to build**: step 4b, snapshots. The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -153,7 +153,7 @@ named scripts and `chartbook run`, which came after it.
 | The reference grammar | `refs.py` | All of it parses |
 | Resolving local references | `resolve.py`, `assets.py`, `data.py`, `chartbook path` | One resolver, typed locations. Live: the declared `path` |
 | `git` dependencies | `gitcache.py`, `lock.py` | Cloned into `~/.chartbook/git/`, checked out at a commit, then pinned like a directory. Only what the repository commits, until `chartbook run` builds it in a working copy |
-| Named scripts and `chartbook run` | `manifest.py` (`read_scripts`), `run.py`, `gitcache.py` (`work_copy`) | `[scripts]`, with `build` reserved. Runs a script in the pipelines this one depends on, in order, then in it. Pins what has no pin before a build; never moves a pin. Skips nothing yet |
+| Named scripts and `chartbook run` | `manifest.py` (`read_scripts`), `run.py`, `gitcache.py` (`work_copy`) | `[scripts]`, with `build` reserved. Runs a script in the pipeline it is given. Pins what has no pin before a build; never moves a pin. Never builds in a folder the pipeline depends on. Builds a `git` dependency once, in a clean copy |
 | Resolving another pipeline's assets | `resolve.py` (`_resolve_pinned`), `lock.py`, `store.py` | `pipeline:name`, for a declared dependency, resolves through `chartbook.lock` to the pinned copy in the store. Every kind, every front door, and `data.load("pipeline:name")` |
 | The index, `index.json` | `index.py`, `hashing.py`, `schemas/` | Written by every build, beside the HTML. One hash rule; hashes cached in the build directory |
 | Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
@@ -169,9 +169,8 @@ named scripts and `chartbook run`, which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: build records, skipping a pipeline that is current, `--frozen`, the command
-rename, model versions, `[sources]` and SQL access, any export, and anything that *reads* the
-index.
+Not built: snapshots, `--frozen`, the command rename, model versions, `[sources]` and SQL
+access, any export, and anything that *reads* the index.
 
 ## What to build next, in order
 
@@ -469,7 +468,7 @@ pinned.
 7. **An asset the other pipeline stops declaring keeps its pin under `pin`, and is dropped by
    `update`.** One it declares and no longer has on disk keeps its pin under both.
    *(2026-10-13, proposed: one exception, for a `git` dependency that an update moves to
-   another commit. See "4a, as built", number 17.)*
+   another commit. See "4a, as built", number 19.)*
 8. **A pinned dependency whose directory has gone is fine for `pin`.** The pins are in the
    store, which is the point. For `update` it is an error.
 9. **No lockfile is made for a pipeline with no dependencies.** Removing the last one leaves
@@ -800,17 +799,83 @@ with 3e. All seven are **decided**.*
 **Done when:** changing one upstream script and running `chartbook run` in the downstream
 example rebuilds exactly the pipelines that depend on it, and running it again does nothing.
 
-*(Added 2026-10-13.)* Step 4 is built in five parts, one pull request each:
+*(Added 2026-10-13.)* The goal and the "Done when" above are no longer what is wanted. The
+maintainer decided the model below while the first part was being built, and it replaces them.
+
+#### The snapshot model
+
+*Decided by the maintainer, 2026-10-13.* Two names make it concrete: `yield_curve` makes data,
+and `rate_forecast` uses it.
+
+**Why.** Pipelines are worked on side by side, by people and, more and more, by agents working
+in parallel, one to a pipeline. Someone is always half-way through a change in `yield_curve`.
+That must not reach `rate_forecast`. So the store is the one thing every pipeline reads from:
+it is read-only, and it changes slowly and on purpose.
+
+**The rules.**
+
+1. **A pipeline never reads, hashes or builds in a folder it depends on.** `rate_forecast`
+   does not look in `../yield_curve/_data/`, and nothing it runs is run there.
+2. **A snapshot is every asset a pipeline declares, as built at one commit**, kept in the store
+   and labelled with that commit. Dataframes, charts, notebooks, notes and models alike.
+3. **A snapshot is made on purpose, by the pipeline's owner**, and only when everything is
+   committed. It is not made by every build. That is how a pipeline is declared ready for
+   others, and what keeps the label "built by this commit" true.
+4. **`pin` and `update` choose among snapshots.** They do not copy whatever is in the folder.
+5. **Nothing that happens in `yield_curve` rebuilds `rate_forecast`.** It rebuilds when it asks
+   to move its pins, with `chartbook update`.
+6. **`chartbook run` builds the pipeline it is run in.** A `git` dependency is the one thing it
+   builds besides, once, in ChartBook's own clean copy of the commit: nobody works there, so
+   there is nothing to disturb. Data that is pulled from outside is refreshed on purpose, with
+   `--force`, and not because time has passed.
+7. **Taking whatever is in a folder stays possible**, as an option that is off by default and
+   out of the way, for someone working on both pipelines at once.
+
+**What is asked for, and what was got.** The split is the one between `requirements.txt` and
+`uv.lock`:
+
+| | File | Says | Example |
+|---|---|---|---|
+| What is asked for | `chartbook.toml` | The repository, and a tag or a branch | `rev = "v1.2"` |
+| What was got | `chartbook.lock` | The exact commit, and the hash of every file | `4f2a91c…`, `sha256:7ff1…` |
+
+A commit alone is not enough: the same code gives other data on another day, or with other
+settings. The lockfile does not try to list every cause. It records the *output*, the hash
+of every file, and that catches a difference whatever caused it. What a hash cannot do is
+bring the bytes back, which is what the store is for, and a store shared between machines
+later.
+
+**Code changes and data changes** are told apart by what is asked for. Pinned to a tag or a
+commit, the code never changes, and `chartbook update` brings only newer data built from that
+code. Pinned to a branch, `update` brings newer code as well.
+
+**How much of it is built.** Rules 5, 6 and the lockfile are (4a, below, and step 3). Rules 2,
+3, 4 and 7 are not: there is no snapshot yet, and `chartbook pin` and `chartbook update` still
+copy what is in a `path` dependency's folder at the moment they run, which breaks rule 1.
+That is the next part.
+
+**What it replaces in this step.** "`chartbook run` builds pipelines in dependency order and
+skips what is current" is not the goal any more: a pipeline's dependencies are not built from
+it. "Skip a pipeline whose input hash is already in the store" has become "a git dependency is
+built once for a commit". And the `Build` record has become the snapshot: what one commit of
+a pipeline built, with the bytes kept. *Proposed* "Done when", in its place: one agent can
+rebuild `yield_curve` as often as it likes while another builds `rate_forecast`, and nothing
+`rate_forecast` reads changes until it runs `chartbook update`.
+
+#### The parts of step 4
 
 | Part | What | State |
 |---|---|---|
-| 4a | `[scripts]` and `chartbook run`: the order between pipelines, and a script run in each | Built |
-| 4b | `Build` records, skipping a pipeline whose inputs have not changed, `--frozen` | Next |
+| 4a | `[scripts]` and `chartbook run` | Built |
+| 4b | Snapshots: an owner declares a build ready, and pinning takes from that and never from the folder | Next |
 | 4c | The command rename: `build` makes everything current, `docs` renders the site. Breaking | |
 | 4d | `@rev` resolves. Model versions and labels | |
 | 4e | Parts: `dataframe#series` for `data.load()` | |
 
-**Decided by the maintainer, 2026-10-13, before 4a was built:**
+`--frozen`, for CI, has no part yet. *Proposed:* it follows snapshots, since what it has to
+check is that the lockfile is complete and that every pin can be had.
+
+**Decided by the maintainer, 2026-10-13:**
 
 1. **`chartbook run` never moves a pin.** It pins what has no pin, as `chartbook pin` does,
    and leaves the rest. {doc}`asset-graph` says the opposite: *"By default it also refreshes
@@ -819,20 +884,21 @@ example rebuilds exactly the pipelines that depend on it, and running it again d
    changes only in a commit someone meant to make.
 2. **`chartbook run` builds a `git` dependency**, in a writable copy of its checkout. This is
    the answer to the question 3e left open: how a `git` dependency's built data gets here.
-3. **Step 4 is cut into the five parts above**, 4a first.
-4. **The pull requests keep stacking**, each branch made from the one before it.
-
-**What decision 1 does to "Done when".** Example: `yield_curve` changes one script, and
-someone runs `chartbook run` in `rate_forecast`. `yield_curve` is rebuilt. `rate_forecast`
-reads its pins, and no pin moved, so nothing it reads has changed. The sentence above
-("rebuilds exactly the pipelines that depend on it") is therefore true after
-`chartbook update`, not before: `update`, then `run`, rebuilds what depends on what moved.
-*Proposed:* 4b is built to that reading. The sentence is left as written, with this note.
+3. **`chartbook run` never builds in a folder a pipeline depends on** (rule 1 above). The
+   first version of 4a did, as {doc}`asset-graph` describes: it ran `build` in every pipeline
+   of the dependency graph, each in its own folder. That was taken out before it was merged.
+   It was also pointless once pins did not move: the other pipeline was rebuilt, and this one
+   went on reading its pinned copy.
+4. **A build is refreshed on purpose.** A git dependency is built once for a commit, and
+   `chartbook run --force` builds it again. A pipeline that pulls live data is not rebuilt
+   because a day has passed.
+5. **The snapshot model**, above.
+6. **Step 4 is built in parts**, 4a first, and the pull requests keep stacking, each branch
+   made from the one before it.
 
 #### 4a, as built
 
-*Added 2026-10-13.* A pipeline says how it is built, and one command builds what it depends
-on first.
+*Added 2026-10-13.* A pipeline says how it is built, and one command gets it built.
 
 ```toml
 [scripts]
@@ -842,31 +908,30 @@ test  = "pytest"
 
 ```console
 $ chartbook run
-ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
 ftsfr/rate_forecast: pinning what it depends on
 ftsfr/fed_yield_curve: 3 pinned
 Wrote chartbook.lock.
 ftsfr/rate_forecast: build
-Ran build in 2 pipeline(s).
+Ran build in 1 pipeline(s).
 ```
 
 | What | Where |
 |---|---|
 | Reading `[scripts]`, and `[project] build` as the same thing | `chartbook/manifest.py`, `read_scripts()` |
-| The order between pipelines | `chartbook/run.py`, `plan()` |
+| Which pipelines a run is about, and in what order | `chartbook/run.py`, `plan()` |
 | Running one script | `chartbook/run.py`, `execute()` |
-| Pinning before a build, then running, then stopping at a failure | `chartbook/run.py`, `run()` |
+| Building a git dependency once, pinning before a build, then running | `chartbook/run.py`, `run()` |
 | The command | `chartbook/cli.py`, `run_command()` |
-| A writable copy of a git checkout, to build in | `chartbook/gitcache.py`, `GitCache.work_copy()` |
+| A writable copy of a git checkout, to build in, and whether it is built | `chartbook/gitcache.py`, `GitCache.work_copy()`, `is_built()` |
 | Pinning from that copy when there is one | `chartbook/lock.py`, `_fetch()` |
 | Letting go of what was built at a commit an update moved away from | `chartbook/lock.py`, `_pin_asset()` |
 | Every script in the index | `chartbook/index.py`, `pipeline_records()` |
 | The tests | `tests/test_run.py`; one end to end in `tests/test_integration.py` |
 
-**Not done in 4a, on purpose.** Nothing is skipped: every pipeline's script runs every time,
-and the pipeline's own tool skips what it can. There are no `Build` records and no
-`--frozen`. Pipelines run one at a time. `chartbook build` still renders the website, so the
-word still means two things until 4c. `chartbook update` still rebuilds nothing.
+**Not done in 4a, on purpose.** There are no snapshots, so pinning still reads a `path`
+dependency's folder (the model's rule 1 is met by `run` and not yet by `pin` and `update`).
+There is no `--frozen`. `chartbook build` still renders the website, so the word still means
+two things until 4c. `chartbook update` still rebuilds nothing.
 
 **Proposed: implemented in 4a, and waiting on the maintainer's yes.**
 
@@ -879,42 +944,43 @@ word still means two things until 4c. `chartbook update` still rebuilds nothing.
    on Windows. It runs in the pipeline's directory, with the environment `chartbook run` was
    started in, and its output is not captured. `bash` because `module load` and
    `conda activate` expect it.
-4. **The order.** Depth first. A pipeline's dependencies are taken in the order of their keys,
-   and a catalog's pipelines in the order the catalog lists them. A pipeline is the directory
-   it is in, so one that two others depend on is run once.
-5. **Two pipelines that depend on each other are an error** that shows the loop. Nothing is run.
-6. **The pipeline that was asked for must have the script.** One it depends on, or a member of
-   a catalog, that has no script by that name is passed over and named. A name that no
-   pipeline has is an error.
-7. **Only `build` pins.** `chartbook run test` pins nothing and writes no lockfile.
-8. **Each pipeline is pinned just before its own build**, after the pipelines it depends on
-   have been built, not all at once at the start. So a dependency that itself has
-   dependencies, a `build` script and no lockfile gets a `chartbook.lock` written in *its*
-   directory. For a `path` dependency that is someone else's working directory. A pipeline
-   with no `build` script is not pinned for.
-9. **What cannot be pinned stops the run before that pipeline's build**: a dependency that is
+4. **In a catalog, the script is run in each of the catalog's pipelines**, one that another of
+   them depends on first, and otherwise in the order the catalog lists them. A pipeline the
+   catalog does not list is not run, whoever depends on it. Two of its pipelines that depend
+   on each other are an error that shows the loop, and nothing is run.
+5. **The pipeline that was asked for must have the script.** A pipeline of a catalog that has
+   no script by that name is passed over and named. A name that no pipeline has is an error.
+6. **Only `build` pins, and only `build` reaches a git dependency.** `chartbook run test`
+   writes no lockfile and fetches nothing.
+7. **Each pipeline is pinned just before its own build.** A pipeline with no `build` script
+   is not pinned for.
+8. **What cannot be pinned stops the run before that pipeline's build**: a dependency that is
    not there and has nothing pinned, a repository that cannot be fetched, a lost pin. A
-   dependency that has gone and *is* pinned is no trouble: it is named as not run, and the
-   build goes ahead on its pins.
-10. **The exit code is the failed script's.** One stopped by a signal gives 128 plus the
-    signal's number, as a shell reports it. What ChartBook printed is flushed before a script
-    starts, so a log has the lines in order.
-11. **A git dependency's working copy** is `~/.chartbook/git/work/<host>/<owner>/<name>/<commit>/`:
-    the checkout's files, made writable. It is made once and kept, so a second run finds the
-    first one's work. It is shared by every project of this user that depends on that commit.
-    The checkout itself is never written to.
-12. **`pin` and `update` pin a git dependency from its working copy when there is one**, and
-    from the checkout otherwise. Running `chartbook pin` after `chartbook run` therefore sees
-    the built data too.
-13. **Which commit is built.** The lockfile's, if it names one, since a pin does not move.
+   dependency that has gone and *is* pinned is no trouble.
+9. **The exit code is the failed script's.** One stopped by a signal gives 128 plus the
+   signal's number, as a shell reports it. What ChartBook printed is flushed before a script
+   starts, so a log has the lines in order.
+10. **A git dependency's working copy** is `~/.chartbook/git/work/<host>/<owner>/<name>/<commit>/`:
+    the checkout's files, made writable. It is made once and kept. It is shared by every
+    project of this user that depends on that commit. The checkout itself is never written to.
+11. **"Built" is a file in the working copy**, `.chartbook-built`, written when the build exits
+    0 and removed before a forced one. A build that fails leaves the copy unbuilt, so the next
+    run tries again. One that is built says `built already, at 4f2a91c`.
+12. **What a built git dependency itself depends on is not looked at again**, unless `--force`
+    is given. It was needed to build it, and it is built.
+13. **A git dependency with no `build` script is not mentioned.** That is the ordinary case of
+    a repository that commits its data.
+14. **`pin` and `update` pin a git dependency from its working copy when there is one**, and
+    from the checkout otherwise.
+15. **Which commit is built.** The lockfile's, if it names one, since a pin does not move.
     Otherwise what the `rev` means now.
-14. **The index lists every script** under `scripts`, sorted by name. The schema already
+16. **The index lists every script** under `scripts`, sorted by name. The schema already
     allowed it.
-15. **A catalog has no `[scripts]`.** A manifest that gives one does not load.
-16. **What it says.** One line per pipeline, `id: script    in <directory>`, with no directory
-    for the pipeline the command was run in. Pins are mentioned only when something happened:
-    a run where every pin was already in place says nothing about them.
-17. **An update that moves a `git` dependency's commit lets go of what was built at the old
+17. **A catalog has no `[scripts]`.** A manifest that gives one does not load.
+18. **What it says.** One line for each pipeline it runs in, with the directory when that is
+    not where the command was given. Pins are mentioned only when something happened, and a
+    lockfile is never written without a line that says so.
+19. **An update that moves a `git` dependency's commit lets go of what was built at the old
     one.** This changes one case of a rule proposed in 3c (number 7 there: an asset the other
     pipeline "declares and no longer has on disk keeps its pin"). Example: `ref_data` is pinned
     at commit A, with `daily_prices` built there by `run`. `update` moves it to commit B, where
@@ -926,45 +992,59 @@ word still means two things until 4c. `chartbook update` still rebuilds nothing.
 
 **Known gaps in 4a.**
 
-1. **Nothing clears old working copies.** A branch that moves leaves one per commit, each with
+1. **Pinning still reads the folder.** For a `path` dependency, `pin` and `update` copy what
+   is there at that moment, and `pin` hashes it to say what has changed. Run while its owner
+   is half-way through a rebuild, `update` pins the half-built state. Snapshots (4b) close it.
+2. **Refreshing a git dependency's data takes two commands**: `chartbook run --force` builds
+   it again, and the pin does not move until `chartbook update`.
+3. **Nothing clears old working copies.** A branch that moves leaves one per commit, each with
    whatever its build wrote. `chartbook store gc` does not touch the git cache.
-2. **Two runs at once in one working copy** are not kept apart. Two projects of one user that
+4. **Two runs at once in one working copy** are not kept apart. Two projects of one user that
    depend on the same commit share it.
-3. **A `path` dependency of a `git` dependency** is looked for beside the working copy, where
-   it almost never is. It is named as not run.
-4. **On a first run, a `git` dependency is fetched twice**: once to choose the commit to build,
+5. **A `path` dependency of a `git` dependency** is not built, and is looked for beside the
+   working copy, where it almost never is. That dependency's build stops at its pin.
+6. **On a first run, a `git` dependency is fetched twice**: once to choose the commit to build,
    once by the pin. If the branch moves in between, the pin lands on a commit that was not
    built, and says "not built". The next run builds that commit and pins it.
 
 **Where the design was wrong, or said less than it seemed to.**
 
-1. *"By default it also refreshes `path` pins."* ({doc}`asset-graph`, "Two verbs".) Decided
-   otherwise, above. It takes this step's "Done when" with it, also above.
-2. *"Today the field is documentation-only … choosing script semantics now means a future
+1. *"`build` … is what the dependency graph invokes"*, *"`chartbook run [script]` — execute a
+   named script across the graph"*, and *"ChartBook's runner is topological order, a process
+   pool, an input-addressed cache and a per-asset lock."* ({doc}`asset-graph`, "Running things"
+   and "Relationship to orchestrators".) Decided otherwise: a pipeline's dependencies are not
+   built from it. The only order left is among a catalog's own pipelines.
+2. *"By default it also refreshes `path` pins."* ({doc}`asset-graph`, "Two verbs".) Decided
+   otherwise.
+3. *"Today the field is documentation-only … choosing script semantics now means a future
    `chartbook run` can execute the value as-is with no format change."*
    ({doc}`toml-format-v2`.) True of the format and not of the values. Nothing ever ran the
    field, so nothing ever checked that it held a command. This repository's own
    `examples/yield_curve` had `build = "module load anaconda3/3.11.4 TeXLive/2023"`: a note
    about the environment. `chartbook run` would have run it and failed. The example now says
    `doit`. Other manifests may hold notes too, and the changelog says so.
-3. *"If variants are ever needed … the natural extension is a `[project.build]` table with
+4. *"If variants are ever needed … the natural extension is a `[project.build]` table with
    named keys."* ({doc}`toml-format-v2`.) {doc}`asset-graph`, written later, has `[scripts]`.
    `[scripts]` is what is built.
-4. *"`chartbook update` — move pins forward to current upstream state, and rebuild what that
-   invalidates."* ({doc}`asset-graph`.) `update` rebuilds nothing. With pins that `run` does
-   not move, the pair is `update`, then `run`. Whether `update` should run the build itself
-   is a question for 4b.
-5. *"`chartbook run` pins anything not yet pinned, so neither verb is needed to get started."*
+5. *"`chartbook update` — move pins forward to current upstream state, and rebuild what that
+   invalidates."* ({doc}`asset-graph`.) `update` rebuilds nothing; the pair is `update`, then
+   `run`.
+6. *"`chartbook run` pins anything not yet pinned, so neither verb is needed to get started."*
    True as built, for `build`. Any other script pins nothing.
-6. *"`build` still means 'render the website' and keeps doing so until `run` exists; the
+7. *"`build` still means 'render the website' and keeps doing so until `run` exists; the
    rename is one breaking change, made once, in the same release as `run`."*
    ({doc}`asset-graph`.) `run` exists and the rename is 4c. Both are unreleased, so "the same
    release" still holds, and until 4c `chartbook build` and `[scripts] build` mean different
    things.
-7. *The `dodo.py` in {doc}`asset-graph` that reads another pipeline's asset at the top of the
+8. *The `dodo.py` in {doc}`asset-graph` that reads another pipeline's asset at the top of the
    file* failed until the dependency was pinned ("3d, as built"). Under `chartbook run` it
    works, because the pin is made before `doit` starts. Run as plain `doit` in a fresh clone,
    it still fails.
+9. *The `Build` record is one per asset, with a `recipe_hash`* ({doc}`asset-graph`,
+   {doc}`index-schema`), *and "the graph's nodes are pipelines … ChartBook therefore never
+   needs per-asset build recipes"* ({doc}`asset-graph`, "Granularity"). The two do not fit:
+   one build makes all of a pipeline's assets. The snapshot settles it as one record for a
+   pipeline at a commit, naming each asset's hash.
 
 **Seen while trying it by hand.** A pin is read-only (decided in 3d). A build script that
 copies a pinned file with `cp` gets a read-only copy, and cannot write over it on the next
@@ -1049,8 +1129,12 @@ maintainer.
 | 2026-10-12 | `git` dependencies are built now, plainly: clone, check out, pin what the repository commits, and say that is all a clone has | "3e, as built", above |
 | 2026-10-12 | Clones of `git` dependencies are kept in `~/.chartbook/git/`, one per user, and ChartBook runs the user's own `git` | "3e, as built", above |
 | 2026-10-13 | `chartbook run` never moves a pin. It pins what has no pin and leaves the rest; `chartbook update` moves pins | Step 4 above; {doc}`asset-graph`, "Two verbs" |
-| 2026-10-13 | `chartbook run` builds a `git` dependency, in a writable copy of its checkout, and its built data is pinned from there | Step 4 above, "4a, as built" |
-| 2026-10-13 | Step 4 is built in five parts, 4a to 4e, one pull request each, stacked | Step 4 above |
+| 2026-10-13 | `chartbook run` builds a `git` dependency, in a writable copy of its checkout, once for a commit, and its built data is pinned from there. `--force` builds it again: data is refreshed on purpose | Step 4 above, "4a, as built" |
+| 2026-10-13 | A pipeline never reads, hashes or builds in a folder it depends on. `chartbook run` builds the pipeline it is run in | Step 4 above, "The snapshot model" |
+| 2026-10-13 | A snapshot is every asset a pipeline declares, as built at one commit, in the store. Its owner makes it on purpose, and only with everything committed. `pin` and `update` choose among snapshots | Step 4 above, "The snapshot model" |
+| 2026-10-13 | Taking whatever is in a folder stays possible only as an option that is off by default and out of the way | Step 4 above, "The snapshot model" |
+| 2026-10-13 | The purpose: people and agents work on different pipelines in parallel. The store is the read-only middle they all depend on, updated slowly and on purpose | Step 4 above, "The snapshot model" |
+| 2026-10-13 | Step 4 is built in parts, one pull request each, stacked | Step 4 above |
 
 ## Open questions, collected
 
@@ -1065,10 +1149,11 @@ Each is explained where it lives.
 - The things settled while building declared dependencies (twelve), the store (ten) and
   pinning (fourteen), cross-pipeline references (eleven) and `git` dependencies (twelve), each
   listed as *proposed* under its "as built" heading. (Step 3 above)
-- The seventeen things settled while building `chartbook run`, and the reading of step 4's
-  "Done when" now that `run` moves no pin. (Step 4 above, "4a, as built")
-- Whether `chartbook update` should run the build after it moves a pin, as {doc}`asset-graph`
-  says, or stay a command that only moves pins. (Step 4 above; a question for 4b)
+- The nineteen things settled while building `chartbook run`, and the *proposed* "Done when"
+  that replaces step 4's. (Step 4 above, "4a, as built" and "The snapshot model")
+- For snapshots: the command's name, what a `path` dependency follows (the newest snapshot
+  at or before the commit its folder is on is *proposed*), whether old snapshots are ever
+  cleared, and what the buried option is called. (Step 4 above; questions for 4b)
 - A shared store, as a second way for a `git` dependency's built data to get here. The first
   is built: `chartbook run` builds it. (Step 4 above, "4a, as built")
 - How a chart says it was made from another pipeline's data. (Step 3 above)

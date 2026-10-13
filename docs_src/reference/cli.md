@@ -16,7 +16,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
 | `chartbook pin` | Freeze what this pipeline depends on, in `chartbook.lock` |
 | `chartbook update` | Move pins forward to what the dependencies have now |
-| `chartbook run [SCRIPT]` | Run a named script here, after the pipelines this one depends on |
+| `chartbook run [SCRIPT]` | Run a named script in this pipeline; `build` by default, after pinning what it depends on |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook store gc` | Remove from the store what no lockfile names |
 | `chartbook config` | Set the default catalog for data loading |
@@ -416,10 +416,10 @@ Keeping it would leave the lockfile naming one commit beside data built from ano
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--project-dir PATH]
 ```
 
-Run a script in this pipeline, after running it in the pipelines this one depends on. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
+Run a script in this pipeline. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
 
 ```toml
 [scripts]
@@ -428,49 +428,69 @@ build = "doit"
 
 ```console
 $ chartbook run
-ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
 ftsfr/rate_forecast: pinning what it depends on
 ftsfr/fed_yield_curve: 3 pinned
 Wrote chartbook.lock.
 ftsfr/rate_forecast: build
-Ran build in 2 pipeline(s).
+Ran build in 1 pipeline(s).
 ```
 
-What it does, in order:
+What `chartbook run` does for `build`, in order:
 
-1. **Works out the order.** It reads `[dependencies]` here, then in each pipeline named there, and so on down. Each pipeline comes after the ones it depends on, and appears once however many depend on it.
-2. **Runs the script in each one**, in that pipeline's own directory. What the script prints is shown as it runs.
-3. **Stops at the first failure**, and exits with that script's exit code. Nothing after it is run.
+1. **Builds a `git` dependency that is not built yet**, in ChartBook's own clean copy of the commit.
+2. **Pins what has no pin yet**, so this pipeline's code can read it.
+3. **Runs this pipeline's `build`**, in its own directory. What the script prints is shown as it runs. If it fails, the command exits with the script's exit code.
 
-**It pins before it builds.** Before a pipeline's `build` runs, whatever that pipeline depends on and has not pinned yet is pinned, so its code can read it. In a fresh clone, `chartbook run` is the only command you need: there is no `chartbook pin` to remember first.
+In a fresh clone, `chartbook run` is the only command you need: there is no `chartbook pin` to remember first.
 
-**It never moves a pin.** Run it again next week. The other pipeline is rebuilt, and may have newer data. This pipeline is still built against the copy it pinned, and you are told:
+**It never builds in a folder this pipeline depends on.** A `path` dependency is a folder somebody works in. They may be half-way through a change. This pipeline reads what is pinned, not what is in that folder, so building there would disturb its owner and change nothing this pipeline reads. That folder is its owner's to build.
+
+**It never moves a pin.** If the other pipeline has newer data, this one is still built against the copy it pinned, and you are told:
 
 ```console
 $ chartbook run
-ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
 ftsfr/rate_forecast: pinning what it depends on
 ftsfr/fed_yield_curve: 2 already pinned, 1 changed upstream since it was pinned
   changed upstream: ftsfr/fed_yield_curve:treasury_rates
 chartbook.lock is unchanged.
 1 pinned asset(s) have changed upstream. `chartbook update` moves the pins.
 ftsfr/rate_forecast: build
-Ran build in 2 pipeline(s).
+Ran build in 1 pipeline(s).
 ```
 
 To build against the newer data, run `chartbook update` and then `chartbook run`. The lockfile changes only when you ask it to, so it only ever changes in a commit you meant to make.
 
-**Another script.** `chartbook run test` runs `test` in every pipeline in the order that has one. A pipeline without it is passed over, and named. The pipeline you are in must have it. Only `build` pins.
+**A `git` dependency is built once.** Nobody works in ChartBook's copy of a commit, so there is nothing to disturb. Its `build` runs in a writable copy of the checkout, under `~/.chartbook/git/work/`, and that is how data the repository builds, and does not commit, comes to be there to pin. That build needs whatever it needs: its tools, its credentials, its network.
 
-**In a catalog**, the script is run in every pipeline of the catalog, and in what they depend on.
+```console
+$ chartbook run
+ftsfr/ref_data: build    in /Users/you/.chartbook/git/work/gitlab.example.org/ftsfr/ref_data/4f2a91c0…
+ftsfr/rate_forecast: pinning what it depends on
+ftsfr/ref_data: 3 pinned
+Wrote chartbook.lock.
+ftsfr/rate_forecast: build
+Ran build in 2 pipeline(s).
 
-**A `git` dependency is built too**, in a writable copy of its checkout under `~/.chartbook/git/work/`. That is how data the other pipeline builds, and does not commit, comes to be there to pin. Its build needs whatever it needs: its tools, its credentials, its network. The copy is kept, so a second run finds the first one's work. `run` stays at the commit in `chartbook.lock`; to move to a newer one, run `chartbook update` and then `chartbook run`.
+$ chartbook run
+ftsfr/ref_data: built already, at 4f2a91c
+ftsfr/rate_forecast: build
+Ran build in 1 pipeline(s).
+```
 
-**What it does not do.**
+Nothing builds it a second time by itself. Two things do, both on purpose:
 
-- **It skips nothing yet.** Every pipeline's script runs every time. That is usually cheap, because the pipeline's own tool (doit, Make, Snakemake) skips what is up to date. Skipping a whole pipeline whose inputs have not changed is not built.
-- **It is not a task runner.** A script is one string. Scripts do not depend on each other, and there are no retries, no schedule and no history. The only order is the one between pipelines.
-- **It runs one pipeline at a time.**
+| You want | You run |
+|---|---|
+| The same code, and fresh data it pulls from outside | `chartbook run --force`, then `chartbook update` |
+| Newer code | `chartbook update`, then `chartbook run` |
+
+`run` stays at the commit in `chartbook.lock`. A `git` dependency that commits its data and has no `build` script is not built and not mentioned.
+
+**Another script.** `chartbook run test` runs `test` in this pipeline, and that is all it does. Only `build` pins, and only `build` reaches what the pipeline depends on.
+
+**In a catalog**, the script is run in each of the catalog's pipelines, one that another of them depends on first. A pipeline of the catalog that has no script by that name is passed over, and named.
+
+**What it is not.** It is not a task runner. A script is one string. Scripts do not depend on each other, and there are no retries, no schedule and no history. What is out of date inside a pipeline is for the pipeline's own tool to decide (doit, Make, Snakemake); `chartbook run` runs that tool every time.
 
 A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`.
 

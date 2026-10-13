@@ -24,10 +24,13 @@ copy. Build records and `chartbook run` are not built. The notes marked *(Built:
 exactly what, and {doc}`overview` ("3a, as built" to "3e, as built") lists what was settled on
 the way, as *proposed*.
 
-2026-10-13: `[scripts]` and `chartbook run` are built, the first of five parts of the second
-step. `run` puts the pipelines in order and runs a script in each. It skips nothing yet, and
-build records are still not built. One thing below was decided otherwise first: `run` never
-moves a pin ("Two verbs"). {doc}`overview`, "4a, as built".
+2026-10-13: `[scripts]` and `chartbook run` are built. Two things below were decided
+otherwise by the maintainer first, and {doc}`overview` ("The snapshot model", under step 4)
+is what holds where this page differs. `run` never moves a pin ("Two verbs"). And a pipeline
+never reads, hashes or builds in a folder it depends on, so `run` builds the pipeline it is
+run in and does not walk the graph ("Running things", "Relationship to orchestrators"). What
+others read of a pipeline is a snapshot its owner makes on purpose, at a commit. Snapshots
+are not built yet.
 ```
 
 ## The problem
@@ -139,9 +142,9 @@ clone, or a store to download from. Until one of those exists, `chartbook pin` s
 built" and says why. Decided by the maintainer 2026-10-12: build it this way now.)*
 
 *(2026-10-13: the first of those exists. Decided by the maintainer: `chartbook run` builds a
-`git` dependency. A checkout is read-only, so the build runs in a writable copy of it,
-`~/.chartbook/git/work/…/<commit>/`, and the dependency is pinned from that copy. `chartbook
-pin` alone still pins only what the repository commits.)*
+`git` dependency, once for a commit. A checkout is read-only, so the build runs in a writable
+copy of it, `~/.chartbook/git/work/…/<commit>/`, and the dependency is pinned from that copy.
+`chartbook pin` alone still pins only what the repository commits.)*
 
 Because scope is captured from the owner path at `init`, the URL is usually inferable from the ID.
 That shortcut is a *configurable* default host, never a hardcoded one:
@@ -305,13 +308,19 @@ and the store has lost. `update` is the one thing that moves a pin. There is no 
 
 *Added 2026-10-13, with `run` built. Decided by the maintainer before it was: **`chartbook
 run` never moves a pin.** The second sentence of the paragraph above ("By default it also
-refreshes `path` pins") is not how it works. `run` pins what has no pin, before each
+refreshes `path` pins") is not how it works. `run` pins what has no pin, before the
 pipeline's `build`, so neither verb is needed to get started; and it leaves every pin that
 exists where it is, saying which have changed upstream. `update` is still the one thing that
 moves a pin, and still rebuilds nothing, so picking up a colleague's latest is `chartbook
 update` and then `chartbook run`. That leaves `--frozen` with less to do than this section
 gives it: there is no pin for it to refuse to move. What is left is failing when the lockfile
-is out of date, which is for the next part.*
+is incomplete, which is not built.*
+
+*Decided the same day, and larger: where a pin's bytes come from. As built in step 3, `pin`
+and `update` copy what is in a `path` dependency's folder at that moment. The maintainer's
+model is that they choose among **snapshots**, which a pipeline's owner makes on purpose at a
+commit, and never look in the folder. See {doc}`overview`, "The snapshot model". Not built
+yet.*
 
 *The resolution rule at the top of this section is built: `chartbook.resolve._resolve_pinned`.
 A reference to another pipeline's asset goes to `[dependencies]` for the pipeline, to
@@ -587,12 +596,18 @@ deliberately not.
 ```
 
 *(Built 2026-10-13: `chartbook.manifest.read_scripts` and `chartbook.run`. `[project] build`
-is read as the same thing as `[scripts] build`. `chartbook run [script]` works out the order
-from each pipeline's `[dependencies]`, runs the script in each pipeline's own directory with
-`bash -e`, dependencies first, and stops at the first failure. Every script runs every time:
-skipping a pipeline whose inputs have not changed needs build records. A `git` dependency is
-built as well, in a writable copy of its checkout, which is how its built data comes to be
-pinned. {doc}`overview`, "4a, as built", lists what was settled on the way, as *proposed*.)*
+is read as the same thing as `[scripts] build`, and a script is run in its pipeline's own
+directory with `bash -e`.*
+
+*"It is what the dependency graph invokes" is not how it was built. Decided by the
+maintainer: `chartbook run` builds the pipeline it is run in, and never builds in a folder
+that pipeline depends on. That folder is somebody's work, and the pipeline reads what is
+pinned, not what is there. A first version did walk the graph and run `build` in each
+pipeline's folder; it was taken out before it was merged. Two things are left of the graph.
+A `git` dependency is built, once for a commit, in a writable copy of its checkout, which is
+how its built data comes to be pinned; `--force` builds it again. And in a catalog, the
+script is run in each of the catalog's pipelines, one that another depends on first.
+{doc}`overview`, "The snapshot model" and "4a, as built".)*
 
 ### The command surface
 
@@ -651,6 +666,11 @@ declared yet.
 
 ChartBook's runner is topological order, a process pool, an input-addressed cache and a per-asset
 lock. No daemon, no queue, no retry policy, no backfill logic, no run database, no UI.
+
+*(2026-10-13: it is less than that. Decided by the maintainer: a pipeline is not built from
+another pipeline's run, so there is no order to work out except among a catalog's own
+pipelines, and no pool. {doc}`overview`, "The snapshot model". The rest of this section, on
+exporting the graph, stands.)*
 
 Every one of those omissions is available by **exporting the graph** rather than reimplementing it.
 There are three ways to relate to an orchestrator and only one is right: depending on one kills rule

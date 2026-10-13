@@ -21,6 +21,6 @@ Individual pipelines have their own inputs (`fred_charts` pulls from FRED; `yiel
 
 `rate_forecast` is built after `yield_curve`, because it reads what that pipeline produces. Its first build step is `chartbook pin`, which copies `yield_curve`'s data into the store at `~/.chartbook/store/` and writes `chartbook.lock`. Its README walks through what happens when `yield_curve` is rebuilt afterwards: nothing, until `chartbook update`.
 
-Each example names its build command, `[scripts] build = "doit"`, so `chartbook run` in `examples/rate_forecast` does all of that in one go: it builds `yield_curve`, pins, and builds `rate_forecast`.
+Each example names its build command, `[scripts] build = "doit"`. `chartbook run` in `examples/yield_curve` builds that pipeline. `chartbook run` in `examples/rate_forecast` then pins what `yield_curve` has and builds `rate_forecast`. It does not build `yield_curve` itself: a folder you depend on is its owner's to build.
 
 The scaffold produced by `chartbook init` is itself a smaller worked example — see the [cookiecutter template](https://github.com/backofficedev/cookiecutter_chartbook).

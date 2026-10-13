@@ -11,8 +11,7 @@ os_compatibility = [
     "MacOS",
 ]
 
-# Named commands. `chartbook run` runs `build`, here and in any pipeline
-# that depends on this one.
+# Named commands. `chartbook run` runs `build`.
 [scripts]
 build = "doit"
 

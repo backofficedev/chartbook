@@ -11,7 +11,8 @@ os_compatibility = [
     "MacOS",
 ]
 
-# Named commands. `chartbook run` runs `build` in yield_curve, and then here.
+# Named commands. `chartbook run` pins what this pipeline depends on, if
+# nothing is pinned yet, and then runs `build`.
 [scripts]
 build = "doit"
 

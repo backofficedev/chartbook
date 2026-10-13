@@ -414,11 +414,13 @@ class TestExampleProjects:
             if lockfile.exists():
                 lockfile.unlink()
 
-    def test_chartbook_run_builds_the_example_and_what_it_depends_on(self, tmp_path):
-        """`chartbook run` in rate_forecast builds yield_curve, pins, and builds it.
+    def test_chartbook_run_pins_and_builds_the_example(self, tmp_path):
+        """`chartbook run` in rate_forecast pins what yield_curve has, and builds.
 
-        One command, from nothing pinned: the first part of step 4 in
-        docs_src/design/overview.md. Each example's `build` script is `doit`.
+        From nothing pinned: the first part of step 4 in
+        docs_src/design/overview.md. It does not build yield_curve, which is
+        a folder this pipeline depends on and its owner's to build; here
+        the test is its owner. Each example's `build` script is `doit`.
         """
         yield_curve_path = Path("examples/yield_curve").resolve()
         example_path = Path("examples/rate_forecast").resolve()
@@ -426,6 +428,17 @@ class TestExampleProjects:
         if not (yield_curve_path / "_data" / "fed_yield_curve.parquet").exists():
             self._clean_example_dirs(yield_curve_path)
             self._setup_mock_data_yield_curve(yield_curve_path)
+        built = subprocess.run(
+            ["chartbook", "run"],
+            cwd=yield_curve_path,
+            capture_output=True,
+            text=True,
+            timeout=900,
+            env=env,
+        )
+        assert built.returncode == 0, f"run failed: {built.stderr}\n{built.stdout}"
+        assert built.stdout.rstrip().endswith("Ran build in 1 pipeline(s).")
+
         self._clean_example_dirs(example_path)
         lockfile = example_path / "chartbook.lock"
         try:
@@ -439,14 +452,14 @@ class TestExampleProjects:
             )
             assert result.returncode == 0, f"run failed: {result.stderr}\n{result.stdout}"
 
-            # The upstream first, where it is; then the pin; then this pipeline
+            # The pin, then this pipeline. Nothing is run in yield_curve.
             said = result.stdout
-            upstream = f"backofficedev/yield_curve: build    in {yield_curve_path}"
             pinning = "backofficedev/rate_forecast: pinning what it depends on"
             itself = "backofficedev/rate_forecast: build\n"
-            assert upstream in said and pinning in said and itself in said, said
-            assert said.index(upstream) < said.index(pinning) < said.index(itself)
-            assert said.rstrip().endswith("Ran build in 2 pipeline(s).")
+            assert pinning in said and itself in said, said
+            assert said.index(pinning) < said.index(itself)
+            assert "backofficedev/yield_curve: build" not in said
+            assert said.rstrip().endswith("Ran build in 1 pipeline(s).")
 
             assert (yield_curve_path / "docs" / "index.html").exists()
             assert lockfile.exists()

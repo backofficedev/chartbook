@@ -62,7 +62,7 @@ All keys are optional:
 ### Scripts
 
 `[scripts]` names the commands that are run in a pipeline. `chartbook run <name>`
-runs one, first in the pipelines this one depends on and then here.
+runs one, in this pipeline.
 
 ```toml
 [scripts]
@@ -85,7 +85,6 @@ python src/pull.py
 - `[project] build = "..."` is the same thing as `[scripts] build` and is still
   read. Give it in one place; two different values do not load.
 - Scripts are not tasks: no dependencies between them, no retries, no schedule.
-  The only order is between pipelines, from `[dependencies]`.
 - A catalog cannot have this table.
 
 ## Complete Pipeline Configuration
@@ -187,10 +186,12 @@ table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git
   It has ONLY what its repository commits: git-ignored, built data is "not built".
   The lockfile records the commit; `chartbook update` re-fetches and follows a branch.
   A catalog cannot have this table.
-- `chartbook run` runs each dependency's `build` script before this pipeline's,
-  in order, and pins whatever has no pin yet before each build. It never moves a
-  pin (`chartbook update` does). It builds a `git` dependency too, in a writable
-  copy of its checkout (`~/.chartbook/git/work/`), so its built data can be pinned.
+- `chartbook run` pins whatever has no pin yet and then runs THIS pipeline's
+  `build`. It never moves a pin (`chartbook update` does). It NEVER builds in a
+  `path` dependency's folder: that folder is somebody's work, and is its owner's
+  to build (run `chartbook run` there). It builds a `git` dependency once per
+  commit, in a clean writable copy of its checkout (`~/.chartbook/git/work/`),
+  so its built data can be pinned; `chartbook run --force` builds it again.
   To move a git dependency to a newer commit: `chartbook update`, then
   `chartbook run` (update lets go of data built at the old commit).
 

@@ -365,7 +365,7 @@ def validate_series(dataframe_manifest: dict, dataframe_id: str) -> dict:
 
 #: The script that makes a pipeline's assets current. It is the one name in
 #: ``[scripts]`` that ChartBook gives a meaning to: what ``chartbook run``
-#: runs by default, in every pipeline of the graph.
+#: runs by default, and what it runs once in a git dependency's clean copy.
 BUILD_SCRIPT = "build"
 
 
@@ -387,8 +387,7 @@ def read_scripts(raw_manifest: dict) -> dict:
     ``[scripts] build`` and is still read; a manifest gives it in one place.
 
     Scripts are not tasks. There is no order among them and none depends
-    on another: the only graph is over pipelines. See "Running things" in
-    ``docs_src/design/asset-graph.md``.
+    on another. See "Running things" in ``docs_src/design/asset-graph.md``.
 
     :param raw_manifest: The dict parsed from chartbook.toml.
     :returns: The scripts by name. ``build`` is in it if either table gives
@@ -1132,8 +1131,7 @@ def _load_catalog_manifest(raw_manifest):
     if "scripts" in raw_manifest:
         raise ValueError(
             f"{source}: a catalog has no [scripts]. `chartbook run` in a "
-            f"catalog runs each of its pipelines' own scripts, in the order "
-            f"they depend on each other."
+            f"catalog runs each of its pipelines' own scripts."
         )
 
     pipelines_raw = manifest.get("pipelines") or {}

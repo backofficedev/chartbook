@@ -1,8 +1,9 @@
 """Tests for ``[scripts]`` and ``chartbook run``: ``chartbook.run``.
 
 This is the first part of step 4 of ``docs_src/design/overview.md``. A
-pipeline names its commands, and ``chartbook run`` runs one of them in the
-pipelines it depends on, in order, and then in it. Nothing is skipped yet.
+pipeline names its commands, and ``chartbook run`` runs one of them in it.
+It never builds in a folder the pipeline depends on, and it builds a git
+dependency once, in a clean copy.
 
 The scripts here are one-line shell commands that leave a file behind, so
 a test can see what ran, where and in what order.
@@ -19,7 +20,7 @@ from click.testing import CliRunner
 
 from chartbook import index, lock, run
 from chartbook.cli import main
-from chartbook.gitcache import GitCache
+from chartbook.gitcache import GitCache, forget_built, is_built, mark_built
 from chartbook.manifest import load_manifest, read_scripts
 from chartbook.run import RunError, Step, execute, plan
 from chartbook.store import default_store
@@ -68,6 +69,19 @@ def chain(work):
     _pipeline(work / "bottom", {"build": LOG})
     _pipeline(work / "middle", {"build": LOG}, {"bottom": {"path": "../bottom"}})
     return _pipeline(work / "top", {"build": LOG}, {"middle": {"path": "../middle"}})
+
+
+def _catalog(work: Path, *members: str) -> Path:
+    """Make *work* a catalog of the pipelines in the folders named."""
+    (work / "chartbook.toml").write_text(
+        tomli_w.dumps(
+            {
+                "project": {"type": "catalog"},
+                "pipelines": {name: {"path": name} for name in members},
+            }
+        )
+    )
+    return work
 
 
 class TestScripts:
@@ -158,65 +172,52 @@ class TestPlan:
             Step("alone", directory, "asked", {"build": "doit"}, has_dependencies=False)
         ]
 
-    def test_dependencies_come_first(self, chain, work):
-        steps = plan(chain)
-        assert [step.id for step in steps] == ["bottom", "middle", "top"]
-        assert [step.source for step in steps] == ["path", "path", "asked"]
-        assert [step.has_dependencies for step in steps] == [False, True, True]
-        assert steps[0].directory == work / "bottom"
+    def test_a_folder_it_depends_on_is_not_in_the_order(self, chain):
+        """It is somebody's working directory, and theirs to build."""
+        (only,) = plan(chain)
+        assert only.id == "top" and only.source == "asked" and only.has_dependencies
 
-    def test_a_pipeline_two_others_depend_on_is_there_once(self, work):
+    def test_pipelines_that_are_not_asked_for_may_depend_on_each_other(self, work):
+        """Nothing follows a path, so a loop out there is not this run's business."""
+        a = _pipeline(work / "a", {"build": LOG}, {"b": {"path": "../b"}})
+        _pipeline(work / "b", {"build": LOG}, {"a": {"path": "../a"}})
+        assert [step.id for step in plan(a)] == ["a"]
+
+    def test_a_catalog_is_its_pipelines_each_after_one_it_depends_on(self, chain, work):
+        _pipeline(work / "apart", {"build": LOG})
+        steps = plan(_catalog(work, "top", "apart", "middle", "bottom"))
+        assert [step.id for step in steps] == ["bottom", "middle", "top", "apart"]
+        assert {step.source for step in steps} == {"asked"}
+
+    def test_a_catalog_does_not_reach_outside_itself(self, chain, work):
+        """``top`` depends on ``middle``, which this catalog does not list."""
+        assert [step.id for step in plan(_catalog(work, "top"))] == ["top"]
+
+    def test_one_that_two_of_a_catalogs_pipelines_depend_on_is_there_once(self, work):
         _pipeline(work / "shared", {"build": LOG})
         _pipeline(work / "left", {"build": LOG}, {"shared": {"path": "../shared"}})
         _pipeline(work / "right", {"build": LOG}, {"shared": {"path": "../shared"}})
-        top = _pipeline(
+        _pipeline(
             work / "top",
             {"build": LOG},
             {"left": {"path": "../left"}, "right": {"path": "../right"}},
         )
-        assert [step.id for step in plan(top)] == ["shared", "left", "right", "top"]
+        steps = plan(_catalog(work, "top", "left", "right", "shared"))
+        assert [step.id for step in steps] == ["shared", "left", "right", "top"]
 
-    def test_the_name_is_the_pipelines_own_not_the_key_it_is_declared_under(self, work):
-        _pipeline(work / "rates", {"build": LOG})
-        top = _pipeline(work / "top", {"build": LOG}, {"acme/upstream": {"path": "../rates"}})
-        assert [step.id for step in plan(top)] == ["rates", "top"]
-
-    def test_pipelines_that_depend_on_each_other_have_no_order(self, work):
+    def test_a_catalogs_pipelines_that_depend_on_each_other_have_no_order(self, work):
         _pipeline(work / "a", {"build": LOG}, {"b": {"path": "../b"}})
         _pipeline(work / "b", {"build": LOG}, {"a": {"path": "../a"}})
         with pytest.raises(RunError, match="depend on each other") as e:
-            plan(work / "a")
+            plan(_catalog(work, "a", "b"))
         assert f"{work / 'a'} -> {work / 'b'} -> {work / 'a'}" in str(e.value)
 
-    def test_a_dependency_that_is_not_here_is_marked_and_kept_in_the_order(self, work):
-        top = _pipeline(work / "top", {"build": LOG}, {"gone": {"path": "../gone"}})
-        missing, itself = plan(top)
-        assert missing == Step("gone", None, "path", missing=f"no pipeline at {work / 'gone'}")
-        assert itself.id == "top"
-
-    def test_a_catalog_is_all_its_pipelines(self, chain, work):
-        _pipeline(work / "apart", {"build": LOG})
-        (work / "chartbook.toml").write_text(
-            tomli_w.dumps(
-                {
-                    "project": {"type": "catalog"},
-                    "pipelines": {"top": {"path": "top"}, "apart": {"path": "apart"}},
-                }
-            )
-        )
-        steps = plan(work)
-        # In the order the catalog lists them, each after what it depends on
-        assert [step.id for step in steps] == ["bottom", "middle", "top", "apart"]
-        # A catalog's members were asked for; what they depend on was not
-        assert [step.source for step in steps] == ["path", "path", "asked", "asked"]
-
     def test_a_manifest_that_cannot_be_read_names_the_file(self, work):
-        """Several are read in one run, so the error says which."""
+        """A catalog reads several in one run, so the error says which."""
         bad = _pipeline(work / "bad")
         (bad / "chartbook.toml").write_text("this is not toml\n")
-        top = _pipeline(work / "top", {"build": LOG}, {"bad": {"path": "../bad"}})
         with pytest.raises(ValueError) as e:
-            plan(top)
+            plan(bad)
         assert str(bad / "chartbook.toml") in str(e.value)
 
     def test_no_manifest(self, work):
@@ -269,48 +270,48 @@ class TestExecute:
 
 @posix
 class TestRun:
-    def test_the_script_runs_in_each_pipeline_dependencies_first(self, chain, work):
-        report = run.run(chain, echo=lambda line: None)
-        assert _order(work) == ["bottom", "middle", "top"]
-        assert [step.id for step in report.ran] == ["bottom", "middle", "top"]
+    def test_it_runs_where_it_was_asked_and_nowhere_else(self, chain, work):
+        """Not in ``middle`` and not in ``bottom``: those are folders it depends on."""
+        said = []
+        report = run.run(chain, echo=said.append)
+        assert _order(work) == ["top"]
+        assert said == ["top: build"]
+        assert [step.id for step in report.ran] == ["top"]
         assert report.failed is None and report.exit_code == 0 and report.script == "build"
 
-    def test_it_says_what_it_is_doing(self, chain, work):
+    def test_a_catalog_runs_each_of_its_pipelines_in_order(self, chain, work):
         said = []
-        run.run(chain, echo=said.append)
+        report = run.run(_catalog(work, "top", "middle", "bottom"), echo=said.append)
+        assert _order(work) == ["bottom", "middle", "top"]
+        assert [step.id for step in report.ran] == ["bottom", "middle", "top"]
+        # None of them is where the command was given, so each says where it is
         assert said == [
             f"bottom: build    in {work / 'bottom'}",
             f"middle: build    in {work / 'middle'}",
-            "top: build",
+            f"top: build    in {work / 'top'}",
         ]
 
-    def test_every_script_runs_every_time(self, chain, work):
-        """Nothing is skipped yet. The pipeline's own tool skips what it can."""
+    def test_the_script_runs_every_time(self, chain, work):
+        """The pipeline's own tool is what skips; this runs it."""
         run.run(chain, echo=lambda line: None)
         run.run(chain, echo=lambda line: None)
-        assert _order(work) == ["bottom", "middle", "top"] * 2
+        assert _order(work) == ["top", "top"]
 
     def test_the_first_failure_stops_the_run(self, work):
         _pipeline(work / "bottom", {"build": LOG})
         _pipeline(work / "middle", {"build": "exit 3"}, {"bottom": {"path": "../bottom"}})
-        top = _pipeline(work / "top", {"build": LOG}, {"middle": {"path": "../middle"}})
-        report = run.run(top, echo=lambda line: None)
+        _pipeline(work / "top", {"build": LOG}, {"middle": {"path": "../middle"}})
+        report = run.run(_catalog(work, "top", "middle", "bottom"), echo=lambda line: None)
         assert report.failed.id == "middle" and report.exit_code == 3
         assert report.reason == "its 'build' script exited with 3"
         assert [step.id for step in report.ran] == ["bottom"]
         assert _order(work) == ["bottom"]  # and top was never run
 
     def test_another_script_by_name(self, work):
-        _pipeline(work / "bottom", {"build": LOG, "test": LOG})
-        _pipeline(work / "middle", {"build": LOG}, {"bottom": {"path": "../bottom"}})
-        top = _pipeline(work / "top", {"build": LOG, "test": LOG}, {"middle": {"path": "../middle"}})
-        said = []
-        report = run.run(top, "test", echo=said.append)
-        assert _order(work) == ["bottom", "top"]
-        assert [(step.id, why) for step, why in report.skipped] == [
-            ("middle", "it has no script named 'test'")
-        ]
-        assert "middle: not run. It has no script named 'test'." in said
+        top = _pipeline(work / "top", {"build": LOG, "test": "echo tested >> ../order.log"})
+        report = run.run(top, "test", echo=lambda line: None)
+        assert _order(work) == ["tested"]
+        assert report.script == "test" and [step.id for step in report.ran] == ["top"]
 
     def test_the_pipeline_asked_for_must_have_the_script(self, chain, work):
         with pytest.raises(RunError) as e:
@@ -319,96 +320,96 @@ class TestRun:
         assert 'put the command under [scripts] in chartbook.toml: test = "…".' in str(e.value)
         assert _order(work) == []  # found out before anything was run
 
-    def test_a_dependency_without_the_script_is_passed_over(self, work):
-        _pipeline(work / "data_only")
-        top = _pipeline(work / "top", {"build": LOG}, {"data_only": {"path": "../data_only"}})
-        report = run.run(top, echo=lambda line: None)
-        assert [step.id for step in report.ran] == ["top"]
-        assert [step.id for step, _ in report.skipped] == ["data_only"]
-
-    def test_a_catalog_runs_all_its_pipelines(self, chain, work):
-        (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"top": {"path": "top"}}})
-        )
-        said = []
-        run.run(work, echo=said.append)
-        assert _order(work) == ["bottom", "middle", "top"]
-        # None of them is where the command was given, so each says where it is
-        assert said[-1] == f"top: build    in {work / 'top'}"
-
     def test_a_catalog_passes_over_a_pipeline_without_the_script(self, chain, work):
         _pipeline(work / "apart", {"build": LOG, "test": LOG})
-        (work / "chartbook.toml").write_text(
-            tomli_w.dumps(
-                {
-                    "project": {"type": "catalog"},
-                    "pipelines": {"top": {"path": "top"}, "apart": {"path": "apart"}},
-                }
-            )
-        )
-        report = run.run(work, "test", echo=lambda line: None)
+        said = []
+        report = run.run(_catalog(work, "top", "apart"), "test", echo=said.append)
         assert [step.id for step in report.ran] == ["apart"]
-        assert [step.id for step, _ in report.skipped] == ["bottom", "middle", "top"]
+        assert [(step.id, why) for step, why in report.skipped] == [
+            ("top", "it has no script named 'test'")
+        ]
+        assert "top: not run. It has no script named 'test'." in said
 
     def test_a_script_nobody_has(self, chain, work):
-        (work / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"top": {"path": "top"}}})
-        )
         with pytest.raises(RunError, match="No pipeline here has a script named 'deploy'"):
-            run.run(work, "deploy")
+            run.run(_catalog(work, "top", "middle"), "deploy")
 
 
 @pytest.fixture
 def reader(work):
-    """``upstream`` builds a dataframe; ``reader`` copies its pinned copy.
+    """``upstream`` builds a dataframe; ``reader`` reads its pinned copy.
 
     The upstream's build writes something new every time it runs, as a
-    pipeline that pulls live data does.
+    pipeline that pulls live data does. Each time it runs it says so in
+    ``upstream_runs.log``.
     """
     _pipeline(
         work / "upstream",
-        {"build": "mkdir -p _data && date +%s%N > _data/x.parquet && echo run >> _data/x.parquet && cat _data/x.parquet >> ../upstream_runs.log"},
+        {
+            "build": "mkdir -p _data && date +%s%N > _data/x.parquet"
+            " && echo run >> _data/x.parquet && echo ran >> ../upstream_runs.log"
+        },
         dataframes={"x": {"path": "./_data/x.parquet", "docs": "d"}},
     )
     chartbook = Path(sys.executable).with_name("chartbook")
     return _pipeline(
         work / "reader",
-        {"build": f"mkdir -p _output && cat $({chartbook} path upstream:x) > _output/read.txt"},
+        # Stops if the path cannot be had, which `cat $(…)` would not
+        {"build": f'mkdir -p _output\nfrom=$({chartbook} path upstream:x)\ncat "$from" > _output/read.txt'},
         {"upstream": {"path": "../upstream"}},
     )
 
 
+def _quiet(line):
+    pass
+
+
 @posix
 class TestPinning:
+    def test_nothing_is_run_in_the_folder_it_depends_on(self, reader, work):
+        """``upstream`` has never been built, and this run does not build it."""
+        pinned = []
+        report = run.run(reader, echo=_quiet, on_pin=lambda step, pins: pinned.append(pins))
+        assert not (work / "upstream_runs.log").exists()
+        assert not (work / "upstream" / "_data").exists()
+        # So there is nothing to pin, and the reader's own build cannot read it
+        assert pinned[0].count("not_built") == 1
+        assert report.failed.id == "reader"
+        assert not (reader / "_output" / "read.txt").exists()
+
     def test_what_a_pipeline_depends_on_is_pinned_before_it_is_built(self, reader, work):
         """So that its code can read it: here, with `chartbook path upstream:x`."""
+        run.run(work / "upstream", echo=_quiet)  # its owner builds it
         pinned = []
-        report = run.run(reader, echo=lambda line: None, on_pin=lambda step, pins: pinned.append((step.id, pins)))
+        report = run.run(
+            reader, echo=_quiet, on_pin=lambda step, pins: pinned.append((step.id, pins))
+        )
         assert report.failed is None, report.reason
         assert [name for name, _ in pinned] == ["reader"]
         assert {e.status for e in pinned[0][1].events} == {"pinned"}
-        # It read what the upstream had just built
         assert (reader / "_output" / "read.txt").read_text() == (
             work / "upstream" / "_data" / "x.parquet"
         ).read_text()
+        assert (work / "upstream_runs.log").read_text().split() == ["ran"]
 
     def test_run_never_moves_a_pin(self, reader, work):
-        """The decision: the upstream is rebuilt, and this pipeline keeps its copy."""
-        run.run(reader, echo=lambda line: None)
+        """Its owner rebuilds the upstream, and this pipeline keeps its copy."""
+        run.run(work / "upstream", echo=_quiet)
+        run.run(reader, echo=_quiet)
         first = (reader / "_output" / "read.txt").read_text()
         before = (reader / lock.LOCK_FILE).read_bytes()
 
+        run.run(work / "upstream", echo=_quiet)
+        assert (work / "upstream" / "_data" / "x.parquet").read_text() != first
         pinned = []
-        run.run(reader, echo=lambda line: None, on_pin=lambda step, pins: pinned.append(pins))
-        upstream_now = (work / "upstream" / "_data" / "x.parquet").read_text()
-        assert upstream_now != first  # the upstream did rebuild
+        run.run(reader, echo=_quiet, on_pin=lambda step, pins: pinned.append(pins))
         assert (reader / "_output" / "read.txt").read_text() == first
         assert (reader / lock.LOCK_FILE).read_bytes() == before
         assert pinned[0].count("stale") == 1
 
         # `chartbook update` is what moves it
         lock.update(reader)
-        run.run(reader, echo=lambda line: None)
+        run.run(reader, echo=_quiet)
         assert (reader / "_output" / "read.txt").read_text() != first
 
     def test_a_pipeline_with_nothing_to_run_is_not_pinned_for(self, work):
@@ -416,48 +417,49 @@ class TestPinning:
         _pipeline(work / "bottom", {"build": LOG}, dataframes={"x": {"path": "./x.parquet", "docs": "d"}})
         (work / "bottom" / "x.parquet").write_bytes(b"x")
         middle = _pipeline(work / "middle", None, {"bottom": {"path": "../bottom"}})
-        top = _pipeline(work / "top", {"build": LOG}, {"middle": {"path": "../middle"}})
-        report = run.run(top, echo=lambda line: None)
+        top = _pipeline(work / "top", {"build": LOG}, {"bottom": {"path": "../bottom"}})
+        report = run.run(_catalog(work, "top", "middle", "bottom"), echo=_quiet)
         assert [step.id for step in report.ran] == ["bottom", "top"]
         assert not (middle / lock.LOCK_FILE).exists()
         assert (top / lock.LOCK_FILE).exists()
 
     def test_another_script_pins_nothing(self, work):
-        _pipeline(work / "upstream", {"test": LOG}, dataframes={"x": {"path": "./x.parquet", "docs": "d"}})
+        _pipeline(work / "upstream", dataframes={"x": {"path": "./x.parquet", "docs": "d"}})
         (work / "upstream" / "x.parquet").write_bytes(b"x")
         top = _pipeline(work / "top", {"build": LOG, "test": LOG}, {"upstream": {"path": "../upstream"}})
-        run.run(top, "test", echo=lambda line: None)
+        run.run(top, "test", echo=_quiet)
         assert not (top / lock.LOCK_FILE).exists()
 
     def test_what_cannot_be_pinned_stops_the_run_before_the_build(self, work):
         top = _pipeline(work / "top", {"build": LOG}, {"gone": {"path": "../gone"}})
-        said = []
-        report = run.run(top, echo=said.append)
+        report = run.run(top, echo=_quiet)
         assert report.failed.id == "top" and report.exit_code == 1
         assert report.reason == "what it depends on could not be pinned"
-        assert said == [f"gone: not run. no pipeline at {work / 'gone'}"]
         assert _order(work) == []
 
     def test_a_dependency_that_has_gone_is_no_trouble_once_it_is_pinned(self, reader, work):
-        run.run(reader, echo=lambda line: None)
+        run.run(work / "upstream", echo=_quiet)
+        run.run(reader, echo=_quiet)
         first = (reader / "_output" / "read.txt").read_text()
         os.rename(work / "upstream", work / "moved_away")
-        report = run.run(reader, echo=lambda line: None)
+        report = run.run(reader, echo=_quiet)
         assert report.failed is None, report.reason
-        assert [step.id for step in report.ran] == ["reader"]
         assert (reader / "_output" / "read.txt").read_text() == first
 
 
 @posix
 class TestGitDependencies:
-    """``run`` builds a git dependency, in a writable copy of its checkout."""
+    """``run`` builds a git dependency once, in a writable copy of its checkout."""
 
     @pytest.fixture
     def repository(self, work):
         """A pipeline in git whose data is built, and git-ignored."""
         directory = _pipeline(
             work / "upstream",
-            {"build": "mkdir -p _data && echo built-by-its-build > _data/built.parquet"},
+            {
+                "build": "mkdir -p _data && echo built-by-its-build > _data/built.parquet"
+                " && echo ran >> build.log"
+            },
             dataframes={
                 "built": {"path": "./_data/built.parquet", "docs": "d"},
                 "committed": {"path": "./data/committed.parquet", "docs": "d"},
@@ -465,7 +467,7 @@ class TestGitDependencies:
         )
         (directory / "data").mkdir()
         (directory / "data" / "committed.parquet").write_bytes(b"hello")
-        (directory / ".gitignore").write_text("/_data/\n")
+        (directory / ".gitignore").write_text("/_data/\n/build.log\n")
         _git(directory, "init", "--quiet", "-b", "main")
         _git(directory, "add", "-A")
         _git(directory, "commit", "--quiet", "-m", "A pipeline")
@@ -476,16 +478,29 @@ class TestGitDependencies:
         chartbook = Path(sys.executable).with_name("chartbook")
         return _pipeline(
             work / "downstream",
-            {"build": f"mkdir -p _output && cat $({chartbook} path upstream:built) > _output/read.txt"},
+            {
+                "build": f'mkdir -p _output\nfrom=$({chartbook} path upstream:built)\n'
+                'cat "$from" > _output/read.txt',
+                "test": LOG,
+            },
             {"acme/upstream": {"git": "../upstream"}},
         )
+
+    @pytest.fixture
+    def cache(self):
+        return GitCache(os.environ["CHARTBOOK_GIT_CACHE"])
+
+    def _copy(self, cache, repository):
+        return cache.find_work(str(repository), _git(repository, "rev-parse", "HEAD"))
 
     def test_pin_alone_has_only_what_the_repository_commits(self, downstream):
         report = lock.pin(downstream)
         statuses = {e.asset.split(":")[1]: e.status for e in report.events if e.asset}
         assert statuses == {"built": "not_built", "committed": "pinned"}
 
-    def test_run_builds_it_and_then_its_built_data_can_be_pinned(self, downstream, repository, work):
+    def test_run_builds_it_and_then_its_built_data_can_be_pinned(
+        self, downstream, repository, cache
+    ):
         said = []
         report = run.run(downstream, echo=said.append)
         assert report.failed is None, report.reason
@@ -494,7 +509,6 @@ class TestGitDependencies:
 
         # It was built in a copy, never in the checkout and never in the repository
         commit = _git(repository, "rev-parse", "HEAD")
-        cache = GitCache(os.environ["CHARTBOOK_GIT_CACHE"])
         copy = cache.find_work(str(repository), commit)
         assert said[0] == f"upstream: build    in {copy}"
         assert (copy / "_data" / "built.parquet").read_text() == "built-by-its-build\n"
@@ -513,9 +527,86 @@ class TestGitDependencies:
         ).stdout.strip()
         assert default_store().root in Path(path).parents
 
-    def test_run_stays_at_the_commit_that_is_pinned(self, downstream, repository, work):
-        """The repository moves on; `run` builds what the lockfile names."""
-        run.run(downstream, echo=lambda line: None)
+    def test_it_is_built_once(self, downstream, repository, cache):
+        """Nothing triggers a rebuild: the second run leaves it alone."""
+        run.run(downstream, echo=_quiet)
+        copy = self._copy(cache, repository)
+        assert is_built(copy)
+
+        said = []
+        report = run.run(downstream, echo=said.append)
+        assert report.failed is None, report.reason
+        assert said[0] == f"upstream: built already, at {copy.name[:7]}"
+        assert [step.id for step in report.ran] == ["downstream"]
+        assert [(step.id, why) for step, why in report.skipped] == [
+            ("upstream", "it is built already")
+        ]
+        assert (copy / "build.log").read_text().split() == ["ran"]
+
+    def test_force_builds_it_again(self, downstream, repository, cache):
+        """How data that is pulled from outside is refreshed, on purpose."""
+        run.run(downstream, echo=_quiet)
+        report = run.run(downstream, echo=_quiet, force=True)
+        assert [step.id for step in report.ran] == ["upstream", "downstream"]
+        copy = self._copy(cache, repository)
+        assert (copy / "build.log").read_text().split() == ["ran", "ran"]
+        assert is_built(copy)
+
+    def test_a_build_that_failed_is_not_a_built_one(self, work, cache):
+        repository = _pipeline(work / "flaky", {"build": "test -f ready && echo ran >> build.log"})
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "A pipeline")
+        top = _pipeline(work / "top", {"build": "true"}, {"flaky": {"git": "../flaky"}})
+
+        report = run.run(top, echo=_quiet)
+        assert report.failed.id == "flaky"
+        copy = self._copy(cache, repository)
+        assert not is_built(copy)
+
+        (copy / "ready").write_text("")  # whatever was wrong is put right
+        report = run.run(top, echo=_quiet)
+        assert report.failed is None and [step.id for step in report.ran] == ["flaky", "top"]
+        assert is_built(copy)
+
+    def test_a_forced_build_that_fails_leaves_it_unbuilt(self, work, cache):
+        repository = _pipeline(work / "flaky", {"build": "test ! -f broken"})
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "A pipeline")
+        top = _pipeline(work / "top", {"build": "true"}, {"flaky": {"git": "../flaky"}})
+        run.run(top, echo=_quiet)
+        copy = self._copy(cache, repository)
+        assert is_built(copy)
+        (copy / "broken").write_text("")
+        assert run.run(top, echo=_quiet, force=True).failed.id == "flaky"
+        assert not is_built(copy)
+
+    def test_one_that_commits_its_data_and_has_no_build_is_not_mentioned(self, work):
+        """The ordinary case of reference data kept in git."""
+        repository = _pipeline(
+            work / "ref_data", None, dataframes={"x": {"path": "./x.parquet", "docs": "d"}}
+        )
+        (repository / "x.parquet").write_bytes(b"x")
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "Reference data")
+        top = _pipeline(work / "top", {"build": "true"}, {"ref_data": {"git": "../ref_data"}})
+        said = []
+        report = run.run(top, echo=said.append)
+        assert said == ["top: build"]
+        assert [step.id for step in report.ran] == ["top"]
+        assert lock.read_lock(top).assets["ref_data:x"]["content_hash"].startswith("sha256:")
+
+    def test_another_script_leaves_git_dependencies_alone(self, downstream, cache):
+        """Only `build` reaches what a pipeline depends on. Nothing is even fetched."""
+        report = run.run(downstream, "test", echo=_quiet)
+        assert [step.id for step in report.ran] == ["downstream"]
+        assert not (cache.root / "work").exists() and not (cache.root / "repos").exists()
+
+    def test_run_stays_at_the_commit_that_is_pinned(self, downstream, repository, cache):
+        """The repository moves on; `run` keeps to what the lockfile names."""
+        run.run(downstream, echo=_quiet)
         first = _git(repository, "rev-parse", "HEAD")
         (repository / "chartbook.toml").write_text(
             (repository / "chartbook.toml").read_text().replace(
@@ -524,11 +615,12 @@ class TestGitDependencies:
         )
         _git(repository, "commit", "--quiet", "-am", "A new build")
         second = _git(repository, "rev-parse", "HEAD")
-        cache = GitCache(os.environ["CHARTBOOK_GIT_CACHE"])
 
-        report = run.run(downstream, echo=lambda line: None)
+        report = run.run(downstream, echo=_quiet)
         assert report.failed is None, report.reason
-        assert report.ran[0].directory == cache.work_path(str(repository), first)
+        assert [step.directory for step, _ in report.skipped] == [
+            cache.work_path(str(repository), first)
+        ]
         assert cache.find_work(str(repository), second) is None
         assert (downstream / "_output" / "read.txt").read_text() == "built-by-its-build\n"
 
@@ -541,22 +633,22 @@ class TestGitDependencies:
         assert locked.dependencies[0]["location"]["commit"] == second
         assert "content_hash" not in locked.assets["acme/upstream:built"]
 
-        # ...and `run` then builds that commit, and pins what it built
-        report = run.run(downstream, echo=lambda line: None)
+        # ...and `run` then builds that commit, once, and pins what it built
+        report = run.run(downstream, echo=_quiet)
         assert report.failed is None, report.reason
         assert report.ran[0].directory == cache.work_path(str(repository), second)
         assert (downstream / "_output" / "read.txt").read_text() == "built-by-a-later-commit\n"
 
     def test_an_update_that_does_not_move_the_commit_keeps_what_was_built(self, downstream):
         """Only a new commit lets a built asset's pin go."""
-        run.run(downstream, echo=lambda line: None)
+        run.run(downstream, echo=_quiet)
         before = (downstream / lock.LOCK_FILE).read_bytes()
         again = lock.update(downstream)
         assert again.count("let_go") == 0
         assert (downstream / lock.LOCK_FILE).read_bytes() == before
 
     def test_update_says_what_it_let_go_and_what_to_do(self, downstream, repository, monkeypatch):
-        run.run(downstream, echo=lambda line: None)
+        run.run(downstream, echo=_quiet)
         (repository / "data" / "committed.parquet").write_bytes(b"hello again")
         _git(repository, "commit", "--quiet", "-am", "New data")
         monkeypatch.chdir(downstream)
@@ -580,8 +672,9 @@ class TestGitDependencies:
         _git(directory, "commit", "--quiet", "-m", "A pipeline")
         top = _pipeline(work / "top", {"build": "true"}, {"acme/ref_data": {"git": "../ref_data"}})
         first, _ = plan(top)
-        assert first.id == "acme/ref_data" and first.source == "git"
+        assert first.id == "acme/ref_data" and first.source == "git" and not first.built
         assert first.directory.name == _git(directory, "rev-parse", "HEAD")
+        assert plan(top, git=False) == [plan(top)[1]]
 
     def test_the_working_copy_is_writable_and_made_once(self, repository, work):
         cache = GitCache(work / "cache")
@@ -597,6 +690,16 @@ class TestGitDependencies:
         with pytest.raises(ValueError, match="is not a full commit hash"):
             cache.work_path(str(repository), "abc")
 
+    def test_a_copy_says_whether_its_build_has_finished(self, work):
+        copy = work / "copy"
+        copy.mkdir()
+        assert not is_built(copy)
+        mark_built(copy)
+        assert is_built(copy)
+        forget_built(copy)
+        forget_built(copy)  # twice is no trouble
+        assert not is_built(copy)
+
     def test_a_repository_that_cannot_be_reached_is_marked(self, work):
         top = _pipeline(
             work / "top", {"build": LOG}, {"crsp": {"git": "https://user:s3cret@localhost:1/x.git"}}
@@ -605,6 +708,7 @@ class TestGitDependencies:
         assert missing.id == "crsp" and missing.directory is None and missing.source == "git"
         assert missing.missing.startswith("could not fetch https://localhost:1/x.git: ")
         assert "s3cret" not in missing.missing
+        assert itself.id == "top"
 
 
 @posix
@@ -612,17 +716,20 @@ class TestCommand:
     def _run(self, *arguments):
         return CliRunner().invoke(main, ["run", *map(str, arguments)])
 
-    def test_run(self, chain, work, monkeypatch):
-        monkeypatch.chdir(chain)
+    def test_run(self, work, monkeypatch):
+        monkeypatch.chdir(_pipeline(work / "top", {"build": LOG}))
         result = self._run()
         assert result.exit_code == 0, result.output
-        assert result.output.splitlines() == [
-            f"bottom: build    in {work / 'bottom'}",
-            f"middle: build    in {work / 'middle'}",
-            "top: build",
-            "Ran build in 3 pipeline(s).",
-        ]
+        assert result.output.splitlines() == ["top: build", "Ran build in 1 pipeline(s)."]
+        assert _order(work) == ["top"]
+
+    def test_run_in_a_catalog(self, chain, work, monkeypatch):
+        monkeypatch.chdir(_catalog(work, "top", "middle", "bottom"))
+        result = self._run()
+        assert result.exit_code == 0, result.output
         assert _order(work) == ["bottom", "middle", "top"]
+        assert result.output.splitlines()[-1] == "Ran build in 3 pipeline(s)."
+        assert f"bottom: build    in {work / 'bottom'}" in result.output.splitlines()
 
     def test_a_named_script_and_a_project_dir(self, work, monkeypatch):
         top = _pipeline(work / "top", {"build": LOG, "test": LOG})
@@ -630,6 +737,7 @@ class TestCommand:
         result = self._run("test", "--project-dir", top)
         assert result.exit_code == 0, result.output
         assert result.output.splitlines() == ["top: test", "Ran test in 1 pipeline(s)."]
+        assert _order(work) == ["top"]
 
     def test_a_failing_script_gives_its_exit_code(self, work, monkeypatch):
         top = _pipeline(work / "top", {"build": "exit 5"})
@@ -640,32 +748,62 @@ class TestCommand:
             result.output
         )
 
-    def test_pins_are_reported_only_when_there_is_something_to_say(self, reader, monkeypatch):
+    def test_it_says_what_it_pinned_and_what_has_changed_since(self, reader, work, monkeypatch):
+        assert self._run("--project-dir", work / "upstream").exit_code == 0
         monkeypatch.chdir(reader)
         first = self._run()
         assert first.exit_code == 0, first.output
-        assert "reader: pinning what it depends on" in first.output
-        assert "upstream: 1 pinned" in first.output
+        assert first.output.splitlines() == [
+            "reader: pinning what it depends on",
+            "upstream: 1 pinned",
+            "Wrote chartbook.lock.",
+            "reader: build",
+            "Ran build in 1 pipeline(s).",
+        ]
 
+        # Its owner builds the upstream again. This pipeline is told, and stays put.
+        assert self._run("--project-dir", work / "upstream").exit_code == 0
         second = self._run()
         assert "upstream: 1 changed upstream since it was pinned" in second.output
+        assert "chartbook.lock is unchanged." in second.output
         assert "1 pinned asset(s) have changed upstream. `chartbook update` moves the pins." in (
             second.output
         )
-
-        CliRunner().invoke(main, ["update"])
-        third = self._run()  # the upstream rebuilt again, so it is stale again
-        assert "changed upstream" in third.output
+        assert (work / "upstream_runs.log").read_text().split() == ["ran", "ran"]
 
     def test_an_unchanged_dependency_is_not_mentioned(self, work, monkeypatch):
-        _pipeline(work / "upstream", {"build": "true"}, dataframes={"x": {"path": "./x.parquet", "docs": "d"}})
+        _pipeline(work / "upstream", dataframes={"x": {"path": "./x.parquet", "docs": "d"}})
         (work / "upstream" / "x.parquet").write_bytes(b"x")
         top = _pipeline(work / "top", {"build": "true"}, {"upstream": {"path": "../upstream"}})
         monkeypatch.chdir(top)
         self._run()
         result = self._run()
-        assert "pinning" not in result.output
-        assert result.output.splitlines()[-1] == "Ran build in 2 pipeline(s)."
+        assert result.output.splitlines() == ["top: build", "Ran build in 1 pipeline(s)."]
+
+    def test_a_lockfile_is_never_written_without_saying_so(self, chain, monkeypatch):
+        """``middle`` declares nothing to pin, and the lockfile is new all the same."""
+        monkeypatch.chdir(chain)
+        result = self._run()
+        assert result.output.splitlines() == [
+            "top: wrote chartbook.lock",
+            "top: build",
+            "Ran build in 1 pipeline(s).",
+        ]
+
+    def test_force_is_passed_on(self, work, monkeypatch):
+        repository = _pipeline(work / "ref", {"build": "echo ran >> build.log"})
+        (repository / ".gitignore").write_text("/build.log\n")
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "A pipeline")
+        monkeypatch.chdir(_pipeline(work / "top", {"build": "true"}, {"ref": {"git": "../ref"}}))
+        assert self._run().exit_code == 0
+        second = self._run()
+        assert "ref: built already, at " in second.output
+        assert "Ran build in 1 pipeline(s)." in second.output
+        third = self._run("--force")
+        assert "ref: build    in " in third.output
+        assert "Ran build in 2 pipeline(s)." in third.output
 
     def test_no_such_script_is_a_clean_error(self, chain, monkeypatch):
         monkeypatch.chdir(chain)
@@ -673,10 +811,10 @@ class TestCommand:
         assert result.exit_code == 1
         assert result.output.startswith("Error: top has no script named 'deploy'.")
 
-    def test_pipelines_in_a_loop_are_a_clean_error(self, work, monkeypatch):
+    def test_a_catalogs_pipelines_in_a_loop_are_a_clean_error(self, work, monkeypatch):
         _pipeline(work / "a", {"build": LOG}, {"b": {"path": "../b"}})
         _pipeline(work / "b", {"build": LOG}, {"a": {"path": "../a"}})
-        monkeypatch.chdir(work / "a")
+        monkeypatch.chdir(_catalog(work, "a", "b"))
         result = self._run()
         assert result.exit_code == 1
         assert "depend on each other" in result.output

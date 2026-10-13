@@ -1708,14 +1708,15 @@ def update(dependencies, project_dir):
     type=click.Path(),
     help="Path to the pipeline, or to a catalog (default: the current directory)",
 )
-def run_command(script, project_dir):
-    """Run a script in this pipeline, after the pipelines it depends on.
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Build a git dependency again, even if it is built already",
+)
+def run_command(script, project_dir, force):
+    """Run a script in this pipeline: `build`, unless another is named.
 
-    SCRIPT is a name from [scripts] in chartbook.toml; `build` if none is
-    given. It is run in every pipeline this one depends on that has a
-    script by that name, dependencies first, each in its own directory,
-    and then here. The first failure stops the run. In a catalog, it is run
-    in all the catalog's pipelines.
+    SCRIPT is a name from [scripts] in chartbook.toml.
 
     \b
         [scripts]
@@ -1723,35 +1724,43 @@ def run_command(script, project_dir):
         test = "pytest"
 
     `build` is the script that makes a pipeline's data current. Before it
-    runs in a pipeline, whatever that pipeline depends on and has not
-    pinned yet is pinned, so its code can read it. A pin that exists is
-    never moved: you are told what has changed upstream, and `chartbook
-    update` moves pins.
+    runs, whatever this pipeline depends on and has not pinned yet is
+    pinned, so its code can read it. A pin that exists is never moved: you
+    are told what has changed, and `chartbook update` moves pins.
 
-    A dependency that is a git repository is built in a writable copy of
-    its checkout, so what it builds can be pinned.
+    It never builds in a folder this pipeline depends on. That folder is
+    somebody's work, and this pipeline reads what is pinned, not what is
+    there.
 
-    Nothing is skipped yet: each pipeline's script runs every time, and its
-    own tool (doit, make) skips what it can.
+    A dependency that is a git repository is built once, in ChartBook's own
+    clean copy of the commit, so that what it builds can be pinned. --force
+    builds it again, which is how data it pulls from outside is refreshed.
+
+    In a catalog, the script is run in each of the catalog's pipelines.
 
     Examples:
         chartbook run
         chartbook run test
-        chartbook run --project-dir ../rate_forecast
+        chartbook run --force
     """
     from chartbook import lock
     from chartbook import run as runner
     from chartbook.store import StoreError
 
     def show_pins(step, pins):
-        # Said only when there is something to say
+        # Said only when there is something to say: a pin that is not
+        # simply still in place, or a lockfile that was written
         if any(event.status != "kept" for event in pins.events):
             click.echo(f"{step.id}: pinning what it depends on")
             _echo_pin_report(pins)
+        elif pins.written:
+            click.echo(f"{step.id}: wrote {lock.LOCK_FILE}")
 
     project_dir = resolve_project_dir(project_dir)
     try:
-        report = runner.run(project_dir, script, echo=click.echo, on_pin=show_pins)
+        report = runner.run(
+            project_dir, script, echo=click.echo, on_pin=show_pins, force=force
+        )
     except (runner.RunError, lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         raise SystemExit(1)

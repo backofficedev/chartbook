@@ -44,7 +44,8 @@ dependency that has not been run. ``chartbook pin`` does not run it.
 
 ``chartbook run`` does. It makes a **working copy** of the commit, which
 is the same files and writable, and runs the dependency's ``build`` there
-(:meth:`GitCache.work_copy`). What that build produces can then be pinned.
+(:meth:`GitCache.work_copy`), once. What that build produces can then be
+pinned. A file in the copy says the build has finished (:func:`is_built`).
 A dependency that has a working copy is pinned from it, since it holds
 everything the checkout does and whatever was built besides. The checkout
 itself is never written to.
@@ -74,6 +75,10 @@ CHECKOUTS_DIR = "checkouts"
 #: Where working copies are: laid out like the checkouts, and writable. A
 #: working copy is where ``chartbook run`` runs a git dependency's build.
 WORK_DIR = "work"
+
+#: A file in a working copy that says a build has finished there. It is
+#: inside the copy, so it goes when the copy goes.
+BUILT_MARKER = ".chartbook-built"
 
 #: The ref a clone keeps the repository's default branch under, so that a
 #: dependency with no ``rev`` has something to mean.
@@ -438,6 +443,30 @@ class GitCache:
             commit=commit,
             path=self.checkout(url, commit),
         )
+
+
+def is_built(work_copy: Union[str, Path]) -> bool:
+    """Whether a working copy's build has finished: ``chartbook run`` ran it."""
+    return (Path(work_copy) / BUILT_MARKER).is_file()
+
+
+def mark_built(work_copy: Union[str, Path]) -> None:
+    """Note in a working copy that its build has finished.
+
+    A git dependency is built once for a commit. This is what says it has
+    been, so that the next run leaves it alone.
+    """
+    (Path(work_copy) / BUILT_MARKER).write_text(
+        "chartbook run finished this pipeline's build here.\n", encoding="utf-8"
+    )
+
+
+def forget_built(work_copy: Union[str, Path]) -> None:
+    """Take that note away, before a build is run there again."""
+    try:
+        (Path(work_copy) / BUILT_MARKER).unlink()
+    except FileNotFoundError:
+        pass
 
 
 def default_git_cache() -> GitCache:

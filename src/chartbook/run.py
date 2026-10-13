@@ -1,38 +1,43 @@
-"""Running a script in a pipeline, after the pipelines it depends on.
+"""Running a script in a pipeline.
 
 A pipeline names its commands in ``[scripts]``. ``build`` is the one that
 makes its assets current, and it is usually one word: ``doit``, ``make``,
-``snakemake``. That tool decides what inside the pipeline is out of date.
-ChartBook decides only the order *between* pipelines::
+``snakemake``. That tool decides what inside the pipeline is out of date::
 
     $ chartbook run
-    ftsfr/fed_yield_curve: build    in /work/fed_yield_curve
+    ftsfr/rate_forecast: pinning what it depends on
+    ftsfr/fed_yield_curve: 3 pinned
+    Wrote chartbook.lock.
     ftsfr/rate_forecast: build
 
-``chartbook run`` works out which pipelines this one depends on, and those
-depend on, from each one's ``[dependencies]``. It runs the script in each,
-dependencies first, each in its own directory, and stops at the first that
-fails. In a catalog it does the same over all the catalog's pipelines.
+``chartbook run`` builds the pipeline it is run in. First it sees that
+what the pipeline depends on can be read, and it does that without ever
+touching another pipeline's working directory:
 
-Before a pipeline's ``build`` runs, whatever it depends on that has no pin
-yet is pinned, so that its code can read it. **A pin that exists is never
-moved**: if a dependency's rebuild changed its data, this pipeline is built
-against the copy it had pinned, and is told what has changed.
-``chartbook update`` is still the only thing that moves a pin.
+- **It never builds in a folder the pipeline depends on.** A ``path``
+  dependency is a directory somebody works in. They may be half-way
+  through a change. This pipeline reads what is pinned, not what is there,
+  so running that folder's build would disturb its owner and change
+  nothing this pipeline reads. It is its owner's to build.
+- **A git dependency is built once, in a clean copy.** Nobody works in
+  ChartBook's own copy of a commit, so there is nothing to disturb. The
+  build runs in a writable copy of the checkout
+  (:meth:`chartbook.gitcache.GitCache.work_copy`), which is how data that a
+  repository builds and does not commit comes to be there to pin. It is
+  built once for a commit. ``force`` builds it again, which is how data
+  that is pulled from outside is refreshed on purpose.
+- **What has no pin yet is pinned**, just before the build, so the
+  pipeline's code can read it. **A pin that exists is never moved.**
+  ``chartbook update`` is the only thing that moves one.
 
-A dependency that is a git repository is built too, in a writable copy of
-its checkout (:meth:`chartbook.gitcache.GitCache.work_copy`), which is how
-data that it builds and does not commit comes to be there to pin. Its
-build needs whatever it needs: its tools, its credentials, its network.
+In a catalog, the script is run in each of the catalog's pipelines, one
+that another of them depends on first.
 
 This is not a task runner. There is one string per script name, no
-dependencies between scripts, no retries, no schedule and no history. The
-only graph is over pipelines. See "Running things" and "Not doing" in
-``docs_src/design/asset-graph.md``.
-
-Nothing is skipped yet: every pipeline's script is run every time, and the
-pipeline's own tool skips what it can. Skipping a whole pipeline whose
-inputs have not changed comes with build records.
+dependencies between scripts, no retries, no schedule and no history. See
+"Running things" and "Not doing" in ``docs_src/design/asset-graph.md``, and
+"The snapshot model" in ``docs_src/design/overview.md`` for why a pipeline
+is never built from the outside in.
 """
 
 from __future__ import annotations
@@ -47,7 +52,15 @@ from pathlib import Path
 from typing import Callable, Optional, Union
 
 from chartbook import lock
-from chartbook.gitcache import GitCache, GitError, default_git_cache, local_url
+from chartbook.gitcache import (
+    GitCache,
+    GitError,
+    default_git_cache,
+    forget_built,
+    is_built,
+    local_url,
+    mark_built,
+)
 from chartbook.identity import derive_pipeline_id, strip_url_credentials
 from chartbook.manifest import (
     BUILD_SCRIPT,
@@ -68,20 +81,22 @@ class RunError(Exception):
 
 @dataclass(frozen=True)
 class Step:
-    """One pipeline, in the order they are to be run.
+    """One pipeline a script may be run in, in the order they come.
 
     Attributes:
-        id: The pipeline's name: its own ID. For one that could not be
-            read, or a ``git`` dependency whose manifest sets no ``id``, the
-            key it is declared under.
-        directory: Where it is, and where its script runs. None if it is
-            not on this disk.
+        id: The pipeline's name: its own ID. For a ``git`` dependency that
+            could not be fetched, or whose manifest sets no ``id``, the key
+            it is declared under.
+        directory: Where it is, and where its script runs. For a ``git``
+            dependency, its working copy. None if it could not be fetched.
         source: How it comes to be in the order: ``"asked"`` (the pipeline
-            ``run`` was given, or a member of the catalog it was given),
-            ``"path"`` or ``"git"`` (something one of those depends on).
+            ``run`` was given, or a member of the catalog it was given) or
+            ``"git"`` (a git dependency of one of those).
         scripts: Its named scripts.
         has_dependencies: Whether it declares any.
-        missing: Why it cannot be run, if it cannot: it is not here.
+        missing: Why it cannot be run, if it cannot: it could not be fetched.
+        built: For a ``git`` dependency, whether its build has already
+            finished in this working copy.
     """
 
     id: str
@@ -90,6 +105,7 @@ class Step:
     scripts: dict = field(default_factory=dict)
     has_dependencies: bool = False
     missing: str = ""
+    built: bool = False
 
 
 @dataclass
@@ -165,28 +181,36 @@ def _working_copy(
 
 
 def plan(
-    project_dir: Union[str, Path] = ".", git_cache: Optional[GitCache] = None
+    project_dir: Union[str, Path] = ".",
+    git_cache: Optional[GitCache] = None,
+    git: bool = True,
+    force: bool = False,
 ) -> list[Step]:
-    """Put a pipeline and everything it depends on in the order to run them.
+    """Say which pipelines a run is about, in order.
 
-    Each pipeline comes after the ones it depends on, and once, however
-    many depend on it. In a catalog, every pipeline of the catalog is in
-    the order, in the order the catalog lists them. A ``git`` dependency is
-    fetched if it has to be, and given a working copy; that is the only
-    thing here that changes anything.
+    That is the pipeline in *project_dir*, or every pipeline of the catalog
+    there, each after any other of them that it depends on. With *git*, it
+    is also their ``git`` dependencies, each before what depends on it: a
+    git dependency is fetched if it has to be and given a working copy,
+    which is the only thing here that changes anything.
 
-    A dependency that is not on this disk is in the order all the same,
-    marked as missing: it cannot be built, and what depends on it may still
-    have its pins.
+    A ``path`` dependency is never in the order. It is a folder somebody
+    works in, and it is theirs to build.
+
+    A git dependency that is built already is in the order, marked as
+    built, and what *it* depends on is left out: that was needed to build
+    it, and it is built. With *force* it is gone into all the same.
 
     :param project_dir: A pipeline's directory, or a catalog's.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
-    :returns: The pipelines, dependencies first.
-    :raises RunError: If *project_dir* holds no manifest, or two pipelines
-        depend on each other.
-    :raises ValueError: If a manifest's ``[dependencies]`` or ``[scripts]``
-        is malformed.
+    :param git: Whether ``git`` dependencies are in the order.
+    :param force: Whether to go into a git dependency that is built already.
+    :returns: The pipelines, each after what it depends on.
+    :raises RunError: If *project_dir* holds no manifest, or two of a
+        catalog's pipelines depend on each other.
+    :raises ValueError: If a manifest cannot be read, or its
+        ``[dependencies]`` or ``[scripts]`` is malformed.
     """
     start = Path(project_dir).resolve()
     try:
@@ -194,9 +218,13 @@ def plan(
     except FileNotFoundError:
         raise RunError(f"No {MANIFEST_NAME} in {start}.") from None
     if resolve_project_type(raw, source=str(start / MANIFEST_NAME)) == "catalog":
-        roots = list(get_pipeline_dirs(load_manifest(start)).values())
+        roots = [
+            directory.resolve()
+            for directory in get_pipeline_dirs(load_manifest(start)).values()
+        ]
     else:
         roots = [start]
+    asked = set(roots)
 
     order: list[Step] = []
     done: set[Path] = set()
@@ -232,20 +260,29 @@ def plan(
         except ValueError as error:
             raise ValueError(f"{manifest_path}: {error}") from None
 
-        visiting.append(directory)
-        for key in sorted(dependencies):
-            entry = dependencies[key]
-            if "git" in entry:
-                if caches[0] is None:
-                    caches[0] = default_git_cache()
-                copy, why = _working_copy(directory, key, entry, caches[0])
-                if copy is None:
-                    order.append(Step(key, None, "git", missing=why))
+        built = source == "git" and is_built(directory)
+        if not built or force:
+            visiting.append(directory)
+            for key in sorted(dependencies):
+                entry = dependencies[key]
+                if "git" in entry:
+                    if not git:
+                        continue
+                    if caches[0] is None:
+                        caches[0] = default_git_cache()
+                    copy, why = _working_copy(directory, key, entry, caches[0])
+                    if copy is None:
+                        order.append(Step(key, None, "git", missing=why))
+                    else:
+                        visit(copy, "git", key)
                 else:
-                    visit(copy, "git", key)
-            else:
-                visit(Path(entry["_resolved_path"]), "path", key)
-        visiting.pop()
+                    # A folder somebody works in is not built from here. It
+                    # is in the order only if it was asked for itself, as
+                    # another pipeline of the same catalog.
+                    there = Path(entry["_resolved_path"]).resolve()
+                    if there in asked:
+                        visit(there, "asked", key)
+            visiting.pop()
 
         done.add(directory)
         project = raw.get("project") or {}
@@ -263,6 +300,7 @@ def plan(
                 source=source,
                 scripts=scripts,
                 has_dependencies=bool(dependencies),
+                built=built,
             )
         )
 
@@ -319,16 +357,20 @@ def run(
     git_cache: Optional[GitCache] = None,
     echo: Callable[[str], None] = print,
     on_pin: Optional[Callable] = None,
+    force: bool = False,
 ) -> RunReport:
-    """Run a script in a pipeline, after running it in what it depends on.
+    """Run a script in a pipeline, or in every pipeline of a catalog.
 
-    For ``build``, each pipeline's dependencies are pinned before its own
-    script runs: what has no pin yet is pinned, and no pin is moved. A
-    pipeline with no ``build`` script is not pinned for, since nothing is
-    run in it.
+    For ``build``, two things are done first. A ``git`` dependency that has
+    not been built at its commit is built, in its working copy. And each
+    pipeline's dependencies are pinned before its own script runs: what has
+    no pin yet is pinned, and no pin is moved.
 
-    A pipeline in the order that has no script by that name is passed over.
-    The pipeline that was asked for must have one.
+    Nothing is ever run in a ``path`` dependency's directory. Any other
+    script is run only where it was asked for.
+
+    The pipeline that was asked for must have the script. A pipeline of a
+    catalog that has no script by that name is passed over.
 
     :param project_dir: A pipeline's directory, or a catalog's.
     :param script: The script to run; ``build`` by default.
@@ -338,12 +380,15 @@ def run(
     :param echo: Called with each line that says what is being done.
     :param on_pin: Called with a pipeline's step and its
         :class:`chartbook.lock.PinReport` after its dependencies are pinned.
+    :param force: Build a ``git`` dependency again even if it is built
+        already. This is how data it pulls from outside is refreshed.
     :returns: What was run, and what failed if anything did.
     :raises RunError: If the pipelines cannot be put in an order, or the
         one asked for has no such script.
     """
     here = Path(project_dir).resolve()
-    steps = plan(here, git_cache)
+    building = script == BUILD_SCRIPT
+    steps = plan(here, git_cache, git=building, force=force)
     # A pipeline that is asked for by name must have the script. A catalog
     # is asked for all of its pipelines, and those without it are passed over.
     for step in steps:
@@ -354,7 +399,7 @@ def run(
                 f"{declared}. To add it, put the command under [scripts] in "
                 f'{MANIFEST_NAME}: {script} = "…".'
             )
-    if not any(script in step.scripts for step in steps):
+    if not any(script in step.scripts for step in steps if step.source == "asked"):
         raise RunError(f"No pipeline here has a script named {script!r}.")
 
     report = RunReport(script=script)
@@ -367,11 +412,22 @@ def run(
         command = step.scripts.get(script)
         if command is None:
             why = f"it has no script named {script!r}"
-            echo(f"{step.id}: not run. {why[0].upper()}{why[1:]}.")
+            if step.source == "asked":
+                echo(f"{step.id}: not run. {why[0].upper()}{why[1:]}.")
+            # A git dependency with no build script is the ordinary case of
+            # a repository that commits its data. There is nothing to say.
             report.skipped.append((step, why))
             continue
 
-        if script == BUILD_SCRIPT and step.has_dependencies:
+        if step.source == "git":
+            if step.built and not force:
+                echo(f"{step.id}: built already, at {step.directory.name[:7]}")
+                report.skipped.append((step, "it is built already"))
+                continue
+            # Until this build finishes, the copy is not a built one
+            forget_built(step.directory)
+
+        if building and step.has_dependencies:
             # What its code reads from other pipelines has to be pinned
             # before it runs. Nothing that is pinned is moved.
             pins = lock.pin(step.directory, store, git_cache)
@@ -389,5 +445,7 @@ def run(
             report.failed, report.exit_code = step, code
             report.reason = f"its {script!r} script exited with {code}"
             break
+        if step.source == "git":
+            mark_built(step.directory)
         report.ran.append(step)
     return report
