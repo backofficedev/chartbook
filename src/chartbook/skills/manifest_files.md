@@ -137,7 +137,28 @@ path = "_output/01_exploratory.ipynb"
 
 [notes.methodology]
 path = "./docs_src/methodology.md"
+
+# Other pipelines this one reads from: a name, and where to find it
+[dependencies]
+"myorg/fed_yield_curve" = { path = "../fed_yield_curve" }
 ```
+
+### Dependencies
+
+`[dependencies]` names the other pipelines a pipeline reads from. The key is a
+pipeline ID (`name` or `scope/name`; quote a key that has a `/`). The value is a
+table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git`
+(a repository URL, optionally with `rev`), never both.
+
+- `chartbook check` reports a `path` that is missing, has no `chartbook.toml`, is
+  a catalog, or is the pipeline itself, and a model whose `trained_on` names a
+  dataframe the dependency does not declare.
+- `index.json` lists them under `dependencies` in the pipeline's record.
+- A model's `trained_on = ["fed_yield_curve:treasury_rates"]` should name a
+  declared dependency (the scope may be left off when unambiguous). If it does
+  not, the manifest loads with a warning.
+- Nothing is fetched, copied or pinned yet. A `git` dependency is recorded only.
+  `chartbook path other:asset` is still refused. A catalog cannot have this table.
 
 A minimal — but complete and valid — pipeline manifest:
 

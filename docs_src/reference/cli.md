@@ -109,6 +109,7 @@ The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
 
 - **a missing required field** — a field the policy requires that is absent or empty;
 - **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing);
+- **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare;
 - **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days.
 
 Each finding is one line naming the manifest, the table and the field, so a CI log is enough to fix it:
@@ -141,6 +142,14 @@ chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/
 # .github/workflows/check.yml
 - run: pip install chartbook
 - run: chartbook check --skip-outputs
+```
+
+**Dependencies.** For each `path` in `[dependencies]`, `check` looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever `check` runs. A `git` dependency is not fetched yet and cannot be looked at; `check` says so in a `warning:` line and does not fail. A `trained_on` that names a pipeline `[dependencies]` does not declare is also a warning for now, and will become a failure.
+
+```console
+$ chartbook check
+chartbook.toml: [dependencies."ftsfr/fed_yield_curve"] path: directory not found: /work/fed_yield_curve
+chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a dataframe that the pipeline 'ftsfr/crsp' does not declare. Its dataframes are: ratings, returns
 ```
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
@@ -182,7 +191,7 @@ The path is absolute and is printed whether or not the file exists, so a build t
 MERGED := $(shell chartbook path merged_rates)
 ```
 
-A name the manifest does not declare exits `1` and says which table to add (or, if the name is declared as another kind of asset, how to refer to it); nothing is printed to standard output. Only assets of the current pipeline resolve. The rest of the {doc}`reference grammar <../design/references>` — `other_pipeline:asset`, `asset#part`, `asset@rev`, `model/name` — is reserved and refused as not yet supported. To locate another pipeline's dataframe through a catalog, use `chartbook data get-path`.
+A name the manifest does not declare exits `1` and says which table to add (or, if the name is declared as another kind of asset, how to refer to it); nothing is printed to standard output. Only assets of the current pipeline resolve. The rest of the {doc}`reference grammar <../design/references>` — `other_pipeline:asset`, `asset#part`, `asset@rev` — is reserved and refused as not yet supported. To locate another pipeline's dataframe through a catalog, use `chartbook data get-path`.
 
 ## chartbook publish
 

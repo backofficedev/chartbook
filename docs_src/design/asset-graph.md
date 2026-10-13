@@ -15,6 +15,11 @@ Revised 2026-10-12: the reference grammar moved to its own document, {doc}`refer
 gained asset kinds (`chart/…`, `model/…`). Models became assets ({doc}`models`). The registry
 rule, the scratch directory and the surface table below were brought in line with what was
 decided while building the groundwork. Each change is marked where it was made.
+
+Later the same day: the first part of the graph is built. A pipeline can declare
+`[dependencies]`, and `chartbook check` says whether each can be found. Nothing is fetched or
+pinned yet. The notes marked *(Built: …)* under "Identity and location" say exactly what, and
+{doc}`overview` ("3a, as built") lists what was settled on the way, as *proposed*.
 ```
 
 ## The problem
@@ -111,6 +116,12 @@ edges. The git URL and rev are only how the content is obtained. Consequences:
   detail — and a requirement, since many research environments run an internal host behind a
   firewall.
 
+*(Built: the loader reads and validates this table, `chartbook.manifest.validate_dependencies`.
+An entry has `path` or `git`, and `rev` only with `git`. `chartbook check` verifies that each
+`path` holds a pipeline. A `git` entry is recorded and not fetched. `[resolve] default_host`
+below is not built, so an entry must name its `git`. Nothing in this section resolves
+`pipeline:asset` to a file yet; that is "Pinning and isolation".)*
+
 Because scope is captured from the owner path at `init`, the URL is usually inferable from the ID.
 That shortcut is a *configurable* default host, never a hardcoded one:
 
@@ -130,6 +141,13 @@ than a silent guess.
 This is acceptable because collisions only matter inside one resolution context. Two groups can
 both have `acme/rates` forever and never notice. And the escape hatch is simple: **the key in
 `[dependencies]` is a local name.** It usually matches what upstream calls itself, but it need not.
+
+*(Built, and narrower than the paragraph above: `chartbook check` on a catalog reports a
+dependency whose key is one of the catalog's pipeline IDs and whose `path` is a different
+directory. Inside one pipeline a key cannot be claimed twice, since it is a key of one TOML
+table. Because a key is a local name, a build translates it: a dependency that is one of the
+build's own pipelines is written in the index by the build's ID for it. Proposed 2026-10-12;
+see {doc}`overview`, "3a, as built".)*
 
 ### Reserving a future global namespace
 
@@ -161,6 +179,10 @@ bare pipeline name. Implemented in `chartbook.identity.split_registry`.
 2. **One resolution chain, written down, with a hole in it**: explicit location in
    `[dependencies]`, then the local catalog, then *(reserved)* configured registries, then an error
    listing candidates. Implement one, two and four in one place and step three is a drop-in.
+   *(Built: `chartbook.resolve.locate_pipeline`. It answers "where is this pipeline?" and
+   says which step answered. The rule further down, that loading from an undeclared pipeline
+   fails, is for its callers to apply: a caller that requires a declared dependency refuses an
+   answer that came from the catalog.)*
 3. **Scope ownership is a registry concern, never a format concern.** Anyone claims any scope
    locally, forever. A registry enforces ownership only for IDs qualified with its host, so existing
    users can never be squatted out of their own names.
@@ -518,6 +540,10 @@ project's dependency state rather than performing a build step — the same leve
 Loading from an undeclared pipeline fails, with a message saying to declare it. The same friction as
 an import needing an installed package, for the same reason: the graph becomes derivable from the
 manifest without running anything, and every load is auditable.
+
+*(Not built. What is built is the first half for stated lineage: a model's `trained_on` that
+names a pipeline `[dependencies]` does not declare draws a warning when the manifest loads. It
+becomes an error when cross-pipeline references resolve.)*
 
 The second-order win is larger. With dependencies declared, **the catalog is no longer needed at load
 time** — the locations are in the manifest. A pipeline becomes self-contained and reproducible, and

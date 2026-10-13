@@ -6,7 +6,8 @@ never seen this project and has to continue building it. It says what ChartBook 
 it uses, what is built, what to build next and in what order, and where every decision is
 written down.
 
-Last revised 2026-10-12, after version 0.2.0, the index, and declared models.
+Last revised 2026-10-12, after version 0.2.0, the index, declared models, and declared
+dependencies (the first of five parts of step 3).
 ```
 
 ## What ChartBook is
@@ -67,6 +68,8 @@ assets alike.
 | **index** | One JSON file describing everything a catalog contains. A build product. Planned ({doc}`index-schema`) |
 | **record** | One entry in the index. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
 | **store** | A local folder of files named by their hash, used for caching and pinning. Planned ({doc}`asset-graph`) |
+| **dependency** | Another pipeline that this one reads from, declared in `[dependencies]`: a name, and where to find it (`path` or `git`) |
+| **resolution chain** | The order in which a pipeline's location is looked for: `[dependencies]`, then the catalog. One function, `chartbook.resolve.locate_pipeline` |
 | **lockfile** | `chartbook.lock`: the exact versions of upstream assets a project uses. Planned |
 | **pin** | To freeze which version of an upstream asset a project reads |
 | **build record** | A written description of how one asset was made: inputs, code, tools, output hash. Planned |
@@ -125,7 +128,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built; local resolution built |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Designed, not built. **Next to build** (step 3) |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Declared dependencies built (step 3a). **Next to build**: the store (3b) |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -135,7 +138,7 @@ and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
 
 ## What is built
 
-As of 0.2.0, plus the index and declared models, which came after it.
+As of 0.2.0, plus the index, declared models and declared dependencies, which came after it.
 
 | Capability | Where | Notes |
 |---|---|---|
@@ -148,7 +151,8 @@ As of 0.2.0, plus the index and declared models, which came after it.
 | The index, `index.json` | `index.py`, `hashing.py`, `schemas/` | Written by every build, beside the HTML. One hash rule; hashes cached in the build directory |
 | Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
 | Models | `models.py`, `manifest.py` (`validate_models`), `markdown_generator.py` (`generate_model_docs`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. No versions yet |
-| Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form |
+| Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked. Nothing is fetched or pinned, and `pipeline:asset` does not resolve yet |
+| Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
 | Data glimpses | `create_data_glimpses.py` | Reads the manifest, not `dodo.py` |
@@ -156,9 +160,9 @@ As of 0.2.0, plus the index and declared models, which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | Cross-pipeline references, `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: `[dependencies]`, the lockfile, the store, pinning, build records, `chartbook run`,
-`[scripts]`, model versions, `[sources]` and SQL access, any export, and anything that *reads*
-the index.
+Not built: the lockfile, the store, pinning, fetching a `git` dependency, build records,
+`chartbook run`, `[scripts]`, model versions, `[sources]` and SQL access, any export, and
+anything that *reads* the index.
 
 ## What to build next, in order
 
@@ -221,7 +225,7 @@ pull requests, in this order. Each leaves `main` working.
 
 | | Pull request | What a user gets | What it does not do |
 |---|---|---|---|
-| **3a** | **Declared dependencies.** `[dependencies]` in the manifest (`path` first). One resolution chain in one function: an explicit location in `[dependencies]`, then the local catalog, then (reserved) registries, then an error that lists candidates. `dependencies` on the `Pipeline` record. `check` verifies each one resolves | A pipeline says what it depends on, and `check` says whether that can be found. A cross-pipeline `trained_on` or chart input must name a declared dependency (a warning first, an error once 3d lands) | Nothing is fetched, copied or pinned |
+| **3a** *(built)* | **Declared dependencies.** `[dependencies]` in the manifest (`path` first). One resolution chain in one function: an explicit location in `[dependencies]`, then the local catalog, then (reserved) registries, then an error that lists candidates. `dependencies` on the `Pipeline` record. `check` verifies each one resolves | A pipeline says what it depends on, and `check` says whether that can be found. A cross-pipeline `trained_on` or chart input must name a declared dependency (a warning first, an error once 3d lands) | Nothing is fetched, copied or pinned |
 | **3b** | **The store.** Objects named by content hash, behind four operations (has, get, put, delete). Links, not copies: reflink, hardlink, symlink, copy, in that order. `chartbook store verify` | Nothing visible. This is the piece everything after sits on, and it can be tested alone | Nothing uses it yet |
 | **3c** | **Pinning.** `chartbook.lock`, written in the index's record schemas. `chartbook pin` snapshots each dependency's declared assets into the store and records their hashes. `chartbook update` moves pins forward. `chartbook store gc`, with the lockfile as its roots | A project can freeze what it depends on, and see in a diff when that changes | References still do not resolve across pipelines |
 | **3d** | **Cross-pipeline references resolve.** `assets.path("pipeline:asset")`, `data.path`, `chartbook path` and `data.load("pipeline:asset")` resolve through the lockfile into the store, never to the upstream's working directory. Loading from an undeclared pipeline fails and says what to add. A model's cross-pipeline `trained_on` is recorded by pinned hash. A second example pipeline, `examples/rate_forecast`, whose model is trained on `yield_curve`'s data | **The payoff.** The case in the box above works end to end | `git` dependencies |
@@ -235,6 +239,142 @@ upstream's data does not change what the downstream reads until `chartbook updat
 lockfile's exact shape; what `pin` does when an upstream has not been built; where a `git`
 checkout is kept; and whether a directory's hash should skip hidden files ({doc}`models`, the
 open question at the end of "What is built").
+
+#### 3a, as built
+
+*Added 2026-10-12.* What a user can do: declare `[dependencies]`, run `chartbook check`, and be
+told whether each one is there and whether it declares the training data a model names.
+
+```toml
+[dependencies]
+"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+
+[models.rate_forecaster]
+path = "./_models/rate_forecaster.joblib"
+trained_on = ["fed_yield_curve:treasury_rates"]
+```
+
+| What | Where |
+|---|---|
+| The `[dependencies]` table, validated when the manifest loads | `chartbook/manifest.py`, `validate_dependencies()` |
+| The resolution chain, and the one place a pipeline's name becomes a location | `chartbook/resolve.py`: `locate_pipeline()`, `PipelineLocation`, `known_as()` |
+| Matching a name against a set of pipeline IDs, without failing on a miss | `chartbook/identity.py`, `match_pipeline_ref()` |
+| `dependencies` on a `Pipeline` record, and inputs written by a dependency's name | `chartbook/index.py`, `schemas/chartbook/v1/Pipeline.json` |
+| `check`: a dependency that is not there; training data it does not declare; one ID for two directories in a catalog | `chartbook/check.py`: `check_dependencies()`, `check_model_lineage()` |
+| The warning for a `trained_on` that names an undeclared pipeline | `chartbook/manifest.py`, `validate_models()` |
+| The tests | `tests/test_dependencies.py` |
+
+Everything that used to look a pipeline up by name now calls `locate_pipeline()`: the catalog
+lookups behind `data.load(pipeline=…)`, the index, the model page and `check`.
+
+**Not done in 3a, on purpose.** Nothing is fetched, copied or pinned. `pipeline:asset` is still
+refused wherever a path is asked for: it must resolve to a frozen copy, never to the other
+pipeline's working directory, so making it resolve early would change what the same text means
+later. No example pipeline declares a dependency yet; `examples/rate_forecast` arrives in 3d.
+Pages do not list a pipeline's dependencies.
+
+**Proposed: implemented in 3a, and waiting on the maintainer's yes.** Each was open or unstated
+in the design.
+
+1. **A `git` dependency may be declared now**, though nothing fetches it until 3e. It is
+   validated, recorded in the index, and `check` warns that it was not looked at. (The table
+   above says "`path` first". Refusing `git` until 3e was the other option; the design's own
+   example manifest would not have loaded.)
+2. **`rev` is optional on a `git` dependency.** With none, the revision is whatever the
+   repository's default branch has when it is pinned, as a `path` is whatever the directory
+   holds. What that fetch does is 3e's to settle.
+3. **`{ rev = "…" }` with no `git` is refused**, with a message. {doc}`toml-format-v2` shows
+   that form, which needs `[resolve] default_host` to work out the URL. Not built.
+4. **The key of `[dependencies]` is a plain pipeline ID.** No URL, and no `@rev`: a revision
+   goes in the entry. {doc}`references` said such a key may carry both.
+5. **A reference may leave the scope off** when exactly one dependency has that name, as a
+   catalog lookup allows. A name that fits two dependencies is an error, and is not passed on
+   to the catalog to be guessed at.
+6. **A `trained_on` that names an undeclared pipeline warns when the manifest loads**, so
+   `build` shows it as well as `check`, and `check` does not fail on it. It becomes an error in
+   3d.
+7. **`check` needs a `path` dependency to be on disk**, with `--skip-outputs` too. A dependency
+   is not something this pipeline builds. A project whose CI checks out one repository will
+   want `git` dependencies, which is 3e.
+8. **Within one build, a pipeline goes by the build's name for it.** If a pipeline calls
+   `../fed_yield_curve` `yield_curve` and the catalog calls that directory
+   `ftsfr/fed_yield_curve`, the catalog's index says `ftsfr/fed_yield_curve` in both
+   `dependencies` and `inputs`. Alone, the pipeline's index says `yield_curve`.
+9. **One ID for two directories is reported by `check` on a catalog**, when a dependency's key
+   is a catalog pipeline's ID and its `path` is a different directory. Inside one pipeline the
+   case cannot arise (a TOML table has each key once), and two pipelines of a catalog may
+   point one name at different places without it being reported.
+10. **A catalog with a `[dependencies]` table does not load.** It reads from no pipeline.
+11. **An unknown key in an entry is an error**, not a warning, so that a later key (`branch`,
+    `tag`) is never silently ignored by an older ChartBook.
+12. The index's shape for a dependency: see {doc}`index-schema`, "Decided while building it",
+    items 10 to 13.
+
+**One row of the table above cannot be met as written.** "A cross-pipeline `trained_on` or
+chart input must name a declared dependency." A chart has no way to name another pipeline's
+dataframe: its `dataframe` field must be one this pipeline declares, or the manifest does not
+load. So only `trained_on` is covered. A chart of another pipeline's data needs the chart's
+`inputs` field ({doc}`index-schema`) or a looser `dataframe`, and a page that can render it;
+that is best decided with 3d.
+
+#### Recommended answers to the open questions
+
+*Proposed 2026-10-12 by whoever built 3a. None is agreed. Each needs the maintainer's yes before
+3b or 3c is built on it.*
+
+1. **Where the store lives.** One store per user, at `~/.chartbook/store/`, beside the
+   settings file that is already there. `CHARTBOOK_STORE`, or a `store` line in
+   `settings.toml`, points it somewhere else: a bigger disk, or a drive a team shares. Not one
+   store per project, because ten projects that pin the same upstream should hold one copy.
+
+   Layout: one directory per asset, named by its hash, holding the asset's files under their
+   own names.
+
+   ```text
+   ~/.chartbook/store/
+     objects/sha256/7f/3a9c…/treasury_rates.parquet          a one-file asset
+     objects/sha256/b2/09e1…/year=2024/part-0.parquet        an asset of many files
+     builds/                                                 kept for step 4
+   ```
+
+   The file names are kept because the path handed to a reader has to still end in `.parquet`,
+   and a partitioned dataset has to keep folders like `year=2024/`.
+
+2. **The lockfile's shape.** JSON, in the index's own format: the same envelope
+   (`"schema": "chartbook/lock/v1"`) and a `records` list. It holds this pipeline's `Pipeline`
+   record with only its `id` and `dependencies` (each now with a `pinned_hash`), and, for each
+   pinned asset, the upstream's own record for it, cut down to `id`, `ref`, `pipeline`,
+   `location.path`, `content_hash` and `size_bytes`. No timestamp and no absolute path, so
+   pinning twice with nothing changed writes the same bytes and shows no diff. `Build` records
+   join it in step 4. This is what "no second format" in {doc}`index-schema` asks for.
+
+3. **`pin` when an upstream has not been built.** Pin what is there and say what is not. An
+   asset whose file is missing gets a record with no `content_hash`, exactly as the index
+   writes one today. Asking for its path later fails, and says to build it upstream and run
+   `chartbook update`. So an upstream with ten dataframes, one of which needs a subscription
+   you do not have, is still usable. The stricter choice, refusing to pin at all, is what
+   `--frozen` is for in step 4.
+
+4. **A `git` dependency.** Clone once into `~/.chartbook/git/`, fetch on `update`, and check
+   the wanted commit out into a directory beside it. From there it is a `path` dependency. The
+   lockfile records the full commit hash that `rev` meant when it was pinned.
+
+   The thing to decide first: a fresh clone has the upstream's *code*, not its data, because
+   built data is usually git-ignored. So in 3e a `git` dependency can only be pinned if the
+   upstream commits its outputs. Otherwise it needs step 4 (run the upstream's `build`) or a
+   shared store to download from. 3e should say so plainly and not pretend otherwise.
+
+5. **`data.load("pipeline:asset")`.** Add it in 3d. `data.load("treasury_rates")` loads this
+   pipeline's own dataframe, `data.load("fed_yield_curve:treasury_rates")` loads the pinned
+   copy, and the two-argument `data.load(pipeline=…, dataframe=…)` keeps meaning "through a
+   catalog". One reference is the form every other call already takes.
+
+6. **Hidden files when hashing a directory.** Skip a short, fixed list of files that operating
+   systems create by themselves: `.DS_Store`, `Thumbs.db`, `desktop.ini`, and `._*`. Do not
+   skip every dotfile. A Zarr dataset keeps its real metadata in `.zarray` and `.zattrs`, and
+   leaving those out would give two different datasets one hash. No release carries the
+   current rule, so it can change now without a new algorithm prefix, and should before the
+   store is keyed by it.
 
 ### Step 4. Running, build records and versions
 
@@ -329,6 +469,9 @@ Each is explained where it lives.
 - Whether a pipeline's own `[policy]` table is wanted. It is honoured today, as a *proposed*
   answer to a crash. ({doc}`toml-format-v2`, "Since this was written")
 - Whether hashing a directory should skip hidden files. ({doc}`models`)
+- The twelve things settled while building declared dependencies, and the six recommended
+  answers for the store and the lockfile. (Step 3 above)
+- How a chart says it was made from another pipeline's data. (Step 3 above)
 - Whether the site should render from the index, and when. (Step 6)
 - `plotting.line()` and its siblings can only use the two built-in backends, although third
   parties can register others. ({doc}`../guide/plotting-backends`)

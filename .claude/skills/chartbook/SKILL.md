@@ -33,7 +33,7 @@ chartbook build -f --watch  # Incremental build, then rebuild on every file chan
 chartbook browse            # Open project docs in default browser
 # every build also writes docs/index.json: one record per pipeline, dataframe, column,
 # chart, notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash
-chartbook check             # CI gate: missing metadata, broken paths, expiring licenses
+chartbook check             # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
 chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
@@ -142,6 +142,13 @@ fig.write_html(assets.path("chart/my_chart"))
 # a model; it hands out the path.
 from chartbook import models
 joblib.dump(model, models.path("my_model"))
+
+# Another pipeline this one reads from is declared in chartbook.toml:
+#   [dependencies]
+#   "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+# `chartbook check` then verifies it is there, and that it declares any dataframe a
+# model names in trained_on = ["fed_yield_curve:treasury_rates"]. Nothing is fetched
+# or pinned yet, and assets.path("fed_yield_curve:treasury_rates") is still refused.
 
 # A throwaway directory for intermediates (<pipeline>/_data/_scratch/):
 # not an asset, git-ignored, safe to delete

@@ -115,6 +115,21 @@ docs_path = "./docs_src/models/rate_forecaster.md"
 
 Your training code writes the model file and a small JSON file of scores; ChartBook reads both and never looks inside the model. {doc}`../reference/configuration` has every field, and the `yield_curve` example trains a small one end to end.
 
+## Depending on another pipeline
+
+If the pipeline uses another pipeline's data, say which pipeline and where it is:
+
+```toml
+[dependencies]
+"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+
+[models.rate_forecaster]
+path = "./_models/rate_forecaster.joblib"
+trained_on = ["fed_yield_curve:treasury_rates"]
+```
+
+`chartbook check` then confirms that the other pipeline is there and that it declares that dataframe. Nothing is fetched or copied yet, and `chartbook path fed_yield_curve:treasury_rates` is still refused; {ref}`[dependencies] <dependencies>` says what works today.
+
 ## Notes and custom pages
 
 `[notes]` entries add standalone markdown documents to the site:

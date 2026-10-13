@@ -12,6 +12,8 @@ A **pipeline** manifest has one metadata table plus entity sections:
 [dataframes]       # Dataframe definitions
 [notebooks]        # Jupyter notebook references
 [notes]            # Additional documentation notes
+[models]           # Trained models
+[dependencies]     # Other pipelines this one reads from
 ```
 
 A **catalog** manifest has the metadata table plus a registry:
@@ -348,11 +350,62 @@ There is no `models.load()`: loading is one line of your own code, and keeping i
 trained_on = ["ftsfr/fed_yield_curve:treasury_rates", "local_features"]
 ```
 
-Today this is a statement of lineage. It is recorded in `index.json`, listed on the model's page, and linked to the dataframe's page when both pipelines are in the same catalog, where `chartbook check` also verifies that the other pipeline declares that dataframe. ChartBook does not yet fetch that data or record which version of it the model was trained on; that arrives with dependencies between pipelines.
+Then say where that pipeline is, in {ref}`[dependencies] <dependencies>`:
+
+```toml
+[dependencies]
+"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+```
+
+With that, `chartbook check` opens the other pipeline's `chartbook.toml` and reports a dataframe it does not declare. The training data is recorded in `index.json`, listed on the model's page, and linked to the dataframe's page when both pipelines are in the same catalog.
+
+Without the `[dependencies]` entry the manifest still loads, with a warning, and the reference is taken on trust. That will become an error.
+
+This is still a statement of lineage. ChartBook does not yet fetch that data or record which version of it the model was trained on; pinning is the next piece.
 
 **What you get.** A page for the model with its write-up, a table of its scores, links to the dataframes it was trained on, and its files if it is a directory. A `Model` record in `index.json` with its content hash. And `chartbook check` reports a missing model file, metrics file or write-up, a metrics file that is not a flat object, and (by default) a model with no `name`, `description`, `trained_on` or write-up. `--skip-outputs` leaves out the model and its metrics, which training produces.
 
 Not yet: versions of a model (`model/rate_forecaster@v3`), labels such as `@champion`, one file inside a directory model (`model/x#weights.pt`), and asking for the path of a model in another pipeline.
+
+(dependencies)=
+## `[dependencies]` — Other Pipelines This One Reads From
+
+A pipeline that uses another pipeline's data says so, and says where that pipeline is:
+
+```toml
+[dependencies]
+"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+"ftsfr/crsp_compustat"  = { git = "https://gitlab.example.org/ftsfr/crsp_compustat", rev = "a1b2c3d" }
+```
+
+The **key** is the name this pipeline knows the other one by. It is a pipeline ID, `name` or `scope/name`, and a key with a `/` in it must be quoted. The **value** says where to get it:
+
+| Field | Meaning |
+|-------|---------|
+| `path` | A directory holding the other pipeline's `chartbook.toml`. Relative to this pipeline's root, or absolute |
+| `git` | A git repository holding it. Any host, any URL git accepts |
+| `rev` | With `git`: the commit, tag or branch to use. Optional |
+
+An entry has `path` or `git`, not both.
+
+**The name and the place are separate on purpose.** Your code, your lineage and `index.json` say `ftsfr/fed_yield_curve`. Only this table says where that is. When a repository moves, one line changes.
+
+**The key is your name for it.** It usually matches what the other pipeline calls itself, and it does not have to. In a reference you may leave the scope off when only one dependency has that name: with the table above, `fed_yield_curve:treasury_rates` and `ftsfr/fed_yield_curve:treasury_rates` are the same dataframe.
+
+**What it does today.**
+
+- `chartbook check` reports a `path` that is not there, has no `chartbook.toml`, is a catalog, or is the pipeline's own directory.
+- `chartbook check` reports training data that a dependency does not declare (`trained_on = ["fed_yield_curve:no_such_table"]`).
+- `index.json` lists them, under `dependencies` in the pipeline's record.
+- A model's training data in another pipeline is written by the dependency's name, so `fed_yield_curve:treasury_rates` becomes `ftsfr/fed_yield_curve:treasury_rates`.
+
+**What it does not do yet.**
+
+- Nothing is fetched, copied or pinned. A `git` dependency is recorded and not looked at; `check` says so in a warning.
+- `chartbook path fed_yield_curve:treasury_rates` is still refused. A reference to another pipeline's asset will resolve to a frozen copy, not to that pipeline's working directory, and that needs the lockfile.
+- `data.load(pipeline=…, dataframe=…)` still looks in a catalog, as it always has. It does not read this table.
+
+A catalog has no `[dependencies]`. It reads from no pipeline; it lists them in `[pipelines]`. The design is {doc}`../design/asset-graph`.
 
 ## Custom Site Pages
 

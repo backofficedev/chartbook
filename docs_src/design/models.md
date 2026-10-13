@@ -340,6 +340,7 @@ Slice M1, in these places:
 | Incremental builds: a model's files are inputs, its page belongs to its pipeline | `chartbook/incremental.py` |
 | The example | `examples/yield_curve` |
 | The tests | `tests/test_models.py` |
+| Training data in a declared dependency: checked, and named by the dependency's name (step 3a) | `chartbook/check.py` (`check_model_lineage`), `chartbook/index.py`, `tests/test_dependencies.py` |
 
 Not built: versions and labels (`@v3`, `@champion`, `[models.x.aliases]`), parts
 (`model/x#file`), and *asking for* a model in another pipeline. Each is refused with "reserved
@@ -365,6 +366,19 @@ which bytes the model was trained on. **Making it one is the reason step 3 exist
 whoever builds step 3 should treat "a model trained on another pipeline's data, reproducibly"
 as its headline case. When that lands, a `trained_on` that names another pipeline must be backed
 by an entry in `[dependencies]`; until then it is taken on trust.
+
+*Since 2026-10-12, the first part of step 3:* the other pipeline can be **declared**.
+
+- With `"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }` in `[dependencies]`,
+  `chartbook check` reads that pipeline's manifest and reports a dataframe it does not declare.
+  No catalog is needed.
+- The index writes the input by the dependency's name: `fed_yield_curve:treasury_rates` in the
+  manifest is `ftsfr/fed_yield_curve:treasury_rates` in the index.
+- A `trained_on` that names a pipeline `[dependencies]` does not declare still loads, and now
+  warns, saying what to add.
+
+Still not done: fetching, pinning, and recording which bytes. See "3a, as built" in
+{doc}`overview`.
 ```
 
 ### Decided while building it

@@ -850,21 +850,32 @@ _MODEL_PAGE_TAIL = """
 """
 
 
-def _site_pipeline(site_manifest, pipeline_ref):
-    """Find a pipeline of the site being built, by any reference to it.
+def _site_pipeline(site_manifest, pipeline_ref, dependencies=None):
+    """Find the pipeline a reference names, and whether this site has it.
 
-    :returns: Tuple of (its ID in this site, its manifest), or (None, None)
-        if the site has no such pipeline.
+    The pipeline is looked for through the one resolution chain: in the
+    ``[dependencies]`` of the pipeline that names it, then among the site's
+    own pipelines.
+
+    :param dependencies: The ``[dependencies]`` of the pipeline that names it.
+    :returns: Tuple of (the ID it has in this site, its manifest). The
+        manifest is None when the site does not contain the pipeline, and
+        both are None when nothing knows it.
     """
-    from chartbook.identity import resolve_pipeline_ref
+    from chartbook.manifest import get_pipeline_dirs
+    from chartbook.resolve import known_as, locate_pipeline
 
-    if not site_manifest:
-        return None, None
+    in_site = get_pipeline_dirs(site_manifest) if site_manifest else {}
     try:
-        known_as = resolve_pipeline_ref(get_pipeline_ids(site_manifest), pipeline_ref)
+        location = locate_pipeline(
+            pipeline_ref, dependencies=dependencies, catalog=in_site
+        )
     except (KeyError, ValueError):
         return None, None
-    return known_as, get_pipeline_manifest(site_manifest, known_as)
+    site_id = known_as(location, in_site)
+    if site_id not in in_site:
+        return site_id, None
+    return site_id, get_pipeline_manifest(site_manifest, site_id)
 
 
 def _trained_on_entries(model_manifest, pipeline_id, pipeline_manifest, site_manifest):
@@ -872,14 +883,19 @@ def _trained_on_entries(model_manifest, pipeline_id, pipeline_manifest, site_man
 
     A dataframe of this pipeline, or of another pipeline that is part of
     the same site, is a link to its page. One in a pipeline the site does
-    not contain is named, as stated, without a link.
+    not contain is named without a link: by the name ``[dependencies]``
+    gives that pipeline if it declares it, and as stated otherwise.
     """
     entries = []
     for reference in model_manifest.get("_trained_on", []):
         if reference.is_local:
             owner_id, owner = pipeline_id, pipeline_manifest
         else:
-            owner_id, owner = _site_pipeline(site_manifest, reference.pipeline_id)
+            owner_id, owner = _site_pipeline(
+                site_manifest,
+                reference.pipeline_id,
+                pipeline_manifest.get("dependencies"),
+            )
         dataframes = (owner or {}).get("dataframes") or {}
         if reference.name in dataframes:
             entries.append(
@@ -891,9 +907,12 @@ def _trained_on_entries(model_manifest, pipeline_id, pipeline_manifest, site_man
                 }
             )
         else:
+            # Known by a declared name only when the site has no page for it
+            declared = owner_id is not None and owner is None
+            named = reference.in_pipeline(owner_id) if declared else reference
             entries.append(
                 {
-                    "label": str(reference),
+                    "label": str(named),
                     "name": "",
                     "link": "",
                     "note": "in another pipeline, which is not part of this site",

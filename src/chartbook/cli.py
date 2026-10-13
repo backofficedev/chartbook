@@ -422,12 +422,14 @@ def resolve_project_dir(project_dir: Path | None):
 def check(project_dir, within_days, policy_path, skip_outputs):
     """Check a project's metadata and paths; exit nonzero on any problem.
 
-    Meant for CI. Works on a pipeline or a catalog and reports three things,
+    Meant for CI. Works on a pipeline or a catalog and reports four things,
     each naming the chartbook.toml and field to edit:
 
     \b
     - fields the policy requires that are missing or empty
     - declared paths that point at files that do not exist
+    - pipelines in [dependencies] that cannot be found where they are said
+      to be, and training data they do not declare
     - dataframe licenses that are expired, or expire within --within days
 
     Required fields come from a catalog's [policy.required], or from the
@@ -470,16 +472,20 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         raise SystemExit(1)
 
-    for warning in caught:
+    # The checks warn about what they could not look at
+    with warnings.catch_warnings(record=True) as unchecked:
+        warnings.simplefilter("always")
+        problems = run_checks(
+            manifest,
+            project_dir,
+            within_days=within_days,
+            policy_label=policy_label,
+            skip_outputs=skip_outputs,
+        )
+
+    for warning in [*caught, *unchecked]:
         click.echo(f"warning: {warning.message}", err=True)
 
-    problems = run_checks(
-        manifest,
-        project_dir,
-        within_days=within_days,
-        policy_label=policy_label,
-        skip_outputs=skip_outputs,
-    )
     for problem in problems:
         click.echo(problem.format(relative_to=Path.cwd()))
 
@@ -493,11 +499,12 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     pipelines = [
         get_pipeline_manifest(manifest, pid) for pid in get_pipeline_ids(manifest)
     ]
-    # Models are counted only where there are some, so that the line for a
-    # project without them reads as it always has
+    # Models and dependencies are counted only where there are some, so that
+    # the line for a project without them reads as it always has
     sections = ["dataframes", "charts", "notebooks"]
-    if any(p.get("models") for p in pipelines):
-        sections.append("models")
+    for optional in ("models", "dependencies"):
+        if any(p.get(optional) for p in pipelines):
+            sections.append(optional)
     counts = ", ".join(
         f"{sum(len(p.get(section, {})) for p in pipelines)} {section}"
         for section in sections

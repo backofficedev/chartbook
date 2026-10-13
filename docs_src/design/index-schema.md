@@ -7,8 +7,9 @@ serves.
 
 Status: **the first implementation is built** (`chartbook.index`, `chartbook.hashing`): every
 build writes `index.json` with `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`,
-`Note` and `Model` records. `Build` records and dependencies are not written yet; they come with
-the parts of the {doc}`asset graph <asset-graph>` that produce them.
+`Note` and `Model` records, and each pipeline's declared `dependencies`. `Build` records and
+pinned hashes are not written yet; they come with the parts of the {doc}`asset graph
+<asset-graph>` that produce them.
 {ref}`index-implementing` says exactly what is and is not there.
 
 Revised 2026-10-12, before any of it was built: IDs carry the asset's kind
@@ -259,6 +260,31 @@ An index for a single pipeline omits the `Catalog` record and sets `root` to tha
 local directory or a fetched revision — the field that keeps "was this built against a stable
 upstream?" answerable.
 
+*(Added 2026-10-12 with the implementation; proposed.)* The example above shows a `git`
+dependency. One that is a directory is written like this:
+
+```json
+{ "id": "ftsfr/fed_yield_curve",
+  "via": "path",
+  "location": { "kind": "path", "path": "../fed_yield_curve",
+                "value": "/Users/x/repos/fed_yield_curve" } }
+```
+
+`path` is as declared in `[dependencies]`, relative to the pipeline's root. `value` is the
+absolute directory, as in the pipeline's own `location`, and like it is left out of a published
+index. There is no `pinned_hash` until something is pinned. A `git` location's `url` is written
+without any user name or password it had in the manifest (`https://user:token@host/…`), since a
+published index goes wherever the site goes.
+
+`dependencies` is absent when the manifest has no `[dependencies]` table, and `[]` when it has
+an empty one, by the rule under "Absent versus empty". (The worked example below writes
+`"dependencies": []` for a pipeline that is not said to have the table.)
+
+A dependency's `id` is its key in `[dependencies]`, with one exception. A key is the pipeline's
+own name for another pipeline. In a catalog's index, a dependency that is one of the catalog's
+pipelines is written by the catalog's ID for it, so that it is the `id` of a `Pipeline` record
+in the same file. The same goes for a model's `inputs`.
+
 ### Dataframe
 
 ```json
@@ -415,7 +441,9 @@ A trained model that a pipeline declares. The record, its fields and what they a
 
 `Model` records are written (step 2), without `built_by`. An entry of a model's `inputs` that
 is in another pipeline is written by the ID that pipeline has in this build when it is part of
-it (a catalog knows `rates` as `ftsfr/rates`), and as the manifest states it otherwise. So in a
+it (a catalog knows `rates` as `ftsfr/rates`); otherwise by the name `[dependencies]` declares
+that pipeline under (`rates:x` becomes `ftsfr/rates:x` when the table has `"ftsfr/rates"`); and
+as the manifest states it when nothing knows the pipeline. So in a
 catalog's index an input is the `id` of another record in the same file whenever it can be. A model's `location` has
 `"kind": "file"` whether its `path` is a file or a directory; `files` is what tells the two
 apart.
@@ -581,7 +609,8 @@ Built in `chartbook/index.py` and `chartbook/hashing.py`, with the JSON Schemas 
 of this section.
 
 **What is written.** `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`, `Note`
-and `Model` records. Not yet: `Build` records and `built_by`; `dependencies` on a `Pipeline`;
+and `Model` records, and `dependencies` on a `Pipeline` that declares some. Not yet: `Build`
+records and `built_by`; `pinned_hash` on a dependency;
 `inputs` on a dataframe or a notebook (the manifest has no field to declare them); `rendered`
 in `docs`. A pipeline's `build` command is written as `"scripts": { "build": … }`,
 ahead of the `[scripts]` table.
@@ -591,7 +620,8 @@ today's layout. `chartbook build` writes two files:
 
 - the **published** index, `index.json` beside the HTML (`docs/index.json`), so that it travels
   with the site and a browser can fetch it. It has no `resolved_path` anywhere, and a pipeline's
-  `location` of kind `path` has no `value`: local absolute paths never reach a published site;
+  `location` of kind `path` has no `value`, nor does a dependency's: local absolute paths never
+  reach a published site;
 - the **full** index, `index.json` in the build directory (`_docs/`), with those paths. A plain
   build deletes that directory when it finishes, so the full index outlives the build only with
   `--keep-build-dirs` or in an incremental build, which is the default for a catalog.
@@ -647,3 +677,15 @@ Each of these was open or unstated when the build began.
 7. An asset record carries all declared metadata, not a fixed list of fields.
 8. `policy.required` keeps the manifest's plural keys.
 9. Pipelines that a `--no-strict` build skips are left out of the index.
+
+**Proposed with declared dependencies (step 3a), 2026-10-12: implemented, and waiting on the
+maintainer's yes:**
+
+10. A `path` dependency's `location` has `path` (as declared) and `value` (absolute, not
+    published). The design showed only the `git` form.
+11. `dependencies` is absent when there is no `[dependencies]` table, not `[]`. A build of a
+    project with no dependencies therefore writes the same index as before.
+12. Within one index, a dependency and a cross-pipeline input are written by the ID the
+    pipeline has in that index, when it is one of its pipelines; by its key in `[dependencies]`
+    otherwise.
+13. Credentials are removed from a `git` dependency's `url`.

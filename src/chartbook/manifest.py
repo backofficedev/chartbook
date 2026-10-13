@@ -2,7 +2,8 @@
 
 A v2 manifest has a single ``[project]`` metadata table plus the entity
 sections ``[charts]``, ``[dataframes]``, ``[notebooks]``, ``[notes]`` and
-``[models]`` (pipelines), or a ``[pipelines]`` registry and optional ``[policy]``
+``[models]``, and a ``[dependencies]`` table naming the pipelines it reads from
+(pipelines), or a ``[pipelines]`` registry and optional ``[policy]``
 (catalogs). Every ``[project]`` field is optional; defaults are filled at
 load time. See ``docs_src/design/toml-format-v2.md`` for the full
 specification.
@@ -24,9 +25,11 @@ import tomli
 
 from chartbook.identity import (
     ID_COMPONENT_PATTERN,
+    UnsupportedRevisionError,
     derive_pipeline_id,
     get_git_remote_url,
     remote_to_web_url,
+    split_rev,
     validate_pipeline_id,
 )
 from chartbook.utils import extract_notebook_title, is_glob_pattern
@@ -360,6 +363,122 @@ def validate_series(dataframe_manifest: dict, dataframe_id: str) -> dict:
     return series
 
 
+#: The keys an entry of ``[dependencies]`` may have.
+DEPENDENCY_KEYS = ("path", "git", "rev")
+
+_DEPENDENCY_EXAMPLE = (
+    '"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" } or '
+    '{ git = "https://example.org/ftsfr/fed_yield_curve", rev = "a1b2c3d" }'
+)
+
+
+def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
+    """Validate a pipeline's ``[dependencies]`` table.
+
+    A dependency is another pipeline that this one reads from. The key is
+    the name this pipeline knows it by, which is a pipeline ID; the value
+    says where to get it::
+
+        [dependencies]
+        "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+        "ftsfr/crsp_compustat" = { git = "https://example.org/ftsfr/crsp_compustat", rev = "a1b2c3d" }
+
+    Identity and location are kept apart on purpose. Code, lineage and the
+    index say ``ftsfr/fed_yield_curve``; only this table says where that
+    is, so moving a repository changes one line. See "Identity and
+    location" in ``docs_src/design/asset-graph.md``.
+
+    Only the table's shape is checked. Whether a ``path`` holds a pipeline
+    is ``chartbook check``'s business: a manifest has to load on a machine
+    where a dependency is not there yet.
+
+    Each ``path`` entry gains ``_resolved_path``, the directory made
+    absolute.
+
+    :param dependencies: The raw ``[dependencies]`` table.
+    :param base_dir: The pipeline's root directory, which a ``path`` is
+        relative to.
+    :returns: The entries by key.
+    :raises UnsupportedRevisionError: If a key carries ``@rev``.
+    :raises UnsupportedRegistryError: If a key carries a registry prefix.
+    :raises ValueError: If the table or an entry is malformed.
+    """
+    if not isinstance(dependencies, dict):
+        raise ValueError(
+            f"[dependencies] must be a table with one entry per pipeline, "
+            f"e.g. {_DEPENDENCY_EXAMPLE}."
+        )
+    validated = {}
+    for key, entry in dependencies.items():
+        where = f"[dependencies]: {key!r}"
+        unpinned, rev = split_rev(key)
+        if rev is not None:
+            raise UnsupportedRevisionError(
+                f"{where} pins a revision with '@rev'. In a key that is "
+                f"reserved syntax and not yet supported; use {unpinned!r} as "
+                f'the key. A git dependency\'s revision is its rev = "{rev}".'
+            )
+        try:
+            validate_pipeline_id(key)
+        except ValueError as error:
+            # Keeps "reserved, not yet supported" distinct from "invalid"
+            raise type(error)(f"{where}: {error}") from None
+
+        if not isinstance(entry, dict):
+            raise ValueError(
+                f"{where} must be a table that says where the pipeline is, "
+                f"e.g. {_DEPENDENCY_EXAMPLE}."
+            )
+        unknown = sorted(set(entry) - set(DEPENDENCY_KEYS))
+        if unknown:
+            if all(isinstance(entry[name], dict) for name in unknown):
+                # ftsfr.rates = {...} is TOML for a table inside a table
+                hint = (
+                    f" A key with a '/' or a '.' in it must be quoted, e.g. "
+                    f'"{key}/{unknown[0]}" = {{ path = "..." }}.'
+                )
+            else:
+                close = difflib.get_close_matches(unknown[0], DEPENDENCY_KEYS, n=1)
+                hint = f" Did you mean {close[0]!r}?" if close else ""
+            raise ValueError(
+                f"{where} has an unknown key {unknown[0]!r}. An entry may "
+                f"have: {', '.join(DEPENDENCY_KEYS)}.{hint}"
+            )
+        for name in DEPENDENCY_KEYS:
+            value = entry.get(name)
+            if name in entry and (not isinstance(value, str) or not value.strip()):
+                raise ValueError(f"{where}: '{name}' must be a non-empty string.")
+
+        if "path" in entry and "git" in entry:
+            raise ValueError(
+                f"{where} has both 'path' and 'git'. A dependency comes from "
+                f"one place: a directory, or a git repository."
+            )
+        if "path" not in entry and "git" not in entry:
+            inferred = (
+                " Working out the repository from the pipeline's ID is not "
+                "supported yet, so a 'rev' needs a 'git' beside it."
+                if "rev" in entry
+                else ""
+            )
+            raise ValueError(
+                f"{where} does not say where the pipeline is. Give it a "
+                f"'path' or a 'git', e.g. {_DEPENDENCY_EXAMPLE}.{inferred}"
+            )
+        if "path" in entry and "rev" in entry:
+            raise ValueError(
+                f"{where} has a 'rev' beside a 'path'. A revision belongs to "
+                f"a git dependency; a path dependency is whatever is in that "
+                f"directory."
+            )
+
+        entry = dict(entry)
+        if "path" in entry:
+            entry["_resolved_path"] = (Path(base_dir) / entry["path"]).resolve()
+        validated[key] = entry
+    return validated
+
+
 def validate_models(manifest: dict, base_dir: Path) -> dict:
     """Validate a pipeline's ``[models.<id>]`` tables.
 
@@ -371,14 +490,15 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
 
     A dataframe in ``trained_on`` may belong to this pipeline
     (``"treasury_rates"``) or to another (``"ftsfr/rates:treasury_rates"``).
-    One of this pipeline's must be declared here. Another pipeline's is
-    taken as stated: it is lineage, and nothing fetches or checks it until
-    dependencies exist.
+    One of this pipeline's must be declared here. Another pipeline's should
+    be in a pipeline that ``[dependencies]`` declares; if it is not, it is
+    still taken as stated, with a warning. Nothing is fetched either way.
 
     Each entry gains ``_resolved_path`` and ``_trained_on``, the parsed
     references to the dataframes it was trained on.
 
-    :param manifest: The pipeline's manifest, with ``dataframes`` loaded.
+    :param manifest: The pipeline's manifest, with ``dataframes`` and
+        ``dependencies`` loaded.
     :param base_dir: The pipeline's root directory.
     :returns: The model tables by key; empty if the pipeline declares none.
     :raises ValueError: If a table is malformed, a key is not a legal name,
@@ -386,7 +506,11 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
         dataframe of this pipeline that it does not declare.
     """
     from chartbook.refs import KindMismatchError
-    from chartbook.resolve import parse_declared_ref
+    from chartbook.resolve import (
+        PipelineNotFoundError,
+        locate_pipeline,
+        parse_declared_ref,
+    )
 
     models = manifest.get("models")
     if models is None:
@@ -397,6 +521,7 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
             "[models.rate_forecaster]."
         )
     dataframes = manifest.get("dataframes") or {}
+    dependencies = manifest.get("dependencies") or {}
     for model_id, entry in models.items():
         where = f"[models.{model_id}]"
         if not isinstance(entry, dict):
@@ -453,6 +578,28 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
                     f"{declared}. To name another pipeline's dataframe, write "
                     f"'<pipeline>:{reference.name}'."
                 )
+            if not reference.is_local:
+                try:
+                    locate_pipeline(reference.pipeline_id, dependencies=dependencies)
+                except PipelineNotFoundError:
+                    warnings.warn(
+                        f"{Path(base_dir) / 'chartbook.toml'}: {where}: "
+                        f"trained_on names {str(reference)!r}, in the pipeline "
+                        f"{reference.pipeline_id!r}, which [dependencies] does "
+                        f"not declare. Say where that pipeline is, e.g. "
+                        f'"{reference.pipeline_id}" = '
+                        f'{{ path = "../{reference.pipeline}" }} under '
+                        f"[dependencies]. It is taken on trust for now, and "
+                        f"will be an error once references to other pipelines "
+                        f"resolve.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                except KeyError as error:
+                    # A bare name that fits two dependencies
+                    raise ValueError(
+                        f"{where}: trained_on: {error.args[0]}"
+                    ) from None
             references.append(reference)
         entry["_trained_on"] = references
     return models
@@ -640,6 +787,16 @@ def _load_pipeline_manifest(raw_manifest):
 
             for dataframe_id, chart_ids in dataframe_to_charts.items():
                 manifest["dataframes"][dataframe_id]["linked_charts"] = chart_ids
+
+    # Before the models, which may be trained on a dependency's data
+    if "dependencies" in manifest:
+        try:
+            manifest["dependencies"] = validate_dependencies(
+                manifest["dependencies"], base_dir
+            )
+        except ValueError as error:
+            source = Path(base_dir) / "chartbook.toml"
+            raise type(error)(f"{source}: {error}") from None
 
     validate_models(manifest, base_dir)
 
@@ -884,6 +1041,12 @@ def _load_catalog_manifest(raw_manifest):
     manifest["project"] = _resolve_project(raw_manifest, base_dir, "catalog")
     manifest["project"]["_resolved_site_dir"] = None
     manifest["policy"] = _resolve_policy(raw_manifest, source)
+    if "dependencies" in raw_manifest:
+        raise ValueError(
+            f"{source}: a catalog has no [dependencies]. It reads from no "
+            f"pipeline; it lists them, in [pipelines]. A pipeline declares "
+            f"what it depends on in its own chartbook.toml."
+        )
 
     pipelines_raw = manifest.get("pipelines") or {}
     members = pipelines_raw.get("members")
@@ -1127,6 +1290,25 @@ def get_pipeline_ids(manifest):
     else:
         pipelines = [manifest["project"]["id"]]
     return pipelines
+
+
+def get_pipeline_dirs(manifest: dict) -> dict:
+    """Get the directory of every pipeline in the manifest, by pipeline ID.
+
+    These are the pipelines of one build, and where each is: what
+    :func:`chartbook.resolve.locate_pipeline` takes as its catalog.
+
+    :param manifest: The manifest dictionary, pipeline or catalog.
+    :type manifest: dict
+    :returns: Each pipeline's ID and its root directory.
+    :rtype: dict[str, Path]
+    """
+    return {
+        pipeline_id: Path(
+            get_pipeline_manifest(manifest, pipeline_id)["pipeline_base_dir"]
+        )
+        for pipeline_id in get_pipeline_ids(manifest)
+    }
 
 
 def get_logo_path(config: dict, project_dir: Path) -> Path:
