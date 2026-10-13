@@ -15,6 +15,7 @@ supported; loading one raises an error pointing at the migration script.
 import difflib
 import importlib.resources
 import os
+import re
 import subprocess
 import warnings
 from datetime import datetime
@@ -553,6 +554,63 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
     return validated
 
 
+#: What a label may point at: the start of a model's content hash, at least
+#: the twelve digits a version is shown with, with or without the algorithm
+#: in front. A label is in a committed file and is read for years, so it is
+#: not allowed to be shorter than the name it was copied from.
+VERSION_PATTERN = re.compile(r"^(sha256:)?[0-9a-f]{12,64}$")
+
+#: A label that could be taken for the start of a hash: four or more hex
+#: digits and nothing else, which is what a typed version may be.
+_LOOKS_LIKE_A_VERSION = re.compile(r"^[0-9a-f]{4,64}$")
+
+
+def validate_aliases(aliases, where: str) -> dict:
+    """Validate a model's labels: ``[models.x.aliases]``.
+
+    A label is a name that points at a version of the model, and promoting
+    a model is changing one line::
+
+        [models.rate_forecaster.aliases]
+        champion = "7f3a9c2e41b0"
+        challenger = "b2c91d0a77f3"
+
+    A version is named by the start of its content hash, which is the same
+    on every machine and every branch. Whether the version a label points
+    at is on this machine is for ``chartbook check`` to say.
+
+    :param aliases: The table as parsed.
+    :param where: The model's table, for messages: ``[models.x]``.
+    :returns: The labels and what they point at.
+    :raises ValueError: If it is not a table, a label is not a name or
+        looks like a version, or a value is not a version.
+    """
+    if not isinstance(aliases, dict):
+        raise ValueError(
+            f"{where}: 'aliases' must be a table of labels, e.g. "
+            f'[{where.strip("[]")}.aliases] with champion = "7f3a9c2e41b0".'
+        )
+    for label, version in aliases.items():
+        if not ID_COMPONENT_PATTERN.match(label):
+            raise ValueError(
+                f"{where}: {label!r} is not a legal label. A label is written "
+                f"after '@' in a reference, so it must match [A-Za-z0-9._-]+."
+            )
+        if _LOOKS_LIKE_A_VERSION.match(label):
+            raise ValueError(
+                f"{where}: the label {label!r} looks like a version. A label is "
+                f"a name, such as champion, so that the two cannot be confused."
+            )
+        if not isinstance(version, str) or not VERSION_PATTERN.match(version):
+            raise ValueError(
+                f"{where}: the label {label!r} must point at a version: the "
+                f"start of the model's content hash, at least 12 digits of it, "
+                f'e.g. {label} = "7f3a9c2e41b0". `chartbook snapshot` prints a new '
+                f"version's name."
+            )
+    return dict(aliases)
+
+
 def validate_models(manifest: dict, base_dir: Path) -> dict:
     """Validate a pipeline's ``[models.<id>]`` tables.
 
@@ -625,6 +683,8 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
             )
         if "tags" in entry:
             entry["tags"] = normalize_tags(entry["tags"])
+        if "aliases" in entry:
+            entry["aliases"] = validate_aliases(entry["aliases"], where)
 
         trained_on = entry.get("trained_on", [])
         if not isinstance(trained_on, list) or not all(

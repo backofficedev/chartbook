@@ -1,0 +1,479 @@
+"""Tests for versions of a model, and the labels that name them.
+
+This is part 4d of step 4 of ``docs_src/design/overview.md``, and slice M4
+of ``docs_src/design/models.md``. Decided by the maintainer on 2026-10-13:
+a version is made by a snapshot, and it is named by the start of its
+content hash, with labels in the manifest as the names people use.
+
+One pipeline runs through these tests: ``forecast``, with one model whose
+bytes and scores the test sets, in a repository of its own.
+"""
+
+import json
+import subprocess
+import warnings
+from pathlib import Path
+
+import jsonschema
+import pytest
+import tomli_w
+from click.testing import CliRunner
+
+from chartbook import check, index, models, snapshot
+from chartbook.cli import main
+from chartbook.errors import AssetNotDeclaredError, VersionNotFoundError
+from chartbook.identity import UnsupportedRevisionError
+from chartbook.manifest import load_manifest, validate_aliases
+from chartbook.store import default_store
+
+
+def _git(directory: Path, *arguments: str) -> str:
+    result = subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.org", *arguments],
+        cwd=directory,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def _commit(repository: Path) -> str:
+    if not (repository / ".git").exists():
+        (repository / ".gitignore").write_text("chartbook.lock\n_models/\n_output/\n_docs*/\ndocs/\n")
+        _git(repository, "init", "--quiet", "-b", "main")
+    _git(repository, "add", "-A")
+    _git(repository, "commit", "--quiet", "--allow-empty", "-m", "Work")
+    return _git(repository, "rev-parse", "HEAD")
+
+
+def _manifest(directory: Path, aliases=None) -> None:
+    model = {
+        "path": "./_models/m.json",
+        "metrics_path": "./_output/metrics.json",
+        "docs": "A small model.",
+    }
+    if aliases is not None:
+        model["aliases"] = aliases
+    (directory / "chartbook.toml").write_text(
+        tomli_w.dumps({"project": {"id": "acme/forecast"}, "models": {"m": model}})
+    )
+
+
+def _train(directory: Path, weights: bytes, rmse: float) -> None:
+    """What the pipeline's own code does: write the model and its scores."""
+    (directory / "_models").mkdir(exist_ok=True)
+    (directory / "_models" / "m.json").write_bytes(weights)
+    (directory / "_output").mkdir(exist_ok=True)
+    (directory / "_output" / "metrics.json").write_text(json.dumps({"rmse": rmse}))
+
+
+def _version(directory: Path) -> str:
+    """Make a snapshot, and return the name of the version it made of the model."""
+    report = snapshot.make(directory)
+    ((model, name),) = report.new_versions
+    assert model == "model/m"
+    return name
+
+
+@pytest.fixture
+def forecast(tmp_path):
+    """A pipeline with one model, trained once, committed, with no snapshot yet."""
+    directory = tmp_path.resolve() / "forecast"
+    directory.mkdir()
+    (directory / "README.md").write_text("# Forecast\n")
+    _manifest(directory)
+    _train(directory, b"weights-1", 0.30)
+    _commit(directory)
+    return directory
+
+
+class TestAVersionIsMadeByASnapshot:
+    def test_the_first_snapshot_makes_the_first_version(self, forecast):
+        report = snapshot.make(forecast)
+        ((model, name),) = report.new_versions
+        record = report.snapshot.assets["model/m"]
+        assert model == "model/m"
+        assert name == record["content_hash"].split(":")[1][:12]
+        assert len(name) == snapshot.VERSION_DIGITS == 12
+        assert [v.name for v in models.versions("m", project_dir=forecast)] == [name]
+
+    def test_retraining_makes_no_version_until_a_snapshot_does(self, forecast):
+        """Twenty retrains in an afternoon are not twenty versions."""
+        first = _version(forecast)
+        for attempt in range(3):
+            _train(forecast, f"attempt-{attempt}".encode(), 0.29)
+        assert [v.name for v in models.versions("m", project_dir=forecast)] == [first]
+        second = _version(forecast)
+        assert [v.name for v in models.versions("m", project_dir=forecast)] == [first, second]
+
+    def test_the_same_bytes_again_are_the_same_version(self, forecast):
+        first = _version(forecast)
+        (forecast / "notes.md").write_text("a commit that changes no model\n")
+        _commit(forecast)
+        again = snapshot.make(forecast)
+        assert again.made and again.new_versions == []
+        assert [v.name for v in models.versions("m", project_dir=forecast)] == [first]
+
+    def test_a_version_keeps_its_scores_and_its_commit(self, forecast):
+        first_commit = _git(forecast, "rev-parse", "HEAD")
+        _version(forecast)
+        _train(forecast, b"weights-2", 0.21)  # the metrics file is written over
+        (forecast / "train.py").write_text("print('better')\n")
+        second_commit = _commit(forecast)
+        _version(forecast)
+        first, second = models.versions("m", project_dir=forecast)
+        assert (first.metrics, first.commit) == ({"rmse": 0.30}, first_commit)
+        assert (second.metrics, second.commit) == ({"rmse": 0.21}, second_commit)
+        assert first.made_at < second.made_at
+        assert first.content_hash != second.content_hash
+
+    def test_one_made_on_another_branch_is_still_a_version(self, forecast):
+        on_main = _version(forecast)
+        _git(forecast, "checkout", "--quiet", "-b", "experiment")
+        _train(forecast, b"experimental", 0.50)
+        (forecast / "train.py").write_text("print('experiment')\n")
+        _commit(forecast)
+        on_branch = _version(forecast)
+        _git(forecast, "checkout", "--quiet", "main")
+        names = [v.name for v in models.versions("m", project_dir=forecast)]
+        assert names == [on_main, on_branch]
+
+    def test_another_pipelines_snapshots_are_not_this_ones(self, forecast, tmp_path):
+        """Two repositories, each with a pipeline at its top, share one store."""
+        other = tmp_path.resolve() / "other"
+        other.mkdir()
+        (other / "README.md").write_text("# Another project\n")
+        _manifest(other)
+        _train(other, b"another-model", 0.9)
+        _commit(other)
+        _version(other)
+        assert models.versions("m", project_dir=forecast) == []
+
+    def test_a_clone_at_the_same_commit_has_the_same_versions(self, forecast, tmp_path):
+        """A commit is the same commit wherever it is checked out, so its snapshots are too."""
+        name = _version(forecast)
+        clone = tmp_path.resolve() / "clone"
+        _git(forecast, "clone", "--quiet", str(forecast), str(clone))
+        assert [v.name for v in models.versions("m", project_dir=clone)] == [name]
+        assert models.path(f"m@{name}", project_dir=clone).read_bytes() == b"weights-1"
+
+    def test_a_pipeline_that_is_not_in_git_has_none(self, tmp_path):
+        directory = tmp_path / "loose"
+        directory.mkdir()
+        _manifest(directory)
+        _train(directory, b"weights", 0.3)
+        assert models.versions("m", project_dir=directory) == []
+
+    def test_a_name_is_twelve_digits_and_more_only_when_two_would_share_them(self):
+        one = "sha256:7f3a9c2e41b0aaaa" + "0" * 48
+        two = "sha256:7f3a9c2e41b0bbbb" + "0" * 48
+        other = "sha256:b2c91d0a77f3" + "0" * 52
+        assert snapshot.version_name(one) == "7f3a9c2e41b0"
+        assert snapshot.version_name(one, [one, other]) == "7f3a9c2e41b0"
+        assert snapshot.version_name(one, [one, two]) == "7f3a9c2e41b0a"
+        assert snapshot.version_name(two, [one, two]) == "7f3a9c2e41b0b"
+
+
+class TestNamingAVersion:
+    def test_the_plain_name_is_what_is_in_the_folder_now(self, forecast):
+        _version(forecast)
+        _train(forecast, b"being tuned", 0.25)
+        path = models.path("m", project_dir=forecast)
+        assert path == forecast / "_models" / "m.json"
+        assert path.read_bytes() == b"being tuned"
+
+    def test_by_the_start_of_its_hash(self, forecast):
+        name = _version(forecast)
+        _train(forecast, b"being tuned", 0.25)
+        path = models.path(f"m@{name}", project_dir=forecast)
+        assert path.read_bytes() == b"weights-1"
+        assert default_store().root in path.parents and path.name == "m.json"
+
+    def test_by_less_of_it_by_more_of_it_and_by_all_of_it(self, forecast):
+        """What is typed may be any start that names one version, four digits or more."""
+        name = _version(forecast)
+        (version,) = models.versions("m", project_dir=forecast)
+        whole = version.content_hash
+        short = models.path(f"m@{name}", project_dir=forecast)
+        assert models.path(f"m@{name[:4]}", project_dir=forecast) == short
+        assert models.path(f"m@{name[:7]}", project_dir=forecast) == short
+        assert models.path(f"m@{whole.split(':')[1][:20]}", project_dir=forecast) == short
+        assert models.path(f"m@{whole.split(':')[1]}", project_dir=forecast) == short
+        assert models.path(f"m@{whole}", project_dir=forecast) == short
+
+    def test_a_version_never_changes(self, forecast):
+        first = _version(forecast)
+        _train(forecast, b"weights-2", 0.21)
+        second = _version(forecast)
+        assert models.path(f"m@{first}", project_dir=forecast).read_bytes() == b"weights-1"
+        assert models.path(f"m@{second}", project_dir=forecast).read_bytes() == b"weights-2"
+
+    def test_one_that_is_not_on_this_machine(self, forecast):
+        name = _version(forecast)
+        with pytest.raises(VersionNotFoundError) as e:
+            models.path("m@000000000000", project_dir=forecast)
+        assert e.value.reason == "no_such_version"
+        assert str(e.value) == (
+            f"No version 000000000000 of model/m is on this machine. Its versions here "
+            f"are: {name}. A version is made by a snapshot: `chartbook run --snapshot`."
+        )
+
+    def test_something_that_is_neither_a_label_nor_a_hash(self, forecast):
+        _version(forecast)
+        with pytest.raises(VersionNotFoundError) as e:
+            models.path("m@v3", project_dir=forecast)
+        assert "'v3' is not a label of model/m" in str(e.value)
+        assert "its labels in [models.m.aliases] are: (none)" in str(e.value)
+
+    def test_a_start_that_two_versions_share(self, forecast, monkeypatch):
+        """Twelve digits are all but always enough. When they are not, it says so,
+
+        and it never picks one of the two.
+        """
+        taken = snapshot.make(forecast).snapshot
+        twins = [
+            ("sha256:7f3a9c2e41b0a" + "0" * 51, taken),
+            ("sha256:7f3a9c2e41b0b" + "0" * 51, taken),
+        ]
+        monkeypatch.setattr(snapshot, "versions_of", lambda *a, **k: twins)
+        with pytest.raises(VersionNotFoundError) as e:
+            models.path("m@7f3a9c2e41b0", project_dir=forecast)
+        assert e.value.reason == "ambiguous"
+        assert (
+            "7f3a9c2e41b0 is the start of 2 versions of model/m: "
+            "7f3a9c2e41b0a, 7f3a9c2e41b0b."
+        ) in str(e.value)
+        assert "Give more digits." in str(e.value)
+
+        # One more digit names one of them
+        monkeypatch.setattr(default_store().__class__, "has", lambda self, h: False)
+        with pytest.raises(VersionNotFoundError) as e:
+            models.path("m@7f3a9c2e41b0a", project_dir=forecast)
+        assert e.value.reason == "not_in_store"  # found, which is the point
+
+    def test_one_whose_bytes_the_store_has_lost(self, forecast):
+        name = _version(forecast)
+        (version,) = models.versions("m", project_dir=forecast)
+        default_store().delete(version.content_hash)
+        with pytest.raises(VersionNotFoundError) as e:
+            models.path(f"m@{name}", project_dir=forecast)
+        assert e.value.reason == "not_in_store"
+
+    def test_a_pipeline_with_no_snapshots(self, forecast):
+        with pytest.raises(VersionNotFoundError, match="Its versions here are: \\(none\\)"):
+            models.path("m@7f3a9c2", project_dir=forecast)
+
+    def test_a_model_that_is_a_folder(self, tmp_path):
+        directory = tmp_path.resolve() / "encoder"
+        (directory / "_models" / "enc").mkdir(parents=True)
+        (directory / "_models" / "enc" / "weights.bin").write_bytes(b"w")
+        (directory / "chartbook.toml").write_text(
+            tomli_w.dumps({"models": {"enc": {"path": "./_models/enc"}}})
+        )
+        (directory / ".gitignore").write_text("")
+        _git(directory, "init", "--quiet", "-b", "main")
+        _git(directory, "add", "-A")
+        _git(directory, "commit", "--quiet", "-m", "A model kept in git")
+        ((_, name),) = snapshot.make(directory).new_versions
+        held = models.path(f"enc@{name}", project_dir=directory)
+        assert held.is_dir() and (held / "weights.bin").read_bytes() == b"w"
+
+    def test_only_models_have_versions_so_far(self, forecast):
+        from chartbook import data
+
+        with pytest.raises(UnsupportedRevisionError, match="kept for models only"):
+            data.path("rates@7f3a9c2", project_dir=forecast)
+
+    def test_another_pipelines_version_is_not_yet_supported(self, forecast):
+        with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
+            models.path("other:m@champion", project_dir=forecast)
+
+
+class TestLabels:
+    """A label is a name for a version, and promoting is changing one line."""
+
+    def test_a_label_points_at_a_version(self, forecast):
+        first = _version(forecast)
+        _train(forecast, b"weights-2", 0.21)
+        second = _version(forecast)
+        _manifest(forecast, {"champion": first, "challenger": second})
+        assert models.path("m@champion", project_dir=forecast).read_bytes() == b"weights-1"
+        assert models.path("m@challenger", project_dir=forecast).read_bytes() == b"weights-2"
+
+    def test_promoting_is_one_line(self, forecast):
+        first = _version(forecast)
+        _train(forecast, b"weights-2", 0.21)
+        second = _version(forecast)
+        _manifest(forecast, {"champion": first})
+        before = models.path("m@champion", project_dir=forecast)
+        _manifest(forecast, {"champion": second})
+        after = models.path("m@champion", project_dir=forecast)
+        assert before.read_bytes() == b"weights-1" and after.read_bytes() == b"weights-2"
+
+    def test_versions_say_which_labels_point_at_them(self, forecast):
+        first = _version(forecast)
+        _train(forecast, b"weights-2", 0.21)
+        _version(forecast)
+        _manifest(forecast, {"champion": first, "last-quarter": first})
+        one, two = models.versions("m", project_dir=forecast)
+        assert one.labels == ("champion", "last-quarter") and two.labels == ()
+
+    def test_a_label_whose_version_is_not_here(self, forecast):
+        name = _version(forecast)
+        _manifest(forecast, {"champion": "000000000000"})
+        with pytest.raises(VersionNotFoundError) as e:
+            models.path("m@champion", project_dir=forecast)
+        assert str(e.value).startswith(
+            "No version 000000000000 of model/m is on this machine (the label 'champion' "
+            "points at it)."
+        )
+        assert name in str(e.value)
+
+    @pytest.mark.parametrize(
+        "aliases, message",
+        [
+            ("7f3a9c2e41b0", "'aliases' must be a table of labels"),
+            ({"my label": "7f3a9c2e41b0"}, "is not a legal label"),
+            ({"7f3a9c2e41b0": "b2c91d0a77f3"}, "looks like a version"),
+            ({"beef": "b2c91d0a77f3"}, "looks like a version"),
+            ({"champion": "v3"}, "must point at a version"),
+            ({"champion": "7f3a9c2"}, "at least 12 digits"),  # git's seven is too few
+            ({"champion": 3}, "must point at a version"),
+            ({"champion": "7F3A9C2E41B0"}, "must point at a version"),
+        ],
+    )
+    def test_a_malformed_table_is_refused(self, aliases, message):
+        with pytest.raises(ValueError, match=message):
+            validate_aliases(aliases, "[models.m]")
+
+    def test_a_well_formed_table(self):
+        aliases = {
+            "champion": "7f3a9c2e41b0",
+            "old.one": "sha256:" + "ab" * 32,  # all of it
+            "abc": "b2c91d0a77f3",  # three hex digits are a name, not a start
+            "bee-keeper": "b2c91d0a77f3",
+        }
+        assert validate_aliases(aliases, "[models.m]") == aliases
+
+    def test_the_loader_reads_them_and_names_the_file(self, forecast):
+        _manifest(forecast, {"champion": "7f3a9c2e41b0"})
+        assert load_manifest(forecast)["models"]["m"]["aliases"] == {"champion": "7f3a9c2e41b0"}
+        _manifest(forecast, {"champion": "nope"})
+        with pytest.raises(ValueError, match="must point at a version"):
+            load_manifest(forecast)
+
+
+class TestListing:
+    def test_versions_oldest_first_with_what_was_kept(self, forecast):
+        first = _version(forecast)
+        (version,) = models.versions("m", project_dir=forecast)
+        assert version.name == first and version.built_by_run is False
+        assert version.to_dict() == {
+            "version": first,
+            "content_hash": version.content_hash,
+            "made_at": version.made_at,
+            "commit": version.commit,
+            "metrics": {"rmse": 0.30},
+        }
+
+    def test_a_model_the_manifest_does_not_declare(self, forecast):
+        with pytest.raises(AssetNotDeclaredError):
+            models.versions("nope", project_dir=forecast)
+
+    def test_another_pipelines_model(self, forecast):
+        with pytest.raises(ValueError, match="one of this pipeline's own models"):
+            models.versions("other:m", project_dir=forecast)
+
+
+class TestTheIndex:
+    def test_the_model_record_lists_its_versions_and_labels(self, forecast):
+        first = _version(forecast)
+        _train(forecast, b"weights-2", 0.21)
+        second = _version(forecast)
+        _manifest(forecast, {"champion": second})
+        built = index.build_index(load_manifest(forecast))
+        (record,) = [r for r in built["records"] if r["kind"] == "Model"]
+        assert record["aliases"] == {"champion": second}
+        assert [v["version"] for v in record["versions"]] == [first, second]
+        assert record["versions"][1]["labels"] == ["champion"]
+        assert record["versions"][0]["metrics"] == {"rmse": 0.30}
+        assert "labels" not in record["versions"][0]
+        jsonschema.validate(record, json.loads(index.schema_path("Model").read_text()))
+
+    def test_a_model_with_no_snapshot_has_no_versions_field(self, forecast):
+        built = index.build_index(load_manifest(forecast))
+        (record,) = [r for r in built["records"] if r["kind"] == "Model"]
+        assert "versions" not in record
+
+
+class TestCheck:
+    def _warnings(self, forecast):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            problems = check.check_model_labels(load_manifest(forecast), forecast)
+        return problems, [str(w.message) for w in caught]
+
+    def test_a_label_that_points_at_a_version_here_is_fine(self, forecast):
+        _manifest(forecast, {"champion": _version(forecast)})
+        assert self._warnings(forecast) == ([], [])
+
+    def test_a_label_whose_version_is_not_here_is_a_warning(self, forecast):
+        """It may be right: the version may be in the store of another machine."""
+        _version(forecast)
+        _manifest(forecast, {"champion": "000000000000"})
+        problems, said = self._warnings(forecast)
+        assert problems == []
+        (line,) = said
+        assert "[models.m.aliases] champion: not checked." in line
+        assert "No version 000000000000 of model/m is on this machine" in line
+
+    def test_no_labels_nothing_to_say(self, forecast):
+        assert self._warnings(forecast) == ([], [])
+
+
+class TestCommands:
+    def _run(self, *arguments):
+        return CliRunner().invoke(main, [str(argument) for argument in arguments])
+
+    def test_snapshot_says_when_it_makes_a_version(self, forecast, monkeypatch):
+        monkeypatch.chdir(forecast)
+        result = self._run("snapshot")
+        assert result.exit_code == 0, result.output
+        (version,) = models.versions("m", project_dir=forecast)
+        assert f"  model/m: new version {version.name}" in result.output.splitlines()
+
+        again = self._run("snapshot")  # nothing new, so nothing to say
+        assert "new version" not in again.output
+
+    def test_path_takes_a_version_and_a_label(self, forecast, monkeypatch):
+        name = _version(forecast)
+        _manifest(forecast, {"champion": name})
+        monkeypatch.chdir(forecast)
+        by_hash = self._run("path", f"model/m@{name}")
+        by_label = self._run("path", "model/m@champion")
+        assert by_hash.exit_code == 0, by_hash.output
+        assert by_hash.output == by_label.output
+        assert Path(by_hash.output.strip()).read_bytes() == b"weights-1"
+
+    def test_path_with_a_version_that_is_not_here_is_a_clean_error(self, forecast, monkeypatch):
+        _version(forecast)
+        monkeypatch.chdir(forecast)
+        result = self._run("path", "model/m@0000000")
+        assert result.exit_code == 1
+        assert "No version 0000000 of model/m is on this machine." in result.output
+        assert self._run("path", "model/m@000").exit_code == 1  # too short to be a start
+
+    def test_the_models_page_lists_its_versions(self, forecast, monkeypatch):
+        first = _version(forecast)
+        _train(forecast, b"weights-2", 0.21)
+        second = _version(forecast)
+        _manifest(forecast, {"champion": second})
+        monkeypatch.chdir(forecast)
+        result = self._run("docs", "./docs", "-f", "--keep-build-dirs")
+        assert result.exit_code == 0, result.output
+        text = (forecast / "_docs" / "cb" / "models" / "acme--forecast" / "m.md").read_text()
+        assert "## Versions" in text
+        rows = [line for line in text.splitlines() if line.startswith(f"| `{second}`")]
+        assert rows and "`champion`" in rows[0] and "0.21" in rows[0]
+        assert text.index(f"| `{second}`") < text.index(f"| `{first}`")  # newest first

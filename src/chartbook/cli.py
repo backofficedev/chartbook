@@ -1908,6 +1908,8 @@ def _echo_snapshot(report):
     click.echo(f"{taken.pipeline} at {taken.commit[:7]}: {summary}")
     for asset, declared_path in report.not_built:
         click.echo(f"  not built: {asset} ({declared_path})")
+    for model, version in report.new_versions:
+        click.echo(f"  {model}: new version {version}")
     if report.made:
         click.echo(
             "Snapshot made. A pipeline that depends on this one gets it with "

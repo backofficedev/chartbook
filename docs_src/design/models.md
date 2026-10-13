@@ -195,6 +195,13 @@ else in this section. It depends on the store and on build records, which do not
 it is settled when they are built.
 ```
 
+*(Decided by the maintainer, 2026-10-13, and built the same day; {doc}`overview`, "4d, as
+built". Two things in this section went another way, and are marked where they are said.
+**A version is made by a snapshot**, not by every build that changes the model. And **a
+version is named by the start of its content hash**, with labels as the names people use, not
+`v1`, `v2`, `v3`. Where this section says "build record", read "snapshot": it is what the
+build record became.)*
+
 **What a version is.** One content hash of the model, together with the build record that
 produced it. The build record ({doc}`asset-graph`) already holds what was asked for: the hash of
 every input (which data), the pipeline's git commit (which code), the tool versions, and when.
@@ -202,6 +209,8 @@ For a model it also keeps a copy of the metrics.
 
 **When a version is made.** When a build finishes and a declared model's content hash is one
 that has not been seen before. Rebuilding and getting the same bytes makes no new version.
+*(As decided: when a **snapshot** is made and the model's content hash is one that no earlier
+snapshot of the pipeline had. A build alone makes none.)*
 
 **Where the bytes go.** Into the store, by content hash, like every other pinned object. The
 file at `path` stays where it is; the store links to it or copies it ({doc}`asset-graph`, "Links,
@@ -210,7 +219,9 @@ same mechanism as a shared build cache, and it needs no server.
 
 **How versions are named.** `v1`, `v2`, `v3`, in the order they first appear, recorded in the
 pipeline's committed `chartbook.lock` so the numbers are the same on every machine and are never
-reused.
+reused. *(As decided: by the start of the content hash, `7f3a9c2e41b0`: twelve digits, and
+more when two versions would share them. Nothing is recorded to make the names agree between
+machines, because they are worked out from the bytes. See open question 1.)*
 
 **Labels.** A label is a name that points at a version, written in the manifest:
 
@@ -219,6 +230,8 @@ reused.
 champion = "v3"
 challenger = "v5"
 ```
+
+*(As built: `champion = "7f3a9c2e41b0"`. A label may not itself look like a version.)*
 
 Promoting a model is then a one-line change, reviewed in a pull request like any other. There is
 no "promote" button and no service behind one.
@@ -232,6 +245,10 @@ no "promote" button and no service behind one.
 | `model/rate_forecaster@champion` | The label is looked up, then as above |
 | `other:model/rate_forecaster` | The version this project's lockfile pins. Cross-pipeline references are pinned |
 | `other:model/rate_forecaster@champion` | The label is looked up when pinning and frozen in the lockfile, so a build is repeatable. `chartbook update` moves it |
+
+*(Built: the first three rows, with a version written as `@7f3a9c2e41b0`. The fourth was built in
+step 3. The fifth is not built: a version of another pipeline's model is refused as not yet
+supported.)*
 
 **Garbage collection.** A recorded version is reachable, so `chartbook store gc` never collects
 it.
@@ -325,7 +342,7 @@ Each slice is useful by itself. The step numbers are the {doc}`overview`'s build
 | **M1. Declared models** (step 2) — **built** | The index | The `[models]` table in the loader, with validation. `model` added to `RESOLVABLE_KINDS`, so `chartbook path model/x` works. `chartbook.models.path()`. `chartbook check` covers `path`, `metrics_path` and `docs_path` (the first two are build outputs, so `--skip-outputs` skips them). The model page. The `Model` record. Policy support: `[policy.required] models = […]`. The worked example above. **No versions** |
 | **M2. Parts** (with M1 or soon after) | M1 | `model/x#file` resolves to a file inside a directory model. Refuse a part that escapes the directory (`..`) |
 | **M3. Cross-pipeline** (step 3) — **built** | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. Training data in another pipeline is a real dependency: declared, pinned, read from the pinned copy, and recorded by hash (`pinned_inputs`). The `examples/rate_forecast` pipeline. A dependency fetched with `git` has only what its repository commits |
-| **M4. Versions and labels** (step 4) | Build records | Versions on new content hashes, `@v3`, `[models.x.aliases]`, `@champion`, the versions table on the page, staleness when inputs move |
+| **M4. Versions and labels** (step 4) — **built, except the last** | Snapshots | A version on each new content hash a snapshot holds, `@7f3a9c2e41b0`, `[models.x.aliases]`, `@champion`, the versions table on the page. Not built: staleness when inputs move |
 
 (models-built)=
 ## What is built
@@ -479,10 +496,11 @@ questions").
 1. **Version numbers and branches.** Two branches that each retrain will both create `v4` in
    their lockfiles, and the merge conflicts. Options: accept the conflict and renumber on merge;
    or name versions by a short content hash and keep sequential numbers out of it, leaving
-   labels as the only human names. Needs a decision before M4.
+   labels as the only human names. Needs a decision before M4. *(Decided 2026-10-13: by the
+   content hash, with labels.)*
 2. **Which builds make a version.** Every new content hash, or only builds on the default
    branch, or only when asked (`chartbook pin`)? Every-hash is simplest and fills the store
-   fastest.
+   fastest. *(Decided 2026-10-13: only when asked, and the asking is a snapshot.)*
 3. **Retention.** Versions are never collected. A model retrained nightly makes 365 a year.
    Probably a per-model `keep = N` that spares labelled versions, but nothing is designed.
 4. **Do other kinds get versions?** A dataframe could keep named versions the same way. Nothing

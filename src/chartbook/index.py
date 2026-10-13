@@ -493,8 +493,19 @@ def _asset_records(
         metrics = _model_metrics(base_dir, name, entry)
         if metrics is not None:
             record["metrics"] = metrics
+        versions = _model_versions(base_dir, name, entry)
+        if versions:
+            record["versions"] = versions
 
     return [_finish(record, entry, skip=skip), *series]
+
+
+def _model_versions(base_dir: Path, name: str, entry: dict) -> list[dict]:
+    """A model's versions, oldest first: what the snapshots on this machine kept."""
+    from chartbook.models import versions_in
+
+    aliases = entry.get("aliases") if isinstance(entry.get("aliases"), dict) else {}
+    return [version.to_dict() for version in versions_in(base_dir, name, aliases)]
 
 
 def _model_metrics(base_dir: Path, name: str, entry: dict) -> Optional[dict]:

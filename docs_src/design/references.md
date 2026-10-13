@@ -364,7 +364,11 @@ Rules for whoever extends this:
 
 ## Open questions
 
-- **How `@rev` is looked up.** Proposed above; settled with the store.
+- **How `@rev` is looked up.** Proposed above; settled with the store. *(2026-10-13: built
+  for one case, a version of one of this pipeline's own models. `model/x@7f3a9c2e41b0` is found
+  among the pipeline's snapshots by the start of the model's content hash, and
+  `model/x@champion` through a label in `[models.x.aliases]`. A revision of any other kind of
+  asset, or of another pipeline's, is still refused. {doc}`overview`, "4d, as built".)*
 - **Parts of charts, notebooks and notes.** A notebook cell? A chart's series? Nothing has asked
   for one yet.
 - **Whether `chartbook.toml` tables may themselves be keyed by a reference** (for example

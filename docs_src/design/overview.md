@@ -131,7 +131,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built. Local references resolve live; another pipeline's resolve pinned |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Steps 4a, 4b and 4c built: `[scripts]`, `chartbook run`, snapshots and the command rename. **Next to build**: step 4d, model versions and `@rev`. The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Steps 4a to 4d built: `[scripts]`, `chartbook run`, snapshots, the command rename, and versions of a model. **Next to build**: step 4e, parts. The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -157,7 +157,7 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Resolving another pipeline's assets | `resolve.py` (`_resolve_pinned`), `lock.py`, `store.py` | `pipeline:name`, for a declared dependency, resolves through `chartbook.lock` to the pinned copy in the store. Every kind, every front door, and `data.load("pipeline:name")` |
 | The index, `index.json` | `index.py`, `hashing.py`, `schemas/` | Written by every build, beside the HTML. One hash rule; hashes cached in the build directory |
 | Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
-| Models | `models.py`, `manifest.py` (`validate_models`), `markdown_generator.py` (`generate_model_docs`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. No versions yet |
+| Models | `models.py`, `manifest.py` (`validate_models`), `markdown_generator.py` (`generate_model_docs`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. Versions, made by a snapshot and named by the start of the content hash, with labels in `[models.x.aliases]` |
 | Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked |
 | The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link |
 | Snapshots | `snapshot.py`, `chartbook snapshot` | What one commit of a pipeline built, in the store. Made on purpose by its owner, with everything committed. The only thing of a pipeline that another reads |
@@ -170,8 +170,8 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: `--frozen`, model versions, `[sources]` and SQL access, any export, and anything
-that *reads* the index.
+Not built: `--frozen`, parts (`dataframe#series`), a version of another pipeline's model,
+`[sources]` and SQL access, any export, and anything that *reads* the index.
 
 ## What to build next, in order
 
@@ -870,8 +870,8 @@ rebuild `yield_curve` as often as it likes while another builds `rate_forecast`,
 | 4a | `[scripts]` and `chartbook run` | Built |
 | 4b | Snapshots: an owner declares a build ready, and pinning takes from that and never from the folder | Built |
 | 4c | The command rename: `build` makes everything current, `docs` renders the site. Breaking | Built |
-| 4d | `@rev` resolves. Model versions and labels | Next |
-| 4e | Parts: `dataframe#series` for `data.load()` | |
+| 4d | `@rev` resolves. Model versions and labels | Built, for a pipeline's own models |
+| 4e | Parts: `dataframe#series` for `data.load()` | Next |
 
 `--frozen`, for CI, has no part yet. *Proposed:* it follows snapshots, since what it has to
 check is that the lockfile is complete and that every pin can be had.
@@ -1201,16 +1201,16 @@ Ran build in 1 pipeline(s).
 | What a snapshot was built with, and from | `chartbook/snapshot.py`, `_built_with()`, `_inputs()` |
 | The tests | `tests/test_run.py` (`TestRunThenSnapshot`), `tests/test_snapshot.py` (`TestBuiltWith`) |
 
-**Decided by the maintainer:** they stay two commands.
+**Decided by the maintainer:** they stay two commands. And, asked afterwards with what was
+built in front of him: **one spelling is enough** (number 1 below), and **named environment
+variables wait** until a real pipeline needs them.
 
-**Proposed: implemented, and waiting on the maintainer's yes.** Two of these were put to him
-as questions and built on the recommended answer before he replied; they are marked.
+**Proposed: implemented, and waiting on the maintainer's yes.**
 
-1. **One spelling for both together: `chartbook run --snapshot`.** *(Asked. He floated two
-   equivalent spellings, that and `chartbook snapshot --run`. One was built: it reads in the
-   order it happens, `run` already has `--force` so `run --force --snapshot` is the weekly
-   refresh in one line, and two spellings are two things to document. The other is cheap to
-   add.)*
+1. **One spelling for both together: `chartbook run --snapshot`.** *(Decided, 2026-10-13. He
+   had floated two equivalent spellings, that and `chartbook snapshot --run`. One: it reads
+   in the order it happens, `run` already has `--force` so `run --force --snapshot` is the
+   weekly refresh in one line, and two spellings are two things to document.)*
 2. **It checks that everything is committed before it builds**, so nobody is refused after an
    hour, and **again after**: a build that changes a committed file gets no snapshot.
 3. **The snapshot records that the build ran in the same command**, `built_with.run`. One
@@ -1232,9 +1232,10 @@ as questions and built on the recommended answer before he replied; they are mar
    and a store is something to share. A setting that changes results belongs in a committed
    file, where the commit covers it.
 
-**Not built, and waiting on his answer.** *(Asked.)* Recording the values of environment
-variables that a pipeline **names** in its manifest as affecting its results, for example
-`[snapshot] env = ["START_DATE"]`. Only named ones, so no secret gets in by accident.
+**Not built, by his decision: later.** Recording the values of environment variables that a
+pipeline **names** in its manifest as affecting its results, for example
+`[snapshot] env = ["START_DATE"]`. Only named ones, so no secret gets in by accident. A
+setting that changes results belongs in a committed file until a real pipeline needs more.
 
 **Where the design said less than it seemed to.**
 
@@ -1243,6 +1244,101 @@ variables that a pipeline **names** in its manifest as affecting its results, fo
 2. *"Make the hashes transitive … hash each input's hash, not its path or name."*
    ({doc}`asset-graph`.) `inputs` records each input's hash. No hash is yet taken *over* the
    inputs, so the chain is recorded and not yet checkable in one step.
+
+#### 4d, as built
+
+*Added 2026-10-13.* A model has versions, and a name can point at one. It is listed after
+4c in the table above and was built after it; it is placed here, beside the snapshots it is
+made of.
+
+```console
+$ chartbook run --snapshot
+ftsfr/rate_forecast: build
+ftsfr/rate_forecast at 4f2a91c: 1 asset(s) in the store
+  model/rate_forecaster: new version 7f3a9c2e41b0
+```
+
+```toml
+[models.rate_forecaster.aliases]
+champion = "7f3a9c2e41b0"
+```
+
+| What | Where |
+|---|---|
+| Every snapshot of a pipeline, on any branch; the versions of one asset; a version's name | `chartbook/snapshot.py`, `history()`, `versions_of()`, `version_name()` |
+| A model's scores kept in its snapshot record | `chartbook/snapshot.py`, `make()` |
+| `[models.x.aliases]` | `chartbook/manifest.py`, `validate_aliases()` |
+| `model/x@7f3a9c2e41b0` and `model/x@champion` resolve | `chartbook/resolve.py`, `_resolve_version()` |
+| `chartbook.models.versions()`, `Version` | `chartbook/models.py` |
+| Versions and labels on the `Model` record, and on the model's page | `chartbook/index.py`, `chartbook/markdown_generator.py`, `schemas/chartbook/v1/Model.json` |
+| A label whose version is not here | `chartbook/check.py`, `check_model_labels()` |
+| The tests | `tests/test_model_versions.py` |
+
+**Decided by the maintainer, 2026-10-13, before it was built:**
+
+1. **A version is made by a snapshot**, the first that holds new bytes for the model.
+   {doc}`models` proposed every build that changes the model. Tuning a model all afternoon
+   makes no versions, and every version has a commit that describes it.
+2. **A version is named by the start of its content hash**, with labels as the names people
+   use. {doc}`models` proposed `v1`, `v2`, `v3`, and listed their trouble as an open question:
+   two branches that each retrain both make a `v4`.
+
+**Not done in 4d, on purpose.** A version of another pipeline's model
+(`other:model/x@champion`) is refused: the lockfile pins one snapshot of a dependency, and a
+second version of one of its models beside it has no place there yet. Only models have
+version names; a dataframe has snapshots and no names for them. Nothing says a model is out
+of date when what it was trained on has moved.
+
+**Proposed: implemented in 4d, and waiting on the maintainer's yes.**
+
+1. **A name is twelve digits of the hash**, and more only when two versions of the same model
+   would share them. A longer start, the whole hash, and `sha256:` in front all name the same
+   version; so does a shorter start of four or more, when typed, if it names only one. *(The
+   length was decided by the maintainer, 2026-10-13: twelve, not git's seven, as Docker and
+   the Linux kernel use. The whole hash is what is stored. A start that matches two versions
+   is refused.)*
+2. **A version is looked for in every snapshot of the pipeline, on any branch** of its
+   repository. One made on a branch that was never merged is still a version.
+3. **A label is looked up before a hash**, and a label may not look like the start of one (four or
+   more hex digits), so the two cannot be confused.
+4. **A label points at the start of a hash, at least twelve digits.** `chartbook check` warns
+   when the version is not on this machine, and does not fail: it may be on another. A label
+   that matches two versions is a problem.
+5. **A version keeps the model's scores**, read from its metrics file when the snapshot is
+   made, so two versions can be compared after the file has been written over. It also has
+   the snapshot's commit and `inputs`.
+6. **`@` resolves for a pipeline's own models and nothing else.** The plain name stays the
+   file in the folder: local references are live, and a version is the one way to ask for
+   something that is not.
+7. **A snapshot says when it makes a version**: `model/x: new version 7f3a9c2e41b0`.
+8. **The index lists a model's versions**, oldest first, and its labels. The page lists them
+   newest first. Both are the versions in the store of the machine that built them.
+9. **`chartbook.models.versions()`** is the one new function. There is no command that lists
+   versions; the page, the index and the snapshot's own line are where they are seen.
+
+**Known gaps in 4d.**
+
+1. **A version is on one machine.** It is in the store that holds its snapshot. A label is in
+   the manifest, which is committed, so a label can name a version a colleague does not
+   have. A store to share closes it.
+2. **The index and the page depend on the machine that built them.** Two machines build
+   different `versions` lists from the same commit.
+3. **No version of another pipeline's model, no version names for other kinds, no staleness.**
+   As above.
+4. **Nothing clears old versions.** They are in snapshots, and nothing clears those.
+
+**Where the design was wrong, or said less than it seemed to.**
+
+1. *"Recorded in the pipeline's committed `chartbook.lock` so the numbers are the same on
+   every machine."* ({doc}`models`.) A lockfile is what a pipeline *depends on*; its own
+   models' versions do not belong in it, and nothing was ever written there. With names
+   worked out from the bytes, nothing needs recording for them to agree.
+2. *"A team that wants to share model versions points at a shared store."* ({doc}`models`.)
+   Still the answer, and still not built. Until it is, "serving code asks for
+   `model/x@champion` and gets a path" works on the machine that made the snapshot.
+3. *"`@rev` resolves"* in this step's list read as one thing. It is at least three: a version
+   of this pipeline's model (built), a version of another pipeline's (not built), and a
+   revision of a dataframe or a chart (nothing has asked for one).
 
 #### 4c, as built
 
@@ -1391,6 +1487,9 @@ maintainer.
 | 2026-10-13 | Taking whatever is in a folder stays possible only as an option that is off by default and out of the way | Step 4 above, "The snapshot model" |
 | 2026-10-13 | The purpose: people and agents work on different pipelines in parallel. The store is the read-only middle they all depend on, updated slowly and on purpose | Step 4 above, "The snapshot model" |
 | 2026-10-13 | Step 4 is built in parts, one pull request each, stacked | Step 4 above |
+| 2026-10-13 | A version of a model is made by a snapshot: the first that holds new bytes for it. Not by every build | Step 4 above, "4d, as built"; {doc}`models` |
+| 2026-10-13 | A version is named by the start of its content hash: twelve digits, with the whole hash stored. The names people use are labels in the manifest, `[models.x.aliases]` | Step 4 above, "4d, as built"; {doc}`models` |
+| 2026-10-13 | Building and making a snapshot together has one spelling, `chartbook run --snapshot`. Recording named environment variables in a snapshot waits until a pipeline needs it | Step 4 above, "4b, continued" |
 | 2026-10-13 | The command rename is made now and is breaking: `chartbook docs` renders the site, `chartbook build` runs the build script and then renders. No compatibility beyond a warning | Step 4 above, "4c, as built" |
 | 2026-10-13 | No backwards compatibility in this work: the right design, even if it breaks, with a warning at most. The order of the remaining work is the builder's to choose | Step 4 above, "4c, as built" |
 
@@ -1398,8 +1497,9 @@ maintainer.
 
 Each is explained where it lives.
 
-- How `@rev` is looked up; how model versions are numbered across branches; which builds make a
-  version; retention. ({doc}`references`, {doc}`models`)
+- For model versions: one of another pipeline's model, versions that travel between machines,
+  retention, and saying when a model is out of date. How they are named and what makes one is
+  decided. ({doc}`models`; step 4 above, "4d, as built")
 - Whether dataframes and charts should still be *required* to have a write-up, or only strongly
   recommended, as models are. ({doc}`models`, "Decided while building it")
 - Whether a pipeline's own `[policy]` table is wanted. It is honoured today, as a *proposed*

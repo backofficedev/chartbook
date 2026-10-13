@@ -460,6 +460,11 @@ asks for the input is handed; it is not proof of what one training run read. Tha
 `Build` record's job. *(Decided by the maintainer 2026-10-12: a field beside `inputs`, which
 stays a list of IDs with no version in them.)*
 
+*(2026-10-13, proposed: a `Model` record also has `aliases`, the model's labels as declared,
+and `versions`, oldest first: each with `version` (its name), `content_hash`, `made_at`,
+`commit`, and where there are any `labels`, `metrics` and `inputs`. They are the versions in
+the store of the machine that built the index.)*
+
 `Model` records are written (step 2), without `built_by`. An entry of a model's `inputs` that
 is in another pipeline is written by the ID that pipeline has in this build when it is part of
 it (a catalog knows `rates` as `ftsfr/rates`); otherwise by the name `[dependencies]` declares

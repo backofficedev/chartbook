@@ -208,11 +208,15 @@ class SnapshotReport:
         made: Whether a new one was written.
         not_built: The assets the pipeline declares and has not built, each
             with its declared path.
+        new_versions: The models whose bytes no earlier snapshot of this
+            pipeline had, each with the name of the version this makes
+            (:func:`version_name`). A snapshot is what makes a version.
     """
 
     snapshot: Snapshot
     made: bool
     not_built: list[tuple[str, str]] = field(default_factory=list)
+    new_versions: list[tuple[str, str]] = field(default_factory=list)
 
 
 def asset_record(
@@ -426,6 +430,75 @@ def newest_for(
     return None, code
 
 
+def history(directory: Union[str, Path], store: Optional[Store] = None) -> list[Snapshot]:
+    """Every snapshot of the pipeline in a folder, oldest first.
+
+    At any commit of its repository, on any branch: a snapshot made on a
+    branch that was never merged is still something that was built.
+
+    :raises SnapshotError: If the folder is not in a git repository.
+    """
+    store = store if store is not None else default_store()
+    code = code_of(directory)
+    kept = store.root / SNAPSHOTS_DIR
+    try:
+        commits = {name for name in os.listdir(kept) if _FULL_COMMIT.match(name)}
+    except FileNotFoundError:
+        return []
+    if not commits:
+        return []
+    # A store holds snapshots of many repositories; these are this one's
+    ours = commits & set(_git(code.top, "rev-list", "--all", "HEAD").split())
+    found = [taken for commit in ours for taken in find(store, commit, code.subdirectory)]
+    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
+
+
+def versions_of(
+    directory: Union[str, Path], name: str, store: Optional[Store] = None
+) -> list[tuple[str, Snapshot]]:
+    """The versions of one asset: each content it has had in a snapshot.
+
+    A version is made by the first snapshot that holds those bytes. Making
+    a snapshot again with the same bytes makes no new version.
+
+    :param directory: The pipeline's folder.
+    :param name: The asset's reference within the pipeline, ``model/x``.
+    :returns: Each content hash with the first snapshot that held it,
+        oldest first.
+    """
+    seen: dict[str, Snapshot] = {}
+    for taken in history(directory, store):
+        content_hash = (taken.assets.get(name) or {}).get("content_hash")
+        if content_hash and content_hash not in seen:
+            seen[content_hash] = taken
+    return list(seen.items())
+
+
+#: How many digits of a content hash name a version, unless more are needed.
+#: Twelve, as Docker shows an image and the Linux kernel asks for a commit:
+#: a label in a committed file should go on naming one version for years.
+#: Among 10,000 versions of one model, two share twelve digits about once in
+#: five million; with git's seven it would be nearer one in six.
+VERSION_DIGITS = 12
+
+
+def version_name(content_hash: str, among: Optional[list[str]] = None) -> str:
+    """The name of a version: the start of its content hash, as git names a commit.
+
+    ``sha256:7f3a9c2e41b0…`` is ``7f3a9c2e41b0``. It is the same on every machine and
+    every branch, since it is worked out from the bytes and nothing else.
+
+    :param among: The other versions of the same asset. If two would share
+        a name, both get as many more digits as tells them apart.
+    """
+    digits = content_hash.split(":", 1)[-1]
+    others = [h.split(":", 1)[-1] for h in (among or []) if h != content_hash]
+    length = VERSION_DIGITS
+    while length < len(digits) and any(o.startswith(digits[:length]) for o in others):
+        length += 1
+    return digits[:length]
+
+
 def all_hashes(store: Store) -> set[str]:
     """Every object any snapshot in a store names: what must not be cleared.
 
@@ -531,6 +604,22 @@ def _inputs(directory: Path) -> list:
     return []
 
 
+def _scores(directory: Path, entry) -> Optional[dict]:
+    """A model's scores as its metrics file has them now, if it has a readable one."""
+    from chartbook.models import read_metrics
+
+    declared = entry.get("metrics_path") if isinstance(entry, dict) else None
+    if not isinstance(declared, str) or not declared.strip():
+        return None
+    metrics_file = directory / declared
+    if not metrics_file.is_file():
+        return None
+    try:
+        return read_metrics(metrics_file)
+    except ValueError:
+        return None  # `chartbook check` is what reports a malformed one
+
+
 def pipeline_in(directory: Union[str, Path]) -> str:
     """The ID of the pipeline in a folder, which must hold one.
 
@@ -581,6 +670,7 @@ def make(
     code = require_committed(directory, pipeline)
 
     store = store if store is not None else default_store()
+    raw = _read_manifest_file(directory)
     assets: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []
     for local, declared_path, absolute in declared_files(directory):
@@ -591,7 +681,14 @@ def make(
             not_built.append((str(ref), declared_path))
             continue
         stored = store.put(absolute, links=LINKS)
-        assets[str(local)] = asset_record(ref, pipeline, declared_path, stored, found.single)
+        record = asset_record(ref, pipeline, declared_path, stored, found.single)
+        if local.kind == "model":
+            scores = _scores(directory, (raw.get("models") or {}).get(local.name))
+            if scores is not None:
+                # Kept with the version, so two versions can be compared
+                # after the metrics file has been written over
+                record["metrics"] = scores
+        assets[str(local)] = record
 
     if not assets:
         raise SnapshotError(
@@ -617,6 +714,17 @@ def make(
     if before and before[0].content() == snapshot.content():
         if before[0].built_by_run or not built_by_run:
             return SnapshotReport(before[0], False, not_built)
+
+    # A model whose bytes no snapshot of this pipeline has had is a new version
+    new_versions = []
+    for name in sorted(assets):
+        content_hash = assets[name].get("content_hash")
+        if not name.startswith("model/") or not content_hash:
+            continue
+        had = [h for h, _ in versions_of(directory, name, store)]
+        if content_hash not in had:
+            new_versions.append((name, version_name(content_hash, had)))
+
     path = _write(snapshot, store)
     snapshot = Snapshot(
         snapshot.pipeline,
@@ -628,4 +736,4 @@ def make(
         snapshot.built_with,
         snapshot.inputs,
     )
-    return SnapshotReport(snapshot, True, not_built)
+    return SnapshotReport(snapshot, True, not_built, new_versions)

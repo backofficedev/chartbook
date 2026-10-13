@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — versions of a model, and labels: `model/x@7f3a9c2e41b0`, `model/x@champion`
+
+A model now has versions, and a name can point at one.
+
+```console
+$ chartbook run --snapshot
+ftsfr/rate_forecast: build
+ftsfr/rate_forecast at 4f2a91c: 1 asset(s) in the store
+  model/rate_forecaster: new version 7f3a9c2e41b0
+```
+
+```toml
+[models.rate_forecaster.aliases]
+champion = "7f3a9c2e41b0"
+```
+
+```python
+models.path("rate_forecaster")             # what is in your folder now
+models.path("rate_forecaster@7f3a9c2e41b0")     # that version, in the store
+models.path("rate_forecaster@champion")    # the version the label points at
+models.versions("rate_forecaster")         # all of them, with scores and commits
+```
+
+**A version is made by a snapshot**, the first one that holds new bytes for the model. The design had every build that changed a model make a version. The maintainer decided otherwise (2026-10-13), in line with snapshots: a version is something declared ready, with everything committed, so tuning a model all afternoon makes none and every version has a commit that describes it. A snapshot already records what a version needs: the commit (which code), what the pipeline was pinned to (which data), and now the model's scores as its metrics file had them at that moment, so two versions can be compared after the file has been written over.
+
+**A version is named by the start of its content hash**, as git names a commit. The design proposed `v1`, `v2`, `v3`, and listed the problem with it as an open question: two branches that each retrain both make a `v4`, and the merge conflicts. A name worked out from the bytes is the same on every machine and every branch and never needs renumbering. The names people use are labels, in the manifest, so promoting a model is a one-line change reviewed in a pull request.
+
+The model's page lists its versions, newest first, with their scores, and `index.json` has them under `versions` on the `Model` record. `chartbook check` warns about a label whose version is not on this machine, and does not fail: the version may be in the store of the machine that made it.
+
+`@` in a reference used to be refused everywhere as reserved. It now resolves for one thing, a version of one of this pipeline's own models. Not built: a version of another pipeline's model (`other:model/x@champion`), versions of anything but a model, and versions that travel between machines, which need a store to share.
+
 ### Changed — **breaking: `chartbook build` is now `chartbook docs`, and `chartbook build` builds everything**
 
 | Command | Builds the data | Renders the site |

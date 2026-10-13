@@ -384,7 +384,58 @@ The model's record in `index.json` then says which bytes that was, under `pinned
 
 A model in another pipeline is read the same way as its data: `models.path("forecasting:rate_forecaster")` is the pinned copy of a declared dependency's model.
 
-Not yet: versions of a model (`model/rate_forecaster@v3`), labels such as `@champion`, and one file inside a directory model (`model/x#weights.pt`).
+(model-versions)=
+### Versions and labels
+
+**A version of a model is made by a snapshot.** Retrain twenty times in an afternoon and there are no new versions. Run `chartbook run --snapshot`, and if the model's bytes are new, that is a version:
+
+```console
+$ chartbook run --snapshot
+ftsfr/rate_forecast: build
+ftsfr/rate_forecast at 4f2a91c: 1 asset(s) in the store
+  model/rate_forecaster: new version 7f3a9c2e41b0
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+```
+
+**A version is named by the start of its content hash**, as git names a commit. The name is worked out from the model's bytes and nothing else, so it is the same on every machine and every branch, and two branches that each retrain never fight over a number.
+
+The whole hash is what is stored and compared. The name is its first 12 digits, which is what Docker shows and what the Linux kernel asks for. Among 10,000 versions of one model, two share 12 digits about once in five million; if two ever do, both are shown with more digits, and a start that matches two versions is refused, never guessed at. You can type any start of four or more digits that names one version.
+
+**A label is a name people use**, and it points at a version:
+
+```toml
+[models.rate_forecaster.aliases]
+champion = "7f3a9c2e41b0"
+challenger = "b2c91d0a77f3"
+```
+
+Promoting a model is changing one line, in a pull request like any other. There is no "promote" button and no service behind one.
+
+| You write | You get |
+|---|---|
+| `models.path("rate_forecaster")` | The file in your folder: what you are working on |
+| `models.path("rate_forecaster@7f3a9c2e41b0")` | That version, in the store. It never changes |
+| `models.path("rate_forecaster@champion")` | The version the label points at |
+| `models.versions("rate_forecaster")` | Every version, oldest first, each with its commit, its scores and what it was trained on |
+
+The same names work on a command line: `chartbook path model/rate_forecaster@champion`.
+
+Each version keeps, from the snapshot that made it: the commit (which code), what the pipeline was pinned to (which data), and the scores as the metrics file had them then. The model's page lists them in a table, newest first, and `index.json` has them under `versions`.
+
+| Rule for `aliases` | Example |
+|---|---|
+| A label is letters, digits, `.`, `_` and `-` | `champion`, `last-quarter` |
+| A label may not look like the start of a hash | `beef = "…"` does not load |
+| It points at the start of a content hash, at least 12 digits, or all of it | `champion = "7f3a9c2e41b0"` |
+
+`chartbook check` warns about a label whose version is not on this machine. It may still be right: the version may be in the store of the machine that made it.
+
+Not yet:
+
+- **A version of another pipeline's model** (`forecasting:rate_forecaster@champion`). `forecasting:rate_forecaster` is the version your `chartbook.lock` pins.
+- **Versions that travel.** A version is in the store of the machine that made its snapshot. A colleague does not have it until there is a store to share.
+- **Versions of anything but a model.** A dataframe has snapshots, and no version names.
+- One file inside a directory model (`model/x#weights.pt`).
 
 (dependencies)=
 ## `[dependencies]` — Other Pipelines This One Reads From
