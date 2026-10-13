@@ -131,7 +131,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built. Local references resolve live; another pipeline's resolve pinned |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Step 4a built: `[scripts]` and `chartbook run`. **Next to build**: step 4b, snapshots. The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Steps 4a and 4b built: `[scripts]`, `chartbook run` and snapshots. **Next to build**: step 4c, the command rename. The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -142,7 +142,7 @@ and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
 ## What is built
 
 As of 0.2.0, plus the index, declared models, declared dependencies, the store, pinning,
-named scripts and `chartbook run`, which came after it.
+named scripts, `chartbook run` and snapshots, which came after it.
 
 | Capability | Where | Notes |
 |---|---|---|
@@ -160,7 +160,8 @@ named scripts and `chartbook run`, which came after it.
 | Models | `models.py`, `manifest.py` (`validate_models`), `markdown_generator.py` (`generate_model_docs`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. No versions yet |
 | Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked |
 | The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link |
-| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: a content hash for every asset of every dependency. `pin` never moves a pin; `update` does |
+| Snapshots | `snapshot.py`, `chartbook snapshot` | What one commit of a pipeline built, in the store. Made on purpose by its owner, with everything committed. The only thing of a pipeline that another reads |
+| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: the commit, and a content hash for every asset, of every dependency. A folder is pinned from a snapshot, a repository from a clean copy. `pin` never moves a pin; `update` does |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
@@ -169,8 +170,8 @@ named scripts and `chartbook run`, which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: snapshots, `--frozen`, the command rename, model versions, `[sources]` and SQL
-access, any export, and anything that *reads* the index.
+Not built: `--frozen`, the command rename, model versions, `[sources]` and SQL access, any
+export, and anything that *reads* the index.
 
 ## What to build next, in order
 
@@ -849,10 +850,10 @@ later.
 commit, the code never changes, and `chartbook update` brings only newer data built from that
 code. Pinned to a branch, `update` brings newer code as well.
 
-**How much of it is built.** Rules 5, 6 and the lockfile are (4a, below, and step 3). Rules 2,
-3, 4 and 7 are not: there is no snapshot yet, and `chartbook pin` and `chartbook update` still
-copy what is in a `path` dependency's folder at the moment they run, which breaks rule 1.
-That is the next part.
+**How much of it is built.** All seven rules: 5 and 6 in 4a, and 1, 2, 3, 4 and 7 in 4b,
+both below. What is left is listed there as known gaps: old snapshots are never cleared, a
+snapshot is not shared between machines, and making one takes its owner's word that what is
+on disk was built by the commit.
 
 **What it replaces in this step.** "`chartbook run` builds pipelines in dependency order and
 skips what is current" is not the goal any more: a pipeline's dependencies are not built from
@@ -867,8 +868,8 @@ rebuild `yield_curve` as often as it likes while another builds `rate_forecast`,
 | Part | What | State |
 |---|---|---|
 | 4a | `[scripts]` and `chartbook run` | Built |
-| 4b | Snapshots: an owner declares a build ready, and pinning takes from that and never from the folder | Next |
-| 4c | The command rename: `build` makes everything current, `docs` renders the site. Breaking | |
+| 4b | Snapshots: an owner declares a build ready, and pinning takes from that and never from the folder | Built |
+| 4c | The command rename: `build` makes everything current, `docs` renders the site. Breaking | Next |
 | 4d | `@rev` resolves. Model versions and labels | |
 | 4e | Parts: `dataframe#series` for `data.load()` | |
 
@@ -1051,6 +1052,131 @@ copies a pinned file with `cp` gets a read-only copy, and cannot write over it o
 run. Nothing is wrong, and it will surprise someone. Reading the pinned file in place avoids
 it.
 
+#### 4b, as built
+
+*Added 2026-10-13.* A pipeline's owner declares a build ready, and that is what others pin.
+
+```console
+$ chartbook snapshot                      # in fed_yield_curve, with everything committed
+ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+
+$ chartbook pin                           # in rate_forecast
+ftsfr/fed_yield_curve: 3 pinned
+  From its snapshot at 4f2a91c, made 2026-10-13 18:22 UTC.
+Wrote chartbook.lock.
+```
+
+| What | Where |
+|---|---|
+| Making a snapshot, and refusing with anything uncommitted | `chartbook/snapshot.py`, `make()`, `uncommitted()` |
+| Where a folder is in git | `chartbook/snapshot.py`, `code_of()` |
+| The newest snapshot at or before the commit a folder is on | `chartbook/snapshot.py`, `newest_for()` |
+| One shape for an asset's record, in a snapshot and in a lockfile | `chartbook/snapshot.py`, `asset_record()` |
+| Pinning a `path` dependency from a snapshot | `chartbook/lock.py`, `_sync_from_snapshots()` |
+| Pinning from the folder, when asked | `chartbook/lock.py`, `pin(from_folder=True)` |
+| A snapshot is never cleared | `chartbook/lock.py`, `plan_gc()` |
+| The commands | `chartbook/cli.py`: `snapshot`, and `--from-folder` on `pin` and `update` |
+| The record's schema | `schemas/chartbook/snapshot/v1.json` |
+| The snapshot's commit and time, on a dependency in the index | `chartbook/index.py`, `schemas/chartbook/v1/Pipeline.json` |
+| The tests | `tests/test_snapshot.py`; the examples, in `tests/test_integration.py` |
+
+**Decided by the maintainer, 2026-10-13, before it was built:** the model above. In his
+answers: yes to the picture as a whole; yes, everything must be committed before a snapshot;
+and taking what is in a folder is "only a buried option that is not on by default".
+
+**Not done in 4b, on purpose.** `chartbook snapshot` does not run the build. Old snapshots
+are not cleared. Snapshots are not shared between machines. A `git` dependency is pinned as
+before, from ChartBook's clean copy of the commit, and does not look for a snapshot.
+`chartbook check` still reads a dependency's manifest from its folder.
+
+**Proposed: implemented in 4b, and waiting on the maintainer's yes.**
+
+1. **The command is `chartbook snapshot`**, run in the pipeline, with no argument.
+2. **"Everything committed" means the pipeline's own folder.** A changed, staged, deleted or
+   new un-ignored file there is refused, and listed. What git ignores does not count, which is
+   how built data stays out of it. Other work in the same repository does not count either,
+   so one agent's half-finished change does not hold up another pipeline's snapshot. The cost:
+   a pipeline that imports code from elsewhere in its repository can be given a label that
+   uncommitted work elsewhere makes untrue.
+3. **A snapshot is found by commit and by the pipeline's folder in its repository**, not by
+   the pipeline's name: `snapshots/<commit>/<folder>/<time>.json`. A commit is the same in
+   every clone, so nothing needs to agree on a name.
+4. **A `path` dependency follows the branch its folder is on.** `pin` and `update` take the
+   newest snapshot at the commit the folder is on or, if that commit has none, at the nearest
+   commit before it that has one. Its owner can be several commits past the last build they
+   declared ready. A snapshot made on another branch is not found.
+5. **One commit can have several snapshots**, told apart by the time they were made, to the
+   microsecond. The newest is the one a pin moves to. Making one when nothing has changed
+   since the last at that commit makes none.
+6. **A dependency is pinned to one snapshot, whole.** `pin` does not take one asset from a
+   newer snapshot and leave the rest. This replaces, for a `path` dependency, 3c's "pins what
+   has no pin yet: an asset the other pipeline has started to declare".
+7. **`pin` says what a newer snapshot would change, and stays.** It no longer hashes anything
+   to find out: it compares two records.
+8. **`update` drops what the newer snapshot no longer declares, and lets go of what it did
+   not build.** The second is the rule of 4a's number 19, for the same reason.
+9. **An asset that is declared and not built is in the snapshot without a hash**, and the
+   rest is in it all the same, as `pin` already did. A pipeline that has built nothing has
+   no snapshot to make.
+10. **The lockfile names the snapshot**: its commit in `location.commit`, where a `git`
+    dependency's commit already is, and its time in `snapshot`. So the lockfile says which
+    code as well as which data, for both kinds of dependency. The index carries both.
+11. **With no snapshot, nothing is pinned**, and the message says what the owner has to do.
+    `chartbook run` stops there, before the build.
+12. **The record is JSON in the index's format**, like the lockfile, with its own schema.
+13. **A snapshot's files are stored as a pin's are**: a copy-on-write clone or a copy, never a
+    link to the pipeline's own file.
+14. **`chartbook store gc` never removes what a snapshot names**, whether or not anything
+    pins it yet. A record that cannot be read stops the clearing.
+15. **The buried option is `--from-folder`**, on `pin` and `update`, hidden from `--help`.
+    It does what both did before 4b. The lockfile then names no commit, and a plain `update`
+    afterwards moves back to a snapshot.
+16. **Looking at a repository takes no lock** (`GIT_OPTIONAL_LOCKS=0`), so finding a
+    snapshot never gets in the way of whoever is working in that folder.
+17. **`builds/` in the store stays a name that is kept free.** Records go in `snapshots/`.
+
+**Known gaps in 4b.**
+
+1. **A snapshot takes its owner's word.** It records what is on disk as what the commit
+   built. If the owner changed code, committed, and did not rebuild, the label is wrong and
+   nothing notices. Running the build as part of making one would close it.
+2. **Nothing clears old snapshots.** Each is its own copy of the files where the disk has no
+   copy-on-write clones, and the store grows with each one.
+3. **A snapshot is on one machine.** A colleague, or CI, has none of them. For a `path`
+   dependency they make their own in that folder. A shared store is the answer, later.
+4. **A lockfile from one machine cannot be put back on another** for a `path` dependency
+   unless the same bytes are built there. `pin` reports a pin whose bytes are not in the
+   store as lost.
+5. **`chartbook check` reads a dependency's manifest from its folder**, as it stands, to see
+   that it declares what a model was trained on. It should read it at the pinned commit.
+6. **A `git` dependency does not use a snapshot.** If its owner made one at that commit on
+   this machine, `chartbook run` still builds the commit again in a clean copy.
+7. **The examples need a clean folder.** `cd examples && doit` makes a snapshot of
+   `yield_curve`, so it fails, and says why, if that example has been edited and not
+   committed.
+
+**Where the design was wrong, or said less than it seemed to.**
+
+1. *"Keep the boring files. `path` stays the real location where a parquet file lives, and
+   the store is a cache that links into it."* ({doc}`asset-graph`, "The store".) For the
+   pipeline's own folder, still true. For what others read, the store is not a cache: it is
+   the only place they read from.
+2. *"A cache and a pin are not the same thing … a pinned object is reachable and must never be
+   collected, while an unreferenced build result may be."* ({doc}`asset-graph`.) A snapshot is
+   a third thing: nothing pins it yet, and it must not be collected, because it was declared
+   ready on purpose.
+3. *The store's two indexes: "the build record maps input hash → output hash".*
+   ({doc}`asset-graph`.) What was built maps a commit to output hashes. The commit is the
+   input that people can name and check out; an input hash over code, parameters and tools
+   is not built, and the model does not need one.
+4. *"`pin` puts back what the store has lost, when the other pipeline still has the same
+   bytes"* (3c, proposed 5). For a `path` dependency it no longer can, because it does not
+   read the folder. A snapshot is what puts bytes in the store.
+5. *"`pin` hashes what is already pinned, to say what has changed upstream"* (3c, proposed
+   6), with its note that a remembered hash would make that cheap. For a `path` dependency
+   there is nothing to hash any more.
+
 ### Step 5. Data in databases
 
 **Goal:** a dataframe can be a table, and `data.load()` does not change.
@@ -1151,9 +1277,10 @@ Each is explained where it lives.
   listed as *proposed* under its "as built" heading. (Step 3 above)
 - The nineteen things settled while building `chartbook run`, and the *proposed* "Done when"
   that replaces step 4's. (Step 4 above, "4a, as built" and "The snapshot model")
-- For snapshots: the command's name, what a `path` dependency follows (the newest snapshot
-  at or before the commit its folder is on is *proposed*), whether old snapshots are ever
-  cleared, and what the buried option is called. (Step 4 above; questions for 4b)
+- The seventeen things settled while building snapshots, and its seven known gaps. Of the
+  gaps, the ones that most need an answer: whether making a snapshot should run the build
+  first, and how old snapshots are cleared. (Step 4 above, "4b, as built")
+- `--frozen`, for CI: what it checks, and when it is built. (Step 4 above)
 - A shared store, as a second way for a `git` dependency's built data to get here. The first
   is built: `chartbook run` builds it. (Step 4 above, "4a, as built")
 - How a chart says it was made from another pipeline's data. (Step 3 above)

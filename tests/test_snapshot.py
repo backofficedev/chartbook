@@ -1,0 +1,755 @@
+"""Tests for snapshots: ``chartbook.snapshot``, ``chartbook snapshot``, and
+pinning from one.
+
+This is the second part of step 4 of ``docs_src/design/overview.md``, and
+the model under "The snapshot model" there. A pipeline's owner declares a
+build ready, at a commit, and that is what other pipelines pin. Nothing
+reads a folder it depends on.
+
+Two names run through these tests, as through the design: ``maker`` makes
+data, and ``user`` uses it. They are in one repository unless a test says
+otherwise.
+"""
+
+import json
+import os
+import subprocess
+from pathlib import Path
+
+import jsonschema
+import pytest
+import tomli_w
+from click.testing import CliRunner
+
+from chartbook import data, index, lock, snapshot
+from chartbook.cli import main
+from chartbook.manifest import load_manifest
+from chartbook.snapshot import SnapshotError
+from chartbook.store import default_store
+
+
+def _git(directory: Path, *arguments: str) -> str:
+    result = subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.org", *arguments],
+        cwd=directory,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def _commit(repository: Path, message: str = "Work") -> str:
+    """Commit everything in a repository, making it one first if need be."""
+    if not (repository / ".git").exists():
+        (repository / ".gitignore").write_text("chartbook.lock\n_data/\n_output/\n")
+        _git(repository, "init", "--quiet", "-b", "main")
+    _git(repository, "add", "-A")
+    _git(repository, "commit", "--quiet", "--allow-empty", "-m", message)
+    return _git(repository, "rev-parse", "HEAD")
+
+
+def _manifest(directory: Path, table: dict) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "chartbook.toml").write_text(tomli_w.dumps(table))
+    return directory
+
+
+def _build(maker: Path, rates: bytes = b"rates-1", curve: bytes = b"curve-1") -> None:
+    """Write the maker's built data, which git ignores, as a build would."""
+    (maker / "_data").mkdir(exist_ok=True)
+    (maker / "_data" / "rates.parquet").write_bytes(rates)
+    (maker / "_output").mkdir(exist_ok=True)
+    (maker / "_output" / "curve.html").write_bytes(curve)
+
+
+@pytest.fixture
+def work(tmp_path):
+    return tmp_path.resolve()
+
+
+@pytest.fixture
+def maker(work):
+    """A pipeline that declares a dataframe and a chart, built and committed."""
+    directory = _manifest(
+        work / "maker",
+        {
+            "project": {"id": "acme/maker"},
+            "dataframes": {"rates": {"path": "./_data/rates.parquet", "docs": "d"}},
+            "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}},
+        },
+    )
+    _build(directory)
+    _commit(work)
+    return directory
+
+
+@pytest.fixture
+def user(work, maker):
+    """A pipeline that depends on ``maker``, in the same repository."""
+    directory = _manifest(
+        work / "user",
+        {"project": {"id": "acme/user"}, "dependencies": {"acme/maker": {"path": "../maker"}}},
+    )
+    _commit(work)
+    return directory
+
+
+def _statuses(report) -> dict:
+    return {e.asset.split(":")[1]: e.status for e in report.events if e.asset}
+
+
+class TestMaking:
+    def test_a_snapshot_is_what_a_commit_built(self, maker, work):
+        commit = _git(work, "rev-parse", "HEAD")
+        report = snapshot.make(maker)
+        taken = report.snapshot
+        assert report.made and report.not_built == []
+        assert (taken.pipeline, taken.commit, taken.subdirectory) == ("acme/maker", commit, "maker")
+        assert sorted(taken.assets) == ["chart/curve", "rates"]
+        assert taken.path.parent == default_store().root / "snapshots" / commit / "maker"
+
+        # The bytes are in the store, under the hash the record gives
+        store = default_store()
+        rates = taken.assets["rates"]
+        assert rates["id"] == "acme/maker:rates"
+        assert (store.get(rates["content_hash"]) / "rates.parquet").read_bytes() == b"rates-1"
+        assert taken.hashes() == {record["content_hash"] for record in taken.assets.values()}
+
+    def test_the_record_is_json_in_the_index_format(self, maker):
+        taken = snapshot.make(maker).snapshot
+        document = json.loads(taken.path.read_text())
+        assert list(document) == ["schema", "root", "code", "made_at", "records"]
+        assert document["schema"] == "chartbook/snapshot/v1"
+        assert document["code"] == {"commit": taken.commit, "subdirectory": "maker"}
+        assert [record["id"] for record in document["records"]] == [
+            "acme/maker:chart/curve",
+            "acme/maker:rates",
+        ]
+        jsonschema.validate(document, json.loads(snapshot.schema_path().read_text()))
+        for record in document["records"]:
+            jsonschema.validate(record, json.loads(index.schema_path(record["kind"]).read_text()))
+        assert snapshot.read(taken.path) == taken
+
+    def test_it_is_frozen(self, maker):
+        """Its owner rewrites the file in place. The snapshot keeps what it had."""
+        taken = snapshot.make(maker).snapshot
+        with open(maker / "_data" / "rates.parquet", "r+b") as f:
+            f.write(b"RATES-9")
+        held = default_store().get(taken.assets["rates"]["content_hash"])
+        assert (held / "rates.parquet").read_bytes() == b"rates-1"
+
+    def test_a_pipeline_at_the_top_of_its_repository(self, work):
+        directory = _manifest(work, {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (directory / "x.parquet").write_bytes(b"x")
+        commit = _commit(directory)
+        taken = snapshot.make(directory).snapshot
+        assert taken.subdirectory == ""
+        assert taken.path.parent == default_store().root / "snapshots" / commit / "_top"
+        assert "subdirectory" not in json.loads(taken.path.read_text())["code"]
+
+    def test_a_pipeline_deep_in_its_repository(self, work):
+        directory = _manifest(
+            work / "pipelines" / "macro" / "rates",
+            {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}},
+        )
+        (directory / "x.parquet").write_bytes(b"x")
+        commit = _commit(work)
+        taken = snapshot.make(directory).snapshot
+        assert taken.subdirectory == "pipelines/macro/rates"
+        assert taken.path.parent.name == "pipelines--macro--rates"
+        assert snapshot.find(default_store(), commit, "pipelines/macro/rates") == [taken]
+
+    def test_a_folder_and_a_glob(self, work):
+        directory = _manifest(
+            work / "maker",
+            {
+                "dataframes": {"parts": {"path": "./parts/*.parquet", "docs": "d"}},
+                "models": {"m": {"path": "./model"}},
+            },
+        )
+        (directory / "parts").mkdir()
+        (directory / "parts" / "a.parquet").write_bytes(b"a")
+        (directory / "parts" / "b.parquet").write_bytes(b"b")
+        (directory / "model").mkdir()
+        (directory / "model" / "weights.bin").write_bytes(b"w")
+        _commit(work)
+        taken = snapshot.make(directory).snapshot
+        assert [f["path"] for f in taken.assets["model/m"]["files"]] == ["weights.bin"]
+        assert "files" not in taken.assets["parts"]  # a glob says which files by itself
+        held = default_store().get(taken.assets["parts"]["content_hash"])
+        assert sorted(p.name for p in held.iterdir()) == ["a.parquet", "b.parquet"]
+
+
+class TestEverythingMustBeCommitted:
+    """The label says "this is what that commit built". It has to be true."""
+
+    def test_a_changed_file(self, maker):
+        (maker / "chartbook.toml").write_text((maker / "chartbook.toml").read_text() + "\n# x\n")
+        with pytest.raises(SnapshotError) as e:
+            snapshot.make(maker)
+        said = str(e.value)
+        assert "acme/maker has changes that are not committed:" in said
+        assert " M maker/chartbook.toml" in said
+        assert "Commit, then run `chartbook snapshot` again." in said
+        assert not (default_store().root / "snapshots").exists()
+
+    def test_a_new_file_git_does_not_ignore(self, maker):
+        (maker / "pull.py").write_text("print('new')\n")
+        with pytest.raises(SnapshotError, match=r"\?\? maker/pull.py"):
+            snapshot.make(maker)
+
+    def test_a_staged_change(self, maker, work):
+        (maker / "pull.py").write_text("print('new')\n")
+        _git(work, "add", "-A")
+        with pytest.raises(SnapshotError, match="A  maker/pull.py"):
+            snapshot.make(maker)
+
+    def test_a_deleted_file(self, maker, work):
+        (maker / "pull.py").write_text("print('new')\n")
+        _commit(work)
+        (maker / "pull.py").unlink()
+        with pytest.raises(SnapshotError, match=" D maker/pull.py"):
+            snapshot.make(maker)
+
+    def test_many_are_cut_short(self, maker):
+        for number in range(14):
+            (maker / f"new_{number:02}.py").write_text("")
+        with pytest.raises(SnapshotError) as e:
+            snapshot.make(maker)
+        assert "?? maker/new_09.py" in str(e.value) and "new_10.py" not in str(e.value)
+        assert "and 4 more" in str(e.value)
+
+    def test_what_git_ignores_does_not_count(self, maker):
+        """Built data is rewritten by every build, and is not code."""
+        _build(maker, rates=b"rates-2")
+        (maker / "_data" / "scratch.tmp").write_bytes(b"x")
+        assert snapshot.make(maker).made
+
+    def test_other_work_in_the_same_repository_does_not_count(self, maker, work):
+        """Somebody else is half-way through a change, in another pipeline."""
+        _manifest(work / "other", {"project": {"id": "acme/other"}})
+        (work / "notes.txt").write_text("not committed")
+        assert snapshot.uncommitted(maker) == []
+        assert snapshot.make(maker).made
+
+    def test_committing_is_what_lets_it_through(self, maker, work):
+        (maker / "pull.py").write_text("print('new')\n")
+        with pytest.raises(SnapshotError):
+            snapshot.make(maker)
+        commit = _commit(work)
+        assert snapshot.make(maker).snapshot.commit == commit
+
+
+class TestWhatCannotHaveOne:
+    def test_a_folder_that_is_not_in_git(self, work):
+        directory = _manifest(work / "loose", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (directory / "x.parquet").write_bytes(b"x")
+        with pytest.raises(SnapshotError) as e:
+            snapshot.make(directory)
+        assert "loose cannot have a snapshot" in str(e.value)
+        assert "is not in a git repository" in str(e.value)
+
+    def test_a_repository_with_no_commit(self, work):
+        directory = _manifest(work, {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        _git(directory, "init", "--quiet", "-b", "main")
+        with pytest.raises(SnapshotError, match="has no commit yet"):
+            snapshot.make(directory)
+
+    def test_a_pipeline_that_has_built_nothing(self, maker):
+        (maker / "_data" / "rates.parquet").unlink()
+        (maker / "_output" / "curve.html").unlink()
+        with pytest.raises(SnapshotError, match="has built nothing it declares") as e:
+            snapshot.make(maker)
+        assert "Build it first: `chartbook run`." in str(e.value)
+
+    def test_a_pipeline_that_declares_nothing(self, work):
+        directory = _manifest(work / "empty", {"project": {"id": "empty"}})
+        _commit(work)
+        with pytest.raises(SnapshotError, match="declares nothing with a path"):
+            snapshot.make(directory)
+
+    def test_a_catalog(self, maker, work):
+        _manifest(work, {"project": {"type": "catalog"}, "pipelines": {"maker": {"path": "maker"}}})
+        with pytest.raises(SnapshotError, match="is a catalog"):
+            snapshot.make(work)
+
+    def test_no_manifest(self, work):
+        with pytest.raises(SnapshotError, match="No chartbook.toml in"):
+            snapshot.make(work)
+
+
+class TestSeveral:
+    def test_what_is_not_built_is_in_it_without_a_hash(self, maker):
+        (maker / "_output" / "curve.html").unlink()
+        report = snapshot.make(maker)
+        assert report.made
+        assert report.not_built == [("acme/maker:chart/curve", "./_output/curve.html")]
+        assert report.snapshot.content()["chart/curve"] is None
+        assert "content_hash" not in report.snapshot.assets["chart/curve"]
+
+    def test_nothing_changed_makes_no_new_one(self, maker):
+        first = snapshot.make(maker)
+        again = snapshot.make(maker)
+        assert not again.made and again.snapshot == first.snapshot
+        assert len(list(first.snapshot.path.parent.glob("*.json"))) == 1
+
+    def test_new_data_at_the_same_commit_is_a_new_one(self, maker, work):
+        """A pipeline that pulls from outside: other bytes, and no file changed."""
+        first = snapshot.make(maker).snapshot
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker).snapshot
+        assert second.commit == first.commit and second.made_at > first.made_at
+        assert second.content()["rates"] != first.content()["rates"]
+        assert second.content()["chart/curve"] == first.content()["chart/curve"]
+        assert snapshot.find(default_store(), first.commit, "maker") == [second, first]
+
+    def test_two_made_at_one_instant_are_both_kept_in_order(self, maker):
+        first = snapshot.make(maker, made_at="2026-10-13T18:22:05.000000Z").snapshot
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker, made_at="2026-10-13T18:22:05.000000Z").snapshot
+        assert second.path != first.path
+        assert snapshot.find(default_store(), first.commit, "maker") == [second, first]
+
+    def test_a_record_that_cannot_be_read_is_an_error(self, maker):
+        taken = snapshot.make(maker).snapshot
+        taken.path.write_text('{"schema": "chartbook/snapshot/v9"}')
+        with pytest.raises(SnapshotError, match="Cannot read the snapshot"):
+            snapshot.find(default_store(), taken.commit, "maker")
+
+
+class TestFinding:
+    def test_at_the_commit_the_folder_is_on(self, maker):
+        taken = snapshot.make(maker).snapshot
+        found, code = snapshot.newest_for(maker)
+        assert found == taken
+        assert (code.commit, code.subdirectory) == (taken.commit, "maker")
+
+    def test_none(self, maker):
+        found, code = snapshot.newest_for(maker)
+        assert found is None and code.subdirectory == "maker"
+
+    def test_at_the_nearest_commit_before(self, maker, work):
+        """Its owner is three commits past the last build they declared ready."""
+        taken = snapshot.make(maker).snapshot
+        for number in range(3):
+            (maker / "pull.py").write_text(f"print({number})\n")
+            _commit(work)
+        found, code = snapshot.newest_for(maker)
+        assert found == taken and code.commit != taken.commit
+
+    def test_the_newer_of_two_commits(self, maker, work):
+        snapshot.make(maker)
+        (maker / "pull.py").write_text("print('new')\n")
+        _commit(work)
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker).snapshot
+        (maker / "pull.py").write_text("print('newer')\n")
+        _commit(work)
+        assert snapshot.newest_for(maker)[0] == second
+
+    def test_one_made_on_another_branch_is_not_found(self, maker, work):
+        first = snapshot.make(maker).snapshot
+        _git(work, "checkout", "--quiet", "-b", "experiment")
+        (maker / "pull.py").write_text("print('experiment')\n")
+        _commit(work)
+        _build(maker, rates=b"experimental")
+        on_branch = snapshot.make(maker).snapshot
+        assert snapshot.newest_for(maker)[0] == on_branch
+        _git(work, "checkout", "--quiet", "main")
+        assert snapshot.newest_for(maker)[0] == first
+
+    def test_another_pipelines_at_the_same_commit_is_not_this_ones(self, maker, work):
+        other = _manifest(work / "other", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (other / "x.parquet").write_bytes(b"x")
+        _commit(work)
+        snapshot.make(other)
+        assert snapshot.newest_for(maker)[0] is None
+
+    def test_from_another_clone_of_the_repository(self, maker, work, tmp_path_factory):
+        """A commit is the same commit wherever it is checked out."""
+        taken = snapshot.make(maker).snapshot
+        elsewhere = tmp_path_factory.mktemp("clone").resolve() / "copy"
+        _git(work, "clone", "--quiet", str(work), str(elsewhere))
+        assert snapshot.newest_for(elsewhere / "maker")[0] == taken
+
+    def test_a_folder_that_is_not_in_git(self, work):
+        (work / "loose").mkdir()
+        with pytest.raises(SnapshotError, match="is not in a git repository"):
+            snapshot.newest_for(work / "loose")
+
+    def test_a_folder_that_is_not_there(self, work):
+        with pytest.raises(SnapshotError, match="there is no folder at"):
+            snapshot.newest_for(work / "gone")
+
+
+class TestPinning:
+    """``pin`` and ``update`` take from a snapshot, and never from the folder."""
+
+    def test_pin_takes_the_snapshot(self, user, maker, work):
+        taken = snapshot.make(maker).snapshot
+        report = lock.pin(user)
+        assert _statuses(report) == {"rates": "pinned", "chart/curve": "pinned"}
+        assert report.problems == [] and report.written
+        assert report.snapshots == {"acme/maker": taken}
+
+        locked = lock.read_lock(user)
+        (listed,) = locked.dependencies
+        assert listed["location"] == {"kind": "path", "path": "../maker", "commit": taken.commit}
+        assert listed["snapshot"] == taken.made_at
+        assert locked.hashes() == taken.hashes()
+        jsonschema.validate(
+            json.loads((user / lock.LOCK_FILE).read_text()),
+            json.loads(lock.schema_path().read_text()),
+        )
+
+    def test_the_folder_is_not_read(self, user, maker):
+        """Half-built, emptied or rewritten since: what is pinned is the snapshot."""
+        taken = snapshot.make(maker).snapshot
+        (maker / "_data" / "rates.parquet").write_bytes(b"half way through a rebuild")
+        (maker / "_output" / "curve.html").unlink()
+        report = lock.pin(user)
+        assert _statuses(report) == {"rates": "pinned", "chart/curve": "pinned"}
+        assert lock.read_lock(user).hashes() == taken.hashes()
+
+    def test_code_reads_the_snapshot(self, user, maker, monkeypatch):
+        snapshot.make(maker)
+        lock.pin(user)
+        (maker / "_data" / "rates.parquet").write_bytes(b"rewritten since")
+        monkeypatch.chdir(user)
+        path = data.path("maker:rates")
+        assert path.read_bytes() == b"rates-1"
+        assert default_store().root in path.parents
+
+    def test_it_goes_by_the_name_it_is_declared_under(self, maker, work):
+        """The maker calls itself acme/maker. This pipeline calls it upstream."""
+        other = _manifest(work / "other", {"dependencies": {"upstream": {"path": "../maker"}}})
+        _commit(work)
+        snapshot.make(maker)
+        lock.pin(other)
+        locked = lock.read_lock(other)
+        assert sorted(locked.assets) == ["upstream:chart/curve", "upstream:rates"]
+        assert locked.assets["upstream:rates"]["pipeline"] == "upstream"
+        assert locked.assets["upstream:rates"]["ref"] == {
+            "pipeline": "upstream",
+            "kind": "dataframe",
+            "name": "rates",
+        }
+
+    def test_with_no_snapshot_nothing_can_be_pinned(self, user, maker, work):
+        commit = _git(work, "rev-parse", "HEAD")
+        report = lock.pin(user)
+        (problem,) = report.problems
+        assert problem.status == "no_snapshot" and problem.dependency == "acme/maker"
+        assert problem.detail == (
+            f"it has no snapshot at or before {commit[:7]}, the commit its folder is "
+            f"on. In ../maker: commit, then run `chartbook snapshot`"
+        )
+        assert lock.read_lock(user).hashes() == set()
+
+    def test_a_folder_that_is_not_in_git_has_none(self, work):
+        loose = _manifest(work / "loose", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (loose / "x.parquet").write_bytes(b"x")
+        user = _manifest(work / "user", {"dependencies": {"loose": {"path": "../loose"}}})
+        (problem,) = lock.pin(user).problems
+        assert problem.status == "no_snapshot"
+        assert "is not in a git repository" in problem.detail
+
+    def test_pin_again_changes_nothing(self, user, maker):
+        snapshot.make(maker)
+        lock.pin(user)
+        before = (user / lock.LOCK_FILE).read_bytes()
+        report = lock.pin(user)
+        assert _statuses(report) == {"rates": "kept", "chart/curve": "kept"}
+        assert not report.written and (user / lock.LOCK_FILE).read_bytes() == before
+
+    def test_pin_says_what_a_newer_snapshot_would_change_and_stays(self, user, maker):
+        snapshot.make(maker)
+        lock.pin(user)
+        before = (user / lock.LOCK_FILE).read_bytes()
+        _build(maker, rates=b"rates-2")
+        snapshot.make(maker)
+        report = lock.pin(user)
+        assert _statuses(report) == {"rates": "stale", "chart/curve": "kept"}
+        assert (user / lock.LOCK_FILE).read_bytes() == before
+
+    def test_a_rebuild_with_no_snapshot_is_not_seen_by_pin_or_update(self, user, maker):
+        snapshot.make(maker)
+        lock.pin(user)
+        _build(maker, rates=b"rates-2", curve=b"curve-2")
+        assert _statuses(lock.pin(user)) == {"rates": "kept", "chart/curve": "kept"}
+        moved = lock.update(user)
+        assert _statuses(moved) == {"rates": "kept", "chart/curve": "kept"}
+        assert not moved.written
+
+    def test_update_moves_to_the_newest(self, user, maker, work):
+        first = snapshot.make(maker).snapshot
+        lock.pin(user)
+        (maker / "pull.py").write_text("print('new code')\n")
+        _commit(work)
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker).snapshot
+
+        report = lock.update(user)
+        assert _statuses(report) == {"rates": "moved", "chart/curve": "kept"}
+        (moved,) = [e for e in report.events if e.status == "moved"]
+        assert (moved.old, moved.new) == (first.content()["rates"], second.content()["rates"])
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["commit"] == second.commit != first.commit
+        assert listed["snapshot"] == second.made_at
+
+    def test_update_brings_what_the_newer_one_added_and_drops_what_it_lost(
+        self, user, maker, work
+    ):
+        snapshot.make(maker)
+        lock.pin(user)
+        _manifest(
+            maker,
+            {
+                "project": {"id": "acme/maker"},
+                "dataframes": {
+                    "rates": {"path": "./_data/rates.parquet", "docs": "d"},
+                    "spreads": {"path": "./_data/spreads.parquet", "docs": "d"},
+                },
+            },
+        )
+        (maker / "_data" / "spreads.parquet").write_bytes(b"spreads")
+        _commit(work)
+        snapshot.make(maker)
+        report = lock.update(user)
+        assert _statuses(report) == {"rates": "kept", "spreads": "pinned", "chart/curve": "dropped"}
+        assert sorted(lock.read_lock(user).assets) == ["acme/maker:rates", "acme/maker:spreads"]
+
+    def test_what_the_newer_one_did_not_build_is_let_go(self, user, maker):
+        """A pin from an older snapshot does not belong beside a newer one's commit."""
+        snapshot.make(maker)
+        lock.pin(user)
+        (maker / "_output" / "curve.html").unlink()
+        (maker / "_data" / "rates.parquet").write_bytes(b"rates-2")
+        snapshot.make(maker)
+        report = lock.update(user)
+        assert _statuses(report) == {"rates": "moved", "chart/curve": "let_go"}
+        assert "content_hash" not in lock.read_lock(user).assets["acme/maker:chart/curve"]
+
+    def test_one_snapshot_whole(self, user, maker):
+        """`pin` does not take one asset from a newer snapshot and leave the rest."""
+        (maker / "_output" / "curve.html").unlink()
+        snapshot.make(maker)
+        lock.pin(user)
+        _build(maker)  # the chart is built now, and declared ready
+        snapshot.make(maker)
+        report = lock.pin(user)
+        assert _statuses(report) == {"rates": "kept", "chart/curve": "not_built"}
+        assert _statuses(lock.update(user)) == {"rates": "kept", "chart/curve": "pinned"}
+
+    def test_a_folder_that_has_gone_is_no_trouble_for_pin(self, user, maker, work):
+        snapshot.make(maker)
+        lock.pin(user)
+        os.rename(maker, work / "moved_away")
+        report = lock.pin(user)
+        assert report.problems == []
+        assert _statuses(report) == {"rates": "kept", "chart/curve": "kept"}
+
+        # For an update it is: there is nowhere to look for something newer
+        moved = lock.update(user)
+        assert [e.status for e in moved.problems] == ["no_snapshot"]
+        assert lock.read_lock(user).hashes()  # and the pins are kept
+
+    def test_what_the_store_has_lost_is_reported(self, user, maker):
+        taken = snapshot.make(maker).snapshot
+        lock.pin(user)
+        default_store().delete(taken.content()["rates"])
+        report = lock.pin(user)
+        assert _statuses(report) == {"rates": "lost", "chart/curve": "kept"}
+        assert len(report.problems) == 1
+
+    def test_the_index_names_the_snapshot(self, user, maker):
+        taken = snapshot.make(maker).snapshot
+        lock.pin(user)
+        built = index.build_index(load_manifest(user))
+        (dependency,) = built["records"][0]["dependencies"]
+        assert dependency["location"]["commit"] == taken.commit
+        assert dependency["snapshot"] == taken.made_at
+        jsonschema.validate(
+            built["records"][0], json.loads(index.schema_path("Pipeline").read_text())
+        )
+
+
+class TestFromFolder:
+    """The buried option: what is in the folder this minute."""
+
+    def test_it_takes_what_is_there_and_names_no_commit(self, user, maker):
+        _build(maker, rates=b"not declared ready")
+        report = lock.pin(user, from_folder=True)
+        assert _statuses(report) == {"rates": "pinned", "chart/curve": "pinned"}
+        assert report.from_folder == {"acme/maker"} and report.snapshots == {}
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"] == {"kind": "path", "path": "../maker"}
+        assert "snapshot" not in listed
+
+    def test_it_needs_no_git(self, work):
+        loose = _manifest(work / "loose", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (loose / "x.parquet").write_bytes(b"x")
+        user = _manifest(work / "user", {"dependencies": {"loose": {"path": "../loose"}}})
+        assert lock.pin(user, from_folder=True).problems == []
+
+    def test_pin_afterwards_leaves_it_and_update_moves_to_a_snapshot(self, user, maker):
+        _build(maker, rates=b"not declared ready")
+        lock.pin(user, from_folder=True)
+        _build(maker)
+        taken = snapshot.make(maker).snapshot
+
+        report = lock.pin(user)
+        assert _statuses(report) == {"rates": "stale", "chart/curve": "kept"}
+        assert "commit" not in lock.read_lock(user).dependencies[0]["location"]
+
+        assert _statuses(lock.update(user)) == {"rates": "moved", "chart/curve": "kept"}
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["commit"] == taken.commit
+
+    def test_taking_from_the_folder_forgets_the_snapshot(self, user, maker):
+        snapshot.make(maker)
+        lock.pin(user)
+        _build(maker, rates=b"rates-2")
+        lock.update(user, from_folder=True)
+        (listed,) = lock.read_lock(user).dependencies
+        assert "commit" not in listed["location"] and "snapshot" not in listed
+
+
+class TestKeeping:
+    def test_a_snapshot_keeps_its_objects_from_being_cleared(self, maker):
+        """Nothing pins it yet. It was declared ready, and that is enough."""
+        taken = snapshot.make(maker).snapshot
+        store = default_store()
+        plan = lock.plan_gc(store, recent_seconds=0)
+        assert plan.delete == [] and plan.kept == 2 and plan.snapshots == 2
+        assert snapshot.all_hashes(store) == taken.hashes()
+
+    def test_what_no_snapshot_and_no_lockfile_names_is_cleared(self, maker, work):
+        snapshot.make(maker)
+        store = default_store()
+        (work / "stray.bin").write_bytes(b"stray")
+        stray = store.put(work / "stray.bin")
+        plan = lock.plan_gc(store, recent_seconds=0)
+        assert [content_hash for content_hash, _ in plan.delete] == [stray.content_hash]
+
+    def test_a_record_that_cannot_be_read_stops_the_clearing(self, maker):
+        taken = snapshot.make(maker).snapshot
+        taken.path.write_text("not json")
+        with pytest.raises(lock.LockError, match="Cannot read the snapshot"):
+            lock.plan_gc(default_store())
+
+
+class TestCommands:
+    def _run(self, *arguments):
+        return CliRunner().invoke(main, [str(argument) for argument in arguments])
+
+    def test_snapshot(self, maker, work, monkeypatch):
+        commit = _git(work, "rev-parse", "HEAD")
+        monkeypatch.chdir(maker)
+        result = self._run("snapshot")
+        assert result.exit_code == 0, result.output
+        assert result.output.splitlines() == [
+            f"acme/maker at {commit[:7]}: 2 asset(s) in the store",
+            "Snapshot made. A pipeline that depends on this one gets it with "
+            "`chartbook update`.",
+        ]
+
+    def test_snapshot_again(self, maker, monkeypatch):
+        monkeypatch.chdir(maker)
+        self._run("snapshot")
+        result = self._run("snapshot")
+        assert result.exit_code == 0
+        last = result.output.splitlines()[-1]
+        assert last.startswith("Nothing has changed since the snapshot of 20")
+        assert last.endswith(" UTC. No new one was made.")
+
+    def test_snapshot_says_what_is_not_built(self, maker, work):
+        (maker / "_output" / "curve.html").unlink()
+        result = self._run("snapshot", "--project-dir", maker)
+        assert result.exit_code == 0, result.output
+        said = result.output.splitlines()
+        assert said[0].endswith(": 1 asset(s) in the store, 1 not built")
+        assert said[1] == "  not built: acme/maker:chart/curve (./_output/curve.html)"
+
+    def test_snapshot_with_uncommitted_changes_is_refused(self, maker, monkeypatch):
+        (maker / "pull.py").write_text("print('new')\n")
+        monkeypatch.chdir(maker)
+        result = self._run("snapshot")
+        assert result.exit_code == 1
+        assert result.output.startswith("Error: acme/maker has changes that are not committed:")
+        assert "  ?? maker/pull.py" in result.output.splitlines()
+
+    def test_pin_says_which_snapshot(self, user, maker, work, monkeypatch):
+        commit = _git(work, "rev-parse", "HEAD")
+        snapshot.make(maker, made_at="2026-10-13T18:22:05.000000Z")
+        monkeypatch.chdir(user)
+        result = self._run("pin")
+        assert result.exit_code == 0, result.output
+        assert result.output.splitlines() == [
+            "acme/maker: 2 pinned",
+            f"  From its snapshot at {commit[:7]}, made 2026-10-13 18:22 UTC.",
+            "Wrote chartbook.lock.",
+        ]
+
+    def test_pin_with_no_snapshot(self, user, work, monkeypatch):
+        commit = _git(work, "rev-parse", "HEAD")
+        monkeypatch.chdir(user)
+        result = self._run("pin")
+        assert result.exit_code == 1
+        assert result.output.splitlines()[0] == (
+            f"acme/maker: cannot be pinned: it has no snapshot at or before {commit[:7]}, "
+            f"the commit its folder is on. In ../maker: commit, then run `chartbook snapshot`"
+        )
+        assert "1 thing(s) could not be pinned." in result.output
+
+    def test_pin_then_update(self, user, maker, monkeypatch):
+        snapshot.make(maker)
+        monkeypatch.chdir(user)
+        self._run("pin")
+        _build(maker, rates=b"rates-2")
+        snapshot.make(maker)
+
+        stays = self._run("pin")
+        assert "acme/maker: 1 already pinned, 1 changed upstream since it was pinned" in (
+            stays.output
+        )
+        assert "chartbook.lock is unchanged." in stays.output
+        assert "`chartbook update` moves the pins." in stays.output
+
+        moves = self._run("update")
+        assert moves.exit_code == 0, moves.output
+        assert "acme/maker: 1 moved, 1 already pinned" in moves.output
+        assert "Wrote chartbook.lock." in moves.output
+
+    def test_update_says_what_was_let_go(self, user, maker, monkeypatch):
+        snapshot.make(maker)
+        monkeypatch.chdir(user)
+        self._run("pin")
+        (maker / "_output" / "curve.html").unlink()
+        (maker / "_data" / "rates.parquet").write_bytes(b"rates-2")
+        snapshot.make(maker)
+        result = self._run("update")
+        assert "  let go: acme/maker:chart/curve (./_output/curve.html)" in result.output
+        assert "  What was let go is not built in the snapshot this moved to." in result.output
+
+    def test_from_folder_is_there_and_out_of_the_way(self, user, maker, monkeypatch):
+        for command in ("pin", "update"):
+            assert "--from-folder" not in self._run(command, "--help").output
+        monkeypatch.chdir(user)
+        result = self._run("pin", "--from-folder")
+        assert result.exit_code == 0, result.output
+        assert result.output.splitlines() == [
+            "acme/maker: 2 pinned",
+            "  Taken from its folder as it is now, not from a snapshot.",
+            "Wrote chartbook.lock.",
+        ]
+
+    def test_gc_keeps_a_snapshot(self, maker):
+        snapshot.make(maker)
+        result = self._run("store", "gc", "--dry-run")
+        assert result.exit_code == 0, result.output
+        assert "Nothing to remove." in result.output
+
+    def test_it_is_in_help(self):
+        assert "snapshot " in self._run("--help").output

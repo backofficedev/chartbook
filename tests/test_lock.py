@@ -7,6 +7,7 @@ and their hashes in a lockfile. References still do not resolve across
 pipelines; that is the next part.
 """
 
+import functools
 import hashlib
 import json
 import os
@@ -26,6 +27,12 @@ from chartbook.store import Root, Store, StoreError
 from tests.fixtures import create_catalog_project
 
 HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+
+# These tests pin from a folder as it stands. That is what ``--from-folder``
+# does, and what pinning did before there were snapshots. Pinning from a
+# snapshot, which is the ordinary way, is tested in tests/test_snapshot.py.
+pin_folder = functools.partial(lock.pin, from_folder=True)
+update_folder = functools.partial(lock.update, from_folder=True)
 
 
 def _write_manifest(directory: Path, config_table: dict) -> None:
@@ -124,7 +131,7 @@ def _train(rates: Path) -> None:
 
 class TestPin:
     def test_every_built_asset_of_a_dependency_is_pinned(self, downstream, rates, store):
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         assert report.lockfile == downstream / LOCK_FILE and report.written
         assert _statuses(report) == {
             "treasury": "pinned",
@@ -153,7 +160,7 @@ class TestPin:
                 "models": {"ar1": {"path": "./_models/ar1"}},
             },
         )
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         listing = f"{HELLO.split(':')[1]}  acme/rates:treasury\n"
         overall = "sha256:" + hashlib.sha256(listing.encode()).hexdigest()
         assert json.loads((downstream / LOCK_FILE).read_text()) == {
@@ -207,7 +214,7 @@ class TestPin:
     def test_it_has_nothing_of_this_machine_or_this_moment_in_it(
         self, downstream, rates, store, work
     ):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         text = (downstream / LOCK_FILE).read_text()
         assert str(work) not in text
         document = json.loads(text)
@@ -215,10 +222,10 @@ class TestPin:
         assert text.endswith("}\n")
 
     def test_pinning_twice_writes_the_same_bytes(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         lockfile = downstream / LOCK_FILE
         first, written_at = lockfile.read_bytes(), lockfile.stat().st_mtime_ns
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         assert report.written is False
         assert lockfile.read_bytes() == first
         assert lockfile.stat().st_mtime_ns == written_at
@@ -226,11 +233,11 @@ class TestPin:
 
     def test_a_pin_is_never_moved_by_pinning_again(self, downstream, rates, store):
         """The decision: only `update` moves a pin."""
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
 
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         assert _statuses(report)["treasury"] == "stale"
         assert report.count("stale") == 1 and report.problems == []
         assert report.written is False
@@ -238,9 +245,9 @@ class TestPin:
         assert (store.get(HELLO) / "treasury.parquet").read_bytes() == b"hello"
 
     def test_what_has_no_pin_yet_is_pinned(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         _train(rates)  # an asset that was declared and not built
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         assert _statuses(report) == {
             "treasury": "kept",
             "by_year": "kept",
@@ -255,7 +262,7 @@ class TestPin:
     def test_an_asset_that_is_not_built_is_recorded_without_a_hash(
         self, downstream, rates, store
     ):
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         (event,) = [e for e in report.events if e.status == "not_built"]
         assert event == PinEvent(
             "not_built", "acme/rates", "acme/rates:model/ar1", detail="./_models/ar1"
@@ -266,24 +273,24 @@ class TestPin:
 
     def test_a_clean_clone_gets_its_pins_back(self, downstream, rates, store):
         """The lockfile is committed; the store is not. `pin` fills it again."""
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         for content_hash in list(store.hashes()):
             store.delete(content_hash)
 
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         assert _statuses(report)["treasury"] == "restored"
         assert report.problems == [] and report.written is False
         assert (downstream / LOCK_FILE).read_bytes() == before
         assert store.has(HELLO)
 
     def test_a_pin_that_cannot_be_got_back_is_a_problem(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         store.delete(HELLO)
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
 
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         (problem,) = report.problems
         assert problem.status == "lost" and problem.asset == "acme/rates:treasury"
         assert problem.old == HELLO
@@ -297,11 +304,11 @@ class TestPin:
         _write_manifest(other, {"dataframes": {"gdp": {"path": "./gdp.parquet", "docs": "d"}}})
         (other / "gdp.parquet").write_bytes(b"gdp")
         _depend(downstream, acme__rates={"path": "../rates"}, macro={"path": "../macro"})
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         assert "macro:gdp" in lock.read_lock(downstream).assets
 
         _depend(downstream, acme__rates={"path": "../rates"})
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         assert PinEvent("removed", "macro") in report.events
         locked = lock.read_lock(downstream)
         assert "macro:gdp" not in locked.assets
@@ -309,7 +316,7 @@ class TestPin:
 
     def test_a_dependency_that_is_not_there_cannot_be_pinned(self, downstream, store):
         _depend(downstream, acme__rates={"path": "../not_cloned_yet"})
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         (problem,) = report.problems
         assert problem.status == "unreachable" and problem.dependency == "acme/rates"
         assert "no pipeline can be read at" in problem.detail
@@ -323,11 +330,11 @@ class TestPin:
 
     def test_a_pinned_dependency_can_go_away(self, downstream, rates, store):
         """What pinning is for: the pins are in the store."""
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         os.rename(rates, rates.with_name("rates_moved_away"))
 
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         assert report.problems == []
         assert set(_statuses(report).values()) == {"kept"}
         assert (downstream / LOCK_FILE).read_bytes() == before
@@ -335,12 +342,12 @@ class TestPin:
     def test_an_asset_the_dependency_stops_declaring_stays_pinned(
         self, downstream, rates, store
     ):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         _write_manifest(
             rates,
             {"dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}},
         )
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         assert _statuses(report) == {
             "treasury": "kept",
             "by_year": "kept",
@@ -354,22 +361,22 @@ class TestPin:
     def test_a_pipeline_with_no_dependencies_gets_no_lockfile(self, work, store):
         alone = work / "alone"
         _write_manifest(alone, {"project": {"id": "alone"}})
-        report = lock.pin(alone, store)
+        report = pin_folder(alone, store)
         assert report.events == [] and report.written is False
         assert not (alone / LOCK_FILE).exists()
         assert not store.root.exists()
 
     def test_the_last_dependency_removed_empties_the_lockfile(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         _write_manifest(downstream, {"project": {"id": "downstream"}})
-        report = lock.pin(downstream, store)
+        report = pin_folder(downstream, store)
         assert report.events == [PinEvent("removed", "acme/rates")]
         locked = lock.read_lock(downstream)
         assert locked.dependencies == [] and locked.assets == {}
         assert store.roots() == []
 
     def test_the_store_is_told_which_lockfile_names_what(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         assert store.roots() == [
             Root(downstream / LOCK_FILE, tuple(sorted(lock.read_lock(downstream).hashes())))
         ]
@@ -384,7 +391,7 @@ class TestPin:
             raise OSError(95, "not supported here")
 
         monkeypatch.setattr(store_module, "_reflink", refuse)  # a disk with no clones
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         upstream = rates / "_data" / "treasury.parquet"
         held = store.get(HELLO) / "treasury.parquet"
         assert not held.is_symlink() and not held.samefile(upstream)
@@ -405,7 +412,7 @@ class TestPin:
         store.put(upstream, links=("hardlink",))
         assert (store.get(HELLO) / "treasury.parquet").samefile(upstream)
 
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         held = store.get(HELLO) / "treasury.parquet"
         assert not held.samefile(upstream)
         assert held.read_bytes() == b"hello" and store.verify() == []
@@ -414,34 +421,34 @@ class TestPin:
         """A dataframe with no write-up does not load, and can still be pinned from."""
         with open(downstream / "chartbook.toml", "a") as f:
             f.write('\n[dataframes.broken]\npath = "./x.parquet"\n')
-        assert lock.pin(downstream, store).problems == []
+        assert pin_folder(downstream, store).problems == []
 
     def test_a_catalog_has_nothing_to_pin(self, work, store):
         catalog = create_catalog_project(work / "cat")
         with pytest.raises(LockError, match="is a catalog"):
-            lock.pin(catalog, store)
+            pin_folder(catalog, store)
 
     def test_a_directory_with_no_manifest(self, work, store):
         (work / "empty").mkdir()
         with pytest.raises(LockError, match="No chartbook.toml in"):
-            lock.pin(work / "empty", store)
+            pin_folder(work / "empty", store)
 
     def test_a_malformed_dependencies_table_names_the_file(self, downstream, store):
         _depend(downstream, rates={"path": "../rates", "git": "https://x/y"})
         with pytest.raises(ValueError) as e:
-            lock.pin(downstream, store)
+            pin_folder(downstream, store)
         assert str(downstream / "chartbook.toml") in str(e.value)
         assert "both 'path' and 'git'" in str(e.value)
 
 
 class TestUpdate:
     def test_it_moves_a_pin_to_what_the_dependency_has_now(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         before = lock.read_lock(downstream)
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
         now = hashing.hash_file(rates / "_data" / "treasury.parquet").content_hash
 
-        report = lock.update(downstream, store=store)
+        report = update_folder(downstream, store=store)
         assert report.written is True
         (moved,) = [e for e in report.events if e.status == "moved"]
         assert moved.asset == "acme/rates:treasury"
@@ -456,8 +463,8 @@ class TestUpdate:
         assert store.has(HELLO) and store.has(now)
 
     def test_nothing_changed_writes_nothing(self, downstream, rates, store):
-        lock.pin(downstream, store)
-        report = lock.update(downstream, store=store)
+        pin_folder(downstream, store)
+        report = update_folder(downstream, store=store)
         assert report.written is False
         assert set(_statuses(report).values()) == {"kept", "not_built"}
 
@@ -466,47 +473,47 @@ class TestUpdate:
         _write_manifest(macro, {"dataframes": {"gdp": {"path": "./gdp.parquet", "docs": "d"}}})
         (macro / "gdp.parquet").write_bytes(b"gdp")
         _depend(downstream, acme__rates={"path": "../rates"}, macro={"path": "../macro"})
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
         _replace(macro / "gdp.parquet", b"new gdp")
 
-        report = lock.update(downstream, ["rates"], store=store)  # the scope left off
+        report = update_folder(downstream, ["rates"], store=store)  # the scope left off
         assert _statuses(report, "acme/rates")["treasury"] == "moved"
         assert _statuses(report, "macro")["gdp"] == "stale"
 
-        report = lock.update(downstream, ["macro"], store=store)
+        report = update_folder(downstream, ["macro"], store=store)
         assert _statuses(report, "macro")["gdp"] == "moved"
 
     def test_a_name_that_is_not_a_dependency(self, downstream, rates, store):
         with pytest.raises(LockError) as e:
-            lock.update(downstream, ["nope"], store=store)
+            update_folder(downstream, ["nope"], store=store)
         assert "Pipeline 'nope' not found" in str(e.value)
         assert "Declared in [dependencies]: acme/rates." in str(e.value)
         assert "In the catalog" not in str(e.value)
 
     def test_an_asset_that_is_no_longer_built_keeps_its_pin(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         (rates / "_data" / "treasury.parquet").unlink()
-        report = lock.update(downstream, store=store)
+        report = update_folder(downstream, store=store)
         assert _statuses(report)["treasury"] == "kept"
         assert lock.read_lock(downstream).assets["acme/rates:treasury"]["content_hash"] == HELLO
 
     def test_an_asset_no_longer_declared_is_dropped(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         _write_manifest(
             rates,
             {"dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}},
         )
-        report = lock.update(downstream, store=store)
+        report = update_folder(downstream, store=store)
         dropped = sorted(e.asset for e in report.events if e.status == "dropped")
         assert dropped == ["acme/rates:by_year", "acme/rates:chart/curve"]
         assert set(lock.read_lock(downstream).assets) == {"acme/rates:treasury"}
 
     def test_a_dependency_that_is_not_there_cannot_be_updated(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         os.rename(rates, rates.with_name("rates_moved_away"))
-        report = lock.update(downstream, store=store)
+        report = update_folder(downstream, store=store)
         assert [p.status for p in report.problems] == ["unreachable"]
         assert (downstream / LOCK_FILE).read_bytes() == before
 
@@ -531,7 +538,7 @@ class TestPinnedHash:
 
 class TestReadingAndWriting:
     def test_a_lockfile_reads_back_as_it_was_written(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         locked = lock.read_lock(downstream / LOCK_FILE)
         assert isinstance(locked, Lock)
         assert lock.read_lock(downstream) == locked  # a directory will do
@@ -572,7 +579,7 @@ class TestSchemas:
     """The lockfile is in the index's format: no second one."""
 
     def test_the_file_fits_its_schema(self, downstream, rates, store):
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         document = json.loads((downstream / LOCK_FILE).read_text())
         jsonschema.validate(document, json.loads(lock.schema_path().read_text()))
 
@@ -580,7 +587,7 @@ class TestSchemas:
         self, downstream, rates, store
     ):
         _train(rates)
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         records = json.loads((downstream / LOCK_FILE).read_text())["records"]
         kinds = set()
         for record in records[1:]:
@@ -595,7 +602,7 @@ class TestSchemas:
             acme__rates={"path": "../rates"},
             crsp={"git": "https://example.org/acme/crsp.git"},
         )
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         pipeline = json.loads(index.schema_path("Pipeline").read_text())
         dependency = pipeline["properties"]["dependencies"]["items"]
         for entry in lock.read_lock(downstream).dependencies:
@@ -649,9 +656,9 @@ class TestGc:
     @pytest.fixture
     def moved(self, downstream, rates, store):
         """A store with one object that an update left behind, an hour old."""
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
-        lock.update(downstream, store=store)
+        update_folder(downstream, store=store)
         _age(store)
         return store
 
@@ -672,9 +679,9 @@ class TestGc:
 
     def test_what_was_stored_in_the_last_hour_is_left_alone(self, downstream, rates, store):
         """A pin stores a file before it writes the lockfile that names it."""
-        lock.pin(downstream, store)
+        pin_folder(downstream, store)
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
-        lock.update(downstream, store=store)
+        update_folder(downstream, store=store)
         plan = lock.plan_gc(store)
         assert plan.delete == [] and plan.recent == [HELLO]
         assert lock.plan_gc(store, recent_seconds=0).delete == [(HELLO, 5)]
@@ -690,7 +697,7 @@ class TestGc:
         _write_manifest(rates.with_name("old_rates"), {"dataframes": {"t": {"path": "./t.parquet", "docs": "d"}}})
         (rates.with_name("old_rates") / "t.parquet").write_bytes(b"hello")
         _depend(other, old={"path": "../old_rates"})
-        lock.pin(other, moved)
+        pin_folder(other, moved)
         _age(moved)
 
         plan = lock.plan_gc(moved)
@@ -746,6 +753,8 @@ class TestCommands:
         return Store(work / "store")
 
     def _run(self, *args, **kwargs):
+        if args and args[0] in ("pin", "update"):
+            args = (*args, "--from-folder")
         return CliRunner().invoke(main, list(args), **kwargs)
 
     def test_pin(self, here, downstream):
@@ -754,6 +763,7 @@ class TestCommands:
         assert result.output.splitlines() == [
             "acme/rates: 3 pinned, 1 not built",
             "  not built: acme/rates:model/ar1 (./_models/ar1)",
+            "  Taken from its folder as it is now, not from a snapshot.",
             "Wrote chartbook.lock.",
         ]
         assert (downstream / LOCK_FILE).is_file()

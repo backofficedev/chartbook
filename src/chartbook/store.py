@@ -12,8 +12,9 @@ are one object.
       store.json                                       which layout this is
       objects/sha256/7f/3a9c…/treasury_rates.parquet   an asset that is one file
       objects/sha256/b2/09e1…/year=2024/part-0.parquet an asset of many files
-      builds/                                          kept for build records
+      builds/                                          a name kept free; nothing is written here
       roots/                                           the lockfiles that name objects
+      snapshots/                                       what each commit of a pipeline built
       tmp/                                             objects being written
 
 An object is a directory holding the asset's files under their own names.
@@ -56,7 +57,9 @@ left alone or is replaced with a new file, never rewritten.
 :meth:`Store.verify` is what tells: it hashes every object again and
 reports each whose content is no longer what its name says.
 
-Pinning (:mod:`chartbook.lock`) is what puts things in the store, and it
+A snapshot (:mod:`chartbook.snapshot`) and pinning (:mod:`chartbook.lock`)
+are what put things in the store. A snapshot's record is kept under
+``snapshots/``, and what it names is never cleared. Pinning
 leaves a note of each lockfile under ``roots/`` so that clearing the store
 out never removes another project's pins. The design is "The store" in
 ``docs_src/design/asset-graph.md``.

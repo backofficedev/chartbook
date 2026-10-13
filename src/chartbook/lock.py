@@ -1,12 +1,20 @@
 """The lockfile: ``chartbook.lock``, the exact bytes a pipeline depends on.
 
 A pipeline declares which pipelines it reads from in ``[dependencies]``.
-*Pinning* freezes what it reads: every asset each of those pipelines
-declares is put in the store (:mod:`chartbook.store`), and its content hash
-is written to ``chartbook.lock`` beside the manifest. The lockfile is
-source. Commit it: a change to what a project depends on then shows up in
-a diff, and someone who clones the project can see exactly which data it
-was built against.
+*Pinning* freezes what it reads: the content hash of every asset each of
+those pipelines declares is written to ``chartbook.lock`` beside the
+manifest, and the bytes are in the store (:mod:`chartbook.store`). The
+lockfile is source. Commit it: a change to what a project depends on then
+shows up in a diff, and someone who clones the project can see exactly
+which data it was built against.
+
+**Where the bytes come from.** Never from another pipeline's working
+directory, which may be in any state. A ``path`` dependency is pinned from
+a **snapshot**: what its owner declared ready, at a commit
+(:mod:`chartbook.snapshot`). A ``git`` dependency is pinned from
+ChartBook's own clean copy of a commit. The lockfile records the commit
+either way. Pinning from a folder as it stands is still there, as
+``from_folder``, for someone working on both pipelines at once.
 
 ::
 
@@ -15,11 +23,9 @@ was built against.
     report = lock.pin("path/to/pipeline")       # pin what has no pin yet
     report = lock.update("path/to/pipeline")    # move every pin forward
 
-``pin`` never moves a pin that exists. It pins what has none (a new
-dependency, an asset the other pipeline has started to declare) and puts
-back in the store anything the lockfile names that the store has lost, if
-the other pipeline still has those bytes. ``update`` is the one thing that
-moves a pin, to whatever the other pipeline has now.
+``pin`` never moves a pin that exists. It pins a dependency that has no
+pin yet. ``update`` is the one thing that moves a pin: to the dependency's
+newest snapshot, or to what its ``rev`` means now.
 
 The file is JSON in the index's own format: the same envelope, and records
 with the same field names (``docs_src/design/index-schema.md``). It holds
@@ -58,10 +64,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Optional, Union
 
-from chartbook import hashing
+from chartbook import hashing, snapshot
 from chartbook.gitcache import GitCache, GitError, default_git_cache, local_url
 from chartbook.identity import derive_pipeline_id, strip_url_credentials
-from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
+from chartbook.index import RECORD_VERSION, SCHEMAS_DIR
 from chartbook.manifest import (
     _read_manifest_file,
     resolve_project_type,
@@ -69,8 +75,8 @@ from chartbook.manifest import (
 )
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, declared_files, locate_pipeline
+from chartbook.snapshot import asset_record as _asset_record
 from chartbook.store import Store, default_store
-from chartbook.utils import is_glob_pattern
 
 #: The lockfile's name, beside ``chartbook.toml``.
 LOCK_FILE = "chartbook.lock"
@@ -82,7 +88,8 @@ SCHEMA = "chartbook/lock/v1"
 #: copy. Decided by the maintainer: a pin must not change when the other
 #: pipeline rewrites its file, so it is never a hard link or a symlink,
 #: which are that file. On a disk with no clones a pin costs the file's size.
-PIN_LINKS = ("reflink", "copy")
+#: A snapshot's files are stored the same way.
+PIN_LINKS = snapshot.LINKS
 
 #: An unreferenced object stored more recently than this is not removed by
 #: :func:`plan_gc`. Someone may be in the middle of pinning it: it is in
@@ -241,7 +248,8 @@ class PinEvent:
             ``git`` dependency was got from its repository), ``unfetched``
             (it could not be), ``relocated`` (the manifest says it is
             somewhere other than where it was pinned from, which only an
-            update follows).
+            update follows), ``no_snapshot`` (a ``path`` dependency has no
+            snapshot to pin from).
         dependency: The dependency's key in ``[dependencies]``.
         asset: The asset's ID, or None when the event is about the whole
             dependency.
@@ -259,7 +267,7 @@ class PinEvent:
 
 
 #: The statuses that mean a project is not fully pinned, and should fail CI.
-PROBLEM_STATUSES = frozenset({"lost", "unreachable", "unfetched"})
+PROBLEM_STATUSES = frozenset({"lost", "unreachable", "unfetched", "no_snapshot"})
 
 
 @dataclass
@@ -274,12 +282,18 @@ class PinReport:
             what it would have.
         git: The dependencies that are git repositories, by key. One of
             these has only what its repository commits.
+        snapshots: The snapshot each ``path`` dependency was pinned from in
+            this run, by key.
+        from_folder: The ``path`` dependencies that were pinned from what
+            was in their folder, because that was asked for.
     """
 
     lockfile: Path
     events: list[PinEvent] = field(default_factory=list)
     written: bool = False
     git: set = field(default_factory=set)
+    snapshots: dict = field(default_factory=dict)
+    from_folder: set = field(default_factory=set)
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -328,44 +342,12 @@ def _dependency_entry(key: str, entry: dict) -> dict:
     return {"id": key, "via": "path", "location": {"kind": "path", "path": entry["path"]}}
 
 
-def _asset_record(
-    ref: AssetRef, dependency: str, declared_path: str, content, single: bool
-) -> dict:
-    """An asset as the lockfile records it; pinned if *content* is given.
-
-    :param content: What was stored: its hash, its size and its files.
-    :param single: Whether the asset's ``path`` named one file. A directory
-        has its files listed, as the index lists a directory model's:
-        ``files`` is what tells a directory from a file.
-    """
-    record = {
-        "kind": record_kind(ref.kind),
-        "version": RECORD_VERSION,
-        "id": str(ref),
-        "ref": ref.to_dict(),
-        "pipeline": dependency,
-        "location": {"kind": "file", "path": declared_path},
-    }
-    if content is not None:
-        record["content_hash"] = content.content_hash
-        record["size_bytes"] = content.size_bytes
-        if not single and not is_glob_pattern(declared_path):
-            record["files"] = [
-                {
-                    "path": file.path,
-                    "size_bytes": file.size_bytes,
-                    "content_hash": file.content_hash,
-                }
-                for file in content.entries
-            ]
-    return record
-
-
 def _sync(
     project_dir: Union[str, Path],
     store: Optional[Store],
     move: Optional[Iterable[str]],
     git_cache: Optional[GitCache] = None,
+    from_folder: bool = False,
 ) -> PinReport:
     """Bring a pipeline's lockfile and the store in line with its manifest.
 
@@ -374,6 +356,8 @@ def _sync(
         means all of them.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
+    :param from_folder: Pin a ``path`` dependency from what is in its
+        folder now, and not from a snapshot.
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
@@ -429,11 +413,21 @@ def _sync(
                 # repository that cannot be reached is no trouble: that is
                 # what the pins are for
                 report.events.append(PinEvent("unfetched", key, detail=failure))
+            records = _sync_dependency(
+                key, directory, had, may_move, store, cache, report, commit_moved
+            )
+        elif from_folder:
+            # What is in the folder this minute, whatever state it is in.
+            # The lockfile then names no commit: nothing says which one
+            # these bytes came from.
+            report.from_folder.add(key)
+            records = _sync_dependency(
+                key, Path(entry["_resolved_path"]), had, may_move, store, cache, report
+            )
         else:
-            directory = Path(entry["_resolved_path"])
-        records = _sync_dependency(
-            key, directory, had, may_move, store, cache, report, commit_moved
-        )
+            records, listed = _sync_from_snapshots(
+                key, Path(entry["_resolved_path"]), was, listed, had, may_move, store, report
+            )
         listed = {k: v for k, v in listed.items() if k != "pinned_hash"}
         overall = pinned_hash(records.values())
         if overall is not None:
@@ -533,6 +527,145 @@ def _fetch(
     listed = {**listed, "location": {**listed["location"], "commit": checkout.commit}}
     built = git_cache.find_work(url, checkout.commit)
     return (built or checkout.path), listed, None
+
+
+def _sync_from_snapshots(
+    key: str,
+    directory: Path,
+    was: Optional[dict],
+    listed: dict,
+    had: dict[str, dict],
+    may_move: bool,
+    store: Store,
+    report: PinReport,
+) -> tuple[dict[str, dict], dict]:
+    """Work out a ``path`` dependency's records from its snapshots.
+
+    The dependency's folder is somebody's working directory, and nothing in
+    it is read here but where it is in git. What is pinned is a snapshot:
+    what its owner declared ready, at a commit (:mod:`chartbook.snapshot`).
+
+    A dependency is pinned to one snapshot, whole. ``pin`` takes the newest
+    when nothing is pinned yet, and otherwise stays where it is and says
+    what a newer one would change. ``update`` moves to the newest.
+
+    :param was: The dependency's entry in the lockfile, if it has one.
+    :param listed: Its entry as the manifest has it now.
+    :param had: The records the lockfile has for it now, by asset ID.
+    :param may_move: Whether its existing pins may move (an update).
+    :returns: Its records as they should be, by asset ID, and the entry the
+        lockfile should list: with the snapshot's commit and time.
+    """
+    pinned = [record for record in had.values() if record.get("content_hash")]
+    locked_commit = (was or {}).get("location", {}).get("commit")
+    locked_made = (was or {}).get("snapshot")
+    why = ""
+    try:
+        newest, code = snapshot.newest_for(directory, store)
+    except snapshot.SnapshotError as error:
+        newest, code, why = None, None, str(error)
+
+    def as_it_was() -> dict:
+        """The listing, still naming the snapshot the pins came from."""
+        kept = dict(listed)
+        if locked_commit:
+            kept["location"] = {**listed["location"], "commit": locked_commit}
+        if locked_made:
+            kept["snapshot"] = locked_made
+        return kept
+
+    if pinned and not may_move:
+        # `pin` does not move a pin. It says what a newer snapshot has.
+        newer = newest is not None and not newest.same_moment(locked_commit, locked_made)
+        theirs = newest.content() if newer else {}
+        for record in had.values():
+            old = record.get("content_hash")
+            if not old:
+                report.events.append(
+                    PinEvent("not_built", key, record["id"], detail=record["location"]["path"])
+                )
+            elif not store.has(old):
+                report.events.append(
+                    PinEvent(
+                        "lost",
+                        key,
+                        record["id"],
+                        old=old,
+                        detail=(
+                            "it is not in the store. A snapshot puts it there: "
+                            "`chartbook update` moves to the newest one"
+                        ),
+                    )
+                )
+            else:
+                now = theirs.get(snapshot.local_name(record))
+                status = "stale" if now is not None and now != old else "kept"
+                report.events.append(PinEvent(status, key, record["id"], old=old, new=old))
+        return dict(had), as_it_was()
+
+    if newest is None:
+        # Nothing to pin from, or nothing to move to. What is pinned stays.
+        for record in pinned:
+            _report_kept(record, key, store, report)
+        if not why:
+            why = (
+                f"it has no snapshot at or before {code.commit[:7]}, the commit "
+                f"its folder is on. In {listed['location']['path']}: commit, "
+                f"then run `chartbook snapshot`"
+            )
+        report.events.append(PinEvent("no_snapshot", key, detail=why))
+        return dict(had), as_it_was()
+
+    records: dict[str, dict] = {}
+    for name in sorted(newest.assets):
+        record = snapshot.renamed(newest.assets[name], key)
+        asset_id = record["id"]
+        before = had.get(asset_id)
+        old = (before or {}).get("content_hash")
+        new = record.get("content_hash")
+        declared_path = record["location"]["path"]
+        if new is None:
+            # Not built when the snapshot was made. A pin from an earlier
+            # snapshot does not belong beside this one's commit.
+            status = "let_go" if old else "not_built"
+            report.events.append(PinEvent(status, key, asset_id, old=old, detail=declared_path))
+        elif not store.has(new):
+            report.events.append(
+                PinEvent(
+                    "lost",
+                    key,
+                    asset_id,
+                    old=old,
+                    detail=(
+                        "the snapshot names it, and it is not in the store. "
+                        "Making the snapshot again puts it back"
+                    ),
+                )
+            )
+            record = before if before is not None else {
+                k: v for k, v in record.items() if k not in ("content_hash", "size_bytes", "files")
+            }
+        elif old is None:
+            report.events.append(PinEvent("pinned", key, asset_id, new=new))
+        elif old == new:
+            report.events.append(PinEvent("kept", key, asset_id, old=old, new=new))
+        else:
+            report.events.append(PinEvent("moved", key, asset_id, old=old, new=new))
+        records[asset_id] = record
+
+    # What the lockfile has that this snapshot does not
+    for asset_id in sorted(set(had) - set(records)):
+        old = had[asset_id].get("content_hash")
+        if old:
+            report.events.append(PinEvent("dropped", key, asset_id, old=old))
+
+    report.snapshots[key] = newest
+    listed = {
+        **listed,
+        "location": {**listed["location"], "commit": newest.commit},
+        "snapshot": newest.made_at,
+    }
+    return records, listed
 
 
 def _sync_dependency(
@@ -707,32 +840,42 @@ def pin(
     project_dir: Union[str, Path] = ".",
     store: Optional[Store] = None,
     git_cache: Optional[GitCache] = None,
+    from_folder: bool = False,
 ) -> PinReport:
     """Pin whatever a pipeline depends on that has no pin yet.
 
-    Every asset each dependency declares is put in the store and recorded
-    in ``chartbook.lock``. A pin that already exists is left exactly where
-    it is, whatever the other pipeline has done since: :func:`update` is
-    what moves one. If the store has lost a pinned object and the other
-    pipeline still has the same bytes, it is put back.
+    A pin that already exists is left exactly where it is, whatever the
+    other pipeline has done since: :func:`update` is what moves one.
 
-    An asset that is declared and not built is recorded as not pinned; the
-    rest of the dependency is pinned all the same.
+    A ``path`` dependency is pinned from its newest **snapshot**: what its
+    owner declared ready, at a commit (:mod:`chartbook.snapshot`). Nothing
+    in its folder is read. One that has no snapshot cannot be pinned, and
+    the report says what its owner has to do.
 
     A ``git`` dependency is fetched into the git cache and pinned from the
     checkout, at the commit the lockfile names if it names one. It has only
-    what its repository commits; the rest of what it declares is not built.
+    what its repository commits, until ``chartbook run`` builds it; the
+    rest of what it declares is not built.
+
+    An asset that is declared and not built is recorded as not pinned; the
+    rest of the dependency is pinned all the same.
 
     :param project_dir: The pipeline's directory.
     :param store: The store to pin into; this user's by default.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
+    :param from_folder: Pin a ``path`` dependency from what is in its
+        folder at this moment, and not from a snapshot. For someone working
+        on both pipelines at once. The folder may be in any state, and the
+        lockfile then names no commit.
     :returns: What was done.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
     :raises ValueError: If its ``[dependencies]`` table is malformed.
     """
-    return _sync(project_dir, store, move=None, git_cache=git_cache)
+    return _sync(
+        project_dir, store, move=None, git_cache=git_cache, from_folder=from_folder
+    )
 
 
 def update(
@@ -740,24 +883,36 @@ def update(
     dependencies: Iterable[str] = (),
     store: Optional[Store] = None,
     git_cache: Optional[GitCache] = None,
+    from_folder: bool = False,
 ) -> PinReport:
     """Move a pipeline's pins forward to what its dependencies have now.
 
-    A ``git`` dependency is fetched again, and its ``rev`` looked up again:
-    a branch may have moved, a tag or a commit has not.
+    A ``path`` dependency moves to its newest snapshot: the newest at the
+    commit its folder is on or, if that commit has none, at the nearest
+    one before it that has. A ``git`` dependency is fetched again, and its
+    ``rev`` looked up again: a branch may have moved, a tag or a commit
+    has not.
 
     :param project_dir: The pipeline's directory.
     :param dependencies: The dependencies to update, as named in
         ``[dependencies]`` (the scope may be left off when unambiguous).
         All of them by default.
     :param store: The store to pin into; this user's by default.
+    :param from_folder: Take a ``path`` dependency from what is in its
+        folder at this moment, and not from a snapshot. See :func:`pin`.
     :returns: What was done. An asset whose pin changed has the status
         ``moved``.
     :raises LockError: If *project_dir* is not a pipeline, its lockfile
         cannot be read, or a name is not one of its dependencies.
     :raises ValueError: If its ``[dependencies]`` table is malformed.
     """
-    return _sync(project_dir, store, move=list(dependencies), git_cache=git_cache)
+    return _sync(
+        project_dir,
+        store,
+        move=list(dependencies),
+        git_cache=git_cache,
+        from_folder=from_folder,
+    )
 
 
 @dataclass
@@ -767,7 +922,8 @@ class GcPlan:
     Attributes:
         lockfiles: Each lockfile the store has a note of, and whether it
             could be found.
-        kept: How many objects some lockfile names.
+        kept: How many objects are kept: some lockfile or snapshot names them.
+        snapshots: How many objects some snapshot names.
         recent: Objects that no lockfile names, stored too recently to
             remove.
         delete: Objects that no lockfile names, each with its size in bytes.
@@ -776,6 +932,7 @@ class GcPlan:
 
     lockfiles: list[tuple[Path, bool]] = field(default_factory=list)
     kept: int = 0
+    snapshots: int = 0
     recent: list[str] = field(default_factory=list)
     delete: list[tuple[str, int]] = field(default_factory=list)
     forget: list[Path] = field(default_factory=list)
@@ -810,7 +967,12 @@ def plan_gc(
     """
     store = store if store is not None else default_store()
     plan = GcPlan()
-    keep: set[str] = set()
+    try:
+        # A snapshot is kept whether or not anything pins it yet
+        keep: set[str] = snapshot.all_hashes(store)
+    except snapshot.SnapshotError as error:
+        raise LockError(str(error)) from None
+    plan.snapshots = len(keep)
     for root in store.roots():
         found = read_lock(root.lockfile)
         plan.lockfiles.append((root.lockfile, found is not None))

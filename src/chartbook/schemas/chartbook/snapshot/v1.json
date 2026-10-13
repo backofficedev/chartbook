@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://backofficedev.github.io/chartbook/schemas/chartbook/snapshot/v1.json",
+  "title": "ChartBook snapshot",
+  "description": "The record `chartbook snapshot` writes in the store: what one commit of a pipeline built. It has the index's envelope, with `code` and `made_at` in place of `generated_at` and `generator`. Its records are the index's asset records with fields left out, one for each asset the pipeline declares. The bytes are objects in the same store, under each record's `content_hash`.",
+  "type": "object",
+  "required": [
+    "schema",
+    "root",
+    "code",
+    "made_at",
+    "records"
+  ],
+  "properties": {
+    "schema": {
+      "const": "chartbook/snapshot/v1"
+    },
+    "root": {
+      "type": "string",
+      "description": "The ID of the pipeline the snapshot is of, as the pipeline named itself when it was made."
+    },
+    "code": {
+      "type": "object",
+      "description": "The code the assets were built from.",
+      "required": [
+        "commit"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "The git commit the pipeline's repository was at, with nothing in the pipeline's folder uncommitted."
+        },
+        "subdirectory": {
+          "type": "string",
+          "description": "The pipeline's folder within its repository, with `/` between its parts. Absent for a pipeline at the top of its repository."
+        }
+      }
+    },
+    "made_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+      "description": "When the snapshot was made, in UTC. One commit can have several: a pipeline that pulls data from outside builds other bytes on another day. With the commit, this names the snapshot."
+    },
+    "records": {
+      "type": "array",
+      "description": "One record per asset the pipeline declares with a `path`, sorted by the asset's reference. One with a `content_hash` was built; one without was declared and not built when the snapshot was made.",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "version",
+          "id",
+          "ref",
+          "pipeline",
+          "location"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "pipeline": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

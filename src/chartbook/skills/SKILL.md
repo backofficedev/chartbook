@@ -40,13 +40,14 @@ chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>,
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy (needs [dependencies] + chartbook pin)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
-chartbook pin               # Freeze what [dependencies] have now: files into the store, hashes into chartbook.lock (commit it); clones git dependencies
-chartbook update [dep...]   # Move pins forward to what the dependencies have now (pin never moves an existing pin)
+chartbook snapshot          # In a pipeline OTHERS depend on: declare its build ready. Copies its built assets to the store, labelled with the commit. Refuses if anything in its folder is uncommitted
+chartbook pin               # Freeze what [dependencies] have: each one's newest snapshot (never its folder); hashes and commit into chartbook.lock (commit it); clones git dependencies
+chartbook update [dep...]   # Move pins forward to each dependency's newest snapshot (pin never moves an existing pin)
 chartbook run               # Pin what has no pin, then run this pipeline's [scripts] build. Never moves a pin. NEVER builds in a folder it depends on
 chartbook run <script>      # ...or another named script, e.g. `chartbook run test` (pins nothing)
 chartbook run --force       # Also rebuild git dependencies (each is built once, in a clean copy); refreshes data they pull from outside
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, or CHARTBOOK_STORE); exit 1 if an object changed
-chartbook store gc          # Remove from the store what no lockfile names; lists and asks first (--dry-run, --yes)
+chartbook store gc          # Remove from the store what no lockfile and no snapshot names; lists and asks first (--dry-run, --yes)
 chartbook config            # Configure default catalog path (interactive)
 chartbook catalog init      # Create global catalog at ~/.chartbook/chartbook.toml
 chartbook catalog add <path>     # Add pipeline(s) to catalog
@@ -154,8 +155,10 @@ joblib.dump(model, models.path("my_model"))
 # Another pipeline this one reads from is declared in chartbook.toml:
 #   [dependencies]
 #   "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
-# then pinned with `chartbook pin` (writes chartbook.lock; commit it), or by
-# `chartbook run`, which pins what has no pin and then builds THIS pipeline. After that,
+# The other pipeline's owner declares a build ready there: `chartbook snapshot`
+# (everything committed first). Then here: `chartbook pin` (writes chartbook.lock;
+# commit it), or `chartbook run`, which pins what has no pin and builds THIS pipeline.
+# Nothing ever reads the other pipeline's folder. After that,
 # "pipeline:name" is that pipeline's asset AS PINNED: a frozen copy in the store,
 # not its working directory. It changes only on `chartbook update`. Read-only.
 rates = data.load("fed_yield_curve:treasury_rates")           # LazyFrame, pinned copy

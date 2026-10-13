@@ -315,13 +315,34 @@ class TestExampleProjects:
         assert (example_path / "_output" / "yield_curve_current.html").exists()
         assert (example_path / "docs" / "index.html").exists()
 
+    @staticmethod
+    def _snapshot(pipeline_path: Path, env: dict):
+        """Declare a pipeline's build ready, as its owner would.
+
+        A snapshot needs everything in the pipeline's folder to be committed,
+        so this fails if the example has been edited and not committed.
+        """
+        result = subprocess.run(
+            ["chartbook", "snapshot"],
+            cwd=pipeline_path,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            env=env,
+        )
+        assert result.returncode == 0, (
+            f"chartbook snapshot failed in {pipeline_path.name}. If you have edited "
+            f"that example, commit it first.\n{result.stderr}\n{result.stdout}"
+        )
+        return result
+
     def _build_rate_forecast(self, store_dir: Path):
         """Build the rate_forecast example on yield_curve's mock data.
 
-        It pins yield_curve's data into *store_dir*, a scratch store, so
-        that a test never writes to the store of whoever runs it. The
-        lockfile it leaves is removed again: it names objects in a store
-        that is about to be deleted.
+        A snapshot of yield_curve is made in *store_dir*, a scratch store,
+        and rate_forecast pins that, so that a test never writes to the
+        store of whoever runs it. The lockfile it leaves is removed again:
+        it names objects in a store that is about to be deleted.
         """
         yield_curve_path = Path("examples/yield_curve").resolve()
         example_path = Path("examples/rate_forecast").resolve()
@@ -339,6 +360,7 @@ class TestExampleProjects:
                 env=env,
             )
             assert result.returncode == 0, f"yield_curve doit failed: {result.stderr}"
+        self._snapshot(yield_curve_path, env)
 
         self._clean_example_dirs(example_path)
         result = subprocess.run(
@@ -359,6 +381,10 @@ class TestExampleProjects:
         builds with no catalog configured, its model's index record names
         the exact bytes it was trained on, and editing the upstream's data
         does not change what it reads until `chartbook update`.
+
+        And of the snapshot model of step 4: what it pins is the build
+        yield_curve's owner declared ready. A rebuild of yield_curve is not
+        seen at all until its owner makes a snapshot of it.
         """
         yield_curve_path = Path("examples/yield_curve").resolve()
         upstream = yield_curve_path / "_data" / "fed_yield_curve.parquet"
@@ -395,6 +421,15 @@ class TestExampleProjects:
             again = run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip()
             assert Path(again) == pinned_path
             assert pinned_path.read_bytes() == original
+
+            # Nothing here is told: the folder is not read, and its owner
+            # has not declared the new data ready. Not even an update moves.
+            pin = run("chartbook", "pin")
+            assert "changed upstream" not in pin.stdout, pin.stdout + pin.stderr
+            assert "chartbook.lock is unchanged." in run("chartbook", "update").stdout
+
+            # Its owner makes a snapshot. Now this pipeline is told, and stays put.
+            assert "Snapshot made." in self._snapshot(yield_curve_path, env).stdout
             pin = run("chartbook", "pin")
             assert "changed upstream" in pin.stdout, pin.stdout + pin.stderr
             assert Path(run("chartbook", "path", "yield_curve:fed_yield_curve").stdout.strip()) == pinned_path
@@ -415,12 +450,12 @@ class TestExampleProjects:
                 lockfile.unlink()
 
     def test_chartbook_run_pins_and_builds_the_example(self, tmp_path):
-        """`chartbook run` in rate_forecast pins what yield_curve has, and builds.
+        """`chartbook run` in rate_forecast pins yield_curve's snapshot, and builds.
 
-        From nothing pinned: the first part of step 4 in
-        docs_src/design/overview.md. It does not build yield_curve, which is
-        a folder this pipeline depends on and its owner's to build; here
-        the test is its owner. Each example's `build` script is `doit`.
+        From nothing pinned: step 4 in docs_src/design/overview.md. It does
+        not build yield_curve, which is a folder this pipeline depends on
+        and its owner's to build and to declare ready; here the test is its
+        owner. Each example's `build` script is `doit`.
         """
         yield_curve_path = Path("examples/yield_curve").resolve()
         example_path = Path("examples/rate_forecast").resolve()
@@ -438,6 +473,7 @@ class TestExampleProjects:
         )
         assert built.returncode == 0, f"run failed: {built.stderr}\n{built.stdout}"
         assert built.stdout.rstrip().endswith("Ran build in 1 pipeline(s).")
+        self._snapshot(yield_curve_path, env)
 
         self._clean_example_dirs(example_path)
         lockfile = example_path / "chartbook.lock"

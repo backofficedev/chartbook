@@ -554,8 +554,9 @@ class TestPinning:
                 }
             },
         )
-        report = lock.pin(downstream, git_cache=cache)
+        report = lock.pin(downstream, git_cache=cache, from_folder=True)
         assert report.git == {"acme/upstream"}
+        assert report.from_folder == {"local"}
         assert set(lock.read_lock(downstream).assets) == {
             "acme/upstream:committed",
             "acme/upstream:ignored",

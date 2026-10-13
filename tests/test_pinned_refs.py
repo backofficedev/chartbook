@@ -6,6 +6,7 @@ dependency resolves through ``chartbook.lock`` to the pinned copy in the
 store, and never to the other pipeline's working directory.
 """
 
+import functools
 import glob
 import json
 import os
@@ -27,6 +28,12 @@ from chartbook.refs import KindMismatchError
 from chartbook.resolve import UnsupportedReferenceError, resolve
 from chartbook.store import Store
 from tests.fixtures import create_catalog_project, create_pipeline_project
+
+# These tests pin from a folder as it stands. That is what ``--from-folder``
+# does, and what pinning did before there were snapshots. Pinning from a
+# snapshot, which is the ordinary way, is tested in tests/test_snapshot.py.
+pin_folder = functools.partial(lock.pin, from_folder=True)
+update_folder = functools.partial(lock.update, from_folder=True)
 
 HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
@@ -104,7 +111,7 @@ def downstream(work, rates):
 @pytest.fixture
 def pinned(downstream, store):
     """The downstream pipeline, with its dependency pinned."""
-    lock.pin(downstream, store)
+    pin_folder(downstream, store)
     return downstream
 
 
@@ -181,10 +188,10 @@ class TestFrozen:
     def test_until_chartbook_update(self, pinned, rates, store):
         before = data.path("rates:treasury", project_dir=pinned)
         _rewrite(rates / "_data" / "treasury.parquet", b"new numbers")
-        lock.pin(pinned, store)  # pinning again moves nothing
+        pin_folder(pinned, store)  # pinning again moves nothing
         assert data.path("rates:treasury", project_dir=pinned) == before
 
-        lock.update(pinned, store=store)
+        update_folder(pinned, store=store)
         after = data.path("rates:treasury", project_dir=pinned)
         assert after != before and after.read_bytes() == b"new numbers"
         # The old copy is as it was, for anything still reading it
@@ -268,7 +275,7 @@ class TestWhatIsMissing:
         assert "had no dataframe named 'treasuri' when it was pinned" in message
         assert "Did you mean 'treasury'?" in message
         assert "are: by_year, not_built, treasury." in message
-        assert "run `chartbook pin`" in message
+        assert "If it has declared one since, `chartbook update` pins it." in message
 
     def test_it_looks_among_assets_of_the_kind_asked_for(self, pinned):
         with pytest.raises(AssetNotPinnedError, match="had no chart named 'treasury'") as e:
@@ -288,9 +295,9 @@ class TestWhatIsMissing:
             data.path("rates:treasury", project_dir=pinned)
         assert e.value.reason == "not_in_store"
         assert f"is pinned at {HELLO}, and the store at {store.root} does not have it" in str(e.value)
-        assert "to put it back" in str(e.value)
+        assert "it puts it back if it can" in str(e.value)
 
-        lock.pin(pinned, store)  # which is what it says to run
+        pin_folder(pinned, store)  # which is what it says to run
         assert data.path("rates:treasury", project_dir=pinned).read_bytes() == b"hello"
 
     def test_a_git_dependency_that_has_not_been_pinned(self, downstream, store):
@@ -383,7 +390,7 @@ def with_data(work, store):
     reader = create_pipeline_project(work / "reader", pipeline_id="reader").resolve()
     with open(reader / "chartbook.toml", "a") as f:
         f.write('\n[dependencies]\nupstream = { path = "../upstream" }\n')
-    lock.pin(reader, store)
+    pin_folder(reader, store)
     return reader, upstream
 
 
@@ -405,7 +412,7 @@ class TestLoad:
         pl.DataFrame({"date": ["2026-01-01"], "value": [1.0]}).write_parquet(source)
 
         assert data.load("upstream:dataframe_0", project_dir=reader).collect().height == 10
-        lock.update(reader, store=store)
+        update_folder(reader, store=store)
         assert data.load("upstream:dataframe_0", project_dir=reader).collect().height == 1
 
     @pytest.mark.parametrize(
@@ -493,7 +500,7 @@ class TestInTheIndex:
 
         unchanged = self._record(index.build_index(load_manifest(reader)), "Model")
         assert unchanged["pinned_inputs"] == before["pinned_inputs"]
-        lock.update(reader, store=store)
+        update_folder(reader, store=store)
         moved = self._record(index.build_index(load_manifest(reader)), "Model")
         assert moved["pinned_inputs"] == {
             "upstream:dataframe_0": hashing.hash_file(source).content_hash
@@ -529,7 +536,7 @@ class TestInTheIndex:
         with open(pipeline_a / "chartbook.toml", "a") as f:
             f.write('\n[dependencies]\nup = { path = "../pipeline_b" }\n')
         self._add_model(pipeline_a, ["up:dataframe_0"])
-        lock.pin(pipeline_a, store)
+        pin_folder(pipeline_a, store)
 
         model = self._record(index.build_index(load_manifest(catalog)), "Model")
         assert model["inputs"] == ["acme/pipeline_b:dataframe_0"]

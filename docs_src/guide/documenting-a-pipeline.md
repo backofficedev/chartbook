@@ -130,10 +130,19 @@ trained_on = ["fed_yield_curve:treasury_rates"]
 
 `chartbook check` then confirms that the other pipeline is there and that it declares that dataframe.
 
+**The other pipeline's owner says when a build is ready.** In its folder, with everything committed:
+
+```console
+$ chartbook run          # build it
+$ chartbook snapshot     # copy what it built into the store, labelled with the commit
+```
+
+That is a snapshot, and it is the only thing of theirs you ever read. You never read their folder.
+
 Then freeze what you depend on, and read it by name:
 
 ```console
-$ chartbook pin          # copy what they have now into the store; write chartbook.lock
+$ chartbook pin          # pin their newest snapshot; write chartbook.lock
 $ git add chartbook.lock
 ```
 
@@ -144,13 +153,19 @@ rates = data.load("fed_yield_curve:treasury_rates")     # the pinned copy
 path = data.path("fed_yield_curve:treasury_rates")      # or just where it is
 ```
 
-What you get is the copy that was pinned, not whatever is in `../fed_yield_curve/_data/` this minute. The other pipeline can rebuild, or be half-way through a change, and your results do not move. When you want their newer data:
+What you get is the build they declared ready, not whatever is in `../fed_yield_curve/_data/` this minute. They can rebuild, or be half-way through a change, and your results do not move. When they have made a newer snapshot and you want it:
 
 ```console
 $ chartbook update       # move the pins; chartbook.lock shows the change in a diff
 ```
 
-The `rate_forecast` example does exactly this, with a model trained on the `yield_curve` example's data. {ref}`[dependencies] <dependencies>` has every detail.
+| Who | Does | When |
+|---|---|---|
+| The other pipeline's owner | `chartbook snapshot` | When a build is ready for others |
+| You | `chartbook pin`, once | To start depending on it |
+| You | `chartbook update` | When you want their newer snapshot |
+
+The `rate_forecast` example does exactly this, with a model trained on the `yield_curve` example's data. {ref}`[dependencies] <dependencies>` and {ref}`chartbook snapshot <chartbook-snapshot>` have every detail.
 
 ### Building it
 
@@ -167,14 +182,15 @@ Then one command pins what you depend on, if nothing is pinned yet, and builds:
 $ chartbook run
 ftsfr/rate_forecast: pinning what it depends on
 ftsfr/fed_yield_curve: 3 pinned
+  From its snapshot at 4f2a91c, made 2026-10-13 18:22 UTC.
 Wrote chartbook.lock.
 ftsfr/rate_forecast: build
 Ran build in 1 pipeline(s).
 ```
 
-`chartbook run` does not build `../fed_yield_curve`. That folder is somebody's work, perhaps in the middle of a change, and your pipeline reads the pinned copy, not the folder. Whoever owns it builds it.
+`chartbook run` does not build `../fed_yield_curve`, and does not read it. That folder is somebody's work, perhaps in the middle of a change. Whoever owns it builds it and makes the snapshot.
 
-It never moves a pin either. If the other pipeline has newer data, yours is still built against the copy you pinned, and the command tells you so. `chartbook update` is what moves a pin. See {ref}`chartbook run <chartbook-run>`.
+It never moves a pin either. If the other pipeline has a newer snapshot, yours is still built against the one you pinned, and the command tells you so. `chartbook update` is what moves a pin. See {ref}`chartbook run <chartbook-run>`.
 
 A dependency can also be a git repository, `{ git = "https://…", rev = "v1.2" }`, for one that is not on your disk. `chartbook pin` clones it, and can pin only what that repository keeps in git: reference data and models that are committed. For data that the other pipeline builds, use `chartbook run`, which builds it once in a clean copy of that commit.
 
