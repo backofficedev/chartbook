@@ -2134,6 +2134,10 @@ def store_gc(dry_run, yes, forget_missing):
 def init(use_git, use_github, public):
     """Initialize a new chartbook project from the cookiecutter template.
 
+    The template is the `template/` folder of ChartBook's repository. It is
+    rendered with cruft, so `cruft update` in the new project brings in
+    later changes to it.
+
     With --git, the new project is also made a git repository with one
     commit. With --github, a GitHub repository is then created for it under
     the account `gh` is logged in as, and the commit is pushed. Both are off
@@ -2188,15 +2192,14 @@ def init(use_git, use_github, public):
                 err=True,
             )
 
-    template = "https://github.com/backofficedev/cookiecutter_chartbook"
     if not use_git:
-        subprocess.run(["cruft", "create", template], check=True)
+        subprocess.run(scaffold.template_command(), check=True)
         return
 
     # The project's directory is named from an answer at cruft's prompt, so
     # it is identified afterwards as the one that was not here before
     before = scaffold.rendered_projects(cwd)
-    rendered = subprocess.run(["cruft", "create", template])
+    rendered = subprocess.run(scaffold.template_command())
     if rendered.returncode != 0:
         raise SystemExit(rendered.returncode)
 

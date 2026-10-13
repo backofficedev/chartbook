@@ -1,6 +1,12 @@
-"""What ``chartbook init`` does after the template has been rendered.
+"""What ``chartbook init`` renders, and what it does after.
 
-``chartbook init`` renders a project from the cookiecutter template. With
+``chartbook init`` renders a project from the cookiecutter template, which
+is the ``template/`` folder of ChartBook's own repository
+(:data:`TEMPLATE_REPOSITORY`, :data:`TEMPLATE_DIRECTORY`). It lives beside
+the code so that a command the template uses and the command itself change
+in one pull request, and so that the tests here build a freshly rendered
+project. It is rendered with cruft, which records where the project came
+from in ``.cruft.json``, so ``cruft update`` can bring in later changes. With
 ``--git`` it also runs ``git init`` and makes the first commit; with
 ``--github`` it then creates a GitHub repository and pushes that commit.
 These are the same three commands every time, run here through ``git`` and
@@ -25,6 +31,17 @@ DEFAULT_BRANCH = "main"
 
 #: A project rendered by cruft carries this file at its root.
 CRUFT_MARKER = ".cruft.json"
+
+#: The repository the project template is in: ChartBook's own.
+TEMPLATE_REPOSITORY = "https://github.com/backofficedev/chartbook"
+
+#: The folder of that repository that is the template.
+TEMPLATE_DIRECTORY = "template"
+
+
+def template_command() -> list[str]:
+    """The command that renders a new project from the template."""
+    return ["cruft", "create", TEMPLATE_REPOSITORY, "--directory", TEMPLATE_DIRECTORY]
 
 
 class ScaffoldError(Exception):

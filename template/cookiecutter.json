@@ -1,0 +1,36 @@
+{
+    "project_name": "My Data Science Project",
+    "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_').replace('-', '_') }}",
+    "project_description": "A data science project",
+    "author_name": "Your Name",
+    "author_email": "your.email@example.com",
+    "python_version": "3.12",
+    "environment_manager": ["pip", "uv", "conda", "pixi"],
+
+    "include_latex_reports": true,
+    "include_jupyter_notebooks": true,
+    "include_r_scripts": false,
+    "include_stata_scripts": false,
+    "include_chartbook": true,
+    "include_github_actions": false,
+
+    "include_fred": false,
+    "include_fed_yield_curve": false,
+    "include_ofr_api": false,
+    "include_bloomberg": false,
+    "include_crsp_stock": false,
+    "include_crsp_compustat": false,
+
+    "_copy_without_render": [
+        "*.bst",
+        "*.sty",
+        "*.eps",
+        "*.ipe",
+        "*.png",
+        "*.pdf",
+        "*.tex",
+        "*.bib",
+        ".github/workflows/*.yml",
+        ".claude/skills/*/*.md"
+    ]
+}

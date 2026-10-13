@@ -731,3 +731,5 @@ Reference material to rewrite, and where the rationale is preserved:
   linking here.
 - **Cookiecutter repo** (`cookiecutter_chartbook`) — template
   `chartbook.toml` (Jinja preserved), rendered `example/`, and its README.
+  *(2026-10-13: the template now lives in this repository, in `template/`.
+  {doc}`overview`, "The project template, moved in".)*
