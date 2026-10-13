@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — a folder's hash ignores `.DS_Store` and its kind
+
+A model or a dataset that is a folder has one content hash over all its files. Until now that meant *all*: opening the folder in Finder wrote a `.DS_Store`, and the hash in `index.json` changed although nothing in the model had. Four kinds of file that operating systems create by themselves are now left out: `.DS_Store`, `Thumbs.db`, `desktop.ini`, and any file whose name starts with `._`. They are also left out of a directory model's `files` in the index and of the Files table on its page.
+
+Every other file still counts, hidden or not. Skipping every dotfile would have been simpler to say and wrong: a Zarr dataset keeps its real metadata in `.zarray` and `.zattrs`. A `path` that names a single file is unaffected, whatever the file is called.
+
+The index and its hashes have not been in a release, so no stored hash changes meaning. The rule is in {doc}`design/index-schema`, with a shell command that reproduces it.
+
 ### Added — dependencies: `[dependencies]`
 
 A pipeline can now say which other pipelines it reads from, and where each one is:

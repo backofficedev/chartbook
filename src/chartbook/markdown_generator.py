@@ -18,6 +18,7 @@ import polars as pl
 import yaml
 
 from chartbook.errors import ChartBookError
+from chartbook.hashing import directory_files
 from chartbook.manifest import (
     apply_code_change_times,
     get_file_modified_datetime,
@@ -760,7 +761,8 @@ def model_last_modified(model_path):
     """
     model_path = Path(model_path)
     if model_path.is_dir():
-        files = [p for p in model_path.rglob("*") if p.is_file()]
+        # The files that make up the model, as its hash counts them
+        files = directory_files(model_path)
         if not files:
             return None
         return max(get_file_modified_datetime(f) for f in files)
@@ -1018,7 +1020,7 @@ def generate_model_docs(
                 "path": file.relative_to(model_path).as_posix(),
                 "size": _format_size(file.stat().st_size),
             }
-            for file in sorted(p for p in model_path.rglob("*") if p.is_file())
+            for file in sorted(directory_files(model_path))
         ]
 
     template = environment.from_string(_MODEL_PAGE_HEAD + write_up + _MODEL_PAGE_TAIL)

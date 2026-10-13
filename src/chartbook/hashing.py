@@ -16,8 +16,12 @@ A hash is written ``"<algorithm>:<hex>"``, e.g. ``"sha256:7f3a9c..."``.
   sorted by path. This is the output of ``sha256sum``, so the result can be
   reproduced by hand::
 
-      cd _data/rates && find . -type f | sed 's|^\\./||' | LC_ALL=C sort \\
-          | xargs sha256sum | sha256sum
+      cd _data/rates && find . -type f | sed 's|^\\./||' \\
+          | grep -viE '(^|/)(\\.DS_Store|Thumbs\\.db|desktop\\.ini|\\._[^/]*)$' \\
+          | LC_ALL=C sort | xargs sha256sum | sha256sum
+
+  The ``grep`` leaves out the few files that operating systems create by
+  themselves (:func:`is_ignored`). Every other file counts, hidden or not.
 
 Hashing reads every byte, and data files are large, so a
 :class:`HashCache` remembers each file's hash against its size and
@@ -47,8 +51,34 @@ CACHE_FILE = ".chartbook-hash-cache.json"
 #: Bumped when the cache file's layout changes; an old file is then ignored.
 CACHE_VERSION = 1
 
+#: Files that operating systems create by themselves, by name in lower case.
+#: A directory or a glob is hashed without them, so that opening a folder in
+#: Finder or Explorer does not change what the folder is.
+IGNORED_NAMES = frozenset({".ds_store", "thumbs.db", "desktop.ini"})
+
+#: ...and by how the name starts: the ``._name`` companions macOS writes
+#: beside files on a disk that is not its own.
+IGNORED_PREFIX = "._"
+
 _CHUNK_SIZE = 1024 * 1024
 _GLOB_CHARACTERS = frozenset("*?[")
+
+
+def is_ignored(name: Union[str, Path]) -> bool:
+    """Whether a file is one of the few that are never part of an asset.
+
+    These are ``.DS_Store``, ``Thumbs.db``, ``desktop.ini`` and anything
+    whose name starts with ``._``, compared without regard to case. The
+    list is short and fixed on purpose. A hidden file is content unless it
+    is on it: a Zarr dataset keeps its metadata in ``.zarray``.
+
+    The rule applies to an asset made of several files, a directory or a
+    glob. A ``path`` that names one file is that file, whatever it is called.
+
+    :param name: A file's name, or a path whose last component is one.
+    """
+    lowered = os.path.basename(str(name)).lower()
+    return lowered in IGNORED_NAMES or lowered.startswith(IGNORED_PREFIX)
 
 
 def format_hash(hex_digest: str) -> str:
@@ -231,17 +261,70 @@ def glob_root(pattern: Union[str, Path]) -> Path:
     return Path(*fixed) if fixed else Path(".")
 
 
+def directory_files(directory: Union[str, Path]) -> list[Path]:
+    """Every file under a directory that counts as part of it.
+
+    That is all of them but the ones :func:`is_ignored` names.
+    """
+    return [
+        Path(folder) / name
+        for folder, _, names in os.walk(directory)
+        for name in names
+        if not is_ignored(name)
+    ]
+
+
 def hash_directory(
     directory: Union[str, Path], cache: Optional[HashCache] = None
 ) -> ContentHash:
     """Hash every file under a directory, as one asset."""
-    directory = Path(directory)
-    files = [
-        Path(folder) / name
-        for folder, _, names in os.walk(directory)
-        for name in names
-    ]
-    return hash_files(files, directory, cache)
+    return hash_files(directory_files(directory), directory, cache)
+
+
+@dataclass(frozen=True)
+class PathFiles:
+    """What a declared ``path`` names on disk.
+
+    Attributes:
+        root: The directory the files are listed relative to: the
+            directory itself, a glob's fixed prefix, or a single file's
+            parent.
+        files: The files, in no particular order.
+        single: True if the path names one file, which is hashed as its
+            bytes. False for a directory or a glob, which is hashed as a
+            listing even when it holds one file.
+    """
+
+    root: Path
+    files: tuple[Path, ...]
+    single: bool
+
+
+def find_files(path: Union[str, Path]) -> Optional[PathFiles]:
+    """Find the files a declared ``path`` names: a file, a glob or a directory.
+
+    This is the one place that decides which files make up an asset, so
+    that what is hashed and what is stored are the same files.
+
+    :param path: An absolute path, which may contain glob characters.
+    :returns: The files, or None if nothing is there yet: the file does not
+        exist, or the glob matches no file.
+    """
+    text = str(path)
+    if is_glob_pattern(text):
+        matches = tuple(
+            Path(match)
+            for match in glob.glob(text, recursive=True)
+            if os.path.isfile(match) and not is_ignored(match)
+        )
+        if not matches:
+            return None
+        return PathFiles(glob_root(text), matches, single=False)
+    if os.path.isdir(text):
+        return PathFiles(Path(text), tuple(directory_files(text)), single=False)
+    if os.path.isfile(text):
+        return PathFiles(Path(text).parent, (Path(text),), single=True)
+    return None
 
 
 def hash_path(
@@ -253,14 +336,9 @@ def hash_path(
     :returns: The hash, or None if nothing is there yet: the file does not
         exist, or the glob matches no file.
     """
-    text = str(path)
-    if is_glob_pattern(text):
-        matches = [m for m in glob.glob(text, recursive=True) if os.path.isfile(m)]
-        if not matches:
-            return None
-        return hash_files(matches, glob_root(text), cache)
-    if os.path.isdir(text):
-        return hash_directory(text, cache)
-    if os.path.isfile(text):
-        return hash_file(text, cache)
-    return None
+    found = find_files(path)
+    if found is None:
+        return None
+    if found.single:
+        return hash_file(found.files[0], cache)
+    return hash_files(found.files, found.root, cache)

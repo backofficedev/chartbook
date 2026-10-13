@@ -17,11 +17,15 @@ from chartbook import hashing
 from chartbook.hashing import (
     ContentHash,
     HashCache,
+    PathFiles,
+    directory_files,
+    find_files,
     glob_root,
     hash_directory,
     hash_file,
     hash_files,
     hash_path,
+    is_ignored,
 )
 
 EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -109,14 +113,123 @@ class TestHashFiles:
     )
     def test_can_be_reproduced_by_hand(self, tree):
         """The listing is `sha256sum` output, so a shell gives the same answer."""
+        # What an operating system leaves behind is not part of the listing;
+        # a hidden file of the data's own is
+        (tree / ".DS_Store").write_bytes(b"finder")
+        (tree / "year=2024" / "._part.parquet").write_bytes(b"fork")
+        (tree / ".zarray").write_bytes(b"{}")
         script = (
-            "find . -type f | sed 's|^\\./||' | LC_ALL=C sort "
-            "| xargs shasum -a 256 | shasum -a 256"
+            "find . -type f | sed 's|^\\./||' "
+            "| grep -viE '(^|/)(\\.DS_Store|Thumbs\\.db|desktop\\.ini|\\._[^/]*)$' "
+            "| LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256"
         )
         output = subprocess.run(
             ["sh", "-c", script], cwd=tree, capture_output=True, text=True, check=True
         ).stdout
         assert hash_directory(tree).content_hash == "sha256:" + output.split()[0]
+        assert [f.path for f in hash_directory(tree).files] == [
+            ".zarray",
+            "a.parquet",
+            "b.parquet",
+            "year=2024/part.parquet",
+        ]
+
+
+class TestIgnoredFiles:
+    """A short, fixed list of files an operating system creates by itself."""
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            ".DS_Store",
+            ".ds_store",
+            "Thumbs.db",
+            "thumbs.db",
+            "desktop.ini",
+            "Desktop.ini",
+            "._weights.pt",
+            "._",
+            "weights/._best.pt",
+        ],
+    )
+    def test_these_are_never_part_of_an_asset(self, name):
+        assert is_ignored(name)
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            ".zarray",
+            ".zattrs",
+            ".gitattributes",
+            ".hidden.parquet",
+            "_SUCCESS",
+            "weights.pt",
+            "DS_Store",
+            "thumbs.db.parquet",
+            "._hidden_dir/weights.pt",
+        ],
+    )
+    def test_everything_else_counts(self, name):
+        assert not is_ignored(name)
+
+    def test_one_appearing_does_not_change_a_directorys_hash(self, tree):
+        before = hash_directory(tree)
+        (tree / ".DS_Store").write_bytes(b"finder was here")
+        (tree / "year=2024" / "Thumbs.db").write_bytes(b"explorer too")
+        (tree / "._a.parquet").write_bytes(b"resource fork")
+        assert hash_directory(tree) == before
+        assert hash_path(tree) == before
+
+    def test_a_hidden_file_of_the_datas_own_does(self, tree):
+        before = hash_directory(tree)
+        (tree / ".zarray").write_bytes(b'{"chunks": [10]}')
+        after = hash_directory(tree)
+        assert after.content_hash != before.content_hash
+        assert ".zarray" in [f.path for f in after.files]
+
+    def test_a_glob_leaves_them_out_too(self, tree):
+        before = hash_path(tree / "**" / "*")
+        (tree / "desktop.ini").write_bytes(b"[.ShellClassInfo]")
+        assert hash_path(tree / "**" / "*") == before
+
+    def test_a_path_that_names_one_is_still_that_file(self, tmp_path):
+        """The rule is about what a folder holds, not about a declared file."""
+        odd = tmp_path / "Thumbs.db"
+        odd.write_bytes(b"hello")
+        assert hash_path(odd).content_hash == f"sha256:{HELLO_SHA256}"
+
+    def test_directory_files_is_the_list_that_is_hashed(self, tree):
+        (tree / ".DS_Store").write_bytes(b"finder")
+        assert sorted(p.relative_to(tree).as_posix() for p in directory_files(tree)) == [
+            "a.parquet",
+            "b.parquet",
+            "year=2024/part.parquet",
+        ]
+
+
+class TestFindFiles:
+    """Which files a declared path names: what is hashed is what is stored."""
+
+    def test_one_file(self, tree):
+        found = find_files(tree / "a.parquet")
+        assert found == PathFiles(tree, (tree / "a.parquet",), single=True)
+
+    def test_a_directory(self, tree):
+        found = find_files(tree)
+        assert found.root == tree and not found.single
+        assert sorted(found.files) == sorted(directory_files(tree))
+
+    def test_a_glob_is_listed_from_its_fixed_prefix(self, tree):
+        found = find_files(tree / "year=*" / "*.parquet")
+        assert found.root == tree and not found.single
+        assert found.files == (tree / "year=2024" / "part.parquet",)
+
+    def test_a_glob_that_matches_one_file_is_still_a_listing(self, tree):
+        assert find_files(tree / "a.*").single is False
+
+    def test_nothing_there(self, tmp_path):
+        assert find_files(tmp_path / "not_built.parquet") is None
+        assert find_files(tmp_path / "none" / "*.parquet") is None
 
 
 class TestGlobRoot:
