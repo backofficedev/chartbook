@@ -565,6 +565,11 @@ missing from it: one record for each asset of each dependency, with its `content
 - **`pinned_hash`** is the SHA-256 of a listing with one line per pinned asset of that
   dependency, `<hex of its content hash>`, two spaces, `<its ID>`, newline, sorted by ID.
 - **A `location` of kind `path` has `path` and no `value`**: a lockfile holds no absolute path.
+- **A `location` of kind `git` has `url`, `rev` if the manifest gives one, and `commit`**: the
+  full hash that `rev` meant when the dependency was pinned. `rev` is what was asked for;
+  `commit` is what was got. The index copies `commit` onto the pipeline's dependency once it
+  is pinned. The `url` never has a user name or a password in it. *(Proposed 2026-10-12, with
+  `git` dependencies.)*
 
 ## Candidate additions, deliberately out of v1
 
@@ -760,3 +765,7 @@ maintainer's yes:**
     is pinned. (That it is a field beside `inputs` was the maintainer's decision.)
 15. A `chartbook.lock` that cannot be read leaves what is pinned out of the index, with a
     warning, and does not stop the build.
+
+**Proposed with `git` dependencies (step 3e), 2026-10-12:**
+
+16. A dependency's `location` of kind `git` gains `commit`, beside `url` and `rev`.

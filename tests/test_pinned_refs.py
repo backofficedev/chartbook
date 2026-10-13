@@ -293,14 +293,15 @@ class TestWhatIsMissing:
         lock.pin(pinned, store)  # which is what it says to run
         assert data.path("rates:treasury", project_dir=pinned).read_bytes() == b"hello"
 
-    def test_a_git_dependency_has_nothing_to_read_yet(self, downstream, store):
+    def test_a_git_dependency_that_has_not_been_pinned(self, downstream, store):
+        """Like any other: it says to pin. Nothing is fetched to resolve a reference."""
         _write_manifest(
             downstream,
             {"dependencies": {"crsp": {"git": "https://example.org/acme/crsp.git"}}},
         )
-        with pytest.raises(UnsupportedReferenceError, match="not yet supported") as e:
+        with pytest.raises(AssetNotPinnedError, match="Run `chartbook pin`") as e:
             data.path("crsp:returns", project_dir=downstream)
-        assert "which is a git dependency" in str(e.value)
+        assert e.value.reason == "no_lockfile"
 
     def test_a_part_a_version_and_a_registry_are_still_reserved(self, pinned):
         with pytest.raises(UnsupportedReferenceError, match="not yet supported"):

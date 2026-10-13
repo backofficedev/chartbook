@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `git` dependencies
+
+A dependency no longer has to be on your disk. It can be a git repository:
+
+```toml
+[dependencies]
+"ftsfr/ref_data" = { git = "https://gitlab.example.org/ftsfr/ref_data", rev = "v1.2" }
+```
+
+```console
+$ chartbook pin
+ftsfr/ref_data: fetched https://gitlab.example.org/ftsfr/ref_data at 4f2a91c (v1.2)
+ftsfr/ref_data: 2 pinned, 1 not built
+  not built: ftsfr/ref_data:daily_prices (./_data/daily_prices.parquet)
+  A git dependency has only what its repository commits.
+Wrote chartbook.lock.
+```
+
+`chartbook pin` clones the repository into `~/.chartbook/git/`, checks out the revision, and from there treats it like a directory: what it declares is pinned, and its assets are read with `data.load("ref_data:countries")` like any other dependency's. Any git host works, and so does a path to a repository on disk. `rev` is a branch, a tag or a commit, and may be left out for the default branch. `chartbook.lock` records the exact commit.
+
+**It can pin only what the repository commits.** A clone has the other pipeline's code and whatever data it keeps in git. Data that is built and git-ignored is not in a clone, and ChartBook does not run another pipeline's build, so those assets are listed as not built and the command says why. This is useful today for reference data, small tables and models that are committed. Reading *built* data from a pipeline you only have as a repository needs ChartBook to be able to run that pipeline, which is a later step.
+
+`pin` stays at the commit in the lockfile, and uses the network only if this machine has lost its copy of it. `chartbook update` fetches again and asks what the `rev` means now: a branch moves forward, a tag or a commit does not. Change `rev` in the manifest and `pin` points it out and stays put; `update` follows it.
+
+ChartBook runs the `git` you already have, so SSH keys and credential helpers work as they do by hand. It never waits at a password prompt; it fails. A URL is handed to git on each call and is not written into the clone, and a URL is shown without its user name and password in every message and in the lockfile. A `git` URL or a `rev` that git could take for an option is refused when the manifest loads.
+
+`chartbook check` looks at a `git` dependency where it has been fetched, and never uses the network: one that has not been fetched on this machine is a warning. To keep the clones somewhere else, set `CHARTBOOK_GIT_CACHE`, or `[git] path = "…"` in `~/.chartbook/settings.toml`.
+
+Not handled: submodules, Git LFS, working out a repository from an ID alone, and clearing out old checkouts, which `chartbook store gc` does not touch.
+
 ### Added — reading another pipeline's assets: `data.load("pipeline:name")`
 
 A pipeline can now read what another pipeline produces, by name, and get a copy that does not change under it.
@@ -41,7 +71,7 @@ A `trained_on` that names a pipeline `[dependencies]` does not declare is now an
 
 **A new example, `examples/rate_forecast`**, is the whole thing in one small pipeline: a model trained on the `yield_curve` example's data. It declares the dependency, pins it, loads the pinned copy, and retrains exactly when `chartbook.lock` changes. Its README shows what happens when `yield_curve` rebuilds afterwards: nothing, until `chartbook update`.
 
-Not yet: one column of another pipeline's dataframe (`…#dgs10`), a version (`…@v3`), and the assets of a `git` dependency. The design is "Pinning and isolation" in {doc}`design/asset-graph`, and the reference grammar is {doc}`design/references`.
+Not yet: one column of another pipeline's dataframe (`…#dgs10`) and a version (`…@v3`). The design is "Pinning and isolation" in {doc}`design/asset-graph`, and the reference grammar is {doc}`design/references`.
 
 ### Added — pinning: `chartbook pin`, `chartbook update`, `chartbook.lock`
 
@@ -64,7 +94,7 @@ For each pipeline in `[dependencies]`, every asset it declares is put in the sto
 
 **A pin is a copy that cannot change.** It is a copy-on-write clone where the disk has them (a Mac; Linux with btrfs or XFS), which costs nothing, and a full copy everywhere else, which costs the file's size. It is never a hard link or a symlink to the other pipeline's file. Those are the cheapest ways to hold a file and the store offers them, but that file is rewritten in place when the other pipeline rebuilds (pandas and polars both write a parquet file that way), and a pin that changed with it would not be a pin.
 
-A `git` dependency is listed in the lockfile and not pinned, since ChartBook does not fetch one yet. The design is "Pinning and isolation" in {doc}`design/asset-graph`.
+A `git` dependency is fetched and then pinned the same way; see the entry on `git` dependencies above. The design is "Pinning and isolation" in {doc}`design/asset-graph`.
 
 ### Added — the store: `chartbook.store` and `chartbook store verify`
 
@@ -109,7 +139,7 @@ What declaring a dependency does today:
 - **`index.json` lists them**, as `dependencies` in the pipeline's record. A model's training data in another pipeline is written by the dependency's name, so `fed_yield_curve:treasury_rates` in a manifest becomes `ftsfr/fed_yield_curve:treasury_rates` in the index. In a catalog, a dependency that is one of the catalog's own pipelines is written by the catalog's ID for it, so the entry matches a record in the same file.
 - **A `trained_on` that names a pipeline not in `[dependencies]` does not load**, and the error shows the line to add. A manifest that named another pipeline's dataframe on trust, which `[models]` first allowed, needs that one line.
 
-Declaring is the first half. Pinning what is declared, and reading the pinned copy, are the two entries above this one. A `git` dependency can be declared and is recorded, and is not fetched yet; `check` says so in a warning. `data.load(pipeline=…, dataframe=…)` still looks in a catalog and does not read this table.
+Declaring is the first half. Pinning what is declared, and reading the pinned copy, are the two entries above this one. A `git` dependency is fetched when it is pinned; `check` looks at it where it has been fetched, and never uses the network itself. `data.load(pipeline=…, dataframe=…)` still looks in a catalog and does not read this table.
 
 A `[dependencies]` table used to be ignored. One that is malformed now stops the manifest from loading, with a message naming the entry, and a catalog that has one is refused: a catalog reads from no pipeline. This is the first of five parts of step 3 in {doc}`design/overview`; the design is {doc}`design/asset-graph`.
 

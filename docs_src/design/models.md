@@ -324,7 +324,7 @@ Each slice is useful by itself. The step numbers are the {doc}`overview`'s build
 |---|---|---|
 | **M1. Declared models** (step 2) — **built** | The index | The `[models]` table in the loader, with validation. `model` added to `RESOLVABLE_KINDS`, so `chartbook path model/x` works. `chartbook.models.path()`. `chartbook check` covers `path`, `metrics_path` and `docs_path` (the first two are build outputs, so `--skip-outputs` skips them). The model page. The `Model` record. Policy support: `[policy.required] models = […]`. The worked example above. **No versions** |
 | **M2. Parts** (with M1 or soon after) | M1 | `model/x#file` resolves to a file inside a directory model. Refuse a part that escapes the directory (`..`) |
-| **M3. Cross-pipeline** (step 3) — **built**, for a dependency on disk | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. Training data in another pipeline is a real dependency: declared, pinned, read from the pinned copy, and recorded by hash (`pinned_inputs`). The `examples/rate_forecast` pipeline. Not yet: a dependency fetched with `git` |
+| **M3. Cross-pipeline** (step 3) — **built** | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. Training data in another pipeline is a real dependency: declared, pinned, read from the pinned copy, and recorded by hash (`pinned_inputs`). The `examples/rate_forecast` pipeline. A dependency fetched with `git` has only what its repository commits |
 | **M4. Versions and labels** (step 4) | Build records | Versions on new content hashes, `@v3`, `[models.x.aliases]`, `@champion`, the versions table on the page, staleness when inputs move |
 
 (models-built)=
@@ -351,7 +351,9 @@ Not built: versions and labels (`@v3`, `@champion`, `[models.x.aliases]`) and pa
 Slice M3 is built too, with step 3 of {doc}`overview`, for a dependency that is a directory
 on disk: `models.path("other:rate_forecaster")` is the pinned copy of another pipeline's
 model, and a model's training data in another pipeline is declared, pinned, read from the
-pinned copy and named by hash. A `git` dependency is the part that is left.
+pinned copy and named by hash. A dependency fetched with `git` works the same way, for what
+its repository commits: a model kept in git can be pinned and read; one that is built and
+git-ignored cannot, until ChartBook can run that pipeline.
 
 ```{admonition} Training data in another pipeline is the point, not an edge case
 :class: important

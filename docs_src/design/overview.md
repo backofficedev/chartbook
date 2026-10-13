@@ -6,9 +6,10 @@ never seen this project and has to continue building it. It says what ChartBook 
 it uses, what is built, what to build next and in what order, and where every decision is
 written down.
 
-Last revised 2026-10-12, after version 0.2.0, the index, declared models, and the first four
-of five parts of step 3: declared dependencies, the store, pinning, and references to another
-pipeline's assets. What is left of step 3 is `git` dependencies.
+Last revised 2026-10-12, after version 0.2.0, the index, declared models, and all five parts
+of step 3: declared dependencies, the store, pinning, references to another pipeline's
+assets, and `git` dependencies. **Step 3 is built. The next step is 4**, running and build
+records.
 ```
 
 ## What ChartBook is
@@ -130,7 +131,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built. Local references resolve live; another pipeline's resolve pinned |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Declared dependencies (3a), the store (3b), pinning (3c) and cross-pipeline references (3d) built. **Next to build**: `git` dependencies (3e) |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. **Next to build**: step 4, `chartbook run` and build records |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -151,6 +152,7 @@ which came after it.
 | `chartbook check`, the CI gate | `check.py` | Required fields, broken paths, expiring licenses. `--skip-outputs` for CI that does not build data |
 | The reference grammar | `refs.py` | All of it parses |
 | Resolving local references | `resolve.py`, `assets.py`, `data.py`, `chartbook path` | One resolver, typed locations. Live: the declared `path` |
+| `git` dependencies | `gitcache.py`, `lock.py` | Cloned into `~/.chartbook/git/`, checked out at a commit, then pinned like a directory. Only what the repository commits |
 | Resolving another pipeline's assets | `resolve.py` (`_resolve_pinned`), `lock.py`, `store.py` | `pipeline:name`, for a declared dependency, resolves through `chartbook.lock` to the pinned copy in the store. Every kind, every front door, and `data.load("pipeline:name")` |
 | The index, `index.json` | `index.py`, `hashing.py`, `schemas/` | Written by every build, beside the HTML. One hash rule; hashes cached in the build directory |
 | Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
@@ -164,9 +166,9 @@ which came after it.
 | Data glimpses | `create_data_glimpses.py` | Reads the manifest, not `dodo.py` |
 | Scaffolding | `scaffold.py`, `chartbook init --git/--github` | Renders the cookiecutter template |
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
-| Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, the assets of a `git` dependency, `chartbook push` |
+| Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: fetching a `git` dependency, build records,
+Not built: build records,
 `chartbook run`, `[scripts]`, model versions, `[sources]` and SQL access, any export, and
 anything that *reads* the index.
 
@@ -236,7 +238,7 @@ pull requests, in this order. Each leaves `main` working.
 | **3b** *(built)* | **The store.** Objects named by content hash, behind four operations (has, get, put, delete). Links, not copies: reflink, hardlink, symlink, copy, in that order. `chartbook store verify` | Nothing visible. This is the piece everything after sits on, and it can be tested alone | Nothing uses it yet |
 | **3c** *(built)* | **Pinning.** `chartbook.lock`, written in the index's record schemas. `chartbook pin` snapshots each dependency's declared assets into the store and records their hashes. `chartbook update` moves pins forward. `chartbook store gc`, with the lockfile as its roots | A project can freeze what it depends on, and see in a diff when that changes | References still do not resolve across pipelines |
 | **3d** *(built)* | **Cross-pipeline references resolve.** `assets.path("pipeline:asset")`, `data.path`, `chartbook path` and `data.load("pipeline:asset")` resolve through the lockfile into the store, never to the upstream's working directory. Loading from an undeclared pipeline fails and says what to add. A model's cross-pipeline `trained_on` is recorded by pinned hash. A second example pipeline, `examples/rate_forecast`, whose model is trained on `yield_curve`'s data | **The payoff.** The case in the box above works end to end | `git` dependencies |
-| **3e** | **`git` dependencies.** `{ git = "…", rev = "…" }`: fetch at a revision into a cache, then as for `path` | A dependency that is not on your disk | — |
+| **3e** *(built)* | **`git` dependencies.** `{ git = "…", rev = "…" }`: fetch at a revision into a cache, then as for `path` | A dependency that is not on your disk | — |
 
 **Done when:** `examples/rate_forecast` builds from a clean clone with no catalog configured, its
 model's index record names the exact bytes of the dataframe it was trained on, and editing the
@@ -608,11 +610,100 @@ made from another pipeline's dataframe. Pages do not show what is pinned.
    `_data` folders removed first. Three earlier reports in this series said "live pulls" and
    were wrong about that.
 
+#### 3e, as built
+
+*Added 2026-10-12.* A dependency that is not on your disk.
+
+```toml
+[dependencies]
+"ftsfr/ref_data" = { git = "https://gitlab.example.org/ftsfr/ref_data", rev = "v1.2" }
+```
+
+```console
+$ chartbook pin
+ftsfr/ref_data: fetched https://gitlab.example.org/ftsfr/ref_data at 4f2a91c (v1.2)
+ftsfr/ref_data: 2 pinned, 1 not built
+  not built: ftsfr/ref_data:daily_prices (./_data/daily_prices.parquet)
+  A git dependency has only what its repository commits.
+Wrote chartbook.lock.
+```
+
+| What | Where |
+|---|---|
+| The clone cache: fetch, resolve a revision, check out a commit | `chartbook/gitcache.py`, `GitCache` |
+| Where the cache is: `CHARTBOOK_GIT_CACHE`, then `[git] path`, then `~/.chartbook/git/` | `chartbook/config.py`, `get_git_cache_path()` |
+| Pinning from a checkout, at the locked commit | `chartbook/lock.py`, `_fetch()` |
+| `check` looks at a fetched dependency, offline | `chartbook/check.py`, `_fetched_checkout()` |
+| The commit, on a dependency in the index | `chartbook/index.py`, `schemas/chartbook/v1/Pipeline.json` |
+| The tests, all on repositories made by the test | `tests/test_git_dependencies.py` |
+
+**Decided by the maintainer, 2026-10-12, before it was built:**
+
+1. **Build it now, plainly.** Clone, check out the revision, then treat it as a `path`
+   dependency. It pins the declared files that are in the checkout, lists the rest as not
+   built, and says that a git dependency has only what its repository commits. Running the
+   upstream's build, or a shared store, fills in the rest later with no change to the format.
+2. **The clones are in `~/.chartbook/git/`**, beside the store, one per user: a bare clone per
+   repository and a checkout per commit. ChartBook runs the user's own `git`.
+
+**Not done in 3e, on purpose.** ChartBook does not run a fetched pipeline's build, so built,
+git-ignored data stays "not built". Submodules and Git LFS are not handled.
+`[resolve] default_host` is not built, so `{ rev = "…" }` with no `git` is still refused.
+Nothing clears old checkouts; `chartbook store gc` does not touch the git cache.
+
+**Proposed: implemented in 3e, and waiting on the maintainer's yes.**
+
+1. **The cache's layout.** `repos/<host>/<owner>/<name>.git` and
+   `checkouts/<host>/<owner>/<name>/<commit>/`. A repository on this disk goes under
+   `local/`. The same repository reached by two URLs shares one clone.
+2. **The lockfile records the commit beside the declared `rev`**:
+   `"location": { "kind": "git", "url": …, "rev": "v1.2", "commit": "4f2a91c0…" }`. `rev` is
+   what the manifest says; `commit` is what it meant when it was pinned. With no `rev`, the
+   repository's default branch.
+3. **`pin` stays at the locked commit, and uses the network only if this disk has lost its
+   copy of it.** `update` fetches again and asks what the `rev` means now, so a branch moves
+   and a tag or a commit does not.
+4. **A changed `git` or `rev` in the manifest is followed by `update`, not by `pin`.** `pin`
+   says that the manifest now names something else, and stays.
+5. **A repository that cannot be reached is a failure only when it matters**: on an update,
+   or when nothing of it is pinned. With its pins in the store, `pin` carries on, as it does
+   for a directory that has gone.
+6. **A token never reaches a disk or a screen through ChartBook.** The URL is handed to git on
+   each call and is not written into the clone's configuration. Every message, the lockfile
+   and the index show the URL without its user name and password.
+7. **Git is never left waiting for someone to type.** Prompts are off, so a repository that
+   needs a password ChartBook cannot supply fails.
+8. **A URL or a `rev` that git could take for an option is refused**, when the manifest loads
+   and again before git is run: one that starts with `-`, a `rev` with anything but letters,
+   digits, `.`, `_`, `/` and `-`, and git's `ext::` transport, which runs a command.
+9. **A path is a repository too**, relative to the manifest: `git = "../ref_data"`.
+10. **A checkout is read-only and has no `.git` in it.** It is a copy of one commit, not a
+    place to work.
+11. **`check` never uses the network.** It looks at a `git` dependency where it has been
+    fetched, at the lockfile's commit, and warns when it has not been.
+12. **Every test runs with its own store and its own git cache.** A fixture sets the two
+    environment variables for all of them. (Before it existed, one test run put an empty
+    clone in the real `~/.chartbook/git/`. It was removed.)
+
+**Where the design was wrong, or said less than it seemed to.**
+
+1. *"`path` versus `rev`: both are pinned. The difference is only where a refresh gets its
+   content from — a local directory, or a git fetch."* ({doc}`asset-graph`.) There is a second
+   difference, and it is the one that matters. A directory has the pipeline's built files. A
+   git fetch has only what was committed, which for most pipelines is none of the data.
+2. *"A shipped pipeline is self-resolving. Someone who clones the repository can build it with
+   no catalog configured and no access to your filesystem."* True of its code and of its
+   dependencies' code. Its dependencies' *data* still has to come from somewhere: committed
+   outputs today; `chartbook run` or a shared store later.
+3. *The build record writes a dependency's location as one string*
+   (`"https://gitlab.internal/…@a1b2c3d"`), *and the `Pipeline` record as an object*
+   (`{ "kind": "git", "url": …, "rev": … }`). The lockfile and the index use the object, with
+   `commit` added. Build records should follow when they are built.
+
 #### Answers to the open questions
 
-*The maintainer answered five of these on 2026-10-12, after 3a, and a sixth with 3d. Those
-are marked **decided**. The one that is left, how a `git` dependency is fetched, is still the
-recommendation of whoever built 3a, marked **proposed**, and needs a yes before 3e.*
+*The maintainer answered five of these on 2026-10-12, after 3a, a sixth with 3d and the last
+with 3e. All seven are **decided**.*
 
 1. **Where the store lives. Decided.** One store per user, at `~/.chartbook/store/`, beside the
    settings file that is already there. `CHARTBOOK_STORE`, or `[store] path = "…"` in
@@ -673,14 +764,16 @@ recommendation of whoever built 3a, marked **proposed**, and needs a yes before 
    datasets one hash. No release carries the earlier rule, so this changes it without a new
    algorithm prefix. It is built with the store (3b), which is keyed by it.
 
-6. **A `git` dependency. Proposed.** Clone once into `~/.chartbook/git/`, fetch on `update`,
-   and check the wanted commit out into a directory beside it. From there it is a `path`
-   dependency. The lockfile records the full commit hash that `rev` meant when it was pinned.
+6. **A `git` dependency. Decided, and built in 3e.** Clone once into `~/.chartbook/git/`,
+   fetch on `update`, and check the wanted commit out into a directory beside it. From there
+   it is a `path` dependency. The lockfile records the full commit hash that `rev` meant when
+   it was pinned.
 
-   The thing to decide first: a fresh clone has the upstream's *code*, not its data, because
-   built data is usually git-ignored. So in 3e a `git` dependency can only be pinned if the
-   upstream commits its outputs. Otherwise it needs step 4 (run the upstream's `build`) or a
-   shared store to download from. 3e should say so plainly and not pretend otherwise.
+   What had to be decided first: a fresh clone has the upstream's *code*, not its data,
+   because built data is usually git-ignored. So a `git` dependency can only be pinned where
+   the upstream commits its outputs. Otherwise it needs step 4 (run the upstream's `build`)
+   or a shared store to download from. The maintainer's answer: build it now, plainly, and
+   have it say so. It does.
 
 7. **`data.load("pipeline:asset")`. Decided, and built in 3d.** `data.load("treasury_rates")`
    loads this pipeline's own dataframe, `data.load("fed_yield_curve:treasury_rates")` loads the
@@ -779,6 +872,8 @@ maintainer.
 | 2026-10-12 | `data.load()` takes one reference, `data.load("pipeline:name")`, beside the two-argument catalog form | "3d, as built", above |
 | 2026-10-12 | A `Model` record names what its cross-pipeline inputs are pinned at in `pinned_inputs`, beside `inputs` | "3d, as built", above; {doc}`index-schema` |
 | 2026-10-12 | `examples/rate_forecast` git-ignores its lockfile, because its upstream pulls live data | "3d, as built", above |
+| 2026-10-12 | `git` dependencies are built now, plainly: clone, check out, pin what the repository commits, and say that is all a clone has | "3e, as built", above |
+| 2026-10-12 | Clones of `git` dependencies are kept in `~/.chartbook/git/`, one per user, and ChartBook runs the user's own `git` | "3e, as built", above |
 
 ## Open questions, collected
 
@@ -791,9 +886,11 @@ Each is explained where it lives.
 - Whether a pipeline's own `[policy]` table is wanted. It is honoured today, as a *proposed*
   answer to a crash. ({doc}`toml-format-v2`, "Since this was written")
 - The things settled while building declared dependencies (twelve), the store (ten) and
-  pinning (fourteen) and cross-pipeline references (eleven), each listed as *proposed* under
-  its "as built" heading, and the one answer still proposed: how a `git` dependency is
-  fetched. (Step 3 above)
+  pinning (fourteen), cross-pipeline references (eleven) and `git` dependencies (twelve), each
+  listed as *proposed* under its "as built" heading. (Step 3 above)
+- How a `git` dependency's built data gets here: by running its build (step 4), or from a
+  shared store. Until then it has only what its repository commits. (Step 3 above, "3e, as
+  built")
 - How a chart says it was made from another pipeline's data. (Step 3 above)
 - Whether the site should render from the index, and when. (Step 6)
 - `plotting.line()` and its siblings can only use the two built-in backends, although third

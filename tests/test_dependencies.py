@@ -693,17 +693,18 @@ class TestCheck:
         downstream, _ = two_pipelines
         _depend(downstream, acme__crsp={"git": "https://example.org/acme/crsp", "rev": "v1"})
         manifest = load_manifest(downstream)
-        with pytest.warns(UserWarning, match="does not fetch git dependencies yet") as caught:
+        with pytest.warns(UserWarning, match="has not been fetched here") as caught:
             assert check_dependencies(manifest, downstream) == []
         (warning,) = caught
         assert '[dependencies."acme/crsp"] git: not checked' in str(warning.message)
+        assert "`chartbook pin` fetches it" in str(warning.message)
 
     def test_a_token_in_a_git_url_does_not_reach_the_log(self, two_pipelines, monkeypatch):
         downstream, _ = two_pipelines
         _depend(downstream, crsp={"git": "https://user:s3cret@example.org/acme/crsp.git"})
         monkeypatch.chdir(downstream)
         result = CliRunner().invoke(main, ["check"])
-        assert "https://example.org/acme/crsp.git holds a pipeline" in result.output
+        assert "https://example.org/acme/crsp.git has not been fetched here" in result.output
         assert "s3cret" not in result.output
 
     def test_training_data_the_dependency_does_not_declare(self, two_pipelines):

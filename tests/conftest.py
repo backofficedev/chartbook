@@ -11,6 +11,21 @@ from tests.fixtures import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
+    """Point the store and the git cache at scratch directories, for every test.
+
+    Both are per user and live under ``~/.chartbook``. A test that pins,
+    or a command it runs in a subprocess, must never write there. Setting
+    the two environment variables is what a user would do to move them, so
+    code that asks for "this user's store" gets a scratch one. Tests of
+    where the default is clear the variables themselves.
+    """
+    scratch = tmp_path_factory.mktemp("chartbook_home")
+    monkeypatch.setenv("CHARTBOOK_STORE", str(scratch / "store"))
+    monkeypatch.setenv("CHARTBOOK_GIT_CACHE", str(scratch / "git"))
+
+
 @pytest.fixture
 def pipeline_project(tmp_path):
     """Creates and returns path to a complete pipeline project.

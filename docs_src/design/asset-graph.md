@@ -16,13 +16,13 @@ gained asset kinds (`chart/…`, `model/…`). Models became assets ({doc}`model
 rule, the scratch directory and the surface table below were brought in line with what was
 decided while building the groundwork. Each change is marked where it was made.
 
-Later the same day: four of the five parts of the graph's first step are built. A pipeline can
-declare `[dependencies]`, and `chartbook check` says whether each can be found. The store
-exists. `chartbook pin` and `chartbook update` write `chartbook.lock` and fill the store. And a
-reference to another pipeline's asset resolves through the lockfile to the pinned copy. `git`
-dependencies, build records and `chartbook run` are not built. The notes marked *(Built: …)*
-say exactly what, and {doc}`overview` ("3a, as built" to "3d, as built") lists what was
-settled on the way, as *proposed*.
+Later the same day: the graph's first step is built, in five parts. A pipeline can declare
+`[dependencies]`, by `path` or by `git`, and `chartbook check` says whether each can be found.
+The store exists. `chartbook pin` and `chartbook update` write `chartbook.lock` and fill the
+store. And a reference to another pipeline's asset resolves through the lockfile to the pinned
+copy. Build records and `chartbook run` are not built. The notes marked *(Built: …)* say
+exactly what, and {doc}`overview` ("3a, as built" to "3e, as built") lists what was settled on
+the way, as *proposed*.
 ```
 
 ## The problem
@@ -121,9 +121,17 @@ edges. The git URL and rev are only how the content is obtained. Consequences:
 
 *(Built: the loader reads and validates this table, `chartbook.manifest.validate_dependencies`.
 An entry has `path` or `git`, and `rev` only with `git`. `chartbook check` verifies that each
-`path` holds a pipeline. A `git` entry is recorded and not fetched. `[resolve] default_host`
-below is not built, so an entry must name its `git`. Nothing in this section resolves
-`pipeline:asset` to a file yet; that is "Pinning and isolation".)*
+`path` holds a pipeline. A `git` entry is cloned by `chartbook pin` into `~/.chartbook/git/`
+and pinned from the checkout (`chartbook.gitcache`). `[resolve] default_host` below is not
+built, so an entry must name its `git`.*
+
+*One consequence of "Git is the distribution mechanism" that the list above does not draw.
+Git distributes what is committed. A clone of a pipeline has its code and its manifest, and
+for most pipelines none of its data, which is built and git-ignored. So a `git` dependency
+can be pinned only as far as its repository commits its outputs, and "someone who clones the
+repository can build it" is true of the code. Getting built data needs `chartbook run` on the
+clone, or a store to download from. Until one of those exists, `chartbook pin` says "not
+built" and says why. Decided by the maintainer 2026-10-12: build it this way now.)*
 
 Because scope is captured from the owner path at `init`, the URL is usually inferable from the ID.
 That shortcut is a *configurable* default host, never a hardcoded one:
@@ -262,6 +270,10 @@ work cannot race.
 
 This also simplifies `path` versus `rev`: **both are pinned**. The difference is only where a
 refresh gets its content from — a local directory, or a git fetch.
+
+*(Built, with one more difference that turned out to matter: a directory has the pipeline's
+built files, and a git fetch has only the committed ones. See the note under "Identity and
+location".)*
 
 ### Two verbs
 

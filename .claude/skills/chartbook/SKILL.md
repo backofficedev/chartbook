@@ -40,7 +40,7 @@ chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>,
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy (needs [dependencies] + chartbook pin)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
-chartbook pin               # Freeze what [dependencies] have now: files into the store, hashes into chartbook.lock (commit it)
+chartbook pin               # Freeze what [dependencies] have now: files into the store, hashes into chartbook.lock (commit it); clones git dependencies
 chartbook update [dep...]   # Move pins forward to what the dependencies have now (pin never moves an existing pin)
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, or CHARTBOOK_STORE); exit 1 if an object changed
 chartbook store gc          # Remove from the store what no lockfile names; lists and asks first (--dry-run, --yes)

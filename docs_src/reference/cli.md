@@ -148,7 +148,7 @@ chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/
 - run: chartbook check --skip-outputs
 ```
 
-**Dependencies.** For each `path` in `[dependencies]`, `check` looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever `check` runs. A `git` dependency is not fetched yet and cannot be looked at; `check` says so in a `warning:` line and does not fail. A `trained_on` that names a pipeline `[dependencies]` does not declare is also a warning for now, and will become a failure.
+**Dependencies.** For each `path` in `[dependencies]`, `check` looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever `check` runs. A `git` dependency is looked at where `chartbook pin` has fetched it, at the commit `chartbook.lock` names. `check` never uses the network: if the dependency has not been fetched on this machine, it says so in a `warning:` line and does not fail. A `trained_on` that names a pipeline `[dependencies]` does not declare stops the manifest loading, so `check` fails on it.
 
 ```console
 $ chartbook check
@@ -359,7 +359,22 @@ What a second `pin` does do:
 
 An asset the other pipeline declares and has not built is listed and left unpinned. The rest is pinned all the same.
 
-`pin` exits `1` when something could not be pinned: a dependency whose `path` holds no pipeline, or a lost pin. A `git` dependency is listed in the lockfile and not pinned, since ChartBook does not fetch one yet.
+`pin` exits `1` when something could not be pinned: a dependency whose `path` holds no pipeline, a repository that cannot be fetched, or a lost pin.
+
+**A `git` dependency** is fetched first, into `~/.chartbook/git/`, and then pinned like a directory:
+
+```console
+$ chartbook pin
+ftsfr/ref_data: fetched https://gitlab.example.org/ftsfr/ref_data at 4f2a91c (v1.2)
+ftsfr/ref_data: 2 pinned, 1 not built
+  not built: ftsfr/ref_data:daily_prices (./_data/daily_prices.parquet)
+  A git dependency has only what its repository commits.
+Wrote chartbook.lock.
+```
+
+That last line matters. A clone has the other pipeline's code and whatever data it keeps in git. Data that it builds and git-ignores is not in a clone, and ChartBook does not run another pipeline's build. So a `git` dependency suits reference data, small tables and models that are committed. For a pipeline whose data is built, depend on a `path` where it has been built.
+
+The lockfile records the commit. `pin` stays at that commit and uses the network only if this machine has lost its copy; `chartbook update` fetches again and asks what the `rev` means now, so a branch moves forward and a tag or a commit does not. If you change `rev` in `chartbook.toml`, `pin` says so and stays where it was, and `update` follows the change. ChartBook runs your own `git`, so your SSH keys and credential helpers work as they do by hand; it never asks for a password, and fails instead.
 
 Once it is pinned, your code reads the pinned copy: `chartbook path fed_yield_curve:treasury_rates`, `data.path("fed_yield_curve:treasury_rates")` and `data.load("fed_yield_curve:treasury_rates")` all go through `chartbook.lock` into the store.
 

@@ -279,13 +279,46 @@ def _pipeline_at(directory: Path) -> Optional[str]:
     return None
 
 
+def _fetched_checkout(pipeline_dir: Path, key: str, entry: dict) -> Optional[Path]:
+    """Where a ``git`` dependency's files are on this disk, if it was fetched.
+
+    That is the checkout of the commit ``chartbook.lock`` names, in the git
+    cache. Nothing is fetched here: a check does not use the network.
+    """
+    from chartbook import lock
+    from chartbook.gitcache import default_git_cache, local_url
+
+    try:
+        locked = lock.read_lock(pipeline_dir)
+    except lock.LockError:
+        return None
+    for listed in locked.dependencies if locked is not None else []:
+        commit = listed.get("location", {}).get("commit")
+        if listed.get("id") == key and commit:
+            try:
+                url = local_url(entry["git"], pipeline_dir)
+                return default_git_cache().find(url, commit)
+            except ValueError:
+                return None
+    return None
+
+
+def _dependency_dir(pipeline_dir: Path, key: str, entry: dict) -> Optional[Path]:
+    """The directory a dependency's files are in; None if they are not here."""
+    if "git" in entry:
+        return _fetched_checkout(pipeline_dir, key, entry)
+    return Path(entry["_resolved_path"])
+
+
 def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     """Report every declared dependency that cannot be found.
 
     A ``path`` dependency must be a directory with a pipeline's
     ``chartbook.toml`` in it, and not the pipeline's own. Nothing in it is
-    built, read or copied. A ``git`` dependency is not fetched yet, so it
-    cannot be looked at: it draws a warning that says so, not a problem.
+    built, read or copied. A ``git`` dependency is looked at where
+    ``chartbook pin`` has fetched it, at the commit the lockfile names. A
+    check never uses the network, so one that has not been fetched draws a
+    warning that says so, not a problem.
 
     In a catalog, a dependency whose key is one of the catalog's own
     pipelines must be that pipeline. One ID that means two directories in
@@ -301,13 +334,19 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
             table = _dependency_table(key)
             location = locate_pipeline(key, dependencies={key: entry})
             if location.kind == "git":
-                warnings.warn(
-                    f"{toml_file}: [{table}] git: not checked. ChartBook does "
-                    f"not fetch git dependencies yet, so it cannot see whether "
-                    f"{strip_url_credentials(location.url)} holds a pipeline.",
-                    UserWarning,
-                    stacklevel=2,
-                )
+                checkout = _fetched_checkout(pipeline_dir, key, entry)
+                if checkout is None:
+                    warnings.warn(
+                        f"{toml_file}: [{table}] git: not checked. "
+                        f"{strip_url_credentials(location.url)} has not been "
+                        f"fetched here; `chartbook pin` fetches it.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    continue
+                wrong = _pipeline_at(checkout)
+                if wrong is not None:
+                    problems.append(Problem(toml_file, table, "git", wrong))
                 continue
 
             wrong = _pipeline_at(location.path)
@@ -345,7 +384,8 @@ def check_model_lineage(manifest: dict, base_dir: Path) -> list[Problem]:
     the pipelines being checked with it. Where its ``chartbook.toml`` can
     be read, a dataframe it does not declare is a mistake. Where the
     pipeline is nowhere to be seen, or is in a git repository that has not
-    been fetched, nothing can be said, and nothing is.
+    been fetched, nothing can be said, and nothing is. Once ``chartbook
+    pin`` has fetched it, it is checked like any other.
     """
     problems = []
     in_build = get_pipeline_dirs(manifest)
@@ -364,10 +404,16 @@ def check_model_lineage(manifest: dict, base_dir: Path) -> list[Problem]:
                     )
                 except (KeyError, ValueError):
                     continue
-                if location.path is None:
+                directory = location.path
+                if directory is None and location.found_in == "dependencies":
+                    # A git dependency: its checkout, if it has been fetched
+                    directory = _dependency_dir(
+                        pipeline_dir, location.id, dependencies[location.id]
+                    )
+                if directory is None:
                     continue
                 try:
-                    dataframes = declared_assets(location.path)["dataframes"]
+                    dataframes = declared_assets(directory)["dataframes"]
                 except (OSError, ValueError):
                     continue  # check_dependencies says what is wrong there
                 if reference.name not in dataframes:

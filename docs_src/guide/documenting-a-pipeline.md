@@ -152,6 +152,8 @@ $ chartbook update       # move the pins; chartbook.lock shows the change in a d
 
 The `rate_forecast` example does exactly this, with a model trained on the `yield_curve` example's data. {ref}`[dependencies] <dependencies>` has every detail.
 
+A dependency can also be a git repository, `{ git = "https://…", rev = "v1.2" }`, for one that is not on your disk. `chartbook pin` clones it. It can pin only what that repository keeps in git, so this suits reference data and models that are committed, not data that the other pipeline builds.
+
 ## Notes and custom pages
 
 `[notes]` entries add standalone markdown documents to the site:
