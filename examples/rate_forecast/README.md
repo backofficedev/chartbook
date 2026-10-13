@@ -30,8 +30,7 @@ Build `yield_curve` first, in its own folder, and declare the build ready:
 
 ```bash
 cd ../yield_curve
-chartbook run          # build it
-chartbook snapshot     # copy what it built into the store, labelled with the commit
+chartbook run --snapshot     # build it, and copy what it built into the store, labelled with the commit
 ```
 
 Then, here:

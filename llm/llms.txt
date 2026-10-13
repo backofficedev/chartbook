@@ -40,7 +40,8 @@ chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy in the store
 chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report
-chartbook snapshot           # Declare this pipeline's build ready for others: its built assets into the store, labelled with the commit
+chartbook run --snapshot     # Build, then declare the build ready for others (a snapshot); checks everything is committed first
+chartbook snapshot           # The second half alone: this pipeline's built assets into the store, labelled with the commit
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
 chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
 chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on

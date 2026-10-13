@@ -41,7 +41,8 @@ chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>,
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy (needs [dependencies] + chartbook pin)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
-chartbook snapshot          # In a pipeline OTHERS depend on: declare its build ready. Copies its built assets to the store, labelled with the commit. Refuses if anything in its folder is uncommitted
+chartbook run --snapshot    # In a pipeline OTHERS depend on: build, then declare the build ready (a snapshot). Refuses BEFORE building if anything in its folder is uncommitted
+chartbook snapshot          # The second half alone: copies its built assets to the store, labelled with the commit. Takes your word that they were built by that commit
 chartbook pin               # Freeze what [dependencies] have: each one's newest snapshot (never its folder); hashes and commit into chartbook.lock (commit it); clones git dependencies
 chartbook update [dep...]   # Move pins forward to each dependency's newest snapshot (pin never moves an existing pin)
 chartbook run               # Pin what has no pin, then run this pipeline's [scripts] build. Never moves a pin. NEVER builds in a folder it depends on

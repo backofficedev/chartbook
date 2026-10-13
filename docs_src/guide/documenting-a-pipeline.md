@@ -133,11 +133,10 @@ trained_on = ["fed_yield_curve:treasury_rates"]
 **The other pipeline's owner says when a build is ready.** In its folder, with everything committed:
 
 ```console
-$ chartbook run          # build it
-$ chartbook snapshot     # copy what it built into the store, labelled with the commit
+$ chartbook run --snapshot     # build it, and copy what it built into the store, labelled with the commit
 ```
 
-That is a snapshot, and it is the only thing of theirs you ever read. You never read their folder.
+That is a snapshot, and it is the only thing of theirs you ever read. You never read their folder. (`chartbook run` and then `chartbook snapshot` are the same two steps, apart.)
 
 Then freeze what you depend on, and read it by name:
 
@@ -161,7 +160,7 @@ $ chartbook update       # move the pins; chartbook.lock shows the change in a d
 
 | Who | Does | When |
 |---|---|---|
-| The other pipeline's owner | `chartbook snapshot` | When a build is ready for others |
+| The other pipeline's owner | `chartbook run --snapshot` | When a build is ready for others |
 | You | `chartbook pin`, once | To start depending on it |
 | You | `chartbook update` | When you want their newer snapshot |
 

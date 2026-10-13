@@ -510,6 +510,105 @@ class TestPinning:
 
 
 @posix
+class TestRunThenSnapshot:
+    """``chartbook run --snapshot``: build, and declare the build ready."""
+
+    def test_it_builds_and_then_makes_a_snapshot_that_says_so(self, reader, work):
+        made = []
+        report = run.run(
+            work / "upstream",
+            echo=_quiet,
+            snapshot=True,
+            on_snapshot=lambda step, taken: made.append((step.id, taken)),
+        )
+        assert report.failed is None, report.reason
+        (taken,) = report.snapshots
+        assert made == [("upstream", taken)]
+        assert taken.made and taken.snapshot.built_by_run
+        assert taken.snapshot.commit == _git(work, "rev-parse", "HEAD")
+        # What depends on it can now be pinned
+        assert run.run(reader, echo=_quiet).failed is None
+
+    def test_uncommitted_changes_stop_it_before_it_builds(self, reader, work):
+        """Found out now, and not after an hour of building."""
+        (work / "upstream" / "pull.py").write_text("print('new')\n")
+        with pytest.raises(RunError) as e:
+            run.run(work / "upstream", echo=_quiet, snapshot=True)
+        assert "upstream has changes that are not committed:" in str(e.value)
+        assert "?? upstream/pull.py" in str(e.value)
+        assert str(e.value).endswith("Nothing was built.")
+        assert not (work / "upstream_runs.log").exists()
+
+    def test_a_build_that_changes_a_committed_file_gets_no_snapshot(self, work):
+        """The folder is then not what the commit describes."""
+        directory = _with_data(work / "upstream", {"build": "echo changed >> x.parquet"})
+        _commit(work)
+        said = []
+        report = run.run(directory, echo=said.append, snapshot=True)
+        assert report.failed.id == "upstream" and report.exit_code == 1
+        assert report.reason == (
+            "its build left changes that are not committed, so no snapshot was made"
+        )
+        assert "upstream: its build changed files that are committed:" in said
+        assert "   M upstream/x.parquet" in said
+        assert snapshot.newest_for(directory)[0] is None
+
+    def test_a_snapshot_is_of_what_build_makes(self, work):
+        directory = _with_data(work / "upstream", {"build": "true", "test": "true"})
+        _commit(work)
+        with pytest.raises(RunError, match="A snapshot is of what `build` makes"):
+            run.run(directory, "test", echo=_quiet, snapshot=True)
+
+    def test_in_a_catalog_each_is_built_and_declared_ready_in_turn(self, reader, work):
+        """So the second pins what the first has just declared ready."""
+        with open(work / "reader" / "chartbook.toml", "a") as f:
+            f.write('\n[dataframes.read]\npath = "./_output/read.txt"\ndocs = "d"\n')
+        _commit(work)
+        _catalog(work, "reader", "upstream")
+        report = run.run(work, echo=_quiet, snapshot=True)
+        assert report.failed is None, report.reason
+        assert [step.id for step in report.ran] == ["upstream", "reader"]
+        assert [taken.snapshot.pipeline for taken in report.snapshots] == ["upstream", "reader"]
+        (was,) = report.snapshots[1].snapshot.inputs
+        assert was["id"] == "upstream"
+        assert was["snapshot"] == report.snapshots[0].snapshot.made_at
+
+    def test_a_git_dependency_is_built_and_not_snapshotted(self, work):
+        repository = _pipeline(work / "ref", {"build": "true"})
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "A pipeline")
+        (work / "top").mkdir()
+        top = _with_data(work / "top" / "pipeline", {"build": "true"}, {"ref": {"git": "../../ref"}})
+        _commit(work / "top")
+        report = run.run(top, echo=_quiet, snapshot=True)
+        assert report.failed is None, report.reason
+        assert [step.id for step in report.ran] == ["ref", "pipeline"]
+        assert [taken.snapshot.pipeline for taken in report.snapshots] == ["pipeline"]
+
+    def test_the_command(self, reader, work, monkeypatch):
+        commit = _git(work, "rev-parse", "HEAD")
+        monkeypatch.chdir(work / "upstream")
+        result = CliRunner().invoke(main, ["run", "--snapshot"])
+        assert result.exit_code == 0, result.output
+        assert result.output.splitlines() == [
+            "upstream: build",
+            f"upstream at {commit[:7]}: 1 asset(s) in the store",
+            "Snapshot made. A pipeline that depends on this one gets it with "
+            "`chartbook update`.",
+            "Ran build in 1 pipeline(s).",
+        ]
+
+    def test_the_command_refuses_before_building(self, reader, work, monkeypatch):
+        (work / "upstream" / "pull.py").write_text("print('new')\n")
+        monkeypatch.chdir(work / "upstream")
+        result = CliRunner().invoke(main, ["run", "--snapshot"])
+        assert result.exit_code == 1
+        assert result.output.startswith("Error: upstream has changes that are not committed:")
+        assert not (work / "upstream_runs.log").exists()
+
+
+@posix
 class TestGitDependencies:
     """``run`` builds a git dependency once, in a writable copy of its checkout."""
 

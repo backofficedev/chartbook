@@ -52,6 +52,7 @@ from pathlib import Path
 from typing import Callable, Optional, Union
 
 from chartbook import lock
+from chartbook import snapshot as snapshots
 from chartbook.gitcache import (
     GitCache,
     GitError,
@@ -141,11 +142,14 @@ class RunReport:
         failed: The pipeline in which it failed, if it did.
         exit_code: 0, or the exit code of what failed.
         reason: What went wrong, when it was not the script itself.
+        snapshots: The snapshot made of each pipeline after its build, when
+            that was asked for, as :class:`chartbook.snapshot.SnapshotReport`.
     """
 
     script: str
     ran: list[Step] = field(default_factory=list)
     skipped: list[tuple[Step, str]] = field(default_factory=list)
+    snapshots: list = field(default_factory=list)
     failed: Optional[Step] = None
     exit_code: int = 0
     reason: str = ""
@@ -392,6 +396,8 @@ def run(
     echo: Callable[[str], None] = print,
     on_pin: Optional[Callable] = None,
     force: bool = False,
+    snapshot: bool = False,
+    on_snapshot: Optional[Callable] = None,
 ) -> RunReport:
     """Run a script in a pipeline, or in every pipeline of a catalog.
 
@@ -416,6 +422,13 @@ def run(
         :class:`chartbook.lock.PinReport` after its dependencies are pinned.
     :param force: Build a ``git`` dependency again even if it is built
         already. This is how data it pulls from outside is refreshed.
+    :param snapshot: After a pipeline's ``build`` succeeds, make a snapshot
+        of it (:mod:`chartbook.snapshot`): build, and declare the build
+        ready, in one command. Everything in its folder must be committed
+        before the build starts and still be when it ends. The snapshot
+        records that the build ran in the same command.
+    :param on_snapshot: Called with a pipeline's step and its
+        :class:`chartbook.snapshot.SnapshotReport` after its snapshot is made.
     :returns: What was run, and what failed if anything did.
     :raises RunError: If the pipelines cannot be put in an order, or the
         one asked for has no such script.
@@ -435,6 +448,19 @@ def run(
             )
     if not any(script in step.scripts for step in steps if step.source == "asked"):
         raise RunError(f"No pipeline here has a script named {script!r}.")
+    if snapshot:
+        if not building:
+            raise RunError(
+                f"A snapshot is of what `{BUILD_SCRIPT}` makes, so `chartbook run "
+                f"{script} --snapshot` has nothing to take one of."
+            )
+        # Found out now, and not after an hour of building
+        for step in steps:
+            if step.source == "asked" and step.directory and script in step.scripts:
+                try:
+                    snapshots.require_committed(step.directory, step.id)
+                except snapshots.SnapshotError as error:
+                    raise RunError(f"{error} Nothing was built.") from None
 
     report = RunReport(script=script)
     for step in steps:
@@ -489,4 +515,26 @@ def run(
         if step.source == "git":
             mark_built(step.directory)
         report.ran.append(step)
+
+        if snapshot and step.source == "asked":
+            # A build that changes a committed file leaves a folder the
+            # commit does not describe, and the label would not be true
+            try:
+                changed = snapshots.uncommitted(step.directory)
+                if changed:
+                    echo(f"{step.id}: its build changed files that are committed:")
+                    for line in changed[:10]:
+                        echo(f"  {line}")
+                    raise snapshots.SnapshotError(
+                        "its build left changes that are not committed, so no "
+                        "snapshot was made"
+                    )
+                made = snapshots.make(step.directory, store, built_by_run=True)
+            except snapshots.SnapshotError as error:
+                report.failed, report.exit_code = step, 1
+                report.reason = str(error).rstrip(".")
+                break
+            report.snapshots.append(made)
+            if on_snapshot is not None:
+                on_snapshot(step, made)
     return report

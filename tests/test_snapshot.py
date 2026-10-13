@@ -119,7 +119,7 @@ class TestMaking:
     def test_the_record_is_json_in_the_index_format(self, maker):
         taken = snapshot.make(maker).snapshot
         document = json.loads(taken.path.read_text())
-        assert list(document) == ["schema", "root", "code", "made_at", "records"]
+        assert list(document) == ["schema", "root", "code", "made_at", "built_with", "records"]
         assert document["schema"] == "chartbook/snapshot/v1"
         assert document["code"] == {"commit": taken.commit, "subdirectory": "maker"}
         assert [record["id"] for record in document["records"]] == [
@@ -191,7 +191,7 @@ class TestEverythingMustBeCommitted:
         said = str(e.value)
         assert "acme/maker has changes that are not committed:" in said
         assert " M maker/chartbook.toml" in said
-        assert "Commit, then run `chartbook snapshot` again." in said
+        assert "everything in the pipeline's folder must be committed first." in said
         assert not (default_store().root / "snapshots").exists()
 
     def test_a_new_file_git_does_not_ignore(self, maker):
@@ -316,6 +316,78 @@ class TestSeveral:
         taken.path.write_text('{"schema": "chartbook/snapshot/v9"}')
         with pytest.raises(SnapshotError, match="Cannot read the snapshot"):
             snapshot.find(default_store(), taken.commit, "maker")
+
+
+class TestBuiltWith:
+    """A note of the conditions, to explain a difference. Not a copy of anything."""
+
+    def test_it_says_what_made_it(self, maker):
+        import platform
+
+        import chartbook
+
+        taken = snapshot.make(maker).snapshot
+        assert taken.built_with == {
+            "run": False,
+            "chartbook": chartbook.__version__,
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+        }
+        assert not taken.built_by_run
+        assert snapshot.read(taken.path).built_with == taken.built_with
+
+    def test_nothing_of_the_environment_is_in_it(self, maker, monkeypatch):
+        """A pipeline's .env holds secrets, and a store is something to share."""
+        monkeypatch.setenv("FRED_API_KEY", "s3cret-value")
+        (maker / "_data" / ".env").write_text("FRED_API_KEY=s3cret-value\n")
+        taken = snapshot.make(maker).snapshot
+        assert "s3cret-value" not in taken.path.read_text()
+
+    def test_it_says_what_the_pipeline_was_itself_pinned_to(self, user, maker, work):
+        """So a snapshot of ``user`` says which snapshot of ``maker`` it was built from."""
+        of_maker = snapshot.make(maker).snapshot
+        lock.pin(user)
+        (user / "_output").mkdir()
+        (user / "_output" / "result.parquet").write_bytes(b"result")
+        _manifest(
+            user,
+            {
+                "project": {"id": "acme/user"},
+                "dependencies": {"acme/maker": {"path": "../maker"}},
+                "dataframes": {"result": {"path": "./_output/result.parquet", "docs": "d"}},
+            },
+        )
+        _commit(work)
+        taken = snapshot.make(user).snapshot
+        (was,) = taken.inputs
+        assert was["id"] == "acme/maker"
+        assert was["location"]["commit"] == of_maker.commit
+        assert was["snapshot"] == of_maker.made_at
+        assert was["pinned_hash"].startswith("sha256:")
+        assert snapshot.read(taken.path).inputs == taken.inputs
+        jsonschema.validate(
+            json.loads(taken.path.read_text()), json.loads(snapshot.schema_path().read_text())
+        )
+
+    def test_a_pipeline_with_no_lockfile_has_no_inputs(self, maker):
+        taken = snapshot.make(maker).snapshot
+        assert taken.inputs == [] and "inputs" not in json.loads(taken.path.read_text())
+
+    def test_a_lockfile_that_cannot_be_read_stops_it(self, maker):
+        (maker / "chartbook.lock").write_text("not json")
+        with pytest.raises(SnapshotError, match="Cannot read"):
+            snapshot.make(maker)
+
+    def test_one_that_follows_a_build_replaces_one_that_took_its_owners_word(self, maker):
+        """The same bytes, and now ChartBook saw them built."""
+        first = snapshot.make(maker)
+        second = snapshot.make(maker, built_by_run=True)
+        assert second.made and second.snapshot.built_by_run
+        assert second.snapshot.content() == first.snapshot.content()
+        assert snapshot.newest_for(maker)[0] == second.snapshot
+        # ...and after that, nothing changed is nothing made, either way
+        assert not snapshot.make(maker, built_by_run=True).made
+        assert not snapshot.make(maker).made
 
 
 class TestFinding:
