@@ -5,7 +5,8 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | Command | Purpose |
 |---------|---------|
 | `chartbook init` | Scaffold a new pipeline project |
-| `chartbook build` | Generate the documentation site |
+| `chartbook docs` | Render the documentation site |
+| `chartbook build` | Make everything current: run the build script, then render the site |
 | `chartbook browse` | Open the generated site in a browser |
 | `chartbook check` | Fail CI on missing metadata, broken paths, or expiring licenses |
 | `chartbook path` | Print the path the manifest declares for an asset |
@@ -45,20 +46,23 @@ Once the remote exists, the pipeline's ID is scoped from it: a project `my_pipel
 
 If a later step fails — a commit hook rejects the commit, or the repository name is taken — the project is left as far as it got and the error names the command that finishes the job by hand.
 
-## chartbook build
+(chartbook-docs)=
+## chartbook docs
 
 ```console
-chartbook build [OPTIONS] [OUTPUT_DIR]
+chartbook docs [OPTIONS] [OUTPUT_DIR]
 ```
 
-Generate the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the current working directory itself). Works for both pipelines and catalogs — the project type comes from the manifest. Internals: {doc}`../guide/how-the-build-works`.
+Render the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the current working directory itself). Works for both pipelines and catalogs — the project type comes from the manifest. Internals: {doc}`../guide/how-the-build-works`.
+
+It renders the site from what is already built. It does not build the project's data: {ref}`chartbook run <chartbook-run>` does that, and {ref}`chartbook build <chartbook-build>` does both.
 
 Beside the HTML it writes `index.json`: one record for every pipeline, dataframe, column, chart, notebook, note and model the site contains, each with an ID and a content hash. See {doc}`"The index" <../guide/how-the-build-works>`.
 
 | Option | Default | Effect |
 |--------|---------|--------|
 | `-f, --force-write` | off | Delete and recreate an existing output directory |
-| `--project-dir PATH` | `.` | Project to build |
+| `--project-dir PATH` | `.` | The project whose site is rendered |
 | `--strict / --no-strict` | `--strict` | Strict: a `path`/`docs_path` pointing at a missing file fails the build, naming the file and the manifest entry. `--no-strict` warns and skips the affected pipeline of a catalog (a single pipeline still fails: there would be nothing left to build) |
 | `--size-threshold FLOAT` | `50` | File size (MB) above which parquet glimpses use memory-efficient loading |
 | `--strip-mathjax2 / --no-strip-mathjax2` | on | Strip Plotly's MathJax 2 scripts from notebook outputs so they don't clash with Sphinx's MathJax 3 |
@@ -71,14 +75,14 @@ Beside the HTML it writes `index.json`: one record for every pipeline, dataframe
 | `--publish-dir PATH` | `./_output/to_be_published/` | Publish staging directory |
 
 ```console
-chartbook build             # first build
-chartbook build -f          # rebuild
-chartbook build ./site -f   # custom output directory
-chartbook build -f --incremental   # rebuild only what changed
-chartbook build -f --watch         # ...and keep doing so as you edit
+chartbook docs             # the first time
+chartbook docs -f          # again, over what is there
+chartbook docs ./site -f   # custom output directory
+chartbook docs -f --incremental   # rebuild only what changed
+chartbook docs -f --watch         # ...and keep doing so as you edit
 ```
 
-**Incremental builds.** A plain `build` starts from nothing every time, which is what you want in CI. `--incremental` keeps the intermediate Sphinx project (`_docs/`) and uses it the next time:
+**Incremental builds.** A plain `docs` starts from nothing every time, which is what you want in CI. `--incremental` keeps the intermediate Sphinx project (`_docs/`) and uses it the next time:
 
 - a pipeline none of whose files changed is not regenerated at all — its `chartbook.toml`, `src/`, `docs_src/`, README, and every data file, chart and notebook it declares are compared by modification time and size;
 - a page whose content comes out the same is left untouched, so Sphinx does not read it again;
@@ -87,15 +91,47 @@ chartbook build -f --watch         # ...and keep doing so as you edit
 Each build says what it did:
 
 ```console
-$ chartbook build -f --incremental
+$ chartbook docs -f --incremental
 Incremental build: regenerated 1 of 40 pipeline(s); 10 source file(s) changed, 0 removed; Sphinx re-read 10 page(s).
 ```
 
 When a page is added or removed, every page is rendered again — from Sphinx's cache, without re-reading anything — so that navigation stays right and no stale page is left behind. Upgrading ChartBook, Sphinx or a theme, or changing a build option, starts over from nothing. The kept `_docs/` directory ignores itself in git.
 
-Two things an incremental build does not promise, both fixed by one plain `chartbook build`: the "Last updated" date on the front page moves only when that page is rendered again, and a page whose *title* changed keeps its old title in other pages' sidebars until they are next rendered.
+Two things an incremental build does not promise, both fixed by one plain `chartbook docs`: the "Last updated" date on the front page moves only when that page is rendered again, and a page whose *title* changed keeps its old title in other pages' sidebars until they are next rendered.
 
 **Watch mode.** `--watch` is an incremental build in a loop. It polls the project's files (once a second by default), rebuilds on any change, reports a failed build and carries on. There is no server and nothing to install: open the site with `chartbook browse` and refresh the page.
+
+(chartbook-build)=
+## chartbook build
+
+```console
+chartbook build [OPTIONS] [OUTPUT_DIR]
+```
+
+Make everything current: run the project's `build` script, then render the site. It is `chartbook run` followed by `chartbook docs`, and it takes the arguments of {ref}`chartbook docs <chartbook-docs>`.
+
+```console
+$ chartbook build -f
+ftsfr/rate_forecast: build
+Ran build in 1 pipeline(s).
+Successfully generated documentation in /work/rate_forecast/docs
+```
+
+| Command | Builds the data | Renders the site |
+|---|---|---|
+| `chartbook run` | Yes | No |
+| `chartbook docs` | No | Yes |
+| `chartbook build` | Yes | Yes |
+
+- **If the script fails, the site is not rendered**, and the command exits with the script's exit code.
+- **With no `build` script** in {ref}`[scripts] <scripts>`, there is nothing to run. It says so and renders the site.
+- **In a catalog**, the script is run in each of the catalog's pipelines, and then the catalog's site is rendered.
+
+```{warning}
+**`chartbook build` used to mean what `chartbook docs` means now.** A build script that says `chartbook build -f`, as the `dodo.py` of a project made by an older `chartbook init` does, must say `chartbook docs -f`.
+
+Until it does: called from inside the build script that `chartbook build` or `chartbook run` is running, `chartbook build` renders the site and prints a warning, so that it does not run the script that called it without end. Called from a build tool you started yourself (plain `doit`), it runs the build script, which is that same tool, a second time.
+```
 
 ## chartbook browse
 

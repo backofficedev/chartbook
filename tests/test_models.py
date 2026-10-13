@@ -420,7 +420,7 @@ class TestModelPage:
     @pytest.fixture
     def site(self, project, monkeypatch):
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         return project / "docs"
 
@@ -466,7 +466,7 @@ class TestModelPage:
 
     def test_a_pipeline_without_models_is_unchanged(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert "Pipeline Models" not in (pipeline_project / "docs" / "index.html").read_text()
         assert not (pipeline_project / "docs" / "cb" / "models").exists()
@@ -474,7 +474,7 @@ class TestModelPage:
     def test_malformed_metrics_do_not_break_the_build(self, project, monkeypatch):
         (project / "_output" / "forecaster_metrics.json").write_text("not json")
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         text = _page_text(
             project / "docs" / "cb" / "models" / "test_pipeline" / "forecaster.html"
@@ -485,7 +485,7 @@ class TestModelPage:
 class TestCatalogSite:
     def _build(self, catalog, monkeypatch):
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         return catalog / "docs"
 
@@ -675,12 +675,12 @@ class TestIncremental:
     def test_second_incremental_build_keeps_the_model_pages(self, project, monkeypatch):
         monkeypatch.chdir(project)
         runner = CliRunner()
-        first = runner.invoke(main, ["build", "./docs", "-f", "--incremental"])
+        first = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
         assert first.exit_code == 0, first.output
         page = project / "_docs" / "cb" / "models" / "test_pipeline" / "forecaster.md"
         written_at = page.stat().st_mtime_ns
 
-        second = runner.invoke(main, ["build", "./docs", "-f", "--incremental"])
+        second = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
         assert second.exit_code == 0, second.output
         assert "regenerated 0 of 1 pipeline(s)" in second.output
         assert page.stat().st_mtime_ns == written_at
@@ -689,12 +689,12 @@ class TestIncremental:
     def test_new_scores_reach_the_page(self, project, monkeypatch):
         monkeypatch.chdir(project)
         runner = CliRunner()
-        assert runner.invoke(main, ["build", "./docs", "-f", "--incremental"]).exit_code == 0
+        assert runner.invoke(main, ["docs", "./docs", "-f", "--incremental"]).exit_code == 0
 
         metrics_file = project / "_output" / "forecaster_metrics.json"
         metrics_file.write_text(json.dumps({"rmse": 0.05}))
         self._touch(metrics_file)
-        result = runner.invoke(main, ["build", "./docs", "-f", "--incremental"])
+        result = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
         assert result.exit_code == 0, result.output
         assert "regenerated 1 of 1 pipeline(s)" in result.output
         text = _page_text(
@@ -787,7 +787,7 @@ class TestTrainedOnAnotherPipeline:
             elsewhere={"git": "https://example.org/acme/elsewhere.git"},
         )
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
         page_file = catalog / "docs" / "cb" / "models" / "acme--pipeline_a" / "m.html"
@@ -803,7 +803,7 @@ class TestTrainedOnAnotherPipeline:
     def test_alone_the_page_names_it_without_a_link(self, pipeline_project, monkeypatch):
         self._add_model(pipeline_project, ["rates:treasury"], rates={"path": "../rates"})
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         page_file = pipeline_project / "docs" / "cb" / "models" / "test_pipeline" / "m.html"
         assert "rates:treasury (in another pipeline" in _page_text(page_file)
@@ -887,7 +887,7 @@ class TestPolicy:
     def test_a_pipeline_with_a_policy_builds(self, project, monkeypatch):
         _edit_toml(project, lambda c: c.update(policy={"required": {"models": ["path"]}}))
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
     def test_a_strict_pipeline_policy_fails_its_own_build(self, project, monkeypatch):
@@ -898,7 +898,7 @@ class TestPolicy:
             ),
         )
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 1
         assert "The policy is 'strict'" in result.output
         assert "model 'test_pipeline:encoder' missing: name" in result.output

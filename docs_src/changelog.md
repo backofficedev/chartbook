@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — **breaking: `chartbook build` is now `chartbook docs`, and `chartbook build` builds everything**
+
+| Command | Builds the data | Renders the site |
+|---|---|---|
+| `chartbook run` | Yes | No |
+| `chartbook docs` | No | Yes |
+| `chartbook build` | Yes | Yes |
+
+**What to change.** Wherever a build script says `chartbook build`, make it say `chartbook docs`. That is the `dodo.py` of every project made by `chartbook init` so far:
+
+```python
+"actions": ["chartbook docs -f"],     # was: chartbook build -f
+```
+
+`chartbook docs` takes every argument and option `chartbook build` took, and does exactly what it did: it renders the site and writes `index.json`.
+
+**Why.** One word meant two things. `chartbook build` rendered the website, while `build` in a manifest is the script that makes a pipeline's data. Now each word means the plain thing: `run` runs a script, `docs` makes the documentation, and `build` builds everything, which is `chartbook run` followed by `chartbook docs`. The maintainer's instruction was to do the right thing and not to keep the old meaning working (2026-10-13).
+
+`chartbook build` runs the `build` script first. If the script fails, the site is not rendered and the exit code is the script's. With no `build` script it says so and renders the site. In a catalog it runs the script in each of the catalog's pipelines and then renders the catalog's site.
+
+**The one protection.** A build script that still says `chartbook build` would be run by the command it calls, without end. So a script is told which pipeline and script it is, and `chartbook build` called from inside the build script it is running renders the site and prints a warning that says to use `chartbook docs`. `chartbook run` called from inside the script it is running is refused. That is all the compatibility there is: started from plain `doit`, an old `dodo.py` runs its own build a second time, nested, before the warning stops it.
+
+`chartbook catalog build` is unchanged. It renders the global catalog's site and runs no script, so its name now disagrees with `chartbook build`; what it should be called is not settled.
+
 ### Added — snapshots: `chartbook snapshot`
 
 A pipeline's owner now says when a build is ready for others, and that is the only thing another pipeline ever reads.
@@ -258,7 +282,7 @@ The recommendation that goes with this: give columns code-friendly, SQL-compatib
 
 ### Fixed
 
-- A `[policy]` table in a *pipeline's* `chartbook.toml` crashed `chartbook build` and `chartbook check` with `KeyError`. It is now read the way a catalog's is, and says what that pipeline holds itself to when it is built or checked alone; inside a catalog, the catalog's policy still decides. A `strict` policy's message no longer says "Catalog policy" when the policy is a pipeline's.
+- A `[policy]` table in a *pipeline's* `chartbook.toml` crashed `chartbook docs` (then called `chartbook build`) and `chartbook check` with `KeyError`. It is now read the way a catalog's is, and says what that pipeline holds itself to when it is built or checked alone; inside a catalog, the catalog's policy still decides. A `strict` policy's message no longer says "Catalog policy" when the policy is a pipeline's.
 - Two example dataframes declared `date_col = "date"` when their date columns are `DATE` and `Date`. The page generator swallowed the mismatch, and their pages showed `None` for "Data available up to". The manifests now name the columns, and building the index warns when a `date_col` names no column. That warning then found a second problem: the FRED example's live download left its date index unnamed, so the column existed only in the test suite's stand-in data. The pull script now names it.
 
 ## [0.2.0] - 2026-10-12

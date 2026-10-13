@@ -703,11 +703,11 @@ class TestWriteIndex:
 
 
 class TestBuildWritesTheIndex:
-    """``chartbook build`` writes ``index.json`` beside the HTML."""
+    """``chartbook docs`` writes ``index.json`` beside the HTML."""
 
     def test_published_index_is_beside_the_html(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
         built = json.loads((pipeline_project / "docs" / "index.json").read_text())
@@ -724,7 +724,7 @@ class TestBuildWritesTheIndex:
         self, pipeline_project, monkeypatch
     ):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
 
         full = json.loads((pipeline_project / "_docs" / "index.json").read_text())
@@ -739,7 +739,7 @@ class TestBuildWritesTheIndex:
         runner = CliRunner()
         published = pipeline_project / "docs" / "index.json"
 
-        first = runner.invoke(main, ["build", "./docs", "-f", "--incremental"])
+        first = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
         assert first.exit_code == 0, first.output
         before = json.loads(published.read_text())
 
@@ -750,7 +750,7 @@ class TestBuildWritesTheIndex:
             hashing, "_file_hex", lambda path: (reads.append(path), real(path))[1]
         )
         untouched = published.read_bytes()
-        second = runner.invoke(main, ["build", "./docs", "-f", "--incremental"])
+        second = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
         assert second.exit_code == 0, second.output
         assert reads == []
         # ...and since it says nothing new, the file is not rewritten at all
@@ -761,7 +761,7 @@ class TestBuildWritesTheIndex:
         pl.DataFrame({"date": [datetime.date(2021, 5, 5)], "value": [1]}).write_parquet(
             parquet
         )
-        third = runner.invoke(main, ["build", "./docs", "-f", "--incremental"])
+        third = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
         assert third.exit_code == 0, third.output
         after = json.loads(published.read_text())
         assert [Path(p).name for p in reads] == ["dataframe_0.parquet"]
@@ -774,7 +774,7 @@ class TestBuildWritesTheIndex:
 
     def test_catalog_build_writes_one_index_for_all(self, catalog_project, monkeypatch):
         monkeypatch.chdir(catalog_project)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         built = json.loads((catalog_project / "docs" / "index.json").read_text())
         _validate(built)

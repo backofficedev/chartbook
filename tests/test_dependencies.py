@@ -606,7 +606,7 @@ class TestInTheIndex:
         _depend(downstream, acme__rates={"path": "../rates"})
         _add_model(downstream, ["rates:dataframe_0"])
         monkeypatch.chdir(downstream)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
         built = json.loads((downstream / "docs" / "index.json").read_text())
@@ -839,7 +839,7 @@ class TestPages:
         _add_model(pipeline_a, ["upstream:dataframe_0"])
 
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         page = catalog / "docs" / "cb" / "models" / "acme--pipeline_a" / "m.html"
         assert 'href="../../dataframes/acme--pipeline_b/dataframe_0.html"' in page.read_text()

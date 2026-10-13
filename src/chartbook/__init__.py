@@ -16,7 +16,7 @@ For plotting:
 
 For CLI (install via pipx):
     pipx install chartbook
-    chartbook build
+    chartbook docs
 """
 
 import importlib

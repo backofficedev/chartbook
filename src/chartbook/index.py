@@ -1,6 +1,6 @@
 """The index: one JSON description of everything a build contains.
 
-``chartbook build`` produces a website and, beside it, ``index.json``: the
+``chartbook docs`` produces a website and, beside it, ``index.json``: the
 resolved, composed view of the manifests, as a flat list of self-describing
 records. Every pipeline and every asset is in it once, with a fully
 qualified ID, a content hash, and what it was made from. A renderer, a

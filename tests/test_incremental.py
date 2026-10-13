@@ -837,12 +837,12 @@ class TestCommands:
     def test_build_incremental_reports_what_it_redid(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
         runner = CliRunner()
-        first = runner.invoke(main, ["build", "--incremental", "-f"])
+        first = runner.invoke(main, ["docs", "--incremental", "-f"])
         assert first.exit_code == 0, first.output
         assert "Full build (no previous incremental build): regenerated 1 of 1" in first.output
         assert (pipeline_project / "_docs" / STATE_FILE).is_file()
 
-        second = runner.invoke(main, ["build", "--incremental", "-f"])
+        second = runner.invoke(main, ["docs", "--incremental", "-f"])
         assert second.exit_code == 0, second.output
         assert "Incremental build: regenerated 0 of 1 pipeline(s)" in second.output
         assert "0 source file(s) changed, 0 removed" in second.output
@@ -850,7 +850,7 @@ class TestCommands:
 
     def test_plain_build_is_still_a_clean_build(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["build", "-f"])
+        result = CliRunner().invoke(main, ["docs", "-f"])
         assert result.exit_code == 0, result.output
         assert "Incremental build" not in result.output
         assert not (pipeline_project / "_docs").exists()
@@ -868,7 +868,7 @@ class TestCommands:
                 raise KeyboardInterrupt
 
         monkeypatch.setattr(incremental.time, "sleep", fake_sleep)
-        result = CliRunner().invoke(main, ["build", "--watch", "--watch-interval", "0.2", "-f"])
+        result = CliRunner().invoke(main, ["docs", "--watch", "--watch-interval", "0.2", "-f"])
 
         assert result.exit_code == 0, result.output
         assert "Full build (no previous incremental build)" in result.output
@@ -880,13 +880,13 @@ class TestCommands:
 
     def test_watch_interval_needs_watch(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["build", "--watch-interval", "2", "-f"])
+        result = CliRunner().invoke(main, ["docs", "--watch-interval", "2", "-f"])
         assert result.exit_code == 2
         assert "--watch-interval only applies with --watch" in result.output
 
     def test_build_error_is_reported_cleanly(self, invalid_project_v1_format, monkeypatch):
         monkeypatch.chdir(invalid_project_v1_format)
-        result = CliRunner().invoke(main, ["build", "--incremental", "-f"])
+        result = CliRunner().invoke(main, ["docs", "--incremental", "-f"])
         assert result.exit_code == 1
         assert "Error: " in result.output
         assert "v1 format" in result.output

@@ -53,8 +53,8 @@ df = data.load(pipeline="fred_charts", dataframe="interest_rates")
 ### Build documentation
 
 ```bash
-chartbook build
-chartbook build -f --watch    # rebuild as you edit; refresh the browser
+chartbook docs
+chartbook docs -f --watch    # rebuild as you edit; refresh the browser
 ```
 
 ### Check a project in CI

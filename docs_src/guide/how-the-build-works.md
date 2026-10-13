@@ -1,6 +1,6 @@
 # How the Build Works
 
-The `chartbook build` command uses a **two-stage pipeline** to generate your documentation site:
+The `chartbook docs` command uses a **two-stage pipeline** to generate your documentation site:
 
 1. **Markdown generation** — reads your `chartbook.toml` manifest and project files, then produces intermediate Markdown files (and copies static assets) into a temporary `_docs/` directory.
 2. **Sphinx build** — runs Sphinx (`python -m sphinx`, with the same Python that is running ChartBook) to convert those intermediate Markdown files into a static HTML site.
@@ -19,7 +19,7 @@ Understanding these internals is useful for:
 The following diagram shows the full build flow:
 
 ```
-chartbook build [OUTPUT_DIR]
+chartbook docs [OUTPUT_DIR]
     |
     |-- Stage 0: Template Preparation
     |   Copy theme templates into _docs_src/
@@ -185,7 +185,7 @@ If a build finds nothing different from the `index.json` already in the output d
 By default, both `_docs/` and `_docs_src/` are deleted when the build finishes, whether it succeeded or failed. To keep them — for example, to inspect the intermediate output after a *failed* build — pass `--keep-build-dirs`:
 
 ```console
-chartbook build --keep-build-dirs
+chartbook docs --keep-build-dirs
 ```
 
 The command prints the path to the preserved directory:
@@ -198,7 +198,7 @@ Keeping temporary build directory: /path/to/project/_docs
 
 Everything above describes a **clean build**: both directories start empty, every page is generated, Sphinx reads and renders all of them, and the directories are deleted afterwards. That is the default, and the right thing in CI.
 
-`chartbook build --incremental` keeps `_docs/` instead and makes the next build do less, in three places.
+`chartbook docs --incremental` keeps `_docs/` instead and makes the next build do less, in three places.
 
 **1. Unchanged pipelines are not regenerated.** Before generating anything, the build takes a *fingerprint* of each pipeline: a hash over the modification time and size of every file its pages are made from —
 
@@ -233,7 +233,7 @@ Within one pipeline, the pages are regenerated together but only the ones that c
 
 ### Watch mode
 
-`chartbook build --watch` is the incremental build in a loop: build, then check the project's files once a second (`--watch-interval`), and rebuild when any of them differs. A build that fails — typically because a file was caught half-saved — is reported, and the loop carries on. Ctrl-C stops it.
+`chartbook docs --watch` is the incremental build in a loop: build, then check the project's files once a second (`--watch-interval`), and rebuild when any of them differs. A build that fails — typically because a file was caught half-saved — is reported, and the loop carries on. Ctrl-C stops it.
 
 There is deliberately nothing else to it: no server, no live reload, no file-system notification service, no process besides the one in your terminal. Open the site with `chartbook browse` and refresh the page after a rebuild.
 
@@ -244,7 +244,7 @@ There is deliberately nothing else to it: no server, no live reload, no file-sys
 The simplest way to inspect intermediate files:
 
 ```console
-chartbook build --keep-build-dirs
+chartbook docs --keep-build-dirs
 ```
 
 This preserves both `_docs/` (generated Markdown + assets) and `_docs_src/` (resolved templates) after the build.
@@ -254,7 +254,7 @@ This preserves both `_docs/` (generated Markdown + assets) and `_docs_src/` (res
 You can control where intermediate files are placed:
 
 ```console
-chartbook build --docs-build-dir ./my_build --temp-docs-src-dir ./my_src --keep-build-dirs
+chartbook docs --docs-build-dir ./my_build --temp-docs-src-dir ./my_src --keep-build-dirs
 ```
 
 This is useful if you want to compare outputs from different builds side by side.
@@ -265,7 +265,7 @@ A typical debugging workflow:
 
 ```console
 # 1. Build with intermediate files preserved
-chartbook build --keep-build-dirs
+chartbook docs --keep-build-dirs
 
 # 2. Inspect the generated Markdown
 cat _docs/cb/charts/acme--yield_curve.repo_rates.md
@@ -536,5 +536,5 @@ You can use any Jinja2 template variables that are available in the original tem
 ## Next Steps
 
 - {doc}`documenting-a-pipeline` — the manifest that drives all of this
-- {doc}`../reference/cli` — full option reference for `chartbook build`
+- {doc}`../reference/cli` — full option reference for `chartbook docs`
 - {doc}`catalogs-and-data` — combine multiple pipelines into a catalog

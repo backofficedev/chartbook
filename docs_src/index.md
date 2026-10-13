@@ -12,7 +12,7 @@ ChartBook turns an analytics project — code, parquet files, chart HTML — int
 
 Everything hangs off two kinds of `chartbook.toml`:
 
-- A **pipeline** is any project directory whose `chartbook.toml` describes its charts, dataframes, and notebooks. `chartbook build` renders it into a static documentation site.
+- A **pipeline** is any project directory whose `chartbook.toml` describes its charts, dataframes, and notebooks. `chartbook docs` renders it into a static documentation site.
 - A **catalog** is a `chartbook.toml` that registers many pipelines. It builds one combined, searchable site — and lets anyone load any cataloged dataset by name:
 
 ```python
@@ -27,7 +27,7 @@ df = data.load(pipeline="fred_charts", dataframe="fred", format="pandas")
 pip install chartbook
 chartbook init            # scaffold a pipeline project
 cd my-pipeline
-chartbook build           # generate its documentation site
+chartbook docs           # generate its documentation site
 chartbook browse          # open it in your browser
 ```
 

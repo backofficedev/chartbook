@@ -1,6 +1,6 @@
 # Documenting a Pipeline
 
-A pipeline is a project that produces artifacts — parquet files, chart HTML, notebooks. ChartBook doesn't run the pipeline; you build the artifacts however you like (`doit`, `make`, plain scripts) and `chartbook.toml` describes what they are, where they live, and how they fit together. `chartbook build` then renders that description into a website.
+A pipeline is a project that produces artifacts — parquet files, chart HTML, notebooks. ChartBook doesn't run the pipeline; you build the artifacts however you like (`doit`, `make`, plain scripts) and `chartbook.toml` describes what they are, where they live, and how they fit together. `chartbook docs` then renders that description into a website.
 
 This page covers the describing. For the field-by-field reference, see {doc}`../reference/configuration`.
 
@@ -308,9 +308,9 @@ API_KEY = chartbook.env.get("FRED_API_KEY", default="")  # .env file or environm
 
 ## Checking your work
 
-While you are writing, `chartbook build -f --watch` rebuilds the site each time you save, redoing only the pages that changed; refresh the browser to see it. ({doc}`how-the-build-works` explains what it skips.)
+While you are writing, `chartbook docs -f --watch` rebuilds the site each time you save, redoing only the pages that changed; refresh the browser to see it. ({doc}`how-the-build-works` explains what it skips.)
 
-`chartbook build` is strict by default: if a `path` or `docs_path` points at a file that doesn't exist, the build fails and names both the missing file and the manifest entry referencing it. In a catalog, `--no-strict` downgrades this to a warning that skips the affected pipeline; a single pipeline has nothing left to build once skipped, so there it is still an error. Two more inspection tools:
+`chartbook docs` is strict by default: if a `path` or `docs_path` points at a file that doesn't exist, the build fails and names both the missing file and the manifest entry referencing it. In a catalog, `--no-strict` downgrades this to a warning that skips the affected pipeline; a single pipeline has nothing left to build once skipped, so there it is still an error. Two more inspection tools:
 
 - Unknown `[project]` keys warn with a did-you-mean suggestion rather than becoming silently dead metadata.
 - `chartbook create-data-glimpses` writes `data_glimpses.md` — schema, null rates, sample rows, and summary stats for every dataframe declared in `chartbook.toml`, whatever tool builds them.

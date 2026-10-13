@@ -20,7 +20,7 @@ This prompts for a project name and author, then creates a working pipeline from
 
 ```console
 cd <your-project>
-chartbook build
+chartbook docs
 chartbook browse
 ```
 
@@ -111,11 +111,11 @@ Every chart and dataframe carries a short write-up: inline `docs` as above, or `
 **4. Build and view.**
 
 ```console
-chartbook build
+chartbook docs
 chartbook browse
 ```
 
-The site lands in `./docs/`: a front page from your README, a page per chart (the interactive plot, your write-up, a spec table), and a page per dataframe (a schema glimpse read from the parquet, plus a provenance table). Rebuild after changes with `chartbook build -f`.
+The site lands in `./docs/`: a front page from your README, a page per chart (the interactive plot, your write-up, a spec table), and a page per dataframe (a schema glimpse read from the parquet, plus a provenance table). Rebuild after changes with `chartbook docs -f`.
 
 ## Where next
 
