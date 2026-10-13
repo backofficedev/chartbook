@@ -10,8 +10,8 @@ need nothing else.
 The format is specified in ``docs_src/design/index-schema.md``. This module
 writes ``Catalog``, ``Pipeline``, ``Dataframe``, ``Series``, ``Chart``,
 ``Notebook``, ``Note`` and ``Model`` records, and each pipeline's declared
-``dependencies``. ``Build`` records and pinned hashes come with the parts
-of the asset graph that produce them.
+``dependencies``, with what ``chartbook.lock`` pins of them. ``Build``
+records come with the part of the asset graph that produces them.
 
 Two forms of the same index are written:
 
@@ -325,15 +325,38 @@ def _input_id(
     return str(reference.in_pipeline(known_as(location, known_pipelines)))
 
 
+def _read_lock(base_dir: Path):
+    """A pipeline's lockfile, or None if it has none or it cannot be read.
+
+    The index says what is pinned when it can. A lockfile that cannot be
+    read is a matter for ``chartbook pin``, not a reason to fail a build.
+    """
+    from chartbook import lock
+
+    try:
+        return lock.read_lock(base_dir)
+    except lock.LockError as error:
+        warnings.warn(f"{error} What is pinned is left out of the index.", stacklevel=2)
+        return None
+
+
 def _dependency_records(
-    dependencies: Mapping[str, dict], known_pipelines: Mapping[str, Path]
+    dependencies: Mapping[str, dict],
+    known_pipelines: Mapping[str, Path],
+    locked=None,
 ) -> list[dict]:
     """A pipeline's declared dependencies, as its record lists them.
 
     Each is named by the ID it has in this build when it is one of the
-    build's pipelines, and by its key in ``[dependencies]`` otherwise.
-    Nothing is pinned yet, so there is no ``pinned_hash``.
+    build's pipelines, and by its key in ``[dependencies]`` otherwise. One
+    that the lockfile pins has its ``pinned_hash``.
+
+    :param locked: The pipeline's lockfile, if it has one.
     """
+    pinned = {
+        entry["id"]: entry.get("pinned_hash")
+        for entry in (locked.dependencies if locked is not None else [])
+    }
     records = []
     for key, entry in dependencies.items():
         location = locate_pipeline(key, dependencies={key: entry})
@@ -350,10 +373,47 @@ def _dependency_records(
                 "value": location.path.as_posix(),
             }
             via = "path"
-        records.append(
-            {"id": known_as(location, known_pipelines), "via": via, "location": where}
-        )
+        record = {
+            "id": known_as(location, known_pipelines),
+            "via": via,
+            "location": where,
+        }
+        if pinned.get(key):
+            record["pinned_hash"] = pinned[key]
+        records.append(record)
     return sorted(records, key=lambda record: record["id"])
+
+
+def _pinned_inputs(
+    references: Iterable[AssetRef],
+    dependencies: Mapping[str, dict],
+    known_pipelines: Mapping[str, Path],
+    locked,
+) -> dict:
+    """The content hash the lockfile pins each cross-pipeline input at.
+
+    Keyed by the input's ID as ``inputs`` writes it. An input of this
+    pipeline's own, and one that is not pinned, is not in it.
+
+    This says what is pinned, which is what code that asks for the input
+    is given. It is not a record of what one particular training run read;
+    that comes with build records.
+    """
+    if locked is None:
+        return {}
+    pinned = {}
+    for reference in references:
+        if reference.is_local:
+            continue
+        try:
+            location = locate_pipeline(reference.pipeline_id, dependencies=dependencies)
+        except (KeyError, ValueError):
+            continue
+        record = locked.assets.get(str(reference.in_pipeline(location.id)))
+        if record and record.get("content_hash"):
+            written_as = reference.in_pipeline(known_as(location, known_pipelines))
+            pinned[str(written_as)] = record["content_hash"]
+    return pinned
 
 
 def _asset_records(
@@ -365,6 +425,7 @@ def _asset_records(
     cache: Optional[hashing.HashCache],
     dependencies: Mapping[str, dict],
     known_pipelines: Mapping[str, Path],
+    locked=None,
 ) -> list[dict]:
     """The record for one asset, followed by its series if it is a dataframe."""
     ref = AssetRef(kind=kind, name=name).in_pipeline(pipeline_id)
@@ -411,6 +472,11 @@ def _asset_records(
                 _input_id(reference, pipeline_id, dependencies, known_pipelines)
                 for reference in entry.get("_trained_on", [])
             ]
+            pinned = _pinned_inputs(
+                entry.get("_trained_on", []), dependencies, known_pipelines, locked
+            )
+            if pinned:
+                record["pinned_inputs"] = pinned
         metrics = _model_metrics(base_dir, name, entry)
         if metrics is not None:
             record["metrics"] = metrics
@@ -460,6 +526,7 @@ def pipeline_records(
     base_dir = Path(pipeline_manifest["pipeline_base_dir"])
     known_pipelines = dict(known_pipelines or {})
     dependencies = pipeline_manifest.get("dependencies") or {}
+    locked = _read_lock(base_dir) if dependencies else None
     project = pipeline_manifest["project"]
 
     assets: list[dict] = []
@@ -477,6 +544,7 @@ def pipeline_records(
                     cache,
                     dependencies,
                     known_pipelines,
+                    locked,
                 )
             except ValueError as error:
                 # A key that cannot be written as an address has no ID
@@ -506,7 +574,9 @@ def pipeline_records(
     if "dependencies" in pipeline_manifest:
         # Absent when the manifest has no [dependencies]; empty when it has
         # the table and nothing in it
-        record["dependencies"] = _dependency_records(dependencies, known_pipelines)
+        record["dependencies"] = _dependency_records(
+            dependencies, known_pipelines, locked
+        )
     record["assets"] = [a["id"] for a in assets if a["kind"] != "Series"]
     record["docs"] = {"path": project.get("readme") or "./README.md"}
     return [record, *assets]

@@ -195,7 +195,31 @@ The path is absolute and is printed whether or not the file exists, so a build t
 MERGED := $(shell chartbook path merged_rates)
 ```
 
-A name the manifest does not declare exits `1` and says which table to add (or, if the name is declared as another kind of asset, how to refer to it); nothing is printed to standard output. Only assets of the current pipeline resolve. The rest of the {doc}`reference grammar <../design/references>` — `other_pipeline:asset`, `asset#part`, `asset@rev` — is reserved and refused as not yet supported. To locate another pipeline's dataframe through a catalog, use `chartbook data get-path`.
+A name the manifest does not declare exits `1` and says which table to add (or, if the name is declared as another kind of asset, how to refer to it); nothing is printed to standard output.
+
+**Another pipeline's asset** has that pipeline's name in front, then a colon:
+
+```console
+$ chartbook path fed_yield_curve:treasury_rates
+/Users/x/.chartbook/store/objects/sha256/4b/1f…/treasury_rates.parquet
+
+$ chartbook path fed_yield_curve:chart/curve_today
+/Users/x/.chartbook/store/objects/sha256/cc/71…/curve_today.html
+```
+
+This resolves differently, on purpose. Your own assets resolve *live*, to the file you are working on. Another pipeline's resolve *pinned*: to the copy that `chartbook.lock` names, in the store, and never to that pipeline's working directory. So what you read from it stays the same while it is being worked on, and changes only when you run `chartbook update`.
+
+Three things have to be true, and each has its own message when it is not:
+
+| What is missing | What it says to do |
+|---|---|
+| The pipeline is not in {ref}`[dependencies] <dependencies>` | Shows the line to add, then `chartbook pin` |
+| It is declared and not pinned, or the asset was not built when it was pinned | `chartbook pin` (after building it there) |
+| It is pinned and the store does not have the bytes, as after a clone | `chartbook pin`, which puts them back |
+
+The scope may be left off when only one dependency has that name. The path is for reading; never write to it.
+
+The rest of the {doc}`reference grammar <../design/references>` — `asset#part`, `asset@rev`, a registry in front — is reserved and refused as not yet supported. To find a dataframe through a catalog, from outside any pipeline, use `chartbook data get-path`.
 
 ## chartbook publish
 
@@ -337,7 +361,9 @@ An asset the other pipeline declares and has not built is listed and left unpinn
 
 `pin` exits `1` when something could not be pinned: a dependency whose `path` holds no pipeline, or a lost pin. A `git` dependency is listed in the lockfile and not pinned, since ChartBook does not fetch one yet.
 
-Pinning does not yet change what your code reads. `chartbook path fed_yield_curve:treasury_rates` is still refused; resolving a reference through the lockfile is the next piece.
+Once it is pinned, your code reads the pinned copy: `chartbook path fed_yield_curve:treasury_rates`, `data.path("fed_yield_curve:treasury_rates")` and `data.load("fed_yield_curve:treasury_rates")` all go through `chartbook.lock` into the store.
+
+**A pin is a copy that cannot change.** It is a copy-on-write clone where the disk has them (a Mac; Linux with btrfs or XFS), which costs nothing, and a full copy everywhere else, which costs the file's size. It is never a hard link or a symlink to the other pipeline's file, because that file gets rewritten in place when the other pipeline rebuilds.
 
 ## chartbook update
 
@@ -395,7 +421,7 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 | symlink (a pointer to the file) | free | Yes, whenever the original changes. It breaks if the original is moved |
 | copy | the file's size | No |
 
-So on a Mac, or on Linux with btrfs or XFS, a stored file is frozen. On ext4 it is a hard link when the store and the data are on one disk, and a symlink when they are not. `verify` is how you find out that one has changed. It reads every byte, so on a large store it takes a while. `chartbook pin` says so when what it has just stored is held as links.
+`chartbook pin` asks for the first or the last of these only, so a pin is always frozen. The two in the middle are there for what is cheap to make again, a build cache, which is not built yet. `verify` is how you find out that an object has changed. It reads every byte, so on a large store it takes a while.
 
 ### store gc
 

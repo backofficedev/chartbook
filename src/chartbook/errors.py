@@ -244,6 +244,78 @@ class AssetNotDeclaredError(LookupError):
         super().__init__("\n".join(lines))
 
 
+class DependencyNotDeclaredError(LookupError):
+    """Raised when a reference names a pipeline that is not a declared dependency.
+
+    A pipeline may read only from the pipelines its ``[dependencies]``
+    declares, so that what it depends on can be read off its manifest
+    without running anything. The message says what to add.
+
+    Attributes:
+        reference: The reference that was asked for, as text.
+        pipeline: The pipeline it names.
+        manifest_path: The chartbook.toml that does not declare it.
+        declared: The dependencies it does declare.
+    """
+
+    def __init__(
+        self,
+        reference: str,
+        pipeline: str,
+        manifest_path: Path,
+        declared: list[str],
+        found_at: Optional[tuple[str, str]] = None,
+    ):
+        self.reference = reference
+        self.pipeline = pipeline
+        self.manifest_path = manifest_path
+        self.declared = list(declared)
+
+        key, where = found_at or (pipeline, f"../{pipeline.rsplit('/', 1)[-1]}")
+        lines = [
+            f"Reference {reference!r} names an asset of the pipeline "
+            f"{pipeline!r}, which is not declared in [dependencies] of "
+            f"{manifest_path}.",
+        ]
+        close = difflib.get_close_matches(pipeline, self.declared, n=1)
+        if close:
+            lines.append(f"Did you mean {close[0]!r}?")
+        if found_at:
+            lines.append(f"Your catalog has it, as {key!r}.")
+        lines += [
+            "",
+            "To read from another pipeline, say where it is, then pin it:",
+            "",
+            "    [dependencies]",
+            f'    "{key}" = {{ path = "{where}" }}',
+            "",
+            "    $ chartbook pin",
+            "",
+            f"Declared dependencies: {', '.join(self.declared) or '(none)'}",
+        ]
+        super().__init__("\n".join(lines))
+
+
+class AssetNotPinnedError(LookupError):
+    """Raised when another pipeline's asset has no pinned copy to resolve to.
+
+    A reference to another pipeline's asset resolves to the copy that
+    ``chartbook.lock`` pins, in the store, and never to that pipeline's
+    working directory. So there has to be a pin, and its bytes have to be
+    in the store. The message says which is missing and what to run.
+
+    Attributes:
+        asset: The asset's ID, as the lockfile would have it.
+        reason: What is missing: ``"no_lockfile"``, ``"not_in_lockfile"``,
+            ``"not_built"`` or ``"not_in_store"``.
+    """
+
+    def __init__(self, asset: str, reason: str, message: str):
+        self.asset = asset
+        self.reason = reason
+        super().__init__(message)
+
+
 def handle_validation_error(error: ValidationError, config_path: Path) -> None:
     """Handle validation error with user-friendly output.
 

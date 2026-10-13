@@ -14,7 +14,11 @@ from click.testing import CliRunner
 
 from chartbook import assets, data, resolve as resolve_module
 from chartbook.cli import main
-from chartbook.errors import AssetNotDeclaredError, ManifestNotFoundError
+from chartbook.errors import (
+    AssetNotDeclaredError,
+    DependencyNotDeclaredError,
+    ManifestNotFoundError,
+)
 from chartbook.identity import UnsupportedRegistryError, UnsupportedRevisionError
 from chartbook.refs import AssetRef, KindMismatchError
 from chartbook.resolve import (
@@ -24,7 +28,6 @@ from chartbook.resolve import (
     UnsupportedReferenceError,
     find_manifest_dir,
     parse_declared_ref,
-    parse_local_ref,
     resolve,
 )
 from tests.fixtures import create_pipeline_project
@@ -79,30 +82,30 @@ class TestFindManifestDir:
         assert isinstance(excinfo.value, FileNotFoundError)
 
 
-class TestParseLocalRef:
-    """Which references resolve today; the rest is reserved, not invalid."""
+class TestParseSupportedRef:
+    """Which references are supported today; the rest is reserved, not invalid."""
 
     @pytest.mark.parametrize("ref", ["treasury_rates", "a.b-c_1", "  padded  "])
     def test_bare_names_are_dataframes(self, ref):
-        assert parse_local_ref(ref) == AssetRef(name=ref.strip())
+        assert parse_declared_ref(ref) == AssetRef(name=ref.strip())
 
     @pytest.mark.parametrize("kind", ["dataframe", "chart", "notebook", "note", "model"])
     def test_every_declarable_kind(self, kind):
-        assert parse_local_ref(f"{kind}/x") == AssetRef(kind=kind, name="x")
-        assert parse_local_ref("x", kind=kind) == AssetRef(kind=kind, name="x")
+        assert parse_declared_ref(f"{kind}/x") == AssetRef(kind=kind, name="x")
+        assert parse_declared_ref("x", kind=kind) == AssetRef(kind=kind, name="x")
 
     def test_accepts_a_parsed_reference(self):
         asset = AssetRef(kind="chart", name="x")
-        assert parse_local_ref(asset) is asset
+        assert parse_declared_ref(asset) is asset
 
     def test_revision_is_reserved(self):
         with pytest.raises(UnsupportedRevisionError, match="not yet supported") as e:
-            parse_local_ref("chart/curve@a1b2c3d")
+            parse_declared_ref("chart/curve@a1b2c3d")
         assert "use 'chart/curve' instead" in str(e.value)
 
     def test_part_is_reserved(self):
         with pytest.raises(UnsupportedReferenceError, match="not yet supported") as e:
-            parse_local_ref("treasury_rates#dgs10")
+            parse_declared_ref("treasury_rates#dgs10")
         assert "'treasury_rates' to get the dataframe that holds it" in str(e.value)
 
     @pytest.mark.parametrize(
@@ -113,50 +116,50 @@ class TestParseLocalRef:
             "ftsfr/fed_yield_curve:chart/curve",
         ],
     )
-    def test_cross_pipeline_is_reserved(self, ref):
-        with pytest.raises(UnsupportedReferenceError, match="not yet supported"):
-            parse_local_ref(ref)
+    def test_another_pipelines_asset_is_a_reference_like_any_other(self, ref):
+        parsed = parse_declared_ref(ref)
+        assert str(parsed) == ref and not parsed.is_local
 
     def test_registry_prefix_is_reserved(self):
         with pytest.raises(UnsupportedRegistryError, match="not yet supported") as e:
-            parse_local_ref("charthub.example/ftsfr/fed_yield_curve:treasury_rates")
+            parse_declared_ref("charthub.example/ftsfr/fed_yield_curve:treasury_rates")
         assert "'charthub.example'" in str(e.value)
         assert "'ftsfr/fed_yield_curve:treasury_rates'" in str(e.value)
 
     def test_models_are_local_references_like_any_other(self):
         expected = AssetRef(kind="model", name="rate_forecaster")
-        assert parse_local_ref("model/rate_forecaster") == expected
-        assert parse_local_ref("rate_forecaster", kind="model") == expected
+        assert parse_declared_ref("model/rate_forecaster") == expected
+        assert parse_declared_ref("rate_forecaster", kind="model") == expected
 
     def test_a_part_of_a_model_is_reserved(self):
         with pytest.raises(UnsupportedReferenceError, match="not yet supported") as e:
-            parse_local_ref("model/rate_forecaster#weights/best.pt")
+            parse_declared_ref("model/rate_forecaster#weights/best.pt")
         assert "'model/rate_forecaster' to get the model that holds it" in str(e.value)
 
     def test_a_version_of_a_model_is_reserved(self):
         with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
-            parse_local_ref("model/rate_forecaster@champion")
+            parse_declared_ref("model/rate_forecaster@champion")
 
     def test_a_pipeline_is_not_an_asset(self):
         with pytest.raises(ValueError, match="does not name an asset") as e:
-            parse_local_ref("ftsfr/fed_yield_curve")
+            parse_declared_ref("ftsfr/fed_yield_curve")
         assert not isinstance(e.value, UnsupportedReferenceError)
 
     def test_kind_mismatch(self):
         with pytest.raises(KindMismatchError):
-            parse_local_ref("chart/curve", kind="dataframe")
+            parse_declared_ref("chart/curve", kind="dataframe")
 
     @pytest.mark.parametrize("ref", ["two words", "semi;colon", "quo'te"])
     def test_invalid_names(self, ref):
         with pytest.raises(ValueError, match="Invalid asset name"):
-            parse_local_ref(ref)
+            parse_declared_ref(ref)
 
     def test_reserved_syntax_errors_are_value_errors(self):
         assert issubclass(UnsupportedReferenceError, ValueError)
 
 
 class TestParseDeclaredRef:
-    """What a manifest may *state*, which is more than what resolves."""
+    """What a manifest may state is what resolves: one function says both."""
 
     @pytest.mark.parametrize(
         "ref", ["treasury_rates", "rates:treasury_rates", "ftsfr/rates:treasury_rates"]
@@ -518,10 +521,12 @@ class TestDataPath:
         assert "data.path() answers for dataframes only" in message
         assert "chartbook.assets.path('chart/chart_0_0')" in message
 
-    def test_cross_pipeline_reference_is_refused(self, project, monkeypatch):
+    def test_an_undeclared_pipeline_says_what_to_add(self, project, monkeypatch):
+        """Resolving another pipeline's asset is tested in test_pinned_refs.py."""
         monkeypatch.chdir(project)
-        with pytest.raises(UnsupportedReferenceError):
+        with pytest.raises(DependencyNotDeclaredError) as excinfo:
             data.path("other_pipeline:dataframe_0")
+        assert '"other_pipeline" = { path = "../other_pipeline" }' in str(excinfo.value)
 
     def test_raises_for_a_location_that_is_not_a_file(self, project, monkeypatch):
         class TableLocation(Location):
@@ -664,12 +669,15 @@ class TestPathCommand:
         assert "Error: No dataframe named 'merged_rates' is declared" in result.stderr
         assert "[dataframes.merged_rates]" in result.stderr
 
-    def test_cross_pipeline_reference_is_refused(self, project, monkeypatch):
+    def test_an_undeclared_pipeline_fails_and_says_what_to_add(
+        self, project, monkeypatch
+    ):
         monkeypatch.chdir(project)
         result = self._invoke("other_pipeline:dataframe_0")
         assert result.exit_code == 1
         assert result.stdout == ""
-        assert "not yet supported" in result.stderr
+        assert "which is not declared in [dependencies]" in result.stderr
+        assert "$ chartbook pin" in result.stderr
 
     def test_outside_any_project(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)

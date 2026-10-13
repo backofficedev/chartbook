@@ -127,6 +127,14 @@
       },
       "description": "IDs of the dataframes the model was trained on."
     },
+    "pinned_inputs": {
+      "type": "object",
+      "description": "For each input that is another pipeline's, the content hash chartbook.lock pins it at, by the input's ID as `inputs` writes it. Absent when none is pinned.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+      }
+    },
     "metrics": {
       "type": "object",
       "description": "The model's scores, from its metrics file: a flat object.",

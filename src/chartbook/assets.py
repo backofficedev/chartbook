@@ -32,9 +32,19 @@ which is what :func:`parse` returns and what ChartBook carries internally::
     ref.kind, ref.name                   # ("chart", "yield_curve")
     assets.path(ref)
 
+An asset of another pipeline has that pipeline's name in front::
+
+    assets.path("fed_yield_curve:treasury_rates")
+    assets.path("fed_yield_curve:chart/curve_today")
+
+The pipeline must be one that ``[dependencies]`` declares, and the path is
+that of the copy ``chartbook.lock`` pins, in the store. It is not the other
+pipeline's working directory, so what it holds does not change until you
+run ``chartbook update``. Read it; do not write to it.
+
 The full grammar, ``[registry/][scope/]pipeline:[kind/]name[#part][@rev]``,
-is specified in ``docs_src/design/references.md``. Only local references
-resolve today; the rest parses, and is refused as not yet supported.
+is specified in ``docs_src/design/references.md``. A part, a revision and a
+registry parse, and are refused as not yet supported.
 """
 
 import sys
@@ -61,7 +71,7 @@ __all__ = [
 
 
 def _path(ref: Union[str, AssetRef], kind: Optional[str], start_dirs: list) -> Path:
-    """Resolve a local reference to a file path, from given starting points.
+    """Resolve a reference to a file path, from given starting points.
 
     The public functions are thin shells over this one, because each must
     read *its own* caller's stack frame to find the calling file.
@@ -76,7 +86,7 @@ def path(
     kind: Optional[str] = None,
     project_dir: Optional[Union[str, Path]] = None,
 ) -> Path:
-    """Get the path the manifest declares for an asset of the current pipeline.
+    """Get the path of an asset: this pipeline's own, or a pinned copy of another's.
 
     The enclosing ``chartbook.toml`` is the single source of truth for where
     an asset lives, so code can ask for the path rather than repeat it:
@@ -98,8 +108,20 @@ def path(
     same path, in any language, works just as well; ``chartbook path`` on the
     command line gives the same answer to a shell, Make, R or Stata.
 
+    **Another pipeline's asset** is named ``"pipeline:name"``, and resolves
+    differently on purpose. The pipeline must be declared in
+    ``[dependencies]``, and the path returned is in the store: the copy that
+    ``chartbook.lock`` pins, not the other pipeline's working directory.
+
+    >>> assets.path("fed_yield_curve:treasury_rates")  # doctest: +SKIP
+
+    So it does not change while the other pipeline is being worked on, and
+    moves only when you run ``chartbook update``. It must have been pinned
+    (``chartbook pin``), and is for reading: never write to it.
+
     :param ref: A reference to the asset: ``"name"`` for a dataframe,
-        ``"kind/name"`` for anything else, or an :class:`AssetRef`.
+        ``"kind/name"`` for anything else, ``"pipeline:name"`` for another
+        pipeline's, or an :class:`AssetRef`.
     :type ref: Union[str, AssetRef]
     :param kind: The kind of asset expected: ``"dataframe"``, ``"chart"``,
         ``"notebook"``, ``"note"`` or ``"model"``. A reference that names no kind takes
@@ -110,10 +132,14 @@ def path(
         search starts at the calling file's directory, then falls back to the
         current working directory.
     :type project_dir: Optional[Union[str, Path]]
-    :returns: The absolute path declared for the asset (it may contain glob
+    :returns: The absolute path of the asset (it may contain glob
         characters for partitioned data).
     :rtype: Path
     :raises AssetNotDeclaredError: If the manifest declares no such asset.
+    :raises DependencyNotDeclaredError: If the reference names a pipeline
+        that ``[dependencies]`` does not declare.
+    :raises AssetNotPinnedError: If another pipeline's asset has no pinned
+        copy in the store.
     :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
         starting directory.
     :raises KindMismatchError: If the reference names a kind other than *kind*.

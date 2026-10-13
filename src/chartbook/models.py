@@ -43,6 +43,10 @@ def path(
     directory that holds the model's files. Nothing checks that it exists,
     so training code can ask where to write before anything is there.
 
+    A model of another pipeline is named with the pipeline in front,
+    ``models.path("forecasting:rate_forecaster")``, and is the copy that
+    ``chartbook.lock`` pins; see :func:`chartbook.assets.path`.
+
     :param ref: The model's name: its key in ``[models]``.
     :type ref: str
     :param project_dir: Where to look for the pipeline, as for

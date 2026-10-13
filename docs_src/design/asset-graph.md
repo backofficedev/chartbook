@@ -16,12 +16,13 @@ gained asset kinds (`chart/…`, `model/…`). Models became assets ({doc}`model
 rule, the scratch directory and the surface table below were brought in line with what was
 decided while building the groundwork. Each change is marked where it was made.
 
-Later the same day: the first three parts of the graph are built. A pipeline can declare
-`[dependencies]`, and `chartbook check` says whether each can be found. The store exists.
-`chartbook pin` and `chartbook update` write `chartbook.lock` and fill the store. A reference to
-another pipeline's asset does not resolve through the lockfile yet. The notes marked
-*(Built: …)* say exactly what, and {doc}`overview` ("3a, as built", "3b, as built", "3c, as
-built") lists what was settled on the way, as *proposed*.
+Later the same day: four of the five parts of the graph's first step are built. A pipeline can
+declare `[dependencies]`, and `chartbook check` says whether each can be found. The store
+exists. `chartbook pin` and `chartbook update` write `chartbook.lock` and fill the store. And a
+reference to another pipeline's asset resolves through the lockfile to the pinned copy. `git`
+dependencies, build records and `chartbook run` are not built. The notes marked *(Built: …)*
+say exactly what, and {doc}`overview` ("3a, as built" to "3d, as built") lists what was
+settled on the way, as *proposed*.
 ```
 
 ## The problem
@@ -278,9 +279,13 @@ parallel automated work should use. This is the `npm ci` / `cargo build --locked
 *(Built: both verbs, in `chartbook.lock`. Decided by the maintainer 2026-10-12: `pin` never moves
 a pin that exists; it pins what has none, and puts back in the store what the lockfile names
 and the store has lost. `update` is the one thing that moves a pin. There is no `run` yet, so
-`pin` is how to get started, and `update` rebuilds nothing. `--frozen` is not built. The
-resolution rule at the top of this section is not built either: nothing reads the lockfile to
-resolve a reference until the next part.)*
+`pin` is how to get started, and `update` rebuilds nothing. `--frozen` is not built.*
+
+*The resolution rule at the top of this section is built: `chartbook.resolve._resolve_pinned`.
+A reference to another pipeline's asset goes to `[dependencies]` for the pipeline, to
+`chartbook.lock` for the asset's hash, and to the store for the bytes. Decided by the
+maintainer 2026-10-12: a pin is stored as a reflink or a copy and never as a hard link or a
+symlink, so "reads a frozen snapshot while its upstream is mid-surgery" holds on every disk.)*
 
 ```{warning}
 A cache and a pin are not the same thing, even sharing storage. A cache is an optimization: delete
@@ -497,11 +502,11 @@ that can capture command output.
 
 | Call | Gives you | Used by | Today |
 |---|---|---|---|
-| `assets.path(ref)` | The file path of any declared asset | Build definitions; code that reads or writes | Local references |
-| `data.path(ref)` | The same, for dataframes only | The common case | Local references |
-| `data.load(ref)` | The data itself | Code doing analysis | Only the older `load(pipeline=, dataframe=)` |
+| `assets.path(ref)` | The file path of any declared asset | Build definitions; code that reads or writes | Built: local, and another pipeline's as pinned |
+| `data.path(ref)` | The same, for dataframes only | The common case | Built |
+| `data.load(ref)` | The data itself | Code doing analysis | Built, beside the older `load(pipeline=, dataframe=)` |
 | `data.scratch()` | A throwaway directory — unindexed, worktree-local | Intermediates nothing depends on | Built |
-| `chartbook path <ref>` | What `assets.path()` gives, on stdout | Make, shell, R, Stata | Local references |
+| `chartbook path <ref>` | What `assets.path()` gives, on stdout | Make, shell, R, Stata | Built |
 
 Five calls, one reference grammar. `path` matches the manifest field it reads, and it supersedes
 `data.get_data_path()` rather than sitting beside it.
@@ -514,6 +519,15 @@ module will follow the same pattern. The reasons are in {doc}`references`.)*
 `data.load(ref)` taking a single reference is the destination. Until cross-pipeline references
 resolve, `data.load(pipeline="fed_yield_curve", dataframe="treasury_rates")` through a catalog
 remains the way to load another pipeline's data, and `data.get_data_path()` the way to find it.
+
+*(Reached 2026-10-12. `data.load("fed_yield_curve:treasury_rates")` loads the pinned copy, and
+the two-argument form stays for loading through a catalog from outside any pipeline. Two
+sentences further up need a qualifier now that another pipeline's asset resolves. "`path()`
+reads the raw `chartbook.toml` and nothing else" is true of a local reference; for another
+pipeline's it also reads `chartbook.lock` and looks in the store, and can fail for a reason in
+either. And the `dodo.py` that opens this section works only once the dependency is pinned,
+because a `dodo.py` is run in full before any of its tasks: see {doc}`overview`, "3d, as
+built".)*
 
 ## Running things
 
@@ -579,9 +593,11 @@ Loading from an undeclared pipeline fails, with a message saying to declare it. 
 an import needing an installed package, for the same reason: the graph becomes derivable from the
 manifest without running anything, and every load is auditable.
 
-*(Not built. What is built is the first half for stated lineage: a model's `trained_on` that
-names a pipeline `[dependencies]` does not declare draws a warning when the manifest loads. It
-becomes an error when cross-pipeline references resolve.)*
+*(Built 2026-10-12. A reference to an asset of a pipeline that `[dependencies]` does not
+declare raises `DependencyNotDeclaredError`, which shows the line to add, and a `trained_on`
+that names one stops the manifest loading. The catalog is asked where the pipeline is, for
+the message only. And the second paragraph holds: `examples/rate_forecast` loads another
+pipeline's data with no catalog configured.)*
 
 The second-order win is larger. With dependencies declared, **the catalog is no longer needed at load
 time** — the locations are in the manifest. A pipeline becomes self-contained and reproducible, and

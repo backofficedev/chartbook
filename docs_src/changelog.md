@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — reading another pipeline's assets: `data.load("pipeline:name")`
+
+A pipeline can now read what another pipeline produces, by name, and get a copy that does not change under it.
+
+```toml
+[dependencies]
+"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+```
+
+```console
+$ chartbook pin
+$ chartbook path fed_yield_curve:treasury_rates
+/Users/x/.chartbook/store/objects/sha256/4b/1f…/treasury_rates.parquet
+```
+
+```python
+from chartbook import data
+
+rates = data.load("fed_yield_curve:treasury_rates")     # the pinned copy
+path = data.path("fed_yield_curve:treasury_rates")      # or just where it is
+```
+
+This is what the three entries below were for. A reference with a pipeline in front, `pipeline:name`, used to be refused as reserved. It now resolves, through `chartbook.lock`, to the copy in the store that `chartbook pin` froze, and never to the other pipeline's working directory. The rule is: **your own assets resolve live, another pipeline's resolve pinned.** So the other pipeline can rebuild, or be half-way through a change, and what you read stays the same until you run `chartbook update`. It works for every kind of asset and from every front door: `assets.path()`, `data.path()`, `models.path()`, `data.load()` and `chartbook path`, which makes it reachable from Make, a shell, R and Stata as well. No catalog is involved.
+
+`data.load()` takes one reference now: `data.load("treasury_rates")` is this pipeline's own dataframe, and `data.load("fed_yield_curve:treasury_rates")` is another's, as pinned. The two-argument form, `data.load(pipeline=…, dataframe=…)`, is unchanged and still means "through a catalog", reading the other pipeline's own file.
+
+When something is missing, the error says which thing and what to do: the pipeline is not in `[dependencies]` (it shows the line to add, and looks in your catalog for where that pipeline is); it is declared and not pinned; the asset was not built when it was pinned; or it is pinned and the store does not have the bytes, as after a clone (`chartbook pin` puts them back).
+
+**A model's record now names the bytes it is trained on.** In `index.json`, a model whose `trained_on` names another pipeline's dataframe has `pinned_inputs`: that input's ID and the content hash `chartbook.lock` pins it at. Each dependency in a pipeline's record has its `pinned_hash`. This says what is pinned, which is what the training code is handed; a record of what one particular run read comes later, with build records.
+
+A `trained_on` that names a pipeline `[dependencies]` does not declare is now an error, not a warning.
+
+**A new example, `examples/rate_forecast`**, is the whole thing in one small pipeline: a model trained on the `yield_curve` example's data. It declares the dependency, pins it, loads the pinned copy, and retrains exactly when `chartbook.lock` changes. Its README shows what happens when `yield_curve` rebuilds afterwards: nothing, until `chartbook update`.
+
+Not yet: one column of another pipeline's dataframe (`…#dgs10`), a version (`…@v3`), and the assets of a `git` dependency. The design is "Pinning and isolation" in {doc}`design/asset-graph`, and the reference grammar is {doc}`design/references`.
+
 ### Added — pinning: `chartbook pin`, `chartbook update`, `chartbook.lock`
 
 A pipeline can now freeze what it depends on.
@@ -26,9 +62,9 @@ For each pipeline in `[dependencies]`, every asset it declares is put in the sto
 
 **`chartbook store gc`** removes from the store what no lockfile names. The store is shared by all your projects, so each `pin` and `update` notes its lockfile there, and `gc` keeps whatever any of them names. It lists what it would remove and asks first. A lockfile it cannot find (a drive not plugged in) still keeps what it last pinned, unless you pass `--forget-missing`; nothing stored in the last hour is removed; and if a lockfile cannot be read, nothing is removed at all.
 
-Where the disk has no copy-on-write clones, the store holds a pinned file as a hard link or a symlink to the other pipeline's own file, which changes if that file is rewritten in place. `pin` says so when that is what it did, and `chartbook store verify` finds a pin that has changed.
+**A pin is a copy that cannot change.** It is a copy-on-write clone where the disk has them (a Mac; Linux with btrfs or XFS), which costs nothing, and a full copy everywhere else, which costs the file's size. It is never a hard link or a symlink to the other pipeline's file. Those are the cheapest ways to hold a file and the store offers them, but that file is rewritten in place when the other pipeline rebuilds (pandas and polars both write a parquet file that way), and a pin that changed with it would not be a pin.
 
-Not yet: your code does not read the pinned copy. `chartbook path other:asset` is still refused, and making it resolve through the lockfile is the next piece. A `git` dependency is listed in the lockfile and not pinned. The design is "Pinning and isolation" in {doc}`design/asset-graph`.
+A `git` dependency is listed in the lockfile and not pinned, since ChartBook does not fetch one yet. The design is "Pinning and isolation" in {doc}`design/asset-graph`.
 
 ### Added — the store: `chartbook.store` and `chartbook store verify`
 
@@ -36,7 +72,7 @@ ChartBook now has a store: a folder of files kept under the hash of what is in t
 
 An asset in the store is a directory named by its content hash, holding the asset's files under their own names, so a path into the store still ends in `.parquet` and a partitioned dataset keeps folders like `year=2024/`. The same bytes stored by ten projects are one object. The store has four operations, `has`, `get`, `put` and `delete`, in `chartbook.store.Store`.
 
-A file that is stored never moves, and is not copied if the disk offers something cheaper. Four ways of holding it are tried in order: a copy-on-write clone, a hard link, a symlink, a copy. A clone and a copy are the store's own bytes and cannot change. A hard link is the original file under a second name, so it changes if the original is rewritten in place; a symlink changes whenever the original does. That trade was chosen on purpose, for the cost, and it is why there is one command already:
+A file that is stored never moves. The store can hold it four ways, tried in order: a copy-on-write clone, a hard link, a symlink, a copy. A clone and a copy are the store's own bytes and cannot change. A hard link is the original file under a second name, so it changes if the original is rewritten in place; a symlink changes whenever the original does. A caller says which of the four it will accept. Pinning accepts only the two that cannot change. The cheaper two are for what can simply be made again, and because an object held that way can change, there is one command already:
 
 ```console
 $ chartbook store verify
@@ -71,9 +107,9 @@ What declaring a dependency does today:
 
 - **`chartbook check` says whether it can be found.** A `path` that is not there, has no `chartbook.toml`, is a catalog, or is the pipeline's own directory is reported, naming the entry. So is a model whose `trained_on` names a dataframe the other pipeline does not declare, which until now was caught only inside a catalog.
 - **`index.json` lists them**, as `dependencies` in the pipeline's record. A model's training data in another pipeline is written by the dependency's name, so `fed_yield_curve:treasury_rates` in a manifest becomes `ftsfr/fed_yield_curve:treasury_rates` in the index. In a catalog, a dependency that is one of the catalog's own pipelines is written by the catalog's ID for it, so the entry matches a record in the same file.
-- **A `trained_on` that names a pipeline not in `[dependencies]` now warns** when the manifest loads, and says what to add. It still loads. It will become an error once references to other pipelines resolve.
+- **A `trained_on` that names a pipeline not in `[dependencies]` does not load**, and the error shows the line to add. A manifest that named another pipeline's dataframe on trust, which `[models]` first allowed, needs that one line.
 
-What it does not do yet: nothing is fetched, copied or pinned. A `git` dependency is recorded and not looked at, and `check` says so in a warning. `chartbook path other:asset` and `data.path("other:asset")` are still refused, because such a reference is meant to resolve to a frozen copy and not to the other pipeline's working directory, and that needs the lockfile and the store. `data.load(pipeline=…, dataframe=…)` still looks in a catalog and does not read this table.
+Declaring is the first half. Pinning what is declared, and reading the pinned copy, are the two entries above this one. A `git` dependency can be declared and is recorded, and is not fetched yet; `check` says so in a warning. `data.load(pipeline=…, dataframe=…)` still looks in a catalog and does not read this table.
 
 A `[dependencies]` table used to be ignored. One that is malformed now stops the manifest from loading, with a message naming the entry, and a catalog that has one is refused: a catalog reads from no pipeline. This is the first of five parts of step 3 in {doc}`design/overview`; the design is {doc}`design/asset-graph`.
 
@@ -99,11 +135,11 @@ What a declared model gets:
 - **A record in `index.json`**, with a content hash (for a directory, one hash over all its files, and each file listed), its scores, and the dataframes it was trained on as `inputs`.
 - **`chartbook check`** reports a missing model, metrics file or write-up; a metrics file that is not a flat JSON object; and, by default, a model with no `name`, `description`, `trained_on` or write-up. `--skip-outputs` leaves out the model and its metrics. A catalog sets its own list with `[policy.required] models = […]`, in which `docs` means a write-up given either way.
 
-**Training data may be in another pipeline.** `trained_on = ["ftsfr/fed_yield_curve:treasury_rates"]` is accepted now. It is stated lineage: recorded in the index, listed on the model's page, linked to the dataframe's page when both pipelines are in one catalog, and checked there against what the other pipeline declares. It is not yet a dependency. Nothing fetches the data or records which version of it was used; that is what dependencies between pipelines will add.
+**Training data may be in another pipeline.** `trained_on = ["ftsfr/fed_yield_curve:treasury_rates"]` names a dataframe of a pipeline that `[dependencies]` declares. It is recorded in the index, listed on the model's page, linked to the dataframe's page when both pipelines are in one catalog, and checked against what the other pipeline declares. Once it is pinned, the model's record also says which bytes it is pinned at. See the entries on dependencies, pinning and references above.
 
 Scores go in a small JSON file that the training code writes (`{"rmse": 0.21, "n_train": 5120}`), not in `chartbook.toml`, because they change with every retraining.
 
-The `yield_curve` example now trains a small model end to end. Not built yet, and refused as "not yet supported": versions and labels (`model/x@v3`, `@champion`), one file inside a directory model (`model/x#weights.pt`), and asking for the path of a model in another pipeline. The design is {doc}`design/models`.
+The `yield_curve` example now trains a small model end to end. Not built yet, and refused as "not yet supported": versions and labels (`model/x@v3`, `@champion`), and one file inside a directory model (`model/x#weights.pt`). The design is {doc}`design/models`.
 
 ### Added — the index: `index.json`
 

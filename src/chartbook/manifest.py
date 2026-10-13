@@ -490,9 +490,9 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
 
     A dataframe in ``trained_on`` may belong to this pipeline
     (``"treasury_rates"``) or to another (``"ftsfr/rates:treasury_rates"``).
-    One of this pipeline's must be declared here. Another pipeline's should
-    be in a pipeline that ``[dependencies]`` declares; if it is not, it is
-    still taken as stated, with a warning. Nothing is fetched either way.
+    One of this pipeline's must be declared here. Another pipeline's must be
+    in a pipeline that ``[dependencies]`` declares. Whether that pipeline
+    has such a dataframe is for ``chartbook check`` to say.
 
     Each entry gains ``_resolved_path`` and ``_trained_on``, the parsed
     references to the dataframes it was trained on.
@@ -502,8 +502,9 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
     :param base_dir: The pipeline's root directory.
     :returns: The model tables by key; empty if the pipeline declares none.
     :raises ValueError: If a table is malformed, a key is not a legal name,
-        or ``trained_on`` names something that is not a dataframe, or a
-        dataframe of this pipeline that it does not declare.
+        or ``trained_on`` names something that is not a dataframe, a
+        dataframe of this pipeline that it does not declare, or a pipeline
+        that ``[dependencies]`` does not declare.
     """
     from chartbook.refs import KindMismatchError
     from chartbook.resolve import (
@@ -582,19 +583,14 @@ def validate_models(manifest: dict, base_dir: Path) -> dict:
                 try:
                     locate_pipeline(reference.pipeline_id, dependencies=dependencies)
                 except PipelineNotFoundError:
-                    warnings.warn(
-                        f"{Path(base_dir) / 'chartbook.toml'}: {where}: "
-                        f"trained_on names {str(reference)!r}, in the pipeline "
-                        f"{reference.pipeline_id!r}, which [dependencies] does "
-                        f"not declare. Say where that pipeline is, e.g. "
-                        f'"{reference.pipeline_id}" = '
+                    raise ValueError(
+                        f"{where}: trained_on names {str(reference)!r}, in the "
+                        f"pipeline {reference.pipeline_id!r}, which "
+                        f"[dependencies] does not declare. Say where that "
+                        f'pipeline is: add "{reference.pipeline_id}" = '
                         f'{{ path = "../{reference.pipeline}" }} under '
-                        f"[dependencies]. It is taken on trust for now, and "
-                        f"will be an error once references to other pipelines "
-                        f"resolve.",
-                        UserWarning,
-                        stacklevel=2,
-                    )
+                        f"[dependencies]."
+                    ) from None
                 except KeyError as error:
                     # A bare name that fits two dependencies
                     raise ValueError(

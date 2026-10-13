@@ -97,7 +97,13 @@ Point ChartBook at a catalog once:
 chartbook config
 ```
 
-This writes the catalog path into `~/.chartbook/settings.toml` (the global catalog works without any configuration). Then every cataloged dataset is loadable by name:
+This writes the catalog path into `~/.chartbook/settings.toml` (the global catalog works without any configuration). Then every cataloged dataset is loadable by name.
+
+```{note}
+This is loading *through a catalog*: from a notebook or a script that belongs to no pipeline, for looking at data. It reads each pipeline's own file, as it is right now.
+
+Inside a pipeline that depends on another one, declare the dependency and pin it instead. `data.load("yield_curve:repo_public")`, with one argument, then reads a frozen copy and needs no catalog. See "Depending on another pipeline" in {doc}`documenting-a-pipeline`.
+```
 
 ```python
 from chartbook import data

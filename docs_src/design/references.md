@@ -7,8 +7,10 @@ design here writes addresses in this grammar, so read it before {doc}`asset-grap
 {doc}`overview`.
 
 Status: **accepted 2026-10-12.** The parser accepts the whole grammar (`chartbook.refs`, in
-0.2.0). Only *local* references resolve to a path today, for all five kinds. Everything else
-parses and is refused as "reserved and not yet supported". See {ref}`refs-status`.
+0.2.0). A *local* reference resolves to the path its manifest declares, and a reference to an
+asset of *another pipeline* resolves to the copy that `chartbook.lock` pins, for all five
+kinds. A part, a version and a registry parse, and are refused as "reserved and not yet
+supported". See {ref}`refs-status`.
 ```
 
 ## The idea in one picture
@@ -285,11 +287,19 @@ first asset that needs them.
 | Local dataframe | `treasury_rates` | **Resolves** |
 | Local chart, notebook, note | `chart/curve_today` | **Resolves** |
 | A dataframe through a catalog | `data.load(pipeline="fed_yield_curve", dataframe="treasury_rates")` | **Resolves**, by the older two-argument call |
-| Another pipeline's asset | `fed_yield_curve:treasury_rates` | Parses. Asking for its path raises `UnsupportedReferenceError`. It may be *stated* as a model's training data ({doc}`models`), and its pipeline may be declared in `[dependencies]`, which lets `check` verify it |
+| Another pipeline's asset | `fed_yield_curve:treasury_rates`, `fed_yield_curve:chart/curve_today` | **Resolves**, to the pinned copy in the store, for a pipeline in `[dependencies]` that has been pinned. `data.load()` takes it too |
 | A part | `treasury_rates#dgs10` | Parses. `UnsupportedReferenceError` |
 | A version | `treasury_rates@a1b2c3d` | Parses. `UnsupportedRevisionError` |
 | A registry | `charthub.example/acme/rates:gdp` | Parses. `UnsupportedRegistryError` |
 | Local model | `model/rate_forecaster` | **Resolves** |
+
+**Local is live; another pipeline's is pinned.** `treasury_rates` is a file of the pipeline
+you are in, which you are editing, so it resolves to that file. `fed_yield_curve:treasury_rates`
+is someone else's, so it resolves to the copy your `chartbook.lock` pins, in the store, and
+does not change until `chartbook update`. The other pipeline must be in `[dependencies]`; one
+that is not raises `DependencyNotDeclaredError`, and an asset with no pinned copy raises
+`AssetNotPinnedError`. Both say what to add or run. ({doc}`asset-graph`, "Pinning and
+isolation".)
 
 All three `Unsupported…` errors are `ValueError`s whose message contains "reserved syntax and not
 yet supported". A reference that breaks the grammar raises a plain `ValueError` instead. The
@@ -302,7 +312,7 @@ What unlocks each row is in the {doc}`overview`'s build order.
 | Module | What it does |
 |---|---|
 | `chartbook/refs.py` | The grammar. `AssetRef`, `parse_asset_ref()`, `KINDS`, `KIND_TABLES`, `KindMismatchError`. Parses and formats; knows nothing about what resolves |
-| `chartbook/resolve.py` | The one resolver. `resolve(ref, kind=…)` returns a typed `Location`. Reserved forms are refused in two functions: `parse_declared_ref()` says what a manifest may *state* (this pipeline's assets and other pipelines'), and `parse_local_ref()` says what *resolves* (this pipeline's only). `locate_pipeline()` is the resolution chain: where a *pipeline* is, from `[dependencies]` and then the catalog |
+| `chartbook/resolve.py` | The one resolver. `resolve(ref, kind=…)` returns a typed `Location`: `_resolve_local()` for an asset of this pipeline, `_resolve_pinned()` for another's. `parse_declared_ref()` says which forms are supported and refuses the reserved ones. `locate_pipeline()` is the resolution chain: where a *pipeline* is, from `[dependencies]` and then the catalog |
 | `chartbook/assets.py` | The general front door: `assets.path()`, `assets.parse()`, `assets.AssetRef` |
 | `chartbook/data.py` | The dataframe front door: `data.path()`, `data.load()`, `data.scratch()` |
 | `chartbook/models.py` | The model front door: `models.path()` |
@@ -320,12 +330,11 @@ Rules for whoever extends this:
   make dependencies unportable.
 - **Refuse, do not guess.** A form that cannot be resolved yet raises an `Unsupported…` error.
   It never falls back to something that happens to work.
-- **To unlock a form**, remove its refusal in `parse_local_ref()` (or `parse_declared_ref()`, for
-  parts, versions and registries) and add the resolution next to `_resolve_local()`. The
-  grammar does not change.
-- **To make `pipeline:asset` resolve** (step 3d): `locate_pipeline()` already says where the
-  pipeline is and whether `[dependencies]` or the catalog said so. What is missing is the
-  lockfile and the store between that answer and a path.
+- **To unlock a form**, remove its refusal in `parse_declared_ref()` and add the resolution
+  next to `_resolve_local()` and `_resolve_pinned()`. The grammar does not change. *(There
+  used to be a second function, `parse_local_ref()`, for what resolved, while another
+  pipeline's asset could be stated and not resolved. Since 2026-10-12 what may be stated is
+  what resolves.)*
 
 ## Why this shape
 

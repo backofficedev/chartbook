@@ -8,5 +8,8 @@ logo = "./logo.png"
 [pipelines."backofficedev/fred_charts"]
 path = "../fred_charts"
 
+[pipelines."backofficedev/rate_forecast"]
+path = "../rate_forecast"
+
 [pipelines."backofficedev/yield_curve"]
 path = "../yield_curve"

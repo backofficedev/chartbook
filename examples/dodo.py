@@ -53,20 +53,41 @@ def task_build_fred_charts():
     }
 
 
+def task_build_rate_forecast():
+    """Run doit in rate_forecast directory, which reads yield_curve's data"""
+    rate_forecast_dir = BASE_DIR / "rate_forecast"
+    yield_curve_dir = BASE_DIR / "yield_curve"
+    return {
+        # Its own first task is `chartbook pin`, which freezes what
+        # yield_curve has just built
+        "actions": [f"doit -f {rate_forecast_dir / 'dodo.py'}"],
+        "file_dep": [
+            str(rate_forecast_dir / "dodo.py"),
+            str(rate_forecast_dir / "chartbook.toml"),
+            str(yield_curve_dir / "docs" / "index.html"),
+        ],
+        "targets": [str(rate_forecast_dir / "docs" / "index.html")],
+        "task_dep": ["build_yield_curve"],
+        "verbosity": 2,
+    }
+
+
 def task_generate_catalog():
     """Run chartbook build in catalog directory"""
     catalog_dir = BASE_DIR / "catalog"
     yield_curve_dir = BASE_DIR / "yield_curve"
     fred_charts_dir = BASE_DIR / "fred_charts"
+    rate_forecast_dir = BASE_DIR / "rate_forecast"
     return {
         "actions": [f"cd {catalog_dir} && chartbook build -f"],
         "file_dep": [
             str(catalog_dir / "chartbook.toml"),
             str(yield_curve_dir / "docs" / "index.html"),
             str(fred_charts_dir / "docs" / "index.html"),
+            str(rate_forecast_dir / "docs" / "index.html"),
         ],
         "targets": [str(catalog_dir / "docs" / "index.html")],
-        "task_dep": ["build_yield_curve", "build_fred_charts"],
+        "task_dep": ["build_yield_curve", "build_fred_charts", "build_rate_forecast"],
         "verbosity": 2,
     }
 
@@ -89,6 +110,6 @@ def task_check():
     return {
         # Checking the catalog checks every member pipeline against its policy
         "actions": [f"chartbook check --project-dir {catalog_dir}"],
-        "task_dep": ["build_yield_curve", "build_fred_charts"],
+        "task_dep": ["build_yield_curve", "build_fred_charts", "build_rate_forecast"],
         "verbosity": 2,
     }

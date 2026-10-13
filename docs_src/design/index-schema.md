@@ -279,7 +279,7 @@ dependency. One that is a directory is written like this:
 
 `path` is as declared in `[dependencies]`, relative to the pipeline's root. `value` is the
 absolute directory, as in the pipeline's own `location`, and like it is left out of a published
-index. There is no `pinned_hash` until something is pinned. A `git` location's `url` is written
+index. `pinned_hash` is there once the dependency is pinned, copied from `chartbook.lock`. A `git` location's `url` is written
 without any user name or password it had in the manifest (`https://user:token@host/…`), since a
 published index goes wherever the site goes.
 
@@ -445,6 +445,20 @@ A trained model that a pipeline declares. The record, its fields and what they a
 `ref`, `pipeline`, `name`, `location`, `content_hash`, `inputs`, `docs`, `built_by` — plus
 `metrics`, and `files` when the model is a directory. Its ID is
 `ftsfr/fed_yield_curve:model/rate_forecaster`.
+
+A model whose inputs include another pipeline's dataframe also has `pinned_inputs`: for each
+such input, its ID as `inputs` writes it, and the content hash `chartbook.lock` pins it at.
+
+```json
+"inputs": ["ftsfr/fed_yield_curve:treasury_rates", "ftsfr/rate_forecast:features"],
+"pinned_inputs": { "ftsfr/fed_yield_curve:treasury_rates": "sha256:4b1f…" }
+```
+
+It is absent when nothing is pinned. An input of the pipeline's own is not in it: a local
+asset is live, so there is no pin to name. It says what is pinned, which is what code that
+asks for the input is handed; it is not proof of what one training run read. That is a
+`Build` record's job. *(Decided by the maintainer 2026-10-12: a field beside `inputs`, which
+stays a list of IDs with no version in them.)*
 
 `Model` records are written (step 2), without `built_by`. An entry of a model's `inputs` that
 is in another pipeline is written by the ID that pipeline has in this build when it is part of
@@ -656,8 +670,9 @@ Built in `chartbook/index.py` and `chartbook/hashing.py`, with the JSON Schemas 
 of this section.
 
 **What is written.** `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`, `Note`
-and `Model` records, and `dependencies` on a `Pipeline` that declares some. Not yet: `Build`
-records and `built_by`; `pinned_hash` on a dependency;
+and `Model` records; `dependencies` on a `Pipeline` that declares some, each with its
+`pinned_hash` once pinned; and `pinned_inputs` on a `Model`. Not yet: `Build`
+records and `built_by`;
 `inputs` on a dataframe or a notebook (the manifest has no field to declare them); `rendered`
 in `docs`. A pipeline's `build` command is written as `"scripts": { "build": … }`,
 ahead of the `[scripts]` table.
@@ -738,3 +753,10 @@ maintainer's yes:**
     pipeline has in that index, when it is one of its pipelines; by its key in `[dependencies]`
     otherwise.
 13. Credentials are removed from a `git` dependency's `url`.
+
+**Proposed with cross-pipeline references (step 3d), 2026-10-12:**
+
+14. `pinned_inputs` holds only inputs that belong to another pipeline, and is absent when none
+    is pinned. (That it is a field beside `inputs` was the maintainer's decision.)
+15. A `chartbook.lock` that cannot be read leaves what is pinned out of the index, with a
+    warning, and does not stop the build.
