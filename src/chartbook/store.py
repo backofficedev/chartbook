@@ -13,6 +13,7 @@ are one object.
       objects/sha256/7f/3a9c…/treasury_rates.parquet   an asset that is one file
       objects/sha256/b2/09e1…/year=2024/part-0.parquet an asset of many files
       builds/                                          kept for build records
+      roots/                                           the lockfiles that name objects
       tmp/                                             objects being written
 
 An object is a directory holding the asset's files under their own names.
@@ -55,8 +56,9 @@ left alone or is replaced with a new file, never rewritten.
 :meth:`Store.verify` is what tells: it hashes every object again and
 reports each whose content is no longer what its name says.
 
-Nothing uses the store yet. Pinning (``chartbook.lock``) is the first
-thing that will. The design is "The store" in
+Pinning (:mod:`chartbook.lock`) is what puts things in the store, and it
+leaves a note of each lockfile under ``roots/`` so that clearing the store
+out never removes another project's pins. The design is "The store" in
 ``docs_src/design/asset-graph.md``.
 """
 
@@ -65,12 +67,14 @@ from __future__ import annotations
 import ctypes
 import ctypes.util
 import errno
+import hashlib
 import json
 import os
 import re
 import shutil
 import stat
 import sys
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -102,6 +106,10 @@ BUILDS_DIR = "builds"
 
 #: Where an object is assembled before it is moved into place.
 TMP_DIR = "tmp"
+
+#: Where the store remembers which lockfiles name its objects, so that
+#: removing what nothing needs never removes another project's pins.
+ROOTS_DIR = "roots"
 
 _HEX = re.compile(r"^[0-9a-f]{64}$")
 _READ_ONLY = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
@@ -148,6 +156,21 @@ class StoredObject:
         how it was made is not known.
         """
         return bool(self.links) and set(self.links) <= FROZEN_LINKS
+
+
+@dataclass(frozen=True)
+class Root:
+    """A lockfile whose pins the store keeps.
+
+    Attributes:
+        lockfile: The absolute path of a ``chartbook.lock``.
+        hashes: The objects it named when it was last pinned or updated.
+            That is what the store goes by if the file can no longer be
+            found, on a drive that is unplugged, say.
+    """
+
+    lockfile: Path
+    hashes: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -446,7 +469,91 @@ class Store:
             for file in staging.iterdir():
                 if not os.path.lexists(final / file.name):
                     os.rename(file, final / file.name)
+        try:
+            # Stored again just now: an object someone is in the middle of
+            # pinning must not look old enough to be cleared away
+            os.utime(final, None)
+        except OSError:
+            pass
         return False
+
+    def _root_file(self, lockfile: Union[str, Path]) -> Path:
+        """Where the store notes one lockfile: a name made from its path."""
+        key = hashlib.sha256(os.path.abspath(lockfile).encode("utf-8")).hexdigest()
+        return self.root / ROOTS_DIR / f"{key[:32]}.json"
+
+    def add_root(self, lockfile: Union[str, Path], hashes: Iterable[str]) -> None:
+        """Note that a lockfile names these objects, so that they are kept.
+
+        Called whenever a lockfile is written. One note is kept per
+        lockfile, and a later call replaces it.
+
+        :param lockfile: The path of a ``chartbook.lock``.
+        :param hashes: The content hashes it names.
+        :raises ValueError: If one of *hashes* is not a content hash.
+        """
+        hashes = sorted(set(hashes))
+        for content_hash in hashes:
+            _split_hash(content_hash)
+        self._check_layout(create=True)
+        note = self._root_file(lockfile)
+        note.parent.mkdir(parents=True, exist_ok=True)
+        temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
+        with open(temporary, "w", encoding="utf-8") as f:
+            json.dump(
+                {"lockfile": os.path.abspath(lockfile), "hashes": hashes}, f, indent=1
+            )
+            f.write("\n")
+        os.replace(temporary, note)
+
+    def remove_root(self, lockfile: Union[str, Path]) -> bool:
+        """Forget a lockfile. Its objects are then kept by nothing.
+
+        :returns: True if the store had a note of it.
+        """
+        note = self._root_file(lockfile)
+        if not note.is_file():
+            return False
+        note.unlink()
+        return True
+
+    def roots(self) -> list[Root]:
+        """Every lockfile the store has a note of, by path.
+
+        :raises StoreError: If a note cannot be read. Nothing should be
+            removed from a store that cannot say what it is keeping.
+        """
+        self._check_layout()
+        directory = self.root / ROOTS_DIR
+        if not directory.is_dir():
+            return []
+        found = []
+        for note in sorted(directory.glob("*.json")):
+            try:
+                with open(note, encoding="utf-8") as f:
+                    stored = json.load(f)
+                root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]))
+                for content_hash in root.hashes:
+                    _split_hash(content_hash)
+            except (OSError, ValueError, KeyError, TypeError) as error:
+                raise StoreError(f"Cannot read {note}: {error}") from None
+            found.append(root)
+        return sorted(found, key=lambda root: str(root.lockfile))
+
+    def size_of(self, content_hash: str) -> int:
+        """The total size in bytes of an object's files; 0 if it has none."""
+        total = 0
+        for file in hashing.directory_files(self.object_path(content_hash)):
+            try:
+                total += file.stat().st_size
+            except OSError:
+                pass  # a link whose file has gone
+        return total
+
+    def age_of(self, content_hash: str, now: Optional[float] = None) -> float:
+        """How many seconds ago an object was put in the store."""
+        stored_at = self.object_path(content_hash).stat().st_mtime
+        return (time.time() if now is None else now) - stored_at
 
     def delete(self, content_hash: str) -> bool:
         """Remove the object with this hash.

@@ -141,7 +141,8 @@ class PipelineNotFoundError(KeyError):
     Attributes:
         pipeline: The reference that was looked up.
         candidates: The pipelines each step that was asked does know, by
-            step: ``"dependencies"`` and ``"catalog"``.
+            step: ``"dependencies"`` and ``"catalog"``. A step the caller
+            had nothing for is not in it.
     """
 
     def __init__(self, pipeline: str, candidates: dict[str, list[str]]):
@@ -204,6 +205,13 @@ def locate_pipeline(
     :raises UnsupportedRevisionError: If the reference carries ``@rev``.
     :raises UnsupportedRegistryError: If it carries a registry prefix.
     """
+    # Only the steps the caller has are asked, and only they are named in
+    # the error: a catalog lookup has no [dependencies] to speak of
+    asked = {
+        step: sorted(table)
+        for step, table in (("dependencies", dependencies), ("catalog", catalog))
+        if table is not None
+    }
     dependencies = dependencies or {}
     catalog = catalog or {}
 
@@ -237,10 +245,7 @@ def locate_pipeline(
     #    refused above, and there is nothing to ask about any other.
 
     # 4. Nothing knows it
-    raise PipelineNotFoundError(
-        pipeline,
-        {"dependencies": sorted(dependencies), "catalog": sorted(catalog)},
-    )
+    raise PipelineNotFoundError(pipeline, asked)
 
 
 def known_as(
@@ -370,6 +375,41 @@ def declared_assets(manifest_dir: Union[str, Path]) -> dict[str, list[str]]:
     """
     raw = _read_raw_manifest(Path(manifest_dir) / MANIFEST_NAME)
     return {table: sorted(raw.get(table) or {}) for table in ASSET_TABLES}
+
+
+def declared_files(
+    manifest_dir: Union[str, Path],
+) -> list[tuple[AssetRef, str, Path]]:
+    """Every asset a pipeline declares with a ``path``, and where that is.
+
+    Read from the raw ``chartbook.toml`` and nothing else. An entry with no
+    ``path``, or whose key cannot be written in a reference, is left out.
+
+    :param manifest_dir: The pipeline's directory.
+    :returns: For each asset, in the order of :data:`ASSET_TABLES` and then
+        by name: its local reference, its ``path`` as declared, and that
+        path made absolute.
+    :raises OSError: If there is no ``chartbook.toml`` there to read.
+    :raises ValueError: If it is not valid TOML.
+    """
+    manifest_dir = Path(manifest_dir)
+    raw = _read_raw_manifest(manifest_dir / MANIFEST_NAME)
+    found = []
+    for kind in RESOLVABLE_KINDS:
+        entries = raw.get(KIND_TABLES[kind]) or {}
+        for name in sorted(entries):
+            entry = entries[name]
+            declared = entry.get("path") if isinstance(entry, dict) else None
+            if not isinstance(declared, str) or not declared.strip():
+                continue
+            try:
+                ref = AssetRef(kind=kind, name=name)
+            except ValueError:
+                continue  # a key that is not an address has no reference
+            # Joined lexically, as a local reference is resolved
+            absolute = Path(os.path.normpath(manifest_dir / declared))
+            found.append((ref, declared, absolute))
+    return found
 
 
 def parse_declared_ref(

@@ -52,7 +52,10 @@ pip install -e ".[dev]"
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
 | `data` | Data operations (get paths, docs) |
 | `create-data-glimpses` | Create a data glimpse report for the dataframes declared in chartbook.toml |
+| `pin` | Freeze what the pipelines in `[dependencies]` have now: files into the store, hashes into `chartbook.lock` |
+| `update` | Move pins forward to what the dependencies have now |
 | `store verify` | Hash every object in the store again; exit nonzero if one has changed |
+| `store gc` | Remove from the store what no lockfile names; lists and asks first |
 | `config` | Configure the default catalog path for data loading |
 | `install skill` | Install the bundled Claude Code skill (user-level by default; `--project` for the repo) |
 
@@ -115,9 +118,20 @@ A trained model is declared in `[models.<id>]` with `path` (a file or a director
 
 Python equivalents, both returning a `pathlib.Path`: `chartbook.assets.path("chart/repo_rates")` (or `assets.path("repo_rates", kind="chart")`) for any asset, and `chartbook.data.path("repo_public")` for dataframes only.
 
-### chartbook store verify
+### chartbook pin / chartbook update
 
-Check the store: a folder of files kept under the hash of their content, where pinned copies of other pipelines' data will live. Nothing puts anything in it yet.
+```bash
+chartbook pin [--project-dir PATH]
+chartbook update [DEPENDENCY...] [--project-dir PATH]
+```
+
+`pin` freezes what a pipeline depends on. For each `path` entry of `[dependencies]`, every asset that pipeline declares (dataframes, charts, notebooks, notes, models) is put in the store and its content hash is written to `chartbook.lock`, beside `chartbook.toml`. The lockfile is committed. It is JSON in the format of `index.json` (`"schema": "chartbook/lock/v1"`, a `records` list), with no timestamp and no absolute path, so pinning twice with nothing changed leaves it untouched. `pin` never moves a pin that exists: run again, it pins what has no pin yet, puts back in the store what the lockfile names and the store has lost (so it is what to run after cloning), and says which pinned assets have changed upstream. `update` moves pins to what the dependencies have now, for all of them or the ones named (the scope may be left off when unambiguous), and prints each old and new hash. An asset that is declared and not built is listed and left unpinned. Exit 1 when something could not be pinned: a dependency whose path holds no pipeline, or a pin whose bytes are in neither the store nor the other pipeline. A `git` dependency is listed and not pinned. Nothing reads the lockfile to resolve a reference yet: `chartbook path other:asset` is still refused.
+
+### chartbook store verify / chartbook store gc
+
+`chartbook store gc [--dry-run] [--yes] [--forget-missing]` removes from the store what no lockfile names. Each `pin` and `update` notes its lockfile in the store, and `gc` keeps whatever any of them names; it lists what it would remove and asks first (`--yes` to skip, `--dry-run` to only list). A lockfile it cannot find still keeps what it last pinned unless `--forget-missing`; nothing stored in the last hour is removed; if a lockfile cannot be read, nothing is removed.
+
+`chartbook store verify` checks the store: a folder of files kept under the hash of their content, where `chartbook pin` keeps its copies of other pipelines' data.
 
 ```bash
 chartbook store verify

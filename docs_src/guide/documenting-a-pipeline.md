@@ -128,7 +128,17 @@ path = "./_models/rate_forecaster.joblib"
 trained_on = ["fed_yield_curve:treasury_rates"]
 ```
 
-`chartbook check` then confirms that the other pipeline is there and that it declares that dataframe. Nothing is fetched or copied yet, and `chartbook path fed_yield_curve:treasury_rates` is still refused; {ref}`[dependencies] <dependencies>` says what works today.
+`chartbook check` then confirms that the other pipeline is there and that it declares that dataframe.
+
+To freeze the data you depend on, so that it does not change under you while the other pipeline is being worked on:
+
+```console
+$ chartbook pin          # copy what they have now into the store; write chartbook.lock
+$ git add chartbook.lock
+$ chartbook update       # later, when you want their newer data
+```
+
+Your code does not read the pinned copy yet: `chartbook path fed_yield_curve:treasury_rates` is still refused. {ref}`[dependencies] <dependencies>` says what works today.
 
 ## Notes and custom pages
 

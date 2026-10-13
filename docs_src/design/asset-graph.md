@@ -16,10 +16,11 @@ gained asset kinds (`chart/…`, `model/…`). Models became assets ({doc}`model
 rule, the scratch directory and the surface table below were brought in line with what was
 decided while building the groundwork. Each change is marked where it was made.
 
-Later the same day: the first two parts of the graph are built. A pipeline can declare
-`[dependencies]`, and `chartbook check` says whether each can be found. The store exists, and
-nothing uses it. Nothing is fetched or pinned yet. The notes marked *(Built: …)* under "Identity
-and location" and "The store" say exactly what, and {doc}`overview` ("3a, as built" and "3b, as
+Later the same day: the first three parts of the graph are built. A pipeline can declare
+`[dependencies]`, and `chartbook check` says whether each can be found. The store exists.
+`chartbook pin` and `chartbook update` write `chartbook.lock` and fill the store. A reference to
+another pipeline's asset does not resolve through the lockfile yet. The notes marked
+*(Built: …)* say exactly what, and {doc}`overview` ("3a, as built", "3b, as built", "3c, as
 built") lists what was settled on the way, as *proposed*.
 ```
 
@@ -274,6 +275,13 @@ it also refreshes `path` pins, because the common case is "pick up a colleague's
 `--frozen` refuses to move any pin and fails if the lockfile is out of date, which is what CI and
 parallel automated work should use. This is the `npm ci` / `cargo build --locked` pair.
 
+*(Built: both verbs, in `chartbook.lock`. Decided by the maintainer 2026-10-12: `pin` never moves
+a pin that exists; it pins what has none, and puts back in the store what the lockfile names
+and the store has lost. `update` is the one thing that moves a pin. There is no `run` yet, so
+`pin` is how to get started, and `update` rebuilds nothing. `--frozen` is not built. The
+resolution rule at the top of this section is not built either: nothing reads the lockfile to
+resolve a reference until the next part.)*
+
 ```{warning}
 A cache and a pin are not the same thing, even sharing storage. A cache is an optimization: delete
 it and behavior is unchanged, only slower. A pin is a commitment: delete it and the project reads
@@ -367,8 +375,11 @@ GC-roots model, and it is the discipline Nextflow omitted — which is why long-
 directories reach terabytes. Pinning makes the store grow faster than building alone would, so this
 is not optional.
 
-*(Not built. It needs the lockfile for its roots, and comes with pinning. `Store.delete()` and
-`Store.hashes()` are what it will be written with.)*
+*(Built: `chartbook store gc`. One thing the paragraph above leaves out: with one store for
+all of a user's projects, the store has to be told which lockfiles there are. Each `pin` and
+`update` leaves a note of its lockfile in the store, and those are the roots. Decided by the
+maintainer 2026-10-12: a lockfile that cannot be found still keeps its pins, and `gc` asks
+before it removes anything.)*
 
 ## The build record, and why lineage is provable
 
@@ -555,8 +566,8 @@ thing — `run` runs a script, `docs` builds docs, `build` builds everything.
 
 Of these, `check`, `path`, `browse`, `ls`, `catalog` and `install` exist. `build` still means
 "render the website" and keeps doing so until `run` exists; the rename is one breaking change,
-made once, in the same release as `run`. `docs`, `run`, `pin`, `update` and `store` do not exist
-yet.
+made once, in the same release as `run`. `docs` and `run` do not exist yet. *(`pin`, `update`,
+`store verify` and `store gc` were added 2026-10-12.)*
 
 `pin` and `update` stay top-level rather than sitting under `build`, because they change the
 project's dependency state rather than performing a build step — the same level as `cargo update` or
