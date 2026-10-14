@@ -32,6 +32,12 @@ changed writes the same bytes.
 An asset the other pipeline declares and has not built is recorded without
 a ``content_hash``. It is not pinned, and asking for it will fail.
 
+A dependency that is a git repository is fetched first
+(:mod:`chartbook.gitcache`) and pinned from its checkout. The lockfile
+records the commit, ``pin`` stays at it, and ``update`` asks the repository
+what the ``rev`` means now. Such a dependency has only what its repository
+commits, so data it builds and git-ignores is "not built" here.
+
 A pin is stored as a copy-on-write clone, or as a copy where the disk has
 no clones (:data:`PIN_LINKS`), and never as a link to the other pipeline's
 own file, so it cannot change when that file is rewritten.
@@ -53,6 +59,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Union
 
 from chartbook import hashing
+from chartbook.gitcache import GitCache, GitError, default_git_cache, local_url
 from chartbook.identity import derive_pipeline_id, strip_url_credentials
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import (
@@ -227,8 +234,11 @@ class PinEvent:
             store, and the other pipeline no longer has those bytes),
             ``dropped`` (no longer declared, so no longer pinned). For a
             whole dependency: ``removed`` (no longer in ``[dependencies]``),
-            ``unreachable`` (its directory holds no pipeline), ``not_fetched``
-            (a ``git`` dependency, which is not fetched yet).
+            ``unreachable`` (its directory holds no pipeline), ``fetched`` (a
+            ``git`` dependency was got from its repository), ``unfetched``
+            (it could not be), ``relocated`` (the manifest says it is
+            somewhere other than where it was pinned from, which only an
+            update follows).
         dependency: The dependency's key in ``[dependencies]``.
         asset: The asset's ID, or None when the event is about the whole
             dependency.
@@ -246,7 +256,7 @@ class PinEvent:
 
 
 #: The statuses that mean a project is not fully pinned, and should fail CI.
-PROBLEM_STATUSES = frozenset({"lost", "unreachable"})
+PROBLEM_STATUSES = frozenset({"lost", "unreachable", "unfetched"})
 
 
 @dataclass
@@ -259,11 +269,14 @@ class PinReport:
             asset.
         written: True if the lockfile was written; False if it already said
             what it would have.
+        git: The dependencies that are git repositories, by key. One of
+            these has only what its repository commits.
     """
 
     lockfile: Path
     events: list[PinEvent] = field(default_factory=list)
     written: bool = False
+    git: set = field(default_factory=set)
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -349,12 +362,15 @@ def _sync(
     project_dir: Union[str, Path],
     store: Optional[Store],
     move: Optional[Iterable[str]],
+    git_cache: Optional[GitCache] = None,
 ) -> PinReport:
     """Bring a pipeline's lockfile and the store in line with its manifest.
 
     :param move: None to leave every existing pin where it is (``pin``).
         Otherwise the dependencies whose pins may move (``update``); empty
         means all of them.
+    :param git_cache: Where ``git`` dependencies are fetched to; this
+        user's by default.
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
@@ -385,12 +401,33 @@ def _sync(
     for key in sorted(locked_before - set(dependencies)):
         report.events.append(PinEvent("removed", key))
 
+    locked = {entry["id"]: entry for entry in before.dependencies}
     for key in sorted(dependencies):
         entry = dependencies[key]
+        may_move = key in moving
+        had = before.assets_of(key)
         listed = _dependency_entry(key, entry)
+        was = locked.get(key)
+
+        if "git" in entry:
+            if git_cache is None:
+                git_cache = default_git_cache()
+            directory, listed, failure = _fetch(
+                key, entry, was, listed, may_move, project_dir, git_cache, report
+            )
+            report.git.add(key)
+            pinned = any(record.get("content_hash") for record in had.values())
+            if failure and (may_move or not pinned):
+                # With pins in the store and nothing asked to move, a
+                # repository that cannot be reached is no trouble: that is
+                # what the pins are for
+                report.events.append(PinEvent("unfetched", key, detail=failure))
+        else:
+            directory = Path(entry["_resolved_path"])
         records = _sync_dependency(
-            key, entry, before.assets_of(key), key in moving, store, cache, report
+            key, directory, had, may_move, store, cache, report
         )
+        listed = {k: v for k, v in listed.items() if k != "pinned_hash"}
         overall = pinned_hash(records.values())
         if overall is not None:
             listed["pinned_hash"] = overall
@@ -408,9 +445,90 @@ def _sync(
     return report
 
 
-def _sync_dependency(
+def _declared_elsewhere(was: dict, now: dict) -> bool:
+    """Whether a dependency's place in the manifest is not the one that was locked.
+
+    The commit a ``git`` dependency resolved to is not part of where the
+    manifest says it is, so it is left out of the comparison.
+    """
+
+    def declared(entry: dict) -> dict:
+        return {k: v for k, v in entry.get("location", {}).items() if k != "commit"}
+
+    return declared(was) != declared(now)
+
+
+def _describe(location: dict) -> str:
+    """Where a dependency is, in a few words, for a message."""
+    if location.get("kind") == "git":
+        rev = f" at {location['rev']}" if location.get("rev") else ""
+        return f"{location['url']}{rev}"
+    return str(location.get("path"))
+
+
+def _fetch(
     key: str,
     entry: dict,
+    was: Optional[dict],
+    listed: dict,
+    may_move: bool,
+    project_dir: Path,
+    git_cache: GitCache,
+    report: PinReport,
+) -> tuple[Optional[Path], dict, Optional[str]]:
+    """Get a ``git`` dependency's files onto this disk, at the commit to pin.
+
+    A dependency that has a commit in the lockfile is pinned at that commit,
+    whatever its branch has done since: ``pin`` never moves a pin. An update,
+    or a dependency with no commit yet, asks the repository what its ``rev``
+    means now.
+
+    :param was: The dependency's entry in the lockfile, if it has one.
+    :param listed: Its entry as the manifest has it now.
+    :returns: The directory its files are in, or None if they could not be
+        got; the entry the lockfile should list; and, if they could not be
+        got, why.
+    """
+    url = local_url(entry["git"], project_dir)
+    shown = strip_url_credentials(entry["git"])
+    rev = entry.get("rev")
+    locked_commit = (was or {}).get("location", {}).get("commit")
+
+    try:
+        if locked_commit and not may_move:
+            if _declared_elsewhere(was, listed):
+                # The manifest names another repository or revision now.
+                # Following it would move the pins, which is an update's job.
+                report.events.append(
+                    PinEvent("relocated", key, detail=_describe(listed["location"]))
+                )
+            # Still the commit it was pinned at. The network is used only
+            # if this disk has lost its copy of it.
+            directory = git_cache.find(url, locked_commit)
+            if directory is None:
+                git_cache.fetch(url)
+                directory = git_cache.checkout(url, locked_commit)
+                report.events.append(
+                    PinEvent("fetched", key, detail=f"{shown} at {locked_commit[:7]}")
+                )
+            return directory, was, None
+        checkout = git_cache.get(url, rev)
+    except (GitError, ValueError, OSError) as error:
+        # What the lockfile says stays as it is; so do its pins
+        failure = f"could not fetch {shown}: {error}"
+        return None, (was if was is not None else listed), failure
+
+    named = f" ({rev})" if rev and rev != checkout.commit else ""
+    report.events.append(
+        PinEvent("fetched", key, detail=f"{shown} at {checkout.commit[:7]}{named}")
+    )
+    listed = {**listed, "location": {**listed["location"], "commit": checkout.commit}}
+    return checkout.path, listed, None
+
+
+def _sync_dependency(
+    key: str,
+    directory: Optional[Path],
     had: dict[str, dict],
     may_move: bool,
     store: Store,
@@ -419,26 +537,21 @@ def _sync_dependency(
 ) -> dict[str, dict]:
     """Work out the records of one dependency's assets, pinning as needed.
 
+    :param directory: Where the dependency's files are: its ``path``, or
+        the checkout of a ``git`` dependency. None if they could not be got.
     :param had: The records the lockfile has for it now, by asset ID.
     :param may_move: Whether its existing pins may move (an update).
     :returns: Its records as they should be, by asset ID.
     """
-    if "git" in entry:
-        report.events.append(
-            PinEvent("not_fetched", key, detail=strip_url_credentials(entry["git"]))
-        )
-        for record in had.values():
-            _report_kept(record, key, store, report)
-        return dict(had)
-
-    directory = Path(entry["_resolved_path"])
     try:
+        if directory is None:
+            raise OSError("it could not be fetched")
         declared = declared_files(directory)
     except (OSError, ValueError) as error:
         # What is pinned stays pinned. That is the point of pinning: the
         # other pipeline can go away and this one still has its data.
         pinned = [record for record in had.values() if record.get("content_hash")]
-        if not pinned or may_move:
+        if (not pinned or may_move) and directory is not None:
             report.events.append(
                 PinEvent(
                     "unreachable",
@@ -567,7 +680,9 @@ def _pin_asset(
 
 
 def pin(
-    project_dir: Union[str, Path] = ".", store: Optional[Store] = None
+    project_dir: Union[str, Path] = ".",
+    store: Optional[Store] = None,
+    git_cache: Optional[GitCache] = None,
 ) -> PinReport:
     """Pin whatever a pipeline depends on that has no pin yet.
 
@@ -580,22 +695,32 @@ def pin(
     An asset that is declared and not built is recorded as not pinned; the
     rest of the dependency is pinned all the same.
 
+    A ``git`` dependency is fetched into the git cache and pinned from the
+    checkout, at the commit the lockfile names if it names one. It has only
+    what its repository commits; the rest of what it declares is not built.
+
     :param project_dir: The pipeline's directory.
     :param store: The store to pin into; this user's by default.
+    :param git_cache: Where ``git`` dependencies are fetched to; this
+        user's by default.
     :returns: What was done.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
     :raises ValueError: If its ``[dependencies]`` table is malformed.
     """
-    return _sync(project_dir, store, move=None)
+    return _sync(project_dir, store, move=None, git_cache=git_cache)
 
 
 def update(
     project_dir: Union[str, Path] = ".",
     dependencies: Iterable[str] = (),
     store: Optional[Store] = None,
+    git_cache: Optional[GitCache] = None,
 ) -> PinReport:
     """Move a pipeline's pins forward to what its dependencies have now.
+
+    A ``git`` dependency is fetched again, and its ``rev`` looked up again:
+    a branch may have moved, a tag or a commit has not.
 
     :param project_dir: The pipeline's directory.
     :param dependencies: The dependencies to update, as named in
@@ -608,7 +733,7 @@ def update(
         cannot be read, or a name is not one of its dependencies.
     :raises ValueError: If its ``[dependencies]`` table is malformed.
     """
-    return _sync(project_dir, store, move=list(dependencies))
+    return _sync(project_dir, store, move=list(dependencies), git_cache=git_cache)
 
 
 @dataclass

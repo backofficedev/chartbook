@@ -402,8 +402,8 @@ The **key** is the name this pipeline knows the other one by. It is a pipeline I
 | Field | Meaning |
 |-------|---------|
 | `path` | A directory holding the other pipeline's `chartbook.toml`. Relative to this pipeline's root, or absolute |
-| `git` | A git repository holding it. Any host, any URL git accepts |
-| `rev` | With `git`: the commit, tag or branch to use. Optional |
+| `git` | A git repository holding it. Any host: an `https://` or `ssh://` URL, `git@host:owner/name`, or a path on disk (relative to this pipeline's root) |
+| `rev` | With `git`: the branch, tag or commit to use. Optional; without it, the repository's default branch |
 
 An entry has `path` or `git`, not both.
 
@@ -424,7 +424,7 @@ An entry has `path` or `git`, not both.
 
 **What it does not do yet.**
 
-- A `git` dependency is recorded and not fetched; `check` and `pin` each say so, and its assets cannot be read.
+- **A `git` dependency has only what its repository commits.** `chartbook pin` clones it and pins the declared files that are in git. Data the other pipeline builds and git-ignores is not in a clone, and ChartBook does not run another pipeline's build, so those assets are listed as not built. Working out a repository from an ID alone (`{ rev = "…" }` with no `git`) is not supported.
 - `data.load(pipeline=…, dataframe=…)`, with two arguments, still looks in a catalog and reads the other pipeline's own file, as it always has. It does not read this table.
 
 A catalog has no `[dependencies]`. It reads from no pipeline; it lists them in `[pipelines]`. The design is {doc}`../design/asset-graph`.
@@ -469,6 +469,15 @@ path = "/a/bigger/disk/chartbook-store"
 ```
 
 The store is a folder of files kept under the hash of their content. It is where `chartbook pin` keeps its copies of other pipelines' data, and it is shared by all your projects. The `CHARTBOOK_STORE` environment variable overrides the setting, for one shell or one CI job. `chartbook store verify` checks a store and `chartbook store gc` clears out what no project needs ({doc}`cli`).
+
+`git` dependencies are cloned into `~/.chartbook/git/`: one clone per repository, and one checkout per commit that something has pinned. To keep them elsewhere, set `CHARTBOOK_GIT_CACHE`, or:
+
+```toml
+[git]
+path = "/a/bigger/disk/chartbook-git"
+```
+
+Nothing in it is precious. Delete it and the next `chartbook pin` or `chartbook update` that needs a repository fetches it again.
 
 ## Best Practices
 

@@ -122,7 +122,13 @@
                 "type": "string"
               },
               "rev": {
-                "type": "string"
+                "type": "string",
+                "description": "The revision as [dependencies] declares it: a branch, a tag or a commit. Absent for the repository's default branch."
+              },
+              "commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "description": "The commit that `rev` meant when the dependency was pinned. Present once chartbook.lock has pinned it."
               }
             }
           },

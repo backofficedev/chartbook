@@ -351,31 +351,6 @@ class TestPin:
         # The model was never pinned, so there was nothing to keep
         assert "acme/rates:model/ar1" not in locked.assets
 
-    def test_a_git_dependency_is_listed_and_not_pinned(self, downstream, store):
-        _depend(
-            downstream,
-            crsp={"git": "https://user:s3cret@example.org/acme/crsp.git", "rev": "a1b2c3d"},
-        )
-        report = lock.pin(downstream, store)
-        assert report.events == [
-            PinEvent("not_fetched", "crsp", detail="https://example.org/acme/crsp.git")
-        ]
-        assert report.problems == []
-        text = (downstream / LOCK_FILE).read_text()
-        assert "s3cret" not in text
-        assert lock.read_lock(downstream).dependencies == [
-            {
-                "id": "crsp",
-                "via": "rev",
-                "location": {
-                    "kind": "git",
-                    "url": "https://example.org/acme/crsp.git",
-                    "rev": "a1b2c3d",
-                },
-            }
-        ]
-        assert not store.root.exists()
-
     def test_a_pipeline_with_no_dependencies_gets_no_lockfile(self, work, store):
         alone = work / "alone"
         _write_manifest(alone, {"project": {"id": "alone"}})
@@ -819,13 +794,6 @@ class TestCommands:
         assert result.exit_code == 1
         assert "acme/rates: cannot be pinned: no pipeline can be read at" in result.output
         assert "1 thing(s) could not be pinned." in result.output
-
-    def test_a_git_dependency_is_said_not_to_be_pinned(self, here, downstream):
-        _depend(downstream, crsp={"git": "https://user:s3cret@example.org/acme/crsp.git"})
-        result = self._run("pin")
-        assert result.exit_code == 0, result.output
-        assert "crsp: not pinned. ChartBook does not fetch git dependencies yet" in result.output
-        assert "s3cret" not in result.output
 
     def test_no_dependencies(self, here, downstream):
         _write_manifest(downstream, {"project": {"id": "downstream"}})

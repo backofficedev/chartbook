@@ -353,10 +353,11 @@ def _dependency_records(
 
     :param locked: The pipeline's lockfile, if it has one.
     """
-    pinned = {
-        entry["id"]: entry.get("pinned_hash")
+    in_lock = {
+        entry["id"]: entry
         for entry in (locked.dependencies if locked is not None else [])
     }
+    pinned = {key: entry.get("pinned_hash") for key, entry in in_lock.items()}
     records = []
     for key, entry in dependencies.items():
         location = locate_pipeline(key, dependencies={key: entry})
@@ -365,6 +366,10 @@ def _dependency_records(
             where = {"kind": "git", "url": strip_url_credentials(location.url)}
             if location.rev:
                 where["rev"] = location.rev
+            commit = in_lock.get(key, {}).get("location", {}).get("commit")
+            if commit:
+                # The commit the lockfile pins it at, whatever `rev` is now
+                where["commit"] = commit
             via = "rev"
         else:
             where = {

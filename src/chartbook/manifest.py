@@ -454,6 +454,14 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
                 f"{where} has both 'path' and 'git'. A dependency comes from "
                 f"one place: a directory, or a git repository."
             )
+        if "git" in entry:
+            from chartbook.gitcache import check_git_url, check_rev
+
+            try:
+                check_git_url(entry["git"])
+                check_rev(entry.get("rev"))
+            except ValueError as error:
+                raise ValueError(f"{where}: {error}") from None
         if "path" not in entry and "git" not in entry:
             inferred = (
                 " Working out the repository from the pipeline's ID is not "

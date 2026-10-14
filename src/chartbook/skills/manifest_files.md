@@ -165,7 +165,10 @@ table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git
   `data.path(...)`, `assets.path("fed_yield_curve:chart/x")`, `models.path(...)`,
   or `chartbook path fed_yield_curve:treasury_rates` from a shell. It never
   resolves to the other pipeline's working directory, and is read-only.
-- A `git` dependency is recorded only: not fetched, not pinned, not readable.
+- A `git` dependency (`{ git = "https://…", rev = "v1.2" }`; `rev` optional) is
+  cloned by `chartbook pin` into `~/.chartbook/git/` and pinned like a directory.
+  It has ONLY what its repository commits: git-ignored, built data is "not built".
+  The lockfile records the commit; `chartbook update` re-fetches and follows a branch.
   A catalog cannot have this table.
 
 A minimal — but complete and valid — pipeline manifest:

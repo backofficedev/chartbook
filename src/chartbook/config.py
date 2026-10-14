@@ -10,7 +10,8 @@ The global config directory (``~/.chartbook/``) has this structure::
     ├── chartbook.toml       # default global catalog
     ├── artifacts/            # auxiliary files (e.g. cached data)
     ├── docs/                # rendered catalog HTML
-    └── store/               # pinned files, named by their hash
+    ├── store/               # pinned files, named by their hash
+    └── git/                 # clones of git dependencies
 
 Settings file format::
 
@@ -20,9 +21,14 @@ Settings file format::
     [store]
     path = "/a/bigger/disk/chartbook-store"
 
+    [git]
+    path = "/a/bigger/disk/chartbook-git"
+
 The store (:mod:`chartbook.store`) is at ``~/.chartbook/store/`` unless
 ``[store] path`` or the ``CHARTBOOK_STORE`` environment variable says
-otherwise.
+otherwise. Git dependencies are fetched into ``~/.chartbook/git/``
+(:mod:`chartbook.gitcache`) unless ``[git] path`` or ``CHARTBOOK_GIT_CACHE``
+says otherwise.
 """
 
 import os
@@ -34,6 +40,9 @@ import tomli_w
 
 #: The environment variable that says where the store is, when it is set.
 STORE_ENV_VAR = "CHARTBOOK_STORE"
+
+#: The environment variable that says where git dependencies are fetched to.
+GIT_CACHE_ENV_VAR = "CHARTBOOK_GIT_CACHE"
 
 
 def get_global_config_dir() -> Path:
@@ -153,6 +162,38 @@ def get_store_path() -> Path:
         return Path(os.path.abspath(Path(path).expanduser()))
 
     return get_global_config_dir() / "store"
+
+
+def get_git_cache_path() -> Path:
+    """Get the directory that ``git`` dependencies are fetched into.
+
+    Resolution order:
+
+    1. The ``CHARTBOOK_GIT_CACHE`` environment variable.
+    2. ``git.path`` from ``~/.chartbook/settings.toml``.
+    3. ``~/.chartbook/git``.
+
+    The directory need not exist yet.
+
+    :returns: The absolute path of the cache.
+    :rtype: Path
+    :raises ValueError: If ``git.path`` in the settings file is not a path.
+    """
+    from_environment = os.environ.get(GIT_CACHE_ENV_VAR, "").strip()
+    if from_environment:
+        return Path(os.path.abspath(Path(from_environment).expanduser()))
+
+    configured = read_global_settings().get("git")
+    if configured is not None:
+        path = configured.get("path") if isinstance(configured, dict) else None
+        if not isinstance(path, str) or not path.strip():
+            raise ValueError(
+                f"{get_global_settings_path()}: [git] needs a 'path', e.g. "
+                f'path = "/a/bigger/disk/chartbook-git".'
+            )
+        return Path(os.path.abspath(Path(path).expanduser()))
+
+    return get_global_config_dir() / "git"
 
 
 def write_global_settings(settings: dict) -> None:

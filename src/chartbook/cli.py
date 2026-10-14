@@ -1581,17 +1581,20 @@ def _echo_pin_report(report):
             f"{counts[status]} {words[status]}" for status in words if status in counts
         )
         for event in whole:
-            if event.status == "removed":
+            if event.status == "fetched":
+                click.echo(f"{dependency}: fetched {event.detail}")
+            elif event.status == "removed":
                 summary = "no longer a dependency; its pins are let go"
-            elif event.status == "not_fetched":
-                summary = (
-                    f"not pinned. ChartBook does not fetch git dependencies yet "
-                    f"({event.detail})"
-                )
-            elif event.status == "unreachable":
+            elif event.status in ("unreachable", "unfetched"):
                 note = f"cannot be pinned: {event.detail}"
                 summary = f"{note}; {summary}" if summary else note
         click.echo(f"{dependency}: {summary or 'declares nothing to pin'}")
+        for event in whole:
+            if event.status == "relocated":
+                click.echo(
+                    f"  [dependencies] now says {event.detail}. It stays pinned "
+                    f"where it was: `chartbook update {dependency}` follows it."
+                )
 
         for event in assets:
             if event.status == "moved":
@@ -1604,6 +1607,8 @@ def _echo_pin_report(report):
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
                 click.echo(f"  lost: {event.asset} ({event.old}): {event.detail}")
+        if dependency in report.git and counts.get("not_built"):
+            click.echo("  A git dependency has only what its repository commits.")
 
     if not report.events:
         click.echo("No dependencies to pin.")

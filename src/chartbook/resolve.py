@@ -552,14 +552,6 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     # The lockfile knows the pipeline by its key in [dependencies]
     pinned = asset.in_pipeline(dependency.id)
     asset_id = str(pinned)
-    if dependency.kind == "git":
-        raise UnsupportedReferenceError(
-            f"Reference {str(asset)!r} names an asset of {dependency.id!r}, "
-            f"which is a git dependency. Fetching one is reserved syntax and "
-            f"not yet supported, so it has no pinned copy to read; declare it "
-            f"with a 'path' for now."
-        )
-
     locked = _read_lock(manifest_dir)
     of_dependency = locked.assets_of(dependency.id) if locked else {}
     if not of_dependency:
