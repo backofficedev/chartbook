@@ -436,6 +436,7 @@ With `--force` as well, it is the weekly refresh in one line: `chartbook run --f
 | Which code made it | The commit | Complete |
 | What it was built from | `inputs`: what this pipeline was itself pinned to | As complete as its `chartbook.lock` |
 | Under what conditions | `built_with`: whether the build ran in the same command, and the ChartBook, Python and platform versions | A note. It explains a difference; it does not make a build repeatable |
+| Which model versions were labelled | `labels`: what `[models.x.aliases]` named, by model | As of this snapshot. `store gc` reads the newest snapshot's, so a label given on one machine keeps its version on another |
 
 **Nothing of your `.env` is ever copied.** It holds secrets, and a store is something to share. A setting that changes your results belongs in a file you commit; then the commit covers it.
 
@@ -742,7 +743,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 |---|---|
 | A lockfile pins it | `rate_forecast` is pinned to it |
 | It is the newest of its pipeline, or the newest a branch or tag can pin from | The last build of `yield_curve` that was declared ready; the last one on its `release` branch |
-| A label points at a model version in it | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as any snapshot of it recorded |
+| A label points at a model version in it | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as its newest snapshot recorded |
 | It was made in the last 30 days | `--keep-days` changes the number |
 
 Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last month of snapshots, the ones somebody pins, and the ones a label names.
@@ -773,7 +774,7 @@ Remove them? [y/N]:
 Five things it is careful about:
 
 - **It looks again when you say yes.** The list is made before the question, and a `chartbook pin` can land while you decide. Whatever became pinned in between is kept, and the command says so.
-- **A snapshot's branches are read from the folder it was made from; its labels from there and from the snapshots themselves.** The store notes that folder beside each pipeline's snapshots, and each snapshot records the labels its manifest had when it was made. If the folder is gone (a deleted project, a throwaway checkout, another machine's), the labels snapshots recorded still count, and a label given after the last snapshot is not known; nothing is known about branches, and the other rules apply.
+- **A snapshot's branches are read from the folder it was made from; its labels from there and from the snapshots themselves.** The store notes that folder beside each pipeline's snapshots, and each snapshot records the labels its manifest had when it was made. If the folder is gone (a deleted project, a throwaway checkout, another machine's), the labels the newest snapshot recorded still count, so a label given on one machine keeps its version on another once a snapshot follows it, and a label taken away releases it once a snapshot follows that; nothing is known about branches, and the other rules apply.
 - **A lockfile it cannot find still keeps its pins.** The project may be on a drive that is not plugged in. The store remembers what that lockfile named when it was last pinned, and keeps it until you pass `--forget-missing`.
 - **An object stored in the last hour is never removed.** A pin puts files in the store before it writes the lockfile that names them. So the run that removes a snapshot's record may leave its objects for the next run.
 - **If a lockfile or a snapshot's record cannot be read, nothing is removed.** `gc` stops and says which.

@@ -643,18 +643,20 @@ def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
     made from. A folder that is gone, or whose manifest cannot be read,
     says nothing; and that is the case for every snapshot made on another
     machine, in a store a team shares, and for one made in a checkout that
-    was thrown away. So each snapshot's own record of the labels its
-    manifest had when it was made counts too. A label given after the
-    last snapshot is known only where the folder is.
+    was thrown away. So the newest snapshot's own record of the labels its
+    manifest had when it was made counts too: the newest only, so that a
+    label the owner has since taken away releases its version once a
+    snapshot follows. A label given after the newest snapshot is known
+    only where the folder is.
 
     :returns: For each model's reference, the starts of the hashes its
         labels point at.
     """
     pointed: dict[str, set[str]] = {}
     seen: set[Path] = set()
+    for name, starts in group[-1].labels.items():
+        pointed.setdefault(name, set()).update(starts)
     for taken in group:
-        for name, starts in taken.labels.items():
-            pointed.setdefault(name, set()).update(starts)
         for top in origins(store, taken):
             directory = top / taken.subdirectory if taken.subdirectory else top
             if directory in seen:
@@ -748,7 +750,7 @@ def plan_removals(
        branch or a tag of the repository it came from can pin from;
     4. a label points at a model version it holds: in the pipeline's
        manifest, read from the folder the snapshots were made from, or as
-       recorded in any snapshot of the pipeline (:func:`labels_of`);
+       recorded in the newest snapshot of the pipeline (:func:`labels_of`);
     5. it was made in the last *keep_days* days.
 
     Otherwise it may be removed. What it names and nothing else names is

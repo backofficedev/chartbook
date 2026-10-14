@@ -210,9 +210,10 @@ class TestFrozen:
             raise OSError(errno.ENOSPC, "No space left on device")
 
         monkeypatch.setattr(json, "dump", full)
-        with pytest.raises(OSError, match="No space left"):
+        with pytest.raises(lock.LockError, match="was written, and the store's note.*No space left"):
             pin_folder(downstream, store)
         assert not list((store.root / "roots").glob("*.tmp"))
+        assert (downstream / lock.LOCK_FILE).exists()
 
     def test_a_lockfile_entry_without_an_id_is_a_lock_error(self, downstream, rates, store):
         import json
@@ -232,7 +233,9 @@ class TestFrozen:
         pin_folder(downstream, store)
         store.delete(HELLO)
         (problem,) = lock.verify(downstream, store).problems
-        assert "`chartbook update acme/rates` moves to a snapshot the store has" in problem.message
+        # Pinned from the folder: only the folder can put it back
+        assert "`chartbook pin --from-folder`, where the store can be written, puts it back" in problem.message
+        assert lock.pin(downstream, store, from_folder=True) and store.has(HELLO)
 
     @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a store this user cannot write")
     def test_a_read_only_roots_folder_is_a_note_not_a_failure(self, downstream, rates, store):

@@ -1455,7 +1455,8 @@ asked not to be consulted on rules of this size.
    which versions to keep.
 5. **Labels are read from that manifest as it is now, committed or not.** A label is what
    someone is relying on now. A folder that is gone, or a manifest that cannot be read, says
-   nothing, and the other three rules still hold.
+   nothing, and the other three rules still hold. *(Since 2026-10-14 the newest snapshot's own
+   record of its labels counts too, for a folder on another machine: "4g, as built", below.)*
 6. **A lockfile that cannot be found keeps any snapshot that holds an object it named.** That
    is as much as is known about it.
 7. **Removing a snapshot removes its record; its objects go by the existing rule**, in the
@@ -1676,13 +1677,15 @@ It opens no repository and uses no network. `run --frozen` skips the pin and the
    never reads the store or the lockfile; keeping that so is the reason, and the open question
    above asks whether CI would rather have one command.
 3. **Labels travel with snapshots.** A snapshot records the model versions its manifest's
-   `[models.x.aliases]` named when it was made, and `gc` reads those as well as the folder's
-   manifest. So a label given on one machine is known to a `gc` on another, as of the last
-   snapshot made after the label. The first design here kept every snapshot whose folder this
-   machine cannot see; the review found that a CI runner's checkout is such a folder the
-   moment the job ends, so that rule would have kept every nightly snapshot for ever, and it
-   was replaced by this. What is still not known across machines: a label given after the
-   last snapshot, and which snapshot a branch tip on another machine pins from.
+   `[models.x.aliases]` named when it was made, and `gc` reads the newest snapshot's as well as
+   the folder's manifest. So a label given on one machine is known to a `gc` on another, as of
+   the newest snapshot; and only the newest counts, so that a label taken away releases its
+   version once a snapshot follows (a second review found the first version of this read every
+   snapshot's labels, which kept a version for ever). The first design here kept every snapshot
+   whose folder this machine cannot see; the first review found that a CI runner's checkout is
+   such a folder the moment the job ends, so that rule would have kept every nightly snapshot
+   for ever, and it was replaced by this. What is still not known across machines: a label
+   given after the newest snapshot, and which snapshot a branch tip on another machine pins from.
 4. **A read-only store is a note, not a failure, for a `path` dependency pinned from a
    snapshot.** The only write that `pin` needs in the store then is the root note for `gc`;
    so the store's owner is the one who runs `gc`, and a `pin` that could not leave the note
@@ -1711,6 +1714,16 @@ docs do); the `store gc` reference and docstring listed the old rules (updated);
 read-only note was wrong on the `remove_root` path (reworded); the read-only test only
 chmod'ed `roots/` (a fully read-only store is tested, from a snapshot); a lockfile entry
 without an `id` was a `KeyError` (a `LockError` with a remedy); a docstring's rule numbers.
+
+A second review, of those fixes, found seven more, all fixed: labels recorded in any snapshot
+kept a version for ever, even after the owner took the label away (the newest snapshot's
+labels count, and no other's); `chartbook snapshot` on a read-only store still printed a bare
+errno; the remedy for a lost pin was wrong for a `--from-folder` pin, and its test asserted the
+wrong remedy (it depends on the kind of pin now: repository, snapshot or folder); a full disk
+after the lockfile was written lost the report (a `LockError` says the lockfile was written and
+the note was not); `run --frozen` on a leaf pipeline said "0 pin(s) of 0 dependencies" ("no
+dependencies to check"); the snapshot record's `labels` was in no schema and no table; the
+`store gc` docstring left out the branch-tip rule.
 
 **Known gaps.** A shared store is cleared by its owner, from the machine the snapshots were
 made on, and without `--forget-missing`: another machine's lockfile cannot be found from

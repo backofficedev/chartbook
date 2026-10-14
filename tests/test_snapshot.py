@@ -868,6 +868,28 @@ class TestClearingOldSnapshots:
         plan = _plan(default_store())
         assert (first, "a label points at a version in it") in plan.keep
         assert [t.made_at for t, _ in plan.remove] == [OLD]
+        # The owner takes the label away and makes another snapshot: the
+        # version is released. Only the newest snapshot's labels count.
+        _manifest(
+            directory,
+            {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json"}}},
+        )
+        _commit(work)
+        (directory / "_output" / "m.json").write_bytes(b"v4")
+        fourth = snapshot.make(directory).snapshot
+        assert fourth.labels == {}
+        (fourth.path.parent / "origins").write_text(str(tmp_path / "elsewhere") + "\n")
+        plan = _plan(default_store())
+        assert {t.made_at for t, _ in plan.remove} == {OLDER, OLD}
+
+    def test_the_remedy_for_a_pin_lost_from_a_snapshot_names_update_and_the_snapshot(self, maker, user):
+        snapshot.make(maker)
+        store = default_store()
+        report = lock.pin(user, store)
+        content_hash = next(iter(report.events)).new or [e.new for e in report.events if e.new][0]
+        store.delete(content_hash)
+        (problem,) = lock.verify(user, store).problems
+        assert "`chartbook update acme/maker` moves to a snapshot the store has, or `chartbook snapshot`" in problem.message
 
     @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a store this user cannot write")
     def test_pinning_from_a_snapshot_needs_no_write_to_the_store(self, maker, user):

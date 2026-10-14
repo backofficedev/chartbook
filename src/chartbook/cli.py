@@ -1747,6 +1747,9 @@ _from_folder = click.option(
 def _echo_frozen_report(step, report):
     """Print what `--frozen` found: one line when all is well, else each problem."""
     who = f"{step.id}: " if step is not None else ""
+    if not report.problems and not report.dependencies:
+        click.echo(f"{who}no dependencies to check. Nothing written.")
+        return
     if not report.problems:
         click.echo(
             f"{who}{report.pins} pin(s) of {report.dependencies} dependenc"
@@ -1904,7 +1907,7 @@ def snapshot(project_dir):
     try:
         report = snapshots.make(project_dir)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
 
     _echo_snapshot(report)
@@ -2141,10 +2144,11 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
     snapshot: what `chartbook snapshot` kept of a pipeline at a commit.
 
     A snapshot is kept if a lockfile pins it, if it is the newest of its
-    pipeline, if a label points at a model version in it (in that
-    pipeline's chartbook.toml, or as any snapshot of it recorded), or if it
-    was made in the last 30 days (--keep-days). Otherwise it may be
-    removed, and what only it named goes with it.
+    pipeline or the newest a branch or tag can pin from, if a label points
+    at a model version in it (in that pipeline's chartbook.toml, or as its
+    newest snapshot recorded), or if it was made in the last 30 days
+    (--keep-days). Otherwise it may be removed, and what only it named
+    goes with it.
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass

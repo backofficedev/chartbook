@@ -473,7 +473,12 @@ def _sync(
             store.remove_root(lock_path)
     except OSError as error:
         if not is_read_only(error):
-            raise
+            raise LockError(
+                f"{lock_path} was written, and the store's note of it for `gc` "
+                f"could not be: {error}. The pins are in the store and the lockfile "
+                f"names them; `chartbook pin` again, once the store can be written, "
+                f"leaves the note."
+            ) from None
         # A store that is read-only for this user: the pins are in it, the
         # lockfile names them, and only the note for `gc` is missing
         report.unrooted = str(error)
@@ -604,8 +609,13 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
             elif not store.has(content_hash):
                 if entry.get("via") == "rev":
                     remedy = "`chartbook pin`, where the store can be written, puts it back from the repository"
+                elif entry.get("location", {}).get("commit"):
+                    remedy = (
+                        f"`chartbook update {key}` moves to a snapshot the store has, or "
+                        f"`chartbook snapshot` in its folder at that commit makes it again"
+                    )
                 else:
-                    remedy = f"`chartbook update {key}` moves to a snapshot the store has"
+                    remedy = "`chartbook pin --from-folder`, where the store can be written, puts it back from the folder"
                 report.problems.append(
                     FrozenProblem(
                         key,
