@@ -17,7 +17,8 @@ from chartbook.cli import main
 from chartbook.identity import clear_git_remote_cache
 from chartbook.manifest import load_manifest
 
-TEMPLATE = "https://github.com/backofficedev/cookiecutter_chartbook"
+# The template is the `template/` folder of this repository
+TEMPLATE = ["https://github.com/backofficedev/chartbook", "--directory", "template"]
 
 
 class FakeTools:
@@ -137,7 +138,14 @@ class TestPlainInit:
     def test_runs_only_cruft(self, tools):
         result = _init()
         assert result.exit_code == 0, result.output
-        assert tools.commands() == [["cruft", "create", TEMPLATE]]
+        assert tools.commands() == [["cruft", "create", *TEMPLATE]]
+        assert scaffold.template_command() == ["cruft", "create", *TEMPLATE]
+
+    def test_the_template_is_in_this_repository(self):
+        """Where `chartbook init` says it is, there is a cookiecutter template."""
+        template = Path(__file__).parent.parent / scaffold.TEMPLATE_DIRECTORY
+        assert (template / "cookiecutter.json").is_file()
+        assert (template / "{{cookiecutter.project_slug}}" / "chartbook.toml").is_file()
 
     def test_git_and_github_are_off_by_default(self, tools):
         _init()

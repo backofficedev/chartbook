@@ -166,7 +166,7 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
 | Data glimpses | `create_data_glimpses.py` | Reads the manifest, not `dodo.py` |
-| Scaffolding | `scaffold.py`, `chartbook init --git/--github` | Renders the cookiecutter template |
+| Scaffolding | `scaffold.py`, `chartbook init --git/--github`, `template/` | Renders the cookiecutter template, which is the `template/` folder of this repository |
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
@@ -1385,6 +1385,9 @@ maybe. But that's as far as I'd go."
 1. **The project template still says `chartbook build`.** It is in another repository
    (`cookiecutter_chartbook`), which this work does not touch. Its `dodo.py` needs the
    one-line change before this is released, or every new project starts with the warning.
+   *(Closed the same day another way: the template was moved into this repository, and
+   says `chartbook docs`. The old repository is left as it is, for the released versions
+   that render it. "The project template, moved in", below.)*
 2. **An old `dodo.py` started with plain `doit`** runs its own build a second time, nested,
    before the warning stops it, and may trip over doit's own lock on its database. The fix is
    the one-line change.
@@ -1402,6 +1405,69 @@ maybe. But that's as far as I'd go."
 2. *"`chartbook build` — make everything current: data, then site."* Most build scripts
    already render the site as their last step. So "data, then site" is, for now, "data and
    site, then site".
+
+#### The project template, moved in
+
+*Added 2026-10-13. Decided by the maintainer the same day:* "Should we move the project
+template to this repository? Maybe, right?" and then yes.
+
+`chartbook init` renders `template/`, a folder of this repository. It rendered a separate
+repository, `cookiecutter_chartbook`.
+
+| What | Where |
+|---|---|
+| The template | `template/`: `cookiecutter.json`, `hooks/`, `{{cookiecutter.project_slug}}/` |
+| Where `chartbook init` gets it | `chartbook/scaffold.py`, `template_command()` |
+| The template's own tests, and a build of a fresh project | `tests/test_template.py` |
+
+**Why.** The rename of 4c showed it: the template called a command that had changed its
+meaning, in a repository this work could not reach, and no test here could have noticed,
+because the tests of `chartbook init` stand in for the download. Now a command and the
+template that uses it change in one pull request, and a test renders a project and builds it
+with the ChartBook of the same commit.
+
+**Proposed: implemented, and waiting on the maintainer's yes.**
+
+1. **It is a folder at the top of the repository, `template/`**, not inside the package. It is
+   fetched from git by cruft, as before, so it does not need to be installed.
+2. **A project is still made with cruft**, and its `.cruft.json` records this repository and
+   the `template` folder, so `cruft update` goes on working for new projects. The template's
+   own README calls that one of its main benefits.
+3. **The template was copied, not merged in with its history.** It came from
+   `cookiecutter_chartbook` at commit `a67eeea`, and that is written here and in the test
+   file. The old repository has the history.
+4. **Four changes on the way in**, each needed by something built in this step: the build
+   file renders with `chartbook docs -f`; the manifest says `[scripts] build = "doit"` where
+   it had a note about which modules to load; its copy of the skill is the package's, kept
+   so by a test; its pixi file does not ask for the removed `[all]` extra. Two stale lines
+   that told people to build the site with `jupyter-book` now say `chartbook docs -f`.
+5. **Not brought over:** the generated `example/` project, which was a rendered copy kept
+   for reference and has to be regenerated on every change (the test that builds a fresh
+   project does that job here); the template repository's own build file and CI workflow,
+   whose jobs the tests here do; and its editor rules.
+6. **The old repository is left exactly as it is.** Released versions of ChartBook render
+   it, and there `chartbook build` still means "render the site". Changing it would break
+   them. Nothing in this work touches it.
+7. **The skill now has three copies kept the same by hand and checked by a test**: the
+   package's, which is the source; `.claude/skills/chartbook/`; and the template's.
+
+**Known gaps.**
+
+1. **A project gets the template as it is on `main` today, whatever ChartBook is installed.**
+   That was true before the move and still is. Someone with an older ChartBook who runs
+   `chartbook init` after a later change to the template can get a build file that uses a
+   command they do not have. Pinning what `chartbook init` fetches to the installed version
+   needs releases to be tagged in git, which they are not. *Proposed:* tag them, and have
+   `chartbook init` ask cruft for that tag.
+2. **`chartbook init` still needs the network.**
+3. **Existing projects point at the old repository.** `cruft update` in them keeps reading
+   it until they are re-linked: `cruft link https://github.com/backofficedev/chartbook
+   --directory template`.
+4. **A project straight from the template fails `chartbook check` on one thing**: it has no
+   `repo_url`, because it has no git remote yet. `chartbook init --github` gives it one.
+   This was so before the move; the new test is what showed it.
+5. **The template asks for `chartbook>=0.1.0`.** A project made from it needs the release
+   that has `chartbook docs`. The number is the release's to set, and is not set here.
 
 ### Step 5. Data in databases
 
@@ -1490,6 +1556,7 @@ maintainer.
 | 2026-10-13 | A version of a model is made by a snapshot: the first that holds new bytes for it. Not by every build | Step 4 above, "4d, as built"; {doc}`models` |
 | 2026-10-13 | A version is named by the start of its content hash: twelve digits, with the whole hash stored. The names people use are labels in the manifest, `[models.x.aliases]` | Step 4 above, "4d, as built"; {doc}`models` |
 | 2026-10-13 | Building and making a snapshot together has one spelling, `chartbook run --snapshot`. Recording named environment variables in a snapshot waits until a pipeline needs it | Step 4 above, "4b, continued" |
+| 2026-10-13 | The project template moves into this repository, as `template/` | Step 4 above, "The project template, moved in" |
 | 2026-10-13 | The command rename is made now and is breaking: `chartbook docs` renders the site, `chartbook build` runs the build script and then renders. No compatibility beyond a warning | Step 4 above, "4c, as built" |
 | 2026-10-13 | No backwards compatibility in this work: the right design, even if it breaks, with a warning at most. The order of the remaining work is the builder's to choose | Step 4 above, "4c, as built" |
 

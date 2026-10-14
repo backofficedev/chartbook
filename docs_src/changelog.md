@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — the project template lives in this repository
+
+`chartbook init` now renders the `template/` folder of ChartBook's own repository. It used to render a separate repository, `cookiecutter_chartbook`.
+
+Three things were wrong with keeping it apart. The template could disagree with the ChartBook that rendered it: renaming `chartbook build` to `chartbook docs`, below, left it calling a command that no longer meant what it wanted. Nothing here tested it: the tests of `chartbook init` stand in for the download, so no test ever built a freshly made project. And a change to a command took two pull requests in two repositories. Now the template and the commands change in one pull request, the template's own tests run with ChartBook's, and one of them renders a project and builds it with the ChartBook in the same commit.
+
+The template was brought over as it was (from `cookiecutter_chartbook` at commit `a67eeea`), with what the changes below need:
+
+- Its build file renders the site with `chartbook docs -f`.
+- Its manifest names its build, `[scripts] build = "doit"`, where it had a note about which modules to load, so `chartbook run` and `chartbook build` work in a new project.
+- Its copy of ChartBook's skill is the package's own, and a test keeps it so.
+- Its pixi file no longer asks for the `[all]` extra, which is gone.
+
+A new project is still made with cruft, and `.cruft.json` in it records this repository and the `template` folder, so `cruft update` brings in later changes.
+
+**For a project made before this:** its `.cruft.json` names the old repository, and `cruft update` there keeps reading the old one. To follow the template here, re-link it: `cruft link https://github.com/backofficedev/chartbook --directory template`.
+
+**The old repository should be left as it is.** Released versions of ChartBook render it, and in those versions `chartbook build` still means "render the site". Not brought over: the generated `example/` project that the old repository keeps for reference, and its editor rules.
+
 ### Added — versions of a model, and labels: `model/x@7f3a9c2e41b0`, `model/x@champion`
 
 A model now has versions, and a name can point at one.
@@ -46,7 +65,7 @@ The model's page lists its versions, newest first, with their scores, and `index
 | `chartbook docs` | No | Yes |
 | `chartbook build` | Yes | Yes |
 
-**What to change.** Wherever a build script says `chartbook build`, make it say `chartbook docs`. That is the `dodo.py` of every project made by `chartbook init` so far:
+**What to change.** Wherever a build script says `chartbook build`, make it say `chartbook docs`. That is the `dodo.py` of every project made by `chartbook init` so far (a project made from now on already says `chartbook docs`: see the entry above):
 
 ```python
 "actions": ["chartbook docs -f"],     # was: chartbook build -f

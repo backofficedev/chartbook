@@ -26,7 +26,9 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 
 ## chartbook init
 
-Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/cookiecutter_chartbook), via [cruft](https://cruft.github.io/cruft/) — so `cruft update` can pull template improvements later. Prompts for project name and author.
+Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template), via [cruft](https://cruft.github.io/cruft/) — so `cruft update` can pull template improvements later. Prompts for project name and author.
+
+The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook build` builds it and renders its site.
 
 ```console
 chartbook init [--git] [--github [--public | --private]]

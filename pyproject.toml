@@ -158,6 +158,9 @@ build = "sphinx-build -b html docs_src docs && touch docs/.nojekyll"
 
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::Warning"]
+markers = [
+    "integration: needs tools that may not be installed (LaTeX); each such test skips itself when they are missing",
+]
 addopts = "--doctest-modules --ignore=examples"
 pythonpath = ["."]
 testpaths = ["tests"]

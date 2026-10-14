@@ -16,7 +16,7 @@ One install, everything included: the site-building CLI, the plotting module, da
 chartbook init
 ```
 
-This prompts for a project name and author, then creates a working pipeline from the [cookiecutter template](https://github.com/backofficedev/cookiecutter_chartbook): `chartbook.toml`, `README.md`, a `dodo.py` task runner, and `src/` scripts that pull data and build charts. Because the project is created with [cruft](https://cruft.github.io/cruft/), you can pull template improvements later with `cruft update`.
+This prompts for a project name and author, then creates a working pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template): `chartbook.toml`, `README.md`, a `dodo.py` task runner, and `src/` scripts that pull data and build charts. Because the project is created with [cruft](https://cruft.github.io/cruft/), you can pull template improvements later with `cruft update`.
 
 ```console
 cd <your-project>
