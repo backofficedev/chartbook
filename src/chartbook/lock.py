@@ -922,17 +922,22 @@ class GcPlan:
     Attributes:
         lockfiles: Each lockfile the store has a note of, and whether it
             could be found.
-        kept: How many objects are kept: some lockfile or snapshot names them.
-        snapshots: How many objects some snapshot names.
-        recent: Objects that no lockfile names, stored too recently to
-            remove.
-        delete: Objects that no lockfile names, each with its size in bytes.
+        kept: How many objects are kept: some lockfile or kept snapshot
+            names them.
+        snapshots: How many objects some kept snapshot names.
+        snapshots_kept: Each snapshot that is kept, with why.
+        snapshots_delete: Each snapshot that is to be removed, with why it
+            may be.
+        recent: Objects that nothing names, stored too recently to remove.
+        delete: Objects that nothing names, each with its size in bytes.
         forget: Lockfiles that could not be found and are to be forgotten.
     """
 
     lockfiles: list[tuple[Path, bool]] = field(default_factory=list)
     kept: int = 0
     snapshots: int = 0
+    snapshots_kept: list = field(default_factory=list)
+    snapshots_delete: list = field(default_factory=list)
     recent: list[str] = field(default_factory=list)
     delete: list[tuple[str, int]] = field(default_factory=list)
     forget: list[Path] = field(default_factory=list)
@@ -947,19 +952,26 @@ def plan_gc(
     store: Optional[Store] = None,
     forget_missing: bool = False,
     recent_seconds: float = RECENT_SECONDS,
+    keep_days: float = snapshot.KEEP_DAYS,
 ) -> GcPlan:
     """Work out what a store can let go of. Nothing is removed.
 
-    An object is kept if a lockfile the store knows of names it. The store
-    knows of every lockfile that was pinned or updated into it. A lockfile
-    is read as it is now; one that cannot be found (a deleted project, a
-    drive that is not plugged in) still keeps what it named when it was
-    last pinned, unless *forget_missing* is set.
+    First the snapshots: one is kept if a lockfile pins it, if it is the
+    newest of its pipeline, if a label points at a model version in it, or
+    if it was made in the last *keep_days* days
+    (:func:`chartbook.snapshot.plan_removals`). Then the objects: one is
+    kept if a lockfile the store knows of names it, or a kept snapshot
+    does. The store knows of every lockfile that was pinned or updated into
+    it. A lockfile is read as it is now; one that cannot be found (a
+    deleted project, a drive that is not plugged in) still keeps what it
+    named when it was last pinned, unless *forget_missing* is set.
 
     :param store: The store; this user's by default.
     :param forget_missing: If True, a lockfile that cannot be found keeps
         nothing, and is forgotten when the plan is carried out.
     :param recent_seconds: An unnamed object newer than this is left alone.
+    :param keep_days: How long an unpinned snapshot that is not the newest
+        of its pipeline is kept.
     :returns: The plan, for :func:`run_gc`.
     :raises StoreError: If the store's notes cannot be read.
     :raises LockError: If a lockfile that is there cannot be read. Nothing
@@ -967,21 +979,35 @@ def plan_gc(
     """
     store = store if store is not None else default_store()
     plan = GcPlan()
-    try:
-        # A snapshot is kept whether or not anything pins it yet
-        keep: set[str] = snapshot.all_hashes(store)
-    except snapshot.SnapshotError as error:
-        raise LockError(str(error)) from None
-    plan.snapshots = len(keep)
+    keep: set[str] = set()
+    pinned_snapshots: set[tuple[str, str]] = set()
+    hashes_of_missing: set[str] = set()
     for root in store.roots():
         found = read_lock(root.lockfile)
         plan.lockfiles.append((root.lockfile, found is not None))
         if found is not None:
             keep |= found.hashes()
+            for entry in found.dependencies:
+                commit = entry.get("location", {}).get("commit")
+                if commit and entry.get("snapshot"):
+                    pinned_snapshots.add((commit, entry["snapshot"]))
         elif forget_missing:
             plan.forget.append(root.lockfile)
         else:
             keep |= set(root.hashes)
+            hashes_of_missing |= set(root.hashes)
+
+    try:
+        snapshots = snapshot.plan_removals(
+            store, pinned_snapshots, hashes_of_missing, keep_days=keep_days
+        )
+    except snapshot.SnapshotError as error:
+        raise LockError(str(error)) from None
+    plan.snapshots_kept = snapshots.keep
+    plan.snapshots_delete = snapshots.remove
+    named_by_snapshots = snapshots.kept_hashes()
+    plan.snapshots = len(named_by_snapshots)
+    keep |= named_by_snapshots
 
     for content_hash in store.hashes():
         if content_hash in keep:
@@ -999,6 +1025,8 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> int:
     :returns: How many objects were removed.
     """
     store = store if store is not None else default_store()
+    for taken, _ in plan.snapshots_delete:
+        snapshot.remove(store, taken)
     removed = sum(store.delete(content_hash) for content_hash, _ in plan.delete)
     for lockfile in plan.forget:
         store.remove_root(lockfile)

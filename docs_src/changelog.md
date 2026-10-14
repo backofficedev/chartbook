@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed — a series address documents a column; it does not load one
+### Added — `chartbook store gc` clears old snapshots
+
+Every snapshot was kept for ever, and on a disk without copy-on-write clones each one is a full copy of a pipeline's data. `chartbook store gc` now lets old ones go. A snapshot is kept if a lockfile pins it, if it is the newest of its pipeline, if a label in that pipeline's `chartbook.toml` points at a model version it holds, or if it was made in the last 30 days (`--keep-days` changes the number). The rest are listed, and removed when you say yes, together with whatever only they named.
+
+```console
+$ chartbook store gc --dry-run
+Kept: 4 snapshot(s), naming 9 object(s): 1 because a lockfile pins it, 2 because it is the newest of its pipeline, 1 because it was made in the last 30 days
+Would remove 6 snapshot(s):
+  ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: nothing pins it, it is not the newest, and it is older than 30 days
+```
+
+For the labels, the store notes beside each pipeline's snapshots the folder they were made from, and reads that folder's manifest when it clears. A folder that is gone says nothing, and the other three rules still hold.
+
 
 `treasury_rates#dgs10` is the address of one column of a dataframe. It is what a `[dataframes.treasury_rates.series.dgs10]` table documents and what `index.json` lists. The design also had `data.load("treasury_rates#dgs10")` hand back that column, as the last part of this step.
 
@@ -61,7 +73,7 @@ models.versions("rate_forecaster")         # all of them, with scores and commit
 
 **A version is named by the start of its content hash**, as git names a commit. The design proposed `v1`, `v2`, `v3`, and listed the problem with it as an open question: two branches that each retrain both make a `v4`, and the merge conflicts. A name worked out from the bytes is the same on every machine and every branch and never needs renumbering. The names people use are labels, in the manifest, so promoting a model is a one-line change reviewed in a pull request.
 
-The model's page lists its versions, newest first, with their scores, and `index.json` has them under `versions` on the `Model` record. `chartbook check` warns about a label whose version is not on this machine, and does not fail: the version may be in the store of the machine that made it.
+The model's page lists its versions, newest first, with their scores, and `index.json` has them under `versions` on the `Model` record. `chartbook check` warns about a label whose version is not on this machine, and does not fail: the version may be in the store of the machine that made it. A labelled version is never cleared by `chartbook store gc`.
 
 `@` in a reference used to be refused everywhere as reserved. It now resolves for one thing, a version of one of this pipeline's own models. Not built: a version of another pipeline's model (`other:model/x@champion`), versions of anything but a model, and versions that travel between machines, which need a store to share.
 
@@ -117,7 +129,7 @@ For working on two pipelines at once, `chartbook pin --from-folder` and `chartbo
 
 **What a snapshot records, and what it never does.** Which data: the hash of every file. Which code: the commit. What it was built from: `inputs`, what the pipeline was itself pinned to, so a snapshot of `rate_forecast` names the snapshot of `fed_yield_curve` it read. And a note of the conditions, `built_with`: whether the build ran in the same command, and the ChartBook, Python and platform versions. The note is there to explain a difference between two snapshots, not to make a build repeatable. Nothing of a pipeline's `.env` is copied, ever: it holds secrets, and a store is something to share.
 
-Not built yet: clearing old snapshots (the store grows with each one), and sharing them between machines.
+Not built yet: sharing snapshots between machines.
 
 ### Added — `[scripts]` and `chartbook run`
 

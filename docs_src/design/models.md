@@ -251,7 +251,9 @@ step 3. The fifth is not built: a version of another pipeline's model is refused
 supported.)*
 
 **Garbage collection.** A recorded version is reachable, so `chartbook store gc` never collects
-it.
+it. *(As built, 2026-10-13: a version a label points at is never collected. One no label names
+is kept for 30 days and while it is the newest of its pipeline, then goes with its snapshot.
+{doc}`overview`, "Clearing old snapshots". That is the answer to open question 3.)*
 
 ### What this gives an ML team
 
@@ -503,6 +505,8 @@ questions").
    fastest. *(Decided 2026-10-13: only when asked, and the asking is a snapshot.)*
 3. **Retention.** Versions are never collected. A model retrained nightly makes 365 a year.
    Probably a per-model `keep = N` that spares labelled versions, but nothing is designed.
+   *(Answered 2026-10-13 without a new field: labelled versions are kept; the rest go with
+   their snapshots after 30 days. {doc}`overview`, "Clearing old snapshots".)*
 4. **Do other kinds get versions?** A dataframe could keep named versions the same way. Nothing
    stops it; nothing has asked for it. Cross-pipeline pins already keep the versions that are
    depended on.

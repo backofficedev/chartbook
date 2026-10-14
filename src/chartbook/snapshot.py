@@ -43,6 +43,14 @@ one record for each asset, each with its content hash. The bytes are
 objects in the store like any other, and a snapshot keeps them from being
 cleared (:func:`chartbook.lock.plan_gc`).
 
+**Clearing old ones.** Every snapshot is kept until ``chartbook store gc``
+is run, and then one is kept if a lockfile pins it, if it is the newest of
+its pipeline, if a label in that pipeline's manifest points at a model
+version in it, or if it was made in the last :data:`KEEP_DAYS` days
+(:func:`plan_removals`). The rest may be removed, and the command asks
+first. Beside each pipeline's records the store notes the folder they were
+made from (``origins``), which is how it finds that manifest.
+
 A snapshot is found by commit, and a commit is the same in every clone of
 a repository. So one made in a folder is found by a pipeline that depends
 on that folder, and by one that depends on the same repository by URL.
@@ -91,6 +99,17 @@ SNAPSHOTS_DIR = "snapshots"
 
 #: The folder, under a commit's, for a pipeline at the top of its repository.
 TOP = "_top"
+
+#: How long a snapshot that nothing pins, that is not the newest of its
+#: pipeline and that no label points into is kept, in days. Long enough to
+#: come back from a holiday to; short enough that a nightly build does not
+#: fill a disk that has no copy-on-write clones.
+KEEP_DAYS = 30
+
+#: Beside a pipeline's records: the folders its snapshots were made from, one
+#: per line. Not a record, so it has no ``.json``. It is how ``store gc`` finds
+#: the manifest whose labels say which versions to keep.
+ORIGINS_FILE = "origins"
 
 #: The kinds of link a snapshot's files are stored with: a copy-on-write
 #: clone, or a copy. Never a hard link or a symlink, which are the
@@ -499,19 +518,189 @@ def version_name(content_hash: str, among: Optional[list[str]] = None) -> str:
     return digits[:length]
 
 
-def all_hashes(store: Store) -> set[str]:
-    """Every object any snapshot in a store names: what must not be cleared.
+def all_snapshots(store: Store) -> list[Snapshot]:
+    """Every snapshot in a store, oldest first.
 
     :raises SnapshotError: If a record cannot be read. Nothing should be
         removed from a store that cannot say what it is keeping.
     """
-    kept: set[str] = set()
     directory = store.root / SNAPSHOTS_DIR
     if not directory.is_dir():
-        return kept
-    for file in directory.glob("*/*/*.json"):
-        kept |= read(file).hashes()
+        return []
+    found = [read(file) for file in directory.glob("*/*/*.json")]
+    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
+
+
+def all_hashes(store: Store) -> set[str]:
+    """Every object any snapshot in a store names."""
+    kept: set[str] = set()
+    for taken in all_snapshots(store):
+        kept |= taken.hashes()
     return kept
+
+
+def _note_origin(folder: Path, top: Path) -> None:
+    """Note, beside a pipeline's records, the repository folder they came from."""
+    note = folder / ORIGINS_FILE
+    line = str(top)
+    try:
+        known = note.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        known = []
+    if line not in known:
+        with open(note, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+
+
+def origins(store: Store, taken: Snapshot) -> list[Path]:
+    """The repository folders a pipeline's snapshots were made from."""
+    note = _folder(store, taken.commit, taken.subdirectory) / ORIGINS_FILE
+    try:
+        return [Path(line) for line in note.read_text(encoding="utf-8").splitlines() if line]
+    except FileNotFoundError:
+        return []
+
+
+def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
+    """The labels of each model of one pipeline, as its manifest has them now.
+
+    Read from the manifest in each folder the pipeline's snapshots were
+    made from. A folder that is gone, or whose manifest cannot be read,
+    says nothing.
+
+    :returns: For each model's reference, the starts of the hashes its
+        labels point at.
+    """
+    pointed: dict[str, set[str]] = {}
+    seen: set[Path] = set()
+    for taken in group:
+        for top in origins(store, taken):
+            directory = top / taken.subdirectory if taken.subdirectory else top
+            if directory in seen:
+                continue
+            seen.add(directory)
+            try:
+                raw = _read_manifest_file(directory)
+            except (OSError, ValueError):
+                continue
+            models = raw.get("models") if isinstance(raw.get("models"), dict) else {}
+            for name, entry in models.items():
+                aliases = entry.get("aliases") if isinstance(entry, dict) else None
+                if not isinstance(aliases, dict):
+                    continue
+                for version in aliases.values():
+                    if isinstance(version, str):
+                        pointed.setdefault(f"model/{name}", set()).add(
+                            version.split(":", 1)[-1]
+                        )
+    return pointed
+
+
+def _made_at(taken: Snapshot) -> datetime:
+    return datetime.fromisoformat(taken.made_at.rstrip("Z")).replace(tzinfo=timezone.utc)
+
+
+@dataclass
+class SnapshotPlan:
+    """Which snapshots a store keeps and which it may let go of.
+
+    Attributes:
+        keep: Each snapshot that is kept, with why.
+        remove: Each snapshot that may be removed, with why it may.
+    """
+
+    keep: list[tuple[Snapshot, str]] = field(default_factory=list)
+    remove: list[tuple[Snapshot, str]] = field(default_factory=list)
+
+    def kept_hashes(self) -> set[str]:
+        """The objects the kept snapshots name."""
+        hashes: set[str] = set()
+        for taken, _ in self.keep:
+            hashes |= taken.hashes()
+        return hashes
+
+
+def plan_removals(
+    store: Store,
+    pinned: set[tuple[str, str]],
+    hashes_of_missing: set[str] = frozenset(),
+    keep_days: float = KEEP_DAYS,
+    now: Optional[datetime] = None,
+) -> SnapshotPlan:
+    """Say which snapshots may be removed. Nothing is removed.
+
+    A snapshot is kept if, in this order:
+
+    1. a lockfile pins it (its commit and time are named by a dependency);
+    2. a lockfile that cannot be found named one of its objects when it was
+       last pinned;
+    3. it is the newest snapshot of its pipeline;
+    4. a label in the pipeline's manifest, read from the folder the
+       snapshots were made from, points at a model version it holds;
+    5. it was made in the last *keep_days* days.
+
+    Otherwise it may be removed. What it names and nothing else names is
+    then removed with it, by :func:`chartbook.lock.plan_gc`.
+
+    :param pinned: The ``(commit, made_at)`` pairs that readable lockfiles
+        pin.
+    :param hashes_of_missing: The objects named by lockfiles that cannot be
+        found and are not to be forgotten.
+    :raises SnapshotError: If a record cannot be read.
+    """
+    now = now if now is not None else datetime.now(timezone.utc)
+    plan = SnapshotPlan()
+    groups: dict[tuple[str, str], list[Snapshot]] = {}
+    for taken in all_snapshots(store):
+        groups.setdefault((taken.pipeline, taken.subdirectory), []).append(taken)
+    for group in groups.values():
+        newest = group[-1]
+        labels = _labels_in(store, group)
+        for taken in group:
+            if (taken.commit, taken.made_at) in pinned:
+                why = "a lockfile pins it"
+            elif taken.hashes() & set(hashes_of_missing):
+                why = "a lockfile that cannot be found named what it holds"
+            elif taken is newest:
+                why = "it is the newest of its pipeline"
+            elif any(
+                (record.get("content_hash") or "").split(":", 1)[-1].startswith(start)
+                for name, starts in labels.items()
+                for record in [taken.assets.get(name) or {}]
+                for start in starts
+            ):
+                why = "a label points at a version in it"
+            elif (now - _made_at(taken)).total_seconds() < keep_days * 86400:
+                why = f"it was made in the last {keep_days:g} days"
+            else:
+                plan.remove.append(
+                    (taken, f"nothing pins it, it is not the newest, and it is older than {keep_days:g} days")
+                )
+                continue
+            plan.keep.append((taken, why))
+    return plan
+
+
+def remove(store: Store, taken: Snapshot) -> bool:
+    """Remove one snapshot's record. Its objects are the store's to clear.
+
+    :returns: True if the record was there.
+    """
+    if taken.path is None or not taken.path.is_file():
+        return False
+    taken.path.unlink()
+    folder = taken.path.parent
+    if not any(folder.glob("*.json")):
+        # The last record of this pipeline at this commit: the folder and
+        # its note of origins go too, then the commit's folder if empty
+        for stray in folder.iterdir():
+            stray.unlink()
+        folder.rmdir()
+        try:
+            folder.parent.rmdir()
+        except OSError:
+            pass
+    return True
 
 
 def _count(path: Path) -> int:
@@ -713,6 +902,7 @@ def make(
     before = find(store, code.commit, code.subdirectory)
     if before and before[0].content() == snapshot.content():
         if before[0].built_by_run or not built_by_run:
+            _note_origin(before[0].path.parent, code.top)
             return SnapshotReport(before[0], False, not_built)
 
     # A model whose bytes no snapshot of this pipeline has had is a new version
@@ -726,6 +916,7 @@ def make(
             new_versions.append((name, version_name(content_hash, had)))
 
     path = _write(snapshot, store)
+    _note_origin(path.parent, code.top)
     snapshot = Snapshot(
         snapshot.pipeline,
         snapshot.commit,

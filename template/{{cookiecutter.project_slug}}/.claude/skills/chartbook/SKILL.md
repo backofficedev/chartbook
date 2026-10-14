@@ -50,7 +50,7 @@ chartbook run               # Pin what has no pin, then run this pipeline's [scr
 chartbook run <script>      # ...or another named script, e.g. `chartbook run test` (pins nothing)
 chartbook run --force       # Also rebuild git dependencies (each is built once, in a clean copy); refreshes data they pull from outside
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, or CHARTBOOK_STORE); exit 1 if an object changed
-chartbook store gc          # Remove from the store what no lockfile and no snapshot names; lists and asks first (--dry-run, --yes)
+chartbook store gc          # Remove old snapshots (unpinned, not the newest, unlabelled, >30 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes)
 chartbook config            # Configure default catalog path (interactive)
 chartbook catalog init      # Create global catalog at ~/.chartbook/chartbook.toml
 chartbook catalog add <path>     # Add pipeline(s) to catalog

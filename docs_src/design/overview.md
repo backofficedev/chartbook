@@ -1146,7 +1146,8 @@ before, from ChartBook's clean copy of the commit, and does not look for a snaps
    "4b, continued", below. `chartbook snapshot` by itself still takes its owner's word, and
    the record says which of the two made it.)*
 2. **Nothing clears old snapshots.** Each is its own copy of the files where the disk has no
-   copy-on-write clones, and the store grows with each one.
+   copy-on-write clones, and the store grows with each one. *(Closed 2026-10-13: "Clearing old
+   snapshots", below.)*
 3. **A snapshot is on one machine.** A colleague, or CI, has none of them. For a `path`
    dependency they make their own in that folder. A shared store is the answer, later.
 4. **A lockfile from one machine cannot be put back on another** for a `path` dependency
@@ -1327,7 +1328,9 @@ of date when what it was trained on has moved.
    different `versions` lists from the same commit.
 3. **No version of another pipeline's model, no version names for other kinds, no staleness.**
    As above.
-4. **Nothing clears old versions.** They are in snapshots, and nothing clears those.
+4. **Nothing clears old versions.** They are in snapshots, and nothing clears those. *(Closed
+   2026-10-13: a version a label points at is kept by `store gc`; one no label names goes
+   with its snapshot. "Clearing old snapshots", below.)*
 
 **Where the design was wrong, or said less than it seemed to.**
 
@@ -1407,6 +1410,70 @@ maybe. But that's as far as I'd go."
 2. *"`chartbook build` — make everything current: data, then site."* Most build scripts
    already render the site as their last step. So "data, then site" is, for now, "data and
    site, then site".
+
+#### Clearing old snapshots
+
+*Added 2026-10-13. Built after step 4, on the maintainer's instruction to go on building and
+decide the order myself; this was the first known gap worth closing, because a nightly
+`chartbook run --snapshot` on a disk without copy-on-write clones fills it.*
+
+```console
+$ chartbook store gc --dry-run
+Kept: 4 snapshot(s), naming 9 object(s): 1 because a lockfile pins it, 2 because it is the newest of its pipeline, 1 because it was made in the last 30 days
+Would remove 6 snapshot(s):
+  ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: nothing pins it, it is not the newest, and it is older than 30 days
+```
+
+| What | Where |
+|---|---|
+| Which snapshots are kept, and why | `chartbook/snapshot.py`, `plan_removals()` |
+| The folder a snapshot was made from, noted beside the records | `chartbook/snapshot.py`, `_note_origin()`, `origins()` |
+| Labels read from that folder's manifest | `chartbook/snapshot.py`, `_labels_in()` |
+| Removing a record, then what only it named | `chartbook/lock.py`, `plan_gc()`, `run_gc()`; `chartbook/snapshot.py`, `remove()` |
+| The command | `chartbook/cli.py`, `store gc --keep-days` |
+| The tests | `tests/test_snapshot.py`, `TestClearingOldSnapshots` |
+
+**Proposed: implemented, and waiting on the maintainer's yes.** All of it; the maintainer
+asked not to be consulted on rules of this size.
+
+1. **A snapshot is kept if a lockfile pins it, if it is the newest of its pipeline, if a
+   label points at a model version in it, or if it was made in the last 30 days.** Otherwise
+   it may be removed. The four are tried in that order, and the first that holds is the
+   reason the command gives.
+2. **Thirty days.** Long enough to come back from a holiday to; short enough that a nightly
+   build does not fill a disk. `--keep-days` moves it, down to zero.
+3. **"The newest of its pipeline" is by pipeline ID and folder within its repository**,
+   which is what the store can tell without a repository to hand. A pipeline that renames
+   itself becomes two pipelines to this rule for as long as both have snapshots.
+4. **The store notes where a snapshot was made from**, in a file `origins` beside the
+   pipeline's records at that commit: one repository folder per line. It is not a record,
+   has no `.json`, and is not shared. It is how `gc` finds the manifest whose labels say
+   which versions to keep.
+5. **Labels are read from that manifest as it is now, committed or not.** A label is what
+   someone is relying on now. A folder that is gone, or a manifest that cannot be read, says
+   nothing, and the other three rules still hold.
+6. **A lockfile that cannot be found keeps any snapshot that holds an object it named.** That
+   is as much as is known about it.
+7. **Removing a snapshot removes its record; its objects go by the existing rule**, in the
+   same run, when nothing else names them. An object stored in the last hour is spared, as
+   before, so the run that removes a record may leave its objects for the next.
+8. **The last record at a commit takes its folder and its `origins` note with it.**
+9. **Nothing is removed if any record cannot be read**, as for a lockfile.
+
+**Known gaps.**
+
+1. **A label in a manifest that was never a snapshot's origin is not seen.** A clone that
+   pins nothing and makes no snapshots can label a version that `gc` on this machine then
+   removes. `chartbook check` there says the version is not on this machine.
+2. **Git working copies are still never cleared.** `~/.chartbook/git/work/` grows by one copy
+   per commit built.
+
+**Where the design said less than it seemed to.** *"A recorded version is reachable, so
+`chartbook store gc` never collects it."* ({doc}`models`.) Every version would then be kept
+for ever, and {doc}`models` itself lists retention as an open question ("a model retrained
+nightly makes 365 a year … probably a per-model `keep = N`"). As built, a labelled version is
+kept and an unlabelled one goes with its snapshot after 30 days, which answers the question
+without a new field.
 
 #### 4e: loading one column. Decided against
 
@@ -1612,7 +1679,7 @@ maintainer.
 Each is explained where it lives.
 
 - For model versions: one of another pipeline's model, versions that travel between machines,
-  retention, and saying when a model is out of date. How they are named and what makes one is
+  and saying when a model is out of date. Retention is answered by "Clearing old snapshots". How they are named and what makes one is
   decided. ({doc}`models`; step 4 above, "4d, as built")
 - Whether dataframes and charts should still be *required* to have a write-up, or only strongly
   recommended, as models are. ({doc}`models`, "Decided while building it")
@@ -1623,9 +1690,9 @@ Each is explained where it lives.
   listed as *proposed* under its "as built" heading. (Step 3 above)
 - The nineteen things settled while building `chartbook run`, and the *proposed* "Done when"
   that replaces step 4's. (Step 4 above, "4a, as built" and "The snapshot model")
-- The seventeen things settled while building snapshots, and its seven known gaps. Of the
-  gaps, the ones that most need an answer: whether making a snapshot should run the build
-  first, and how old snapshots are cleared. (Step 4 above, "4b, as built")
+- The seventeen things settled while building snapshots, and its known gaps. Two were
+  answered the same day: `chartbook run --snapshot` builds first, and "Clearing old
+  snapshots" says how old ones go. (Step 4 above, "4b, as built")
 - `--frozen`, for CI: what it checks, and when it is built. (Step 4 above)
 - What `chartbook catalog build` should be called now that `chartbook build` runs a build
   script, and whether a build script should still render the site itself. (Step 4 above, "4c,

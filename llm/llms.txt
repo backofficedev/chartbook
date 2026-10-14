@@ -47,7 +47,7 @@ chartbook pin                # Freeze what [dependencies] have: each one's newes
 chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
 chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on
 chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
-chartbook store gc           # Remove from the store what no lockfile and no snapshot names (asks first)
+chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 30)
 chartbook config             # Configure default catalog path
 chartbook catalog add <dir>  # Register a pipeline in the catalog
 chartbook catalog build      # Build the catalog site

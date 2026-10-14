@@ -688,14 +688,165 @@ class TestFromFolder:
         assert "commit" not in listed["location"] and "snapshot" not in listed
 
 
+OLD = "2026-01-01T00:00:00.000000Z"  # long before any keep window
+OLDER = "2025-12-01T00:00:00.000000Z"
+
+
+def _plan(store, pinned=(), missing=(), keep_days=30):
+    return snapshot.plan_removals(store, set(pinned), set(missing), keep_days=keep_days)
+
+
 class TestKeeping:
-    def test_a_snapshot_keeps_its_objects_from_being_cleared(self, maker):
+    def test_a_new_snapshot_keeps_its_objects_from_being_cleared(self, maker):
         """Nothing pins it yet. It was declared ready, and that is enough."""
         taken = snapshot.make(maker).snapshot
         store = default_store()
         plan = lock.plan_gc(store, recent_seconds=0)
         assert plan.delete == [] and plan.kept == 2 and plan.snapshots == 2
+        assert plan.snapshots_delete == []
+        assert [why for _, why in plan.snapshots_kept] == ["it is the newest of its pipeline"]
         assert snapshot.all_hashes(store) == taken.hashes()
+
+    def test_the_folder_a_snapshot_came_from_is_noted(self, maker, work):
+        taken = snapshot.make(maker).snapshot
+        assert snapshot.origins(default_store(), taken) == [work]
+        snapshot.make(maker)  # again, with nothing changed: noted once
+        assert (taken.path.parent / "origins").read_text().splitlines() == [str(work)]
+
+
+class TestClearingOldSnapshots:
+    """Which snapshots `chartbook store gc` keeps, and which it lets go."""
+
+    @pytest.fixture
+    def three(self, maker):
+        """Three snapshots of ``maker``, oldest first; the first two long ago."""
+        first = snapshot.make(maker, made_at=OLDER).snapshot
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker, made_at=OLD).snapshot
+        _build(maker, rates=b"rates-3")
+        third = snapshot.make(maker).snapshot
+        return first, second, third
+
+    def test_the_newest_is_kept_and_old_unpinned_ones_may_go(self, three):
+        first, second, third = three
+        plan = _plan(default_store())
+        assert [t for t, _ in plan.keep] == [third]
+        assert [(t, why) for t, why in plan.remove] == [
+            (first, "nothing pins it, it is not the newest, and it is older than 30 days"),
+            (second, "nothing pins it, it is not the newest, and it is older than 30 days"),
+        ]
+
+    def test_a_recent_one_is_kept(self, maker):
+        snapshot.make(maker, made_at=OLD)
+        _build(maker, rates=b"rates-2")
+        recent = snapshot.make(maker).snapshot  # now
+        _build(maker, rates=b"rates-3")
+        snapshot.make(maker)
+        plan = _plan(default_store())
+        assert (recent, "it was made in the last 30 days") in plan.keep
+        assert len(plan.remove) == 1
+        # ...unless the window is shorter
+        assert len(_plan(default_store(), keep_days=0).remove) == 2
+
+    def test_one_a_lockfile_pins_is_kept(self, three, user):
+        first, second, third = three
+        plan = _plan(default_store(), pinned={(first.commit, first.made_at)})
+        assert (first, "a lockfile pins it") in plan.keep
+        assert [t for t, _ in plan.remove] == [second]
+
+    def test_one_a_missing_lockfile_named_is_kept(self, three):
+        first, second, third = three
+        plan = _plan(default_store(), missing={first.content()["rates"]})
+        assert (first, "a lockfile that cannot be found named what it holds") in plan.keep
+        assert [t for t, _ in plan.remove] == [second]
+
+    def test_one_a_label_points_into_is_kept(self, work):
+        """The manifest in the folder the snapshots came from says which."""
+        directory = _manifest(
+            work / "forecast",
+            {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json"}}},
+        )
+        (directory / "_output").mkdir()
+        (directory / "_output" / "m.json").write_bytes(b"v1")
+        _commit(work)
+        first = snapshot.make(directory, made_at=OLDER).snapshot
+        (directory / "_output" / "m.json").write_bytes(b"v2")
+        second = snapshot.make(directory, made_at=OLD).snapshot
+        (directory / "_output" / "m.json").write_bytes(b"v3")
+        snapshot.make(directory)
+
+        # The label is added afterwards and not committed: the manifest is
+        # read as it is, since a label is what someone is relying on now
+        champion = first.content()["model/m"].split(":")[1][:12]
+        _manifest(
+            directory,
+            {
+                "project": {"id": "acme/forecast"},
+                "models": {"m": {"path": "./_output/m.json", "aliases": {"champion": champion}}},
+            },
+        )
+        plan = _plan(default_store())
+        assert (first, "a label points at a version in it") in plan.keep
+        assert [t for t, _ in plan.remove] == [second]
+
+    def test_a_folder_that_is_gone_says_nothing_about_labels(self, three, work):
+        first, second, third = three
+        os.rename(work / "maker", work / "moved")
+        plan = _plan(default_store())
+        assert [t for t, _ in plan.remove] == [first, second]
+
+    def test_pipelines_are_kept_apart(self, three, work):
+        other = _manifest(work / "other", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (other / "x.parquet").write_bytes(b"x")
+        _commit(work)
+        only = snapshot.make(other, made_at=OLDER).snapshot
+        plan = _plan(default_store())
+        assert (only, "it is the newest of its pipeline") in plan.keep
+
+    def test_gc_removes_the_record_and_then_what_only_it_named(self, three):
+        first, second, third = three
+        store = default_store()
+        plan = lock.plan_gc(store, recent_seconds=0)
+        assert [t for t, _ in plan.snapshots_delete] == [first, second]
+        gone = {first.content()["rates"], second.content()["rates"]}
+        assert {h for h, _ in plan.delete} == gone  # the chart is shared with the third
+        lock.run_gc(plan, store)
+        assert not first.path.exists() and not second.path.exists() and third.path.exists()
+        assert all(not store.has(h) for h in gone)
+        assert store.has(third.content()["rates"]) and store.has(third.content()["chart/curve"])
+        assert snapshot.all_snapshots(store) == [third]
+
+    def test_removing_the_last_record_at_a_commit_removes_its_folders(self, three, work):
+        first, second, third = three
+        (maker_dir,) = [work / "maker"]
+        # Move on a commit so the old ones are alone at theirs
+        store = default_store()
+        plan = lock.plan_gc(store, recent_seconds=0)
+        lock.run_gc(plan, store)
+        assert not first.path.parent.exists() or any(first.path.parent.glob("*.json"))
+        assert third.path.parent.exists() and (third.path.parent / "origins").exists()
+
+    def test_the_command(self, three, monkeypatch):
+        first, second, third = three
+        result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
+        assert result.exit_code == 0, result.output
+        said = result.output
+        assert "Kept: 1 snapshot(s), naming 2 object(s): 1 because it is the newest of its pipeline" in said
+        assert "Would remove 2 snapshot(s):" in said
+        assert f"  acme/maker at {first.commit[:7]}, made 2025-12-01 00:00 UTC: nothing pins it" in said
+        # Their objects were stored a moment ago, so this run spares them;
+        # the next run, an hour on, removes them
+        assert "Kept: 2 object(s) nothing names, stored in the last hour" in said
+        assert first.path.exists()  # a dry run
+
+        kept = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "100000"])
+        assert "Would remove" not in kept.output and "Nothing to remove." in kept.output
+
+        done = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert done.exit_code == 0, done.output
+        assert "Removed 2 snapshot(s) and 0 object(s)" in done.output
+        assert not first.path.exists() and third.path.exists()
+        assert snapshot.all_snapshots(default_store()) == [third]
 
     def test_what_no_snapshot_and_no_lockfile_names_is_cleared(self, maker, work):
         snapshot.make(maker)
