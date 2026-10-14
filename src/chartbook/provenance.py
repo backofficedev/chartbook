@@ -12,6 +12,8 @@ or a file; what the panel says is what ``index.json`` says.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Optional
 
 
@@ -22,6 +24,11 @@ def _owner(asset_id: str) -> str:
 
 def _short(content_hash: Optional[str]) -> str:
     return content_hash[:19] + "…" if content_hash else "(not built)"
+
+
+def _cell(text: str) -> str:
+    """Text for a Markdown table cell: a pipe would end the cell."""
+    return text.replace("|", "\\|")
 
 
 def _where(record: dict) -> str:
@@ -130,9 +137,9 @@ def panel(record_id: str, records: dict) -> Optional[dict]:
         "kind": record.get("kind"),
         "id": record_id,
         "pipeline": pipeline_id,
-        "where": _where(record),
-        "content": _content(record),
-        "build": build,
+        "where": _cell(_where(record)),
+        "content": _cell(_content(record)),
+        "build": _cell(build) if isinstance(build, str) else build,
         "inputs": inputs,
         "used_by": used_by,
         "series": len(series),
@@ -150,6 +157,8 @@ def _input_words(entry: dict) -> str:
         if pin.get("commit"):
             when = f", made {pin['snapshot'][:10]}" if pin.get("snapshot") else ""
             parts.append(f"from the snapshot at `{pin['commit'][:7]}`{when}")
+        if entry["in_site"] and entry["hash_now"] and entry["hash_now"] != entry["pinned"]:
+            parts.append(f"now at `{_short(entry['hash_now'])}` in this site: the upstream has moved on since the pin")
     elif entry["in_site"]:
         parts.append(f"now at `{_short(entry['hash_now'])}`")
     else:
@@ -159,3 +168,19 @@ def _input_words(entry: dict) -> str:
     elif entry["trained_with"]:
         parts.append("as trained")
     return "; ".join(parts)
+
+
+def digest(pipeline_id: str, records: dict) -> str:
+    """A hash of everything the panels of one pipeline's pages say.
+
+    A pipeline's pages read other pipelines' records: an input's hash now,
+    the assets made from this one. So whether its pages can be reused from
+    an earlier build depends on this digest as well as on its own files;
+    the incremental build mixes it into the pipeline's fingerprint.
+    """
+    said = {
+        record_id: panel(record_id, records)
+        for record_id, record in sorted(records.items())
+        if record.get("pipeline") == pipeline_id and record.get("kind") in ("Dataframe", "Chart", "Model")
+    }
+    return hashlib.sha256(json.dumps(said, sort_keys=True, default=str).encode()).hexdigest()

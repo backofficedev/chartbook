@@ -1678,6 +1678,7 @@ def build_all(
     reuse_pipelines=None,
     code_times=None,
     hash_cache=None,
+    built_index=None,
 ):
     """Build all documentation.
 
@@ -1716,9 +1717,10 @@ def build_all(
     from chartbook import hashing
     from chartbook import index as index_module
 
-    cache = hash_cache if hash_cache is not None else hashing.HashCache(Path(docs_build_dir) / hashing.CACHE_FILE)
-    built_index = index_module.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
-    cache.save()
+    if built_index is None:
+        cache = hash_cache if hash_cache is not None else hashing.HashCache(Path(docs_build_dir) / hashing.CACHE_FILE)
+        built_index = index_module.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        cache.save()
     index_records = {record["id"]: record for record in built_index["records"]}
 
     # Extract enable_data_download setting (defaults to False)

@@ -3,10 +3,13 @@
 import json
 from pathlib import Path
 
+import tomli
+import tomli_w
 from click.testing import CliRunner
 
 from chartbook import provenance
 from chartbook.cli import main
+from tests.fixtures import create_catalog_project
 
 H = "sha256:" + "a" * 64
 H2 = "sha256:" + "b" * 64
@@ -82,6 +85,33 @@ class TestPanel:
         assert local["words"] == "not in this site; as trained"
         assert p["stale"] == ["acme/rates:treasury"]
 
+    def test_a_pinned_input_whose_upstream_moved_on_since(self):
+        """Found by a reviewer: pinned and in the site, the line said nothing of
+        the live upstream having moved on since the pin."""
+        records = {k: dict(v) for k, v in RECORDS.items()}
+        records["acme/rates:treasury"]["content_hash"] = H2
+        records["acme/forecast:model/m"] = {k: v for k, v in records["acme/forecast:model/m"].items() if k not in ("trained_with", "stale_inputs")}
+        cross, _ = provenance.panel("acme/forecast:model/m", records)["inputs"]
+        assert cross["words"] == (
+            f"pinned at `{H[:19]}…`; from the snapshot at `0f900fc`, made 2026-10-14; "
+            f"now at `{H2[:19]}…` in this site: the upstream has moved on since the pin"
+        )
+
+    def test_a_pipe_in_a_cell_is_escaped(self):
+        """Found by a reviewer: a build script with a pipe broke the table row."""
+        records = {k: dict(v) for k, v in RECORDS.items()}
+        records["acme/rates"] = {**records["acme/rates"], "scripts": {"build": "doit | tee build.log"}}
+        p = provenance.panel("acme/rates:treasury", records)
+        assert p["build"] == "doit \\| tee build.log"
+
+    def test_the_digest_moves_with_what_the_panels_say(self):
+        before = provenance.digest("acme/forecast", RECORDS)
+        assert before == provenance.digest("acme/forecast", RECORDS)
+        records = {k: dict(v) for k, v in RECORDS.items()}
+        records["acme/rates:treasury"]["content_hash"] = H2  # another pipeline's record
+        assert provenance.digest("acme/forecast", records) != before
+        assert provenance.digest("acme/forecast", records) != provenance.digest("acme/rates", records)
+
     def test_no_record_no_panel(self):
         assert provenance.panel("acme/rates:nope", RECORDS) is None
         assert provenance.panel("x", {}) is None
@@ -113,3 +143,77 @@ class TestOnThePage:
         assert f"**Used by:** `{chart['id']}`" in text
         chart_text = [p for p in pages["Chart"] if chart["id"].rsplit("/", 1)[1] in p.stem][0].read_text()
         assert f"- `{dataframe['id']}`: now at `{dataframe['content_hash'][:19]}…`" in chart_text
+
+
+def _edit_toml(path: Path, edit) -> None:
+    config = tomli.loads(path.read_text())
+    edit(config)
+    path.write_text(tomli_w.dumps(config))
+
+
+class TestIncrementalBuildsKeepThePanelsCurrent:
+    """Found by a reviewer: a reused pipeline's pages kept panels that had read
+    other pipelines' records, so after an upstream rebuild the page disagreed
+    with index.json."""
+
+    def _catalog(self, tmp_path) -> Path:
+        catalog = create_catalog_project(tmp_path / "cat")
+
+        def scope(config):
+            for name in ("pipeline_a", "pipeline_b"):
+                config["pipelines"][f"acme/{name}"] = config["pipelines"].pop(name)
+
+        _edit_toml(catalog / "chartbook.toml", scope)
+        a = catalog / "pipelines" / "pipeline_a"
+        (a / "_models").mkdir(exist_ok=True)
+        (a / "_models" / "m.json").write_text("{}")
+
+        def model(config):
+            config["dependencies"] = {"acme/pipeline_b": {"path": "../pipeline_b"}}
+            config["models"] = {"m": {"path": "./_models/m.json", "trained_on": ["acme/pipeline_b:dataframe_0"], "docs": "A model."}}
+
+        _edit_toml(a / "chartbook.toml", model)
+        return catalog
+
+    def test_an_upstream_rebuild_and_a_new_user_reach_the_reused_pages(self, tmp_path, monkeypatch):
+        catalog = self._catalog(tmp_path)
+        monkeypatch.chdir(catalog)
+        runner = CliRunner()
+        model_page = catalog / "_docs" / "cb" / "models" / "acme--pipeline_a" / "m.md"
+        upstream_page = catalog / "_docs" / "cb" / "dataframes" / "acme--pipeline_b" / "dataframe_0.md"
+        parquet = next((catalog / "pipelines" / "pipeline_b" / "_data").rglob("dataframe_0.parquet"))
+
+        first = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
+        assert first.exit_code == 0, first.output
+        index_1 = json.loads((catalog / "_docs" / "index.json").read_text())
+        hash_1 = next(r for r in index_1["records"] if r["id"] == "acme/pipeline_b:dataframe_0")["content_hash"]
+        # The model page, built for real, carries the panel from the index, in the catalog theme
+        text = model_page.read_text()
+        assert "## Provenance" in text and f"- `acme/pipeline_b:dataframe_0`: now at `{hash_1[:19]}…`" in text
+        assert "| What                           | Model `acme/pipeline_a:model/m`" in text
+
+        # Nothing changed: both pipelines are reused
+        again = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
+        assert again.exit_code == 0 and "regenerated 0 of 2" in again.output, again.output
+
+        # The upstream rebuilds its dataframe: pipeline_a's own files are the
+        # same, and its model page must still say the new hash
+        parquet.write_bytes(parquet.read_bytes() + b"\0")
+        second = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
+        assert second.exit_code == 0, second.output
+        index_2 = json.loads((catalog / "_docs" / "index.json").read_text())
+        hash_2 = next(r for r in index_2["records"] if r["id"] == "acme/pipeline_b:dataframe_0")["content_hash"]
+        assert hash_2 != hash_1
+        assert f"now at `{hash_2[:19]}…`" in model_page.read_text()
+        assert "regenerated 2 of 2" in second.output, second.output
+
+        # A second model in pipeline_a uses the upstream dataframe: the
+        # upstream's page, whose own files did not change, lists it
+        (catalog / "pipelines" / "pipeline_a" / "_models" / "m2.json").write_text("{}")
+        _edit_toml(
+            catalog / "pipelines" / "pipeline_a" / "chartbook.toml",
+            lambda c: c["models"].update({"m2": {"path": "./_models/m2.json", "trained_on": ["acme/pipeline_b:dataframe_0"], "docs": "d"}}),
+        )
+        third = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
+        assert third.exit_code == 0, third.output
+        assert "`acme/pipeline_a:model/m2`" in upstream_page.read_text()

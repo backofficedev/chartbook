@@ -8,7 +8,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from chartbook import hashing, markdown_generator
+from chartbook import hashing, index, markdown_generator
 from chartbook.diagnostics import generate_metadata_diagnostics
 from chartbook.errors import MissingSourceFilesError, ValidationError, handle_validation_error
 from chartbook.manifest import (
@@ -49,6 +49,7 @@ def run_build_markdown(
     reuse_pipelines: set[str] | None = None,
     code_times: dict[str, str] | None = None,
     hash_cache=None,
+    built_index: dict | None = None,
 ):
     """Run the pipeline publish script to generate markdown files.
 
@@ -87,6 +88,7 @@ def run_build_markdown(
         reuse_pipelines=reuse_pipelines,
         code_times=code_times,
         hash_cache=hash_cache,
+        built_index=built_index,
     )
 
 
@@ -146,6 +148,7 @@ def _write_sphinx_project(
     reuse_pipelines: set[str] | None = None,
     code_times: dict[str, str] | None = None,
     hash_cache=None,
+    built_index: dict | None = None,
 ):
     """Write the complete Sphinx project for a site into a directory.
 
@@ -209,6 +212,7 @@ def _write_sphinx_project(
         reuse_pipelines=reuse_pipelines,
         code_times=code_times,
         hash_cache=hash_cache,
+        built_index=built_index,
     )
 
     # Strip MathJax 2 from notebook outputs (prevents Plotly/Sphinx conflict)
@@ -342,6 +346,11 @@ def generate_docs(
     temp_docs_src_dir.mkdir(exist_ok=True)
 
     try:
+        # The index first, once: the pages' provenance panels read it, and
+        # it is written beside the site at the end
+        _docs_dir.mkdir(parents=True, exist_ok=True)
+        cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
+        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
         _write_sphinx_project(
             manifest=manifest,
             project_dir=project_dir,
@@ -352,6 +361,8 @@ def generate_docs(
             size_threshold=size_threshold,
             strip_mathjax2=strip_mathjax2,
             skip_pipelines=skip_pipelines,
+            hash_cache=cache,
+            built_index=built,
         )
 
         # Run sphinx build
@@ -383,7 +394,7 @@ def generate_docs(
                 copy_tree(html_build_dir, output_dir)
                 (output_dir / ".nojekyll").touch()
 
-            _write_index(manifest, _docs_dir, output_dir, skip_pipelines)
+            _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
 
     finally:
         if not keep_build_dirs:
@@ -394,7 +405,12 @@ def generate_docs(
 
 
 def _write_index(
-    manifest: dict, _docs_dir: Path, output_dir: Path, skip_pipelines: set[str]
+    manifest: dict,
+    _docs_dir: Path,
+    output_dir: Path,
+    skip_pipelines: set[str],
+    built: dict | None = None,
+    cache=None,
 ) -> None:
     """Write the build's index: everything the site contains, as one JSON file.
 
@@ -407,8 +423,10 @@ def _write_index(
     """
     from chartbook import hashing, index
 
-    cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
-    built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+    if cache is None:
+        cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
+    if built is None:
+        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
     # An index that differs only in when it was generated is left alone, so
     # a build that changes nothing writes nothing.
     if _docs_dir.is_dir():
@@ -504,14 +522,29 @@ def _generate_docs_incremental(
 
     from chartbook import hashing, incremental, index
 
+    from chartbook import provenance
+    from chartbook.manifest import get_pipeline_ids
+
     pipeline_theme = manifest["project"]["type"]
     options = {"size_threshold": size_threshold, "strip_mathjax2": strip_mathjax2}
+    # The index first, once. A pipeline's pages carry provenance panels that
+    # read other pipelines' records, so whether its pages can be reused
+    # depends on what those panels would say as well as on its own files
+    cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
+    built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+    records = {record["id"]: record for record in built["records"]}
+    salts = {
+        pipeline_id: provenance.digest(pipeline_id, records)
+        for pipeline_id in get_pipeline_ids(manifest)
+        if pipeline_id not in set(skip_pipelines)
+    }
     plan = incremental.plan_build(
         manifest,
         build_dir=_docs_dir,
         theme_dir=get_docs_src_path(pipeline_theme),
         options=options,
         skip_pipelines=skip_pipelines,
+        salts=salts,
     )
     incremental.prepare_build_tree(_docs_dir, fresh=plan.fresh)
 
@@ -546,9 +579,9 @@ def _generate_docs_incremental(
                 skip_pipelines=skip_pipelines,
                 reuse_pipelines=set(plan.reuse),
                 code_times=plan.code_times,
-                # The pages' index reads and writes the hash cache that is
-                # kept in the build directory, not one in the staging copy
-                hash_cache=hashing.HashCache(_docs_dir / hashing.CACHE_FILE),
+                # The build directory's hash cache, not one in the staging copy
+                hash_cache=cache,
+                built_index=built,
             )
             sources = incremental.sync_tree(
                 staging_dir,
@@ -597,7 +630,7 @@ def _generate_docs_incremental(
             )
             (output_dir / ".nojekyll").touch()
             output_written = len(output.written)
-            _write_index(manifest, _docs_dir, output_dir, skip_pipelines)
+            _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
     finally:
         # The theme copy is rebuilt every time; only the Sphinx project is kept
         if not keep_build_dirs:

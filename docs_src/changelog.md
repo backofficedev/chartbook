@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — a provenance panel on every dataframe, chart and model page
 
-Each page now carries a **Provenance** section that says, from `index.json` alone: what this is and where it is; its content hash, size, rows and columns (or its definition hash, for a table or query); which pipeline built it and with what script; what it was made from, at which hash, pinned from which snapshot at which commit, and whether that has moved since the model was trained; and what is made from it. The page generator builds the index first and hands each page its record, so the pages are readers of the index and say what it says; `chartbook.provenance.panel()` is the reader. The index is still written beside the site at the end of the build, as before.
+Each page now carries a **Provenance** section, before its manifest sections, that says, from `index.json` alone: what this is and where it is; its content hash, size, rows and columns (or its definition hash, for a table or query); which pipeline built it and with what script; what it was made from, at which hash, pinned from which snapshot at which commit, and whether that has moved since the model was trained; and what is made from it. The build makes the index first, once, and hands each page its record, so the pages are readers of the index and say what it says; `chartbook.provenance.panel()` is the reader; the same index is written beside the site at the end. An incremental build regenerates a pipeline's pages when what their panels would say has changed, even if none of its own files did, since a panel reads other pipelines' records.
 
 ### Added — `chartbook index diff`: what changed between two builds
 
