@@ -176,9 +176,10 @@ table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git
 - A `path` dependency is read through **snapshots**, never through its folder
   (people and agents work on different pipelines at the same time, and a folder
   may be half-way through a change). In the OTHER pipeline, its owner runs
-  `chartbook snapshot`: everything in that folder must be committed, and its
+  `chartbook run --snapshot` (build, then snapshot; or `chartbook snapshot`
+  alone after a build): everything in that folder must be committed, and its
   built assets are copied to the store, labelled with the commit. It is made on
-  purpose, not by every build.
+  purpose, not by every build. A snapshot never contains anything from `.env`.
 - `chartbook pin` pins each dependency's newest snapshot (the newest at the
   commit its folder is on, else at the nearest earlier commit that has one) and
   writes the content hashes and the commit to `chartbook.lock`, which is

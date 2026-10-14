@@ -1140,7 +1140,9 @@ before, from ChartBook's clean copy of the commit, and does not look for a snaps
 
 1. **A snapshot takes its owner's word.** It records what is on disk as what the commit
    built. If the owner changed code, committed, and did not rebuild, the label is wrong and
-   nothing notices. Running the build as part of making one would close it.
+   nothing notices. *(Closed the same day for `chartbook run --snapshot`, which builds first:
+   "4b, continued", below. `chartbook snapshot` by itself still takes its owner's word, and
+   the record says which of the two made it.)*
 2. **Nothing clears old snapshots.** Each is its own copy of the files where the disk has no
    copy-on-write clones, and the store grows with each one.
 3. **A snapshot is on one machine.** A colleague, or CI, has none of them. For a `path`
@@ -1176,6 +1178,71 @@ before, from ChartBook's clean copy of the commit, and does not look for a snaps
 5. *"`pin` hashes what is already pinned, to say what has changed upstream"* (3c, proposed
    6), with its note that a remembered hash would make that cheap. For a `path` dependency
    there is nothing to hash any more.
+
+#### 4b, continued: build and snapshot together, and what a snapshot records
+
+*Added 2026-10-13.* The maintainer, on whether `chartbook snapshot` should run the build:
+"Running and snapshotting are two separate things that need separate commands. But it's
+clear that you often want to run them together." And: "a commit is not enough to pin, since
+we need to snapshot .env and environment variables and other config, too, right?"
+
+```console
+$ chartbook run --snapshot
+ftsfr/fed_yield_curve: build
+ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+Ran build in 1 pipeline(s).
+```
+
+| What | Where |
+|---|---|
+| Build, then snapshot, with the two checks | `chartbook/run.py`, `run(snapshot=True)` |
+| The check that everything is committed | `chartbook/snapshot.py`, `require_committed()` |
+| What a snapshot was built with, and from | `chartbook/snapshot.py`, `_built_with()`, `_inputs()` |
+| The tests | `tests/test_run.py` (`TestRunThenSnapshot`), `tests/test_snapshot.py` (`TestBuiltWith`) |
+
+**Decided by the maintainer:** they stay two commands.
+
+**Proposed: implemented, and waiting on the maintainer's yes.** Two of these were put to him
+as questions and built on the recommended answer before he replied; they are marked.
+
+1. **One spelling for both together: `chartbook run --snapshot`.** *(Asked. He floated two
+   equivalent spellings, that and `chartbook snapshot --run`. One was built: it reads in the
+   order it happens, `run` already has `--force` so `run --force --snapshot` is the weekly
+   refresh in one line, and two spellings are two things to document. The other is cheap to
+   add.)*
+2. **It checks that everything is committed before it builds**, so nobody is refused after an
+   hour, and **again after**: a build that changes a committed file gets no snapshot.
+3. **The snapshot records that the build ran in the same command**, `built_with.run`. One
+   made by `chartbook snapshot` alone says `false`.
+4. **A snapshot that follows a build replaces one of the same bytes that took its owner's
+   word.** Otherwise the same bytes make no new snapshot.
+5. **A snapshot is of what `build` makes.** `chartbook run test --snapshot` is refused.
+6. **In a catalog, each pipeline is built and declared ready in turn**, so one later in the
+   catalog pins what an earlier one has just declared ready. A git dependency that is built
+   on the way gets no snapshot.
+7. **`inputs`: a snapshot says what it was built from.** The dependencies of the pipeline's
+   own lockfile, each with its commit, snapshot time and `pinned_hash`. This is the design's
+   "hash each input's hash", at the granularity of a pipeline: a snapshot of `rate_forecast`
+   names the snapshot of `fed_yield_curve` it read.
+8. **`built_with`: a note of the conditions.** The ChartBook, Python and platform versions.
+   It explains a difference between two snapshots. No hash covers it, and it does not make
+   a build repeatable.
+9. **Nothing of a pipeline's `.env`, or of the environment, is recorded.** It holds secrets,
+   and a store is something to share. A setting that changes results belongs in a committed
+   file, where the commit covers it.
+
+**Not built, and waiting on his answer.** *(Asked.)* Recording the values of environment
+variables that a pipeline **names** in its manifest as affecting its results, for example
+`[snapshot] env = ["START_DATE"]`. Only named ones, so no secret gets in by accident.
+
+**Where the design said less than it seemed to.**
+
+1. *The `Build` record's `tools` and `impure`* ({doc}`index-schema`) are what `built_with` is
+   a first, smaller form of. `impure` is not recorded: nothing declares it.
+2. *"Make the hashes transitive … hash each input's hash, not its path or name."*
+   ({doc}`asset-graph`.) `inputs` records each input's hash. No hash is yet taken *over* the
+   inputs, so the chain is recorded and not yet checkable in one step.
 
 #### 4c, as built
 

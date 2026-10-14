@@ -378,6 +378,8 @@ ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
 Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
 ```
 
+Or both in one command, which is the better habit: `chartbook run --snapshot`. See {ref}`below <run-then-snapshot>`.
+
 **Why.** People, and agents, work on different pipelines at the same time. Someone is always half-way through a change. So a pipeline that depends on this one never reads this folder. It reads the last snapshot you made, and your folder can be in any state in between.
 
 Three rules:
@@ -391,7 +393,7 @@ $ chartbook snapshot
 Error: ftsfr/fed_yield_curve has changes that are not committed:
    M fed_yield_curve/src/pull_fred.py
   ?? fed_yield_curve/src/new_script.py
-A snapshot is labelled with the commit it was built from, so everything in the pipeline's folder must be committed first. Commit, then run `chartbook snapshot` again.
+A snapshot is labelled with the commit it was built from, so everything in the pipeline's folder must be committed first.
 ```
 
 **New data, same code.** A pipeline that pulls data from outside builds other bytes on another day, with no file changed. Build again and snapshot again: the commit is the same and the snapshot is new. If nothing was rebuilt, nothing is made:
@@ -404,9 +406,38 @@ Nothing has changed since the snapshot of 2026-10-13 18:22 UTC. No new one was m
 
 An asset that is declared and not built is listed, and the rest is in the snapshot all the same. A pipeline that has built nothing has no snapshot to make.
 
+(run-then-snapshot)=
+**Build and snapshot in one command: `chartbook run --snapshot`.** `chartbook snapshot` by itself takes your word that what is on disk was built by the commit you are on. Change a script, commit, forget to rebuild, and the old data gets the new commit's label. `chartbook run --snapshot` does not have that hole:
+
+```console
+$ chartbook run --snapshot
+ftsfr/fed_yield_curve: build
+ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+Ran build in 1 pipeline(s).
+```
+
+1. It checks that everything is committed **before** it builds, so you are not refused after an hour.
+2. It builds.
+3. It checks again. A build that changes a committed file leaves a folder the commit does not describe, and gets no snapshot.
+4. It makes the snapshot, and records in it that the build ran in the same command.
+
+With `--force` as well, it is the weekly refresh in one line: `chartbook run --force --snapshot`. In a catalog, each pipeline is built and declared ready in turn, so a pipeline later in the catalog pins what an earlier one has just declared ready.
+
+**What a snapshot records.**
+
+| It says | With | How complete |
+|---|---|---|
+| Which data this is | The hash of every file | Complete |
+| Which code made it | The commit | Complete |
+| What it was built from | `inputs`: what this pipeline was itself pinned to | As complete as its `chartbook.lock` |
+| Under what conditions | `built_with`: whether the build ran in the same command, and the ChartBook, Python and platform versions | A note. It explains a difference; it does not make a build repeatable |
+
+**Nothing of your `.env` is ever copied.** It holds secrets, and a store is something to share. A setting that changes your results belongs in a file you commit; then the commit covers it.
+
 Things to know:
 
-- **It does not run the build.** It takes your word that what is on disk was built by the commit you are on. Build first.
+- **`chartbook snapshot` does not run the build.** `chartbook run --snapshot` does.
 - **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). Every snapshot is kept; nothing clears old ones yet.
 - **It is found by commit.** So it is found by a pipeline that depends on this folder, and by one that depends on the same repository by URL, on this machine. It is not shared between machines.
 
@@ -544,7 +575,7 @@ Keeping it would leave the lockfile naming one commit beside data built from ano
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--force] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--snapshot] [--project-dir PATH]
 ```
 
 Run a script in this pipeline. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
@@ -613,6 +644,8 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 | Newer code | `chartbook update`, then `chartbook run` |
 
 `run` stays at the commit in `chartbook.lock`. A `git` dependency that commits its data and has no `build` script is not built and not mentioned.
+
+**Build, and declare it ready.** `chartbook run --snapshot` makes a {ref}`snapshot <run-then-snapshot>` after the build, in the same command.
 
 **Another script.** `chartbook run test` runs `test` in this pipeline, and that is all it does. Only `build` pins, and only `build` reaches what the pipeline depends on.
 

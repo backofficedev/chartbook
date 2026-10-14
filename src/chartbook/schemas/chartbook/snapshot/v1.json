@@ -42,6 +42,40 @@
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
       "description": "When the snapshot was made, in UTC. One commit can have several: a pipeline that pulls data from outside builds other bytes on another day. With the commit, this names the snapshot."
     },
+    "built_with": {
+      "type": "object",
+      "description": "A note of the conditions the snapshot was made under. It is there to explain a difference between two snapshots, and no hash covers it. Nothing of the pipeline's .env is ever recorded.",
+      "properties": {
+        "run": {
+          "type": "boolean",
+          "description": "True when ChartBook ran the pipeline's build in the same command that made the snapshot (`chartbook run --snapshot`). False when the snapshot took its owner's word that what was on disk was built by the commit."
+        },
+        "chartbook": {
+          "type": "string",
+          "description": "The version of ChartBook that made it."
+        },
+        "python": {
+          "type": "string",
+          "description": "The version of Python that ChartBook ran under."
+        },
+        "platform": {
+          "type": "string",
+          "description": "The operating system and machine type."
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "description": "What the pipeline itself was pinned to when the snapshot was made: the `dependencies` of its own chartbook.lock, each with the commit and `pinned_hash` it was pinned at. Absent if it has no lockfile.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "via",
+          "location"
+        ]
+      }
+    },
     "records": {
       "type": "array",
       "description": "One record per asset the pipeline declares with a `path`, sorted by the asset's reference. One with a `content_hash` was built; one without was declared and not built when the snapshot was made.",

@@ -47,14 +47,25 @@ A snapshot is found by commit, and a commit is the same in every clone of
 a repository. So one made in a folder is found by a pipeline that depends
 on that folder, and by one that depends on the same repository by URL.
 
-It takes the owner's word that what is on disk was built by that commit.
-ChartBook does not run the build first; ``chartbook run`` does that.
+Made by ``chartbook snapshot``, a snapshot takes its owner's word that what
+is on disk was built by that commit. ``chartbook run --snapshot`` builds
+and then makes one in the same command, and the record says so
+(``built_with.run``).
+
+**What a snapshot says, and what it does not.** Which data it is: the hash
+of every file, which is complete. Which code made it: the commit. And a
+short note of the conditions it was made under (``built_with``, and
+``inputs``: what the pipeline itself was pinned to), which is there to
+explain a difference between two snapshots, not to make a build
+repeatable. Nothing of a pipeline's ``.env`` is ever copied: it holds
+secrets, and a store is something to share.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import platform
 import re
 import subprocess
 import uuid
@@ -129,6 +140,13 @@ class Snapshot:
             asset's reference within the pipeline (``treasury_rates``,
             ``chart/curve_today``). One with a ``content_hash`` was built.
         path: The record's file, if it has been written.
+        built_with: A note of the conditions it was made under: whether the
+            build ran in the same command (``run``), and the versions of
+            ChartBook and Python and the platform. It explains a
+            difference; no hash covers it.
+        inputs: What the pipeline itself was pinned to when the snapshot
+            was made: the dependencies of its own lockfile, each with its
+            commit and its ``pinned_hash``. Empty if it has no lockfile.
     """
 
     pipeline: str
@@ -137,6 +155,13 @@ class Snapshot:
     made_at: str
     assets: dict[str, dict] = field(default_factory=dict)
     path: Optional[Path] = None
+    built_with: dict = field(default_factory=dict, compare=False)
+    inputs: list = field(default_factory=list, compare=False)
+
+    @property
+    def built_by_run(self) -> bool:
+        """Whether ChartBook ran the build in the command that made this."""
+        return bool(self.built_with.get("run"))
 
     def hashes(self) -> set[str]:
         """The content hash of every asset in it: what the store must keep."""
@@ -159,13 +184,18 @@ class Snapshot:
         code = {"commit": self.commit}
         if self.subdirectory:
             code["subdirectory"] = self.subdirectory
-        return {
+        document = {
             "schema": SCHEMA,
             "root": self.pipeline,
             "code": code,
             "made_at": self.made_at,
-            "records": [self.assets[name] for name in sorted(self.assets)],
         }
+        if self.built_with:
+            document["built_with"] = self.built_with
+        if self.inputs:
+            document["inputs"] = self.inputs
+        document["records"] = [self.assets[name] for name in sorted(self.assets)]
+        return document
 
 
 @dataclass
@@ -337,6 +367,8 @@ def read(path: Union[str, Path]) -> Snapshot:
             made_at=document["made_at"],
             assets=assets,
             path=path,
+            built_with=dict(document.get("built_with") or {}),
+            inputs=list(document.get("inputs") or []),
         )
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise SnapshotError(f"Cannot read the snapshot {path}: {error}") from None
@@ -443,41 +475,12 @@ def _write(snapshot: Snapshot, store: Store) -> Path:
     return final
 
 
-def make(
-    project_dir: Union[str, Path] = ".",
-    store: Optional[Store] = None,
-    made_at: Optional[str] = None,
-) -> SnapshotReport:
-    """Make a snapshot of a pipeline: what it has built, at the commit it is on.
+def require_committed(directory: Union[str, Path], pipeline: str) -> Code:
+    """Check that a pipeline can have a snapshot now, and say where it is in git.
 
-    Every asset the pipeline declares and has built is put in the store,
-    as its own frozen copy, and a record of them is written under the
-    commit. An asset that is declared and not built is in the record
-    without a hash, and in the report.
-
-    If nothing has changed since the newest snapshot at this commit, no
-    new one is made.
-
-    :param project_dir: The pipeline's folder.
-    :param store: The store; this user's by default.
-    :param made_at: The time to record, for a test; now by default.
-    :returns: The snapshot, and whether it is new.
-    :raises SnapshotError: If the folder holds no pipeline, is not in git,
-        has anything uncommitted, or has built nothing.
+    :raises SnapshotError: If its folder is not in git, or anything in it
+        is not committed. The message lists what.
     """
-    directory = Path(project_dir).resolve()
-    manifest_path = directory / MANIFEST_NAME
-    try:
-        raw = _read_manifest_file(directory)
-    except FileNotFoundError:
-        raise SnapshotError(f"No {MANIFEST_NAME} in {directory}.") from None
-    if resolve_project_type(raw, source=str(manifest_path)) != "pipeline":
-        raise SnapshotError(
-            f"{directory} is a catalog. A snapshot is of one pipeline: run "
-            f"`chartbook snapshot` in the pipeline's own folder."
-        )
-    pipeline = derive_pipeline_id(raw.get("project") or {}, directory)
-
     try:
         code = code_of(directory)
     except SnapshotError as error:
@@ -489,9 +492,93 @@ def make(
         raise SnapshotError(
             f"{pipeline} has changes that are not committed:\n{shown}{more}\n"
             f"A snapshot is labelled with the commit it was built from, so "
-            f"everything in the pipeline's folder must be committed first. "
-            f"Commit, then run `chartbook snapshot` again."
+            f"everything in the pipeline's folder must be committed first."
         )
+    return code
+
+
+def _built_with(run: bool) -> dict:
+    """The conditions a snapshot is being made under, as far as they are recorded."""
+    from chartbook import __version__
+
+    return {
+        "run": run,
+        "chartbook": __version__,
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+    }
+
+
+def _inputs(directory: Path) -> list:
+    """What a pipeline is itself pinned to: the dependencies of its lockfile.
+
+    Read from the file as it is, so that a snapshot says what it was built
+    from. They hold no absolute path and no password.
+
+    :raises SnapshotError: If there is a lockfile and it cannot be read.
+    """
+    lockfile = directory / "chartbook.lock"
+    if not lockfile.is_file():
+        return []
+    try:
+        with open(lockfile, encoding="utf-8") as f:
+            records = json.load(f)["records"]
+        for record in records:
+            if record.get("kind") == "Pipeline":
+                return list(record.get("dependencies") or [])
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        raise SnapshotError(f"Cannot read {lockfile}: {error}") from None
+    return []
+
+
+def pipeline_in(directory: Union[str, Path]) -> str:
+    """The ID of the pipeline in a folder, which must hold one.
+
+    :raises SnapshotError: If the folder holds no pipeline.
+    """
+    directory = Path(directory).resolve()
+    manifest_path = directory / MANIFEST_NAME
+    try:
+        raw = _read_manifest_file(directory)
+    except FileNotFoundError:
+        raise SnapshotError(f"No {MANIFEST_NAME} in {directory}.") from None
+    if resolve_project_type(raw, source=str(manifest_path)) != "pipeline":
+        raise SnapshotError(
+            f"{directory} is a catalog. A snapshot is of one pipeline: run "
+            f"`chartbook snapshot` in the pipeline's own folder."
+        )
+    return derive_pipeline_id(raw.get("project") or {}, directory)
+
+
+def make(
+    project_dir: Union[str, Path] = ".",
+    store: Optional[Store] = None,
+    made_at: Optional[str] = None,
+    built_by_run: bool = False,
+) -> SnapshotReport:
+    """Make a snapshot of a pipeline: what it has built, at the commit it is on.
+
+    Every asset the pipeline declares and has built is put in the store,
+    as its own frozen copy, and a record of them is written under the
+    commit. An asset that is declared and not built is in the record
+    without a hash, and in the report.
+
+    If nothing has changed since the newest snapshot at this commit, no
+    new one is made; unless that one took its owner's word and this one
+    follows a build, which is worth recording.
+
+    :param project_dir: The pipeline's folder.
+    :param store: The store; this user's by default.
+    :param made_at: The time to record, for a test; now by default.
+    :param built_by_run: Whether the build was run by the command that is
+        making this snapshot (``chartbook run --snapshot``).
+    :returns: The snapshot, and whether it is new.
+    :raises SnapshotError: If the folder holds no pipeline, is not in git,
+        has anything uncommitted, or has built nothing.
+    """
+    directory = Path(project_dir).resolve()
+    pipeline = pipeline_in(directory)
+    code = require_committed(directory, pipeline)
 
     store = store if store is not None else default_store()
     assets: dict[str, dict] = {}
@@ -517,12 +604,28 @@ def make(
             f"take a snapshot of. Build it first: `chartbook run`."
         )
 
-    snapshot = Snapshot(pipeline, code.commit, code.subdirectory, made_at or _now(), assets)
+    snapshot = Snapshot(
+        pipeline,
+        code.commit,
+        code.subdirectory,
+        made_at or _now(),
+        assets,
+        built_with=_built_with(built_by_run),
+        inputs=_inputs(directory),
+    )
     before = find(store, code.commit, code.subdirectory)
     if before and before[0].content() == snapshot.content():
-        return SnapshotReport(before[0], False, not_built)
+        if before[0].built_by_run or not built_by_run:
+            return SnapshotReport(before[0], False, not_built)
     path = _write(snapshot, store)
     snapshot = Snapshot(
-        snapshot.pipeline, snapshot.commit, snapshot.subdirectory, snapshot.made_at, assets, path
+        snapshot.pipeline,
+        snapshot.commit,
+        snapshot.subdirectory,
+        snapshot.made_at,
+        assets,
+        path,
+        snapshot.built_with,
+        snapshot.inputs,
     )
     return SnapshotReport(snapshot, True, not_built)

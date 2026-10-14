@@ -36,13 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 A pipeline's owner now says when a build is ready for others, and that is the only thing another pipeline ever reads.
 
 ```console
-$ chartbook run            # build it
-$ chartbook snapshot       # and say it is ready
+$ chartbook run --snapshot       # build it, and say it is ready
+ftsfr/fed_yield_curve: build
 ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
 Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+Ran build in 1 pipeline(s).
 ```
 
-A **snapshot** is every asset a pipeline declares, as built at one commit, copied into the store and labelled with that commit.
+A **snapshot** is every asset a pipeline declares, as built at one commit, copied into the store and labelled with that commit. `chartbook snapshot` makes one from what is on disk; `chartbook run --snapshot` builds first and makes one in the same command.
 
 The reason is that pipelines are worked on at the same time, by people and by agents, one to a pipeline. Someone is always half-way through a change. Until now `chartbook pin` and `chartbook update` copied whatever was in the other pipeline's folder at the moment they ran, so an update made during a rebuild pinned a half-built folder, and one pipeline's work reached into another's working directory. Now nothing does. The store is the read-only middle that every pipeline reads from, and it changes slowly and on purpose. The maintainer decided this model on 2026-10-13; it is written up in the design overview.
 
@@ -54,7 +55,11 @@ One commit can have several snapshots, since a pipeline that pulls data from out
 
 For working on two pipelines at once, `chartbook pin --from-folder` and `chartbook update --from-folder` still take what is in the folder this minute. The option is off by default and left out of `--help` on purpose, and a lockfile made with it names no commit.
 
-Not built yet: clearing old snapshots (the store grows with each one), sharing them between machines, and running the build as part of making one. `chartbook snapshot` takes its owner's word that what is on disk was built by the commit they are on.
+**Build and snapshot together.** `chartbook snapshot` by itself takes its owner's word that what is on disk was built by the commit they are on: change a script, commit, forget to rebuild, and the old data gets the new commit's label. `chartbook run --snapshot` closes that. It checks that everything is committed before it builds, builds, checks again (a build that changes a committed file gets no snapshot), and records in the snapshot that the build ran in the same command. In a catalog each pipeline is built and declared ready in turn.
+
+**What a snapshot records, and what it never does.** Which data: the hash of every file. Which code: the commit. What it was built from: `inputs`, what the pipeline was itself pinned to, so a snapshot of `rate_forecast` names the snapshot of `fed_yield_curve` it read. And a note of the conditions, `built_with`: whether the build ran in the same command, and the ChartBook, Python and platform versions. The note is there to explain a difference between two snapshots, not to make a build repeatable. Nothing of a pipeline's `.env` is copied, ever: it holds secrets, and a store is something to share.
+
+Not built yet: clearing old snapshots (the store grows with each one), and sharing them between machines.
 
 ### Added — `[scripts]` and `chartbook run`
 

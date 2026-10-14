@@ -1823,24 +1823,7 @@ def snapshot(project_dir):
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         raise SystemExit(1)
 
-    taken = report.snapshot
-    built = sum(1 for record in taken.assets.values() if record.get("content_hash"))
-    summary = f"{built} asset(s) in the store"
-    if report.not_built:
-        summary += f", {len(report.not_built)} not built"
-    click.echo(f"{taken.pipeline} at {taken.commit[:7]}: {summary}")
-    for asset, declared_path in report.not_built:
-        click.echo(f"  not built: {asset} ({declared_path})")
-    if report.made:
-        click.echo(
-            "Snapshot made. A pipeline that depends on this one gets it with "
-            "`chartbook update`."
-        )
-    else:
-        click.echo(
-            f"Nothing has changed since the snapshot of {_when(taken.made_at)}. "
-            f"No new one was made."
-        )
+    _echo_snapshot(report)
 
 
 @main.command("run")
@@ -1855,7 +1838,13 @@ def snapshot(project_dir):
     is_flag=True,
     help="Build a git dependency again, even if it is built already",
 )
-def run_command(script, project_dir, force):
+@click.option(
+    "--snapshot",
+    "make_snapshot",
+    is_flag=True,
+    help="After the build, declare it ready: make a snapshot (see `chartbook snapshot`)",
+)
+def run_command(script, project_dir, force, make_snapshot):
     """Run a script in this pipeline: `build`, unless another is named.
 
     SCRIPT is a name from [scripts] in chartbook.toml.
@@ -1880,13 +1869,21 @@ def run_command(script, project_dir, force):
 
     In a catalog, the script is run in each of the catalog's pipelines.
 
+    --snapshot builds and then declares the build ready, in one command.
+    It is `chartbook run` followed by `chartbook snapshot`, with two
+    differences: it checks that everything is committed before it builds,
+    and the snapshot records that the build ran in the same command.
+
     \b
     Examples:
         chartbook run
         chartbook run test
         chartbook run --force
+        chartbook run --snapshot
     """
-    _run_script(resolve_project_dir(project_dir), script, force=force)
+    _run_script(
+        resolve_project_dir(project_dir), script, force=force, snapshot=make_snapshot
+    )
 
 
 def _has_script(project_dir, script):
@@ -1901,7 +1898,29 @@ def _has_script(project_dir, script):
     return any(script in step.scripts for step in steps if step.source == "asked")
 
 
-def _run_script(project_dir, script, force=False):
+def _echo_snapshot(report):
+    """Print what making a snapshot did."""
+    taken = report.snapshot
+    built = sum(1 for record in taken.assets.values() if record.get("content_hash"))
+    summary = f"{built} asset(s) in the store"
+    if report.not_built:
+        summary += f", {len(report.not_built)} not built"
+    click.echo(f"{taken.pipeline} at {taken.commit[:7]}: {summary}")
+    for asset, declared_path in report.not_built:
+        click.echo(f"  not built: {asset} ({declared_path})")
+    if report.made:
+        click.echo(
+            "Snapshot made. A pipeline that depends on this one gets it with "
+            "`chartbook update`."
+        )
+    else:
+        click.echo(
+            f"Nothing has changed since the snapshot of {_when(taken.made_at)}. "
+            f"No new one was made."
+        )
+
+
+def _run_script(project_dir, script, force=False, snapshot=False):
     """Run a named script as `chartbook run` does; exit with its code if it fails."""
     from chartbook import lock
     from chartbook import run as runner
@@ -1917,7 +1936,13 @@ def _run_script(project_dir, script, force=False):
 
     try:
         report = runner.run(
-            project_dir, script, echo=click.echo, on_pin=show_pins, force=force
+            project_dir,
+            script,
+            echo=click.echo,
+            on_pin=show_pins,
+            force=force,
+            snapshot=snapshot,
+            on_snapshot=lambda step, made: _echo_snapshot(made),
         )
     except (runner.RunError, lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
