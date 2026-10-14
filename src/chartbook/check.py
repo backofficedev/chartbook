@@ -557,10 +557,7 @@ def check_model_staleness(manifest: dict, base_dir: Path) -> list[Problem]:
     for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         for model_id, model in (pipeline_manifest.get("models") or {}).items():
-            try:
-                found = staleness(pipeline_dir, model_id, model)
-            except Exception:  # a store or a repository that cannot be read: not this check's to say
-                continue
+            found = staleness(pipeline_dir, model_id, model)
             if found is None or not found.stale:
                 continue
             moved = "; ".join(
@@ -568,9 +565,10 @@ def check_model_staleness(manifest: dict, base_dir: Path) -> list[Problem]:
                 for key in found.stale
             )
             warnings.warn(
-                f"{display_path(pipeline_dir / 'chartbook.toml')}: [models.{model_id}] is out of "
-                f"date: version {found.version} was trained on inputs that have since moved "
-                f"({moved}). `chartbook run` retrains it.",
+                f"{display_path(pipeline_dir / 'chartbook.toml', base_dir)}: [models.{model_id}] "
+                f"trained_on: out of date: version {found.version} was trained on inputs that "
+                f"have since moved ({moved}). `chartbook run` retrains it; if that gives the same "
+                f"bytes, the version keeps the inputs it was first made with.",
                 stacklevel=2,
             )
     return []

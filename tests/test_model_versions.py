@@ -414,8 +414,12 @@ class TestStaleness:
         assert set(record["trained_with"]) == {"d", "rates:treasury"}
         schema = json.loads(index.schema_path("Model").read_text())
         jsonschema.validate(record, schema)
-        with pytest.warns(UserWarning, match=r"\[models.m\] is out of date: version [0-9a-f]{12} was trained on inputs that have since moved .*rates:treasury was sha256:.*chartbook run. retrains it"):
+        with pytest.warns(UserWarning, match=r"^chartbook.toml: \[models.m\] trained_on: out of date: version [0-9a-f]{12} was trained on inputs that have since moved .*rates:treasury was sha256:.*chartbook run. retrains it"):
             check.check_model_staleness(load_manifest(forecast), forecast)
+        # Past versions say which data made them
+        (version,) = models.versions_in(forecast, "m")
+        assert version.trained_on == taken.assets["model/m"]["trained_on"]
+        assert record["versions"][0]["trained_on"] == version.trained_on
         monkeypatch.chdir(forecast)
         result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
@@ -435,6 +439,32 @@ class TestStaleness:
         built = index.build_index(load_manifest(forecast))
         (record,) = [r for r in built["records"] if r["id"] == "acme/forecast:model/m"]
         assert record["stale_inputs"] == []
+
+    def test_a_version_keeps_the_inputs_it_was_first_made_with(self, trained):
+        """Found by a reviewer: a later snapshot of the same bytes wrote the inputs
+        as they were then, so the record did not mean "trained with", and `pin`
+        copied it into a dependant's lockfile."""
+        from chartbook import lock
+
+        rates, forecast = trained
+        snapshot.make(rates)
+        lock.pin(forecast)
+        _commit(forecast.parent)
+        first = snapshot.make(forecast).snapshot
+        then = first.assets["model/m"]["trained_on"]
+        # The upstream moves, this pipeline updates and declares ready without retraining
+        (rates / "_data" / "treasury.parquet").write_bytes(b"t2")
+        snapshot.make(rates)
+        lock.update(forecast)
+        _commit(forecast.parent)
+        second = snapshot.make(forecast).snapshot
+        assert second.assets["model/m"]["trained_on"] == then
+        assert models.staleness(forecast, "m", self.MODEL).stale == ["rates:treasury"]
+        # A dependant's lockfile does not carry the owner's record
+        serve = _serve(forecast)
+        lock.pin(serve)
+        record = lock.read_lock(serve / lock.LOCK_FILE).assets["forecast:model/m"]
+        assert "trained_on" not in record
 
     def test_nothing_is_said_without_a_snapshot_or_without_inputs(self, trained, forecast):
         rates, with_inputs = trained

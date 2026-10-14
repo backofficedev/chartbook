@@ -152,6 +152,9 @@ class Version:
         labels: The labels that point at it in ``[models.x.aliases]``.
         metrics: Its scores, as the metrics file had them then.
         inputs: What the pipeline was pinned to then: which data.
+        trained_on: The content hash of each ``trained_on`` input when the
+            version was first made, by the input's ID: exactly which data
+            made it.
         built_by_run: Whether ChartBook ran the build in the command that
             made the snapshot.
     """
@@ -163,6 +166,7 @@ class Version:
     labels: tuple = ()
     metrics: dict = field(default_factory=dict)
     inputs: list = field(default_factory=list)
+    trained_on: dict = field(default_factory=dict)
     built_by_run: bool = False
 
     def to_dict(self) -> dict:
@@ -179,6 +183,8 @@ class Version:
             record["metrics"] = self.metrics
         if self.inputs:
             record["inputs"] = self.inputs
+        if self.trained_on:
+            record["trained_on"] = self.trained_on
         return record
 
 
@@ -320,6 +326,7 @@ def versions_in(
                 labels=labels,
                 metrics=dict(record.get("metrics") or {}),
                 inputs=list(taken.inputs),
+                trained_on=dict(record.get("trained_on") or {}),
                 built_by_run=taken.built_by_run,
             )
         )

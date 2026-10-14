@@ -198,6 +198,8 @@ chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a data
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
+**Warnings, not problems.** Two things are said with `warning:` and do not fail the command: a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
+
 ## chartbook path
 
 ```console
@@ -368,8 +370,6 @@ chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-thre
 The manifest is the only source of the list. Nothing about how the project is built is consulted, so a pipeline built with doit, Snakemake, Make or plain scripts gets the same report, and a data file the manifest does not declare is not included. Partitioned dataframes (a glob `path`) are summarized as one dataset. Declared dataframes whose files do not exist yet are skipped with a note. Run in a catalog, the report covers every member pipeline.
 
 (chartbook-snapshot)=
-**Warnings, not problems.** Two things are said with `warning:` and do not fail the command: a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
-
 ## chartbook snapshot
 
 ```console
@@ -440,6 +440,8 @@ With `--force` as well, it is the weekly refresh in one line: `chartbook run --f
 | What it was built from | `inputs`: what this pipeline was itself pinned to | As complete as its `chartbook.lock` |
 | Under what conditions | `built_with`: whether the build ran in the same command, and the ChartBook, Python and platform versions | A note. It explains a difference; it does not make a build repeatable |
 | Which model versions were labelled | `labels`: what `[models.x.aliases]` named, by model | As of this snapshot. `store gc` reads the newest snapshot's, so a label given on one machine keeps its version on another |
+| What each model scored | `metrics` on the model's record, as its metrics file had them | Kept with the version, so two versions compare after the file is written over |
+| What each model was trained on | `trained_on` on the model's record: each input's content hash when the version was first made | The version's, not this snapshot's: a later snapshot of the same bytes copies it forward. What `check` and the page judge staleness against |
 
 **Nothing of your `.env` is ever copied.** It holds secrets, and a store is something to share. A setting that changes your results belongs in a file you commit; then the commit covers it.
 

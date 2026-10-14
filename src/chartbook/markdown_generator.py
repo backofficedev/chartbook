@@ -988,10 +988,7 @@ def _model_staleness(pipeline_base_dir, model_id, model_manifest):
     """What a model's page says when its inputs have moved since it was trained; None otherwise."""
     from chartbook.models import staleness
 
-    try:
-        found = staleness(pipeline_base_dir, model_id, model_manifest)
-    except Exception:
-        return None
+    found = staleness(pipeline_base_dir, model_id, model_manifest)
     return found if found is not None and found.stale else None
 
 

@@ -1852,11 +1852,35 @@ snapshot recorded no inputs.
    bytes are no version, so there is nothing recorded to compare with. The snapshot that
    follows makes it one.
 
+**What an adversarial review found before merge** (2026-10-14; ten findings, each fixed with a
+test unless said otherwise): the "Warnings, not problems" paragraph of the CLI reference had
+landed under the wrong heading, between a MyST target and the heading it names, so three links
+pointed at it (moved); a later snapshot of bytes an earlier one already held wrote `trained_on`
+from the inputs *then*, so the field did not mean "trained with" on that record, and `pin`
+copied it into dependants' lockfiles keyed in the owner's names (a version keeps the inputs it
+was first made with: the first-holding snapshot's record is copied forward, and a lockfile
+record carries no `trained_on`); a model retrained to the same bytes on new inputs is reported
+out of date for ever and told to retrain (the message says what happens then; the gap stands,
+below); a dependency key renamed after the snapshot leaves the old key in `trained_with` and
+nothing is said (gap, below); the warning printed an absolute path and had no field (it is
+`chartbook.toml: [models.x] trained_on: …`); the snapshot reference table lacked `metrics` and
+`trained_on` (added); `Version` did not carry `trained_on`, so past versions did not show which
+data made them (it does, and the index's `versions[]` has it); two of the three callers of
+`staleness()` swallowed every exception (none does: `staleness()` turns the expected failures
+into None); the index and `check` hash the model and its inputs again and read every snapshot
+a second time per model (not fixed: a known gap).
+
 **Known gaps.** A model trained on a dataframe in a `[sources]` table or query has nothing to
 compare, since those have no content hash; such an input is left out. The comparison is as
 good as the snapshot's record: a model whose version predates this change has no
-`trained_on` and is never out of date. A `git` dependency's input is compared by its pinned
-hash like any other.
+`trained_on` and is never out of date. A version is its bytes: a model retrained to the same
+bytes on new inputs is the same version, keeps the inputs it was first made with, and is
+reported out of date although retraining changes nothing. A dependency whose key in
+`[dependencies]` is renamed after the version was made has the old key in `trained_with` and
+no match in `now`, so nothing is said of it. `staleness()` hashes the model file and its local
+inputs again, without the index's cache, and reads every snapshot of the pipeline once per
+model, in the index and in `check`. A `git` dependency's input is compared by its pinned hash
+like any other.
 
 ### Step 5. Data in databases
 
