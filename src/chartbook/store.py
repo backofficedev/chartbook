@@ -491,6 +491,15 @@ class Store:
         """
         final.parent.mkdir(parents=True, exist_ok=True)
         if frozen and final.is_dir() and not _is_frozen(final):
+            if single:
+                # The same bytes may be there under other names, from other
+                # pipelines. They come along, as copies of the new frozen
+                # file, so that no pin loses the name it resolves by.
+                (frozen_file,) = list(staging.iterdir())
+                for other in final.iterdir():
+                    if other.name != frozen_file.name and other.is_file():
+                        shutil.copyfile(frozen_file, staging / other.name)
+                        os.chmod(staging / other.name, _READ_ONLY)
             aside = staging.with_name(staging.name + ".linked")
             os.rename(final, aside)
             try:

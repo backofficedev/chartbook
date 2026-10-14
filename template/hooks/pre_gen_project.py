@@ -5,7 +5,7 @@ import re
 import sys
 
 # Validate project_slug is a valid Python identifier
-project_slug = "{{ cookiecutter.project_slug }}"
+project_slug = {{ cookiecutter.project_slug | tojson }}
 
 if not re.match(r"^[a-z][a-z0-9_]*$", project_slug):
     print(f"ERROR: '{project_slug}' is not a valid project slug.")

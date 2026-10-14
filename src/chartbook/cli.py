@@ -1630,6 +1630,7 @@ def _echo_pin_report(report):
             "kept": "already pinned",
             "stale": "changed upstream since it was pinned",
             "not_built": "not built",
+            "outside": "outside the repository",
             "let_go": "let go",
             "dropped": "no longer declared",
             "lost": "lost",
@@ -1662,6 +1663,8 @@ def _echo_pin_report(report):
                 click.echo(f"  changed upstream: {event.asset}")
             elif event.status == "let_go":
                 click.echo(f"  let go: {event.asset} ({event.detail})")
+            elif event.status == "outside":
+                click.echo(f"  not pinned: {event.asset}: {event.detail}")
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
@@ -2210,7 +2213,12 @@ def init(use_git, use_github, public):
             )
 
     if not use_git:
-        subprocess.run(scaffold.template_command(), check=True)
+        try:
+            rendered = subprocess.run(scaffold.template_command())
+        except KeyboardInterrupt:
+            raise SystemExit(130)
+        if rendered.returncode != 0:
+            raise SystemExit(rendered.returncode)
         return
 
     # The project's directory is named from an answer at cruft's prompt, so

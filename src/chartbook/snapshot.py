@@ -71,6 +71,7 @@ secrets, and a store is something to share.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import platform
@@ -295,7 +296,7 @@ def local_name(record: dict) -> str:
     return str(AssetRef(kind=record["ref"]["kind"], name=record["ref"]["name"]))
 
 
-def _git(directory: Path, *arguments: str) -> str:
+def _git(directory: Path, *arguments: str, stdin: str = "") -> str:
     """Run git in a directory and return what it printed.
 
     It takes no lock it does not need, so that looking at a repository
@@ -308,6 +309,7 @@ def _git(directory: Path, *arguments: str) -> str:
             capture_output=True,
             text=True,
             env=environment,
+            input=stdin,
         )
     except OSError as error:
         raise SnapshotError(f"git could not be run: {error}") from None
@@ -342,7 +344,7 @@ def code_of(directory: Union[str, Path]) -> Code:
     return Code(top, commit, "" if subdirectory == "." else subdirectory)
 
 
-def uncommitted(directory: Union[str, Path]) -> list[str]:
+def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
     """What in a pipeline's folder is not committed, as ``git status`` lists it.
 
     A changed file, a staged one, and a new file that git does not ignore
@@ -350,20 +352,35 @@ def uncommitted(directory: Union[str, Path]) -> list[str]:
     out of it. Only the pipeline's own folder is looked at, so other work
     in the same repository does not hold a snapshot up.
 
+    :param ignoring: File names that do not count, wherever they are. The
+        lockfile that ``chartbook run`` writes before a build is one.
     :returns: One line for each, as ``git status --porcelain`` prints it,
         with paths from the top of the repository.
     """
     listing = _git(
         Path(directory).resolve(), "status", "--porcelain", "--untracked-files=all", "--", "."
     )
-    return [line for line in listing.splitlines() if line.strip()]
+    return [
+        line
+        for line in listing.splitlines()
+        if line.strip() and os.path.basename(line[3:].split(" -> ")[-1]) not in ignoring
+    ]
 
 
 def _folder(store: Store, commit: str, subdirectory: str) -> Path:
-    """Where the records of one pipeline at one commit are kept."""
+    """Where the records of one pipeline at one commit are kept.
+
+    The pipeline's folder in its repository names it, with ``--`` for
+    ``/``. A folder whose own name holds ``--``, or is ``_top``, would then
+    be mistaken for another; such a one gets a short hash of itself as
+    well, so that two pipelines never share a folder here.
+    """
     if not _FULL_COMMIT.match(commit):
         raise ValueError(f"{commit!r} is not a full commit hash.")
-    name = subdirectory.strip("/").replace("/", "--") or TOP
+    clean = subdirectory.strip("/")
+    name = clean.replace("/", "--") or TOP
+    if clean and ("--" in clean or name == TOP):
+        name += "~" + hashlib.sha256(clean.encode("utf-8")).hexdigest()[:8]
     return store.root / SNAPSHOTS_DIR / commit / name
 
 
@@ -452,8 +469,11 @@ def newest_for(
 def history(directory: Union[str, Path], store: Optional[Store] = None) -> list[Snapshot]:
     """Every snapshot of the pipeline in a folder, oldest first.
 
-    At any commit of its repository, on any branch: a snapshot made on a
-    branch that was never merged is still something that was built.
+    At any commit the repository still has, on any branch or on none: a
+    snapshot made on a branch that was never merged, or at a commit that
+    was then amended away, is still something that was built. Only a
+    commit git has pruned is gone, and so are its snapshots to this
+    repository.
 
     :raises SnapshotError: If the folder is not in a git repository.
     """
@@ -466,8 +486,16 @@ def history(directory: Union[str, Path], store: Optional[Store] = None) -> list[
         return []
     if not commits:
         return []
-    # A store holds snapshots of many repositories; these are this one's
-    ours = commits & set(_git(code.top, "rev-list", "--all", "HEAD").split())
+    # A store holds snapshots of many repositories; these are this one's.
+    # Asked of the object store, not of the branches, so a commit that was
+    # amended away still counts while git keeps it.
+    answers = _git(
+        code.top, "cat-file", "--batch-check=%(objectname) %(objecttype)",
+        stdin="".join(f"{commit}\n" for commit in sorted(commits)),
+    )
+    ours = {
+        line.split()[0] for line in answers.splitlines() if line.endswith(" commit")
+    }
     found = [taken for commit in ours for taken in find(store, commit, code.subdirectory)]
     return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
 
@@ -730,16 +758,24 @@ def _write(snapshot: Snapshot, store: Store) -> Path:
         count += 1
         final = folder / f"{stamp}-{count}.json"
     temporary = folder / f"{uuid.uuid4().hex}.tmp"
-    with open(temporary, "w", encoding="utf-8") as f:
-        json.dump(snapshot.to_document(), f, indent=2, ensure_ascii=False)
-        f.write("\n")
-    os.replace(temporary, final)
+    try:
+        with open(temporary, "w", encoding="utf-8") as f:
+            json.dump(snapshot.to_document(), f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        os.replace(temporary, final)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
     return final
 
 
-def require_committed(directory: Union[str, Path], pipeline: str) -> Code:
+def require_committed(
+    directory: Union[str, Path], pipeline: str, ignoring: tuple = ()
+) -> Code:
     """Check that a pipeline can have a snapshot now, and say where it is in git.
 
+    :param ignoring: File names that may be uncommitted all the same; see
+        :func:`uncommitted`.
     :raises SnapshotError: If its folder is not in git, or anything in it
         is not committed. The message lists what.
     """
@@ -747,7 +783,7 @@ def require_committed(directory: Union[str, Path], pipeline: str) -> Code:
         code = code_of(directory)
     except SnapshotError as error:
         raise SnapshotError(f"{pipeline} cannot have a snapshot: {error}.") from None
-    changes = uncommitted(directory)
+    changes = uncommitted(directory, ignoring)
     if changes:
         shown = "\n".join(f"  {line}" for line in changes[:10])
         more = f"\n  and {len(changes) - 10} more" if len(changes) > 10 else ""
@@ -833,6 +869,7 @@ def make(
     store: Optional[Store] = None,
     made_at: Optional[str] = None,
     built_by_run: bool = False,
+    ignoring: tuple = (),
 ) -> SnapshotReport:
     """Make a snapshot of a pipeline: what it has built, at the commit it is on.
 
@@ -850,13 +887,15 @@ def make(
     :param made_at: The time to record, for a test; now by default.
     :param built_by_run: Whether the build was run by the command that is
         making this snapshot (``chartbook run --snapshot``).
+    :param ignoring: File names that may be uncommitted; see
+        :func:`uncommitted`.
     :returns: The snapshot, and whether it is new.
     :raises SnapshotError: If the folder holds no pipeline, is not in git,
         has anything uncommitted, or has built nothing.
     """
     directory = Path(project_dir).resolve()
     pipeline = pipeline_in(directory)
-    code = require_committed(directory, pipeline)
+    code = require_committed(directory, pipeline, ignoring)
 
     store = store if store is not None else default_store()
     raw = _read_manifest_file(directory)
@@ -864,6 +903,14 @@ def make(
     not_built: list[tuple[str, str]] = []
     for local, declared_path, absolute in declared_files(directory):
         ref = local.in_pipeline(pipeline)
+        reached = hashing.escapes(absolute, directory)
+        if reached is not None:
+            raise SnapshotError(
+                f"{pipeline} declares {str(ref)!r} at {declared_path!r}, which "
+                f"reaches {reached}, outside the pipeline's folder. A snapshot is "
+                f"what the pipeline built, so everything in it must be under "
+                f"{directory}."
+            )
         found = hashing.find_files(absolute)
         if found is None or not found.files:
             assets[str(local)] = asset_record(ref, pipeline, declared_path, None, True)

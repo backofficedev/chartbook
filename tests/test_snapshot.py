@@ -131,6 +131,27 @@ class TestMaking:
             jsonschema.validate(record, json.loads(index.schema_path(record["kind"]).read_text()))
         assert snapshot.read(taken.path) == taken
 
+    def test_it_gives_up_nothing_but_the_pipelines_own_files(self, maker, work):
+        """A declared path that reaches outside the folder is refused."""
+        secret = work / "secret.txt"
+        secret.write_text("mine\n")
+        _manifest(
+            maker,
+            {
+                "project": {"id": "acme/maker"},
+                "dataframes": {
+                    "rates": {"path": "./_data/rates.parquet", "docs": "d"},
+                    "other": {"path": "../secret.txt", "docs": "d"},
+                },
+            },
+        )
+        _commit(work)
+        with pytest.raises(SnapshotError) as e:
+            snapshot.make(maker)
+        assert "'acme/maker:other' at '../secret.txt'" in str(e.value)
+        assert "outside the pipeline's folder" in str(e.value)
+        assert not (default_store().root / "snapshots").exists()
+
     def test_it_is_frozen(self, maker):
         """Its owner rewrites the file in place. The snapshot keeps what it had."""
         taken = snapshot.make(maker).snapshot
@@ -147,6 +168,16 @@ class TestMaking:
         assert taken.subdirectory == ""
         assert taken.path.parent == default_store().root / "snapshots" / commit / "_top"
         assert "subdirectory" not in json.loads(taken.path.read_text())["code"]
+
+    def test_two_pipelines_never_share_a_folder_in_the_store(self, work):
+        """``a--b/c`` and ``a/b--c`` would both be ``a--b--c``; so would ``_top`` and the top."""
+        store = default_store()
+        commit = "0" * 40
+        names = ["", "_top", "a--b/c", "a/b--c", "a/b/c"]
+        folders = [snapshot._folder(store, commit, name) for name in names]
+        assert len(set(folders)) == len(names)
+        assert folders[0].name == "_top" and folders[4].name == "a--b--c"
+        assert folders[1].name.startswith("_top~") and folders[2].name.startswith("a--b--c~")
 
     def test_a_pipeline_deep_in_its_repository(self, work):
         directory = _manifest(
@@ -635,6 +666,47 @@ class TestPinning:
         assert _statuses(report) == {"rates": "lost", "chart/curve": "kept"}
         assert len(report.problems) == 1
 
+    def test_update_to_a_snapshot_the_store_has_lost_part_of_moves_nothing(self, user, maker):
+        """Found by a reviewer: the lockfile once named the new snapshot
+        beside the old asset's bytes. A snapshot is taken whole or not at all."""
+        first = snapshot.make(maker).snapshot
+        lock.pin(user)
+        before = (user / lock.LOCK_FILE).read_bytes()
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker).snapshot
+        default_store().delete(second.content()["rates"])
+
+        report = lock.update(user)
+        assert _statuses(report) == {"rates": "lost", "chart/curve": "kept"}
+        assert len(report.problems) == 1
+        assert "nothing was moved" in report.problems[0].detail
+        assert not report.written and (user / lock.LOCK_FILE).read_bytes() == before
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["commit"] == first.commit and listed["snapshot"] == first.made_at
+
+    def test_moving_the_dependency_to_another_folder_is_followed_by_update_not_pin(
+        self, user, maker, work
+    ):
+        snapshot.make(maker)
+        lock.pin(user)
+        other = _manifest(work / "elsewhere", {"project": {"id": "acme/maker"}, "dataframes": {"rates": {"path": "./_data/rates.parquet", "docs": "d"}}})
+        _build(other, rates=b"elsewhere")
+        _commit(work)
+        snapshot.make(other)
+        _manifest(user, {"project": {"id": "acme/user"}, "dependencies": {"acme/maker": {"path": "../elsewhere"}}})
+
+        report = lock.pin(user)
+        assert [e.status for e in report.events if e.asset is None] == ["relocated"]
+        # It says what the new folder's snapshot would change, and stays put
+        assert _statuses(report) == {"rates": "stale", "chart/curve": "kept"}
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["path"] == "../maker"  # still where the pins came from
+
+        moved = lock.update(user)
+        assert _statuses(moved) == {"rates": "moved", "chart/curve": "dropped"}
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["path"] == "../elsewhere"
+
     def test_the_index_names_the_snapshot(self, user, maker):
         taken = snapshot.make(maker).snapshot
         lock.pin(user)
@@ -686,6 +758,17 @@ class TestFromFolder:
         lock.update(user, from_folder=True)
         (listed,) = lock.read_lock(user).dependencies
         assert "commit" not in listed["location"] and "snapshot" not in listed
+
+    def test_pin_from_the_folder_that_moves_nothing_keeps_saying_where_the_pins_came_from(
+        self, user, maker
+    ):
+        taken = snapshot.make(maker).snapshot
+        lock.pin(user)
+        _build(maker, rates=b"rates-2")
+        report = lock.pin(user, from_folder=True)  # pin never moves, so nothing moved
+        assert _statuses(report) == {"rates": "stale", "chart/curve": "kept"}
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["commit"] == taken.commit and listed["snapshot"] == taken.made_at
 
 
 OLD = "2026-01-01T00:00:00.000000Z"  # long before any keep window

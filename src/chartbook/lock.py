@@ -59,6 +59,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import uuid
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -201,9 +202,15 @@ def write_lock(lock: Lock, path: Union[str, Path]) -> bool:
             return False
     except OSError:
         pass
-    temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(text, encoding="utf-8")
-    os.replace(temporary, path)
+    # A name of its own, so that two pins at once do not write over each
+    # other's half-written file and then rename it away
+    temporary = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary.write_text(text, encoding="utf-8")
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
     return True
 
 
@@ -240,6 +247,8 @@ class PinEvent:
             (declared, with no file to pin), ``lost`` (pinned, not in the
             store, and the other pipeline no longer has those bytes),
             ``dropped`` (no longer declared, so no longer pinned),
+            ``outside`` (declared with a path that reaches outside the
+            dependency's own files, which is not pinned),
             ``let_go`` (an update moved a ``git`` dependency to another
             commit, and this was built from the one before and is not built
             at the new one, so it is no longer pinned). For a
@@ -267,7 +276,7 @@ class PinEvent:
 
 
 #: The statuses that mean a project is not fully pinned, and should fail CI.
-PROBLEM_STATUSES = frozenset({"lost", "unreachable", "unfetched", "no_snapshot"})
+PROBLEM_STATUSES = frozenset({"lost", "unreachable", "unfetched", "no_snapshot", "outside"})
 
 
 @dataclass
@@ -413,8 +422,11 @@ def _sync(
                 # repository that cannot be reached is no trouble: that is
                 # what the pins are for
                 report.events.append(PinEvent("unfetched", key, detail=failure))
+            # A repository is only read. Nothing it declares may reach
+            # outside its own files.
             records = _sync_dependency(
-                key, directory, had, may_move, store, cache, report, commit_moved
+                key, directory, had, may_move, store, cache, report, commit_moved,
+                within=directory,
             )
         elif from_folder:
             # What is in the folder this minute, whatever state it is in.
@@ -424,6 +436,10 @@ def _sync(
             records = _sync_dependency(
                 key, Path(entry["_resolved_path"]), had, may_move, store, cache, report
             )
+            if not may_move and was is not None and records == had:
+                # Nothing moved, so the pins are still the snapshot's, and
+                # the lockfile goes on saying so
+                listed = {**was, "location": dict(was["location"])}
         else:
             records, listed = _sync_from_snapshots(
                 key, Path(entry["_resolved_path"]), was, listed, had, may_move, store, report
@@ -576,6 +592,14 @@ def _sync_from_snapshots(
 
     if pinned and not may_move:
         # `pin` does not move a pin. It says what a newer snapshot has.
+        if was is not None and _declared_elsewhere(was, listed):
+            # The manifest names another folder now. Following it would
+            # move the pins, which is an update's job; the lockfile keeps
+            # saying where these came from.
+            report.events.append(
+                PinEvent("relocated", key, detail=_describe(listed["location"]))
+            )
+            listed = {**listed, "location": dict(was["location"])}
         newer = newest is not None and not newest.same_moment(locked_commit, locked_made)
         theirs = newest.content() if newer else {}
         for record in had.values():
@@ -616,6 +640,33 @@ def _sync_from_snapshots(
         report.events.append(PinEvent("no_snapshot", key, detail=why))
         return dict(had), as_it_was()
 
+    # A snapshot is taken whole or not at all. If the store has lost an
+    # object the snapshot names, nothing moves: the lockfile would otherwise
+    # name this snapshot beside bytes from another.
+    missing = [
+        snapshot.renamed(newest.assets[name], key)["id"]
+        for name in sorted(newest.assets)
+        if newest.assets[name].get("content_hash")
+        and not store.has(newest.assets[name]["content_hash"])
+    ]
+    if missing:
+        for record in pinned:
+            _report_kept(record, key, store, report)
+        for asset_id in missing:
+            report.events.append(
+                PinEvent(
+                    "lost",
+                    key,
+                    asset_id,
+                    detail=(
+                        f"the snapshot at {newest.commit[:7]} names it, and it is "
+                        f"not in the store, so nothing was moved. Making the "
+                        f"snapshot again puts it back"
+                    ),
+                )
+            )
+        return dict(had), as_it_was()
+
     records: dict[str, dict] = {}
     for name in sorted(newest.assets):
         record = snapshot.renamed(newest.assets[name], key)
@@ -629,22 +680,6 @@ def _sync_from_snapshots(
             # snapshot does not belong beside this one's commit.
             status = "let_go" if old else "not_built"
             report.events.append(PinEvent(status, key, asset_id, old=old, detail=declared_path))
-        elif not store.has(new):
-            report.events.append(
-                PinEvent(
-                    "lost",
-                    key,
-                    asset_id,
-                    old=old,
-                    detail=(
-                        "the snapshot names it, and it is not in the store. "
-                        "Making the snapshot again puts it back"
-                    ),
-                )
-            )
-            record = before if before is not None else {
-                k: v for k, v in record.items() if k not in ("content_hash", "size_bytes", "files")
-            }
         elif old is None:
             report.events.append(PinEvent("pinned", key, asset_id, new=new))
         elif old == new:
@@ -677,6 +712,7 @@ def _sync_dependency(
     cache: hashing.HashCache,
     report: PinReport,
     commit_moved: bool = False,
+    within: Optional[Path] = None,
 ) -> dict[str, dict]:
     """Work out the records of one dependency's assets, pinning as needed.
 
@@ -686,6 +722,8 @@ def _sync_dependency(
     :param may_move: Whether its existing pins may move (an update).
     :param commit_moved: Whether this update moved a ``git`` dependency to
         another commit than the one it was pinned at.
+    :param within: If given, a declared path that reaches a file outside
+        this directory is not pinned, and is a problem.
     :returns: Its records as they should be, by asset ID.
     """
     try:
@@ -722,6 +760,7 @@ def _sync_dependency(
             cache,
             report,
             commit_moved,
+            within,
         )
 
     # What the lockfile has that the other pipeline no longer declares
@@ -769,10 +808,32 @@ def _pin_asset(
     cache: hashing.HashCache,
     report: PinReport,
     commit_moved: bool = False,
+    within: Optional[Path] = None,
 ) -> dict:
     """Decide what one asset's record is, storing its bytes if they are needed."""
     asset_id = str(ref)
     old = (had or {}).get("content_hash")
+
+    if within is not None:
+        reached = hashing.escapes(absolute, within)
+        if reached is not None:
+            # Whatever the manifest says, a pipeline that is only read gives
+            # up nothing but its own files. Nothing is stored, and a pin it
+            # had is not kept either: it names bytes from outside.
+            report.events.append(
+                PinEvent(
+                    "outside",
+                    key,
+                    asset_id,
+                    old=old,
+                    detail=(
+                        f"its path {declared_path!r} reaches {reached}, which is "
+                        f"outside the repository. Only a repository's own files "
+                        f"are pinned"
+                    ),
+                )
+            )
+            return _asset_record(ref, key, declared_path, None, True)
 
     if old is None or may_move:
         found = hashing.find_files(absolute)

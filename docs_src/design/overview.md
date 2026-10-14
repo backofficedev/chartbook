@@ -1475,6 +1475,44 @@ nightly makes 365 a year … probably a per-model `keep = N`"). As built, a labe
 kept and an unlabelled one goes with its snapshot after 30 days, which answers the question
 without a new field.
 
+#### What two adversarial reviews found, and what was done
+
+*Added 2026-10-13.* After the step 4 pull requests were merged, two sub-agents reviewed
+`main` with no knowledge of the builder's conclusions: one for correctness and races, one for
+safety. They found twenty-six things between them. Each is in the changelog under "Fixed", and
+the ones that change a rule are here.
+
+**Changed rules, all *proposed*.**
+
+1. **A pipeline that is only read gives up nothing but its own files.** A git dependency's
+   manifest, or a pipeline being snapshotted, may declare an absolute path, a `..`, or a
+   symlink that reaches outside; every declared path is followed to where it really is
+   (`chartbook.hashing.escapes`), and one that reaches out is `outside`, not pinned, and a
+   problem. This is the boundary 3e implied and did not enforce: `pin` is safe, `run` is
+   trust. A `path` dependency pinned `--from-folder` is not checked: it is a folder on this
+   disk that the user chose.
+2. **A snapshot is pinned whole or not at all.** An update to a snapshot with an object the
+   store has lost moves nothing. 4a's rule 19 and 4b's rule 8 said a lockfile must never name
+   one commit beside another's bytes; this was the case that could still do it.
+3. **The lockfile ChartBook writes does not count as an uncommitted change** for
+   `run --snapshot`, before or after the build. The snapshot's `inputs` record what it says.
+   A build that makes a commit gets no snapshot.
+4. **The recursion guard sees the whole chain of scripts**, in `CHARTBOOK_RUN_STACK`, and
+   comes before the pin.
+5. **A version is found at any commit the repository still has**, asked of git's object store,
+   so an amended-away commit keeps its versions until git prunes it.
+6. **Names in the store carry a short hash when they would otherwise collide**: a clone's
+   folder with a port or a cleaned character, a snapshot folder with `--` or `_top`.
+
+**Found and left, with the reason.**
+
+- *Two `chartbook snapshot` at once make two identical snapshots.* Cosmetic; the newer wins.
+- *A snapshot that takes over an hour to store can lose an early object to a concurrent `gc`.*
+  Improbable; a store-wide lock is the fix, and is not built.
+- *A shallow clone cannot see snapshots beyond its depth*, and the message blames the owner.
+- *`chartbook init` renders whatever is on `main`*, not the installed version; needs tags.
+- *No timeouts on git calls.* Prompts are off; a GUI credential helper could still block.
+
 #### 4e: loading one column. Decided against
 
 *Added 2026-10-13.* This step's list ends with *"Parts: `dataframe#series` resolves for

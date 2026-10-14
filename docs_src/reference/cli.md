@@ -421,9 +421,9 @@ Snapshot made. A pipeline that depends on this one gets it with `chartbook updat
 Ran build in 1 pipeline(s).
 ```
 
-1. It checks that everything is committed **before** it builds, so you are not refused after an hour.
+1. It checks that everything is committed **before** it builds, so you are not refused after an hour. `chartbook.lock` does not count: the pin before the build is about to write it, and the snapshot records what it says.
 2. It builds.
-3. It checks again. A build that changes a committed file leaves a folder the commit does not describe, and gets no snapshot.
+3. It checks again. A build that changes a committed file leaves a folder the commit does not describe, and gets no snapshot. So does a build that makes a commit.
 4. It makes the snapshot, and records in it that the build ran in the same command.
 
 With `--force` as well, it is the weekly refresh in one line: `chartbook run --force --snapshot`. In a catalog, each pipeline is built and declared ready in turn, so a pipeline later in the catalog pins what an earlier one has just declared ready.
@@ -624,6 +624,8 @@ Ran build in 1 pipeline(s).
 To build against the newer snapshot, run `chartbook update` and then `chartbook run`. The lockfile changes only when you ask it to, so it only ever changes in a commit you meant to make.
 
 **A `git` dependency is built once.** Nobody works in ChartBook's copy of a commit, so there is nothing to disturb. Its `build` runs in a writable copy of the checkout, under `~/.chartbook/git/work/`, and that is how data the repository builds, and does not commit, comes to be there to pin. That build needs whatever it needs: its tools, its credentials, its network.
+
+**That is running the repository's code, with your environment.** Add a `git` dependency only from a repository you would run code from. `chartbook pin` by itself runs nothing, and pins nothing a repository's manifest declares outside the repository's own files: an absolute path, a `..` or a symlink that reaches out is reported as `outside the repository` and left alone.
 
 ```console
 $ chartbook run

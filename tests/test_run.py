@@ -539,6 +539,38 @@ class TestRunThenSnapshot:
         assert str(e.value).endswith("Nothing was built.")
         assert not (work / "upstream_runs.log").exists()
 
+    def test_the_lockfile_it_writes_does_not_count_as_uncommitted(self, reader, work):
+        """A real project commits chartbook.lock. The pin before the build
+        changes it, and that is ChartBook's doing, not the build's."""
+        (work / ".gitignore").write_text("_data/\n_output/\n*.log\n")  # the lockfile is tracked
+        _commit(work)
+        _ready(work / "upstream")
+        with open(work / "reader" / "chartbook.toml", "a") as f:
+            f.write('\n[dataframes.read]\npath = "./_output/read.txt"\ndocs = "d"\n')
+        _commit(work)
+        report = run.run(reader, echo=_quiet, snapshot=True)  # writes a new, untracked lockfile
+        assert report.failed is None, report.reason
+        assert (reader / lock.LOCK_FILE).exists()
+        (taken,) = report.snapshots
+        assert taken.snapshot.inputs and taken.snapshot.inputs[0]["id"] == "upstream"
+        # Commit it, add a dependency's worth of change, and it is still fine
+        _commit(work)
+        _ready(work / "upstream")
+        lock.update(reader)  # the tracked lockfile is now modified
+        report = run.run(reader, echo=_quiet, snapshot=True)
+        assert report.failed is None, report.reason
+
+    def test_a_build_that_commits_gets_no_snapshot(self, work):
+        """The label would name a commit that did not run the build."""
+        directory = _with_data(work / "upstream", {"build": "echo more >> notes.md && git add -A && git -c user.name=T -c user.email=t@e.org commit -q -m built"})
+        (directory / "notes.md").write_text("notes\n")
+        _commit(work)
+        before = _git(work, "rev-parse", "HEAD")
+        report = run.run(directory, echo=_quiet, snapshot=True)
+        assert report.failed.id == "upstream"
+        assert f"its build moved the repository from {before[:7]} to" in report.reason
+        assert snapshot.newest_for(directory)[0] is None
+
     def test_a_build_that_changes_a_committed_file_gets_no_snapshot(self, work):
         """The folder is then not what the commit describes."""
         directory = _with_data(work / "upstream", {"build": "echo changed >> x.parquet"})
@@ -658,6 +690,60 @@ class TestGitDependencies:
         report = lock.pin(downstream)
         statuses = {e.asset.split(":")[1]: e.status for e in report.events if e.asset}
         assert statuses == {"built": "not_built", "committed": "pinned"}
+
+    def test_a_repository_gives_up_nothing_but_its_own_files(self, work, cache):
+        """A manifest in a repository is not trusted to name files outside it.
+
+        Found by a reviewer: an absolute path, or a committed symlink, in a
+        dependency's manifest had `pin` copy any file the user can read into
+        the store and its hash into the committed lockfile.
+        """
+        secret = work / "secret.txt"
+        secret.write_text("the user's own file\n")
+        repository = _pipeline(
+            work / "sneaky",
+            None,
+            dataframes={
+                "abs": {"path": str(secret), "docs": "d"},
+                "linked": {"path": "./link", "docs": "d"},
+                "climb": {"path": "../secret.txt", "docs": "d"},
+                "honest": {"path": "./data.parquet", "docs": "d"},
+            },
+        )
+        (repository / "data.parquet").write_bytes(b"theirs")
+        os.symlink(secret, repository / "link")
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "A manifest that reaches out")
+        top = _pipeline(work / "top", {"build": "true"}, {"sneaky": {"git": "../sneaky"}})
+
+        report = lock.pin(top)
+        statuses = {e.asset.split(":")[1]: e.status for e in report.events if e.asset}
+        assert statuses == {"abs": "outside", "linked": "outside", "climb": "outside", "honest": "pinned"}
+        assert len(report.problems) == 3
+        locked = lock.read_lock(top)
+        for name in ("abs", "linked", "climb"):
+            assert "content_hash" not in locked.assets[f"sneaky:{name}"]
+        from chartbook import hashing
+        assert not default_store().has(hashing.hash_path(secret).content_hash)
+        (problem,) = [e for e in report.problems if e.asset.endswith(":abs")]
+        assert "outside the repository" in problem.detail and str(secret.resolve()) in problem.detail
+
+    def test_a_script_in_a_repository_can_be_run(self, work, cache):
+        """A checkout is read-only, and a build script is still a program."""
+        repository = _pipeline(work / "scripted", {"build": "./build.sh"})
+        (repository / "build.sh").write_text("#!/bin/sh\necho ran > built.txt\n")
+        (repository / "build.sh").chmod(0o755)
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "add", "-A")
+        _git(repository, "commit", "--quiet", "-m", "A pipeline with a script")
+        top = _pipeline(work / "top", {"build": "true"}, {"scripted": {"git": "../scripted"}})
+        report = run.run(top, echo=_quiet)
+        assert report.failed is None, report.reason
+        copy = self._copy(cache, repository)
+        assert (copy / "built.txt").read_text() == "ran\n"
+        checkout = cache.find(str(repository), _git(repository, "rev-parse", "HEAD"))
+        assert os.access(checkout / "build.sh", os.X_OK) and not os.access(checkout / "build.sh", os.W_OK)
 
     def test_run_builds_it_and_then_its_built_data_can_be_pinned(
         self, downstream, repository, cache

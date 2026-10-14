@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — `chartbook store gc` clears old snapshots
+### Fixed — what two adversarial reviews of the asset graph found
+
+None of this was released. It is listed because each item changes something the entries below describe.
+
+- **A git dependency's manifest could name files outside its repository, and `chartbook pin` copied them.** An absolute `path`, a `..`, or a committed symlink pointing at, say, `~/.ssh/id_rsa` had `pin` copy that file into the store and write its hash into the committed lockfile, without running anything. Now a repository gives up nothing but its own files: every declared path is followed to where it really is, and one that reaches outside is reported as `outside the repository`, not pinned, and counted as a problem. `chartbook snapshot` refuses a pipeline whose manifest reaches outside its folder for the same reason.
+- **`chartbook update` could write a lockfile that named a new snapshot beside an old asset's bytes**, when the store had lost one of the new snapshot's objects. A snapshot is now taken whole or not at all: if any object it names is missing, nothing moves, the lockfile is left as it was, and the missing object is reported.
+- **`chartbook run --snapshot` refused itself in a project that commits `chartbook.lock`**, because the pin it made before the build changed that file and the check after the build blamed the build. The lockfile ChartBook itself writes no longer counts as an uncommitted change, before or after the build. A build that *commits* is refused: the label would name a commit that did not run the build.
+- **Two pipelines whose build scripts ran each other looped without end.** The guard against a build script calling `chartbook build` or `chartbook run` saw only the innermost call. Every script ChartBook is running is now in `CHARTBOOK_RUN_STACK`, and a pipeline anywhere in it is refused. The guard also comes before the pin, so a refused call writes no lockfile.
+- **A model version at a commit that was amended away was lost.** Amending right after `chartbook run --snapshot` is routine. Versions are now found among every commit the repository still has, not only those a branch points at.
+- **A git dependency with `build = "./build.sh"` could not run**: the checkout made every file read-only and dropped the executable bit. It is kept.
+- **Two different repositories could share one clone**, when their URLs differed only in port or in a character the cache does not keep (`a b` and `a_b`). A port stays in the clone's name, and a component that had to be cleaned carries a short hash of itself.
+- **Two pipelines could share one folder of snapshots** (`a--b/c` and `a/b--c`; a folder named `_top` and the repository's top). Such names carry a short hash of themselves.
+- **A frozen pin of bytes already in the store under another name dropped that name**, when the earlier object was a hard link or symlink made through the Python API. The other names are kept, as frozen copies.
+- Smaller: two `pin`s at once no longer trip over one temporary file name; `pin` now says `relocated` and stays put when a `path` dependency is pointed at another folder, as it does for `git`; `pin --from-folder` that moves nothing keeps saying which snapshot the pins came from; `model/x@md5:…` is refused instead of being read as sha256; a label that is not text is not a label; `chartbook init` interrupted at the prompt exits cleanly; the template no longer ships a path from its author's machine.
+
 
 Every snapshot was kept for ever, and on a disk without copy-on-write clones each one is a full copy of a pipeline's data. `chartbook store gc` now lets old ones go. A snapshot is kept if a lockfile pins it, if it is the newest of its pipeline, if a label in that pipeline's `chartbook.toml` points at a model version it holds, or if it was made in the last 30 days (`--keep-days` changes the number). The rest are listed, and removed when you say yes, together with whatever only they named.
 

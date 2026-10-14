@@ -82,20 +82,45 @@ from chartbook.store import Store
 RUN_DIR_ENV_VAR = "CHARTBOOK_RUN_DIR"
 RUN_SCRIPT_ENV_VAR = "CHARTBOOK_RUN_SCRIPT"
 
+#: Every script ChartBook is running, outermost first, as ``directory\tscript``
+#: entries joined by the path separator. The two variables above are the
+#: innermost; this is the whole chain, so that two pipelines whose scripts
+#: call each other are caught as well as one that calls itself.
+RUN_STACK_ENV_VAR = "CHARTBOOK_RUN_STACK"
+
+
+def _stack() -> list[tuple[str, str]]:
+    """The scripts this process is running inside, outermost first."""
+    found = []
+    for entry in os.environ.get(RUN_STACK_ENV_VAR, "").split(os.pathsep):
+        if "\t" in entry:
+            directory, script = entry.split("\t", 1)
+            found.append((directory, script))
+    return found
+
 
 def running(directory: Union[str, Path], script: str) -> bool:
-    """Whether this process was started by that script of that pipeline.
+    """Whether this process is inside that script of that pipeline.
 
     A build script that calls ``chartbook build`` or ``chartbook run`` in
-    its own pipeline would be run by the command it calls, without end.
+    its own pipeline would be run by the command it calls, without end; so
+    would two pipelines whose build scripts each run the other's. Every
+    script ChartBook is running is in :data:`RUN_STACK_ENV_VAR`, and a
+    pipeline anywhere in it is one this process is already inside.
     """
-    inside = os.environ.get(RUN_DIR_ENV_VAR)
-    if not inside or os.environ.get(RUN_SCRIPT_ENV_VAR) != script:
-        return False
     try:
-        return Path(inside).resolve() == Path(directory).resolve()
+        here = Path(directory).resolve()
     except OSError:
         return False
+    for inside, name in _stack():
+        if name != script:
+            continue
+        try:
+            if Path(inside).resolve() == here:
+                return True
+        except OSError:
+            continue
+    return False
 
 
 class RunError(Exception):
@@ -360,8 +385,12 @@ def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
             pass
     environment = dict(os.environ)
     if name is not None:
-        environment[RUN_DIR_ENV_VAR] = str(Path(directory).resolve())
+        where = str(Path(directory).resolve())
+        environment[RUN_DIR_ENV_VAR] = where
         environment[RUN_SCRIPT_ENV_VAR] = name
+        above = environment.get(RUN_STACK_ENV_VAR, "")
+        entry = f"{where}\t{name}"
+        environment[RUN_STACK_ENV_VAR] = f"{above}{os.pathsep}{entry}" if above else entry
     code = _execute(script, directory, environment)
     return 128 - code if code < 0 else code
 
@@ -436,6 +465,7 @@ def run(
     here = Path(project_dir).resolve()
     building = script == BUILD_SCRIPT
     steps = plan(here, git_cache, git=building, force=force)
+    commits_before: dict[Path, str] = {}
     # A pipeline that is asked for by name must have the script. A catalog
     # is asked for all of its pipelines, and those without it are passed over.
     for step in steps:
@@ -454,13 +484,18 @@ def run(
                 f"A snapshot is of what `{BUILD_SCRIPT}` makes, so `chartbook run "
                 f"{script} --snapshot` has nothing to take one of."
             )
-        # Found out now, and not after an hour of building
+        # Found out now, and not after an hour of building. The lockfile
+        # does not count: the pin before the build is about to write it,
+        # and the snapshot records what it says in `inputs`.
         for step in steps:
             if step.source == "asked" and step.directory and script in step.scripts:
                 try:
-                    snapshots.require_committed(step.directory, step.id)
+                    code = snapshots.require_committed(
+                        step.directory, step.id, ignoring=(lock.LOCK_FILE,)
+                    )
                 except snapshots.SnapshotError as error:
                     raise RunError(f"{error} Nothing was built.") from None
+                commits_before[step.directory] = code.commit
 
     report = RunReport(script=script)
     for step in steps:
@@ -487,6 +522,13 @@ def run(
             # Until this build finishes, the copy is not a built one
             forget_built(step.directory)
 
+        if running(step.directory, script):
+            raise RunError(
+                f"`chartbook run {script}` was called from {step.id}'s own "
+                f"{script!r} script, which would then run itself without end. "
+                f"Take it out of the script."
+            )
+
         if building and step.has_dependencies:
             # What its code reads from other pipelines has to be pinned
             # before it runs. Nothing that is pinned is moved.
@@ -497,13 +539,6 @@ def run(
                 report.failed, report.exit_code = step, 1
                 report.reason = "what it depends on could not be pinned"
                 break
-
-        if running(step.directory, script):
-            raise RunError(
-                f"`chartbook run {script}` was called from {step.id}'s own "
-                f"{script!r} script, which would then run itself without end. "
-                f"Take it out of the script."
-            )
 
         where = "" if step.directory == here else f"    in {step.directory}"
         echo(f"{step.id}: {script}{where}")
@@ -517,10 +552,11 @@ def run(
         report.ran.append(step)
 
         if snapshot and step.source == "asked":
-            # A build that changes a committed file leaves a folder the
-            # commit does not describe, and the label would not be true
+            # A build that changes a committed file, or that commits, leaves
+            # a folder the commit the build ran at does not describe, and
+            # the label would not be true
             try:
-                changed = snapshots.uncommitted(step.directory)
+                changed = snapshots.uncommitted(step.directory, ignoring=(lock.LOCK_FILE,))
                 if changed:
                     echo(f"{step.id}: its build changed files that are committed:")
                     for line in changed[:10]:
@@ -529,7 +565,16 @@ def run(
                         "its build left changes that are not committed, so no "
                         "snapshot was made"
                     )
-                made = snapshots.make(step.directory, store, built_by_run=True)
+                now = snapshots.code_of(step.directory).commit
+                if now != commits_before.get(step.directory, now):
+                    raise snapshots.SnapshotError(
+                        f"its build moved the repository from "
+                        f"{commits_before[step.directory][:7]} to {now[:7]}, so no "
+                        f"snapshot was made: the label would not say which code ran"
+                    )
+                made = snapshots.make(
+                    step.directory, store, built_by_run=True, ignoring=(lock.LOCK_FILE,)
+                )
             except snapshots.SnapshotError as error:
                 report.failed, report.exit_code = step, 1
                 report.reason = str(error).rstrip(".")

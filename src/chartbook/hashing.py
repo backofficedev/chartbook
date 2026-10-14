@@ -36,6 +36,7 @@ import glob
 import hashlib
 import json
 import os
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Optional, Union
@@ -153,7 +154,7 @@ class HashCache:
         if self._used == self._stored and self.path.is_file():
             return  # nothing to add or drop; leave the file as it is
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.path.with_name(self.path.name + ".tmp")
+        temporary = self.path.with_name(f"{self.path.name}.{uuid.uuid4().hex}.tmp")
         with open(temporary, "w", encoding="utf-8") as f:
             json.dump(
                 {"version": CACHE_VERSION, "files": self._used},
@@ -324,6 +325,45 @@ def find_files(path: Union[str, Path]) -> Optional[PathFiles]:
         return PathFiles(Path(text), tuple(directory_files(text)), single=False)
     if os.path.isfile(text):
         return PathFiles(Path(text).parent, (Path(text),), single=True)
+    return None
+
+
+def escapes(path: Union[str, Path], root: Union[str, Path]) -> Optional[Path]:
+    """The first file a declared ``path`` reaches outside *root*, or None.
+
+    A manifest's ``path`` is joined to the pipeline's directory, but it may
+    be absolute, climb with ``..``, or be a symlink; and a file inside the
+    directory may itself be a link to one outside. Every file the path
+    names is followed to where it really is. This is what keeps a pipeline
+    that is only read (a git dependency being pinned, a snapshot being
+    made) from reaching anything but its own files.
+
+    :param path: The declared path, made absolute, possibly a glob.
+    :param root: The directory the files must be within.
+    :returns: The real path of the first file outside *root*, or None if
+        every file is inside it or there are no files.
+    """
+    inside = os.path.realpath(root)
+
+    def outside(candidate) -> Optional[Path]:
+        real = os.path.realpath(candidate)
+        if real == inside or real.startswith(inside + os.sep):
+            return None
+        return Path(real)
+
+    text = str(path)
+    if not is_glob_pattern(text):
+        # The path itself, before anything is listed under it
+        found = outside(text)
+        if found is not None:
+            return found
+    files = find_files(text)
+    if files is None:
+        return None
+    for file in files.files:
+        found = outside(file)
+        if found is not None:
+            return found
     return None
 
 
