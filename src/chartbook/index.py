@@ -574,8 +574,19 @@ def _asset_records(
         versions = _model_versions(base_dir, name, entry)
         if versions:
             record["versions"] = versions
+        stale = _model_staleness(base_dir, name, entry)
+        if stale is not None:
+            record["trained_with"] = stale.trained_with
+            record["stale_inputs"] = stale.stale
 
     return [_finish(record, entry, skip=skip), *series]
+
+
+def _model_staleness(base_dir: Path, name: str, entry: dict):
+    """Whether the model file was trained on what its inputs are now; None if nothing can be said."""
+    from chartbook.models import staleness
+
+    return staleness(base_dir, name, entry)
 
 
 def _model_versions(base_dir: Path, name: str, entry: dict) -> list[dict]:

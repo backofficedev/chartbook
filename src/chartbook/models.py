@@ -182,6 +182,103 @@ class Version:
         return record
 
 
+@dataclass
+class Staleness:
+    """Whether a model's bytes were trained on what its inputs are now.
+
+    Attributes:
+        version: The version the model file is: the snapshot that first held
+            these bytes recorded what they were trained on.
+        trained_with: Each input's content hash then, by the input's ID as
+            the lockfile writes it.
+        now: Each input's content hash now: the local dataframe as it is in
+            the folder, another pipeline's as ``chartbook.lock`` pins it.
+            Missing where it cannot be told (a file not there, a pin gone).
+    """
+
+    version: str
+    trained_with: dict
+    now: dict
+
+    @property
+    def stale(self) -> list[str]:
+        """The inputs that have moved since the model was trained."""
+        return [key for key, then in self.trained_with.items() if self.now.get(key) not in (None, then)]
+
+
+def staleness(
+    directory: Union[str, Path], model_id: str, entry: dict, store=None
+) -> Optional[Staleness]:
+    """Say whether a model is out of date: trained on inputs that have moved.
+
+    The model file's bytes are a version, if some snapshot of the pipeline
+    first held them; that snapshot recorded the content hash of each
+    ``trained_on`` input at the time. Those are compared with the inputs
+    now. The answer is None when nothing can be said: no model file, no
+    snapshot holding these bytes, or no inputs recorded.
+
+    :param directory: The pipeline's folder.
+    :param model_id: The model's key in ``[models]``.
+    :param entry: Its manifest entry, with ``path``.
+    :param store: The store; this user's by default.
+    """
+    from chartbook import hashing, snapshot
+    from chartbook.lock import LOCK_FILE, LockError, read_lock
+    from chartbook.resolve import MANIFEST_NAME, _read_raw_manifest, parse_declared_ref
+
+    directory = Path(directory)
+    declared = entry.get("path")
+    if not isinstance(declared, str) or not declared.strip():
+        return None
+    try:
+        current = hashing.hash_path(directory / declared)
+    except OSError:
+        return None
+    if current is None:
+        return None
+    try:
+        versions = snapshot.versions_of(directory, f"model/{model_id}", store)
+    except snapshot.SnapshotError:
+        return None
+    held = next((taken for content_hash, taken in versions if content_hash == current.content_hash), None)
+    if held is None:
+        return None
+    trained_with = (held.assets.get(f"model/{model_id}") or {}).get("trained_on")
+    if not trained_with:
+        return None
+    hashes = [content_hash for content_hash, _ in versions]
+    try:
+        raw = _read_raw_manifest(directory / MANIFEST_NAME)
+    except (OSError, ValueError):
+        raw = {}
+    dataframes = raw.get("dataframes") if isinstance(raw.get("dataframes"), dict) else {}
+    try:
+        locked = read_lock(directory / LOCK_FILE)
+    except LockError:
+        locked = None
+    now: dict = {}
+    for key in trained_with:
+        try:
+            ref = parse_declared_ref(key, kind="dataframe")
+        except ValueError:
+            continue
+        if ref.is_local:
+            path = (dataframes.get(ref.name) or {}).get("path") if isinstance(dataframes.get(ref.name), dict) else None
+            if not isinstance(path, str) or not path.strip():
+                continue
+            try:
+                content = hashing.hash_path(directory / path)
+            except OSError:
+                continue
+            if content is not None:
+                now[key] = content.content_hash
+        else:
+            record = (locked.assets.get(key) if locked else None) or {}
+            if record.get("content_hash"):
+                now[key] = record["content_hash"]
+    return Staleness(snapshot.version_name(current.content_hash, hashes), dict(trained_with), now)
+
+
 def versions_in(
     directory: Union[str, Path], model_id: str, aliases: Optional[dict] = None, store=None
 ) -> list[Version]:

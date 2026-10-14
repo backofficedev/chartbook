@@ -368,6 +368,8 @@ chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-thre
 The manifest is the only source of the list. Nothing about how the project is built is consulted, so a pipeline built with doit, Snakemake, Make or plain scripts gets the same report, and a data file the manifest does not declare is not included. Partitioned dataframes (a glob `path`) are summarized as one dataset. Declared dataframes whose files do not exist yet are skipped with a note. Run in a catalog, the report covers every member pipeline.
 
 (chartbook-snapshot)=
+**Warnings, not problems.** Two things are said with `warning:` and do not fail the command: a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
+
 ## chartbook snapshot
 
 ```console

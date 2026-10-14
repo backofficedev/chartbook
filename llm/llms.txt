@@ -40,6 +40,7 @@ chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy in the store
 chartbook path model/<name>@<version>  # a version of a model: by the start of its hash, or by a label from [models.<name>.aliases]
 chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version, as pinned in chartbook.lock (pin reads labels from the snapshot; update moves them)
+# A model is out of date when what it was trained on has moved: its page says so, index.json has stale_inputs, `chartbook check` warns; `chartbook run` retrains
 # In Python: data.sql("select * from {df_a} join {df_b} using (date)") runs SQL with dataframes named in braces (DuckDB);
 # data.ref("df") is a dataframe's name in SQL; data.connect("source") the raw connection. [sources] in chartbook.toml.
 chartbook publish            # Stage publishable files to a directory

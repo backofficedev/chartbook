@@ -542,6 +542,40 @@ def check_sources(manifest: dict, base_dir: Path, skip_outputs: bool = False) ->
     return problems
 
 
+def check_model_staleness(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Warn about a model trained on inputs that have since moved.
+
+    The model file's bytes are a version; the snapshot that first held them
+    recorded what each ``trained_on`` input was then. An input that is
+    something else now, a local dataframe rebuilt or another pipeline's
+    pinned elsewhere by ``chartbook update``, makes the model out of date.
+    That is a warning and not a problem: a model may be kept on purpose,
+    and retraining is the pipeline's build to run.
+    """
+    from chartbook.models import staleness
+
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        for model_id, model in (pipeline_manifest.get("models") or {}).items():
+            try:
+                found = staleness(pipeline_dir, model_id, model)
+            except Exception:  # a store or a repository that cannot be read: not this check's to say
+                continue
+            if found is None or not found.stale:
+                continue
+            moved = "; ".join(
+                f"{key} was {found.trained_with[key][:19]}… and is {found.now[key][:19]}…"
+                for key in found.stale
+            )
+            warnings.warn(
+                f"{display_path(pipeline_dir / 'chartbook.toml')}: [models.{model_id}] is out of "
+                f"date: version {found.version} was trained on inputs that have since moved "
+                f"({moved}). `chartbook run` retrains it.",
+                stacklevel=2,
+            )
+    return []
+
+
 def check_model_labels(manifest: dict, base_dir: Path) -> list[Problem]:
     """Look at each model's labels: does each point at a version that is here?
 
@@ -623,6 +657,7 @@ def run_checks(
         *check_model_metrics(manifest, base_dir),
         *check_model_lineage(manifest, base_dir),
         *check_model_labels(manifest, base_dir),
+        *check_model_staleness(manifest, base_dir),
         *check_sources(manifest, base_dir, skip_outputs=skip_outputs),
         *check_licenses(manifest, base_dir, within_days=within_days, today=today),
     ]

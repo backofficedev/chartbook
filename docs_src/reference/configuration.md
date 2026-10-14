@@ -491,6 +491,8 @@ Each version keeps, from the snapshot that made it: the commit (which code), wha
 
 `chartbook check` warns about a label whose version is not on this machine. It may still be right: the version may be in the store of the machine that made it.
 
+**Out of date.** A snapshot records what each model was trained on, input by input, as the hash of each at the time. When a model file's bytes are a version and an input has since moved (a local dataframe rebuilt, another pipeline's pinned elsewhere by `chartbook update`), the model's page says so and lists the inputs, `index.json` has them under `stale_inputs`, and `chartbook check` warns. `chartbook run` retrains it, and the next snapshot makes the new bytes a version that is up to date.
+
 **A version of another pipeline's model.** `forecasting:rate_forecaster@champion` is the version that label named when you pinned `forecasting`: `chartbook pin` reads the labels from the snapshot it pins (a snapshot records the labels its manifest had), and writes each as its own record in `chartbook.lock`, `forecasting:model/rate_forecaster@champion`, with the version's hash. So a build that serves the champion is repeatable until `chartbook update` moves the label with the owner's manifest. `forecasting:rate_forecaster@7f3a9c2e41b0` is that version: the one a label of your lockfile pins, if one does, else found among the pipeline's snapshots in the store. A label the owner gave after you pinned is not in your lockfile, and the error says so: `chartbook update` pins it. Nothing of the other pipeline's folder is read.
 
 Not yet:

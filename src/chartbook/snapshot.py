@@ -626,6 +626,60 @@ def origins(store: Store, taken: Snapshot) -> list[Path]:
     return [Path(line) for line in lines if line and os.path.isabs(line)]
 
 
+def training_inputs(directory: Path, raw: dict, assets: dict) -> dict[str, dict[str, str]]:
+    """For each model with ``trained_on``, the content hash of each input now.
+
+    A local dataframe's hash is the one this snapshot records for it; another
+    pipeline's is the one the folder's lockfile pins, under the ID the
+    lockfile uses (the dependency's key). An input that is not built, not
+    pinned, or not a reference that parses is left out; ``chartbook check``
+    reports those.
+
+    :returns: By the model's reference, ``{input_id: content_hash}``.
+    """
+    from chartbook.lock import LOCK_FILE, LockError, read_lock
+    from chartbook.manifest import validate_dependencies
+    from chartbook.resolve import locate_pipeline, parse_declared_ref
+
+    models = raw.get("models") if isinstance(raw.get("models"), dict) else {}
+    if not models:
+        return {}
+    try:
+        dependencies = validate_dependencies(raw.get("dependencies") or {}, directory)
+    except ValueError:
+        dependencies = {}
+    try:
+        locked = read_lock(directory / LOCK_FILE)
+    except LockError:
+        locked = None
+    found: dict[str, dict[str, str]] = {}
+    for name, entry in models.items():
+        references = entry.get("trained_on") if isinstance(entry, dict) else None
+        if not isinstance(references, list):
+            continue
+        inputs: dict[str, str] = {}
+        for text in references:
+            try:
+                ref = parse_declared_ref(text, kind="dataframe")
+            except ValueError:
+                continue
+            if ref.is_local:
+                key = str(ref)
+                content_hash = (assets.get(key) or {}).get("content_hash")
+            else:
+                try:
+                    location = locate_pipeline(ref.pipeline_id, dependencies=dependencies)
+                except (KeyError, ValueError):
+                    continue
+                key = str(ref.in_pipeline(location.id))
+                content_hash = ((locked.assets.get(key) if locked else None) or {}).get("content_hash")
+            if content_hash:
+                inputs[key] = content_hash
+        if inputs:
+            found[f"model/{name}"] = inputs
+    return found
+
+
 def labels_of(raw: dict) -> dict[str, dict[str, str]]:
     """The labels a manifest's ``[models.x.aliases]`` give, and what they name.
 
@@ -1140,6 +1194,12 @@ def make(
                 # after the metrics file has been written over
                 record["metrics"] = scores
         assets[str(local)] = record
+
+    # What each model was trained on, as this snapshot and the folder's
+    # lockfile have it: the hashes staleness is later judged against
+    for model_name, inputs in training_inputs(directory, raw, assets).items():
+        if assets.get(model_name, {}).get("content_hash"):
+            assets[model_name]["trained_on"] = inputs
 
     if not assets:
         raise SnapshotError(

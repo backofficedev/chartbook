@@ -875,6 +875,7 @@ rebuild `yield_curve` as often as it likes while another builds `rate_forecast`,
 | 4e | Parts: `dataframe#series` for `data.load()` | **Not to be built.** Decided 2026-10-13, below |
 | 4g | `--frozen`, and a store a team shares | Built 2026-10-14, below |
 | 4h | A version of another pipeline's model: `other:model/x@champion` | Built 2026-10-14, below |
+| 4i | A model out of date: what it was trained on has moved | Built 2026-10-14, below |
 
 `--frozen` is 4g, below. It followed snapshots, as proposed here: what it has to
 check is that the lockfile is complete and that every pin can be had.
@@ -1809,8 +1810,53 @@ the pipeline gave itself in the pinned snapshot; a pipeline that renamed its id 
 snapshot that made a version and the one that labels it gets the label pinned without bytes,
 and the message says where it looked. `pin` and the exact-version lookup read every snapshot
 record in the store (once per labelled model, or per call); fine for a store of hundreds, not
-of millions. Staleness, "this model is out of date because what it was trained on moved", is
-still the one unbuilt piece of {doc}`models`.
+of millions. Staleness, "this model is out of date because what it was trained on moved", was
+the one unbuilt piece of {doc}`models`; it is 4i, below.
+
+#### 4i. A model out of date — as built
+
+*Added 2026-10-14.* The last line of the loop in {doc}`models`: *"When upstream data changes,
+the model's inputs no longer match, so it shows as out of date."* The last unbuilt piece of
+that design.
+
+| What | Where |
+|---|---|
+| A snapshot records what each model was trained on: `trained_on` on the model's record, `{input_id: content_hash}` | `chartbook/snapshot.py`, `training_inputs()`, `make()` |
+| What the model file is now, against that | `chartbook/models.py`, `staleness()`, `Staleness` |
+| The index: `trained_with`, `stale_inputs` on the `Model` record | `chartbook/index.py`; `schemas/chartbook/v1/Model.json` |
+| The page: "Out of date", with each input then and now | `chartbook/markdown_generator.py`, `_model_staleness()` |
+| `check` warns | `chartbook/check.py`, `check_model_staleness()` |
+| The tests | `tests/test_model_versions.py`, `TestStaleness` |
+
+**How it is judged.** The model file's bytes are a version if some snapshot of the pipeline
+first held them; that snapshot recorded, when it was made, the content hash of each
+`trained_on` input: a local dataframe's as the same snapshot has it, another pipeline's as the
+folder's lockfile pinned it then. Those are compared with the inputs now: the local dataframe
+as it is in the folder, the other pipeline's as `chartbook.lock` pins it now. An input whose
+hash differs has moved, and the model is out of date. Where nothing can be said, nothing is:
+a model file that is no version yet (just retrained, not snapshotted), or a version whose
+snapshot recorded no inputs.
+
+**Proposed: decided here.**
+
+1. **The record is the snapshot's.** `pinned_inputs` on the index record says what is pinned
+   now, as 3d decided; what a version was *trained with* is written by the snapshot that
+   makes the version, beside its metrics, so it is kept with the version and travels with
+   it. It says what the inputs were when the snapshot was made, which is the design's
+   "build record" in its simplest form: not what one training run read.
+2. **Keyed as the lockfile keys assets**: a local input by its name, another pipeline's by
+   the dependency's key, so the two sides of the comparison line up without a resolver.
+3. **Out of date is a warning in `check`, not a problem.** A model may be kept on purpose,
+   and retraining is the pipeline's build to run.
+4. **A retrained model that has no snapshot yet says nothing**, rather than "up to date": its
+   bytes are no version, so there is nothing recorded to compare with. The snapshot that
+   follows makes it one.
+
+**Known gaps.** A model trained on a dataframe in a `[sources]` table or query has nothing to
+compare, since those have no content hash; such an input is left out. The comparison is as
+good as the snapshot's record: a model whose version predates this change has no
+`trained_on` and is never out of date. A `git` dependency's input is compared by its pinned
+hash like any other.
 
 ### Step 5. Data in databases
 
@@ -2011,8 +2057,8 @@ maintainer.
 
 Each is explained where it lives.
 
-- For model versions: saying when a model is out of date. One of another pipeline's model is
-  4h; versions travel through a store a team shares (4g); retention is answered by "Clearing
+- For model versions: nothing open. One of another pipeline's model is 4h, out-of-date models
+  are 4i, versions travel through a store a team shares (4g), retention is answered by "Clearing
   old snapshots". How they are named and what makes one is decided. ({doc}`models`; step 4
   above, "4d, as built")
 - Whether dataframes and charts should still be *required* to have a write-up, or only strongly

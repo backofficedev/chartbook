@@ -925,6 +925,16 @@ A version is made by a snapshot. Its name is the start of the model's content ha
 {% else %}
 - Not declared
 {% endif %}
+{% if staleness %}
+
+**Out of date.** This file is version `{{staleness.version}}`, trained on inputs that have since moved:
+
+{% for input in staleness.stale %}
+- `{{input}}`: trained with `{{staleness.trained_with[input][:19]}}…`, now `{{staleness.now[input][:19]}}…`
+{% endfor %}
+
+`chartbook run` retrains it.
+{% endif %}
 
 {% if model_files %}
 ## Files
@@ -972,6 +982,17 @@ def _site_pipeline(site_manifest, pipeline_ref, dependencies=None):
     if site_id not in in_site:
         return site_id, None
     return site_id, get_pipeline_manifest(site_manifest, site_id)
+
+
+def _model_staleness(pipeline_base_dir, model_id, model_manifest):
+    """What a model's page says when its inputs have moved since it was trained; None otherwise."""
+    from chartbook.models import staleness
+
+    try:
+        found = staleness(pipeline_base_dir, model_id, model_manifest)
+    except Exception:
+        return None
+    return found if found is not None and found.stale else None
 
 
 def _trained_on_entries(model_manifest, pipeline_id, pipeline_manifest, site_manifest):
@@ -1106,6 +1127,7 @@ def generate_model_docs(
     trained_on = _trained_on_entries(
         model_manifest, pipeline_id, pipeline_manifest, site_manifest
     )
+    staleness = _model_staleness(pipeline_base_dir, model_id, model_manifest)
 
     model_files = []
     if model_path.is_dir():
@@ -1149,6 +1171,7 @@ def generate_model_docs(
         versions=versions,
         version_metrics=version_metrics,
         trained_on=trained_on,
+        staleness=staleness,
         model_files=model_files,
         freshness=[
             fact
