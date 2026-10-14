@@ -1791,7 +1791,18 @@ version, the exact hash failed although the lockfile's root kept the bytes (a ve
 pins is at hand first); a label without bytes was silent on later `pin`s; `verify()`'s remedy
 for a lost labelled version named the wrong snapshot; the lock schema did not describe label
 records and `pinned_hash` now moves with a label; `pin` reads every snapshot record once per
-labelled model; the gc test held for the wrong reason (sharpened).
+labelled model (not fixed: a known gap, below); the gc test held for the wrong reason (sharpened).
+
+A second review, of those fixes, found eight more, all fixed with a test: three about `git`
+dependencies, which have no versions (the exact-version message gave them the `--from-folder`
+remedy, the label message promised that `update` would pin one, and a dependency that went from
+`path` to `git` carried its label pins for ever with no event; they are let go now, and both
+messages say a git dependency has no versions); a byteless label was reported only on one of
+the three paths a `pin` can take (all three now); `chartbook snapshot` skipped an illegal label
+silently where `run --snapshot` refuses the manifest (the report lists what it did not record);
+the hex pattern for "reads as a version" was not the one `check` uses (it is); the remedy for a
+label whose start two versions share said to make a snapshot (give the label more digits); and
+the changelog said "all fixed" of a list with a gap in it.
 
 **Known gaps.** A `git` dependency has no versions. Labels are looked up by the id and folder
 the pipeline gave itself in the pinned snapshot; a pipeline that renamed its id between the

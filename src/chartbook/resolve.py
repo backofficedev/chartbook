@@ -682,13 +682,15 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         )
     content_hash = record.get("content_hash")
     if not content_hash and record.get("label"):
+        from chartbook.lock import label_remedy
+
+        remedy = label_remedy(record.get("missing"), dependency.id)
         raise AssetNotPinnedError(
             asset_id,
             "not_built",
             f"{asset_id!r} was pinned without its bytes: "
             f"{record.get('missing') or 'the store could not supply the version the label names'}. "
-            f"When the owner of {dependency.id!r} has made a snapshot that holds it, "
-            f"`chartbook update {dependency.id}` in {manifest_dir} pins it.",
+            f"{remedy[0].upper()}{remedy[1:]}, in {manifest_dir}.",
         )
     if not content_hash:
         raise AssetNotPinnedError(
@@ -838,6 +840,15 @@ def _resolve_pinned_version(
         and other.get("ref", {}).get("kind") == pinned.kind
     )
     digits = pinned.rev.split(":", 1)[-1]
+    if dependency.kind == "git":
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_in_lockfile",
+            f"{dependency.id!r} is a git dependency, and a git dependency has no "
+            f"versions: it is pinned from a checkout of its repository, not from a "
+            f"snapshot, so no label of its models is pinned and no version of them "
+            f"is in the store. {without!r} is its model as pinned.",
+        )
     if pinned.kind != "model" or not all(c in "0123456789abcdef" for c in digits) or len(digits) < 4:
         raise AssetNotPinnedError(
             asset_id,

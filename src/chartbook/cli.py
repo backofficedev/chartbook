@@ -2013,6 +2013,12 @@ def _echo_snapshot(report):
         click.echo(f"  not built: {asset} ({declared_path})")
     for model, version in report.new_versions:
         click.echo(f"  {model}: new version {version}")
+    for model, label in report.skipped_labels:
+        click.echo(
+            f"  label not recorded: {model} {label!r}. A label is letters, digits, '.', "
+            f"'_' and '-', does not read as a hash, and names a version by twelve or more "
+            f"of its digits; `chartbook check` says the same."
+        )
     if report.made:
         click.echo(
             "Snapshot made. A pipeline that depends on this one gets it with "

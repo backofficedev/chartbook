@@ -440,7 +440,15 @@ def _sync(
                 key, directory, had_assets, may_move, store, cache, report, commit_moved,
                 within=directory,
             )
-            records.update(had_labels)
+            for asset_id, record in sorted(had_labels.items()):
+                # A git dependency has no versions: a label pinned while this
+                # was a path dependency is let go
+                report.events.append(
+                    PinEvent(
+                        "let_go", key, asset_id, old=record.get("content_hash"),
+                        detail="a git dependency has no versions, so none of its labels is pinned",
+                    )
+                )
         elif from_folder:
             # What is in the folder this minute, whatever state it is in.
             # The lockfile then names no commit: nothing says which one
@@ -450,6 +458,11 @@ def _sync(
                 key, Path(entry["_resolved_path"]), had_assets, may_move, store, cache, report
             )
             records.update(had_labels)
+            for asset_id, record in sorted(had_labels.items()):
+                if not record.get("content_hash"):
+                    report.events.append(
+                        PinEvent("not_built", key, asset_id, detail=record.get("missing") or "the label was pinned without its bytes")
+                    )
             if not may_move and was is not None and records == had:
                 # Nothing moved, so the pins are still the snapshot's, and
                 # the lockfile goes on saying so
@@ -490,6 +503,13 @@ def _sync(
         # lockfile names them, and only the note for `gc` is missing
         report.unrooted = str(error)
     return report
+
+
+def label_remedy(missing: Optional[str], key: str) -> str:
+    """What puts bytes behind a label pinned without them, given why it was."""
+    if "share that start" in (missing or ""):
+        return f"its owner gives the label more digits of the hash, and makes a snapshot; then `chartbook update {key}`"
+    return f"when its owner has made a snapshot that holds that version, `chartbook update {key}`"
 
 
 def is_read_only(error: OSError) -> bool:
@@ -614,7 +634,8 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                         asset_id,
                         f"is a label pinned without its bytes: "
                         f"{assets[asset_id].get('missing') or 'the store could not supply the version it names'}. "
-                        f"When its owner has made a snapshot that holds that version, `chartbook update {key}`.",
+                        f"{label_remedy(assets[asset_id].get('missing'), key)[0].upper()}"
+                        f"{label_remedy(assets[asset_id].get('missing'), key)[1:]}.",
                     )
                 )
             elif not content_hash:
@@ -838,9 +859,13 @@ def _sync_from_snapshots(
         # Nothing to pin from, or nothing to move to. What is pinned stays.
         for record in pinned:
             _report_kept(record, key, store, report)
-        for record in had_labels.values():
+        for asset_id, record in sorted(had_labels.items()):
             if record.get("content_hash"):
                 _report_kept(record, key, store, report)
+            else:
+                report.events.append(
+                    PinEvent("not_built", key, asset_id, detail=record.get("missing") or "the label was pinned without its bytes")
+                )
         had = {**had, **had_labels}
         if not why:
             why = (

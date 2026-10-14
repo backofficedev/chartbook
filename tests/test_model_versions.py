@@ -425,9 +425,51 @@ class TestAnotherPipelinesVersion:
         # Resolution says the same, not "declared and not built"
         with pytest.raises(AssetNotPinnedError, match="was pinned without its bytes.*bytes are not in the store"):
             models.path("forecast:m@champion", project_dir=serve)
-        # ...and so does every later pin, not only the first
+        # ...and so does every later pin, not only the first, whichever way it goes
         again = lock.pin(serve)
         assert _label_statuses(again)["forecast:model/m@champion"] == "not_built"
+        from_folder = lock.update(serve, from_folder=True)
+        assert _label_statuses(from_folder)["forecast:model/m@champion"] == "not_built"
+
+    def test_a_git_dependency_has_no_versions(self, forecast):
+        """Found by a reviewer: the messages gave a git dependency the remedies of a
+        path one, and a dependency that became a git one kept its labels for ever."""
+        from chartbook import lock
+        from chartbook.errors import AssetNotPinnedError
+
+        first, _ = _labelled(forecast)
+        serve = _serve(forecast)
+        lock.pin(serve)  # as a path dependency: the label is pinned
+        (serve / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/serve"}, "dependencies": {"forecast": {"git": str(forecast)}}})
+        )
+        report = lock.update(serve)
+        assert _label_statuses(report)["forecast:model/m@champion"] == "let_go"
+        assert "forecast:model/m@champion" not in lock.read_lock(serve / lock.LOCK_FILE).assets
+        for reference in ("forecast:m@champion", f"forecast:m@{first}"):
+            with pytest.raises(AssetNotPinnedError, match="a git dependency has no versions"):
+                models.path(reference, project_dir=serve)
+        assert lock.verify(serve).problems == []
+
+    def test_the_owner_hears_which_labels_a_snapshot_did_not_record(self, forecast, monkeypatch):
+        first = _version(forecast)
+        _train(forecast, b"weights-2", 0.21)
+        _manifest(forecast, {"my label": first, "deadbeef": first, "champion": first})
+        _commit(forecast)
+        report = snapshot.make(forecast)
+        assert report.skipped_labels == [("model/m", "deadbeef"), ("model/m", "my label")]
+        monkeypatch.chdir(forecast)
+        _train(forecast, b"weights-3", 0.1)
+        result = CliRunner().invoke(main, ["snapshot"])
+        assert result.exit_code == 0, result.output
+        assert "label not recorded: model/m 'my label'" in result.output
+        assert "label not recorded: model/m 'deadbeef'" in result.output
+
+    def test_the_remedy_for_a_byteless_label_depends_on_why(self):
+        from chartbook.lock import label_remedy
+
+        assert "more digits" in label_remedy("the label names version abcd, and 2 versions share that start", "f")
+        assert "made a snapshot that holds that version" in label_remedy("...its bytes are not in the store", "f")
 
     def test_a_dependency_declared_with_a_scope(self, forecast):
         """Found by a reviewer: the exact-version lookup kept the scope on the local name."""

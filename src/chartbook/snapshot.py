@@ -244,12 +244,17 @@ class SnapshotReport:
         new_versions: The models whose bytes no earlier snapshot of this
             pipeline had, each with the name of the version this makes
             (:func:`version_name`). A snapshot is what makes a version.
+        skipped_labels: Labels of the manifest the snapshot did not record,
+            by model: a name a reference cannot carry, or one that reads as
+            a version, or one whose value is not a version. ``chartbook
+            check`` refuses the same ones.
     """
 
     snapshot: Snapshot
     made: bool
     not_built: list[tuple[str, str]] = field(default_factory=list)
     new_versions: list[tuple[str, str]] = field(default_factory=list)
+    skipped_labels: list[tuple[str, str]] = field(default_factory=list)
 
 
 def asset_record(
@@ -648,7 +653,22 @@ def labels_of(raw: dict) -> dict[str, dict[str, str]]:
 #: What a label may be called: what a reference carries after ``@``, and
 #: not something that reads as the start of a version's hash.
 LABEL_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
-_HEX_START = re.compile(r"^[0-9a-f]{4,}$")
+_HEX_START = re.compile(r"^[0-9a-f]{4,64}$")  # as `validate_aliases` reads "looks like a version"
+
+
+def labels_skipped(raw: dict) -> list[tuple[str, str]]:
+    """The labels of a manifest that :func:`labels_of` leaves out, for the owner to hear of."""
+    recorded = labels_of(raw)
+    skipped = []
+    models = raw.get("models") if isinstance(raw.get("models"), dict) else {}
+    for name, entry in sorted(models.items()):
+        aliases = entry.get("aliases") if isinstance(entry, dict) else None
+        if not isinstance(aliases, dict):
+            continue
+        for label in sorted(aliases):
+            if label not in recorded.get(f"model/{name}", {}):
+                skipped.append((f"model/{name}", label))
+    return skipped
 
 
 def versions_of_pipeline(
@@ -1146,7 +1166,7 @@ def make(
     if before and before[0].content() == snapshot.content():
         if before[0].built_by_run or not built_by_run:
             _note_origin(before[0].path.parent, code.top)
-            return SnapshotReport(before[0], False, not_built)
+            return SnapshotReport(before[0], False, not_built, skipped_labels=labels_skipped(raw))
 
     # A model whose bytes no snapshot of this pipeline has had is a new version
     new_versions = []
@@ -1171,4 +1191,4 @@ def make(
         snapshot.inputs,
         snapshot.labels,
     )
-    return SnapshotReport(snapshot, True, not_built, new_versions)
+    return SnapshotReport(snapshot, True, not_built, new_versions, labels_skipped(raw))
