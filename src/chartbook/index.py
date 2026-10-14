@@ -574,8 +574,11 @@ def pipeline_records(
             [compatibility] if isinstance(compatibility, str) else list(compatibility)
         )
     record["location"] = {"kind": "path", "value": base_dir.as_posix()}
-    if project.get("build"):
-        record["scripts"] = {"build": project["build"]}
+    scripts = pipeline_manifest.get("scripts") or {}
+    if not scripts and project.get("build"):
+        scripts = {"build": project["build"]}
+    if scripts:
+        record["scripts"] = {name: scripts[name] for name in sorted(scripts)}
     if "dependencies" in pipeline_manifest:
         # Absent when the manifest has no [dependencies]; empty when it has
         # the table and nothing in it

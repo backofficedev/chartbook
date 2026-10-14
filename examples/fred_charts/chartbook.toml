@@ -10,6 +10,8 @@ os_compatibility = [
     "Linux",
     "macOS",
 ]
+
+[scripts]
 build = "doit"
 
 [notebooks.01_example_notebook_interactive]

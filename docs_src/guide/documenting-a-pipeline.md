@@ -152,7 +152,31 @@ $ chartbook update       # move the pins; chartbook.lock shows the change in a d
 
 The `rate_forecast` example does exactly this, with a model trained on the `yield_curve` example's data. {ref}`[dependencies] <dependencies>` has every detail.
 
-A dependency can also be a git repository, `{ git = "https://…", rev = "v1.2" }`, for one that is not on your disk. `chartbook pin` clones it. It can pin only what that repository keeps in git, so this suits reference data and models that are committed, not data that the other pipeline builds.
+### Building it
+
+Say how the pipeline is built, in its `chartbook.toml`:
+
+```toml
+[scripts]
+build = "doit"
+```
+
+Then one command pins what you depend on, if nothing is pinned yet, and builds:
+
+```console
+$ chartbook run
+ftsfr/rate_forecast: pinning what it depends on
+ftsfr/fed_yield_curve: 3 pinned
+Wrote chartbook.lock.
+ftsfr/rate_forecast: build
+Ran build in 1 pipeline(s).
+```
+
+`chartbook run` does not build `../fed_yield_curve`. That folder is somebody's work, perhaps in the middle of a change, and your pipeline reads the pinned copy, not the folder. Whoever owns it builds it.
+
+It never moves a pin either. If the other pipeline has newer data, yours is still built against the copy you pinned, and the command tells you so. `chartbook update` is what moves a pin. See {ref}`chartbook run <chartbook-run>`.
+
+A dependency can also be a git repository, `{ git = "https://…", rev = "v1.2" }`, for one that is not on your disk. `chartbook pin` clones it, and can pin only what that repository keeps in git: reference data and models that are committed. For data that the other pipeline builds, use `chartbook run`, which builds it once in a clean copy of that commit.
 
 ## Notes and custom pages
 

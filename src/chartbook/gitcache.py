@@ -16,6 +16,8 @@ it as one.
       repos/gitlab.example.org/ftsfr/ref_data.git       one bare clone per repository
       checkouts/gitlab.example.org/ftsfr/ref_data/
         4f2a91c0…/                                      one checkout per commit
+      work/gitlab.example.org/ftsfr/ref_data/
+        4f2a91c0…/                                      a copy to build in, if run
 
 Three steps, each its own method, because only the first uses the network:
 
@@ -38,7 +40,15 @@ is shown without its credentials in every message.
 usually git-ignored, so a pipeline fetched this way has its code and its
 manifest and, typically, none of its data. What a ``git`` dependency
 declares and does not commit is "not built", exactly as for a ``path``
-dependency that has not been run. ChartBook does not run it.
+dependency that has not been run. ``chartbook pin`` does not run it.
+
+``chartbook run`` does. It makes a **working copy** of the commit, which
+is the same files and writable, and runs the dependency's ``build`` there
+(:meth:`GitCache.work_copy`), once. What that build produces can then be
+pinned. A file in the copy says the build has finished (:func:`is_built`).
+A dependency that has a working copy is pinned from it, since it holds
+everything the checkout does and whatever was built besides. The checkout
+itself is never written to.
 """
 
 from __future__ import annotations
@@ -61,6 +71,14 @@ REPOS_DIR = "repos"
 
 #: Where checkouts are: one directory per repository, one inside it per commit.
 CHECKOUTS_DIR = "checkouts"
+
+#: Where working copies are: laid out like the checkouts, and writable. A
+#: working copy is where ``chartbook run`` runs a git dependency's build.
+WORK_DIR = "work"
+
+#: A file in a working copy that says a build has finished there. It is
+#: inside the copy, so it goes when the copy goes.
+BUILT_MARKER = ".chartbook-built"
 
 #: The ref a clone keeps the repository's default branch under, so that a
 #: dependency with no ``rev`` has something to mean.
@@ -199,6 +217,62 @@ class GitCache:
         """A checkout that is already here, without running git; else None."""
         path = self.checkout_path(url, commit)
         return path if path.is_dir() else None
+
+    def work_path(self, url: str, commit: str) -> Path:
+        """Where the working copy of a repository at one commit is, or would be.
+
+        :raises ValueError: If *commit* is not a full commit hash.
+        """
+        if not _FULL_COMMIT.match(commit):
+            raise ValueError(f"{commit!r} is not a full commit hash.")
+        return self.root / WORK_DIR / repository_slug(url) / commit
+
+    def find_work(self, url: str, commit: str) -> Optional[Path]:
+        """A working copy that is already here, without running git; else None."""
+        path = self.work_path(url, commit)
+        return path if path.is_dir() else None
+
+    def files(self, url: str, commit: str) -> Optional[Path]:
+        """The best copy of a commit's files that is on this disk; else None.
+
+        The working copy if there is one, because it has what was built in
+        it as well as what was committed; otherwise the checkout.
+        """
+        return self.find_work(url, commit) or self.find(url, commit)
+
+    def work_copy(self, url: str, commit: str) -> Path:
+        """Make a writable copy of a commit's files, if there is none yet.
+
+        This is where a ``git`` dependency's build is run. It starts as the
+        checkout's files and keeps whatever a build writes into it, so a
+        second run finds the first one's work. One working copy is shared
+        by every project of this user that depends on that commit.
+
+        :returns: The working copy's directory.
+        :raises GitError: If the clone does not have the commit.
+        """
+        final = self.work_path(url, commit)
+        if final.is_dir():
+            return final
+        source = self.checkout(url, commit)
+        final.parent.mkdir(parents=True, exist_ok=True)
+        staging = final.with_name(f"{commit}.{uuid.uuid4().hex}.tmp")
+        try:
+            shutil.copytree(source, staging, symlinks=True)
+            for folder, _, names in os.walk(staging):
+                for name in names:
+                    file = os.path.join(folder, name)
+                    if not os.path.islink(file):
+                        os.chmod(file, os.stat(file).st_mode | stat.S_IWUSR)
+            try:
+                os.rename(staging, final)
+            except OSError:
+                if not final.is_dir():
+                    raise
+        finally:
+            if staging.exists():
+                shutil.rmtree(staging, ignore_errors=True)
+        return final
 
     def _git(self, *arguments: str, url: Optional[str] = None, env=None) -> str:
         """Run git, and return what it printed. Never shows a URL's credentials."""
@@ -369,6 +443,30 @@ class GitCache:
             commit=commit,
             path=self.checkout(url, commit),
         )
+
+
+def is_built(work_copy: Union[str, Path]) -> bool:
+    """Whether a working copy's build has finished: ``chartbook run`` ran it."""
+    return (Path(work_copy) / BUILT_MARKER).is_file()
+
+
+def mark_built(work_copy: Union[str, Path]) -> None:
+    """Note in a working copy that its build has finished.
+
+    A git dependency is built once for a commit. This is what says it has
+    been, so that the next run leaves it alone.
+    """
+    (Path(work_copy) / BUILT_MARKER).write_text(
+        "chartbook run finished this pipeline's build here.\n", encoding="utf-8"
+    )
+
+
+def forget_built(work_copy: Union[str, Path]) -> None:
+    """Take that note away, before a build is run there again."""
+    try:
+        (Path(work_copy) / BUILT_MARKER).unlink()
+    except FileNotFoundError:
+        pass
 
 
 def default_git_cache() -> GitCache:

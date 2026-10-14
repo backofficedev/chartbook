@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `[scripts]` and `chartbook run`
+
+A pipeline can now say how it is built, and one command gets it built.
+
+```toml
+[scripts]
+build = "doit"
+test = "pytest"
+```
+
+```console
+$ chartbook run
+ftsfr/rate_forecast: pinning what it depends on
+ftsfr/fed_yield_curve: 3 pinned
+Wrote chartbook.lock.
+ftsfr/rate_forecast: build
+Ran build in 1 pipeline(s).
+```
+
+Until now, a pipeline that read another's data was built by hand in steps: `chartbook pin`, then the build. `chartbook run` pins what has no pin yet and runs the pipeline's `build` script, so a fresh clone needs one command. `chartbook run test` runs another script by name, and in a catalog the script is run in each of the catalog's pipelines, one that another depends on first.
+
+`build` is the one script name with a meaning: it makes a pipeline's data current. A script is one string handed to a shell (`bash`, or `sh` where there is none), so one of several lines is one script and it stops at its first failing command. The command exits with the script's exit code.
+
+**It never builds in a folder the pipeline depends on.** A `path` dependency is a folder somebody works in, and they may be half-way through a change. This pipeline reads what is pinned, not what is in that folder, so building there would disturb its owner and change nothing this pipeline reads. The design had `chartbook run` build every pipeline in the dependency graph, and a first version did. The maintainer decided against it (2026-10-13): pipelines are worked on side by side, by people and by agents, and one of them must not reach into another's working directory.
+
+**It never moves a pin.** If the other pipeline has newer data, this one is still built against the copy it pinned, and the command says what has changed; `chartbook update` moves the pins. The design had `run` pick up new upstream data by default. That was decided against too: a lockfile should change only in a commit someone meant to make.
+
+**It builds a `git` dependency, once.** `chartbook pin` can pin only what a repository commits, because a clone has no built data in it. Nobody works in ChartBook's own copy of a commit, so there is nothing to disturb: `chartbook run` makes a writable copy of the checkout under `~/.chartbook/git/work/`, runs the dependency's `build` there, and pins what that produces. This is what the note under "`git` dependencies" below was waiting for. It is built once for a commit, and nothing builds it again by itself. `chartbook run --force` does, which is how data it pulls from outside is refreshed on purpose. `run` stays at the commit in the lockfile. `chartbook update` moves to a newer one, and when it does, data that was built at the old commit and is not built at the new one is let go from the lockfile, since it did not come from the commit now named; the next `chartbook run` builds it and pins it.
+
+**`[project] build` is now executed.** It has always been described as a script, and until now it was only shown on the pipeline's page. It is the same thing as `[scripts] build` and is still read; a manifest that gives both, differently, does not load. If yours holds a note and not the command that builds the pipeline (one of the examples here had `build = "module load anaconda3/3.11.4 TeXLive/2023"`), `chartbook run` will run that note. Make it the command. Nothing else reads the field differently, so this matters only once you use `chartbook run`.
+
+`index.json` lists all of a pipeline's scripts under `scripts`, where it had only `build`.
+
+Not built yet: a way for a pipeline's owner to say "this build is ready for others", so that pinning takes from that and never from the working folder (today `chartbook pin` and `chartbook update` still copy what is in a `path` dependency's folder at that moment), and `--frozen` for CI. Scripts are not tasks, and that part is on purpose: one does not depend on another, and there are no retries, no schedule and no history.
+
 ### Added — `git` dependencies
 
 A dependency no longer has to be on your disk. It can be a git repository:

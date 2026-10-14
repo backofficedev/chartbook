@@ -23,6 +23,14 @@ store. And a reference to another pipeline's asset resolves through the lockfile
 copy. Build records and `chartbook run` are not built. The notes marked *(Built: …)* say
 exactly what, and {doc}`overview` ("3a, as built" to "3e, as built") lists what was settled on
 the way, as *proposed*.
+
+2026-10-13: `[scripts]` and `chartbook run` are built. Two things below were decided
+otherwise by the maintainer first, and {doc}`overview` ("The snapshot model", under step 4)
+is what holds where this page differs. `run` never moves a pin ("Two verbs"). And a pipeline
+never reads, hashes or builds in a folder it depends on, so `run` builds the pipeline it is
+run in and does not walk the graph ("Running things", "Relationship to orchestrators"). What
+others read of a pipeline is a snapshot its owner makes on purpose, at a commit. Snapshots
+are not built yet.
 ```
 
 ## The problem
@@ -132,6 +140,11 @@ can be pinned only as far as its repository commits its outputs, and "someone wh
 repository can build it" is true of the code. Getting built data needs `chartbook run` on the
 clone, or a store to download from. Until one of those exists, `chartbook pin` says "not
 built" and says why. Decided by the maintainer 2026-10-12: build it this way now.)*
+
+*(2026-10-13: the first of those exists. Decided by the maintainer: `chartbook run` builds a
+`git` dependency, once for a commit. A checkout is read-only, so the build runs in a writable
+copy of it, `~/.chartbook/git/work/…/<commit>/`, and the dependency is pinned from that copy.
+`chartbook pin` alone still pins only what the repository commits.)*
 
 Because scope is captured from the owner path at `init`, the URL is usually inferable from the ID.
 That shortcut is a *configurable* default host, never a hardcoded one:
@@ -292,6 +305,22 @@ parallel automated work should use. This is the `npm ci` / `cargo build --locked
 a pin that exists; it pins what has none, and puts back in the store what the lockfile names
 and the store has lost. `update` is the one thing that moves a pin. There is no `run` yet, so
 `pin` is how to get started, and `update` rebuilds nothing. `--frozen` is not built.*
+
+*Added 2026-10-13, with `run` built. Decided by the maintainer before it was: **`chartbook
+run` never moves a pin.** The second sentence of the paragraph above ("By default it also
+refreshes `path` pins") is not how it works. `run` pins what has no pin, before the
+pipeline's `build`, so neither verb is needed to get started; and it leaves every pin that
+exists where it is, saying which have changed upstream. `update` is still the one thing that
+moves a pin, and still rebuilds nothing, so picking up a colleague's latest is `chartbook
+update` and then `chartbook run`. That leaves `--frozen` with less to do than this section
+gives it: there is no pin for it to refuse to move. What is left is failing when the lockfile
+is incomplete, which is not built.*
+
+*Decided the same day, and larger: where a pin's bytes come from. As built in step 3, `pin`
+and `update` copy what is in a `path` dependency's folder at that moment. The maintainer's
+model is that they choose among **snapshots**, which a pipeline's owner makes on purpose at a
+commit, and never look in the folder. See {doc}`overview`, "The snapshot model". Not built
+yet.*
 
 *The resolution rule at the top of this section is built: `chartbook.resolve._resolve_pinned`.
 A reference to another pipeline's asset goes to `[dependencies]` for the pipeline, to
@@ -566,6 +595,20 @@ pipelines. Letting scripts depend on each other would make ChartBook the orchest
 deliberately not.
 ```
 
+*(Built 2026-10-13: `chartbook.manifest.read_scripts` and `chartbook.run`. `[project] build`
+is read as the same thing as `[scripts] build`, and a script is run in its pipeline's own
+directory with `bash -e`.*
+
+*"It is what the dependency graph invokes" is not how it was built. Decided by the
+maintainer: `chartbook run` builds the pipeline it is run in, and never builds in a folder
+that pipeline depends on. That folder is somebody's work, and the pipeline reads what is
+pinned, not what is there. A first version did walk the graph and run `build` in each
+pipeline's folder; it was taken out before it was merged. Two things are left of the graph.
+A `git` dependency is built, once for a commit, in a writable copy of its checkout, which is
+how its built data comes to be pinned; `--force` builds it again. And in a catalog, the
+script is run in each of the catalog's pipelines, one that another depends on first.
+{doc}`overview`, "The snapshot model" and "4a, as built".)*
+
 ### The command surface
 
 Flat for what you type daily, grouped for what you type occasionally.
@@ -593,7 +636,10 @@ thing — `run` runs a script, `docs` builds docs, `build` builds everything.
 Of these, `check`, `path`, `browse`, `ls`, `catalog` and `install` exist. `build` still means
 "render the website" and keeps doing so until `run` exists; the rename is one breaking change,
 made once, in the same release as `run`. `docs` and `run` do not exist yet. *(`pin`, `update`,
-`store verify` and `store gc` were added 2026-10-12.)*
+`store verify` and `store gc` were added 2026-10-12. `run` was added 2026-10-13. The rename
+has not been made: it is its own part of the same step, so until then `chartbook build`
+renders the website and `[scripts] build` builds a pipeline's data. `docs` does not exist
+yet.)*
 
 `pin` and `update` stay top-level rather than sitting under `build`, because they change the
 project's dependency state rather than performing a build step — the same level as `cargo update` or
@@ -620,6 +666,11 @@ declared yet.
 
 ChartBook's runner is topological order, a process pool, an input-addressed cache and a per-asset
 lock. No daemon, no queue, no retry policy, no backfill logic, no run database, no UI.
+
+*(2026-10-13: it is less than that. Decided by the maintainer: a pipeline is not built from
+another pipeline's run, so there is no order to work out except among a catalog's own
+pipelines, and no pool. {doc}`overview`, "The snapshot model". The rest of this section, on
+exporting the graph, stands.)*
 
 Every one of those omissions is available by **exporting the graph** rather than reimplementing it.
 There are three ways to relate to an orchestrator and only one is right: depending on one kills rule

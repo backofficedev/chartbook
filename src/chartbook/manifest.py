@@ -2,11 +2,11 @@
 
 A v2 manifest has a single ``[project]`` metadata table plus the entity
 sections ``[charts]``, ``[dataframes]``, ``[notebooks]``, ``[notes]`` and
-``[models]``, and a ``[dependencies]`` table naming the pipelines it reads from
-(pipelines), or a ``[pipelines]`` registry and optional ``[policy]``
-(catalogs). Every ``[project]`` field is optional; defaults are filled at
-load time. See ``docs_src/design/toml-format-v2.md`` for the full
-specification.
+``[models]``, a ``[dependencies]`` table naming the pipelines it reads from
+and a ``[scripts]`` table of named commands (pipelines), or a ``[pipelines]``
+registry and optional ``[policy]`` (catalogs). Every ``[project]`` field is
+optional; defaults are filled at load time. See
+``docs_src/design/toml-format-v2.md`` for the full specification.
 
 v1 manifests (the old ``[config]``/``[site]``/``[pipeline]`` layout) are not
 supported; loading one raises an error pointing at the migration script.
@@ -361,6 +361,72 @@ def validate_series(dataframe_manifest: dict, dataframe_id: str) -> dict:
                 f"{where}: {key!r} has both docs_path and docs. Only one is allowed."
             )
     return series
+
+
+#: The script that makes a pipeline's assets current. It is the one name in
+#: ``[scripts]`` that ChartBook gives a meaning to: what ``chartbook run``
+#: runs by default, and what it runs once in a git dependency's clean copy.
+BUILD_SCRIPT = "build"
+
+
+def read_scripts(raw_manifest: dict) -> dict:
+    """Read a pipeline's named scripts: ``[scripts]``, and ``[project] build``.
+
+    A script is one string, run by a shell in the pipeline's directory::
+
+        [scripts]
+        build = "doit"
+        test = "pytest"
+        fetch = '''
+        module load python/3.12
+        python src/pull_wrds.py
+        '''
+
+    A value of several lines is one script, so what one line sets up the
+    next can use. ``[project] build`` is the same thing as
+    ``[scripts] build`` and is still read; a manifest gives it in one place.
+
+    Scripts are not tasks. There is no order among them and none depends
+    on another. See "Running things" in ``docs_src/design/asset-graph.md``.
+
+    :param raw_manifest: The dict parsed from chartbook.toml.
+    :returns: The scripts by name. ``build`` is in it if either table gives
+        one.
+    :raises ValueError: If the table is malformed, a name could not be
+        typed on a command line, a script is empty, or ``build`` is given
+        twice and differently.
+    """
+    scripts = raw_manifest.get("scripts")
+    if scripts is None:
+        scripts = {}
+    if not isinstance(scripts, dict):
+        raise ValueError(
+            '[scripts] must be a table of named commands, e.g. build = "doit".'
+        )
+    found = {}
+    for name, script in scripts.items():
+        if not ID_COMPONENT_PATTERN.match(name):
+            raise ValueError(
+                f"[scripts]: {name!r} is not a name a script can have. It is "
+                f"typed after `chartbook run`, so it must match [A-Za-z0-9._-]+."
+            )
+        if not isinstance(script, str) or not script.strip():
+            raise ValueError(
+                f"[scripts]: {name!r} must be a command, as a string, e.g. "
+                f'{name} = "doit".'
+            )
+        found[name] = script
+
+    project = raw_manifest.get("project")
+    old_place = project.get(BUILD_SCRIPT) if isinstance(project, dict) else None
+    if isinstance(old_place, str) and old_place.strip():
+        if BUILD_SCRIPT in found and found[BUILD_SCRIPT].strip() != old_place.strip():
+            raise ValueError(
+                "The build script is given twice, and differently: in [project] "
+                "build and in [scripts] build. Keep the one in [scripts]."
+            )
+        found.setdefault(BUILD_SCRIPT, old_place)
+    return found
 
 
 #: The keys an entry of ``[dependencies]`` may have.
@@ -792,6 +858,17 @@ def _load_pipeline_manifest(raw_manifest):
             for dataframe_id, chart_ids in dataframe_to_charts.items():
                 manifest["dataframes"][dataframe_id]["linked_charts"] = chart_ids
 
+    try:
+        scripts = read_scripts(raw_manifest)
+    except ValueError as error:
+        raise ValueError(f"{Path(base_dir) / 'chartbook.toml'}: {error}") from None
+    if scripts or "scripts" in raw_manifest:
+        manifest["scripts"] = scripts
+    if BUILD_SCRIPT in scripts:
+        # One build script, wherever it was written: pages and the policy
+        # read it from the project table
+        manifest["project"]["build"] = scripts[BUILD_SCRIPT]
+
     # Before the models, which may be trained on a dependency's data
     if "dependencies" in manifest:
         try:
@@ -1050,6 +1127,11 @@ def _load_catalog_manifest(raw_manifest):
             f"{source}: a catalog has no [dependencies]. It reads from no "
             f"pipeline; it lists them, in [pipelines]. A pipeline declares "
             f"what it depends on in its own chartbook.toml."
+        )
+    if "scripts" in raw_manifest:
+        raise ValueError(
+            f"{source}: a catalog has no [scripts]. `chartbook run` in a "
+            f"catalog runs each of its pipelines' own scripts."
         )
 
     pipelines_raw = manifest.get("pipelines") or {}

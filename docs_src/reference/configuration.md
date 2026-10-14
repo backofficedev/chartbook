@@ -52,7 +52,7 @@ Every field is optional. Types and defaults:
 | `logo` | path | bundled default |
 | `favicon` | path | bundled default |
 | `os_compatibility` | array of strings | `[]` |
-| `build` | string (multi-line allowed) | `""` |
+| `build` | string (multi-line allowed). The same as `build` in {ref}`[scripts] <scripts>` | `""` |
 | `site_dir` | path | `"./docs_src/site/"` when that directory exists |
 | `enable_data_download` | bool | `false` |
 
@@ -68,9 +68,9 @@ maintainer = "Jeremy Bejarano"
 contributors = ["Jeremy Bejarano"]
 repo_url = "https://github.com/ftsfr/crsp_treasury"
 os_compatibility = ["Windows", "Linux", "macOS"]
-build = """
-doit
-"""
+
+[scripts]
+build = "doit"
 ```
 
 The **minimal** valid pipeline manifest is an empty file — its presence alone marks a directory as a chartbook pipeline. In practice you'll usually want at least:
@@ -82,10 +82,10 @@ name = "My Pipeline"
 
 ### Build commands
 
-`build` is a single string with **shell-script semantics**: a multi-line value is one script, so environment state carries across lines:
+`build` is the command that builds the pipeline. It is a single string with **shell-script semantics**: a multi-line value is one script, so environment state carries across lines:
 
 ```toml
-[project]
+[scripts]
 build = """
 module load anaconda3/2024.02
 conda activate myenv
@@ -93,7 +93,7 @@ doit
 """
 ```
 
-Today the field is rendered on the pipeline's documentation page; the script semantics mean a future `chartbook run` can execute it as-is.
+It is shown on the pipeline's documentation page, and {ref}`chartbook run <chartbook-run>` executes it. `build` in `[project]` means the same and is still read; {ref}`[scripts] <scripts>` is where it and any other named command go.
 
 ## Pipeline Identity
 
@@ -424,10 +424,53 @@ An entry has `path` or `git`, not both.
 
 **What it does not do yet.**
 
-- **A `git` dependency has only what its repository commits.** `chartbook pin` clones it and pins the declared files that are in git. Data the other pipeline builds and git-ignores is not in a clone, and ChartBook does not run another pipeline's build, so those assets are listed as not built. Working out a repository from an ID alone (`{ rev = "…" }` with no `git`) is not supported.
+- **A `git` dependency has only what its repository commits, until it is built.** `chartbook pin` clones it and pins the declared files that are in git. Data the other pipeline builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build, so those assets are listed as not built. `chartbook run` does build it, in a copy of its checkout, and then they can be pinned. Working out a repository from an ID alone (`{ rev = "…" }` with no `git`) is not supported.
 - `data.load(pipeline=…, dataframe=…)`, with two arguments, still looks in a catalog and reads the other pipeline's own file, as it always has. It does not read this table.
 
+- `chartbook run` pins what has no pin yet, and then builds this pipeline. It never builds in a `path` dependency's folder: that is its owner's to build. It builds a `git` dependency once, in a clean copy. See {ref}`chartbook run <chartbook-run>`.
+
 A catalog has no `[dependencies]`. It reads from no pipeline; it lists them in `[pipelines]`. The design is {doc}`../design/asset-graph`.
+
+(scripts)=
+## `[scripts]` — Named Commands
+
+A pipeline names the commands that are run in it:
+
+```toml
+[scripts]
+build = "doit"
+test  = "pytest"
+fetch = """
+module load python/3.12
+python src/pull_wrds.py
+"""
+```
+
+`chartbook run` runs the first, `chartbook run test` the second. See {ref}`chartbook run <chartbook-run>`.
+
+| Rule | Example |
+|------|---------|
+| A name is letters, digits, `.`, `_` and `-`, since you type it after `chartbook run` | `build`, `fetch.wrds` |
+| A script is one string, and may not be empty | `build = "doit"` |
+| A script of several lines is **one** script: what one line sets up, the next can use | `fetch`, above |
+| It is run in the pipeline's own directory, and stops at the first command that fails | |
+
+**`build` is the one name with a meaning.** It is the script that makes this pipeline's data current. It is what `chartbook run` runs when you name no script, and what it runs, once, in a `git` dependency that is not built yet. It is shown on the pipeline's page, and written to `index.json` with the others.
+
+**`build` in `[project]` is the same thing**, and is still read. Give it in one place. A manifest that gives both, with different text, does not load.
+
+```toml
+[project]
+build = "doit"      # the same as [scripts] build = "doit"
+```
+
+```{warning}
+`chartbook run` **executes** `build`. Before `chartbook run` existed the field was only shown on a page, and some manifests keep a note there (`build = "module load anaconda3 TeXLive"`) and not the command that builds the pipeline. Make it the command.
+```
+
+**Scripts are not tasks.** One does not depend on another, and there is no order among them. What is out of date *inside* a pipeline is for the pipeline's own tool to decide: doit, Make, Snakemake.
+
+A catalog has no `[scripts]`. `chartbook run` in a catalog runs each of its pipelines' own.
 
 ## Custom Site Pages
 

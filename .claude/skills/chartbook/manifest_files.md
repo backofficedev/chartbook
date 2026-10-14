@@ -55,21 +55,37 @@ All keys are optional:
 | `logo` | string (path) | bundled default asset |
 | `favicon` | string (path) | bundled default asset |
 | `os_compatibility` | array of strings | `[]` |
-| `build` | string (multi-line allowed) | `""` |
+| `build` | string (multi-line allowed); the same as `[scripts] build` | `""` |
 | `site_dir` | string (path) | `"./docs_src/site/"` when that directory exists, else disabled |
 | `enable_data_download` | bool | `false` |
 
-`build` is a single string with **shell-script semantics**: a multi-line value
-is one script, so state (e.g. `conda activate`) carries across lines:
+### Scripts
+
+`[scripts]` names the commands that are run in a pipeline. `chartbook run <name>`
+runs one, in this pipeline.
 
 ```toml
-[project]
-build = """
+[scripts]
+build = "doit"
+test = "pytest"
+fetch = """
 module load anaconda3/2024.02
 conda activate myenv
-doit
+python src/pull.py
 """
 ```
+
+- `build` is the one reserved name: the command that makes the pipeline's data
+  current. `chartbook run` with no name runs it. It MUST be a command that builds
+  the pipeline, not a note: `chartbook run` executes it.
+- A script is a single string with **shell-script semantics**: a multi-line value
+  is one script, so state (e.g. `conda activate`) carries across lines. It runs in
+  the pipeline's directory under `bash -e` and stops at the first failing command.
+- A name matches `[A-Za-z0-9._-]+`. An empty script does not load.
+- `[project] build = "..."` is the same thing as `[scripts] build` and is still
+  read. Give it in one place; two different values do not load.
+- Scripts are not tasks: no dependencies between them, no retries, no schedule.
+- A catalog cannot have this table.
 
 ## Complete Pipeline Configuration
 
@@ -81,10 +97,10 @@ maintainer = "Jane Doe"
 contributors = ["Jane Doe", "John Smith"]
 repo_url = "https://github.com/org/sales-analytics"
 os_compatibility = ["Windows", "Linux", "macOS"]
-build = """
-doit
-"""
 site_dir = "./docs_src/site/"
+
+[scripts]
+build = "doit"
 
 [charts.monthly_sales]
 name = "Monthly Sales Overview"
@@ -170,6 +186,14 @@ table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git
   It has ONLY what its repository commits: git-ignored, built data is "not built".
   The lockfile records the commit; `chartbook update` re-fetches and follows a branch.
   A catalog cannot have this table.
+- `chartbook run` pins whatever has no pin yet and then runs THIS pipeline's
+  `build`. It never moves a pin (`chartbook update` does). It NEVER builds in a
+  `path` dependency's folder: that folder is somebody's work, and is its owner's
+  to build (run `chartbook run` there). It builds a `git` dependency once per
+  commit, in a clean writable copy of its checkout (`~/.chartbook/git/work/`),
+  so its built data can be pinned; `chartbook run --force` builds it again.
+  To move a git dependency to a newer commit: `chartbook update`, then
+  `chartbook run` (update lets go of data built at the old commit).
 
 A minimal — but complete and valid — pipeline manifest:
 

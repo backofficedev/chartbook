@@ -10,6 +10,10 @@ os_compatibility = [
     "Linux",
     "MacOS",
 ]
+
+# Named commands. `chartbook run` pins what this pipeline depends on, if
+# nothing is pinned yet, and then runs `build`.
+[scripts]
 build = "doit"
 
 # The pipelines this one reads from. The key is this pipeline's own name for

@@ -10,7 +10,10 @@ os_compatibility = [
     "Linux",
     "MacOS",
 ]
-build = "module load anaconda3/3.11.4 TeXLive/2023"
+
+# Named commands. `chartbook run` runs `build`.
+[scripts]
+build = "doit"
 
 [notebooks.01_example_notebook_interactive]
 description = "Example notebook for demonstrating how to construct a Chartbook notebook."

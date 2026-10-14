@@ -54,6 +54,7 @@ pip install -e ".[dev]"
 | `create-data-glimpses` | Create a data glimpse report for the dataframes declared in chartbook.toml |
 | `pin` | Freeze what the pipelines in `[dependencies]` have now: files into the store, hashes into `chartbook.lock` |
 | `update` | Move pins forward to what the dependencies have now |
+| `run` | Run a named script in this pipeline (default `build`, after pinning what has no pin). Never builds in a folder it depends on |
 | `store verify` | Hash every object in the store again; exit nonzero if one has changed |
 | `store gc` | Remove from the store what no lockfile names; lists and asks first |
 | `config` | Configure the default catalog path for data loading |
@@ -128,6 +129,14 @@ chartbook update [DEPENDENCY...] [--project-dir PATH]
 ```
 
 `pin` freezes what a pipeline depends on. For each `path` entry of `[dependencies]`, every asset that pipeline declares (dataframes, charts, notebooks, notes, models) is put in the store and its content hash is written to `chartbook.lock`, beside `chartbook.toml`. The lockfile is committed. It is JSON in the format of `index.json` (`"schema": "chartbook/lock/v1"`, a `records` list), with no timestamp and no absolute path, so pinning twice with nothing changed leaves it untouched. `pin` never moves a pin that exists: run again, it pins what has no pin yet, puts back in the store what the lockfile names and the store has lost (so it is what to run after cloning), and says which pinned assets have changed upstream. `update` moves pins to what the dependencies have now, for all of them or the ones named (the scope may be left off when unambiguous), and prints each old and new hash. An asset that is declared and not built is listed and left unpinned. Exit 1 when something could not be pinned: a dependency whose path holds no pipeline, or a pin whose bytes are in neither the store nor the other pipeline. A `git` dependency (`{ git = "https://…", rev = "v1.2" }`, `rev` optional) is cloned into `~/.chartbook/git/` (or `CHARTBOOK_GIT_CACHE`, or `[git] path` in settings.toml), checked out at the revision, and pinned like a directory; the lockfile records the commit, `pin` stays at it, and `update` re-fetches and follows a branch. It has only what its repository commits: built, git-ignored data is listed as not built. A pin is a copy-on-write clone where the disk has them and a full copy otherwise, never a link to the other pipeline's file, so it cannot change. Code reads the pinned copy by reference: `chartbook path other:asset`, `data.path("other:asset")`, `data.load("other:asset")`.
+
+### chartbook run
+
+```bash
+chartbook run [SCRIPT] [--force] [--project-dir PATH]
+```
+
+Runs a named script in a pipeline. `SCRIPT` is a name from `[scripts]` in `chartbook.toml`; with none given it is `build`, the script that makes a pipeline's data current (`[scripts] build = "doit"`; `[project] build` is the same thing and is still read). The script runs in the pipeline's directory, under `bash -e` (`sh` where there is no bash, `cmd` on Windows), with its output shown as it runs; the command exits with the script's exit code. For `build`, two things happen first. A `git` dependency that has not been built at its commit is built, in a writable clean copy of its checkout under `~/.chartbook/git/work/<host>/<owner>/<name>/<commit>/`, and is then pinned from that copy, which is how data it builds and does not commit gets pinned; it is built once per commit (`built already, at 4f2a91c` afterwards), and `--force` builds it again, which is how data it pulls from outside is refreshed on purpose. Then whatever the pipeline depends on and has not pinned yet is pinned (as `chartbook pin` does), so its code can read it with `data.load("other:asset")`; a fresh clone needs only `chartbook run`. It never builds in a `path` dependency's folder: that folder is somebody's working directory, the pipeline reads what is pinned and not what is there, and it is its owner's to build (by running `chartbook run` there). A pin that exists is never moved: if the other pipeline has newer data, this one is still built against the copy it pinned, the command says which assets have changed upstream, and `chartbook update` followed by `chartbook run` builds against the newer data. `run` stays at the commit in the lockfile; `chartbook update` moves it, and then lets go of the pin of anything that was built at the old commit and is not built at the new one (reported as `let go`), so that the next `chartbook run` builds and pins it. A script other than `build` pins nothing and touches no dependency; the pipeline the command is run in must have it. In a catalog, the script is run in each of the catalog's pipelines, one that another of them depends on first, and one without the script is passed over and named. Not built yet: a way for a pipeline's owner to declare a build ready for others (pinning still copies what is in a `path` dependency's folder at that moment), and `--frozen`. Scripts are not tasks: there are no dependencies between scripts, no retries, no schedule and no history.
 
 ### chartbook store verify / chartbook store gc
 
@@ -304,6 +313,7 @@ ChartBook uses a TOML configuration file (`chartbook.toml`) to define your proje
 [notebooks]        # Jupyter notebook references
 [models]           # Trained models
 [dependencies]     # Other pipelines this one reads from
+[scripts]          # Named commands; `build` is what `chartbook run` runs
 ```
 
 There is no format version key. The minimal valid pipeline manifest is an empty file — its presence alone marks a directory as a ChartBook pipeline.
@@ -338,7 +348,7 @@ site_dir = "./docs_src/site/"      # Default when that directory exists
 enable_data_download = false       # Default
 ```
 
-`build` is a single string with shell-script semantics — a multi-line value is one script, so state (e.g. `conda activate`) carries across lines.
+`build` is a single string with shell-script semantics — a multi-line value is one script, so state (e.g. `conda activate`) carries across lines. It is the same thing as `build` in `[scripts]`, which is where it and any other named command belong; `chartbook run` executes it, so it must be the command that builds the pipeline, not a note.
 
 ### Pipeline Identity
 
@@ -480,6 +490,20 @@ path = "_output/01_exploratory_analysis.ipynb"
 description = "Time series models for revenue forecasting"
 path = "_output/02_model_development.ipynb"
 ```
+
+### [scripts] - Named Commands
+
+```toml
+[scripts]
+build = "doit"
+test = "pytest"
+fetch = """
+module load python/3.12
+python src/pull_wrds.py
+"""
+```
+
+Each entry is a name and one command string. `chartbook run <name>` runs it in this pipeline; `chartbook run` alone runs `build`, the one reserved name, which means "make this pipeline's data current". A name matches `[A-Za-z0-9._-]+`; a script may not be empty; a script of several lines is one script, run in the pipeline's directory and stopped at its first failing command. `[project] build` is the same as `[scripts] build` and is still read; giving both with different text is an error. All scripts are written to the pipeline's record in `index.json` under `scripts`. Scripts do not depend on each other. A catalog cannot have this table.
 
 ### [dependencies] - Other Pipelines This One Reads From
 

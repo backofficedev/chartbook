@@ -232,7 +232,10 @@ class PinEvent:
             else now), ``moved`` (an update changed the pin), ``not_built``
             (declared, with no file to pin), ``lost`` (pinned, not in the
             store, and the other pipeline no longer has those bytes),
-            ``dropped`` (no longer declared, so no longer pinned). For a
+            ``dropped`` (no longer declared, so no longer pinned),
+            ``let_go`` (an update moved a ``git`` dependency to another
+            commit, and this was built from the one before and is not built
+            at the new one, so it is no longer pinned). For a
             whole dependency: ``removed`` (no longer in ``[dependencies]``),
             ``unreachable`` (its directory holds no pipeline), ``fetched`` (a
             ``git`` dependency was got from its repository), ``unfetched``
@@ -408,6 +411,7 @@ def _sync(
         had = before.assets_of(key)
         listed = _dependency_entry(key, entry)
         was = locked.get(key)
+        commit_moved = False
 
         if "git" in entry:
             if git_cache is None:
@@ -416,6 +420,9 @@ def _sync(
                 key, entry, was, listed, may_move, project_dir, git_cache, report
             )
             report.git.add(key)
+            commit_was = (was or {}).get("location", {}).get("commit")
+            commit_now = listed.get("location", {}).get("commit")
+            commit_moved = bool(commit_was and commit_now and commit_was != commit_now)
             pinned = any(record.get("content_hash") for record in had.values())
             if failure and (may_move or not pinned):
                 # With pins in the store and nothing asked to move, a
@@ -425,7 +432,7 @@ def _sync(
         else:
             directory = Path(entry["_resolved_path"])
         records = _sync_dependency(
-            key, directory, had, may_move, store, cache, report
+            key, directory, had, may_move, store, cache, report, commit_moved
         )
         listed = {k: v for k, v in listed.items() if k != "pinned_hash"}
         overall = pinned_hash(records.values())
@@ -503,8 +510,9 @@ def _fetch(
                     PinEvent("relocated", key, detail=_describe(listed["location"]))
                 )
             # Still the commit it was pinned at. The network is used only
-            # if this disk has lost its copy of it.
-            directory = git_cache.find(url, locked_commit)
+            # if this disk has lost its copy of it. A working copy, where
+            # `chartbook run` built it, has more in it than the checkout.
+            directory = git_cache.files(url, locked_commit)
             if directory is None:
                 git_cache.fetch(url)
                 directory = git_cache.checkout(url, locked_commit)
@@ -523,7 +531,8 @@ def _fetch(
         PinEvent("fetched", key, detail=f"{shown} at {checkout.commit[:7]}{named}")
     )
     listed = {**listed, "location": {**listed["location"], "commit": checkout.commit}}
-    return checkout.path, listed, None
+    built = git_cache.find_work(url, checkout.commit)
+    return (built or checkout.path), listed, None
 
 
 def _sync_dependency(
@@ -534,6 +543,7 @@ def _sync_dependency(
     store: Store,
     cache: hashing.HashCache,
     report: PinReport,
+    commit_moved: bool = False,
 ) -> dict[str, dict]:
     """Work out the records of one dependency's assets, pinning as needed.
 
@@ -541,6 +551,8 @@ def _sync_dependency(
         the checkout of a ``git`` dependency. None if they could not be got.
     :param had: The records the lockfile has for it now, by asset ID.
     :param may_move: Whether its existing pins may move (an update).
+    :param commit_moved: Whether this update moved a ``git`` dependency to
+        another commit than the one it was pinned at.
     :returns: Its records as they should be, by asset ID.
     """
     try:
@@ -576,6 +588,7 @@ def _sync_dependency(
             store,
             cache,
             report,
+            commit_moved,
         )
 
     # What the lockfile has that the other pipeline no longer declares
@@ -622,6 +635,7 @@ def _pin_asset(
     store: Store,
     cache: hashing.HashCache,
     report: PinReport,
+    commit_moved: bool = False,
 ) -> dict:
     """Decide what one asset's record is, storing its bytes if they are needed."""
     asset_id = str(ref)
@@ -630,13 +644,23 @@ def _pin_asset(
     if old is None or may_move:
         found = hashing.find_files(absolute)
         if found is None or not found.files:
-            if old is not None:
+            if old is not None and not commit_moved:
                 # An update with nothing to move to: the pin stays
                 _report_kept(had, key, store, report)
                 return had
-            report.events.append(
-                PinEvent("not_built", key, asset_id, detail=declared_path)
-            )
+            if old is not None:
+                # The dependency is at another commit now. This was built
+                # from the one before, and has not been built at this one.
+                # Keeping the pin would have the lockfile name a commit
+                # beside data that did not come from it, which nobody else
+                # could get back. `chartbook run` builds it and pins it.
+                report.events.append(
+                    PinEvent("let_go", key, asset_id, old=old, detail=declared_path)
+                )
+            else:
+                report.events.append(
+                    PinEvent("not_built", key, asset_id, detail=declared_path)
+                )
             return _asset_record(ref, key, declared_path, None, True)
         stored = store.put(absolute, links=PIN_LINKS)
         if old is None:
