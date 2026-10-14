@@ -1657,7 +1657,7 @@ machine that may only read it build.
 | `verify()`: can the pipeline be built from its lockfile alone, nothing written | `chartbook/lock.py`, `FrozenReport`, `FrozenProblem` |
 | `chartbook pin --frozen`, `chartbook run --frozen` | `chartbook/cli.py`, `chartbook/run.py` (`frozen=`, `on_verify=`) |
 | A read-only store does not fail `pin` | `chartbook/lock.py`, `_sync()`, `PinReport.unrooted` |
-| `gc` keeps a snapshot made from a folder not on this machine | `chartbook/snapshot.py`, `_made_elsewhere()`, `plan_removals(forget_missing=)` |
+| Labels travel with snapshots, so `gc` on another machine knows them | `chartbook/snapshot.py`, `Snapshot.labels`, `labels_of()`, `_labels_in()` |
 | The tests | `tests/test_lock.py` (`TestFrozen`), `tests/test_run.py` (`TestFrozen`), `tests/test_snapshot.py` |
 
 **What `--frozen` checks.** The lockfile exists if the manifest has dependencies; every
@@ -1675,25 +1675,51 @@ It opens no repository and uses no network. `run --frozen` skips the pin and the
 2. **`--frozen` is a flag on `pin` and `run`, not a command, and not on `check`.** `check`
    never reads the store or the lockfile; keeping that so is the reason, and the open question
    above asks whether CI would rather have one command.
-3. **A snapshot made from a folder this machine cannot see is kept by `gc`**, before the
-   newest-of-its-pipeline rule, so the reason reads "made from a folder that is not on this
-   machine". `--forget-missing`, which already says a lockfile that is gone is gone, says the
-   same of such a folder. The cost: a deleted project's snapshots stay until someone passes
-   it. The alternative, removing what another machine's labels may point at, is data loss.
-4. **A read-only store is a note, not a failure.** The only write `pin` needs in the store,
-   with the objects already there from a snapshot, is the root note for `gc`; so the store's
-   owner is the one who runs `gc`, and a `pin` that could not leave the note says so once.
+3. **Labels travel with snapshots.** A snapshot records the model versions its manifest's
+   `[models.x.aliases]` named when it was made, and `gc` reads those as well as the folder's
+   manifest. So a label given on one machine is known to a `gc` on another, as of the last
+   snapshot made after the label. The first design here kept every snapshot whose folder this
+   machine cannot see; the review found that a CI runner's checkout is such a folder the
+   moment the job ends, so that rule would have kept every nightly snapshot for ever, and it
+   was replaced by this. What is still not known across machines: a label given after the
+   last snapshot, and which snapshot a branch tip on another machine pins from.
+4. **A read-only store is a note, not a failure, for a `path` dependency pinned from a
+   snapshot.** The only write that `pin` needs in the store then is the root note for `gc`;
+   so the store's owner is the one who runs `gc`, and a `pin` that could not leave the note
+   says so once. Only a permission error is treated so; a disk that is full is still an
+   error, and a half-written note is removed. What has to write the store (a `git`
+   dependency's first pin, `--from-folder`, `snapshot`) stops with a message that says the
+   store is read-only and what to do.
 5. **Nothing new in the store's layout.** Sharing is a path in `settings.toml`, which existed.
    Snapshots were already the store's own bytes (`snapshot.LINKS` is reflink then copy), which
    is what makes a shared disk work; it is recorded here because it was found, not made.
 
-**Known gaps.** Two machines that `gc` the same shared store each keep the other's snapshots,
-so a shared store is cleared by its owner, from the machine the snapshots were made on, or with
-`--forget-missing` and care. The `origins` note and the `roots` note hold paths from the machine
-that wrote them, which mean nothing elsewhere; `gc` already treats both as "cannot be found". A
-lockfile does not say which store its pins went into; `--frozen` checks the store this machine is
-pointed at. Concurrent writers to a shared store rely on each file being written whole and then
-renamed into place, which is what the store does; nothing locks the store as a whole.
+**What an adversarial review found before merge** (2026-10-14; eleven findings, each fixed
+with a test unless said otherwise): the gc rule above, which would have kept every CI
+snapshot for ever (replaced); "a read-only store still pins" was true only for a `path`
+dependency from a snapshot, and a `git` dependency's pin failed with a bare errno (the
+message now says the store is read-only and what to do; the docs say which pins write);
+every `OSError` from the gc note was reported as "read-only", so a full disk passed silently
+and left a half-written note (the catch is permission errors only, the note is whole or not
+at all); `run --frozen` skipped `verify()` when the manifest had no dependencies, although
+the lockfile might still list one, and `--frozen` on a non-`build` script was ignored (both
+fixed: `run --frozen` always verifies; a non-`build` script with `--frozen` is refused);
+`verify()`'s remedy for a pin the store lacks said `chartbook pin`, which never re-stores a
+`path` dependency's lost pin (the remedy now depends on the kind); `--forget-missing` on a
+shared store discards other machines' pins and nothing said so (the help, the hint and the
+docs do); the `store gc` reference and docstring listed the old rules (updated); the
+read-only note was wrong on the `remove_root` path (reworded); the read-only test only
+chmod'ed `roots/` (a fully read-only store is tested, from a snapshot); a lockfile entry
+without an `id` was a `KeyError` (a `LockError` with a remedy); a docstring's rule numbers.
+
+**Known gaps.** A shared store is cleared by its owner, from the machine the snapshots were
+made on, and without `--forget-missing`: another machine's lockfile cannot be found from
+here, so a writable `roots/` is what lets its pins be known, and a label given after the
+last snapshot, or a branch tip on another machine, is not known at all. The `origins` note and
+the `roots` note hold paths from the machine that wrote them. A lockfile does not say which
+store its pins went into; `--frozen` checks the store this machine is pointed at. Concurrent
+writers to a shared store rely on each file being written whole and then renamed into place,
+which is what the store does; nothing locks the store as a whole.
 
 ### Step 5. Data in databases
 

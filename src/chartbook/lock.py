@@ -57,6 +57,7 @@ in ``docs_src/design/asset-graph.md``.
 from __future__ import annotations
 
 import hashlib
+import errno
 import json
 import os
 import uuid
@@ -295,10 +296,11 @@ class PinReport:
             this run, by key.
         from_folder: The ``path`` dependencies that were pinned from what
             was in their folder, because that was asked for.
-        unrooted: Why the store could not take a note of this lockfile, when
-            it could not: it is read-only, as a store a team shares may be
-            for everyone but its owner. The pins are made all the same; the
-            store's ``gc`` will not know of them.
+        unrooted: Why the store's note of this lockfile could not be
+            written or removed, when it could not: the store is read-only
+            for this user, as a store a team shares may be for everyone but
+            its owner. The lockfile is written all the same; the store's
+            ``gc`` goes by the note it has, if any.
     """
 
     lockfile: Path
@@ -470,10 +472,17 @@ def _sync(
         else:
             store.remove_root(lock_path)
     except OSError as error:
+        if not is_read_only(error):
+            raise
         # A store that is read-only for this user: the pins are in it, the
         # lockfile names them, and only the note for `gc` is missing
         report.unrooted = str(error)
     return report
+
+
+def is_read_only(error: OSError) -> bool:
+    """Whether an error says the place could not be written for want of permission."""
+    return isinstance(error, PermissionError) or error.errno in (errno.EROFS, errno.EACCES, errno.EPERM)
 
 
 @dataclass
@@ -555,6 +564,11 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                 )
             )
         return report
+    if any(not isinstance(entry.get("id"), str) for entry in locked.dependencies):
+        raise LockError(
+            f"{lock_path} lists a dependency without an id. The file is not one "
+            f"ChartBook wrote; run `chartbook pin` to write it again."
+        )
     entries = {entry["id"]: entry for entry in locked.dependencies}
     for key in sorted(dependencies):
         entry = entries.get(key)
@@ -588,13 +602,17 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                     )
                 )
             elif not store.has(content_hash):
+                if entry.get("via") == "rev":
+                    remedy = "`chartbook pin`, where the store can be written, puts it back from the repository"
+                else:
+                    remedy = f"`chartbook update {key}` moves to a snapshot the store has"
                 report.problems.append(
                     FrozenProblem(
                         key,
                         asset_id,
                         f"is pinned at {content_hash[:19]}… and the store at {store.root} "
-                        f"does not have it. Run `chartbook pin` where the store can be written, "
-                        f"or point CHARTBOOK_STORE at the store that has it.",
+                        f"does not have it. Point CHARTBOOK_STORE at the store that has it; "
+                        f"or {remedy}.",
                     )
                 )
             else:
@@ -1179,9 +1197,9 @@ def plan_gc(
 
     :param store: The store; this user's by default.
     :param forget_missing: If True, a lockfile that cannot be found keeps
-        nothing, and is forgotten when the plan is carried out; and a
-        snapshot made from a folder that is not on this machine is judged
-        like any other, instead of being kept.
+        nothing, and is forgotten when the plan is carried out. On a store
+        a team shares, every other machine's lockfile is one that cannot be
+        found from here.
     :param recent_seconds: An unnamed object newer than this is left alone.
     :param keep_days: How long an unpinned snapshot that is not the newest
         of its pipeline is kept.
@@ -1214,11 +1232,7 @@ def plan_gc(
 
     try:
         snapshots = snapshot.plan_removals(
-            store,
-            pinned_snapshots,
-            hashes_of_missing,
-            keep_days=keep_days,
-            forget_missing=forget_missing,
+            store, pinned_snapshots, hashes_of_missing, keep_days=keep_days
         )
     except snapshot.SnapshotError as error:
         raise LockError(str(error)) from None

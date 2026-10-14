@@ -1719,13 +1719,13 @@ def _run_pin(project_dir, dependencies=None, from_folder=False):
         else:
             report = lock.update(project_dir, dependencies, from_folder=from_folder)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
     _echo_pin_report(report)
     if report.unrooted:
         click.echo(
-            f"The store is read-only for you, so it has no note of this lockfile "
-            f"and its `store gc` will not know these pins ({report.unrooted})."
+            f"The store is read-only for you, so its note of this lockfile could not "
+            f"be updated, and its `store gc` goes by the note it has ({report.unrooted})."
         )
     if report.problems:
         click.echo(
@@ -1814,6 +1814,27 @@ def pin(project_dir, frozen, from_folder):
     _run_pin(project_dir, from_folder=from_folder)
 
 
+def _explain_os_error(error):
+    """An OSError as a sentence: what a read-only store means, else the error."""
+    from chartbook import lock
+    from chartbook.store import default_store
+
+    if isinstance(error, OSError) and lock.is_read_only(error):
+        try:
+            root = str(default_store().root)
+        except Exception:  # pragma: no cover - the store path is unreadable
+            root = ""
+        if root and str(getattr(error, "filename", "") or "").startswith(root):
+            return (
+                f"The store at {root} is read-only for you, and this had to write "
+                f"it: a git dependency's first pin, --from-folder, and a snapshot "
+                f"all put files into the store. Do it where the store can be "
+                f"written; or, if the store already has what the lockfile names, "
+                f"use --frozen. ({error})"
+            )
+    return str(error)
+
+
 def _run_frozen(project_dir):
     """Say whether a pipeline can be built from its lockfile alone; exit 1 if not."""
     from chartbook import lock
@@ -1822,7 +1843,7 @@ def _run_frozen(project_dir):
     try:
         report = lock.verify(resolve_project_dir(project_dir))
     except (lock.LockError, StoreError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
     _echo_frozen_report(None, report)
     if report.problems:
@@ -2028,7 +2049,7 @@ def _run_script(project_dir, script, force=False, snapshot=False, frozen=False):
             on_verify=_echo_frozen_report,
         )
     except (runner.RunError, lock.LockError, StoreError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
 
     if report.failed is not None:
@@ -2102,7 +2123,7 @@ def _format_bytes(size):
 @click.option(
     "--forget-missing",
     is_flag=True,
-    help="Stop keeping the pins of a lockfile that cannot be found",
+    help="Stop keeping the pins of a lockfile that cannot be found (on a store a team shares, that is every other machine's)",
 )
 @click.option(
     "--keep-days",
@@ -2120,13 +2141,16 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
     snapshot: what `chartbook snapshot` kept of a pipeline at a commit.
 
     A snapshot is kept if a lockfile pins it, if it is the newest of its
-    pipeline, if a label in that pipeline's chartbook.toml points at a model
-    version in it, or if it was made in the last 30 days (--keep-days).
-    Otherwise it may be removed, and what only it named goes with it.
+    pipeline, if a label points at a model version in it (in that
+    pipeline's chartbook.toml, or as any snapshot of it recorded), or if it
+    was made in the last 30 days (--keep-days). Otherwise it may be
+    removed, and what only it named goes with it.
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
-    --forget-missing to let those go.
+    --forget-missing to let those go. On a store a team shares, every other
+    machine's lockfile is one that cannot be found from here, so there the
+    store's owner runs gc without it.
 
     What would be removed is listed, and nothing is removed until you say
     yes. An object stored in the last hour is never removed: a pin puts
@@ -2180,7 +2204,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
     ):
         click.echo(
             "  A lockfile that cannot be found keeps every snapshot that holds "
-            "something it named. --forget-missing lets them go."
+            "something it named. --forget-missing lets them go; on a store a team "
+            "shares, that includes what other machines pin."
         )
 
     if not plan.delete and not plan.snapshots_delete:

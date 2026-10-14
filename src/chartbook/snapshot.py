@@ -167,6 +167,11 @@ class Snapshot:
         inputs: What the pipeline itself was pinned to when the snapshot
             was made: the dependencies of its own lockfile, each with its
             commit and its ``pinned_hash``. Empty if it has no lockfile.
+        labels: The model versions the pipeline's manifest labelled when
+            the snapshot was made, by the model's reference: ``{"model/x":
+            ["7f3a9c2e41b0"]}``. Labels travel with snapshots so that a
+            machine that cannot read the folder they were made from, a
+            store a team shares, still knows which versions to keep.
     """
 
     pipeline: str
@@ -177,6 +182,7 @@ class Snapshot:
     path: Optional[Path] = None
     built_with: dict = field(default_factory=dict, compare=False)
     inputs: list = field(default_factory=list, compare=False)
+    labels: dict = field(default_factory=dict, compare=False)
 
     @property
     def built_by_run(self) -> bool:
@@ -214,6 +220,8 @@ class Snapshot:
             document["built_with"] = self.built_with
         if self.inputs:
             document["inputs"] = self.inputs
+        if self.labels:
+            document["labels"] = {name: sorted(self.labels[name]) for name in sorted(self.labels)}
         document["records"] = [self.assets[name] for name in sorted(self.assets)]
         return document
 
@@ -424,6 +432,7 @@ def read(path: Union[str, Path]) -> Snapshot:
             path=path,
             built_with=dict(document.get("built_with") or {}),
             inputs=list(document.get("inputs") or []),
+            labels={k: list(v) for k, v in (document.get("labels") or {}).items()},
         )
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise SnapshotError(f"Cannot read the snapshot {path}: {error}") from None
@@ -607,12 +616,36 @@ def origins(store: Store, taken: Snapshot) -> list[Path]:
     return [Path(line) for line in lines if line and os.path.isabs(line)]
 
 
-def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
-    """The labels of each model of one pipeline, as its manifest has them now.
+def labels_of(raw: dict) -> dict[str, set[str]]:
+    """The model versions a manifest's ``[models.x.aliases]`` point at.
 
-    Read from the manifest in each folder the pipeline's snapshots were
+    :returns: For each model's reference, the starts of the hashes its
+        labels name. Only what a label may say counts: twelve or more hex
+        digits; anything shorter would keep every snapshot for ever.
+    """
+    pointed: dict[str, set[str]] = {}
+    models = raw.get("models") if isinstance(raw.get("models"), dict) else {}
+    for name, entry in models.items():
+        aliases = entry.get("aliases") if isinstance(entry, dict) else None
+        if not isinstance(aliases, dict):
+            continue
+        for version in aliases.values():
+            if isinstance(version, str) and VERSION_PATTERN.match(version):
+                pointed.setdefault(f"model/{name}", set()).add(version.split(":", 1)[-1])
+    return pointed
+
+
+def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
+    """The labels of each model of one pipeline: as its manifest has them
+    now, and as its snapshots recorded them.
+
+    The manifest is read from each folder the pipeline's snapshots were
     made from. A folder that is gone, or whose manifest cannot be read,
-    says nothing.
+    says nothing; and that is the case for every snapshot made on another
+    machine, in a store a team shares, and for one made in a checkout that
+    was thrown away. So each snapshot's own record of the labels its
+    manifest had when it was made counts too. A label given after the
+    last snapshot is known only where the folder is.
 
     :returns: For each model's reference, the starts of the hashes its
         labels point at.
@@ -620,6 +653,8 @@ def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
     pointed: dict[str, set[str]] = {}
     seen: set[Path] = set()
     for taken in group:
+        for name, starts in taken.labels.items():
+            pointed.setdefault(name, set()).update(starts)
         for top in origins(store, taken):
             directory = top / taken.subdirectory if taken.subdirectory else top
             if directory in seen:
@@ -629,18 +664,8 @@ def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
                 raw = _read_manifest_file(directory)
             except (OSError, ValueError):
                 continue
-            models = raw.get("models") if isinstance(raw.get("models"), dict) else {}
-            for name, entry in models.items():
-                aliases = entry.get("aliases") if isinstance(entry, dict) else None
-                if not isinstance(aliases, dict):
-                    continue
-                for version in aliases.values():
-                    # Only what a label may say: twelve or more hex digits.
-                    # Anything shorter would keep every snapshot for ever.
-                    if isinstance(version, str) and VERSION_PATTERN.match(version):
-                        pointed.setdefault(f"model/{name}", set()).add(
-                            version.split(":", 1)[-1]
-                        )
+            for name, starts in labels_of(raw).items():
+                pointed.setdefault(name, set()).update(starts)
     return pointed
 
 
@@ -705,31 +730,12 @@ class SnapshotPlan:
         return hashes
 
 
-def _made_elsewhere(store: Store, group: list[Snapshot]) -> set[Path]:
-    """The snapshots of one pipeline made from a folder that is not here.
-
-    Rules 3 and 4 of :func:`plan_removals` read that folder: its branches
-    and tags, and its manifest's labels. A store a team shares holds
-    snapshots made on other machines, whose folders this one cannot see,
-    so this machine cannot know whether a label points into one of them or
-    a branch pins from it. It does not guess; it keeps them.
-
-    :returns: The records' paths.
-    """
-    elsewhere: set[Path] = set()
-    for taken in group:
-        if any(not top.is_dir() for top in origins(store, taken)):
-            elsewhere.add(taken.path)
-    return elsewhere
-
-
 def plan_removals(
     store: Store,
     pinned: set[tuple[str, str]],
     hashes_of_missing: set[str] = frozenset(),
     keep_days: float = KEEP_DAYS,
     now: Optional[datetime] = None,
-    forget_missing: bool = False,
 ) -> SnapshotPlan:
     """Say which snapshots may be removed. Nothing is removed.
 
@@ -738,14 +744,12 @@ def plan_removals(
     1. a lockfile pins it (its commit and time are named by a dependency);
     2. a lockfile that cannot be found named one of its objects when it was
        last pinned;
-    3. it was made from a folder that is not on this machine (a store a
-       team shares; or a project that was deleted), since rules 4 and 5
-       read that folder and cannot. *forget_missing* turns this off;
-    4. it is the newest snapshot of its pipeline, or the newest that a
+    3. it is the newest snapshot of its pipeline, or the newest that a
        branch or a tag of the repository it came from can pin from;
-    5. a label in the pipeline's manifest, read from the folder the
-       snapshots were made from, points at a model version it holds;
-    6. it was made in the last *keep_days* days.
+    4. a label points at a model version it holds: in the pipeline's
+       manifest, read from the folder the snapshots were made from, or as
+       recorded in any snapshot of the pipeline (:func:`labels_of`);
+    5. it was made in the last *keep_days* days.
 
     Otherwise it may be removed. What it names and nothing else names is
     then removed with it, by :func:`chartbook.lock.plan_gc`.
@@ -754,8 +758,6 @@ def plan_removals(
         pin.
     :param hashes_of_missing: The objects named by lockfiles that cannot be
         found and are not to be forgotten.
-    :param forget_missing: Judge a snapshot whose folder is gone like any
-        other, instead of keeping it.
     :raises SnapshotError: If a record cannot be read.
     """
     now = now if now is not None else datetime.now(timezone.utc)
@@ -767,14 +769,11 @@ def plan_removals(
         newest = group[-1]
         labels = _labels_in(store, group)
         pinnable = _pinnable(store, group)
-        elsewhere = set() if forget_missing else _made_elsewhere(store, group)
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
             elif taken.hashes() & set(hashes_of_missing):
                 why = "a lockfile that cannot be found named what it holds"
-            elif taken.path in elsewhere:
-                why = "it was made from a folder that is not on this machine"
             elif taken is newest:
                 why = "it is the newest of its pipeline"
             elif taken.path in pinnable:
@@ -1049,6 +1048,7 @@ def make(
         assets,
         built_with=_built_with(built_by_run),
         inputs=_inputs(directory),
+        labels={name: sorted(starts) for name, starts in labels_of(raw).items()},
     )
     before = find(store, code.commit, code.subdirectory)
     if before and before[0].content() == snapshot.content():
@@ -1077,5 +1077,6 @@ def make(
         path,
         snapshot.built_with,
         snapshot.inputs,
+        snapshot.labels,
     )
     return SnapshotReport(snapshot, True, not_built, new_versions)

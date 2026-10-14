@@ -489,6 +489,11 @@ def run(
         raise RunError(
             "--frozen writes nothing, and --snapshot writes a snapshot. One or the other."
         )
+    if frozen and not building:
+        raise RunError(
+            f"--frozen is about what `{BUILD_SCRIPT}` pins before it runs, and "
+            f"`chartbook run {script}` pins nothing, so `--frozen` has nothing to check."
+        )
     # Under --frozen a git dependency is neither fetched nor built: what is
     # pinned of it has to be in the store already, and verify() checks that
     steps = plan(here, git_cache, git=building and not frozen, force=force)
@@ -557,8 +562,10 @@ def run(
                 f"Take it out of the script."
             )
 
-        if building and step.has_dependencies and frozen:
-            # Nothing is written. Either every pin can be had, or nothing runs.
+        if building and frozen:
+            # Nothing is written. Either every pin can be had, or nothing
+            # runs. Checked whether or not the manifest has dependencies
+            # now: a lockfile may still list one it dropped.
             checked = lock.verify(step.directory, store)
             if on_verify is not None:
                 on_verify(step, checked)

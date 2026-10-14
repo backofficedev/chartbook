@@ -197,10 +197,46 @@ class TestFrozen:
         refused = CliRunner().invoke(main, ["pin", "--frozen", "--from-folder", "--project-dir", str(downstream)])
         assert refused.exit_code == 1 and "One or the other" in refused.output
 
+    def test_a_full_disk_is_still_an_error_and_leaves_no_half_written_note(self, downstream, rates, store, monkeypatch):
+        """Found by a reviewer: every OSError was read as "read-only"."""
+        import errno
+        import json
+
+        _train(rates)
+        pin_folder(downstream, store)
+        store.remove_root(downstream / lock.LOCK_FILE)
+
+        def full(*args, **kwargs):
+            raise OSError(errno.ENOSPC, "No space left on device")
+
+        monkeypatch.setattr(json, "dump", full)
+        with pytest.raises(OSError, match="No space left"):
+            pin_folder(downstream, store)
+        assert not list((store.root / "roots").glob("*.tmp"))
+
+    def test_a_lockfile_entry_without_an_id_is_a_lock_error(self, downstream, rates, store):
+        import json
+
+        _train(rates)
+        pin_folder(downstream, store)
+        path = downstream / lock.LOCK_FILE
+        document = json.loads(path.read_text())
+        del document["records"][0]["dependencies"][0]["id"]
+        path.write_text(json.dumps(document))
+        with pytest.raises(lock.LockError, match="without an id"):
+            lock.verify(downstream, store)
+
+    def test_the_remedy_for_a_lost_pin_depends_on_the_kind(self, downstream, rates, store):
+        """Found by a reviewer: `chartbook pin` never re-stores a path dependency's lost pin."""
+        _train(rates)
+        pin_folder(downstream, store)
+        store.delete(HELLO)
+        (problem,) = lock.verify(downstream, store).problems
+        assert "`chartbook update acme/rates` moves to a snapshot the store has" in problem.message
+
     @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a store this user cannot write")
-    def test_a_store_that_is_read_only_still_pins(self, downstream, rates, store):
-        """A store a team shares, read-only for everyone but its owner: the
-        pins are in it, the lockfile names them, and only gc's note is missing."""
+    def test_a_read_only_roots_folder_is_a_note_not_a_failure(self, downstream, rates, store):
+        """Only the note for gc could not be left; the pins are made."""
         _train(rates)
         pin_folder(downstream, store)  # the objects get into the store
         (downstream / lock.LOCK_FILE).unlink()

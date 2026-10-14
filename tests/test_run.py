@@ -420,6 +420,19 @@ class TestFrozen:
     def test_frozen_and_snapshot_are_one_or_the_other(self, reader):
         with pytest.raises(RunError, match="One or the other"):
             run.run(reader, echo=_quiet, frozen=True, snapshot=True)
+        with pytest.raises(RunError, match="has nothing to check"):
+            run.run(reader, "test", echo=_quiet, frozen=True)
+
+    def test_a_frozen_run_checks_the_lockfile_even_with_no_dependencies_left(self, reader, work):
+        """Found by a reviewer: a manifest that dropped its last dependency,
+        with the lockfile still listing it, built under --frozen."""
+        _ready(work / "upstream")
+        lock.pin(reader)
+        _pipeline(reader, {"build": "mkdir -p _output && echo alone > _output/read.txt"})
+        said = []
+        report = run.run(reader, echo=_quiet, frozen=True, on_verify=lambda step, r: said.append(r))
+        assert report.failed is not None
+        assert "no longer in [dependencies]" in said[0].problems[0].message
 
     def test_the_command(self, reader, work, monkeypatch):
         from click.testing import CliRunner
