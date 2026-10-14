@@ -45,8 +45,10 @@ chartbook create-data-glimpses  # Create data summary report
 chartbook run --snapshot    # In a pipeline OTHERS depend on: build, then declare the build ready (a snapshot). Refuses BEFORE building if anything in its folder is uncommitted
 chartbook snapshot          # The second half alone: copies its built assets to the store, labelled with the commit. Takes your word that they were built by that commit
 chartbook pin               # Freeze what [dependencies] have: each one's newest snapshot (never its folder); hashes and commit into chartbook.lock (commit it); clones git dependencies
+chartbook pin --frozen      # Writes NOTHING. Exit 1 unless chartbook.lock is complete and every pin is in the store. For CI and a read-only shared store
 chartbook update [dep...]   # Move pins forward to each dependency's newest snapshot (pin never moves an existing pin)
 chartbook run               # Pin what has no pin, then run this pipeline's [scripts] build. Never moves a pin. NEVER builds in a folder it depends on
+chartbook run --frozen      # Pin nothing, fetch nothing, write nothing; build only if every pin is in the store (CI). Not with --snapshot
 chartbook run <script>      # ...or another named script, e.g. `chartbook run test` (pins nothing)
 chartbook run --force       # Also rebuild git dependencies (each is built once, in a clean copy); refreshes data they pull from outside
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, or CHARTBOOK_STORE); exit 1 if an object changed

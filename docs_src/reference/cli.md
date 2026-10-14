@@ -532,6 +532,19 @@ Wrote chartbook.lock.
 
 The folder may be half-built, and the lockfile then names no commit, because nothing says which one those bytes came from. Do not commit a lockfile made this way. The next plain `chartbook update` moves back to a snapshot.
 
+**`--frozen`: say, and write nothing.** For CI, and for anyone whose store is read-only. `chartbook pin --frozen` pins nothing, fetches nothing and writes nothing, not the lockfile, not the store. It reads `[dependencies]`, `chartbook.lock` and the store, and exits `1` unless the pipeline can be built from its lockfile alone: every dependency pinned, from where the manifest says it is; every asset built when it was pinned; every pin in the store.
+
+```console
+$ chartbook pin --frozen
+ftsfr/fed_yield_curve:model/term_premium_ar1: was declared and not built when it was pinned. Build it there, declare it ready, and `chartbook update`.
+1 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.
+
+$ chartbook pin --frozen
+4 pin(s) of 1 dependency, all in the store. Nothing written.
+```
+
+Where `pin` records an asset that was not built and goes on, `--frozen` counts it a problem: the build that follows may need it.
+
 ## chartbook update
 
 ```console
@@ -661,6 +674,15 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 
 A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`.
 
+**`--frozen`.** Pin nothing and write nothing before the build: not the lockfile, not the store, and no `git` dependency is fetched or built. The build runs only if `chartbook pin --frozen` would pass; otherwise nothing runs and the problems are listed. `--frozen` and `--snapshot` are one or the other.
+
+```console
+$ chartbook run --frozen
+ftsfr/rate_forecast: 4 pin(s) of 1 dependency, all in the store. Nothing written.
+ftsfr/rate_forecast: build
+Ran build in 1 pipeline(s).
+```
+
 ## chartbook store
 
 The store is a folder of files kept under the hash of what is in them. It is where `chartbook pin` keeps its copies of other pipelines' data.
@@ -671,6 +693,8 @@ It is at `~/.chartbook/store/`. To put it somewhere else, set `CHARTBOOK_STORE`,
 [store]
 path = "/a/bigger/disk/chartbook-store"
 ```
+
+**A store a team shares.** Point every machine's `[store] path` (or `CHARTBOOK_STORE`) at one folder on a shared disk, and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: `pin` still pins, and says that the store could not take its note of the lockfile, which only `store gc` uses. `--frozen` writes nothing at all, and is what CI should run. `store gc` keeps a snapshot made from a folder it cannot see (another machine's checkout), since it cannot read that folder's branches and labels; `--forget-missing` turns that off, for the owner clearing out a project that is gone.
 
 ### store verify
 

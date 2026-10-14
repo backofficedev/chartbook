@@ -122,6 +122,101 @@ def downstream(work, rates):
     return directory
 
 
+class TestFrozen:
+    """`--frozen`: nothing written; either every pin can be had, or no."""
+
+    def _ok(self, downstream, store):
+        report = lock.verify(downstream, store)
+        assert report.problems == [], [p.message for p in report.problems]
+        return report
+
+    def test_no_lockfile_is_a_problem_when_there_are_dependencies(self, downstream, store, work):
+        report = lock.verify(downstream, store)
+        assert report.dependencies == 1 and report.pins == 0
+        (problem,) = report.problems
+        assert "does not exist" in problem.message and "1 dependency" in problem.message
+        assert not (downstream / lock.LOCK_FILE).exists() and not (work / "store").exists()
+        # ...and no problem at all for a pipeline with nothing to pin
+        alone = work / "alone"
+        _write_manifest(alone, {"project": {"id": "alone"}})
+        assert lock.verify(alone, store).problems == []
+
+    def test_every_pin_in_the_store_is_no_problem_and_writes_nothing(self, downstream, rates, store):
+        _train(rates)
+        pin_folder(downstream, store)
+        before = (downstream / lock.LOCK_FILE).read_bytes()
+        report = self._ok(downstream, store)
+        assert (report.dependencies, report.pins) == (1, 4)
+        assert (downstream / lock.LOCK_FILE).read_bytes() == before
+
+    def test_an_asset_not_built_when_pinned_is_a_problem(self, downstream, store):
+        """The stricter choice the design kept for --frozen."""
+        pin_folder(downstream, store)  # the model is declared and not built
+        (problem,) = lock.verify(downstream, store).problems
+        assert problem.asset == "acme/rates:model/ar1" and "not built when it was pinned" in problem.message
+
+    def test_a_pin_the_store_has_lost_is_a_problem(self, downstream, rates, store):
+        _train(rates)
+        pin_folder(downstream, store)
+        store.delete(HELLO)
+        (problem,) = lock.verify(downstream, store).problems
+        assert problem.asset == "acme/rates:treasury" and "does not have it" in problem.message
+        assert "CHARTBOOK_STORE" in problem.message
+
+    def test_the_manifest_and_the_lockfile_must_agree(self, downstream, rates, store, work):
+        _train(rates)
+        pin_folder(downstream, store)
+        # A dependency added since
+        _write_manifest(work / "other", {"project": {"id": "other"}})
+        _depend(downstream, acme__rates={"path": "../rates"}, other={"path": "../other"})
+        (problem,) = lock.verify(downstream, store).problems
+        assert problem.dependency == "other" and "not in the lockfile" in problem.message
+        # ...one taken away
+        _depend(downstream)
+        (problem,) = lock.verify(downstream, store).problems
+        assert problem.dependency == "acme/rates" and "no longer in [dependencies]" in problem.message
+        # ...one that moved
+        _depend(downstream, acme__rates={"path": "../elsewhere"})
+        problems = lock.verify(downstream, store).problems
+        assert any("is pinned from ../rates and [dependencies] now says ../elsewhere" in p.message for p in problems)
+
+    def test_the_command_exits_one_and_writes_nothing(self, downstream, rates, store, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        monkeypatch.setenv("CHARTBOOK_STORE", str(store.root))
+        result = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(downstream)])
+        assert result.exit_code == 1 and "does not exist" in result.output
+        assert "Nothing written" in result.output and not (downstream / lock.LOCK_FILE).exists()
+        _train(rates)
+        pin_folder(downstream, store)
+        result = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(downstream)])
+        assert result.exit_code == 0, result.output
+        assert "4 pin(s) of 1 dependency, all in the store. Nothing written." in result.output
+        refused = CliRunner().invoke(main, ["pin", "--frozen", "--from-folder", "--project-dir", str(downstream)])
+        assert refused.exit_code == 1 and "One or the other" in refused.output
+
+    @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a store this user cannot write")
+    def test_a_store_that_is_read_only_still_pins(self, downstream, rates, store):
+        """A store a team shares, read-only for everyone but its owner: the
+        pins are in it, the lockfile names them, and only gc's note is missing."""
+        _train(rates)
+        pin_folder(downstream, store)  # the objects get into the store
+        (downstream / lock.LOCK_FILE).unlink()
+        store.remove_root(downstream / lock.LOCK_FILE)
+        roots = store.root / "roots"
+        mode = roots.stat().st_mode
+        os.chmod(roots, 0o555)
+        try:
+            report = pin_folder(downstream, store)
+        finally:
+            os.chmod(roots, mode)
+        assert report.written and "Permission denied" in report.unrooted
+        assert set(_statuses(report).values()) == {"pinned"}
+        assert lock.verify(downstream, store).problems == []
+
+
 def _train(rates: Path) -> None:
     """Build the upstream's model: a directory of two files."""
     (rates / "_models" / "ar1" / "weights").mkdir(parents=True, exist_ok=True)

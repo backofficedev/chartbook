@@ -705,12 +705,31 @@ class SnapshotPlan:
         return hashes
 
 
+def _made_elsewhere(store: Store, group: list[Snapshot]) -> set[Path]:
+    """The snapshots of one pipeline made from a folder that is not here.
+
+    Rules 3 and 4 of :func:`plan_removals` read that folder: its branches
+    and tags, and its manifest's labels. A store a team shares holds
+    snapshots made on other machines, whose folders this one cannot see,
+    so this machine cannot know whether a label points into one of them or
+    a branch pins from it. It does not guess; it keeps them.
+
+    :returns: The records' paths.
+    """
+    elsewhere: set[Path] = set()
+    for taken in group:
+        if any(not top.is_dir() for top in origins(store, taken)):
+            elsewhere.add(taken.path)
+    return elsewhere
+
+
 def plan_removals(
     store: Store,
     pinned: set[tuple[str, str]],
     hashes_of_missing: set[str] = frozenset(),
     keep_days: float = KEEP_DAYS,
     now: Optional[datetime] = None,
+    forget_missing: bool = False,
 ) -> SnapshotPlan:
     """Say which snapshots may be removed. Nothing is removed.
 
@@ -719,11 +738,14 @@ def plan_removals(
     1. a lockfile pins it (its commit and time are named by a dependency);
     2. a lockfile that cannot be found named one of its objects when it was
        last pinned;
-    3. it is the newest snapshot of its pipeline, or the newest that a
+    3. it was made from a folder that is not on this machine (a store a
+       team shares; or a project that was deleted), since rules 4 and 5
+       read that folder and cannot. *forget_missing* turns this off;
+    4. it is the newest snapshot of its pipeline, or the newest that a
        branch or a tag of the repository it came from can pin from;
-    4. a label in the pipeline's manifest, read from the folder the
+    5. a label in the pipeline's manifest, read from the folder the
        snapshots were made from, points at a model version it holds;
-    5. it was made in the last *keep_days* days.
+    6. it was made in the last *keep_days* days.
 
     Otherwise it may be removed. What it names and nothing else names is
     then removed with it, by :func:`chartbook.lock.plan_gc`.
@@ -732,6 +754,8 @@ def plan_removals(
         pin.
     :param hashes_of_missing: The objects named by lockfiles that cannot be
         found and are not to be forgotten.
+    :param forget_missing: Judge a snapshot whose folder is gone like any
+        other, instead of keeping it.
     :raises SnapshotError: If a record cannot be read.
     """
     now = now if now is not None else datetime.now(timezone.utc)
@@ -743,11 +767,14 @@ def plan_removals(
         newest = group[-1]
         labels = _labels_in(store, group)
         pinnable = _pinnable(store, group)
+        elsewhere = set() if forget_missing else _made_elsewhere(store, group)
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
             elif taken.hashes() & set(hashes_of_missing):
                 why = "a lockfile that cannot be found named what it holds"
+            elif taken.path in elsewhere:
+                why = "it was made from a folder that is not on this machine"
             elif taken is newest:
                 why = "it is the newest of its pipeline"
             elif taken.path in pinnable:

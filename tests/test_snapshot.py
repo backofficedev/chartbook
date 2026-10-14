@@ -828,6 +828,21 @@ class TestClearingOldSnapshots:
         third = snapshot.make(maker).snapshot
         return first, second, third
 
+    def test_a_snapshot_made_from_a_folder_not_on_this_machine_is_kept(self, three, tmp_path):
+        """A store a team shares: this machine cannot read the other's
+        branches or labels, so it does not guess."""
+        first, second, third = three
+        note = third.path.parent / "origins"
+        note.write_text(str(tmp_path / "someone-elses-checkout") + "\n")
+        plan = _plan(default_store())
+        assert plan.remove == []
+        assert {why for _, why in plan.keep} == {"it was made from a folder that is not on this machine"}
+        # ...unless told that what is gone is gone
+        plan = snapshot.plan_removals(default_store(), set(), set(), keep_days=30, forget_missing=True)
+        assert [t for t, _ in plan.remove] == [first, second]
+        plan = lock.plan_gc(default_store(), recent_seconds=0, forget_missing=True)
+        assert [t for t, _ in plan.snapshots_delete] == [first, second]
+
     def test_the_newest_is_kept_and_old_unpinned_ones_may_go(self, three):
         first, second, third = three
         plan = _plan(default_store())

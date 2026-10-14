@@ -1722,6 +1722,11 @@ def _run_pin(project_dir, dependencies=None, from_folder=False):
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         raise SystemExit(1)
     _echo_pin_report(report)
+    if report.unrooted:
+        click.echo(
+            f"The store is read-only for you, so it has no note of this lockfile "
+            f"and its `store gc` will not know these pins ({report.unrooted})."
+        )
     if report.problems:
         click.echo(
             f"\n{len(report.problems)} thing(s) could not be pinned.", err=True
@@ -1739,10 +1744,34 @@ _from_folder = click.option(
 )
 
 
+def _echo_frozen_report(step, report):
+    """Print what `--frozen` found: one line when all is well, else each problem."""
+    who = f"{step.id}: " if step is not None else ""
+    if not report.problems:
+        click.echo(
+            f"{who}{report.pins} pin(s) of {report.dependencies} dependenc"
+            f"{'y' if report.dependencies == 1 else 'ies'}, all in the store. Nothing written."
+        )
+        return
+    for problem in report.problems:
+        where = problem.asset or problem.dependency
+        click.echo(f"{who}{where + ': ' if where else ''}{problem.message}", err=True)
+    click.echo(
+        f"{who}{len(report.problems)} problem(s): the pipeline cannot be built from its "
+        f"lockfile alone. Nothing written.",
+        err=True,
+    )
+
+
 @main.command()
 @click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
+@click.option(
+    "--frozen",
+    is_flag=True,
+    help="Write nothing: say whether the lockfile is complete and every pin is in the store",
+)
 @_from_folder
-def pin(project_dir, from_folder):
+def pin(project_dir, frozen, from_folder):
     """Freeze what this pipeline depends on.
 
     Each pipeline in [dependencies] is pinned to a snapshot of it: what its
@@ -1761,12 +1790,43 @@ def pin(project_dir, from_folder):
     A dependency that is a git repository is fetched, and pinned from a
     clean copy of the commit.
 
+    --frozen pins nothing and writes nothing: not the lockfile, not the
+    store. It says whether the pipeline can be built from its lockfile
+    alone, every dependency pinned and every pin in the store, and exits
+    1 if not. For CI, and for a store you may only read.
+
     \b
     Examples:
         chartbook pin
         chartbook pin --project-dir ../rate_forecast
+        chartbook pin --frozen
     """
+    if frozen and from_folder:
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + "--frozen writes nothing, and --from-folder pins. One or the other.",
+            err=True,
+        )
+        raise SystemExit(1)
+    if frozen:
+        _run_frozen(project_dir)
+        return
     _run_pin(project_dir, from_folder=from_folder)
+
+
+def _run_frozen(project_dir):
+    """Say whether a pipeline can be built from its lockfile alone; exit 1 if not."""
+    from chartbook import lock
+    from chartbook.store import StoreError
+
+    try:
+        report = lock.verify(resolve_project_dir(project_dir))
+    except (lock.LockError, StoreError, ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+    _echo_frozen_report(None, report)
+    if report.problems:
+        raise SystemExit(1)
 
 
 @main.command()
@@ -1847,7 +1907,12 @@ def snapshot(project_dir):
     is_flag=True,
     help="After the build, declare it ready: make a snapshot (see `chartbook snapshot`)",
 )
-def run_command(script, project_dir, force, make_snapshot):
+@click.option(
+    "--frozen",
+    is_flag=True,
+    help="Pin nothing and write nothing before the build; refuse unless every pin is in the store",
+)
+def run_command(script, project_dir, force, make_snapshot, frozen):
     """Run a script in this pipeline: `build`, unless another is named.
 
     SCRIPT is a name from [scripts] in chartbook.toml.
@@ -1883,9 +1948,20 @@ def run_command(script, project_dir, force, make_snapshot):
         chartbook run test
         chartbook run --force
         chartbook run --snapshot
+        chartbook run --frozen
+
+    --frozen pins nothing and writes nothing before the build: not the
+    lockfile, not the store, and no git dependency is fetched or built.
+    The build runs only if the lockfile is complete and every pin is in
+    the store (`chartbook pin --frozen` says the same without building).
+    For CI, and for a store you may only read.
     """
     _run_script(
-        resolve_project_dir(project_dir), script, force=force, snapshot=make_snapshot
+        resolve_project_dir(project_dir),
+        script,
+        force=force,
+        snapshot=make_snapshot,
+        frozen=frozen,
     )
 
 
@@ -1925,7 +2001,7 @@ def _echo_snapshot(report):
         )
 
 
-def _run_script(project_dir, script, force=False, snapshot=False):
+def _run_script(project_dir, script, force=False, snapshot=False, frozen=False):
     """Run a named script as `chartbook run` does; exit with its code if it fails."""
     from chartbook import lock
     from chartbook import run as runner
@@ -1948,6 +2024,8 @@ def _run_script(project_dir, script, force=False, snapshot=False):
             force=force,
             snapshot=snapshot,
             on_snapshot=lambda step, made: _echo_snapshot(made),
+            frozen=frozen,
+            on_verify=_echo_frozen_report,
         )
     except (runner.RunError, lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
