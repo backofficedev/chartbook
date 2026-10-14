@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — a series address documents a column; it does not load one
+
+`treasury_rates#dgs10` is the address of one column of a dataframe. It is what a `[dataframes.treasury_rates.series.dgs10]` table documents and what `index.json` lists. The design also had `data.load("treasury_rates#dgs10")` hand back that column, as the last part of this step.
+
+That will not be built. The maintainer decided (2026-10-13) that ChartBook should not grow a language for loading data: it says where a dataframe is, what it is and which copy you get, and picking columns and rows is for the tools that already do it. Load the dataframe and select with polars, or take `data.path()` and hand it to anything else; a database is read with SQL passed through.
+
+So a reference with `#` is still refused by `data.load()`, `data.path()` and `chartbook path`, and the message no longer says "not yet". It says what the address is for and what to do instead.
+
 ### Changed — the project template lives in this repository
 
 `chartbook init` now renders the `template/` folder of ChartBook's own repository. It used to render a separate repository, `cookiecutter_chartbook`.

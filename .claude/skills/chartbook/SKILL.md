@@ -174,6 +174,10 @@ rates = data.load("fed_yield_curve:treasury_rates")           # LazyFrame, pinne
 path = data.path("fed_yield_curve:treasury_rates")            # its path in the store
 chart = assets.path("fed_yield_curve:chart/curve_today")      # any kind of asset
 mine = data.load("my_data")                                   # this pipeline's own, live
+# ChartBook NEVER selects columns or rows. "my_data#col" is an address for
+# documenting a column and is refused by data.load()/data.path(). Load or locate
+# the whole dataframe, then use polars or SQL:
+one = data.load("my_data").select("date", "DGS10")
 # A model's trained_on = ["fed_yield_curve:treasury_rates"] must name a declared
 # dependency; `chartbook check` verifies the dataframe exists there.
 

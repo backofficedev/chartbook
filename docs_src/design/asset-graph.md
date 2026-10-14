@@ -258,6 +258,11 @@ strings or Python.
 `Series` record for every column. A series address does not resolve yet, and pages do not show
 series yet.)*
 
+*(2026-10-13, decided by the maintainer: a series address will not resolve to data.
+"`…/treasury_rates.html#dgs10`, which is the primary consumer" turns out to be the whole of
+it: the address is for a page, for documentation and for the index. Loading one column is
+for polars or SQL, not for a reference. {doc}`overview`, step 4, "4e".)*
+
 Two properties worth noting. An explicit `column` means the **address survives a column rename** —
 change one line and every reference still resolves. And because the index records each dataframe's
 column list from the parquet schema anyway, *which* series exist is known without any declaration;

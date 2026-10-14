@@ -420,25 +420,34 @@ def declared_files(
 
 
 def parse_declared_ref(
-    ref: Union[str, AssetRef], kind: Optional[str] = None, revisions: bool = False
+    ref: Union[str, AssetRef], kind: Optional[str] = None, resolving: bool = False
 ) -> AssetRef:
     """Parse a reference of a form that is supported today.
 
     That is an asset of this pipeline or of another one: ``name``,
     ``kind/name``, ``pipeline:name`` or ``scope/pipeline:name``. It is what
-    a manifest may state and what :func:`resolve` resolves. Parts and
-    registries are refused as reserved, so the message can say "not yet"
-    where the syntax is right. So is a revision, except the one kind that
-    resolves: a version of one of this pipeline's own models,
-    ``model/x@7f3a9c2e41b0`` or ``model/x@champion``, and only when *revisions*
-    is set.
+    a manifest may state and what :func:`resolve` resolves, and the two
+    differ in what else they take.
+
+    A registry is refused as reserved either way, so the message can say
+    "not yet" where the syntax is right.
+
+    A revision resolves in one case: a version of one of this pipeline's
+    own models, ``model/x@7f3a9c2e41b0`` or ``model/x@champion``. A manifest
+    does not state one.
+
+    A part, ``dataframe#series``, is the address of one column. In a
+    manifest it would say which column something was made from, and that
+    is refused as not yet supported. When *resolving*, it is refused for
+    good: the address is for documenting the column, it has no file of its
+    own, and ChartBook does not select columns (decided by the maintainer,
+    2026-10-13; ``docs_src/design/overview.md``, step 4).
 
     :param ref: The reference.
     :param kind: The kind the caller expects; see
         :func:`chartbook.refs.parse_asset_ref`.
-    :param revisions: Whether a version of a local model is accepted. A
-        manifest states what it was built from without one; :func:`resolve`
-        takes one.
+    :param resolving: Whether the reference is being resolved to where
+        an asset is, as :func:`resolve` does, and not stated in a manifest.
     :returns: The parsed reference.
     :raises UnsupportedRevisionError: If the reference carries an ``@rev``
         that does not resolve.
@@ -450,7 +459,7 @@ def parse_declared_ref(
     asset = parse_asset_ref(ref, kind=kind)
     if asset.rev is not None:
         without = dataclasses.replace(asset, rev=None)
-        if not revisions:
+        if not resolving:
             raise UnsupportedRevisionError(
                 f"Reference {str(asset)!r} pins a revision with '@rev'. Version "
                 f"pinning is reserved syntax and not yet supported; use "
@@ -471,10 +480,33 @@ def parse_declared_ref(
             )
     if asset.part is not None:
         without = dataclasses.replace(asset, part=None)
+        if not resolving:
+            # Said in a manifest, a part is a statement about lineage: which
+            # column, or which file. That may come; it loads nothing.
+            raise UnsupportedReferenceError(
+                f"Reference {str(asset)!r} addresses a part of an asset with '#'. "
+                f"Parts are reserved syntax and not yet supported; use "
+                f"{str(without)!r} to get the {asset.kind} that holds it."
+            )
+        if asset.kind == "dataframe":
+            # Decided: ChartBook says where a dataframe is. It is not a
+            # language for picking columns out of one.
+            raise UnsupportedReferenceError(
+                f"Reference {str(asset)!r} names one column of a dataframe. "
+                f"That address is for documenting the column; it has no file "
+                f"of its own, and ChartBook does not select columns. Use "
+                f"{str(without)!r} to get the dataframe, and pick the column "
+                f"with polars or SQL."
+            )
+        if asset.kind == "model":
+            raise UnsupportedReferenceError(
+                f"Reference {str(asset)!r} names a file inside a model. Use "
+                f"{str(without)!r} to get the model's path, and join "
+                f"{asset.part!r} to it."
+            )
         raise UnsupportedReferenceError(
-            f"Reference {str(asset)!r} addresses a part of an asset with '#'. "
-            f"Parts are reserved syntax and not yet supported; use "
-            f"{str(without)!r} to get the {asset.kind} that holds it."
+            f"Reference {str(asset)!r} addresses a part of a {asset.kind} with "
+            f"'#'. A {asset.kind} has no parts; use {str(without)!r}."
         )
     if asset.registry is not None:
         without = dataclasses.replace(asset, registry=None)
@@ -832,7 +864,7 @@ def resolve(
     :raises KeyError: If the pipeline or dataframe is not in the catalog.
     """
     if pipeline is None:
-        asset = parse_declared_ref(ref, kind=kind, revisions=True)
+        asset = parse_declared_ref(ref, kind=kind, resolving=True)
         manifest_dir = find_manifest_dir(*start_dirs)
         if asset.is_local:
             return _resolve_local(asset, manifest_dir)

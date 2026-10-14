@@ -228,6 +228,11 @@ assets.AssetRef.from_dict(ref.to_dict()) == ref     # True
 A part is something *inside* an asset that deserves its own address. It needs no storage of its
 own; the asset already holds it.
 
+*(2026-10-13, decided by the maintainer: a part is an **address**, and never a way to load
+data. `data.load("treasury_rates#dgs10")` will not be built: ChartBook does not select
+columns, and a column is picked with polars or SQL. {doc}`overview`, step 4, "4e". What
+follows describes the address.)*
+
 - **In a dataframe, a part is a series.** `treasury_rates#dgs10` is one column, so that
   documentation, units and a frequency can attach to it. The key after `#` is the series' key in
   `[dataframes.treasury_rates.series.dgs10]`, which may name a differently-spelled column. See
