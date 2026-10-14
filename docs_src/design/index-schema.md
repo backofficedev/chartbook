@@ -668,6 +668,8 @@ Once the index exists, several things stop being subsystems and become readers o
 - A **Dagster export**, mapping each asset to an `@asset` with `deps`.
 - **Faceted search** over the catalog, computed in a browser against a small file.
 - A **provenance panel** on every asset page: what built this, from which inputs at which hashes.
+  *(Built 2026-10-14: `chartbook/provenance.py`, the index is built first and each page reads its
+  record; {doc}`overview`, "6b, as built".)*
 - A **build diff** for reviewing what changed, including changes made by automated tooling.
   *(Built 2026-10-14: `chartbook index diff`, `chartbook/indexdiff.py`; {doc}`overview`, "6a, as built".)*
 

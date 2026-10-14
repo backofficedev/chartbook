@@ -171,7 +171,7 @@ def pipeline_input_files(pipeline_manifest: dict) -> list[Path]:
     return sorted(files)
 
 
-def pipeline_fingerprint(pipeline_id: str, pipeline_manifest: dict) -> str:
+def pipeline_fingerprint(pipeline_id: str, pipeline_manifest: dict, salt: str = "") -> str:
     """Hash everything a pipeline's pages depend on.
 
     Two builds with the same fingerprint produce the same pages for this
@@ -179,11 +179,15 @@ def pipeline_fingerprint(pipeline_id: str, pipeline_manifest: dict) -> str:
 
     :param pipeline_id: The pipeline's ID in this build (a catalog's key).
     :param pipeline_manifest: Its loaded manifest.
+    :param salt: What else the pages depend on that is not a file of this
+        pipeline's: the digest of what its provenance panels say, which
+        read other pipelines' records in the index.
     :returns: A hex digest.
     """
     base_dir = Path(pipeline_manifest["pipeline_base_dir"])
     digest = hashlib.sha256()
     digest.update(pipeline_id.encode())
+    digest.update(f"\0salt\0{salt}".encode())
     for path in pipeline_input_files(pipeline_manifest):
         try:
             name = path.relative_to(base_dir).as_posix()
@@ -346,6 +350,7 @@ def plan_build(
     theme_dir: Path,
     options: dict,
     skip_pipelines: Iterable[str] = (),
+    salts: Optional[dict] = None,
 ) -> BuildPlan:
     """Decide which pipelines to regenerate and which to reuse.
 
@@ -355,13 +360,15 @@ def plan_build(
     :param options: Build options that alter generated pages.
     :param skip_pipelines: Pipelines left out of the build altogether (their
         source files are missing); they are neither regenerated nor reused.
+    :param salts: For each pipeline, what else its pages depend on; see
+        :func:`pipeline_fingerprint`.
     """
     build_dir = Path(build_dir)
     skipped = set(skip_pipelines)
     pipeline_ids = [p for p in get_pipeline_ids(manifest) if p not in skipped]
     fingerprints = {
         pipeline_id: pipeline_fingerprint(
-            pipeline_id, get_pipeline_manifest(manifest, pipeline_id)
+            pipeline_id, get_pipeline_manifest(manifest, pipeline_id), (salts or {}).get(pipeline_id, "")
         )
         for pipeline_id in pipeline_ids
     }
@@ -406,6 +413,23 @@ def looks_like_build_tree(directory: Path) -> bool:
     )
 
 
+def check_build_tree(build_dir: Path) -> None:
+    """Refuse a build directory that holds something that is not a build tree.
+
+    Called first, before anything is read or hashed, so that the error
+    comes before the work.
+
+    :raises ValueError: If *build_dir* holds unrelated files.
+    """
+    build_dir = Path(build_dir)
+    if build_dir.exists() and any(build_dir.iterdir()) and not looks_like_build_tree(build_dir):
+        raise ValueError(
+            f"{build_dir} exists and is not a ChartBook build directory, "
+            f"so an incremental build will not write into it. Point "
+            f"--docs-build-dir at an empty or new directory."
+        )
+
+
 def prepare_build_tree(build_dir: Path, fresh: bool) -> None:
     """Make the build tree ready to be synced into.
 
@@ -415,13 +439,8 @@ def prepare_build_tree(build_dir: Path, fresh: bool) -> None:
     :raises ValueError: If *build_dir* holds unrelated files.
     """
     build_dir = Path(build_dir)
+    check_build_tree(build_dir)
     if build_dir.exists() and any(build_dir.iterdir()):
-        if not looks_like_build_tree(build_dir):
-            raise ValueError(
-                f"{build_dir} exists and is not a ChartBook build directory, "
-                f"so an incremental build will not write into it. Point "
-                f"--docs-build-dir at an empty or new directory."
-            )
         if fresh:
             shutil.rmtree(build_dir)
     build_dir.mkdir(parents=True, exist_ok=True)

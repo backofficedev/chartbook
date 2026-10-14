@@ -210,6 +210,7 @@ def generate_all_pipeline_docs(
     enable_data_download=False,
     skip_pipelines=None,
     reuse_pipelines=None,
+    index_records=None,
 ):
     """Generate documentation for all pipelines in the manifest.
 
@@ -258,6 +259,7 @@ def generate_all_pipeline_docs(
             size_threshold=size_threshold,
             enable_data_download=enable_data_download,
             site_manifest=manifest,
+            index_records=index_records,
         )
         if pipeline_theme == "catalog":
             # Copy pipeline README to pipelines directory
@@ -516,6 +518,7 @@ def generate_pipeline_docs(
     size_threshold=50,
     enable_data_download=False,
     site_manifest=None,
+    index_records=None,
 ):
     """Generate documentation for a single pipeline.
 
@@ -547,6 +550,7 @@ def generate_pipeline_docs(
             docs_src_dir=docs_src_dir,
             size_threshold=size_threshold,
             enable_data_download=enable_data_download,
+            index_records=index_records,
         )
 
     for chart_id in pipeline_manifest["charts"]:
@@ -559,6 +563,7 @@ def generate_pipeline_docs(
             pipeline_theme=pipeline_theme,
             docs_src_dir=docs_src_dir,
             enable_data_download=enable_data_download,
+            index_records=index_records,
         )
 
     for model_id in pipeline_manifest.get("models") or {}:
@@ -571,6 +576,7 @@ def generate_pipeline_docs(
             pipeline_theme=pipeline_theme,
             docs_src_dir=docs_src_dir,
             site_manifest=site_manifest,
+            index_records=index_records,
         )
 
 
@@ -667,6 +673,7 @@ def generate_dataframe_docs(
     docs_src_dir=DOCS_SRC_DIR,
     size_threshold=50,
     enable_data_download=False,
+    index_records=None,
 ):
     """Generate documentation for a specific dataframe, including the most recent data dates.
 
@@ -742,6 +749,8 @@ def generate_dataframe_docs(
 {{dataframe_glimpse}}
 ```
 
+{% include "provenance.md" %}
+
 ## Dataframe Manifest
 
 {% include "dataframe_manifest.md" %}
@@ -807,6 +816,7 @@ def generate_dataframe_docs(
     # Render the template with the new variables
     table_page = template.render(
         dataframe_manifest,
+        provenance=_panel(index_records, f"{pipeline_id}:{dataframe_id}"),
         dataframe_manifest=dataframe_manifest,
         link_to_dataframe_docs=link_to_dataframe_docs,
         dataframe_id=dataframe_id,
@@ -945,6 +955,8 @@ A version is made by a snapshot. Its name is the start of the model's content ha
 {% endfor %}
 {% endif %}
 
+{% include "provenance.md" %}
+
 ## Model Manifest
 
 {% include "model_manifest.md" %}
@@ -990,6 +1002,23 @@ def _model_staleness(pipeline_base_dir, model_id, model_manifest):
 
     found = staleness(pipeline_base_dir, model_id, model_manifest)
     return found if found is not None and found.stale else None
+
+
+_REVERSED: dict = {}
+
+
+def _panel(index_records, record_id):
+    """A page's provenance panel, from the index built for this site; None without one."""
+    from chartbook.provenance import panel, reverse
+
+    if not index_records:
+        return None
+    # The reverse map of one index serves every page of the build
+    key = id(index_records)
+    if _REVERSED.get("key") != key:
+        _REVERSED.clear()
+        _REVERSED.update({"key": key, "map": reverse(index_records)})
+    return panel(record_id, index_records, _REVERSED["map"])
 
 
 def _trained_on_entries(model_manifest, pipeline_id, pipeline_manifest, site_manifest):
@@ -1044,6 +1073,7 @@ def generate_model_docs(
     pipeline_theme="pipeline",
     docs_src_dir=DOCS_SRC_DIR,
     site_manifest=None,
+    index_records=None,
 ):
     """Generate the page for one model a pipeline declares.
 
@@ -1156,6 +1186,7 @@ def generate_model_docs(
     template = environment.from_string(_MODEL_PAGE_HEAD + write_up + _MODEL_PAGE_TAIL)
     page = template.render(
         model_manifest,
+        provenance=_panel(index_records, f"{pipeline_id}:model/{model_id}"),
         model_manifest=model_manifest,
         model_id=model_id,
         model_name=model_manifest.get("name", model_id),
@@ -1248,6 +1279,7 @@ def generate_chart_docs(
     pipeline_theme="pipeline",
     docs_src_dir=DOCS_SRC_DIR,
     enable_data_download=False,
+    index_records=None,
 ):
     """Generate documentation for a specific chart.
 
@@ -1319,6 +1351,8 @@ def generate_chart_docs(
 """
         + source
         + """\n\n
+{% include "provenance.md" %}
+
 {% include "chart_entry_bottom.md" %}
 """
     )
@@ -1366,6 +1400,7 @@ def generate_chart_docs(
     # Render chart page
     chart_page = template.render(
         chart_manifest,
+        provenance=_panel(index_records, f"{pipeline_id}:chart/{chart_id}"),
         chart_manifest=chart_manifest,
         chart_id=chart_id,
         dataframe_id=dataframe_id,
@@ -1650,6 +1685,8 @@ def build_all(
     skip_pipelines=None,
     reuse_pipelines=None,
     code_times=None,
+    hash_cache=None,
+    built_index=None,
 ):
     """Build all documentation.
 
@@ -1682,6 +1719,17 @@ def build_all(
     manifest = load_manifest(base_dir=base_dir)
     # Pages say when the code changed according to git, not the file system
     apply_code_change_times(manifest, known=code_times)
+
+    # The index first: every page's provenance panel reads its record from
+    # it, so the pages are readers of the index and say what it says
+    from chartbook import hashing
+    from chartbook import index as index_module
+
+    if built_index is None:
+        cache = hash_cache if hash_cache is not None else hashing.HashCache(Path(docs_build_dir) / hashing.CACHE_FILE)
+        built_index = index_module.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        cache.save()
+    index_records = {record["id"]: record for record in built_index["records"]}
 
     # Extract enable_data_download setting (defaults to False)
     enable_data_download = manifest["project"].get("enable_data_download", False)
@@ -1717,6 +1765,7 @@ def build_all(
         enable_data_download=enable_data_download,
         skip_pipelines=skip_pipelines,
         reuse_pipelines=reuse_pipelines,
+        index_records=index_records,
     )
 
     # Copy remaining docs_src files to build directory

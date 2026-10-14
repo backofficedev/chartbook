@@ -2042,6 +2042,61 @@ site showed this. A `Series` record follows its dataframe and is listed on its o
 `trained_with` and `stale_inputs` are the building machine's. Nothing yet fetches the *before*
 index from git or from a deployed site; the reviewer brings both files.
 
+#### 6b. The provenance panel — as built
+
+*Added 2026-10-14, by the maintainer's choice of what to build next.* Every dataframe, chart and
+model page carries a **Provenance** section, before its manifest sections: what this is and where it is; its content hash,
+size, rows and columns, or its definition hash; which pipeline built it and with what script;
+what it was made from, at which hash, pinned from which snapshot of which commit, and whether
+that has moved since the model was trained; what is made from it; and, for a model, which
+version the file is and its labels. `chartbook/provenance.py`, `panel()`; the include
+`provenance.md` in both themes; `tests/test_provenance.py`.
+
+**Proposed: decided here.**
+
+1. **The pages are readers of the index.** The build makes the index first, once, in
+   `build_docs`, and hands the records to the page generators; a page's panel is
+   `panel(record_id, records)`, which reads the index and nothing else. The same index is
+   written beside the site at the end. An incremental build mixes into each pipeline's
+   fingerprint a digest of what its panels would say (`provenance.digest()`), since a panel
+   reads other pipelines' records: an upstream rebuilt, or a new chart made from this dataframe
+   elsewhere, regenerates every page of each pipeline one of whose panels would change, and
+   no other pipeline's. This is the first step
+   toward rendering the site from the index, which the maintainer wants to discuss before it is
+   built: a page already carries one section written from its record.
+2. **Facts, not links.** The panel names assets by ID in code, and does not link them; the
+   pages' existing sections link. A link scheme that works for both themes belongs to the
+   site-from-index design.
+3. **The panel is the record's.** Nothing in it is computed from a manifest or a file; what the
+   index does not have (a pipeline's own commit, a build time) the panel does not say. Those
+   are the `Build` records the index design leaves for later.
+
+**Decisions by the maintainer, 2026-10-14, on the other readers.** An MCP server is an idea for
+later, filed as GitHub issue 54, not to be built now. Rendering the site from the index is to be
+discussed very soon and is not to be built before that conversation. A Dagster export is not
+wanted at all for now.
+
+**What an adversarial review found before merge** (2026-10-14; six findings, each fixed with a
+test, the single index build included, which a test now counts): in an incremental build a reused pipeline's pages kept panels that
+had read other pipelines' records, so after an upstream rebuild the page disagreed with
+`index.json` (the index is built once, before the plan, and each pipeline's fingerprint carries a
+digest of what its panels say); a build script with a `|` in it broke the panel's table (cells
+are escaped); an input pinned and also in the site said nothing when the live upstream had
+moved on since the pin (it says "now at …"); the docs said a page "ends with" the panel, which
+the manifest sections follow (reworded); the index was built twice per build, and what the
+hash cache does not cover (parquet footers, DuckDB describes, versions, staleness) ran twice
+(once now); the model page, the catalog theme and the incremental path were tested only on
+hand-made records (a two-pipeline catalog is built, rebuilt incrementally and checked).
+A second review found five small things, fixed: the salts were quadratic in the size of the
+index (a reverse map is built once per index, and serves every page too); the whole index was
+built before a build directory holding unrelated files was refused (refused first); two
+wordings; and the test now counts the index builds and asserts the salt-driven regeneration.
+
+**Known gaps.** A panel says nothing of a pipeline's own commit or of when the build ran: the
+index has no `Build` record yet. An input not in the site (another pipeline's dataframe, when the
+site is one pipeline's) is named and shown at its pinned hash only. The `Pipeline` page has no
+panel; its dependencies' pins are in the pipeline manifest section already.
+
 ## Working in the code
 
 The contributing guide ({doc}`../contributing`) has setup and style. These are the things that
@@ -2119,6 +2174,7 @@ maintainer.
 | 2026-10-13 | The project template moves into this repository, as `template/` | Step 4 above, "The project template, moved in" |
 | 2026-10-13 | The command rename is made now and is breaking: `chartbook docs` renders the site, `chartbook build` runs the build script and then renders. No compatibility beyond a warning | Step 4 above, "4c, as built" |
 | 2026-10-13 | No backwards compatibility in this work: the right design, even if it breaks, with a warning at most. The order of the remaining work is the builder's to choose | Step 4 above, "4c, as built" |
+| 2026-10-14 | Of step 6's readers: the provenance panel now; an MCP server later (issue 54); the site rendered from the index only after a conversation, very soon; no Dagster export for now | "6b, as built", above |
 
 ## Open questions, collected
 
