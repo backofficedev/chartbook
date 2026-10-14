@@ -413,6 +413,23 @@ def looks_like_build_tree(directory: Path) -> bool:
     )
 
 
+def check_build_tree(build_dir: Path) -> None:
+    """Refuse a build directory that holds something that is not a build tree.
+
+    Called first, before anything is read or hashed, so that the error
+    comes before the work.
+
+    :raises ValueError: If *build_dir* holds unrelated files.
+    """
+    build_dir = Path(build_dir)
+    if build_dir.exists() and any(build_dir.iterdir()) and not looks_like_build_tree(build_dir):
+        raise ValueError(
+            f"{build_dir} exists and is not a ChartBook build directory, "
+            f"so an incremental build will not write into it. Point "
+            f"--docs-build-dir at an empty or new directory."
+        )
+
+
 def prepare_build_tree(build_dir: Path, fresh: bool) -> None:
     """Make the build tree ready to be synced into.
 
@@ -422,13 +439,8 @@ def prepare_build_tree(build_dir: Path, fresh: bool) -> None:
     :raises ValueError: If *build_dir* holds unrelated files.
     """
     build_dir = Path(build_dir)
+    check_build_tree(build_dir)
     if build_dir.exists() and any(build_dir.iterdir()):
-        if not looks_like_build_tree(build_dir):
-            raise ValueError(
-                f"{build_dir} exists and is not a ChartBook build directory, "
-                f"so an incremental build will not write into it. Point "
-                f"--docs-build-dir at an empty or new directory."
-            )
         if fresh:
             shutil.rmtree(build_dir)
     build_dir.mkdir(parents=True, exist_ok=True)

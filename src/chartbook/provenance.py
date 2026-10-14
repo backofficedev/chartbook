@@ -68,17 +68,35 @@ def _dependency_for(pipeline: Optional[dict], input_id: str) -> Optional[dict]:
     return None
 
 
-def panel(record_id: str, records: dict) -> Optional[dict]:
+def reverse(records: dict) -> dict:
+    """What the index says about each asset from the other side: who uses it,
+    and how many of its columns are documented. Built once for a whole index,
+    so that every panel of a build is linear in the number of records."""
+    used_by: dict = {}
+    series: dict = {}
+    for other_id, other in records.items():
+        for input_id in other.get("inputs") or []:
+            used_by.setdefault(input_id, []).append(other_id)
+        if other.get("kind") == "Series" and other.get("dataframe"):
+            series[other["dataframe"]] = series.get(other["dataframe"], 0) + 1
+    return {"used_by": {k: sorted(v) for k, v in used_by.items()}, "series": series}
+
+
+def panel(record_id: str, records: dict, reversed_index: Optional[dict] = None) -> Optional[dict]:
     """The facts a page's provenance panel shows for one asset.
 
     :param record_id: The asset's ID in the index.
     :param records: Every record of the index, by ID.
+    :param reversed_index: :func:`reverse` of the records, when many panels
+        are made from one index; worked out here otherwise.
     :returns: Plain values for a template, or None when the index has no
         such record (an asset skipped, or a build without an index).
     """
     record = records.get(record_id)
     if record is None:
         return None
+    if reversed_index is None:
+        reversed_index = reverse(records)
     pipeline_id = record.get("pipeline") or _owner(record_id)
     pipeline = records.get(pipeline_id)
     build = ((pipeline or {}).get("scripts") or {}).get("build")
@@ -111,15 +129,8 @@ def panel(record_id: str, records: dict) -> Optional[dict]:
         entry["words"] = _input_words(entry)
         inputs.append(entry)
 
-    used_by = sorted(
-        other_id
-        for other_id, other in records.items()
-        if record_id in (other.get("inputs") or [])
-    )
-    series = sorted(
-        other_id for other_id, other in records.items()
-        if other.get("kind") == "Series" and other.get("dataframe") == record_id
-    ) if record.get("kind") == "Dataframe" else []
+    used_by = reversed_index["used_by"].get(record_id, [])
+    series = reversed_index["series"].get(record_id, 0) if record.get("kind") == "Dataframe" else 0
 
     version = None
     if record.get("kind") == "Model" and record.get("content_hash"):
@@ -142,7 +153,7 @@ def panel(record_id: str, records: dict) -> Optional[dict]:
         "build": _cell(build) if isinstance(build, str) else build,
         "inputs": inputs,
         "used_by": used_by,
-        "series": len(series),
+        "series": series,
         "version": version,
         "stale": sorted(stale),
     }
@@ -178,8 +189,9 @@ def digest(pipeline_id: str, records: dict) -> str:
     an earlier build depends on this digest as well as on its own files;
     the incremental build mixes it into the pipeline's fingerprint.
     """
+    reversed_index = reverse(records)
     said = {
-        record_id: panel(record_id, records)
+        record_id: panel(record_id, records, reversed_index)
         for record_id, record in sorted(records.items())
         if record.get("pipeline") == pipeline_id and record.get("kind") in ("Dataframe", "Chart", "Model")
     }

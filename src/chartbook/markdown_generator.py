@@ -1004,13 +1004,21 @@ def _model_staleness(pipeline_base_dir, model_id, model_manifest):
     return found if found is not None and found.stale else None
 
 
+_REVERSED: dict = {}
+
+
 def _panel(index_records, record_id):
     """A page's provenance panel, from the index built for this site; None without one."""
-    from chartbook.provenance import panel
+    from chartbook.provenance import panel, reverse
 
     if not index_records:
         return None
-    return panel(record_id, index_records)
+    # The reverse map of one index serves every page of the build
+    key = id(index_records)
+    if _REVERSED.get("key") != key:
+        _REVERSED.clear()
+        _REVERSED.update({"key": key, "map": reverse(index_records)})
+    return panel(record_id, index_records, _REVERSED["map"])
 
 
 def _trained_on_entries(model_manifest, pipeline_id, pipeline_manifest, site_manifest):

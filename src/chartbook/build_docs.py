@@ -527,6 +527,8 @@ def _generate_docs_incremental(
 
     pipeline_theme = manifest["project"]["type"]
     options = {"size_threshold": size_threshold, "strip_mathjax2": strip_mathjax2}
+    # A directory that is not a build tree is refused before any work is done
+    incremental.check_build_tree(_docs_dir)
     # The index first, once. A pipeline's pages carry provenance panels that
     # read other pipelines' records, so whether its pages can be reused
     # depends on what those panels would say as well as on its own files

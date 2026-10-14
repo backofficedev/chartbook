@@ -2060,7 +2060,8 @@ version the file is and its labels. `chartbook/provenance.py`, `panel()`; the in
    written beside the site at the end. An incremental build mixes into each pipeline's
    fingerprint a digest of what its panels would say (`provenance.digest()`), since a panel
    reads other pipelines' records: an upstream rebuilt, or a new chart made from this dataframe
-   elsewhere, regenerates the pages whose panels change and no others. This is the first step
+   elsewhere, regenerates every page of each pipeline one of whose panels would change, and
+   no other pipeline's. This is the first step
    toward rendering the site from the index, which the maintainer wants to discuss before it is
    built: a page already carries one section written from its record.
 2. **Facts, not links.** The panel names assets by ID in code, and does not link them; the
@@ -2076,7 +2077,7 @@ discussed very soon and is not to be built before that conversation. A Dagster e
 wanted at all for now.
 
 **What an adversarial review found before merge** (2026-10-14; six findings, each fixed with a
-test unless said otherwise): in an incremental build a reused pipeline's pages kept panels that
+test, the single index build included, which a test now counts): in an incremental build a reused pipeline's pages kept panels that
 had read other pipelines' records, so after an upstream rebuild the page disagreed with
 `index.json` (the index is built once, before the plan, and each pipeline's fingerprint carries a
 digest of what its panels say); a build script with a `|` in it broke the panel's table (cells
@@ -2086,6 +2087,10 @@ the manifest sections follow (reworded); the index was built twice per build, an
 hash cache does not cover (parquet footers, DuckDB describes, versions, staleness) ran twice
 (once now); the model page, the catalog theme and the incremental path were tested only on
 hand-made records (a two-pipeline catalog is built, rebuilt incrementally and checked).
+A second review found five small things, fixed: the salts were quadratic in the size of the
+index (a reverse map is built once per index, and serves every page too); the whole index was
+built before a build directory holding unrelated files was refused (refused first); two
+wordings; and the test now counts the index builds and asserts the salt-driven regeneration.
 
 **Known gaps.** A panel says nothing of a pipeline's own commit or of when the build ran: the
 index has no `Build` record yet. An input not in the site (another pipeline's dataframe, when the

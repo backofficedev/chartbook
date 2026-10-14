@@ -104,6 +104,14 @@ class TestPanel:
         p = provenance.panel("acme/rates:treasury", records)
         assert p["build"] == "doit \\| tee build.log"
 
+    def test_the_reverse_map_gives_the_same_panels(self):
+        """Found by a reviewer: every panel scanned every record twice."""
+        reversed_index = provenance.reverse(RECORDS)
+        for record_id in RECORDS:
+            assert provenance.panel(record_id, RECORDS, reversed_index) == provenance.panel(record_id, RECORDS)
+        assert reversed_index["used_by"]["acme/rates:treasury"] == ["acme/forecast:model/m", "acme/rates:chart/curve"]
+        assert reversed_index["series"] == {"acme/rates:treasury": 1}
+
     def test_the_digest_moves_with_what_the_panels_say(self):
         before = provenance.digest("acme/forecast", RECORDS)
         assert before == provenance.digest("acme/forecast", RECORDS)
@@ -183,8 +191,15 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         upstream_page = catalog / "_docs" / "cb" / "dataframes" / "acme--pipeline_b" / "dataframe_0.md"
         parquet = next((catalog / "pipelines" / "pipeline_b" / "_data").rglob("dataframe_0.parquet"))
 
+        from chartbook import index as index_module
+
+        builds = []
+        real_build = index_module.build_index
+        monkeypatch.setattr(index_module, "build_index", lambda *a, **k: (builds.append(1), real_build(*a, **k))[1])
+
         first = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
         assert first.exit_code == 0, first.output
+        assert len(builds) == 1  # the index is built once per build, and handed to the pages
         index_1 = json.loads((catalog / "_docs" / "index.json").read_text())
         hash_1 = next(r for r in index_1["records"] if r["id"] == "acme/pipeline_b:dataframe_0")["content_hash"]
         # The model page, built for real, carries the panel from the index, in the catalog theme
@@ -216,4 +231,17 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         )
         third = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
         assert third.exit_code == 0, third.output
+        assert "regenerated 2 of 2" in third.output, third.output  # pipeline_b on its panels alone
         assert "`acme/pipeline_a:model/m2`" in upstream_page.read_text()
+        assert len(builds) == 4
+
+    def test_a_directory_that_is_not_a_build_tree_is_refused_before_any_work(self, tmp_path, monkeypatch):
+        catalog = self._catalog(tmp_path)
+        monkeypatch.chdir(catalog)
+        (catalog / "_docs").mkdir()
+        (catalog / "_docs" / "unrelated.txt").write_text("mine")
+        from chartbook import index as index_module
+
+        monkeypatch.setattr(index_module, "build_index", lambda *a, **k: (_ for _ in ()).throw(AssertionError("the index was built first")))
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--incremental"])
+        assert result.exit_code != 0 and "is not a ChartBook build directory" in result.output
