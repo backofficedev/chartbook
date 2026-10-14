@@ -14,7 +14,10 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
+| `chartbook pin` | Freeze what this pipeline depends on, in `chartbook.lock` |
+| `chartbook update` | Move pins forward to what the dependencies have now |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
+| `chartbook store gc` | Remove from the store what no lockfile names |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install skill` | Install the bundled Claude Code skill (user-level by default) |
 
@@ -297,9 +300,66 @@ chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-thre
 
 The manifest is the only source of the list. Nothing about how the project is built is consulted, so a pipeline built with doit, Snakemake, Make or plain scripts gets the same report, and a data file the manifest does not declare is not included. Partitioned dataframes (a glob `path`) are summarized as one dataset. Declared dataframes whose files do not exist yet are skipped with a note. Run in a catalog, the report covers every member pipeline.
 
+## chartbook pin
+
+```console
+chartbook pin [--project-dir PATH]
+```
+
+Freeze what this pipeline depends on. For each pipeline in {ref}`[dependencies] <dependencies>`, every asset it declares is put in the store, and its content hash is written to `chartbook.lock`, beside `chartbook.toml`.
+
+```console
+$ chartbook pin
+ftsfr/fed_yield_curve: 3 pinned, 1 not built
+  not built: ftsfr/fed_yield_curve:model/term_premium_ar1 (./_models/term_premium_ar1.json)
+Wrote chartbook.lock.
+```
+
+**Commit `chartbook.lock`.** It is source. A change to what the project depends on then shows up in a diff, and someone who clones the project sees which data it was built against. It holds no path from your machine and no timestamp, so pinning twice with nothing changed leaves the file as it was.
+
+**A pin never moves by itself.** Run `pin` again a week later, after the other pipeline has rebuilt, and nothing changes; it tells you what has moved on without you:
+
+```console
+$ chartbook pin
+ftsfr/fed_yield_curve: 2 already pinned, 1 changed upstream since it was pinned, 1 not built
+  changed upstream: ftsfr/fed_yield_curve:treasury_rates
+  not built: ftsfr/fed_yield_curve:model/term_premium_ar1 (./_models/term_premium_ar1.json)
+chartbook.lock is unchanged.
+1 pinned asset(s) have changed upstream. `chartbook update` moves the pins.
+```
+
+What a second `pin` does do:
+
+- **Pins what has no pin yet**: a new dependency, an asset the other pipeline has started to declare, or one that was not built last time.
+- **Puts back what the store has lost.** The lockfile is in git and the store is not. After cloning a project, `chartbook pin` fills the store again, as long as the other pipeline still has the same bytes. If it does not, the asset is reported as `lost` and the command exits `1`: the pin is not quietly moved to something else.
+
+An asset the other pipeline declares and has not built is listed and left unpinned. The rest is pinned all the same.
+
+`pin` exits `1` when something could not be pinned: a dependency whose `path` holds no pipeline, or a lost pin. A `git` dependency is listed in the lockfile and not pinned, since ChartBook does not fetch one yet.
+
+Pinning does not yet change what your code reads. `chartbook path fed_yield_curve:treasury_rates` is still refused; resolving a reference through the lockfile is the next piece.
+
+## chartbook update
+
+```console
+chartbook update [DEPENDENCY...] [--project-dir PATH]
+```
+
+Move pins forward to what the dependencies have now, and rewrite `chartbook.lock`. With no argument every dependency is updated. Name some to update only those, as they are written in `[dependencies]`; the scope may be left off when only one has that name.
+
+```console
+$ chartbook update fed_yield_curve
+ftsfr/fed_yield_curve: 1 moved, 2 already pinned, 1 not built
+  ftsfr/fed_yield_curve:treasury_rates
+    sha256:4b1f… -> sha256:99ab…
+Wrote chartbook.lock.
+```
+
+An asset the other pipeline no longer declares is dropped from the lockfile. One that it declares and no longer has on disk keeps its pin. Nothing of this pipeline is rebuilt. The object a pin moved away from stays in the store until `chartbook store gc`.
+
 ## chartbook store
 
-The store is a folder of files kept under the hash of what is in them. It is where pinned copies of other pipelines' data will be kept. Nothing puts anything in it yet; it is the piece that pinning is built on.
+The store is a folder of files kept under the hash of what is in them. It is where `chartbook pin` keeps its copies of other pipelines' data.
 
 It is at `~/.chartbook/store/`. To put it somewhere else, set `CHARTBOOK_STORE`, or add this to `~/.chartbook/settings.toml`:
 
@@ -335,7 +395,41 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 | symlink (a pointer to the file) | free | Yes, whenever the original changes. It breaks if the original is moved |
 | copy | the file's size | No |
 
-So on a Mac, or on Linux with btrfs or XFS, a stored file is frozen. On ext4 it is a hard link when the store and the data are on one disk, and a symlink when they are not. `verify` is how you find out that one has changed. It reads every byte, so on a large store it takes a while.
+So on a Mac, or on Linux with btrfs or XFS, a stored file is frozen. On ext4 it is a hard link when the store and the data are on one disk, and a symlink when they are not. `verify` is how you find out that one has changed. It reads every byte, so on a large store it takes a while. `chartbook pin` says so when what it has just stored is held as links.
+
+### store gc
+
+```console
+chartbook store gc [--dry-run] [--yes] [--forget-missing]
+```
+
+Remove from the store what no lockfile names: what an update moved a pin away from, and what a removed dependency used to need.
+
+The store is shared by all your projects. Every `chartbook pin` and `chartbook update` notes its lockfile in the store, and `gc` keeps whatever any of those lockfiles names. It lists what it would remove and asks before removing anything:
+
+```console
+$ chartbook store gc
+Kept: 14 object(s), named by 3 lockfile(s)
+  /work/crsp_treasury/chartbook.lock
+  /work/rate_forecast/chartbook.lock
+  /Volumes/usb/old_project/chartbook.lock  (not found; its pins are kept)
+Would remove 5 object(s), 2.1 GB, that no lockfile names.
+Remove them? [y/N]:
+```
+
+| Option | Effect |
+|--------|--------|
+| `--dry-run` | List each object that would be removed, with its size, and remove nothing |
+| `--yes`, `-y` | Do not ask |
+| `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found |
+
+Three things it is careful about:
+
+- **A lockfile it cannot find still keeps its pins.** The project may be on a drive that is not plugged in. The store remembers what that lockfile named when it was last pinned, and keeps it until you pass `--forget-missing`.
+- **An object stored in the last hour is never removed.** A pin puts files in the store before it writes the lockfile that names them.
+- **If a lockfile cannot be read, nothing is removed.** `gc` stops and says which.
+
+A lockfile is read as it is now. If you check out an older commit and run `gc` without pinning, the pins of the commit you left are not named by anything and can be removed; run `chartbook pin` after switching back.
 
 ## chartbook config
 

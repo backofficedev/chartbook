@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — pinning: `chartbook pin`, `chartbook update`, `chartbook.lock`
+
+A pipeline can now freeze what it depends on.
+
+```console
+$ chartbook pin
+ftsfr/fed_yield_curve: 3 pinned, 1 not built
+  not built: ftsfr/fed_yield_curve:model/term_premium_ar1 (./_models/term_premium_ar1.json)
+Wrote chartbook.lock.
+```
+
+For each pipeline in `[dependencies]`, every asset it declares is put in the store and its content hash is written to `chartbook.lock`, beside `chartbook.toml`. The lockfile is source: commit it, and a change to what the project depends on shows up in a diff. It is JSON in the same format as `index.json`, with no timestamp and no path from your machine, so pinning twice with nothing changed leaves it untouched.
+
+**`pin` never moves a pin; `update` does.** Run `pin` again after the other pipeline has rebuilt and your pins stay where they were, with a line saying what has changed upstream. `chartbook update` moves them, for every dependency or the ones you name, and prints each old and new hash. The split is the one `cargo build` and `cargo update` have, and it means an accidental `pin` cannot undo a freeze.
+
+`pin` also pins whatever has no pin yet, and puts back in the store anything the lockfile names that the store has lost, as long as the other pipeline still has those bytes. So it is the command to run after cloning. An asset that is declared and not built is listed and left unpinned; the rest is pinned.
+
+**`chartbook store gc`** removes from the store what no lockfile names. The store is shared by all your projects, so each `pin` and `update` notes its lockfile there, and `gc` keeps whatever any of them names. It lists what it would remove and asks first. A lockfile it cannot find (a drive not plugged in) still keeps what it last pinned, unless you pass `--forget-missing`; nothing stored in the last hour is removed; and if a lockfile cannot be read, nothing is removed at all.
+
+Where the disk has no copy-on-write clones, the store holds a pinned file as a hard link or a symlink to the other pipeline's own file, which changes if that file is rewritten in place. `pin` says so when that is what it did, and `chartbook store verify` finds a pin that has changed.
+
+Not yet: your code does not read the pinned copy. `chartbook path other:asset` is still refused, and making it resolve through the lockfile is the next piece. A `git` dependency is listed in the lockfile and not pinned. The design is "Pinning and isolation" in {doc}`design/asset-graph`.
+
 ### Added — the store: `chartbook.store` and `chartbook store verify`
 
 ChartBook now has a store: a folder of files kept under the hash of what is in them, at `~/.chartbook/store/`. It is where a pinned copy of another pipeline's data will live, so that a project keeps reading the data it was built against while the other pipeline moves on. **Nothing puts anything in it yet.** This is the piece that pinning is built on, added first so that it can be tested alone.

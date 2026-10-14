@@ -1543,6 +1543,149 @@ def data_get_docs_path(pipeline, dataframe, catalog):
         raise SystemExit(1)
 
 
+def _echo_pin_report(report):
+    """Print what a pin or an update did, one line per dependency and exception."""
+    from chartbook.check import display_path
+
+    by_dependency = {}
+    for event in report.events:
+        by_dependency.setdefault(event.dependency, []).append(event)
+
+    for dependency, events in by_dependency.items():
+        whole = [e for e in events if e.asset is None]
+        assets = [e for e in events if e.asset is not None]
+        counts = {}
+        for event in assets:
+            counts[event.status] = counts.get(event.status, 0) + 1
+        words = {
+            "pinned": "pinned",
+            "restored": "put back in the store",
+            "moved": "moved",
+            "kept": "already pinned",
+            "stale": "changed upstream since it was pinned",
+            "not_built": "not built",
+            "dropped": "no longer declared",
+            "lost": "lost",
+        }
+        summary = ", ".join(
+            f"{counts[status]} {words[status]}" for status in words if status in counts
+        )
+        for event in whole:
+            if event.status == "removed":
+                summary = "no longer a dependency; its pins are let go"
+            elif event.status == "not_fetched":
+                summary = (
+                    f"not pinned. ChartBook does not fetch git dependencies yet "
+                    f"({event.detail})"
+                )
+            elif event.status == "unreachable":
+                note = f"cannot be pinned: {event.detail}"
+                summary = f"{note}; {summary}" if summary else note
+        click.echo(f"{dependency}: {summary or 'declares nothing to pin'}")
+
+        for event in assets:
+            if event.status == "moved":
+                click.echo(f"  {event.asset}\n    {event.old} -> {event.new}")
+            elif event.status == "not_built":
+                click.echo(f"  not built: {event.asset} ({event.detail})")
+            elif event.status == "stale":
+                click.echo(f"  changed upstream: {event.asset}")
+            elif event.status == "dropped":
+                click.echo(f"  no longer declared: {event.asset}")
+            elif event.status == "lost":
+                click.echo(f"  lost: {event.asset} ({event.old}): {event.detail}")
+
+    if not report.events:
+        click.echo("No dependencies to pin.")
+    shown = display_path(report.lockfile, relative_to=Path.cwd())
+    if report.written:
+        click.echo(f"Wrote {shown}.")
+    elif report.lockfile.exists():
+        click.echo(f"{shown} is unchanged.")
+
+    stale = report.count("stale")
+    if stale:
+        click.echo(
+            f"{stale} pinned asset(s) have changed upstream. `chartbook update` "
+            f"moves the pins."
+        )
+    linked = sum(event.linked for event in report.events)
+    if linked:
+        click.echo(
+            f"{linked} of the asset(s) just stored are held as links to the "
+            f"other pipeline's own files, and change if those are rewritten in "
+            f"place. `chartbook store verify` finds one that has.",
+            err=True,
+        )
+
+
+def _run_pin(project_dir, dependencies=None):
+    """Run a pin, or an update when *dependencies* is given; exit 1 on a problem."""
+    from chartbook import lock
+    from chartbook.store import StoreError
+
+    project_dir = resolve_project_dir(project_dir)
+    try:
+        if dependencies is None:
+            report = lock.pin(project_dir)
+        else:
+            report = lock.update(project_dir, dependencies)
+    except (lock.LockError, StoreError, ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+    _echo_pin_report(report)
+    if report.problems:
+        click.echo(
+            f"\n{len(report.problems)} thing(s) could not be pinned.", err=True
+        )
+        raise SystemExit(1)
+
+
+@main.command()
+@click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
+def pin(project_dir):
+    """Freeze what this pipeline depends on.
+
+    Every asset that each pipeline in [dependencies] declares is put in the
+    store, and its content hash is written to chartbook.lock. Commit that
+    file: a change to what the project depends on then shows in a diff.
+
+    A pin that already exists is never moved, whatever the other pipeline
+    has done since; `chartbook update` moves pins. What `pin` does do again
+    is pin anything that has no pin yet, and put back in the store anything
+    the lockfile names that the store has lost, when the other pipeline
+    still has the same bytes. So it is what to run after cloning a project.
+
+    An asset the other pipeline declares and has not built is listed and
+    left unpinned; the rest is pinned all the same.
+
+    Examples:
+        chartbook pin
+        chartbook pin --project-dir ../rate_forecast
+    """
+    _run_pin(project_dir)
+
+
+@main.command()
+@click.argument("dependencies", nargs=-1)
+@click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
+def update(dependencies, project_dir):
+    """Move pins forward to what the dependencies have now.
+
+    With no argument, every dependency is updated. Name some to update only
+    those, as they are written in [dependencies]; the scope may be left off
+    when only one has that name. Each pin that changes is printed with its
+    old and new hash, and chartbook.lock is rewritten.
+
+    Nothing is rebuilt: this pipeline's own outputs are as they were.
+
+    Examples:
+        chartbook update
+        chartbook update fed_yield_curve
+    """
+    _run_pin(project_dir, dependencies=list(dependencies))
+
+
 @main.group()
 def store():
     """Look after the store: the local folder of pinned files.
@@ -1587,6 +1730,104 @@ def store_verify():
         )
         raise SystemExit(1)
     click.echo(f"{the_store.root}: OK ({total} object(s))")
+
+
+def _format_bytes(size):
+    """A size for a person: ``18.2 KB``, ``4.1 GB``."""
+    size = float(size)
+    for unit in ("bytes", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return f"{int(size)} bytes" if unit == "bytes" else f"{size:.1f} {unit}"
+        size /= 1024
+
+
+@store.command("gc")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Show what would be removed, and remove nothing",
+)
+@click.option(
+    "--yes", "-y", is_flag=True, default=False, help="Remove without asking first"
+)
+@click.option(
+    "--forget-missing",
+    is_flag=True,
+    default=False,
+    help="Stop keeping the pins of a lockfile that can no longer be found",
+)
+def store_gc(dry_run, yes, forget_missing):
+    """Remove from the store what no lockfile names.
+
+    The store is shared by every project of yours that pins into it. Each
+    `chartbook pin` and `chartbook update` notes its lockfile there, and
+    this keeps every object that any of those lockfiles names. Whatever is
+    left is what an update moved a pin away from, or what a deleted
+    dependency used to need.
+
+    A lockfile that cannot be found, because its project was deleted or its
+    drive is not plugged in, still keeps what it last pinned. Pass
+    --forget-missing to let those go.
+
+    What would be removed is listed, and nothing is removed until you say
+    yes. An object stored in the last hour is never removed: a pin puts
+    files in the store before it writes the lockfile that names them.
+
+    Examples:
+        chartbook store gc --dry-run
+        chartbook store gc
+        chartbook store gc --yes --forget-missing
+    """
+    from chartbook import lock
+    from chartbook.store import StoreError, default_store
+
+    try:
+        the_store = default_store()
+        plan = lock.plan_gc(the_store, forget_missing=forget_missing)
+    except (StoreError, lock.LockError, ValueError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo("Nothing was removed.", err=True)
+        raise SystemExit(1)
+
+    click.echo(
+        f"Kept: {plan.kept} object(s), named by {len(plan.lockfiles)} lockfile(s)"
+    )
+    for lockfile, found in plan.lockfiles:
+        if found:
+            note = ""
+        elif forget_missing:
+            note = "  (not found; forgotten)"
+        else:
+            note = "  (not found; its pins are kept)"
+        click.echo(f"  {lockfile}{note}")
+    if plan.recent:
+        click.echo(
+            f"Kept: {len(plan.recent)} object(s) no lockfile names, stored in "
+            f"the last hour"
+        )
+
+    if not plan.delete:
+        click.echo("Nothing to remove.")
+        if not dry_run:
+            lock.run_gc(plan, the_store)  # forgets the missing, if asked to
+        return
+
+    summary = (
+        f"{len(plan.delete)} object(s), {_format_bytes(plan.size_bytes)}, that no "
+        f"lockfile names"
+    )
+    if dry_run:
+        click.echo(f"Would remove {summary}:")
+        for content_hash, size in plan.delete:
+            click.echo(f"  {content_hash}  {_format_bytes(size)}")
+        return
+    click.echo(f"Would remove {summary}.")
+    if not yes and not click.confirm("Remove them?", default=False):
+        click.echo("Nothing was removed.")
+        return
+    removed = lock.run_gc(plan, the_store)
+    click.echo(f"Removed {removed} object(s), {_format_bytes(plan.size_bytes)}.")
 
 
 @main.command()

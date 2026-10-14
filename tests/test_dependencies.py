@@ -332,10 +332,19 @@ class TestTheChain:
     def test_not_found_is_a_key_error_that_reads_as_a_sentence(self):
         with pytest.raises(KeyError) as e:
             locate_pipeline("nope")
+        assert str(e.value) == "Pipeline 'nope' not found."
+
+    def test_not_found_names_only_the_steps_that_were_asked(self):
+        with pytest.raises(PipelineNotFoundError) as e:
+            locate_pipeline("nope", dependencies={})
         assert str(e.value) == (
-            "Pipeline 'nope' not found. Declared in [dependencies]: (none). "
-            "In the catalog: (none)."
+            "Pipeline 'nope' not found. Declared in [dependencies]: (none)."
         )
+        assert e.value.candidates == {"dependencies": []}
+        with pytest.raises(PipelineNotFoundError) as e:
+            locate_pipeline("nope", catalog=self.CATALOG)
+        assert "[dependencies]" not in str(e.value)
+        assert "In the catalog: acme/rates, ftsfr/macro." in str(e.value)
 
     def test_a_registry_is_still_reserved(self):
         """Step three of the chain is a hole, and says so."""

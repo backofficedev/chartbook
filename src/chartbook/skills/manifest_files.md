@@ -157,7 +157,10 @@ table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git
 - A model's `trained_on = ["fed_yield_curve:treasury_rates"]` should name a
   declared dependency (the scope may be left off when unambiguous). If it does
   not, the manifest loads with a warning.
-- Nothing is fetched, copied or pinned yet. A `git` dependency is recorded only.
+- `chartbook pin` copies (or links) every asset of each `path` dependency into the
+  store and writes their content hashes to `chartbook.lock`, which is committed.
+  It never moves an existing pin; `chartbook update [dep...]` does.
+- A `git` dependency is recorded only: not fetched, not pinned.
   `chartbook path other:asset` is still refused. A catalog cannot have this table.
 
 A minimal — but complete and valid — pipeline manifest:

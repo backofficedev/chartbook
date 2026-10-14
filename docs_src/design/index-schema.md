@@ -512,6 +512,46 @@ source, because it is what makes a rebuild reproducible and an upstream pin stab
 
 Both use the same record schemas. There is no second format.
 
+*(Built 2026-10-12, `chartbook.lock` the module. Corrected here as built; the shape was decided
+by the maintainer, the details below are proposed.)* What the lockfile holds is not quite the
+paragraph above. There are no `Build` records yet. And the part that freezes anything is
+missing from it: one record for each asset of each dependency, with its `content_hash`.
+
+```json
+{
+  "schema": "chartbook/lock/v1",
+  "root": "ftsfr/rate_forecast",
+  "records": [
+    { "kind": "Pipeline", "version": "chartbook/v1", "id": "ftsfr/rate_forecast",
+      "dependencies": [
+        { "id": "ftsfr/fed_yield_curve", "via": "path",
+          "location": { "kind": "path", "path": "../yield_curve" },
+          "pinned_hash": "sha256:9ac2…" } ] },
+    { "kind": "Dataframe", "version": "chartbook/v1",
+      "id": "ftsfr/fed_yield_curve:treasury_rates",
+      "ref": { "scope": "ftsfr", "pipeline": "fed_yield_curve",
+               "kind": "dataframe", "name": "treasury_rates" },
+      "pipeline": "ftsfr/fed_yield_curve",
+      "location": { "kind": "file", "path": "./_data/treasury_rates.parquet" },
+      "content_hash": "sha256:4b1f…", "size_bytes": 2148374 }
+  ]
+}
+```
+
+- **The envelope** is the index's, without `generated_at` and without `generator`, so that
+  neither the clock nor a ChartBook upgrade changes a lockfile.
+- **An asset record** is the index's record for that asset, cut down to these fields. It fits
+  the index's JSON Schema for its kind as it is. One with a `content_hash` is a pin; one
+  without was declared by the other pipeline and not built when this was pinned.
+- **The `Pipeline` record** is this pipeline's, cut down to `id` and `dependencies`. That is
+  below what the index's schema requires of a `Pipeline` (`name`, `location`, `assets`), on
+  purpose: those would change the lockfile whenever the manifest changed. The lockfile's own
+  envelope schema, `schemas/chartbook/lock/v1.json`, says what is there.
+- **IDs use the dependency's key** in `[dependencies]`, which is this pipeline's name for it.
+- **`pinned_hash`** is the SHA-256 of a listing with one line per pinned asset of that
+  dependency, `<hex of its content hash>`, two spaces, `<its ID>`, newline, sorted by ID.
+- **A `location` of kind `path` has `path` and no `value`**: a lockfile holds no absolute path.
+
 ## Candidate additions, deliberately out of v1
 
 - **`Diagnostic` records** carrying metadata-completeness results. Derived and recomputable, so the

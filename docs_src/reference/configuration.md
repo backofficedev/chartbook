@@ -399,10 +399,12 @@ An entry has `path` or `git`, not both.
 - `index.json` lists them, under `dependencies` in the pipeline's record.
 - A model's training data in another pipeline is written by the dependency's name, so `fed_yield_curve:treasury_rates` becomes `ftsfr/fed_yield_curve:treasury_rates`.
 
+- `chartbook pin` freezes what each `path` dependency has now. Every asset it declares is put in the store, and its content hash is written to `chartbook.lock`, which you commit. `chartbook update` moves the pins forward. See {doc}`cli`.
+
 **What it does not do yet.**
 
-- Nothing is fetched, copied or pinned. A `git` dependency is recorded and not looked at; `check` says so in a warning.
-- `chartbook path fed_yield_curve:treasury_rates` is still refused. A reference to another pipeline's asset will resolve to a frozen copy, not to that pipeline's working directory, and that needs the lockfile.
+- A `git` dependency is recorded and not fetched; `check` and `pin` each say so.
+- `chartbook path fed_yield_curve:treasury_rates` is still refused. A reference to another pipeline's asset will resolve through `chartbook.lock` to the pinned copy, never to that pipeline's working directory. That is the next piece.
 - `data.load(pipeline=…, dataframe=…)` still looks in a catalog, as it always has. It does not read this table.
 
 A catalog has no `[dependencies]`. It reads from no pipeline; it lists them in `[pipelines]`. The design is {doc}`../design/asset-graph`.
@@ -446,7 +448,7 @@ The same file says where the store is, if it is not at `~/.chartbook/store/`:
 path = "/a/bigger/disk/chartbook-store"
 ```
 
-The store is a folder of files kept under the hash of their content, where pinned copies of other pipelines' data will live. The `CHARTBOOK_STORE` environment variable overrides the setting, for one shell or one CI job. Nothing uses the store yet; `chartbook store verify` ({doc}`cli`) checks one.
+The store is a folder of files kept under the hash of their content. It is where `chartbook pin` keeps its copies of other pipelines' data, and it is shared by all your projects. The `CHARTBOOK_STORE` environment variable overrides the setting, for one shell or one CI job. `chartbook store verify` checks a store and `chartbook store gc` clears out what no project needs ({doc}`cli`).
 
 ## Best Practices
 

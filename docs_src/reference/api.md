@@ -21,6 +21,7 @@ chartbook
 ../apidocs/chartbook/chartbook.index
 ../apidocs/chartbook/chartbook.hashing
 ../apidocs/chartbook/chartbook.store
+../apidocs/chartbook/chartbook.lock
 ../apidocs/chartbook/chartbook.build_docs
 ../apidocs/chartbook/chartbook.check
 ../apidocs/chartbook/chartbook.diagnostics

@@ -6,8 +6,8 @@ never seen this project and has to continue building it. It says what ChartBook 
 it uses, what is built, what to build next and in what order, and where every decision is
 written down.
 
-Last revised 2026-10-12, after version 0.2.0, the index, declared models, and the first two
-of five parts of step 3: declared dependencies, and the store.
+Last revised 2026-10-12, after version 0.2.0, the index, declared models, and the first three
+of five parts of step 3: declared dependencies, the store, and pinning.
 ```
 
 ## What ChartBook is
@@ -67,12 +67,12 @@ assets alike.
 | **location** | Where an asset physically is. A file today; a database table later ({doc}`data-access`) |
 | **index** | One JSON file describing everything a catalog contains. A build product. Planned ({doc}`index-schema`) |
 | **record** | One entry in the index. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
-| **store** | A local folder of files named by their hash, used for caching and pinning. Built, and not used by anything yet ({doc}`asset-graph`) |
+| **store** | A local folder of files named by their hash, used for caching and pinning. One per user, shared by their projects ({doc}`asset-graph`) |
 | **object** | One asset in the store: a directory named by the asset's content hash, holding its files under their own names |
 | **dependency** | Another pipeline that this one reads from, declared in `[dependencies]`: a name, and where to find it (`path` or `git`) |
 | **resolution chain** | The order in which a pipeline's location is looked for: `[dependencies]`, then the catalog. One function, `chartbook.resolve.locate_pipeline` |
-| **lockfile** | `chartbook.lock`: the exact versions of upstream assets a project uses. Planned |
-| **pin** | To freeze which version of an upstream asset a project reads |
+| **lockfile** | `chartbook.lock`: the exact bytes of the upstream assets a project uses, by content hash. JSON in the index's format. Committed |
+| **pin** | To freeze which version of an upstream asset a project reads. Also the record of it: an asset's entry in the lockfile, with a `content_hash`. `chartbook pin` makes pins and never moves one; `chartbook update` moves them |
 | **build record** | A written description of how one asset was made: inputs, code, tools, output hash. Planned |
 | **source / backend** | A named database connection in a manifest / the engine behind it. Planned ({doc}`data-access`) |
 | **scratch** | `_data/_scratch/` inside a pipeline: throwaway files that are not assets |
@@ -129,7 +129,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built; local resolution built |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Declared dependencies (3a) and the store (3b) built. **Next to build**: pinning (3c) |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Declared dependencies (3a), the store (3b) and pinning (3c) built. **Next to build**: resolving `pipeline:asset` through the lockfile (3d) |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -139,8 +139,8 @@ and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
 
 ## What is built
 
-As of 0.2.0, plus the index, declared models, declared dependencies and the store, which came
-after it.
+As of 0.2.0, plus the index, declared models, declared dependencies, the store and pinning,
+which came after it.
 
 | Capability | Where | Notes |
 |---|---|---|
@@ -154,7 +154,8 @@ after it.
 | Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
 | Models | `models.py`, `manifest.py` (`validate_models`), `markdown_generator.py` (`generate_model_docs`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. No versions yet |
 | Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked. Nothing is fetched or pinned, and `pipeline:asset` does not resolve yet |
-| The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link. Nothing uses it yet |
+| The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link |
+| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: a content hash for every asset of every `path` dependency. `pin` never moves a pin; `update` does. Nothing reads the lockfile to resolve a reference yet |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
@@ -163,7 +164,7 @@ after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | Cross-pipeline references, `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: the lockfile, pinning, `chartbook store gc`, fetching a `git` dependency, build records,
+Not built: resolving `pipeline:asset` through the lockfile, fetching a `git` dependency, build records,
 `chartbook run`, `[scripts]`, model versions, `[sources]` and SQL access, any export, and
 anything that *reads* the index.
 
@@ -230,7 +231,7 @@ pull requests, in this order. Each leaves `main` working.
 |---|---|---|---|
 | **3a** *(built)* | **Declared dependencies.** `[dependencies]` in the manifest (`path` first). One resolution chain in one function: an explicit location in `[dependencies]`, then the local catalog, then (reserved) registries, then an error that lists candidates. `dependencies` on the `Pipeline` record. `check` verifies each one resolves | A pipeline says what it depends on, and `check` says whether that can be found. A cross-pipeline `trained_on` or chart input must name a declared dependency (a warning first, an error once 3d lands) | Nothing is fetched, copied or pinned |
 | **3b** *(built)* | **The store.** Objects named by content hash, behind four operations (has, get, put, delete). Links, not copies: reflink, hardlink, symlink, copy, in that order. `chartbook store verify` | Nothing visible. This is the piece everything after sits on, and it can be tested alone | Nothing uses it yet |
-| **3c** | **Pinning.** `chartbook.lock`, written in the index's record schemas. `chartbook pin` snapshots each dependency's declared assets into the store and records their hashes. `chartbook update` moves pins forward. `chartbook store gc`, with the lockfile as its roots | A project can freeze what it depends on, and see in a diff when that changes | References still do not resolve across pipelines |
+| **3c** *(built)* | **Pinning.** `chartbook.lock`, written in the index's record schemas. `chartbook pin` snapshots each dependency's declared assets into the store and records their hashes. `chartbook update` moves pins forward. `chartbook store gc`, with the lockfile as its roots | A project can freeze what it depends on, and see in a diff when that changes | References still do not resolve across pipelines |
 | **3d** | **Cross-pipeline references resolve.** `assets.path("pipeline:asset")`, `data.path`, `chartbook path` and `data.load("pipeline:asset")` resolve through the lockfile into the store, never to the upstream's working directory. Loading from an undeclared pipeline fails and says what to add. A model's cross-pipeline `trained_on` is recorded by pinned hash. A second example pipeline, `examples/rate_forecast`, whose model is trained on `yield_curve`'s data | **The payoff.** The case in the box above works end to end | `git` dependencies |
 | **3e** | **`git` dependencies.** `{ git = "…", rev = "…" }`: fetch at a revision into a cache, then as for `path` | A dependency that is not on your disk | — |
 
@@ -399,6 +400,101 @@ not copies", and are marked there.
    another, an object is a symlink, never a copy. Copy is reached only where symlinks are not
    allowed, which in practice is Windows without the privilege.
 
+#### 3c, as built
+
+*Added 2026-10-12.* What a user can do: freeze what a pipeline depends on, see in a diff when
+that changes, and clear out of the store what nothing needs any more.
+
+```console
+$ chartbook pin
+ftsfr/fed_yield_curve: 3 pinned, 1 not built
+  not built: ftsfr/fed_yield_curve:model/term_premium_ar1 (./_models/term_premium_ar1.json)
+Wrote chartbook.lock.
+
+$ chartbook update fed_yield_curve
+ftsfr/fed_yield_curve: 1 moved, 2 already pinned, 1 not built
+  ftsfr/fed_yield_curve:treasury_rates
+    sha256:4b1f… -> sha256:99ab…
+Wrote chartbook.lock.
+```
+
+| What | Where |
+|---|---|
+| Reading and writing `chartbook.lock`; `pin()` and `update()`; what `gc` keeps | `chartbook/lock.py` |
+| The lockfile's JSON Schema | `chartbook/schemas/chartbook/lock/v1.json` |
+| Which lockfiles name the store's objects | `chartbook/store.py`: `add_root()`, `roots()`, `remove_root()` |
+| Every asset a pipeline declares with a `path`, from its raw manifest | `chartbook/resolve.py`, `declared_files()` |
+| `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook/cli.py` |
+| The tests | `tests/test_lock.py` |
+
+**Decided by the maintainer, 2026-10-12, while it was being built:**
+
+1. **`pin` never moves a pin; `update` does.** A second `pin` pins what has no pin yet and
+   leaves the rest exactly where it is, saying what has changed upstream.
+2. **`chartbook store gc` keeps what registered lockfiles name, and asks before removing
+   anything.** Each `pin` and `update` notes its lockfile in the store. A lockfile that cannot
+   be found still keeps its pins unless `--forget-missing` is given. `--dry-run` only lists;
+   `--yes` does not ask.
+
+**Not done in 3c, on purpose.** Nothing reads the lockfile to resolve a reference:
+`chartbook path fed_yield_curve:treasury_rates` is still refused, and the index does not carry
+`pinned_hash`. Both are 3d. `chartbook check` says nothing about a lockfile that is out of
+date; refusing to run with one is `--frozen`, in step 4. A `git` dependency is listed and not
+pinned.
+
+**Proposed: implemented in 3c, and waiting on the maintainer's yes.**
+
+1. **The lockfile leaves out `generator` as well as `generated_at`.** The decision was "no
+   timestamp". Without the ChartBook version too, upgrading ChartBook does not rewrite every
+   lockfile.
+2. **The lockfile is keyed by the dependency's key in `[dependencies]`**, the pipeline's own
+   name for it, not by what the other pipeline calls itself.
+3. **Every kind of asset is pinned**: dataframes, charts, notebooks, notes and models. The
+   plan says "declared assets", and with links it costs nothing.
+4. **A dependency's `pinned_hash` is the hash of a listing of its pins**, one line per pinned
+   asset, in the form a directory is hashed in. One line of a diff then says a dependency
+   moved.
+5. **`pin` puts back what the store has lost**, when the other pipeline still has the same
+   bytes. That is what makes it the command to run after cloning. When the bytes are gone the
+   asset is reported as *lost* and `pin` exits 1; the pin is not moved to what is there now.
+6. **`pin` hashes what is already pinned, to say what has changed upstream.** It reads every
+   byte of every pinned asset on each run. A remembered hash would make that cheap, and is
+   not built.
+7. **An asset the other pipeline stops declaring keeps its pin under `pin`, and is dropped by
+   `update`.** One it declares and no longer has on disk keeps its pin under both.
+8. **A pinned dependency whose directory has gone is fine for `pin`.** The pins are in the
+   store, which is the point. For `update` it is an error.
+9. **No lockfile is made for a pipeline with no dependencies.** Removing the last one leaves
+   a lockfile with nothing in it.
+10. **`pin` reads only the pipeline's ID and its `[dependencies]`**, so something wrong
+    elsewhere in the manifest does not stop it.
+11. **`pin` says when what it stored is held as links** to the other pipeline's files, and
+    points at `chartbook store verify`.
+12. **`gc` leaves alone anything stored in the last hour.** A pin puts files in the store
+    before it writes the lockfile that names them, so a `gc` running at the same moment would
+    otherwise remove them.
+13. **`gc` reads each lockfile as it is now.** After checking out an older commit, the pins of
+    the commit you left are named by nothing until you pin again.
+14. **`gc` removes nothing if a lockfile, or one of the store's notes, cannot be read.**
+
+**Where the design was wrong, or assumed something that does not exist yet.**
+
+1. *"`chartbook.lock` is … its own `Build` records and its resolved `dependencies`"*
+   ({doc}`index-schema`). It leaves out the part that freezes anything: the other pipelines'
+   asset records, with their hashes. Those are what the lockfile mostly holds.
+2. *"Both use the same record schemas."* True of the asset records, which fit the index's
+   schema for their kind as they are. The lockfile's `Pipeline` record has only `id` and
+   `dependencies`, and the index's schema for a `Pipeline` also requires `name`, `location`
+   and `assets`, which would change the lockfile every time the manifest did. The lockfile
+   has an envelope schema of its own that says so.
+3. *"`chartbook run` pins anything not yet pinned, so neither verb is needed to get started."*
+   There is no `run` until step 4, so until then `pin` is how to get started.
+4. *"`chartbook update` … and rebuild what that invalidates."* That also needs `run`. `update`
+   moves pins and rebuilds nothing.
+5. *"An object is reachable if some lockfile references it."* With one store for all of a
+   user's projects, the store has to be told which lockfiles there are. It keeps a note of
+   each one that pins into it.
+
 #### Answers to the open questions
 
 *The maintainer answered five of these on 2026-10-12, after 3a. Those are marked **decided**.
@@ -559,7 +655,9 @@ maintainer.
 | 2026-10-12 | The store links by reflink, hardlink, symlink, copy, in that order, as designed. `chartbook store verify` is what catches an object changed from outside | "Answers to the open questions", above; {doc}`asset-graph` |
 | 2026-10-12 | `chartbook.lock` is JSON in the index's format: no timestamp, no absolute path | "Answers to the open questions", above |
 | 2026-10-12 | `chartbook pin` pins what is built and says what is not; asking for an unpinned asset is what fails | "Answers to the open questions", above |
-| 2026-10-12 | Hashing a directory skips `.DS_Store`, `Thumbs.db`, `desktop.ini` and `._*`, and nothing else | "Answers to the open questions", above; {doc}`index-schema` once built |
+| 2026-10-12 | Hashing a directory skips `.DS_Store`, `Thumbs.db`, `desktop.ini` and `._*`, and nothing else | "Answers to the open questions", above; {doc}`index-schema` |
+| 2026-10-12 | `chartbook pin` never moves an existing pin. `chartbook update` is what moves one | "3c, as built", above |
+| 2026-10-12 | `chartbook store gc` keeps what the lockfiles registered in the store name, keeps the pins of one it cannot find unless told to forget it, and asks before removing | "3c, as built", above |
 
 ## Open questions, collected
 
@@ -571,8 +669,13 @@ Each is explained where it lives.
   recommended, as models are. ({doc}`models`, "Decided while building it")
 - Whether a pipeline's own `[policy]` table is wanted. It is honoured today, as a *proposed*
   answer to a crash. ({doc}`toml-format-v2`, "Since this was written")
-- The twelve things settled while building declared dependencies, and the two answers still
-  proposed: how a `git` dependency is fetched, and `data.load("pipeline:asset")`. (Step 3 above)
+- The things settled while building declared dependencies (twelve), the store (ten) and
+  pinning (fourteen), each listed as *proposed* under its "as built" heading, and the two
+  answers still proposed: how a `git` dependency is fetched, and `data.load("pipeline:asset")`.
+  (Step 3 above)
+- Whether a pin should ask the store for a frozen kind of link. With the designed ladder a pin
+  on ext4 is a hard link, and pandas and polars rewrite a parquet file in place, so the step's
+  "Done when" will hold on a Mac and not on a Linux runner. (Step 3 above, answer 2)
 - How a chart says it was made from another pipeline's data. (Step 3 above)
 - Whether the site should render from the index, and when. (Step 6)
 - `plotting.line()` and its siblings can only use the two built-in backends, although third
