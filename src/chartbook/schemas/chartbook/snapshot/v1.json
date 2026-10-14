@@ -78,10 +78,10 @@
     },
     "labels": {
       "type": "object",
-      "description": "The model versions the pipeline's `[models.x.aliases]` named when the snapshot was made, by the model's reference (`model/x`): the first twelve or more hex digits of each version's content hash. `store gc` reads them from the newest snapshot, so a label given on one machine keeps its version on another. Absent if no label named a version.",
+      "description": "The labels the pipeline's `[models.x.aliases]` gave when the snapshot was made, by the model's reference (`model/x`): each label and the first twelve or more hex digits of the version's content hash. `store gc` reads them from the newest snapshot, so a label given on one machine keeps its version on another; `chartbook pin` in a pipeline that depends on this one pins `this:model/x@label` from them. Absent if no label named a version.",
       "additionalProperties": {
-        "type": "array",
-        "items": {
+        "type": "object",
+        "additionalProperties": {
           "type": "string",
           "pattern": "^[0-9a-f]{12,}$"
         }

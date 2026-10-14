@@ -39,6 +39,7 @@ chartbook check --skip-outputs  # same, without requiring built data/charts/note
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
 chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
 chartbook path model/<name>@<version>  # a version of a model, in the store: by the start of its hash (@7f3a9c2e41b0) or by a label (@champion)
+chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version: the label as pinned in chartbook.lock; `chartbook update` moves it
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy (needs [dependencies] + chartbook pin)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report

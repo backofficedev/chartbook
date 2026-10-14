@@ -72,6 +72,7 @@ secrets, and a store is something to share.
 from __future__ import annotations
 
 import hashlib
+import dataclasses
 import json
 import os
 import platform
@@ -167,11 +168,13 @@ class Snapshot:
         inputs: What the pipeline itself was pinned to when the snapshot
             was made: the dependencies of its own lockfile, each with its
             commit and its ``pinned_hash``. Empty if it has no lockfile.
-        labels: The model versions the pipeline's manifest labelled when
-            the snapshot was made, by the model's reference: ``{"model/x":
-            ["7f3a9c2e41b0"]}``. Labels travel with snapshots so that a
-            machine that cannot read the folder they were made from, a
-            store a team shares, still knows which versions to keep.
+        labels: The labels the pipeline's manifest gave its models' versions
+            when the snapshot was made, by the model's reference: ``{"model/x":
+            {"champion": "7f3a9c2e41b0"}}``. Labels travel with snapshots so
+            that a machine that cannot read the folder they were made from,
+            a store a team shares, still knows which versions to keep; and
+            so that a pipeline that depends on this one can pin
+            ``this:model/x@champion`` without reading its folder.
     """
 
     pipeline: str
@@ -221,7 +224,9 @@ class Snapshot:
         if self.inputs:
             document["inputs"] = self.inputs
         if self.labels:
-            document["labels"] = {name: sorted(self.labels[name]) for name in sorted(self.labels)}
+            document["labels"] = {
+                name: dict(sorted(self.labels[name].items())) for name in sorted(self.labels)
+            }
         document["records"] = [self.assets[name] for name in sorted(self.assets)]
         return document
 
@@ -432,7 +437,7 @@ def read(path: Union[str, Path]) -> Snapshot:
             path=path,
             built_with=dict(document.get("built_with") or {}),
             inputs=list(document.get("inputs") or []),
-            labels={k: list(v) for k, v in (document.get("labels") or {}).items()},
+            labels={k: dict(v) for k, v in (document.get("labels") or {}).items()},
         )
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise SnapshotError(f"Cannot read the snapshot {path}: {error}") from None
@@ -616,23 +621,87 @@ def origins(store: Store, taken: Snapshot) -> list[Path]:
     return [Path(line) for line in lines if line and os.path.isabs(line)]
 
 
-def labels_of(raw: dict) -> dict[str, set[str]]:
-    """The model versions a manifest's ``[models.x.aliases]`` point at.
+def labels_of(raw: dict) -> dict[str, dict[str, str]]:
+    """The labels a manifest's ``[models.x.aliases]`` give, and what they name.
 
-    :returns: For each model's reference, the starts of the hashes its
-        labels name. Only what a label may say counts: twelve or more hex
+    :returns: For each model's reference, each label and the start of the
+        hash it names. Only what a label may say counts: twelve or more hex
         digits; anything shorter would keep every snapshot for ever.
     """
-    pointed: dict[str, set[str]] = {}
+    pointed: dict[str, dict[str, str]] = {}
     models = raw.get("models") if isinstance(raw.get("models"), dict) else {}
     for name, entry in models.items():
         aliases = entry.get("aliases") if isinstance(entry, dict) else None
         if not isinstance(aliases, dict):
             continue
-        for version in aliases.values():
+        for label, version in aliases.items():
             if isinstance(version, str) and VERSION_PATTERN.match(version):
-                pointed.setdefault(f"model/{name}", set()).add(version.split(":", 1)[-1])
+                pointed.setdefault(f"model/{name}", {})[label] = version.split(":", 1)[-1]
     return pointed
+
+
+def versions_of_pipeline(
+    store: Store, pipeline: str, subdirectory: str, name: str
+) -> list[tuple[str, "Snapshot"]]:
+    """The versions of one asset of a pipeline, from the store alone.
+
+    What :func:`versions_of` answers from a folder's repository, this
+    answers from the snapshots a store holds of the pipeline, by the name
+    the pipeline gives itself. For a pipeline that depends on another: it
+    never reads the other's folder.
+
+    :returns: Each content hash with the first snapshot that held it,
+        oldest first.
+    """
+    seen: dict[str, Snapshot] = {}
+    for taken in all_snapshots(store):
+        if taken.pipeline != pipeline or taken.subdirectory != subdirectory:
+            continue
+        content_hash = (taken.assets.get(name) or {}).get("content_hash")
+        if content_hash and content_hash not in seen:
+            seen[content_hash] = taken
+    return list(seen.items())
+
+
+def label_records(
+    newest: "Snapshot", key: str, store: Store
+) -> tuple[dict[str, dict], list[tuple[str, str, str]]]:
+    """The lockfile records for the labels a snapshot carries, resolved to bytes.
+
+    Each label of each model becomes a record of its own, ``key:model/x@champion``,
+    with the content hash of the version the label names, so that a
+    pipeline that depends on this one gets the labelled version through
+    its lockfile and the store, as it gets anything else, and a build
+    stays repeatable until ``chartbook update`` moves the label.
+
+    :param newest: The snapshot being pinned from, whose ``labels`` say
+        what the owner's manifest said when it was made.
+    :param key: The dependency's key in ``[dependencies]``.
+    :returns: The records, by ID; and the labels that could not be
+        resolved, as ``(model, label, start)``: the version is in no
+        snapshot the store has, or two versions share the start.
+    """
+    records: dict[str, dict] = {}
+    unresolved: list[tuple[str, str, str]] = []
+    for name, labels in sorted(newest.labels.items()):
+        versions = None
+        for label, start in sorted(labels.items()):
+            if versions is None:
+                versions = versions_of_pipeline(store, newest.pipeline, newest.subdirectory, name)
+            matches = [
+                (content_hash, taken)
+                for content_hash, taken in versions
+                if content_hash.split(":", 1)[-1].startswith(start) and store.has(content_hash)
+            ]
+            if len(matches) != 1:
+                unresolved.append((name, label, start))
+                continue
+            content_hash, taken = matches[0]
+            record = renamed(taken.assets[name], key)
+            ref = AssetRef.from_dict(record["ref"])
+            ref = dataclasses.replace(ref, rev=label)
+            records[str(ref)] = {**record, "id": str(ref), "ref": ref.to_dict(), "label": label}
+    return records, unresolved
 
 
 def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
@@ -654,8 +723,8 @@ def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
     """
     pointed: dict[str, set[str]] = {}
     seen: set[Path] = set()
-    for name, starts in group[-1].labels.items():
-        pointed.setdefault(name, set()).update(starts)
+    for name, labels in group[-1].labels.items():
+        pointed.setdefault(name, set()).update(labels.values())
     for taken in group:
         for top in origins(store, taken):
             directory = top / taken.subdirectory if taken.subdirectory else top
@@ -666,8 +735,8 @@ def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
                 raw = _read_manifest_file(directory)
             except (OSError, ValueError):
                 continue
-            for name, starts in labels_of(raw).items():
-                pointed.setdefault(name, set()).update(starts)
+            for name, labels in labels_of(raw).items():
+                pointed.setdefault(name, set()).update(labels.values())
     return pointed
 
 
@@ -1050,7 +1119,7 @@ def make(
         assets,
         built_with=_built_with(built_by_run),
         inputs=_inputs(directory),
-        labels={name: sorted(starts) for name, starts in labels_of(raw).items()},
+        labels=labels_of(raw),
     )
     before = find(store, code.commit, code.subdirectory)
     if before and before[0].content() == snapshot.content():

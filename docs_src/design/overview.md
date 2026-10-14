@@ -170,8 +170,7 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: a version of another pipeline's model, any export, and anything that *reads* the
-index. Not to be built: loading one column by its
+Not built: any export, and anything that *reads* the index. Not to be built: loading one column by its
 address (`data.load("dataframe#series")`).
 
 ## What to build next, in order
@@ -875,6 +874,7 @@ rebuild `yield_curve` as often as it likes while another builds `rate_forecast`,
 | 4d | `@rev` resolves. Model versions and labels | Built, for a pipeline's own models |
 | 4e | Parts: `dataframe#series` for `data.load()` | **Not to be built.** Decided 2026-10-13, below |
 | 4g | `--frozen`, and a store a team shares | Built 2026-10-14, below |
+| 4h | A version of another pipeline's model: `other:model/x@champion` | Built 2026-10-14, below |
 
 `--frozen` is 4g, below. It followed snapshots, as proposed here: what it has to
 check is that the lockfile is complete and that every pin can be had.
@@ -1290,7 +1290,8 @@ champion = "7f3a9c2e41b0"
 
 **Not done in 4d, on purpose.** A version of another pipeline's model
 (`other:model/x@champion`) is refused: the lockfile pins one snapshot of a dependency, and a
-second version of one of its models beside it has no place there yet. Only models have
+second version of one of its models beside it has no place there yet. *(Built 2026-10-14 as 4h,
+below: a label gets a record of its own in the lockfile.)* Only models have
 version names; a dataframe has snapshots and no names for them. Nothing says a model is out
 of date when what it was trained on has moved.
 
@@ -1329,7 +1330,7 @@ of date when what it was trained on has moved.
 2. **The index and the page depend on the machine that built them.** Two machines build
    different `versions` lists from the same commit.
 3. **No version of another pipeline's model, no version names for other kinds, no staleness.**
-   As above.
+   As above. *(The first closed 2026-10-14: "4h, as built".)*
 4. **Nothing clears old versions.** They are in snapshots, and nothing clears those. *(Closed
    2026-10-13: a version a label points at is kept by `store gc`; one no label names goes
    with its snapshot. "Clearing old snapshots", below.)*
@@ -1734,6 +1735,49 @@ store its pins went into; `--frozen` checks the store this machine is pointed at
 writers to a shared store rely on each file being written whole and then renamed into place,
 which is what the store does; nothing locks the store as a whole.
 
+#### 4h. A version of another pipeline's model — as built
+
+*Added 2026-10-14.* The fifth row of the table in {doc}`models`: *"`other:model/x@champion`: the
+label is looked up when pinning and frozen in the lockfile, so a build is repeatable;
+`chartbook update` moves it."* Built as that row says, on what 4g left in place.
+
+| What | Where |
+|---|---|
+| A snapshot records its labels by name: `{"model/x": {"champion": "7f3a…"}}` | `chartbook/snapshot.py`, `Snapshot.labels`, `labels_of()`; `schemas/chartbook/snapshot/v1.json` |
+| A label becomes a lockfile record of its own, `key:model/x@champion`, with the version's hash | `chartbook/snapshot.py`, `label_records()`, `versions_of_pipeline()`; `chartbook/lock.py`, `_sync_from_snapshots()` |
+| `other:model/x@champion` resolves through the lockfile; `@7f3a…` through the store | `chartbook/resolve.py`, `_resolve_pinned()`, `_resolve_pinned_version()` |
+| The tests | `tests/test_model_versions.py`, `TestAnotherPipelinesVersion` |
+
+**Built as designed.** The label is read when pinning, from the snapshot, never from the other
+pipeline's folder; it is frozen in the lockfile; `update` moves it. `--frozen` and `store gc`
+need nothing new: a label's record has a hash like any other, so `verify()` checks it and the
+lockfile's root note keeps it.
+
+**Proposed: decided here.**
+
+1. **A label is a record, not a field on the dependency entry.** It is one more asset the
+   lockfile pins, `key:model/x@champion`, with the version's full hash and a `label` field.
+   Everything that reads records (resolution, `verify`, roots, `pinned_hash`) then works
+   unchanged, and a diff of the lockfile shows a label moving as it shows data moving.
+2. **An exact version, `other:model/x@7f3a9c2e41b0`, is not pinned.** The hash is the
+   identity; it is looked for among the dependency's snapshots in the store, by the name the
+   dependency gives itself, which the pinned snapshot says. It may be cleared by `gc` if no
+   label and no lockfile names it; the docs say to pin it with a label to keep it.
+3. **A label whose version the store does not have is pinned without bytes**, reported as
+   `not built` with the reason, and is a problem under `--frozen`. `pin` goes on with the rest.
+4. **`pin` reports a label the owner has moved since as `stale`**, like changed data, and does
+   not move it; `update` does, as `moved`; a label taken away is `dropped` on `update`.
+5. **`Snapshot.labels` changed shape**, from a list of version starts to a map of label to
+   start, since the names are what a dependant pins by. 4g was unreleased; no compatibility.
+6. **A `git` dependency's labels are not pinned.** It is pinned from a checkout, not a
+   snapshot, and has no versions in the store. A label of one is reported as not a label when
+   it was pinned.
+
+**Known gaps.** A `git` dependency has no versions. The exact-version lookup reads every
+snapshot record in the store once per call; fine for a store of hundreds, not of millions.
+Staleness, "this model is out of date because what it was trained on moved", is still the
+one unbuilt piece of {doc}`models`.
+
 ### Step 5. Data in databases
 
 **Goal:** a dataframe can be a table, and `data.load()` does not change.
@@ -1933,9 +1977,10 @@ maintainer.
 
 Each is explained where it lives.
 
-- For model versions: one of another pipeline's model, versions that travel between machines,
-  and saying when a model is out of date. Retention is answered by "Clearing old snapshots". How they are named and what makes one is
-  decided. ({doc}`models`; step 4 above, "4d, as built")
+- For model versions: saying when a model is out of date. One of another pipeline's model is
+  4h; versions travel through a store a team shares (4g); retention is answered by "Clearing
+  old snapshots". How they are named and what makes one is decided. ({doc}`models`; step 4
+  above, "4d, as built")
 - Whether dataframes and charts should still be *required* to have a write-up, or only strongly
   recommended, as models are. ({doc}`models`, "Decided while building it")
 - Whether a pipeline's own `[policy]` table is wanted. It is honoured today, as a *proposed*

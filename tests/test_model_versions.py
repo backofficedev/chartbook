@@ -311,9 +311,136 @@ class TestNamingAVersion:
         with pytest.raises(UnsupportedRevisionError, match="kept for models only"):
             data.path("rates@7f3a9c2", project_dir=forecast)
 
-    def test_another_pipelines_version_is_not_yet_supported(self, forecast):
-        with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
+    def test_a_version_of_a_pipeline_that_is_not_a_dependency(self, forecast):
+        from chartbook.errors import DependencyNotDeclaredError
+
+        with pytest.raises(DependencyNotDeclaredError, match="not declared in \\[dependencies\\]"):
             models.path("other:m@champion", project_dir=forecast)
+
+
+def _serve(forecast: Path) -> Path:
+    """A pipeline beside ``forecast`` that depends on it, to serve its model."""
+    serve = forecast.parent / "serve"
+    serve.mkdir()
+    (serve / "README.md").write_text("# Serve\n")
+    (serve / "chartbook.toml").write_text(
+        tomli_w.dumps({"project": {"id": "acme/serve"}, "dependencies": {"forecast": {"path": "../forecast"}}})
+    )
+    return serve
+
+
+def _labelled(forecast: Path) -> tuple[str, str]:
+    """Two versions, the first labelled champion, the label in the newest snapshot."""
+    first = _version(forecast)
+    _train(forecast, b"weights-2", 0.21)
+    _manifest(forecast, {"champion": first})
+    _commit(forecast)
+    second = _version(forecast)
+    return first, second
+
+
+def _label_statuses(report) -> dict:
+    return {event.asset: event.status for event in report.events if event.asset}
+
+
+class TestAnotherPipelinesVersion:
+    """``other:model/m@champion``: the label is looked up when pinning and frozen
+    in the lockfile, so a build is repeatable; ``chartbook update`` moves it."""
+
+    def test_a_label_is_pinned_from_the_snapshot_and_resolves(self, forecast):
+        from chartbook import lock
+
+        first, second = _labelled(forecast)
+        serve = _serve(forecast)
+        report = lock.pin(serve)
+        assert _label_statuses(report)["forecast:model/m@champion"] == "pinned"
+        assert models.path("forecast:m@champion", project_dir=serve).read_bytes() == b"weights-1"
+        assert models.path("forecast:m", project_dir=serve).read_bytes() == b"weights-2"
+        # A version by the start of its hash is found among the dependency's
+        # snapshots in the store; nothing of its folder is read
+        assert models.path(f"forecast:m@{first}", project_dir=serve).read_bytes() == b"weights-1"
+        assert models.path(f"forecast:m@{second}", project_dir=serve).read_bytes() == b"weights-2"
+        record = lock.read_lock(serve / lock.LOCK_FILE).assets["forecast:model/m@champion"]
+        assert record["label"] == "champion" and record["ref"]["rev"] == "champion"
+        assert record["content_hash"].split(":", 1)[1].startswith(first)
+        assert lock.verify(serve).problems == []
+        # The lockfile is source: pinning again changes nothing
+        assert lock.pin(serve).written is False
+
+    def test_a_label_not_given_when_pinned_says_so(self, forecast):
+        from chartbook import lock
+        from chartbook.errors import AssetNotPinnedError
+
+        _version(forecast)
+        serve = _serve(forecast)
+        lock.pin(serve)
+        with pytest.raises(AssetNotPinnedError, match="'champion' was not a label of forecast:model/m when") as e:
+            models.path("forecast:m@champion", project_dir=serve)
+        assert "Its labels then: (none)" in str(e.value) and "`chartbook update forecast`" in str(e.value)
+        with pytest.raises(AssetNotPinnedError, match="No version deadbeef of forecast:model/m is in the store"):
+            models.path("forecast:m@deadbeef", project_dir=serve)
+
+    def test_pin_keeps_a_label_and_update_moves_it(self, forecast):
+        from chartbook import lock
+
+        first, second = _labelled(forecast)
+        serve = _serve(forecast)
+        lock.pin(serve)
+        # The owner promotes the second version, and declares it ready
+        _manifest(forecast, {"champion": second})
+        _commit(forecast)
+        _train(forecast, b"weights-3", 0.10)
+        snapshot.make(forecast)
+        report = lock.pin(serve)
+        assert _label_statuses(report)["forecast:model/m@champion"] == "stale"
+        assert models.path("forecast:m@champion", project_dir=serve).read_bytes() == b"weights-1"
+        report = lock.update(serve)
+        assert _label_statuses(report)["forecast:model/m@champion"] == "moved"
+        assert models.path("forecast:m@champion", project_dir=serve).read_bytes() == b"weights-2"
+        # The owner takes the label away: the next update drops its pin
+        _manifest(forecast)
+        _commit(forecast)
+        _train(forecast, b"weights-4", 0.05)
+        snapshot.make(forecast)
+        report = lock.update(serve)
+        assert _label_statuses(report)["forecast:model/m@champion"] == "dropped"
+        assert "forecast:model/m@champion" not in lock.read_lock(serve / lock.LOCK_FILE).assets
+
+    def test_a_label_whose_version_the_store_has_lost(self, forecast):
+        from chartbook import lock
+
+        first, _ = _labelled(forecast)
+        store = default_store()
+        (lost,) = [h for h, _ in snapshot.versions_of(forecast, "model/m") if h.split(":", 1)[1].startswith(first)]
+        store.delete(lost)
+        serve = _serve(forecast)
+        report = lock.pin(serve)
+        assert _label_statuses(report)["forecast:model/m@champion"] == "not_built"
+        (problem,) = lock.verify(serve).problems
+        assert problem.asset == "forecast:model/m@champion"
+        assert "is a label whose version no snapshot in the store had" in problem.message
+
+    def test_what_a_label_pins_is_a_root_for_gc(self, forecast):
+        from chartbook import lock
+
+        first, _ = _labelled(forecast)
+        serve = _serve(forecast)
+        lock.pin(serve)
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        assert plan.delete == []
+        (root,) = [r for r in default_store().roots() if r.lockfile == serve / lock.LOCK_FILE]
+        assert any(h.split(":", 1)[1].startswith(first) for h in root.hashes)
+
+    def test_the_command_line(self, forecast, monkeypatch):
+        from chartbook import lock
+
+        first, _ = _labelled(forecast)
+        serve = _serve(forecast)
+        lock.pin(serve)
+        monkeypatch.chdir(serve)
+        result = CliRunner().invoke(main, ["path", "forecast:model/m@champion"])
+        assert result.exit_code == 0, result.output
+        assert Path(result.output.strip()).read_bytes() == b"weights-1"
 
 
 class TestLabels:

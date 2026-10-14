@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a version of another pipeline's model: `forecasting:model/x@champion`
+
+The fifth row of the design's table in `models.md`, and the last piece of model versions. A pipeline that depends on another can ask for a labelled version of its model, `models.path("forecasting:rate_forecaster@champion")`, or an exact one, `@7f3a9c2e41b0`. The label is looked up when pinning and frozen in the lockfile: a snapshot records the labels its manifest gave (`labels` on the record, by label name now, not only by version), `chartbook pin` writes each as a record of its own, `forecasting:model/rate_forecaster@champion`, with the hash of the version it names, and `chartbook update` moves it with the owner's manifest (`moved`, or `dropped` when the label is gone; `pin` reports a label the owner has moved since as changed upstream). An exact version is found among the pipeline's snapshots in the store. Nothing of the other pipeline's folder is read. A label the owner gave after you pinned is not in your lockfile, and the error says `chartbook update` pins it. What a label pins is a root for `store gc`, so the version is kept; a label whose version the store does not have is pinned without bytes, and `--frozen` reports it.
+
 ### Added — `--frozen`, and a store a team shares
 
 `chartbook pin --frozen` and `chartbook run --frozen` write nothing: not the lockfile, not the store, and no `git` dependency is fetched or built. They say whether the pipeline can be built from its lockfile alone (every dependency pinned from where the manifest says, every asset built when pinned, every pin in the store) and exit `1` if not; `run --frozen` builds only when that holds. It is what CI runs, and what anyone with a store they may only read runs. `--frozen` and `--snapshot` are one or the other. In Python it is `chartbook.lock.verify()`.

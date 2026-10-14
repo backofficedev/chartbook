@@ -860,8 +860,8 @@ class TestClearingOldSnapshots:
         _commit(work)
         (directory / "_output" / "m.json").write_bytes(b"v3")
         third = snapshot.make(directory).snapshot
-        assert third.labels == {"model/m": [version]}
-        assert snapshot.read(third.path).labels == {"model/m": [version]}
+        assert third.labels == {"model/m": {"champion": version}}
+        assert snapshot.read(third.path).labels == {"model/m": {"champion": version}}
         # Another machine: the folder is not here. The label still keeps the first.
         for folder in {t.path.parent for t in snapshot.all_snapshots(default_store())}:
             (folder / "origins").write_text(str(tmp_path / "elsewhere") + "\n")

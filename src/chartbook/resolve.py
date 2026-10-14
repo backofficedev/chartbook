@@ -469,9 +469,10 @@ def parse_declared_ref(
     A registry is refused as reserved either way, so the message can say
     "not yet" where the syntax is right.
 
-    A revision resolves in one case: a version of one of this pipeline's
-    own models, ``model/x@7f3a9c2e41b0`` or ``model/x@champion``. A manifest
-    does not state one.
+    A revision resolves for a model: a version of one of this pipeline's
+    own, ``model/x@7f3a9c2e41b0`` or ``model/x@champion``, or of a
+    dependency's, ``other:model/x@champion``, which the lockfile pins. A
+    manifest does not state one.
 
     A part, ``dataframe#series``, is the address of one column. In a
     manifest it would say which column something was made from, and that
@@ -507,13 +508,6 @@ def parse_declared_ref(
                 f"Reference {str(asset)!r} names a version of a {asset.kind}. "
                 f"Versions are kept for models only so far; use "
                 f"{str(without)!r} instead."
-            )
-        if not asset.is_local:
-            raise UnsupportedRevisionError(
-                f"Reference {str(asset)!r} names a version of another "
-                f"pipeline's model, which is not yet supported. "
-                f"{str(without)!r} is the version that chartbook.lock pins, "
-                f"and `chartbook update` moves it."
             )
     if asset.part is not None:
         without = dataclasses.replace(asset, part=None)
@@ -656,6 +650,8 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"to its pinned copy, not to that pipeline's working directory.",
         )
     record = of_dependency.get(asset_id)
+    if record is None and pinned.rev is not None:
+        return _resolve_pinned_version(pinned, dependency, of_dependency, locked, manifest_dir)
     if record is None:
         in_source = pinned.kind == "dataframe" and _declared_in_source(dependency, pinned.name)
         if in_source:
@@ -807,6 +803,87 @@ def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Locati
             f"bytes.",
         )
     return _held(store, records[matches[0]])
+
+
+def _resolve_pinned_version(
+    pinned: AssetRef, dependency: PipelineLocation, of_dependency: dict, locked, manifest_dir: Path
+) -> Location:
+    """A version of a dependency's model that the lockfile does not pin by label.
+
+    ``other:model/x@7f3a9c2e41b0`` names a version by the start of its
+    hash: it is looked for among the dependency's snapshots in the store,
+    by the name the dependency gives itself, which the pinned snapshot
+    says. Nothing of the other pipeline's folder is read. A label the
+    lockfile does not have is a label the owner had not given when this
+    pipeline pinned; ``chartbook update`` pins it.
+    """
+    from chartbook import snapshot
+    from chartbook.store import default_store
+
+    asset_id = str(pinned)
+    without = str(dataclasses.replace(pinned, rev=None))
+    labels = sorted(
+        other["ref"]["rev"]
+        for other in of_dependency.values()
+        if other.get("ref", {}).get("rev") and other.get("ref", {}).get("name") == pinned.name
+        and other.get("ref", {}).get("kind") == pinned.kind
+    )
+    digits = pinned.rev.split(":", 1)[-1]
+    if pinned.kind != "model" or not all(c in "0123456789abcdef" for c in digits) or len(digits) < 4:
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_in_lockfile",
+            f"{pinned.rev!r} was not a label of {without} when the pipeline "
+            f"{dependency.id!r} was pinned. Its labels then: "
+            f"{', '.join(labels) or '(none)'}. If its owner has given the label "
+            f"since, and made a snapshot, `chartbook update {dependency.id}` pins it.",
+        )
+    store = default_store()
+    entry = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
+    commit, made_at = entry.get("location", {}).get("commit"), entry.get("snapshot")
+    pinned_snapshot = None
+    if commit and made_at:
+        pinned_snapshot = next(
+            (t for t in snapshot.all_snapshots(store) if t.same_moment(commit, made_at)), None
+        )
+    if pinned_snapshot is None:
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_in_store",
+            f"{asset_id!r} names a version by its hash, and the snapshot that "
+            f"{dependency.id!r} is pinned to is not in the store, so its versions "
+            f"cannot be looked up there. Run `chartbook pin`.",
+        )
+    local = str(dataclasses.replace(pinned, pipeline=None, rev=None))
+    versions = snapshot.versions_of_pipeline(
+        store, pinned_snapshot.pipeline, pinned_snapshot.subdirectory, local
+    )
+    hashes = [h for h, _ in versions]
+    matches = [(h, t) for h, t in versions if h.split(":", 1)[-1].startswith(digits)]
+    if not matches:
+        known = ", ".join(snapshot.version_name(h, hashes) for h in hashes) or "(none)"
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_in_store",
+            f"No version {pinned.rev} of {without} is in the store. Its versions "
+            f"here are: {known}. A version is made by a snapshot, in its own pipeline.",
+        )
+    if len(matches) > 1:
+        raise AssetNotPinnedError(
+            asset_id,
+            "ambiguous",
+            f"{pinned.rev} is the start of {len(matches)} versions of {without}: "
+            f"{', '.join(snapshot.version_name(h, hashes) for h, _ in matches)}. Give more digits.",
+        )
+    content_hash, taken = matches[0]
+    if not store.has(content_hash):
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_in_store",
+            f"Version {pinned.rev} of {without} is named by a snapshot, and its "
+            f"bytes are not in the store at {store.root}.",
+        )
+    return _held(store, taken.assets[local])
 
 
 def _declared_in_source(dependency: PipelineLocation, name: str) -> Optional[str]:
