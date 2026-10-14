@@ -20,6 +20,7 @@ chartbook
 ../apidocs/chartbook/chartbook.identity
 ../apidocs/chartbook/chartbook.incremental
 ../apidocs/chartbook/chartbook.index
+../apidocs/chartbook/chartbook.indexdiff
 ../apidocs/chartbook/chartbook.hashing
 ../apidocs/chartbook/chartbook.store
 ../apidocs/chartbook/chartbook.snapshot

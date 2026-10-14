@@ -754,6 +754,48 @@ def _get_pipeline_name(pipeline_manifest):
     return pipeline_manifest.get("project", {}).get("name", "Unknown")
 
 
+@main.group("index")
+def index_group():
+    """Read the index.json a build writes beside the site."""
+
+
+@index_group.command("diff")
+@click.argument("before", type=click.Path(exists=True))
+@click.argument("after", type=click.Path(exists=True))
+@click.option("--json", "as_json", is_flag=True, help="Print the diff as JSON, for a script")
+@click.option(
+    "--exit-code", is_flag=True, help="Exit 1 when the two differ, as `git diff --exit-code` does"
+)
+def index_diff(before, after, as_json, exit_code):
+    """Say what changed between two builds, from their index.json files.
+
+    BEFORE and AFTER are two index.json files, or the folders that hold
+    them (the site folder, `docs/`). Records are matched by kind and ID;
+    the two are compared as published, so a build directory's index and
+    the site's compare as equals, and `generated_at` is ignored.
+
+    \b
+    Examples:
+        chartbook index diff docs-main/ docs/
+        chartbook index diff old.json docs/index.json --exit-code
+    """
+    import json
+
+    from chartbook import indexdiff
+
+    try:
+        found = indexdiff.diff(indexdiff.read_index(before), indexdiff.read_index(after))
+    except (OSError, ValueError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(2)
+    if as_json:
+        click.echo(json.dumps(found.to_dict(), indent=2, default=str))
+    else:
+        click.echo(indexdiff.format_diff(found))
+    if exit_code and not found.empty:
+        raise SystemExit(1)
+
+
 @main.group(invoke_without_command=True)
 @click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
 @click.pass_context

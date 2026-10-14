@@ -1999,6 +1999,28 @@ Once the index is stable: render the site from it, a Dagster export, an MCP serv
 provenance panel on each page, a diff of two indexes. Each is a reader of one file
 ({doc}`index-schema`, "What this unblocks").
 
+#### 6a. A diff of two indexes — as built
+
+*Added 2026-10-14.* The smallest reader, and the one a reviewer of any build wants:
+`chartbook index diff BEFORE AFTER` says what changed between two builds from their
+`index.json` files alone. `chartbook/indexdiff.py`; `tests/test_index_diff.py`.
+
+**Proposed: decided here.** The two indexes are compared *as published* (`index.published()`
+applied to both), so a build directory's full index and the site's compare as equals and no
+local path is ever in the output; `generated_at` is ignored. Records are matched by kind and
+ID. A changed record is described in words a reviewer uses, worked out from which fields
+differ: *data changed* for a content or definition hash, size, row count, columns or files;
+*pins moved* for a pipeline's dependencies; *N new version(s)*; *labels moved*; *out of date* or
+*up to date again*; *scores changed*; else *declared differently* with the field names. The
+hashes and row counts are printed for data. `--json` gives every changed field before and
+after; `--exit-code` exits 1 on any difference, as `git diff --exit-code` does. The index was
+judged stable enough for this: the diff reads only `kind`, `id` and whole fields, so a field
+added to a record later shows as *declared differently* and breaks nothing.
+
+**Known gaps.** A record whose ID changes (a renamed asset) is a removal and an addition, not a
+rename. A `Series` record follows its dataframe and is listed on its own. Nothing yet fetches
+the *before* index from git or from a deployed site; the reviewer brings both files.
+
 ## Working in the code
 
 The contributing guide ({doc}`../contributing`) has setup and style. These are the things that

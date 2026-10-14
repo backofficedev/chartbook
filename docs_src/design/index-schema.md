@@ -669,6 +669,7 @@ Once the index exists, several things stop being subsystems and become readers o
 - **Faceted search** over the catalog, computed in a browser against a small file.
 - A **provenance panel** on every asset page: what built this, from which inputs at which hashes.
 - A **build diff** for reviewing what changed, including changes made by automated tooling.
+  *(Built 2026-10-14: `chartbook index diff`, `chartbook/indexdiff.py`; {doc}`overview`, "6a, as built".)*
 
 Which is the reason this document comes first.
 

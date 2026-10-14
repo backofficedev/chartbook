@@ -691,6 +691,28 @@ ftsfr/rate_forecast: build
 Ran build in 1 pipeline(s).
 ```
 
+## chartbook index
+
+```console
+chartbook index diff BEFORE AFTER [--json] [--exit-code]
+```
+
+Say what changed between two builds, from the `index.json` each wrote beside its site. `BEFORE` and `AFTER` are two `index.json` files, or the folders that hold them. Records are matched by kind and ID; the two are compared as published, so a build directory's full index and the site's compare as equals, and `generated_at` is ignored.
+
+```console
+$ chartbook index diff docs-main/ docs/
+Added 1:
+  Chart ftsfr/fed_yield_curve:chart/curve_slope
+Changed 2:
+  Dataframe ftsfr/fed_yield_curve:treasury_rates: data changed
+    content_hash: sha256:2c7ffc38b1c1… -> sha256:9ab40d12e77e…
+    row_count: 17043 -> 17044
+  Model ftsfr/rate_forecast:model/rate_forecaster: out of date
+    stale_inputs: [] -> ["fed_yield_curve:treasury_rates"]
+```
+
+A changed record is described in a reviewer's words: *data changed* (a content or definition hash, a size, a row count, columns or files), *pins moved* (a pipeline's dependencies), *N new version(s)*, *labels moved*, *out of date* or *up to date again*, *scores changed*, and *declared differently* with the fields. `--json` prints the same as JSON, each changed field with its value before and after, for a script or a bot that comments on a pull request. `--exit-code` exits `1` when the two differ, as `git diff --exit-code` does, so CI can ask "did this change what the site says?". This is the first reader of the index ({doc}`../design/index-schema`, "What this unblocks").
+
 ## chartbook store
 
 The store is a folder of files kept under the hash of what is in them. It is where `chartbook pin` keeps its copies of other pipelines' data.
