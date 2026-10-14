@@ -246,7 +246,9 @@ class TestLoading:
         }
         _manifest(pipeline, broken)
         frame = data.load("bad", project_dir=pipeline)  # binds: no error yet
-        with pytest.raises(pl.exceptions.ComputeError, match="Conversion"):
+        # Polars wraps it as ComputeError on some versions and lets DuckDB's own
+        # exception through on others; the message is DuckDB's either way
+        with pytest.raises((pl.exceptions.ComputeError, duckdb.Error), match="Conversion Error"):
             frame.collect()
         glimpse = _source_glimpse(load_manifest(pipeline)["dataframes"]["bad"])
         assert glimpse.startswith("A query in source 'local' (duckdb). It could not be read when the site was built:")
