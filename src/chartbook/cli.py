@@ -1719,9 +1719,14 @@ def _run_pin(project_dir, dependencies=None, from_folder=False):
         else:
             report = lock.update(project_dir, dependencies, from_folder=from_folder)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
     _echo_pin_report(report)
+    if report.unrooted:
+        click.echo(
+            f"The store is read-only for you, so its note of this lockfile could not "
+            f"be updated, and its `store gc` goes by the note it has ({report.unrooted})."
+        )
     if report.problems:
         click.echo(
             f"\n{len(report.problems)} thing(s) could not be pinned.", err=True
@@ -1739,10 +1744,37 @@ _from_folder = click.option(
 )
 
 
+def _echo_frozen_report(step, report):
+    """Print what `--frozen` found: one line when all is well, else each problem."""
+    who = f"{step.id}: " if step is not None else ""
+    if not report.problems and not report.dependencies:
+        click.echo(f"{who}no dependencies to check. Nothing written.")
+        return
+    if not report.problems:
+        click.echo(
+            f"{who}{report.pins} pin(s) of {report.dependencies} dependenc"
+            f"{'y' if report.dependencies == 1 else 'ies'}, all in the store. Nothing written."
+        )
+        return
+    for problem in report.problems:
+        where = problem.asset or problem.dependency
+        click.echo(f"{who}{where + ': ' if where else ''}{problem.message}", err=True)
+    click.echo(
+        f"{who}{len(report.problems)} problem(s): the pipeline cannot be built from its "
+        f"lockfile alone. Nothing written.",
+        err=True,
+    )
+
+
 @main.command()
 @click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
+@click.option(
+    "--frozen",
+    is_flag=True,
+    help="Write nothing: say whether the lockfile is complete and every pin is in the store",
+)
 @_from_folder
-def pin(project_dir, from_folder):
+def pin(project_dir, frozen, from_folder):
     """Freeze what this pipeline depends on.
 
     Each pipeline in [dependencies] is pinned to a snapshot of it: what its
@@ -1761,12 +1793,64 @@ def pin(project_dir, from_folder):
     A dependency that is a git repository is fetched, and pinned from a
     clean copy of the commit.
 
+    --frozen pins nothing and writes nothing: not the lockfile, not the
+    store. It says whether the pipeline can be built from its lockfile
+    alone, every dependency pinned and every pin in the store, and exits
+    1 if not. For CI, and for a store you may only read.
+
     \b
     Examples:
         chartbook pin
         chartbook pin --project-dir ../rate_forecast
+        chartbook pin --frozen
     """
+    if frozen and from_folder:
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + "--frozen writes nothing, and --from-folder pins. One or the other.",
+            err=True,
+        )
+        raise SystemExit(1)
+    if frozen:
+        _run_frozen(project_dir)
+        return
     _run_pin(project_dir, from_folder=from_folder)
+
+
+def _explain_os_error(error):
+    """An OSError as a sentence: what a read-only store means, else the error."""
+    from chartbook import lock
+    from chartbook.store import default_store
+
+    if isinstance(error, OSError) and lock.is_read_only(error):
+        try:
+            root = str(default_store().root)
+        except Exception:  # pragma: no cover - the store path is unreadable
+            root = ""
+        if root and str(getattr(error, "filename", "") or "").startswith(root):
+            return (
+                f"The store at {root} is read-only for you, and this had to write "
+                f"it: a git dependency's first pin, --from-folder, and a snapshot "
+                f"all put files into the store. Do it where the store can be "
+                f"written; or, if the store already has what the lockfile names, "
+                f"use --frozen. ({error})"
+            )
+    return str(error)
+
+
+def _run_frozen(project_dir):
+    """Say whether a pipeline can be built from its lockfile alone; exit 1 if not."""
+    from chartbook import lock
+    from chartbook.store import StoreError
+
+    try:
+        report = lock.verify(resolve_project_dir(project_dir))
+    except (lock.LockError, StoreError, ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
+        raise SystemExit(1)
+    _echo_frozen_report(None, report)
+    if report.problems:
+        raise SystemExit(1)
 
 
 @main.command()
@@ -1823,7 +1907,7 @@ def snapshot(project_dir):
     try:
         report = snapshots.make(project_dir)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
 
     _echo_snapshot(report)
@@ -1847,7 +1931,12 @@ def snapshot(project_dir):
     is_flag=True,
     help="After the build, declare it ready: make a snapshot (see `chartbook snapshot`)",
 )
-def run_command(script, project_dir, force, make_snapshot):
+@click.option(
+    "--frozen",
+    is_flag=True,
+    help="Pin nothing and write nothing before the build; refuse unless every pin is in the store",
+)
+def run_command(script, project_dir, force, make_snapshot, frozen):
     """Run a script in this pipeline: `build`, unless another is named.
 
     SCRIPT is a name from [scripts] in chartbook.toml.
@@ -1883,9 +1972,20 @@ def run_command(script, project_dir, force, make_snapshot):
         chartbook run test
         chartbook run --force
         chartbook run --snapshot
+        chartbook run --frozen
+
+    --frozen pins nothing and writes nothing before the build: not the
+    lockfile, not the store, and no git dependency is fetched or built.
+    The build runs only if the lockfile is complete and every pin is in
+    the store (`chartbook pin --frozen` says the same without building).
+    For CI, and for a store you may only read.
     """
     _run_script(
-        resolve_project_dir(project_dir), script, force=force, snapshot=make_snapshot
+        resolve_project_dir(project_dir),
+        script,
+        force=force,
+        snapshot=make_snapshot,
+        frozen=frozen,
     )
 
 
@@ -1925,7 +2025,7 @@ def _echo_snapshot(report):
         )
 
 
-def _run_script(project_dir, script, force=False, snapshot=False):
+def _run_script(project_dir, script, force=False, snapshot=False, frozen=False):
     """Run a named script as `chartbook run` does; exit with its code if it fails."""
     from chartbook import lock
     from chartbook import run as runner
@@ -1948,9 +2048,11 @@ def _run_script(project_dir, script, force=False, snapshot=False):
             force=force,
             snapshot=snapshot,
             on_snapshot=lambda step, made: _echo_snapshot(made),
+            frozen=frozen,
+            on_verify=_echo_frozen_report,
         )
     except (runner.RunError, lock.LockError, StoreError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
 
     if report.failed is not None:
@@ -2024,7 +2126,7 @@ def _format_bytes(size):
 @click.option(
     "--forget-missing",
     is_flag=True,
-    help="Stop keeping the pins of a lockfile that cannot be found",
+    help="Stop keeping the pins of a lockfile that cannot be found (on a store a team shares, that is every other machine's)",
 )
 @click.option(
     "--keep-days",
@@ -2042,13 +2144,17 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
     snapshot: what `chartbook snapshot` kept of a pipeline at a commit.
 
     A snapshot is kept if a lockfile pins it, if it is the newest of its
-    pipeline, if a label in that pipeline's chartbook.toml points at a model
-    version in it, or if it was made in the last 30 days (--keep-days).
-    Otherwise it may be removed, and what only it named goes with it.
+    pipeline or the newest a branch or tag can pin from, if a label points
+    at a model version in it (in that pipeline's chartbook.toml, or as its
+    newest snapshot recorded), or if it was made in the last 30 days
+    (--keep-days). Otherwise it may be removed, and what only it named
+    goes with it.
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
-    --forget-missing to let those go.
+    --forget-missing to let those go. On a store a team shares, every other
+    machine's lockfile is one that cannot be found from here, so there the
+    store's owner runs gc without it.
 
     What would be removed is listed, and nothing is removed until you say
     yes. An object stored in the last hour is never removed: a pin puts
@@ -2102,7 +2208,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
     ):
         click.echo(
             "  A lockfile that cannot be found keeps every snapshot that holds "
-            "something it named. --forget-missing lets them go."
+            "something it named. --forget-missing lets them go; on a store a team "
+            "shares, that includes what other machines pin."
         )
 
     if not plan.delete and not plan.snapshots_delete:

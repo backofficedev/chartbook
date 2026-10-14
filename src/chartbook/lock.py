@@ -57,6 +57,7 @@ in ``docs_src/design/asset-graph.md``.
 from __future__ import annotations
 
 import hashlib
+import errno
 import json
 import os
 import uuid
@@ -295,6 +296,11 @@ class PinReport:
             this run, by key.
         from_folder: The ``path`` dependencies that were pinned from what
             was in their folder, because that was asked for.
+        unrooted: Why the store's note of this lockfile could not be
+            written or removed, when it could not: the store is read-only
+            for this user, as a store a team shares may be for everyone but
+            its owner. The lockfile is written all the same; the store's
+            ``gc`` goes by the note it has, if any.
     """
 
     lockfile: Path
@@ -303,6 +309,7 @@ class PinReport:
     git: set = field(default_factory=set)
     snapshots: dict = field(default_factory=dict)
     from_folder: set = field(default_factory=set)
+    unrooted: str = ""
 
     def count(self, *statuses: str) -> int:
         """How many events have one of these statuses."""
@@ -459,10 +466,171 @@ def _sync(
     if dependencies or lock_path.exists():
         report.written = write_lock(after, lock_path)
     hashes = after.hashes()
-    if hashes:
-        store.add_root(lock_path, hashes)
-    else:
-        store.remove_root(lock_path)
+    try:
+        if hashes:
+            store.add_root(lock_path, hashes)
+        else:
+            store.remove_root(lock_path)
+    except OSError as error:
+        if not is_read_only(error):
+            raise LockError(
+                f"{lock_path} was written, and the store's note of it for `gc` "
+                f"could not be: {error}. The pins are in the store and the lockfile "
+                f"names them; `chartbook pin` again, once the store can be written, "
+                f"leaves the note."
+            ) from None
+        # A store that is read-only for this user: the pins are in it, the
+        # lockfile names them, and only the note for `gc` is missing
+        report.unrooted = str(error)
+    return report
+
+
+def is_read_only(error: OSError) -> bool:
+    """Whether an error says the place could not be written for want of permission."""
+    return isinstance(error, PermissionError) or error.errno in (errno.EROFS, errno.EACCES, errno.EPERM)
+
+
+@dataclass
+class FrozenProblem:
+    """One reason a pipeline cannot be built from its lockfile alone.
+
+    Attributes:
+        dependency: The dependency's key in ``[dependencies]``; empty when
+            the problem is the lockfile itself.
+        asset: The asset's ID, or None when it is about the dependency.
+        message: What is wrong, and what to run.
+    """
+
+    dependency: str
+    asset: Optional[str]
+    message: str
+
+
+@dataclass
+class FrozenReport:
+    """What :func:`verify` found: whether every pin can be had, with nothing written.
+
+    Attributes:
+        lockfile: The lockfile's path.
+        dependencies: How many dependencies the manifest declares.
+        pins: How many pinned assets are in the store.
+        problems: Everything that stands in the way, in order.
+    """
+
+    lockfile: Path
+    dependencies: int = 0
+    pins: int = 0
+    problems: list[FrozenProblem] = field(default_factory=list)
+
+
+def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -> FrozenReport:
+    """Say whether a pipeline can be built from its lockfile alone. Nothing is written.
+
+    This is ``--frozen``: what CI runs, and what anyone with a store they
+    may only read runs. It opens no repository, fetches nothing, pins
+    nothing and writes nothing, not the lockfile, not the store. It reads
+    the manifest's ``[dependencies]``, the lockfile and the store, and
+    reports a problem for
+
+    - a lockfile that is not there while the manifest has dependencies;
+    - a dependency in the manifest and not in the lockfile, or in the
+      lockfile and no longer in the manifest, or pinned from one place
+      while the manifest now says another;
+    - a dependency with nothing pinned;
+    - an asset that was declared and not built when it was pinned;
+    - a pinned asset that the store does not have.
+
+    The stricter choice the design kept for ``--frozen``: where ``pin``
+    records an unbuilt asset and goes on, ``verify`` counts it a problem,
+    since the build that follows may need it.
+
+    :param project_dir: The pipeline's directory.
+    :param store: The store the pins should be in; this user's by default.
+    :returns: What was found. No problems means the build can go ahead.
+    :raises LockError: If *project_dir* is not a pipeline, or its lockfile
+        is there and cannot be read.
+    :raises ValueError: If its ``[dependencies]`` table is malformed.
+    """
+    project_dir = Path(project_dir).resolve()
+    store = store if store is not None else default_store()
+    _, dependencies = _read_pipeline(project_dir)
+    lock_path = project_dir / LOCK_FILE
+    report = FrozenReport(lockfile=lock_path, dependencies=len(dependencies))
+    locked = read_lock(lock_path)
+    if locked is None:
+        if dependencies:
+            report.problems.append(
+                FrozenProblem(
+                    "",
+                    None,
+                    f"{lock_path} does not exist, and {MANIFEST_NAME} declares "
+                    f"{len(dependencies)} dependenc{'y' if len(dependencies) == 1 else 'ies'}. "
+                    f"Run `chartbook pin` and commit the lockfile.",
+                )
+            )
+        return report
+    if any(not isinstance(entry.get("id"), str) for entry in locked.dependencies):
+        raise LockError(
+            f"{lock_path} lists a dependency without an id. The file is not one "
+            f"ChartBook wrote; run `chartbook pin` to write it again."
+        )
+    entries = {entry["id"]: entry for entry in locked.dependencies}
+    for key in sorted(dependencies):
+        entry = entries.get(key)
+        if entry is None:
+            report.problems.append(
+                FrozenProblem(key, None, "is in [dependencies] and not in the lockfile. Run `chartbook pin`.")
+            )
+            continue
+        listed = _dependency_entry(key, dependencies[key])
+        if _declared_elsewhere(entry, listed):
+            report.problems.append(
+                FrozenProblem(
+                    key,
+                    None,
+                    f"is pinned from {_describe(entry.get('location', {}))} and "
+                    f"[dependencies] now says {_describe(listed['location'])}. "
+                    f"`chartbook update {key}` follows it.",
+                )
+            )
+        assets = locked.assets_of(key)
+        if not assets:
+            report.problems.append(
+                FrozenProblem(key, None, "has nothing pinned. Run `chartbook pin`, and see what it says.")
+            )
+        for asset_id in sorted(assets):
+            content_hash = assets[asset_id].get("content_hash")
+            if not content_hash:
+                report.problems.append(
+                    FrozenProblem(
+                        key, asset_id, "was declared and not built when it was pinned. Build it there, declare it ready, and `chartbook update`."
+                    )
+                )
+            elif not store.has(content_hash):
+                if entry.get("via") == "rev":
+                    remedy = "`chartbook pin`, where the store can be written, puts it back from the repository"
+                elif entry.get("location", {}).get("commit"):
+                    remedy = (
+                        f"`chartbook update {key}` moves to a snapshot the store has, or "
+                        f"`chartbook snapshot` in its folder at that commit makes it again"
+                    )
+                else:
+                    remedy = "`chartbook pin --from-folder`, where the store can be written, puts it back from the folder"
+                report.problems.append(
+                    FrozenProblem(
+                        key,
+                        asset_id,
+                        f"is pinned at {content_hash[:19]}… and the store at {store.root} "
+                        f"does not have it. Point CHARTBOOK_STORE at the store that has it; "
+                        f"or {remedy}.",
+                    )
+                )
+            else:
+                report.pins += 1
+    for key in sorted(set(entries) - set(dependencies)):
+        report.problems.append(
+            FrozenProblem(key, None, "is in the lockfile and no longer in [dependencies]. Run `chartbook pin`.")
+        )
     return report
 
 
@@ -1039,7 +1207,9 @@ def plan_gc(
 
     :param store: The store; this user's by default.
     :param forget_missing: If True, a lockfile that cannot be found keeps
-        nothing, and is forgotten when the plan is carried out.
+        nothing, and is forgotten when the plan is carried out. On a store
+        a team shares, every other machine's lockfile is one that cannot be
+        found from here.
     :param recent_seconds: An unnamed object newer than this is left alone.
     :param keep_days: How long an unpinned snapshot that is not the newest
         of its pipeline is kept.

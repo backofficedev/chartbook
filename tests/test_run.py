@@ -402,6 +402,56 @@ def _ready(directory: Path) -> None:
 
 
 @posix
+class TestFrozen:
+    def test_a_frozen_run_builds_nothing_until_every_pin_is_there(self, reader, work):
+        upstream = work / "upstream"
+        _ready(upstream)
+        said = []
+        report = run.run(reader, echo=_quiet, frozen=True, on_verify=lambda step, r: said.append(r))
+        assert report.failed is not None and "--frozen writes nothing" in report.reason
+        assert "does not exist" in said[0].problems[0].message
+        assert not (reader / "_output").exists() and not (reader / lock.LOCK_FILE).exists()
+        # Pinned, the frozen run goes ahead, and the upstream is left alone
+        lock.pin(reader)
+        report = run.run(reader, echo=_quiet, frozen=True)
+        assert report.failed is None and (reader / "_output" / "read.txt").exists()
+        assert (work / "upstream_runs.log").read_text().count("ran") == 1
+
+    def test_frozen_and_snapshot_are_one_or_the_other(self, reader):
+        with pytest.raises(RunError, match="One or the other"):
+            run.run(reader, echo=_quiet, frozen=True, snapshot=True)
+        with pytest.raises(RunError, match="has nothing to check"):
+            run.run(reader, "test", echo=_quiet, frozen=True)
+
+    def test_a_frozen_run_checks_the_lockfile_even_with_no_dependencies_left(self, reader, work):
+        """Found by a reviewer: a manifest that dropped its last dependency,
+        with the lockfile still listing it, built under --frozen."""
+        _ready(work / "upstream")
+        lock.pin(reader)
+        _pipeline(reader, {"build": "mkdir -p _output && echo alone > _output/read.txt"})
+        said = []
+        report = run.run(reader, echo=_quiet, frozen=True, on_verify=lambda step, r: said.append(r))
+        assert report.failed is not None
+        assert "no longer in [dependencies]" in said[0].problems[0].message
+
+    def test_the_command(self, reader, work, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        _ready(work / "upstream")
+        monkeypatch.chdir(reader)
+        result = CliRunner().invoke(main, ["run", "--frozen"])
+        assert result.exit_code == 1, result.output
+        assert "chartbook.lock does not exist" in result.output and "Nothing written" in result.output
+        lock.pin(reader)
+        result = CliRunner().invoke(main, ["run", "--frozen"])
+        assert result.exit_code == 0, result.output
+        assert "1 pin(s) of 1 dependency, all in the store. Nothing written." in result.output
+        assert "Ran build in 1 pipeline(s)." in result.output
+
+
+@posix
 class TestPinning:
     def test_nothing_is_run_in_the_folder_it_depends_on(self, reader, work):
         """``upstream`` has never been built, and this run does not build it."""

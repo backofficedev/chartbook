@@ -552,12 +552,20 @@ class Store:
         note = self._root_file(lockfile)
         note.parent.mkdir(parents=True, exist_ok=True)
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
-        with open(temporary, "w", encoding="utf-8") as f:
-            json.dump(
-                {"lockfile": os.path.abspath(lockfile), "hashes": hashes}, f, indent=1
-            )
-            f.write("\n")
-        os.replace(temporary, note)
+        try:
+            with open(temporary, "w", encoding="utf-8") as f:
+                json.dump(
+                    {"lockfile": os.path.abspath(lockfile), "hashes": hashes}, f, indent=1
+                )
+                f.write("\n")
+            os.replace(temporary, note)
+        except BaseException:
+            # Whole or not at all: a half-written note is not left behind
+            try:
+                os.unlink(temporary)
+            except OSError:
+                pass
+            raise
 
     def remove_root(self, lockfile: Union[str, Path]) -> bool:
         """Forget a lockfile. Its objects are then kept by nothing.

@@ -161,7 +161,7 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked |
 | The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link |
 | Snapshots | `snapshot.py`, `chartbook snapshot` | What one commit of a pipeline built, in the store. Made on purpose by its owner, with everything committed. The only thing of a pipeline that another reads |
-| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: the commit, and a content hash for every asset, of every dependency. A folder is pinned from a snapshot, a repository from a clean copy. `pin` never moves a pin; `update` does |
+| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: the commit, and a content hash for every asset, of every dependency. A folder is pinned from a snapshot, a repository from a clean copy. `pin` never moves a pin; `update` does. `pin --frozen` and `run --frozen` write nothing and say whether every pin can be had |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
@@ -170,8 +170,8 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: `--frozen`, a version of another pipeline's model, any export, and anything that
-*reads* the index. Not to be built: loading one column by its
+Not built: a version of another pipeline's model, any export, and anything that *reads* the
+index. Not to be built: loading one column by its
 address (`data.load("dataframe#series")`).
 
 ## What to build next, in order
@@ -874,8 +874,9 @@ rebuild `yield_curve` as often as it likes while another builds `rate_forecast`,
 | 4c | The command rename: `build` makes everything current, `docs` renders the site. Breaking | Built |
 | 4d | `@rev` resolves. Model versions and labels | Built, for a pipeline's own models |
 | 4e | Parts: `dataframe#series` for `data.load()` | **Not to be built.** Decided 2026-10-13, below |
+| 4g | `--frozen`, and a store a team shares | Built 2026-10-14, below |
 
-`--frozen`, for CI, has no part yet. *Proposed:* it follows snapshots, since what it has to
+`--frozen` is 4g, below. It followed snapshots, as proposed here: what it has to
 check is that the lockfile is complete and that every pin can be had.
 
 **Decided by the maintainer, 2026-10-13:**
@@ -1150,6 +1151,7 @@ before, from ChartBook's clean copy of the commit, and does not look for a snaps
    snapshots", below.)*
 3. **A snapshot is on one machine.** A colleague, or CI, has none of them. For a `path`
    dependency they make their own in that folder. A shared store is the answer, later.
+   *(Closed 2026-10-14: "4g, as built", below.)*
 4. **A lockfile from one machine cannot be put back on another** for a `path` dependency
    unless the same bytes are built there. `pin` reports a pin whose bytes are not in the
    store as lost.
@@ -1453,7 +1455,8 @@ asked not to be consulted on rules of this size.
    which versions to keep.
 5. **Labels are read from that manifest as it is now, committed or not.** A label is what
    someone is relying on now. A folder that is gone, or a manifest that cannot be read, says
-   nothing, and the other three rules still hold.
+   nothing, and the other three rules still hold. *(Since 2026-10-14 the newest snapshot's own
+   record of its labels counts too, for a folder on another machine: "4g, as built", below.)*
 6. **A lockfile that cannot be found keeps any snapshot that holds an object it named.** That
    is as much as is known about it.
 7. **Removing a snapshot removes its record; its objects go by the existing rule**, in the
@@ -1642,6 +1645,94 @@ with the ChartBook of the same commit.
    This was so before the move; the new test is what showed it.
 5. **The template asks for `chartbook>=0.1.0`.** A project made from it needs the release
    that has `chartbook docs`. The number is the release's to set, and is not set here.
+
+#### 4g. `--frozen`, and a store a team shares — as built
+
+*Added 2026-10-14.* Built after step 5, by my choice, because the maintainer's purpose for all
+of this is people and agents working in parallel around a store that is read-only for most of
+them and updated deliberately; this is the piece that lets such a store be shared and lets a
+machine that may only read it build.
+
+| What | Where |
+|---|---|
+| `verify()`: can the pipeline be built from its lockfile alone, nothing written | `chartbook/lock.py`, `FrozenReport`, `FrozenProblem` |
+| `chartbook pin --frozen`, `chartbook run --frozen` | `chartbook/cli.py`, `chartbook/run.py` (`frozen=`, `on_verify=`) |
+| A read-only store does not fail `pin` | `chartbook/lock.py`, `_sync()`, `PinReport.unrooted` |
+| Labels travel with snapshots, so `gc` on another machine knows them | `chartbook/snapshot.py`, `Snapshot.labels`, `labels_of()`, `_labels_in()` |
+| The tests | `tests/test_lock.py` (`TestFrozen`), `tests/test_run.py` (`TestFrozen`), `tests/test_snapshot.py` |
+
+**What `--frozen` checks.** The lockfile exists if the manifest has dependencies; every
+dependency in the manifest is in the lockfile, and the other way round; a dependency is pinned
+from where the manifest now says it is (`_declared_elsewhere`); each has something pinned; each
+asset has a content hash, that is, was built when it was pinned; and the store has every hash.
+It opens no repository and uses no network. `run --frozen` skips the pin and the building of
+`git` dependencies, runs `verify()` in their place, and refuses to build on a problem.
+
+**Proposed: decided here, not by the maintainer.**
+
+1. **An asset not built when it was pinned is a problem under `--frozen`.** `pin` records it
+   and goes on, so that an upstream with one dataframe behind a subscription is still usable;
+   the design said the stricter choice is what `--frozen` is for, and this is it.
+2. **`--frozen` is a flag on `pin` and `run`, not a command, and not on `check`.** `check`
+   never reads the store or the lockfile; keeping that so is the reason, and the open question
+   above asks whether CI would rather have one command.
+3. **Labels travel with snapshots.** A snapshot records the model versions its manifest's
+   `[models.x.aliases]` named when it was made, and `gc` reads the newest snapshot's as well as
+   the folder's manifest. So a label given on one machine is known to a `gc` on another, as of
+   the newest snapshot; and only the newest counts, so that a label taken away releases its
+   version once a snapshot follows (a second review found the first version of this read every
+   snapshot's labels, which kept a version for ever). The first design here kept every snapshot
+   whose folder this machine cannot see; the first review found that a CI runner's checkout is
+   such a folder the moment the job ends, so that rule would have kept every nightly snapshot
+   for ever, and it was replaced by this. What is still not known across machines: a label
+   given after the newest snapshot, and which snapshot a branch tip on another machine pins from.
+4. **A read-only store is a note, not a failure, for a `path` dependency pinned from a
+   snapshot.** The only write that `pin` needs in the store then is the root note for `gc`;
+   so the store's owner is the one who runs `gc`, and a `pin` that could not leave the note
+   says so once. Only a permission error is treated so; a disk that is full is still an
+   error, and a half-written note is removed. What has to write the store (a `git`
+   dependency's first pin, `--from-folder`, `snapshot`) stops with a message that says the
+   store is read-only and what to do.
+5. **Nothing new in the store's layout.** Sharing is a path in `settings.toml`, which existed.
+   Snapshots were already the store's own bytes (`snapshot.LINKS` is reflink then copy), which
+   is what makes a shared disk work; it is recorded here because it was found, not made.
+
+**What an adversarial review found before merge** (2026-10-14; eleven findings, each fixed
+with a test unless said otherwise): the gc rule above, which would have kept every CI
+snapshot for ever (replaced); "a read-only store still pins" was true only for a `path`
+dependency from a snapshot, and a `git` dependency's pin failed with a bare errno (the
+message now says the store is read-only and what to do; the docs say which pins write);
+every `OSError` from the gc note was reported as "read-only", so a full disk passed silently
+and left a half-written note (the catch is permission errors only, the note is whole or not
+at all); `run --frozen` skipped `verify()` when the manifest had no dependencies, although
+the lockfile might still list one, and `--frozen` on a non-`build` script was ignored (both
+fixed: `run --frozen` always verifies; a non-`build` script with `--frozen` is refused);
+`verify()`'s remedy for a pin the store lacks said `chartbook pin`, which never re-stores a
+`path` dependency's lost pin (the remedy now depends on the kind); `--forget-missing` on a
+shared store discards other machines' pins and nothing said so (the help, the hint and the
+docs do); the `store gc` reference and docstring listed the old rules (updated); the
+read-only note was wrong on the `remove_root` path (reworded); the read-only test only
+chmod'ed `roots/` (a fully read-only store is tested, from a snapshot); a lockfile entry
+without an `id` was a `KeyError` (a `LockError` with a remedy); a docstring's rule numbers.
+
+A second review, of those fixes, found seven more, all fixed: labels recorded in any snapshot
+kept a version for ever, even after the owner took the label away (the newest snapshot's
+labels count, and no other's); `chartbook snapshot` on a read-only store still printed a bare
+errno; the remedy for a lost pin was wrong for a `--from-folder` pin, and its test asserted the
+wrong remedy (it depends on the kind of pin now: repository, snapshot or folder); a full disk
+after the lockfile was written lost the report (a `LockError` says the lockfile was written and
+the note was not); `run --frozen` on a leaf pipeline said "0 pin(s) of 0 dependencies" ("no
+dependencies to check"); the snapshot record's `labels` was in no schema and no table; the
+`store gc` docstring left out the branch-tip rule.
+
+**Known gaps.** A shared store is cleared by its owner, from the machine the snapshots were
+made on, and without `--forget-missing`: another machine's lockfile cannot be found from
+here, so a writable `roots/` is what lets its pins be known, and a label given after the
+last snapshot, or a branch tip on another machine, is not known at all. The `origins` note and
+the `roots` note hold paths from the machine that wrote them. A lockfile does not say which
+store its pins went into; `--frozen` checks the store this machine is pointed at. Concurrent
+writers to a shared store rely on each file being written whole and then renamed into place,
+which is what the store does; nothing locks the store as a whole.
 
 ### Step 5. Data in databases
 
@@ -1857,7 +1948,9 @@ Each is explained where it lives.
 - The seventeen things settled while building snapshots, and its known gaps. Two were
   answered the same day: `chartbook run --snapshot` builds first, and "Clearing old
   snapshots" says how old ones go. (Step 4 above, "4b, as built")
-- `--frozen`, for CI: what it checks, and when it is built. (Step 4 above)
+- Whether `chartbook check` should run `--frozen`'s check too, so that CI is one command; and
+  whether a lockfile should record which store its pins were made into. (Step 4 above, "4g, as
+  built")
 - For data in a database: when a second engine is wanted and the backend contract is
   extracted; whether a table-backed dataframe can be pinned, by hash of a snapshot of its
   rows or not at all. (Step 5 above)

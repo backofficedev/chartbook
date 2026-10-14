@@ -828,6 +828,88 @@ class TestClearingOldSnapshots:
         third = snapshot.make(maker).snapshot
         return first, second, third
 
+    def test_a_snapshot_from_a_checkout_that_is_gone_is_judged_like_any_other(self, three, tmp_path):
+        """Found by a reviewer: a first design kept every such snapshot, and a
+        CI runner's checkout is gone the moment the job ends."""
+        first, second, third = three
+        (third.path.parent / "origins").write_text(str(tmp_path / "ci-runner-checkout") + "\n")
+        plan = _plan(default_store())
+        assert [t for t, _ in plan.remove] == [first, second]
+        assert [t for t, _ in plan.keep] == [third]
+
+    def test_labels_travel_with_snapshots(self, work, tmp_path):
+        """A label given on one machine is known to gc on another, through
+        the snapshots made after it."""
+        directory = _manifest(
+            work / "forecast",
+            {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json"}}},
+        )
+        (directory / "_output").mkdir()
+        (directory / "_output" / "m.json").write_bytes(b"v1")
+        _commit(work)
+        first = snapshot.make(directory, made_at=OLDER).snapshot
+        assert first.labels == {}
+        version = first.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
+        (directory / "_output" / "m.json").write_bytes(b"v2")
+        snapshot.make(directory, made_at=OLD)
+        # The owner labels the first version, commits, and makes another snapshot
+        _manifest(
+            directory,
+            {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json", "aliases": {"champion": version}}}},
+        )
+        _commit(work)
+        (directory / "_output" / "m.json").write_bytes(b"v3")
+        third = snapshot.make(directory).snapshot
+        assert third.labels == {"model/m": [version]}
+        assert snapshot.read(third.path).labels == {"model/m": [version]}
+        # Another machine: the folder is not here. The label still keeps the first.
+        for folder in {t.path.parent for t in snapshot.all_snapshots(default_store())}:
+            (folder / "origins").write_text(str(tmp_path / "elsewhere") + "\n")
+        plan = _plan(default_store())
+        assert (first, "a label points at a version in it") in plan.keep
+        assert [t.made_at for t, _ in plan.remove] == [OLD]
+        # The owner takes the label away and makes another snapshot: the
+        # version is released. Only the newest snapshot's labels count.
+        _manifest(
+            directory,
+            {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json"}}},
+        )
+        _commit(work)
+        (directory / "_output" / "m.json").write_bytes(b"v4")
+        fourth = snapshot.make(directory).snapshot
+        assert fourth.labels == {}
+        (fourth.path.parent / "origins").write_text(str(tmp_path / "elsewhere") + "\n")
+        plan = _plan(default_store())
+        assert {t.made_at for t, _ in plan.remove} == {OLDER, OLD}
+
+    def test_the_remedy_for_a_pin_lost_from_a_snapshot_names_update_and_the_snapshot(self, maker, user):
+        snapshot.make(maker)
+        store = default_store()
+        report = lock.pin(user, store)
+        content_hash = next(iter(report.events)).new or [e.new for e in report.events if e.new][0]
+        store.delete(content_hash)
+        (problem,) = lock.verify(user, store).problems
+        assert "`chartbook update acme/maker` moves to a snapshot the store has, or `chartbook snapshot`" in problem.message
+
+    @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a store this user cannot write")
+    def test_pinning_from_a_snapshot_needs_no_write_to_the_store(self, maker, user):
+        """A store a team shares, read-only for everyone but its owner."""
+        snapshot.make(maker)
+        store = default_store()
+        modes = {}
+        for path in [store.root, *store.root.rglob("*")]:
+            if path.is_dir():
+                modes[path] = path.stat().st_mode
+                os.chmod(path, 0o555)
+        try:
+            report = lock.pin(user, store)
+        finally:
+            for path, mode in modes.items():
+                os.chmod(path, mode)
+        assert report.written and (user / lock.LOCK_FILE).exists()
+        assert set(_statuses(report).values()) == {"pinned"} and "denied" in report.unrooted
+        assert lock.verify(user, store).problems == []
+
     def test_the_newest_is_kept_and_old_unpinned_ones_may_go(self, three):
         first, second, third = three
         plan = _plan(default_store())

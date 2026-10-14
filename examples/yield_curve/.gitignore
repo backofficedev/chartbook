@@ -252,3 +252,6 @@ src/z_scratch_project_template.ipynb
 *Thumbs.db
 
 src/z_scratch_pipeline_template.ipynb
+
+# Notebooks that run_notebooks makes from src/*.py and deletes again
+src/*_ipynb.ipynb

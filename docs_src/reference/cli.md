@@ -436,6 +436,7 @@ With `--force` as well, it is the weekly refresh in one line: `chartbook run --f
 | Which code made it | The commit | Complete |
 | What it was built from | `inputs`: what this pipeline was itself pinned to | As complete as its `chartbook.lock` |
 | Under what conditions | `built_with`: whether the build ran in the same command, and the ChartBook, Python and platform versions | A note. It explains a difference; it does not make a build repeatable |
+| Which model versions were labelled | `labels`: what `[models.x.aliases]` named, by model | As of this snapshot. `store gc` reads the newest snapshot's, so a label given on one machine keeps its version on another |
 
 **Nothing of your `.env` is ever copied.** It holds secrets, and a store is something to share. A setting that changes your results belongs in a file you commit; then the commit covers it.
 
@@ -531,6 +532,19 @@ Wrote chartbook.lock.
 ```
 
 The folder may be half-built, and the lockfile then names no commit, because nothing says which one those bytes came from. Do not commit a lockfile made this way. The next plain `chartbook update` moves back to a snapshot.
+
+**`--frozen`: say, and write nothing.** For CI, and for anyone whose store is read-only. `chartbook pin --frozen` pins nothing, fetches nothing and writes nothing, not the lockfile, not the store. It reads `[dependencies]`, `chartbook.lock` and the store, and exits `1` unless the pipeline can be built from its lockfile alone: every dependency pinned, from where the manifest says it is; every asset built when it was pinned; every pin in the store.
+
+```console
+$ chartbook pin --frozen
+ftsfr/fed_yield_curve:model/term_premium_ar1: was declared and not built when it was pinned. Build it there, declare it ready, and `chartbook update`.
+1 problem(s): the pipeline cannot be built from its lockfile alone. Nothing written.
+
+$ chartbook pin --frozen
+4 pin(s) of 1 dependency, all in the store. Nothing written.
+```
+
+Where `pin` records an asset that was not built and goes on, `--frozen` counts it a problem: the build that follows may need it.
 
 ## chartbook update
 
@@ -661,6 +675,15 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 
 A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`.
 
+**`--frozen`.** Pin nothing and write nothing before the build: not the lockfile, not the store, and no `git` dependency is fetched or built. The build runs only if `chartbook pin --frozen` would pass; otherwise nothing runs and the problems are listed. `--frozen` and `--snapshot` are one or the other.
+
+```console
+$ chartbook run --frozen
+ftsfr/rate_forecast: 4 pin(s) of 1 dependency, all in the store. Nothing written.
+ftsfr/rate_forecast: build
+Ran build in 1 pipeline(s).
+```
+
 ## chartbook store
 
 The store is a folder of files kept under the hash of what is in them. It is where `chartbook pin` keeps its copies of other pipelines' data.
@@ -671,6 +694,8 @@ It is at `~/.chartbook/store/`. To put it somewhere else, set `CHARTBOOK_STORE`,
 [store]
 path = "/a/bigger/disk/chartbook-store"
 ```
+
+**A store a team shares.** Point every machine's `[store] path` (or `CHARTBOOK_STORE`) at one folder on a shared disk, and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `roots/` writable for everyone and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin, `--from-folder` and `chartbook snapshot` all put files in. `--frozen` writes nothing at all, and is what CI should run. `store gc` is the owner's to run, from the machine the snapshots were made on, and without `--forget-missing`: a label another machine gave is known here only through the snapshots that recorded it, and another machine's lockfile is one that cannot be found from here.
 
 ### store verify
 
@@ -718,7 +743,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 |---|---|
 | A lockfile pins it | `rate_forecast` is pinned to it |
 | It is the newest of its pipeline, or the newest a branch or tag can pin from | The last build of `yield_curve` that was declared ready; the last one on its `release` branch |
-| A label points at a model version in it | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml` |
+| A label points at a model version in it | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as its newest snapshot recorded |
 | It was made in the last 30 days | `--keep-days` changes the number |
 
 Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last month of snapshots, the ones somebody pins, and the ones a label names.
@@ -743,13 +768,13 @@ Remove them? [y/N]:
 |--------|--------|
 | `--dry-run` | List each snapshot and object that would be removed, with sizes, and remove nothing |
 | `--yes`, `-y` | Do not ask |
-| `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found |
+| `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found. On a store a team shares, every other machine's lockfile is one |
 | `--keep-days DAYS` | Keep an unpinned snapshot that is not the newest of its pipeline for this long. Default 30 |
 
 Five things it is careful about:
 
 - **It looks again when you say yes.** The list is made before the question, and a `chartbook pin` can land while you decide. Whatever became pinned in between is kept, and the command says so.
-- **A snapshot's labels, and its branches, are read from the folder it was made from.** The store notes that folder beside each pipeline's snapshots. If the folder is gone, nothing is known about labels, and only the other three rules apply.
+- **A snapshot's branches are read from the folder it was made from; its labels from there and from the snapshots themselves.** The store notes that folder beside each pipeline's snapshots, and each snapshot records the labels its manifest had when it was made. If the folder is gone (a deleted project, a throwaway checkout, another machine's), the labels the newest snapshot recorded still count, so a label given on one machine keeps its version on another once a snapshot follows it, and a label taken away releases it once a snapshot follows that; nothing is known about branches, and the other rules apply.
 - **A lockfile it cannot find still keeps its pins.** The project may be on a drive that is not plugged in. The store remembers what that lockfile named when it was last pinned, and keeps it until you pass `--forget-missing`.
 - **An object stored in the last hour is never removed.** A pin puts files in the store before it writes the lockfile that names them. So the run that removes a snapshot's record may leave its objects for the next run.
 - **If a lockfile or a snapshot's record cannot be read, nothing is removed.** `gc` stops and says which.

@@ -438,6 +438,8 @@ def run(
     on_pin: Optional[Callable] = None,
     force: bool = False,
     snapshot: bool = False,
+    frozen: bool = False,
+    on_verify: Optional[Callable] = None,
     on_snapshot: Optional[Callable] = None,
 ) -> RunReport:
     """Run a script in a pipeline, or in every pipeline of a catalog.
@@ -470,13 +472,31 @@ def run(
         records that the build ran in the same command.
     :param on_snapshot: Called with a pipeline's step and its
         :class:`chartbook.snapshot.SnapshotReport` after its snapshot is made.
+    :param frozen: Write nothing before the build: no pin, no fetch, no
+        lockfile, no store. Instead check that the lockfile is complete and
+        every pin is in the store (:func:`chartbook.lock.verify`), and
+        refuse to build if not. A ``git`` dependency is not built either;
+        its pins have to be there. For CI, and for a store one may only read.
+    :param on_verify: Called with a pipeline's step and its
+        :class:`chartbook.lock.FrozenReport`, under *frozen*.
     :returns: What was run, and what failed if anything did.
     :raises RunError: If the pipelines cannot be put in an order, or the
         one asked for has no such script.
     """
     here = Path(project_dir).resolve()
     building = script == BUILD_SCRIPT
-    steps = plan(here, git_cache, git=building, force=force)
+    if frozen and snapshot:
+        raise RunError(
+            "--frozen writes nothing, and --snapshot writes a snapshot. One or the other."
+        )
+    if frozen and not building:
+        raise RunError(
+            f"--frozen is about what `{BUILD_SCRIPT}` pins before it runs, and "
+            f"`chartbook run {script}` pins nothing, so `--frozen` has nothing to check."
+        )
+    # Under --frozen a git dependency is neither fetched nor built: what is
+    # pinned of it has to be in the store already, and verify() checks that
+    steps = plan(here, git_cache, git=building and not frozen, force=force)
     commits_before: dict[Path, str] = {}
     # A pipeline that is asked for by name must have the script. A catalog
     # is asked for all of its pipelines, and those without it are passed over.
@@ -542,7 +562,21 @@ def run(
                 f"Take it out of the script."
             )
 
-        if building and step.has_dependencies:
+        if building and frozen:
+            # Nothing is written. Either every pin can be had, or nothing
+            # runs. Checked whether or not the manifest has dependencies
+            # now: a lockfile may still list one it dropped.
+            checked = lock.verify(step.directory, store)
+            if on_verify is not None:
+                on_verify(step, checked)
+            if checked.problems:
+                report.failed, report.exit_code = step, 1
+                report.reason = (
+                    "its lockfile is not complete, or a pin is not in the store, "
+                    "and --frozen writes nothing"
+                )
+                break
+        elif building and step.has_dependencies:
             # What its code reads from other pipelines has to be pinned
             # before it runs. Nothing that is pinned is moved.
             pins = lock.pin(step.directory, store, git_cache)
