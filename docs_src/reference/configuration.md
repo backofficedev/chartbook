@@ -491,10 +491,11 @@ Each version keeps, from the snapshot that made it: the commit (which code), wha
 
 `chartbook check` warns about a label whose version is not on this machine. It may still be right: the version may be in the store of the machine that made it.
 
+**A version of another pipeline's model.** `forecasting:rate_forecaster@champion` is the version that label named when you pinned `forecasting`: `chartbook pin` reads the labels from the snapshot it pins (a snapshot records the labels its manifest had), and writes each as its own record in `chartbook.lock`, `forecasting:model/rate_forecaster@champion`, with the version's hash. So a build that serves the champion is repeatable until `chartbook update` moves the label with the owner's manifest. `forecasting:rate_forecaster@7f3a9c2e41b0` is that version: the one a label of your lockfile pins, if one does, else found among the pipeline's snapshots in the store. A label the owner gave after you pinned is not in your lockfile, and the error says so: `chartbook update` pins it. Nothing of the other pipeline's folder is read.
+
 Not yet:
 
-- **A version of another pipeline's model** (`forecasting:rate_forecaster@champion`). `forecasting:rate_forecaster` is the version your `chartbook.lock` pins.
-- **Versions that travel.** A version is in the store of the machine that made its snapshot. A colleague does not have it until there is a store to share.
+- **Versions that travel.** A version is in the store of the machine that made its snapshot, or in a store a team shares (see {doc}`cli`, "A store a team shares"). A label pinned across pipelines needs the version's bytes in the store; one whose version is not there is pinned without them, and `--frozen` reports it.
 - **Versions of anything but a model.** A dataframe has snapshots, and no version names.
 - One file inside a directory model (`model/x#weights.pt`).
 

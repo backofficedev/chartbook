@@ -19,7 +19,7 @@
     },
     "records": {
       "type": "array",
-      "description": "First the pipeline's own record, then one record per asset of each dependency, sorted by ID. An asset record with a `content_hash` is a pin; one without is declared by the other pipeline and was not built when this was pinned.",
+      "description": "First the pipeline's own record, then one record per asset of each dependency, sorted by ID. A labelled version of a dependency's model is a record of its own, `dep:model/x@champion`, with `ref.rev` and `label` set and the version's `content_hash`; one without a `content_hash` has `missing`, why the store could not supply it. An asset record with a `content_hash` is a pin; one without is declared by the other pipeline and was not built when this was pinned.",
       "items": {
         "type": "object",
         "required": [
@@ -39,7 +39,7 @@
           },
           "dependencies": {
             "type": "array",
-            "description": "On the Pipeline record: each dependency as in the index's Pipeline record, by its key in [dependencies], with no absolute path. `pinned_hash` is one hash over everything pinned of it. A directory pinned from a snapshot has the snapshot's commit in `location.commit` and its time in `snapshot`.",
+            "description": "On the Pipeline record: each dependency as in the index's Pipeline record, by its key in [dependencies], with no absolute path. `pinned_hash` is one hash over everything pinned of it, labelled versions included. A directory pinned from a snapshot has the snapshot's commit in `location.commit` and its time in `snapshot`.",
             "items": {
               "type": "object",
               "required": [

@@ -247,8 +247,9 @@ no "promote" button and no service behind one.
 | `other:model/rate_forecaster@champion` | The label is looked up when pinning and frozen in the lockfile, so a build is repeatable. `chartbook update` moves it |
 
 *(Built: the first three rows, with a version written as `@7f3a9c2e41b0`. The fourth was built in
-step 3. The fifth is not built: a version of another pipeline's model is refused as not yet
-supported.)*
+step 3. The fifth on 2026-10-14: the label is read from the snapshot being pinned, which records
+its manifest's labels, and written to the lockfile as a record of its own; {doc}`overview`, "4h,
+as built".)*
 
 **Garbage collection.** A recorded version is reachable, so `chartbook store gc` never collects
 it. *(As built, 2026-10-13: a version a label points at is never collected. One no label names
@@ -344,7 +345,7 @@ Each slice is useful by itself. The step numbers are the {doc}`overview`'s build
 | **M1. Declared models** (step 2) — **built** | The index | The `[models]` table in the loader, with validation. `model` added to `RESOLVABLE_KINDS`, so `chartbook path model/x` works. `chartbook.models.path()`. `chartbook check` covers `path`, `metrics_path` and `docs_path` (the first two are build outputs, so `--skip-outputs` skips them). The model page. The `Model` record. Policy support: `[policy.required] models = […]`. The worked example above. **No versions** |
 | **M2. Parts** (with M1 or soon after) — *proposed 2026-10-13: not to be built* | M1 | `model/x#file` resolves to a file inside a directory model. Refuse a part that escapes the directory (`..`). *(The maintainer decided that a reference does not select data ({doc}`overview`, step 4, "4e"). By the same reasoning a file inside a model is `models.path("x") / "file"`, and the message for `model/x#file` says so. That extension is the builder's, and waits on his yes.)* |
 | **M3. Cross-pipeline** (step 3) — **built** | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. Training data in another pipeline is a real dependency: declared, pinned, read from the pinned copy, and recorded by hash (`pinned_inputs`). The `examples/rate_forecast` pipeline. A dependency fetched with `git` has only what its repository commits |
-| **M4. Versions and labels** (step 4) — **built, except the last** | Snapshots | A version on each new content hash a snapshot holds, `@7f3a9c2e41b0`, `[models.x.aliases]`, `@champion`, the versions table on the page. Not built: staleness when inputs move |
+| **M4. Versions and labels** (step 4) — **built, except staleness** | Snapshots | A version on each new content hash a snapshot holds, `@7f3a9c2e41b0`, `[models.x.aliases]`, `@champion`, the versions table on the page. Not built: staleness when inputs move |
 
 (models-built)=
 ## What is built

@@ -217,6 +217,7 @@ Print the path that the enclosing `chartbook.toml` declares for an asset — a d
 | `model/rate_forecaster` | `[models.rate_forecaster]` |
 | `model/rate_forecaster@7f3a9c2e41b0` | A {ref}`version <model-versions>` of that model, in the store |
 | `model/rate_forecaster@champion` | The version that label points at |
+| `forecasting:model/rate_forecaster@champion` | The version that label named when `forecasting` was pinned; `chartbook update` moves it |
 
 ```console
 $ chartbook path repo_public
@@ -496,6 +497,8 @@ chartbook.lock is unchanged.
 A rebuild that its owner has not made a snapshot of is not mentioned, because it is not seen.
 
 **A dependency is pinned to one snapshot, whole.** `pin` does not take one asset from a newer snapshot and leave the rest. What a second `pin` does do is pin a dependency that has no pin yet.
+
+**Its labels are pinned too.** A snapshot records the labels the pipeline's `[models.x.aliases]` gave when it was made, and `pin` writes each as a record of its own, `ftsfr/fed_yield_curve:model/term_premium_ar1@champion`, with the hash of the version it names. `forecasting:model/x@champion` then resolves to those bytes until `chartbook update`, which follows the owner's labels: a label moved shows as `moved`, one taken away as `dropped`, and one the owner has moved since you pinned is reported by `pin` as changed upstream. A label whose version the store cannot supply (no snapshot names it, or its bytes are gone) is pinned without bytes, as a `not built` asset is, with the reason, and `--frozen` reports it. `--from-folder` pins carry the labels they have and gain none; labels come from snapshots. A `git` dependency has no versions and no labels pinned, and a dependency that becomes one lets its labels go (`let go`).
 
 `pin` exits `1` when something could not be pinned: a dependency with no snapshot, a repository that cannot be fetched, or a pin whose bytes are not in the store.
 

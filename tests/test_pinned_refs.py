@@ -315,7 +315,11 @@ class TestWhatIsMissing:
             data.path("rates:treasury#dgs10", project_dir=pinned)
         with pytest.raises(UnsupportedRevisionError, match="kept for models only"):
             data.path("rates:treasury@v2", project_dir=pinned)
-        with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
+        # A version of another pipeline's model resolves now; a label the
+        # owner had not given when this pipeline pinned says so
+        from chartbook.errors import AssetNotPinnedError
+
+        with pytest.raises(AssetNotPinnedError, match="'champion' was not a label of acme/rates:model/ar1"):
             models.path("rates:ar1@champion", project_dir=pinned)
         with pytest.raises(UnsupportedRegistryError, match="not yet supported"):
             data.path("charthub.example/acme/rates:treasury", project_dir=pinned)
