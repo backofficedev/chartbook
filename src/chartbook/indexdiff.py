@@ -19,7 +19,8 @@ may not be the same site, or not written the same way.
 Two things the diff cannot tell apart from a change, and says so in the
 docs: a chart file that a renderer writes differently each time (Plotly
 embeds a fresh id unless given ``div_id``; ChartBook's own plotting helpers
-give one), and a model's ``versions``, ``trained_with`` and ``stale_inputs``,
+give one; an executed notebook's HTML carries ids and times from its run),
+and a model's ``versions``, ``trained_with`` and ``stale_inputs``,
 which are read from the store of the machine that built the index.
 """
 
@@ -34,6 +35,9 @@ from chartbook.index import INDEX_FILE, published
 
 #: Fields whose change means the asset's data moved.
 DATA_FIELDS = ("content_hash", "definition_hash", "size_bytes", "row_count", "columns", "files")
+
+#: Kinds whose file is a rendering, which a renderer may write differently each time.
+RENDERED_KINDS = ("Chart", "Notebook")
 
 #: Fields that are worked out, not declared, with the words for a change in each.
 COMPUTED_WORDS = {
@@ -72,9 +76,10 @@ class Change:
         """What the change is, in a reviewer's words, in order of weight."""
         said = []
         if any(name in self.fields for name in DATA_FIELDS):
-            # A chart is a rendering of data, and a renderer may write the
-            # file differently each time; its data is its dataframe's
-            said.append("rendered differently" if self.kind == "Chart" else "data changed")
+            # A chart is a rendering of data, and a notebook's HTML a record
+            # of a run; a renderer may write either differently each time
+            # (an id, a time), and their data is their dataframes'
+            said.append("rendered differently" if self.kind in RENDERED_KINDS else "data changed")
         if "dependencies" in self.fields:
             before, after = self.fields["dependencies"]
             pins = lambda entries: {e.get("id"): e.get("pinned_hash") for e in (entries or []) if isinstance(e, dict)}

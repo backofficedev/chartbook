@@ -2036,7 +2036,9 @@ columns-only change and the envelope are tested); *versions changed* did not tel
 lost from one replaced (new and gone are counted and named).
 
 **Known gaps.** A record whose ID changes (a renamed asset) is a removal and an addition, not a
-rename. A `Series` record follows its dataframe and is listed on its own. A model's `versions`,
+rename. An executed notebook's HTML carries ids and times from its run, so its hash moves on
+every render and the diff says *rendered differently* of it, as of a chart; the live example
+site showed this. A `Series` record follows its dataframe and is listed on its own. A model's `versions`,
 `trained_with` and `stale_inputs` are the building machine's. Nothing yet fetches the *before*
 index from git or from a deployed site; the reviewer brings both files.
 

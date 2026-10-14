@@ -1,1 +1,0 @@
-# Dataframe: `{{pipeline_id}}:{{dataframe_id}}` - {{name}}

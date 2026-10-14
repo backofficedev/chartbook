@@ -118,6 +118,7 @@ class TestDiff:
         assert indexdiff.Change("Model", "m", {"stale_inputs": (["x"], [])}).words == ["up to date again"]
         # A chart is a rendering: its hash moving is not its data moving
         assert indexdiff.Change("Chart", "c", {"content_hash": ("sha256:a", "sha256:b")}).words == ["rendered differently"]
+        assert indexdiff.Change("Notebook", "n", {"content_hash": ("sha256:a", "sha256:b")}).words == ["rendered differently"]
         # Pins moved only when a pinned hash did
         pinned = indexdiff.Change("Pipeline", "p", {"dependencies": ([{"id": "x", "pinned_hash": "a"}], [{"id": "x", "pinned_hash": "b"}])})
         relocated = indexdiff.Change("Pipeline", "p", {"dependencies": ([{"id": "x", "pinned_hash": "a", "location": 1}], [{"id": "x", "pinned_hash": "a", "location": 2}])})
