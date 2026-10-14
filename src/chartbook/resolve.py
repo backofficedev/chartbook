@@ -681,6 +681,15 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"one since, `chartbook update` pins it.",
         )
     content_hash = record.get("content_hash")
+    if not content_hash and record.get("label"):
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_built",
+            f"{asset_id!r} was pinned without its bytes: "
+            f"{record.get('missing') or 'the store could not supply the version the label names'}. "
+            f"When the owner of {dependency.id!r} has made a snapshot that holds it, "
+            f"`chartbook update {dependency.id}` in {manifest_dir} pins it.",
+        )
     if not content_hash:
         raise AssetNotPinnedError(
             asset_id,
@@ -839,22 +848,42 @@ def _resolve_pinned_version(
             f"since, and made a snapshot, `chartbook update {dependency.id}` pins it.",
         )
     store = default_store()
+    local = str(AssetRef(kind=pinned.kind, name=pinned.name))
+    # A version a label of this lockfile pins is at hand whatever has become
+    # of the snapshot that made it: the lockfile's root note keeps the bytes
+    by_label = [
+        other
+        for other in of_dependency.values()
+        if other.get("ref", {}).get("rev")
+        and other.get("ref", {}).get("name") == pinned.name
+        and other.get("ref", {}).get("kind") == pinned.kind
+        and (other.get("content_hash") or "").split(":", 1)[-1].startswith(digits)
+    ]
+    if len({other["content_hash"] for other in by_label}) == 1 and store.has(by_label[0]["content_hash"]):
+        return _held(store, by_label[0])
     entry = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
     commit, made_at = entry.get("location", {}).get("commit"), entry.get("snapshot")
-    pinned_snapshot = None
-    if commit and made_at:
-        pinned_snapshot = next(
-            (t for t in snapshot.all_snapshots(store) if t.same_moment(commit, made_at)), None
+    if not (commit and made_at):
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_in_store",
+            f"{asset_id!r} names a version by its hash, and {dependency.id!r} is "
+            f"pinned from its folder (`--from-folder`), not from a snapshot, so its "
+            f"versions cannot be looked up in the store. `chartbook update "
+            f"{dependency.id}` pins it from a snapshot.",
         )
+    pinned_snapshot = next(
+        (t for t in snapshot.all_snapshots(store) if t.same_moment(commit, made_at)), None
+    )
     if pinned_snapshot is None:
         raise AssetNotPinnedError(
             asset_id,
             "not_in_store",
             f"{asset_id!r} names a version by its hash, and the snapshot that "
             f"{dependency.id!r} is pinned to is not in the store, so its versions "
-            f"cannot be looked up there. Run `chartbook pin`.",
+            f"cannot be looked up there. `chartbook update {dependency.id}` pins "
+            f"one that is.",
         )
-    local = str(dataclasses.replace(pinned, pipeline=None, rev=None))
     versions = snapshot.versions_of_pipeline(
         store, pinned_snapshot.pipeline, pinned_snapshot.subdirectory, local
     )
@@ -862,11 +891,16 @@ def _resolve_pinned_version(
     matches = [(h, t) for h, t in versions if h.split(":", 1)[-1].startswith(digits)]
     if not matches:
         known = ", ".join(snapshot.version_name(h, hashes) for h in hashes) or "(none)"
+        where = f"{pinned_snapshot.pipeline!r}" + (
+            f" at {pinned_snapshot.subdirectory}" if pinned_snapshot.subdirectory else ""
+        )
         raise AssetNotPinnedError(
             asset_id,
             "not_in_store",
-            f"No version {pinned.rev} of {without} is in the store. Its versions "
-            f"here are: {known}. A version is made by a snapshot, in its own pipeline.",
+            f"No snapshot of {where} in the store names a version {pinned.rev} of "
+            f"{without}. Its versions there are: {known}. A version is made by a "
+            f"snapshot, in its own pipeline; a snapshot `store gc` has cleared no "
+            f"longer names one.",
         )
     if len(matches) > 1:
         raise AssetNotPinnedError(

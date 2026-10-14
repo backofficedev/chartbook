@@ -635,9 +635,20 @@ def labels_of(raw: dict) -> dict[str, dict[str, str]]:
         if not isinstance(aliases, dict):
             continue
         for label, version in aliases.items():
+            # Only a label a reference can carry, and one that does not read
+            # as a version; `chartbook check` refuses the rest, and a snapshot
+            # must not hand a dependant a name its lockfile cannot hold
+            if not LABEL_PATTERN.match(label) or _HEX_START.match(label):
+                continue
             if isinstance(version, str) and VERSION_PATTERN.match(version):
                 pointed.setdefault(f"model/{name}", {})[label] = version.split(":", 1)[-1]
     return pointed
+
+
+#: What a label may be called: what a reference carries after ``@``, and
+#: not something that reads as the start of a version's hash.
+LABEL_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
+_HEX_START = re.compile(r"^[0-9a-f]{4,}$")
 
 
 def versions_of_pipeline(
@@ -678,25 +689,35 @@ def label_records(
         what the owner's manifest said when it was made.
     :param key: The dependency's key in ``[dependencies]``.
     :returns: The records, by ID; and the labels that could not be
-        resolved, as ``(model, label, start)``: the version is in no
-        snapshot the store has, or two versions share the start.
+        resolved, as ``(model, label, start, why)``: no snapshot of the
+        pipeline in the store names such a version, two versions share
+        the start, or the version is named and its bytes are not there.
     """
     records: dict[str, dict] = {}
-    unresolved: list[tuple[str, str, str]] = []
+    unresolved: list[tuple[str, str, str, str]] = []
+    where = f"{newest.pipeline!r}" + (f" at {newest.subdirectory}" if newest.subdirectory else "")
     for name, labels in sorted(newest.labels.items()):
         versions = None
         for label, start in sorted(labels.items()):
             if versions is None:
                 versions = versions_of_pipeline(store, newest.pipeline, newest.subdirectory, name)
-            matches = [
+            named = [
                 (content_hash, taken)
                 for content_hash, taken in versions
-                if content_hash.split(":", 1)[-1].startswith(start) and store.has(content_hash)
+                if content_hash.split(":", 1)[-1].startswith(start)
             ]
-            if len(matches) != 1:
-                unresolved.append((name, label, start))
+            if not named:
+                why = f"no snapshot of {where} in the store names such a version"
+            elif len(named) > 1:
+                why = f"{len(named)} versions share that start"
+            elif not store.has(named[0][0]):
+                why = "a snapshot names it, and its bytes are not in the store"
+            else:
+                why = ""
+            if why:
+                unresolved.append((name, label, start, why))
                 continue
-            content_hash, taken = matches[0]
+            content_hash, taken = named[0]
             record = renamed(taken.assets[name], key)
             ref = AssetRef.from_dict(record["ref"])
             ref = dataclasses.replace(ref, rev=label)

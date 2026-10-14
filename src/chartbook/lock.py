@@ -410,6 +410,10 @@ def _sync(
         entry = dependencies[key]
         may_move = key in moving
         had = before.assets_of(key)
+        # A label's record is pinned from a snapshot and only from one; a
+        # pin from a folder or a repository carries what it has unchanged
+        had_labels = {k: v for k, v in had.items() if (v.get("ref") or {}).get("rev")}
+        had_assets = {k: v for k, v in had.items() if k not in had_labels}
         listed = _dependency_entry(key, entry)
         was = locked.get(key)
         commit_moved = False
@@ -433,17 +437,19 @@ def _sync(
             # A repository is only read. Nothing it declares may reach
             # outside its own files.
             records = _sync_dependency(
-                key, directory, had, may_move, store, cache, report, commit_moved,
+                key, directory, had_assets, may_move, store, cache, report, commit_moved,
                 within=directory,
             )
+            records.update(had_labels)
         elif from_folder:
             # What is in the folder this minute, whatever state it is in.
             # The lockfile then names no commit: nothing says which one
             # these bytes came from.
             report.from_folder.add(key)
             records = _sync_dependency(
-                key, Path(entry["_resolved_path"]), had, may_move, store, cache, report
+                key, Path(entry["_resolved_path"]), had_assets, may_move, store, cache, report
             )
+            records.update(had_labels)
             if not may_move and was is not None and records == had:
                 # Nothing moved, so the pins are still the snapshot's, and
                 # the lockfile goes on saying so
@@ -604,7 +610,11 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
             if not content_hash and assets[asset_id].get("label"):
                 report.problems.append(
                     FrozenProblem(
-                        key, asset_id, "is a label whose version no snapshot in the store had when it was pinned. Its owner makes the snapshot again; then `chartbook update`."
+                        key,
+                        asset_id,
+                        f"is a label pinned without its bytes: "
+                        f"{assets[asset_id].get('missing') or 'the store could not supply the version it names'}. "
+                        f"When its owner has made a snapshot that holds that version, `chartbook update {key}`.",
                     )
                 )
             elif not content_hash:
@@ -614,7 +624,9 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                     )
                 )
             elif not store.has(content_hash):
-                if entry.get("via") == "rev":
+                if assets[asset_id].get("label"):
+                    remedy = f"its owner makes a snapshot that holds that version again, and then `chartbook update {key}`"
+                elif entry.get("via") == "rev":
                     remedy = "`chartbook pin`, where the store can be written, puts it back from the repository"
                 elif entry.get("location", {}).get("commit"):
                     remedy = (
@@ -816,6 +828,10 @@ def _sync_from_snapshots(
             moved = bool(old and now and not old.split(":", 1)[-1].startswith(now))
             if old:
                 report.events.append(PinEvent("stale" if moved else "kept", key, asset_id, old=old, new=old))
+            else:
+                report.events.append(
+                    PinEvent("not_built", key, asset_id, detail=record.get("missing") or "the label was pinned without its bytes")
+                )
         return {**had, **had_labels}, as_it_was()
 
     if newest is None:
@@ -899,16 +915,17 @@ def _sync_from_snapshots(
         status = "pinned" if old is None else "kept" if old == new else "moved"
         report.events.append(PinEvent(status, key, asset_id, old=old, new=new))
         records[asset_id] = record
-    for name, label, start in unresolved:
+    for name, label, start, why in unresolved:
         ref = dataclasses.replace(AssetRef.from_dict(snapshot.renamed(newest.assets[name], key)["ref"]), rev=label)
         asset_id = str(ref)
         record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("content_hash", "size_bytes", "files")}
-        records[asset_id] = {**record, "id": asset_id, "ref": ref.to_dict(), "label": label}
+        missing = f"the label names version {start}, and {why}"
+        records[asset_id] = {**record, "id": asset_id, "ref": ref.to_dict(), "label": label, "missing": missing}
         report.events.append(
             PinEvent(
                 "not_built", key, asset_id,
                 old=(had_labels.get(asset_id) or {}).get("content_hash"),
-                detail=f"the label names version {start}, which no snapshot in the store has",
+                detail=missing,
             )
         )
     for asset_id in sorted(set(had_labels) - set(records)):

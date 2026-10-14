@@ -1760,11 +1760,13 @@ lockfile's root note keeps it.
    Everything that reads records (resolution, `verify`, roots, `pinned_hash`) then works
    unchanged, and a diff of the lockfile shows a label moving as it shows data moving.
 2. **An exact version, `other:model/x@7f3a9c2e41b0`, is not pinned.** The hash is the
-   identity; it is looked for among the dependency's snapshots in the store, by the name the
-   dependency gives itself, which the pinned snapshot says. It may be cleared by `gc` if no
-   label and no lockfile names it; the docs say to pin it with a label to keep it.
-3. **A label whose version the store does not have is pinned without bytes**, reported as
-   `not built` with the reason, and is a problem under `--frozen`. `pin` goes on with the rest.
+   identity. If a label of this lockfile pins that version, it is at hand whatever became of
+   the snapshot that made it; else it is looked for among the dependency's snapshots in the
+   store, by the name the dependency gives itself, which the pinned snapshot says, and it may
+   be cleared by `gc` if no label and no lockfile names it.
+3. **A label whose version the store cannot supply is pinned without bytes**, with the reason
+   in the record (`missing`) and in every message, reported as `not built`, and a problem
+   under `--frozen`. `pin` goes on with the rest.
 4. **`pin` reports a label the owner has moved since as `stale`**, like changed data, and does
    not move it; `update` does, as `moved`; a label taken away is `dropped` on `update`.
 5. **`Snapshot.labels` changed shape**, from a list of version starts to a map of label to
@@ -1773,10 +1775,31 @@ lockfile's root note keeps it.
    snapshot, and has no versions in the store. A label of one is reported as not a label when
    it was pinned.
 
-**Known gaps.** A `git` dependency has no versions. The exact-version lookup reads every
-snapshot record in the store once per call; fine for a store of hundreds, not of millions.
-Staleness, "this model is out of date because what it was trained on moved", is still the
-one unbuilt piece of {doc}`models`.
+**What an adversarial review found before merge** (2026-10-14; eleven findings, each fixed
+with a test unless said otherwise): an exact version of a dependency declared with a scope
+raised a bare `ValueError` (the local name was built with the scope left on); a label name the
+owner's manifest spells illegally (`"my label"`, or one that reads as a hash) was recorded by
+`snapshot` and crashed every dependant's `pin` with no lockfile written (a snapshot records
+only names a reference can carry); a label pinned without bytes resolved with the message for
+an unbuilt asset, and the reason given was false in the two cases that produce it (the reason
+is worked out and carried in the record); `update --from-folder` dropped label pins as "no
+longer declared" (a folder or repository pin carries the labels it has); a pipeline that
+renamed its id between snapshots gets no label resolved, and the message now says under which
+id and folder it looked (no test; the gap stands); after `--from-folder` the exact-version
+message blamed a missing snapshot, and after `gc` cleared the snapshot that made a labelled
+version, the exact hash failed although the lockfile's root kept the bytes (a version a label
+pins is at hand first); a label without bytes was silent on later `pin`s; `verify()`'s remedy
+for a lost labelled version named the wrong snapshot; the lock schema did not describe label
+records and `pinned_hash` now moves with a label; `pin` reads every snapshot record once per
+labelled model; the gc test held for the wrong reason (sharpened).
+
+**Known gaps.** A `git` dependency has no versions. Labels are looked up by the id and folder
+the pipeline gave itself in the pinned snapshot; a pipeline that renamed its id between the
+snapshot that made a version and the one that labels it gets the label pinned without bytes,
+and the message says where it looked. `pin` and the exact-version lookup read every snapshot
+record in the store (once per labelled model, or per call); fine for a store of hundreds, not
+of millions. Staleness, "this model is out of date because what it was trained on moved", is
+still the one unbuilt piece of {doc}`models`.
 
 ### Step 5. Data in databases
 
