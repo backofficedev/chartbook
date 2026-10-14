@@ -255,8 +255,11 @@ class TestPath:
         with pytest.raises(AssetNotDeclaredError, match="declared as a model"):
             data.path("forecaster", project_dir=project)
 
-    def test_versions_and_parts_are_not_yet_supported(self, project):
-        with pytest.raises(UnsupportedRevisionError):
+    def test_parts_are_not_yet_supported_and_a_version_has_to_exist(self, project):
+        """Versions resolve now (tests/test_model_versions.py). This project has none."""
+        from chartbook.errors import VersionNotFoundError
+
+        with pytest.raises(VersionNotFoundError):
             models.path("forecaster@champion", project_dir=project)
         with pytest.raises(UnsupportedReferenceError):
             models.path("encoder#weights/best.pt", project_dir=project)

@@ -146,6 +146,61 @@
         ]
       }
     },
+    "aliases": {
+      "type": "object",
+      "description": "The model's labels, from [models.x.aliases]: each a name that points at a version, by the start of the version's content hash.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^(sha256:)?[0-9a-f]{12,64}$"
+      }
+    },
+    "versions": {
+      "type": "array",
+      "description": "The model's versions, oldest first. A version is made by a snapshot: the first one that held those bytes. These are the versions in the store of the machine that built the index.",
+      "items": {
+        "type": "object",
+        "required": [
+          "version",
+          "content_hash",
+          "made_at",
+          "commit"
+        ],
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The version's name: the start of its content hash, as `model/x@<version>` takes it."
+          },
+          "content_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+          },
+          "made_at": {
+            "type": "string",
+            "description": "When the snapshot that made it was made, in UTC."
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$",
+            "description": "The commit the pipeline was at: which code trained it."
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The labels that point at it."
+          },
+          "metrics": {
+            "type": "object",
+            "description": "Its scores, as the metrics file had them when the snapshot was made."
+          },
+          "inputs": {
+            "type": "array",
+            "description": "What the pipeline was pinned to when the snapshot was made: which data."
+          }
+        }
+      }
+    },
     "tags": {
       "type": "array",
       "items": {

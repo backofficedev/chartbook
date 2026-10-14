@@ -510,6 +510,58 @@ def check_licenses(
     return problems
 
 
+def check_model_labels(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Look at each model's labels: does each point at a version that is here?
+
+    A label points at a version by the start of its content hash, and a
+    version is made by a snapshot, which is kept in the store of the
+    machine that made it. So a label can be right and its version not be
+    on this machine. That is a warning, as a git dependency that has not
+    been fetched is: nothing can be said, and that is said.
+
+    A label that matches more than one version is a problem: it does not
+    say which.
+    """
+    from chartbook.models import versions_in
+
+    problems = []
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        toml_file = Path(pipeline_dir) / "chartbook.toml"
+        for model_id, model in (pipeline_manifest.get("models") or {}).items():
+            aliases = model.get("aliases")
+            if not isinstance(aliases, dict) or not aliases:
+                continue
+            kept = versions_in(pipeline_dir, model_id, aliases)
+            for label, points_at in aliases.items():
+                digits = str(points_at).split(":", 1)[-1]
+                matches = [
+                    version.name
+                    for version in kept
+                    if version.content_hash.split(":", 1)[-1].startswith(digits)
+                ]
+                if len(matches) > 1:
+                    problems.append(
+                        Problem(
+                            toml_file,
+                            f"models.{model_id}.aliases",
+                            label,
+                            f"{points_at} is the start of {len(matches)} versions "
+                            f"({', '.join(matches)}). Give more digits.",
+                        )
+                    )
+                elif not matches:
+                    warnings.warn(
+                        f"{toml_file}: [models.{model_id}.aliases] {label}: not "
+                        f"checked. No version {points_at} of model/{model_id} is "
+                        f"on this machine; a version is made by a snapshot, in "
+                        f"the store of the machine that made it.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+    return problems
+
+
 def run_checks(
     manifest: dict,
     base_dir: Union[str, Path],
@@ -538,6 +590,7 @@ def run_checks(
         *check_dependencies(manifest, base_dir),
         *check_model_metrics(manifest, base_dir),
         *check_model_lineage(manifest, base_dir),
+        *check_model_labels(manifest, base_dir),
         *check_licenses(manifest, base_dir, within_days=within_days, today=today),
     ]
     return sorted(problems, key=lambda p: (str(p.file), p.table, p.field))

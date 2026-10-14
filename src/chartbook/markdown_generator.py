@@ -821,6 +821,21 @@ _MODEL_PAGE_TAIL = """
 {% endfor %}
 {% endif %}
 
+{% if versions %}
+## Versions
+
+A version is made by a snapshot. Its name is the start of the model's content hash:
+`chartbook path model/{{model_id}}@<version>` gives its path.
+
+| Version | Made | Commit | Labels |{% for name in version_metrics %} `{{name}}` |{% endfor %}
+
+|---------|------|--------|--------|{% for name in version_metrics %}------|{% endfor %}
+
+{% for version in versions %}| `{{version.name}}` | {{version.made}} | `{{version.commit}}` | {{version.labels}} |{% for name in version_metrics %} {{version.metrics.get(name, "")}} |{% endfor %}
+
+{% endfor %}
+{% endif %}
+
 ## Trained On
 
 {% if trained_on %}
@@ -1023,6 +1038,23 @@ def generate_model_docs(
             for file in sorted(directory_files(model_path))
         ]
 
+    # Newest first: the one someone is most likely to be looking for
+    from chartbook.models import versions_in
+
+    aliases = model_manifest.get("aliases")
+    kept = versions_in(pipeline_base_dir, model_id, aliases if isinstance(aliases, dict) else {})
+    version_metrics = sorted({name for version in kept for name in version.metrics})
+    versions = [
+        {
+            "name": version.name,
+            "made": f"{version.made_at[:10]} {version.made_at[11:16]} UTC",
+            "commit": version.commit[:7],
+            "labels": ", ".join(f"`{label}`" for label in version.labels),
+            "metrics": {k: _format_metric(v) for k, v in version.metrics.items()},
+        }
+        for version in reversed(kept)
+    ]
+
     template = environment.from_string(_MODEL_PAGE_HEAD + write_up + _MODEL_PAGE_TAIL)
     page = template.render(
         model_manifest,
@@ -1035,6 +1067,8 @@ def generate_model_docs(
         pipeline_page_link=pipeline_page_link,
         dot_or_dotdot="../..",
         metrics=metrics,
+        versions=versions,
+        version_metrics=version_metrics,
         trained_on=trained_on,
         model_files=model_files,
         freshness=[

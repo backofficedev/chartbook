@@ -213,6 +213,8 @@ Print the path that the enclosing `chartbook.toml` declares for an asset — a d
 | `notebook/analysis` | `[notebooks.analysis]` |
 | `note/methodology` | `[notes.methodology]` |
 | `model/rate_forecaster` | `[models.rate_forecaster]` |
+| `model/rate_forecaster@7f3a9c2e41b0` | A {ref}`version <model-versions>` of that model, in the store |
+| `model/rate_forecaster@champion` | The version that label points at |
 
 ```console
 $ chartbook path repo_public

@@ -458,3 +458,25 @@ class MissingSourceFilesError(Exception):
         """
         click.echo(self.format_cli_message(), err=True)
         raise SystemExit(1)
+
+
+class VersionNotFoundError(LookupError):
+    """Raised when a reference names a version of an asset that cannot be found.
+
+    A version is made by a snapshot (``chartbook run --snapshot``) and is
+    named by the start of its content hash, ``model/x@7f3a9c2e41b0``, or by a
+    label the manifest gives it, ``model/x@champion``.
+
+    Attributes:
+        asset: The asset's reference, without the revision.
+        rev: The revision that was asked for.
+        reason: What is wrong: ``"no_such_version"``, ``"ambiguous"`` or
+            ``"not_in_store"``.
+    """
+
+    def __init__(self, asset: str, rev: str, reason: str, message: str):
+        self.asset = asset
+        self.rev = rev
+        self.reason = reason
+        super().__init__(message)
+

@@ -38,6 +38,7 @@ chartbook check             # CI gate: missing metadata, broken paths, dependenc
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
 chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
+chartbook path model/<name>@<version>  # a version of a model, in the store: by the start of its hash (@7f3a9c2e41b0) or by a label (@champion)
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy (needs [dependencies] + chartbook pin)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
@@ -153,6 +154,12 @@ fig.write_html(assets.path("chart/my_chart"))
 # a model; it hands out the path.
 from chartbook import models
 joblib.dump(model, models.path("my_model"))
+# A VERSION of a model is made by a snapshot (`chartbook run --snapshot`), named by
+# the start of its content hash, and labelled in chartbook.toml:
+#   [models.my_model.aliases]
+#   champion = "7f3a9c2e41b0"
+# models.path("my_model@champion") is that version in the store (read-only);
+# models.versions("my_model") lists them with their scores and commits.
 
 # Another pipeline this one reads from is declared in chartbook.toml:
 #   [dependencies]

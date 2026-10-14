@@ -645,11 +645,14 @@ class TestPathCommand:
         assert "No model named 'rate_forecaster' is declared" in result.stderr
         assert "[models.rate_forecaster]" in result.stderr
 
-    def test_a_version_of_a_model_is_not_yet_supported(self, project, monkeypatch):
+    def test_a_version_of_a_model_that_is_not_declared_is_a_clean_error(
+        self, project, monkeypatch
+    ):
+        """Versions resolve now (tests/test_model_versions.py). The model comes first."""
         monkeypatch.chdir(project)
         result = self._invoke("model/rate_forecaster@champion")
         assert result.exit_code == 1
-        assert "not yet supported" in result.stderr
+        assert "No model named 'rate_forecaster' is declared" in result.stderr
 
     def test_project_dir_option(self, project, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)

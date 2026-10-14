@@ -59,6 +59,7 @@ from chartbook.errors import (
     CatalogNotConfiguredError,
     DependencyNotDeclaredError,
     ManifestNotFoundError,
+    VersionNotFoundError,
 )
 from chartbook.identity import (
     UnsupportedRegistryError,
@@ -419,21 +420,28 @@ def declared_files(
 
 
 def parse_declared_ref(
-    ref: Union[str, AssetRef], kind: Optional[str] = None
+    ref: Union[str, AssetRef], kind: Optional[str] = None, revisions: bool = False
 ) -> AssetRef:
     """Parse a reference of a form that is supported today.
 
     That is an asset of this pipeline or of another one: ``name``,
     ``kind/name``, ``pipeline:name`` or ``scope/pipeline:name``. It is what
-    a manifest may state and what :func:`resolve` resolves. Parts,
-    revisions and registries are refused as reserved, so the message can
-    say "not yet" where the syntax is right.
+    a manifest may state and what :func:`resolve` resolves. Parts and
+    registries are refused as reserved, so the message can say "not yet"
+    where the syntax is right. So is a revision, except the one kind that
+    resolves: a version of one of this pipeline's own models,
+    ``model/x@7f3a9c2e41b0`` or ``model/x@champion``, and only when *revisions*
+    is set.
 
     :param ref: The reference.
     :param kind: The kind the caller expects; see
         :func:`chartbook.refs.parse_asset_ref`.
+    :param revisions: Whether a version of a local model is accepted. A
+        manifest states what it was built from without one; :func:`resolve`
+        takes one.
     :returns: The parsed reference.
-    :raises UnsupportedRevisionError: If the reference carries ``@rev``.
+    :raises UnsupportedRevisionError: If the reference carries an ``@rev``
+        that does not resolve.
     :raises UnsupportedRegistryError: If it carries a registry prefix.
     :raises UnsupportedReferenceError: If it names a part.
     :raises ValueError: If it does not follow the grammar, or names a kind
@@ -442,11 +450,25 @@ def parse_declared_ref(
     asset = parse_asset_ref(ref, kind=kind)
     if asset.rev is not None:
         without = dataclasses.replace(asset, rev=None)
-        raise UnsupportedRevisionError(
-            f"Reference {str(asset)!r} pins a revision with '@rev'. Version "
-            f"pinning is reserved syntax and not yet supported; use "
-            f"{str(without)!r} instead."
-        )
+        if not revisions:
+            raise UnsupportedRevisionError(
+                f"Reference {str(asset)!r} pins a revision with '@rev'. Version "
+                f"pinning is reserved syntax and not yet supported; use "
+                f"{str(without)!r} instead."
+            )
+        if asset.kind != "model":
+            raise UnsupportedRevisionError(
+                f"Reference {str(asset)!r} names a version of a {asset.kind}. "
+                f"Versions are kept for models only so far; use "
+                f"{str(without)!r} instead."
+            )
+        if not asset.is_local:
+            raise UnsupportedRevisionError(
+                f"Reference {str(asset)!r} names a version of another "
+                f"pipeline's model, which is not yet supported. "
+                f"{str(without)!r} is the version that chartbook.lock pins, "
+                f"and `chartbook update` moves it."
+            )
     if asset.part is not None:
         without = dataclasses.replace(asset, part=None)
         raise UnsupportedReferenceError(
@@ -604,7 +626,15 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"if it cannot.",
         )
 
-    held = store.object_path(content_hash)
+    return _held(store, record)
+
+
+def _held(store, record: dict) -> Location:
+    """Where the store holds an asset, given its record with a content hash."""
+    from chartbook import hashing
+    from chartbook.utils import is_glob_pattern
+
+    held = store.object_path(record["content_hash"])
     declared_path = record["location"]["path"]
     if is_glob_pattern(declared_path):
         # The files are laid out from the glob's fixed prefix
@@ -614,6 +644,80 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     if "files" in record or not (held / name).is_file():
         return FileLocation(held)  # a directory: the object is the directory
     return FileLocation(held / name)
+
+
+def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Location:
+    """Resolve a version of one of this pipeline's models, to the store.
+
+    ``model/x@7f3a9c2e41b0`` names a version by the start of its content hash.
+    ``model/x@champion`` names it by a label, which ``[models.x.aliases]``
+    points at a version. A version is made by a snapshot, so it is found in
+    this pipeline's snapshots, at any commit of its repository.
+    """
+    from chartbook import snapshot
+    from chartbook.store import default_store
+
+    local = str(dataclasses.replace(asset, rev=None))
+    labels = entry.get("aliases") if isinstance(entry.get("aliases"), dict) else {}
+    label = asset.rev if asset.rev in labels else None
+    wanted = str(labels[label]) if label else asset.rev
+    digits = wanted.split(":", 1)[-1]
+    pointing = f" (the label {label!r} points at it)" if label else ""
+
+    try:
+        versions = snapshot.versions_of(manifest_dir, local)
+    except snapshot.SnapshotError as error:
+        raise VersionNotFoundError(
+            local,
+            asset.rev,
+            "no_such_version",
+            f"{str(asset)!r} names a version, and this pipeline has none: "
+            f"{error}. A version is made by a snapshot.",
+        ) from None
+    records = {content_hash: taken.assets[local] for content_hash, taken in versions}
+    hashes = list(records)
+    known = ", ".join(snapshot.version_name(h, hashes) for h in hashes) or "(none)"
+
+    if not all(c in "0123456789abcdef" for c in digits) or len(digits) < 4:
+        raise VersionNotFoundError(
+            local,
+            asset.rev,
+            "no_such_version",
+            f"{str(asset)!r}: {asset.rev!r} is not a label of {local} (its labels "
+            f"in [models.{asset.name}.aliases] are: "
+            f"{', '.join(sorted(labels)) or '(none)'}), and is not the start of a "
+            f"version's hash. Its versions on this machine are: {known}.",
+        )
+    matches = [h for h in hashes if h.split(":", 1)[-1].startswith(digits)]
+    if not matches:
+        raise VersionNotFoundError(
+            local,
+            asset.rev,
+            "no_such_version",
+            f"No version {wanted} of {local} is on this machine{pointing}. Its "
+            f"versions here are: {known}. A version is made by a snapshot: "
+            f"`chartbook run --snapshot`.",
+        )
+    if len(matches) > 1:
+        raise VersionNotFoundError(
+            local,
+            asset.rev,
+            "ambiguous",
+            f"{wanted} is the start of {len(matches)} versions of {local}"
+            f"{pointing}: {', '.join(snapshot.version_name(h, hashes) for h in matches)}. "
+            f"Give more digits.",
+        )
+    store = default_store()
+    if not store.has(matches[0]):
+        raise VersionNotFoundError(
+            local,
+            asset.rev,
+            "not_in_store",
+            f"Version {snapshot.version_name(matches[0], hashes)} of {local} was "
+            f"made{pointing}, and the store at {store.root} no longer has its "
+            f"bytes.",
+        )
+    return _held(store, records[matches[0]])
 
 
 def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
@@ -650,6 +754,9 @@ def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
             f"[{table}.{name}] in {manifest_path} has no 'path'. Add one, "
             f'e.g. path = "{example}".'
         )
+    if asset.rev is not None:
+        # A version: what a snapshot kept, not what is in the folder now
+        return _resolve_version(asset, manifest_dir, raw[table][name])
     # Joined lexically, not resolved: the declared path is the asset's real
     # location even when something has since linked another file into it.
     return FileLocation(Path(os.path.normpath(manifest_dir / declared_path)))
@@ -725,7 +832,7 @@ def resolve(
     :raises KeyError: If the pipeline or dataframe is not in the catalog.
     """
     if pipeline is None:
-        asset = parse_declared_ref(ref, kind=kind)
+        asset = parse_declared_ref(ref, kind=kind, revisions=True)
         manifest_dir = find_manifest_dir(*start_dirs)
         if asset.is_local:
             return _resolve_local(asset, manifest_dir)

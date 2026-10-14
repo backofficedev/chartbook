@@ -38,6 +38,7 @@ chartbook check              # CI gate: missing metadata, broken paths, dependen
 chartbook path <name>        # Print the path chartbook.toml declares for a dataframe
 chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
 chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy in the store
+chartbook path model/<name>@<version>  # a version of a model: by the start of its hash, or by a label from [models.<name>.aliases]
 chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook run --snapshot     # Build, then declare the build ready for others (a snapshot); checks everything is committed first

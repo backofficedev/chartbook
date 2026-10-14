@@ -313,8 +313,10 @@ class TestWhatIsMissing:
     def test_a_part_a_version_and_a_registry_are_still_reserved(self, pinned):
         with pytest.raises(UnsupportedReferenceError, match="not yet supported"):
             data.path("rates:treasury#dgs10", project_dir=pinned)
-        with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
+        with pytest.raises(UnsupportedRevisionError, match="kept for models only"):
             data.path("rates:treasury@v2", project_dir=pinned)
+        with pytest.raises(UnsupportedRevisionError, match="not yet supported"):
+            models.path("rates:ar1@champion", project_dir=pinned)
         with pytest.raises(UnsupportedRegistryError, match="not yet supported"):
             data.path("charthub.example/acme/rates:treasury", project_dir=pinned)
 

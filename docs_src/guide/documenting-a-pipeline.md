@@ -115,6 +115,19 @@ docs_path = "./docs_src/models/rate_forecaster.md"
 
 Your training code writes the model file and a small JSON file of scores; ChartBook reads both and never looks inside the model. {doc}`../reference/configuration` has every field, and the `yield_curve` example trains a small one end to end.
 
+**Versions.** When a build of the model is ready, `chartbook run --snapshot` keeps it as a version, named by the start of its hash. Give the one in use a label, and have the code that uses it ask for the label:
+
+```toml
+[models.rate_forecaster.aliases]
+champion = "7f3a9c2e41b0"
+```
+
+```python
+model = joblib.load(models.path("rate_forecaster@champion"))
+```
+
+Promoting a newer version is changing that one line. See {ref}`Versions and labels <model-versions>`.
+
 ## Depending on another pipeline
 
 If the pipeline uses another pipeline's data, say which pipeline and where it is:
