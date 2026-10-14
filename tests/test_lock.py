@@ -399,17 +399,41 @@ class TestPin:
             Root(downstream / LOCK_FILE, tuple(sorted(lock.read_lock(downstream).hashes())))
         ]
 
-    def test_a_file_stored_as_a_link_is_flagged(self, downstream, rates, store, monkeypatch):
-        """With no clone to be had, a pin is the upstream's own file."""
+    def test_a_pin_is_a_clone_or_a_copy_and_never_a_link(
+        self, downstream, rates, store, monkeypatch
+    ):
+        """Decided: a pin must not change when the upstream rewrites its file."""
+        assert lock.PIN_LINKS == ("reflink", "copy")
 
         def refuse(*args, **kwargs):
             raise OSError(95, "not supported here")
 
-        monkeypatch.setattr(store_module, "_reflink", refuse)
-        report = lock.pin(downstream, store)
-        pinned = [e for e in report.events if e.status == "pinned"]
-        assert pinned and all(e.linked for e in pinned)
-        assert not any(e.linked for e in lock.pin(downstream, store).events)
+        monkeypatch.setattr(store_module, "_reflink", refuse)  # a disk with no clones
+        lock.pin(downstream, store)
+        upstream = rates / "_data" / "treasury.parquet"
+        held = store.get(HELLO) / "treasury.parquet"
+        assert not held.is_symlink() and not held.samefile(upstream)
+        assert os.stat(held).st_nlink == 1
+
+        # Rewritten in place, as pandas and polars rewrite a parquet file
+        with open(upstream, "r+b") as f:
+            f.write(b"new numbers")
+            f.truncate()
+        assert held.read_bytes() == b"hello"
+        assert store.verify() == []
+
+    def test_a_pin_replaces_an_object_that_was_stored_as_a_link(
+        self, downstream, rates, store
+    ):
+        """Something else may have stored the same bytes more cheaply."""
+        upstream = rates / "_data" / "treasury.parquet"
+        store.put(upstream, links=("hardlink",))
+        assert (store.get(HELLO) / "treasury.parquet").samefile(upstream)
+
+        lock.pin(downstream, store)
+        held = store.get(HELLO) / "treasury.parquet"
+        assert not held.samefile(upstream)
+        assert held.read_bytes() == b"hello" and store.verify() == []
 
     def test_only_what_pinning_needs_is_read_from_the_manifest(self, downstream, rates, store):
         """A dataframe with no write-up does not load, and can still be pinned from."""
@@ -752,15 +776,11 @@ class TestCommands:
     def test_pin(self, here, downstream):
         result = self._run("pin")
         assert result.exit_code == 0, result.output
-        lines = result.output.splitlines()
-        assert lines[:3] == [
+        assert result.output.splitlines() == [
             "acme/rates: 3 pinned, 1 not built",
             "  not built: acme/rates:model/ar1 (./_models/ar1)",
             "Wrote chartbook.lock.",
         ]
-        # On a disk with no copy-on-write clones, one more line says that
-        # the pins are links
-        assert len(lines) == 3 or "held as links" in lines[3]
         assert (downstream / LOCK_FILE).is_file()
         assert len(list(here.hashes())) == 3
 
@@ -806,18 +826,6 @@ class TestCommands:
         assert result.exit_code == 0, result.output
         assert "crsp: not pinned. ChartBook does not fetch git dependencies yet" in result.output
         assert "s3cret" not in result.output
-
-    def test_links_are_pointed_out(self, here, monkeypatch):
-        def refuse(*args, **kwargs):
-            raise OSError(95, "not supported here")
-
-        monkeypatch.setattr(store_module, "_reflink", refuse)
-        result = self._run("pin")
-        assert result.exit_code == 0, result.output
-        assert "3 of the asset(s) just stored are held as links to the other pipeline's" in (
-            result.output
-        )
-        assert "`chartbook store verify` finds one that has." in result.output
 
     def test_no_dependencies(self, here, downstream):
         _write_manifest(downstream, {"project": {"id": "downstream"}})

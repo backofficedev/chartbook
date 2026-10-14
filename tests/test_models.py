@@ -20,7 +20,7 @@ from chartbook import assets, data, hashing, index, models
 from chartbook.check import run_checks
 from chartbook.cli import main
 from chartbook.diagnostics import build_diagnostics
-from chartbook.errors import AssetNotDeclaredError
+from chartbook.errors import AssetNotDeclaredError, DependencyNotDeclaredError
 from chartbook.identity import UnsupportedRevisionError
 from chartbook.incremental import pipeline_fingerprint, pipeline_owned_paths
 from chartbook.manifest import load_manifest, resolve_project_type
@@ -112,7 +112,11 @@ class TestModelsTable:
         assert explicit["_trained_on"] == [AssetRef(name="dataframe_0")]
 
     def test_trained_on_another_pipelines_dataframe(self, pipeline_project):
-        """Stated lineage: taken as written, with nothing to check it against."""
+        """Taken as written, when the other pipeline is a declared dependency."""
+        _edit_toml(
+            pipeline_project,
+            lambda c: c.update(dependencies={"acme/rates": {"path": "../rates"}}),
+        )
         model = self._load_with(
             pipeline_project,
             trained_on=["dataframe_0", "rates:treasury", "acme/rates:treasury"],
@@ -718,48 +722,57 @@ def _scoped_catalog(tmp_path) -> Path:
 class TestTrainedOnAnotherPipeline:
     """A model's training data may be another pipeline's dataframe.
 
-    For now that is stated lineage: recorded, shown, linked where the other
-    pipeline is in the same site, and checked where it can be. Fetching and
-    pinning it comes with dependencies.
+    The other pipeline has to be one that ``[dependencies]`` declares. The
+    input is then recorded, shown, linked where the other pipeline is in
+    the same site, and checked. Declaring is tested in
+    ``test_dependencies.py``, and reading the pinned copy in
+    ``test_pinned_refs.py``.
     """
 
-    def _add_model(self, pipeline_dir, trained_on):
+    def _add_model(self, pipeline_dir, trained_on, **dependencies):
         (pipeline_dir / "_models").mkdir(exist_ok=True)
         (pipeline_dir / "_models" / "m.json").write_text("{}")
-        _edit_toml(
-            pipeline_dir,
-            lambda c: c.update(
-                models={"m": {"path": "./_models/m.json", "trained_on": trained_on}}
-            ),
-        )
+
+        def edit(config):
+            config["models"] = {"m": {"path": "./_models/m.json", "trained_on": trained_on}}
+            if dependencies:
+                config["dependencies"] = dependencies
+
+        _edit_toml(pipeline_dir, edit)
 
     def _model_record(self, built) -> dict:
         (record,) = [r for r in built["records"] if r["kind"] == "Model"]
         return record
 
-    def test_alone_the_input_is_recorded_as_stated(self, pipeline_project):
-        self._add_model(pipeline_project, ["dataframe_0", "rates:treasury", "acme/x:y"])
+    def test_a_pipeline_that_is_not_a_dependency_does_not_load(self, pipeline_project):
+        self._add_model(pipeline_project, ["rates:treasury"])
+        with pytest.raises(ValueError) as e:
+            load_manifest(pipeline_project)
+        message = str(e.value)
+        assert "[models.m]: trained_on names 'rates:treasury'" in message
+        assert "which [dependencies] does not declare" in message
+        assert 'add "rates" = { path = "../rates" } under [dependencies]' in message
+
+    def test_alone_the_input_is_recorded_by_the_dependencys_name(self, pipeline_project):
+        self._add_model(
+            pipeline_project,
+            ["dataframe_0", "rates:treasury"],
+            **{"acme/rates": {"path": "../rates"}},
+        )
         record = self._model_record(index.build_index(load_manifest(pipeline_project)))
-        assert record["inputs"] == [
-            "test_pipeline:dataframe_0",
-            "rates:treasury",
-            "acme/x:y",
-        ]
+        assert record["inputs"] == ["test_pipeline:dataframe_0", "acme/rates:treasury"]
 
     def test_in_a_catalog_the_input_gets_the_id_it_has_there(self, tmp_path):
         catalog = _scoped_catalog(tmp_path)
         self._add_model(
             catalog / "pipelines" / "pipeline_a",
-            ["pipeline_b:dataframe_0", "acme/pipeline_b:dataframe_0", "elsewhere:rates"],
+            ["pipeline_b:dataframe_0"],
+            pipeline_b={"path": "../pipeline_b"},
         )
         built = index.build_index(load_manifest(catalog))
         record = self._model_record(built)
         assert record["id"] == "acme/pipeline_a:model/m"
-        assert record["inputs"] == [
-            "acme/pipeline_b:dataframe_0",
-            "acme/pipeline_b:dataframe_0",
-            "elsewhere:rates",
-        ]
+        assert record["inputs"] == ["acme/pipeline_b:dataframe_0"]
         # ...which is the ID of a record in the same index
         assert "acme/pipeline_b:dataframe_0" in [r.get("id") for r in built["records"]]
 
@@ -768,7 +781,10 @@ class TestTrainedOnAnotherPipeline:
     ):
         catalog = _scoped_catalog(tmp_path)
         self._add_model(
-            catalog / "pipelines" / "pipeline_a", ["pipeline_b:dataframe_0", "elsewhere:rates"]
+            catalog / "pipelines" / "pipeline_a",
+            ["pipeline_b:dataframe_0", "elsewhere:rates"],
+            pipeline_b={"path": "../pipeline_b"},
+            elsewhere={"git": "https://example.org/acme/elsewhere.git"},
         )
         monkeypatch.chdir(catalog)
         result = CliRunner().invoke(main, ["build", "./docs", "-f"])
@@ -785,7 +801,7 @@ class TestTrainedOnAnotherPipeline:
         assert "elsewhere:rates (in another pipeline, which is not part of this site)" in text
 
     def test_alone_the_page_names_it_without_a_link(self, pipeline_project, monkeypatch):
-        self._add_model(pipeline_project, ["rates:treasury"])
+        self._add_model(pipeline_project, ["rates:treasury"], rates={"path": "../rates"})
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["build", "./docs", "-f"])
         assert result.exit_code == 0, result.output
@@ -795,7 +811,11 @@ class TestTrainedOnAnotherPipeline:
 
     def test_check_catches_a_dataframe_the_other_pipeline_does_not_have(self, tmp_path):
         catalog = _scoped_catalog(tmp_path)
-        self._add_model(catalog / "pipelines" / "pipeline_a", ["pipeline_b:no_such_table"])
+        self._add_model(
+            catalog / "pipelines" / "pipeline_a",
+            ["pipeline_b:no_such_table"],
+            pipeline_b={"path": "../pipeline_b"},
+        )
         problems = [
             p
             for p in run_checks(load_manifest(catalog), catalog)
@@ -807,27 +827,26 @@ class TestTrainedOnAnotherPipeline:
         assert "'acme/pipeline_b'" in problem.message
         assert "dataframe_0" in problem.message
 
-    def test_check_says_nothing_about_a_pipeline_it_cannot_see(self, tmp_path, pipeline_project):
-        catalog = _scoped_catalog(tmp_path)
-        self._add_model(catalog / "pipelines" / "pipeline_a", ["elsewhere:rates"])
-        assert not [
-            p
-            for p in run_checks(load_manifest(catalog), catalog)
-            if "does not declare" in p.message
-        ]
-        self._add_model(pipeline_project, ["rates:treasury"])
+    def test_check_says_nothing_about_a_pipeline_it_cannot_see(self, pipeline_project):
+        """A git dependency is not fetched, so there is no manifest to read."""
+        self._add_model(
+            pipeline_project,
+            ["rates:treasury"],
+            rates={"git": "https://example.org/acme/rates.git"},
+        )
         assert not [
             p
             for p in run_checks(load_manifest(pipeline_project), pipeline_project)
             if "does not declare" in p.message
         ]
 
-    def test_resolving_another_pipelines_asset_is_still_refused(self, pipeline_project):
-        """Stating lineage is allowed; asking for the path is not, yet."""
-        with pytest.raises(UnsupportedReferenceError, match="not yet supported"):
-            data.path("rates:treasury", project_dir=pipeline_project)
-        with pytest.raises(UnsupportedReferenceError, match="not yet supported"):
+    def test_asking_for_a_model_in_an_undeclared_pipeline_says_what_to_add(
+        self, pipeline_project
+    ):
+        with pytest.raises(DependencyNotDeclaredError, match=r"\$ chartbook pin"):
             models.path("rates:m", project_dir=pipeline_project)
+        with pytest.raises(DependencyNotDeclaredError):
+            data.path("rates:treasury", project_dir=pipeline_project)
 
 
 class TestPolicy:

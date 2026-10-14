@@ -16,25 +16,29 @@ dataframes as further kinds, which is why ``load()`` and ``path()`` each
 call the resolver rather than one calling the other: a table has no path,
 but it can still be loaded.
 
-Two forms of reference resolve today:
+Three forms of reference resolve today:
 
 - a **local** reference — ``name`` or ``kind/name`` — against the
-  ``chartbook.toml`` enclosing the caller. The raw file is read and nothing
-  else, so this is cheap, offline, and does not care whether the asset has
-  been built yet;
+  ``chartbook.toml`` enclosing the caller. It resolves *live*: to the
+  ``path`` the manifest declares, which is the file you are working on.
+  The raw file is read and nothing else, so this is cheap, offline, and
+  does not care whether the asset has been built yet;
+- a **cross-pipeline** reference — ``pipeline:name`` — to an asset of a
+  pipeline that ``[dependencies]`` declares. It resolves *pinned*: through
+  ``chartbook.lock`` to the copy in the store, and never to the other
+  pipeline's working directory. So what a pipeline reads from another one
+  does not change until it runs ``chartbook update``;
 - a **catalog** reference — a pipeline plus a dataframe name — through a
-  catalog, as ``data.load()`` always has.
+  catalog, as ``data.load(pipeline=..., dataframe=...)`` always has.
 
-The rest of the grammar (``pipeline:asset``, ``#part``, ``@rev``, a
-registry prefix) is recognized and refused as not yet supported. See
+The rest of the grammar (``#part``, ``@rev``, a registry prefix) is
+recognized and refused as not yet supported. See
 ``docs_src/design/references.md``.
 
 Finding *a pipeline* by name is here too, in :func:`locate_pipeline`: the
 one resolution chain, which asks the ``[dependencies]`` of the pipeline
-that wants to know, then the catalog. ``chartbook check``, the index and
-the catalog lookups above all go through it. It says where a pipeline is;
-it does not yet make ``pipeline:asset`` resolve to a path, which waits for
-the lockfile and the store (``docs_src/design/asset-graph.md``).
+that wants to know, then the catalog. ``chartbook check``, the index, the
+catalog lookups and cross-pipeline references all go through it.
 """
 
 from __future__ import annotations
@@ -51,7 +55,9 @@ import tomli
 from chartbook.config import get_default_catalog_path, get_global_settings_path
 from chartbook.errors import (
     AssetNotDeclaredError,
+    AssetNotPinnedError,
     CatalogNotConfiguredError,
+    DependencyNotDeclaredError,
     ManifestNotFoundError,
 )
 from chartbook.identity import (
@@ -415,14 +421,13 @@ def declared_files(
 def parse_declared_ref(
     ref: Union[str, AssetRef], kind: Optional[str] = None
 ) -> AssetRef:
-    """Parse a reference that a manifest may *declare* today.
+    """Parse a reference of a form that is supported today.
 
     That is an asset of this pipeline or of another one: ``name``,
-    ``kind/name``, ``pipeline:name`` or ``scope/pipeline:name``. A manifest
-    can say that a model was trained on another pipeline's dataframe before
-    ChartBook can fetch that dataframe; saying so is lineage, and needs no
-    resolution. Parts, revisions and registries are still refused, since
-    each means something only once there is a store to look in.
+    ``kind/name``, ``pipeline:name`` or ``scope/pipeline:name``. It is what
+    a manifest may state and what :func:`resolve` resolves. Parts,
+    revisions and registries are refused as reserved, so the message can
+    say "not yet" where the syntax is right.
 
     :param ref: The reference.
     :param kind: The kind the caller expects; see
@@ -466,36 +471,154 @@ def parse_declared_ref(
     return asset
 
 
-def parse_local_ref(
-    ref: Union[str, AssetRef], kind: Optional[str] = None
-) -> AssetRef:
-    """Parse a reference and check that it is one that *resolves* today.
+# Lockfiles keyed by path, with the (mtime, size) they were read at, for the
+# same reason raw manifests are remembered: a dodo.py asks for many paths.
+_lock_cache: dict[Path, tuple[tuple[int, int], object]] = {}
 
-    That is a local reference, ``name`` or ``kind/name``. Everything else
-    the grammar allows is refused as reserved, so the message can say "not
-    yet" where the syntax is right.
 
-    :param ref: The reference, e.g. ``"treasury_rates"`` or ``"chart/gdp"``.
-    :param kind: The kind the caller expects; see
-        :func:`chartbook.refs.parse_asset_ref`.
-    :returns: The parsed reference.
-    :raises UnsupportedRevisionError: If the reference carries ``@rev``.
-    :raises UnsupportedRegistryError: If it carries a registry prefix.
-    :raises UnsupportedReferenceError: If it names a part or another
-        pipeline.
-    :raises ValueError: If it does not follow the grammar, or names a kind
-        other than *kind*.
+def _read_lock(manifest_dir: Path):
+    """A pipeline's lockfile, reusing the last read while the file is unchanged.
+
+    :returns: The :class:`chartbook.lock.Lock`, or None if there is no file.
+        It is shared between calls and must not be changed.
     """
-    asset = parse_declared_ref(ref, kind=kind)
-    if not asset.is_local:
+    from chartbook import lock
+
+    path = manifest_dir / lock.LOCK_FILE
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    stamp = (stat.st_mtime_ns, stat.st_size)
+    cached = _lock_cache.get(path)
+    if cached is not None and cached[0] == stamp:
+        return cached[1]
+    locked = lock.read_lock(path)
+    _lock_cache[path] = (stamp, locked)
+    return locked
+
+
+def _catalog_hint(pipeline: str, manifest_dir: Path) -> Optional[tuple[str, str]]:
+    """Where the user's catalog says an undeclared pipeline is, if it says.
+
+    This is the second step of the chain, used only to make an error more
+    useful: a pipeline found in the catalog and not in ``[dependencies]`` is
+    still not one this pipeline may read from.
+
+    :returns: The catalog's key for it and its directory relative to
+        *manifest_dir*, or None.
+    """
+    from chartbook.manifest import get_pipeline_dirs, load_manifest
+
+    try:
+        catalog = load_manifest(base_dir=resolve_catalog_path().parent)
+        found = locate_pipeline(pipeline, catalog=get_pipeline_dirs(catalog))
+        return found.id, Path(os.path.relpath(found.path, manifest_dir)).as_posix()
+    except Exception:  # noqa: BLE001 - a hint is never worth failing for
+        return None
+
+
+def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
+    """Resolve a reference to another pipeline's asset, to its pinned copy.
+
+    The pipeline must be one ``[dependencies]`` declares. The asset is then
+    looked up in ``chartbook.lock``, and its content hash in the store.
+    Nothing is hashed and nothing outside the manifest, the lockfile and
+    the store is looked at, so this is as cheap as a local reference.
+    """
+    from chartbook import hashing
+    from chartbook.manifest import validate_dependencies
+    from chartbook.store import default_store
+    from chartbook.utils import is_glob_pattern
+
+    manifest_path = manifest_dir / MANIFEST_NAME
+    raw = _read_raw_manifest(manifest_path)
+    try:
+        dependencies = validate_dependencies(raw.get("dependencies") or {}, manifest_dir)
+    except ValueError as error:
+        raise type(error)(f"{manifest_path}: {error}") from None
+
+    try:
+        dependency = locate_pipeline(asset.pipeline_id, dependencies=dependencies)
+    except PipelineNotFoundError:
+        raise DependencyNotDeclaredError(
+            str(asset),
+            asset.pipeline_id,
+            manifest_path,
+            sorted(dependencies),
+            found_at=_catalog_hint(asset.pipeline_id, manifest_dir),
+        ) from None
+
+    # The lockfile knows the pipeline by its key in [dependencies]
+    pinned = asset.in_pipeline(dependency.id)
+    asset_id = str(pinned)
+    if dependency.kind == "git":
         raise UnsupportedReferenceError(
-            f"Reference {str(asset)!r} names an asset in another pipeline. "
-            f"Cross-pipeline references are reserved syntax and not yet "
-            f"supported; only an asset declared in the current pipeline's "
-            f"{MANIFEST_NAME} resolves. To locate a dataframe through a "
-            f"catalog, use data.get_data_path(pipeline=..., dataframe=...)."
+            f"Reference {str(asset)!r} names an asset of {dependency.id!r}, "
+            f"which is a git dependency. Fetching one is reserved syntax and "
+            f"not yet supported, so it has no pinned copy to read; declare it "
+            f"with a 'path' for now."
         )
-    return asset
+
+    locked = _read_lock(manifest_dir)
+    of_dependency = locked.assets_of(dependency.id) if locked else {}
+    if not of_dependency:
+        raise AssetNotPinnedError(
+            asset_id,
+            "no_lockfile",
+            f"{asset_id!r} is not pinned: {manifest_dir / 'chartbook.lock'} "
+            f"{'does not list' if locked else 'does not exist, so nothing lists'} "
+            f"the dependency {dependency.id!r}. Run `chartbook pin` in "
+            f"{manifest_dir}. A reference to another pipeline's asset resolves "
+            f"to its pinned copy, not to that pipeline's working directory.",
+        )
+    record = of_dependency.get(asset_id)
+    if record is None:
+        same_kind = sorted(
+            AssetRef.from_dict(other["ref"]).name
+            for other in of_dependency.values()
+            if other.get("ref", {}).get("kind") == pinned.kind
+        )
+        close = difflib.get_close_matches(pinned.name, same_kind, n=1)
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_in_lockfile",
+            f"The pipeline {dependency.id!r} had no {pinned.kind} named "
+            f"{pinned.name!r} when it was pinned."
+            f"{f' Did you mean {close[0]!r}?' if close else ''} Its "
+            f"{KIND_TABLES[pinned.kind]} in {manifest_dir / 'chartbook.lock'} "
+            f"are: {', '.join(same_kind) or '(none)'}. If it has started to "
+            f"declare one since, run `chartbook pin`.",
+        )
+    content_hash = record.get("content_hash")
+    if not content_hash:
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_built",
+            f"{asset_id!r} is not pinned: the pipeline {dependency.id!r} "
+            f"declares it, and had not built it when it was pinned. Build it "
+            f"there, then run `chartbook pin` in {manifest_dir}.",
+        )
+    store = default_store()
+    if not store.has(content_hash):
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_in_store",
+            f"{asset_id!r} is pinned at {content_hash}, and the store at "
+            f"{store.root} does not have it. Run `chartbook pin` in "
+            f"{manifest_dir} to put it back.",
+        )
+
+    held = store.object_path(content_hash)
+    declared_path = record["location"]["path"]
+    if is_glob_pattern(declared_path):
+        # The files are laid out from the glob's fixed prefix
+        tail = Path(declared_path).relative_to(hashing.glob_root(declared_path))
+        return FileLocation(held / tail)
+    name = Path(declared_path).name
+    if "files" in record or not (held / name).is_file():
+        return FileLocation(held)  # a directory: the object is the directory
+    return FileLocation(held / name)
 
 
 def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
@@ -574,13 +697,14 @@ def resolve(
 ) -> Location:
     """Resolve a reference to the location of the asset it names.
 
-    This is the one resolver. With *pipeline* unset, *ref* is a local
-    reference and resolves against the enclosing ``chartbook.toml``. With
-    *pipeline* set, *ref* is a dataframe of that pipeline and resolves
-    through a catalog.
+    This is the one resolver. With *pipeline* unset, *ref* is a reference
+    in the grammar and resolves against the enclosing ``chartbook.toml``:
+    live if it is local, and to the pinned copy if it names another
+    pipeline. With *pipeline* set, *ref* is a dataframe of that pipeline
+    and resolves through a catalog.
 
-    :param ref: A local reference, ``name`` or ``kind/name``; or, with
-        *pipeline*, a dataframe's name.
+    :param ref: A reference, ``name``, ``kind/name`` or ``pipeline:name``;
+        or, with *pipeline*, a dataframe's name.
     :param kind: The kind of asset the caller expects. A reference that
         names no kind takes it; one that names another kind is an error.
         By default a reference that names no kind is a dataframe.
@@ -596,14 +720,21 @@ def resolve(
         ``chartbook.toml``.
     :raises AssetNotDeclaredError: If a local reference names nothing the
         manifest declares, of that kind.
+    :raises DependencyNotDeclaredError: If a reference names a pipeline
+        that ``[dependencies]`` does not declare.
+    :raises AssetNotPinnedError: If another pipeline's asset has no pinned
+        copy: there is no pin, or the store does not have its bytes.
     :raises UnsupportedReferenceError: For reserved reference syntax.
     :raises CatalogNotConfiguredError: If a catalog is needed and none is
         configured.
     :raises KeyError: If the pipeline or dataframe is not in the catalog.
     """
     if pipeline is None:
-        asset = parse_local_ref(ref, kind=kind)
-        return _resolve_local(asset, find_manifest_dir(*start_dirs))
+        asset = parse_declared_ref(ref, kind=kind)
+        manifest_dir = find_manifest_dir(*start_dirs)
+        if asset.is_local:
+            return _resolve_local(asset, manifest_dir)
+        return _resolve_pinned(asset, manifest_dir)
     if kind not in (None, DEFAULT_KIND):
         raise UnsupportedReferenceError(
             f"Only dataframes resolve through a catalog, not a {kind}."

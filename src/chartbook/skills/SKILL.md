@@ -37,6 +37,7 @@ chartbook check             # CI gate: missing metadata, broken paths, dependenc
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
 chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
+chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy (needs [dependencies] + chartbook pin)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook pin               # Freeze what [dependencies] have now: files into the store, hashes into chartbook.lock (commit it)
@@ -150,9 +151,15 @@ joblib.dump(model, models.path("my_model"))
 # Another pipeline this one reads from is declared in chartbook.toml:
 #   [dependencies]
 #   "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
-# `chartbook check` then verifies it is there, and that it declares any dataframe a
-# model names in trained_on = ["fed_yield_curve:treasury_rates"]. Nothing is fetched
-# or pinned yet, and assets.path("fed_yield_curve:treasury_rates") is still refused.
+# then pinned with `chartbook pin` (writes chartbook.lock; commit it). After that,
+# "pipeline:name" is that pipeline's asset AS PINNED: a frozen copy in the store,
+# not its working directory. It changes only on `chartbook update`. Read-only.
+rates = data.load("fed_yield_curve:treasury_rates")           # LazyFrame, pinned copy
+path = data.path("fed_yield_curve:treasury_rates")            # its path in the store
+chart = assets.path("fed_yield_curve:chart/curve_today")      # any kind of asset
+mine = data.load("my_data")                                   # this pipeline's own, live
+# A model's trained_on = ["fed_yield_curve:treasury_rates"] must name a declared
+# dependency; `chartbook check` verifies the dataframe exists there.
 
 # A throwaway directory for intermediates (<pipeline>/_data/_scratch/):
 # not an asset, git-ignored, safe to delete

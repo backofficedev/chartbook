@@ -130,15 +130,27 @@ trained_on = ["fed_yield_curve:treasury_rates"]
 
 `chartbook check` then confirms that the other pipeline is there and that it declares that dataframe.
 
-To freeze the data you depend on, so that it does not change under you while the other pipeline is being worked on:
+Then freeze what you depend on, and read it by name:
 
 ```console
 $ chartbook pin          # copy what they have now into the store; write chartbook.lock
 $ git add chartbook.lock
-$ chartbook update       # later, when you want their newer data
 ```
 
-Your code does not read the pinned copy yet: `chartbook path fed_yield_curve:treasury_rates` is still refused. {ref}`[dependencies] <dependencies>` says what works today.
+```python
+from chartbook import data
+
+rates = data.load("fed_yield_curve:treasury_rates")     # the pinned copy
+path = data.path("fed_yield_curve:treasury_rates")      # or just where it is
+```
+
+What you get is the copy that was pinned, not whatever is in `../fed_yield_curve/_data/` this minute. The other pipeline can rebuild, or be half-way through a change, and your results do not move. When you want their newer data:
+
+```console
+$ chartbook update       # move the pins; chartbook.lock shows the change in a diff
+```
+
+The `rate_forecast` example does exactly this, with a model trained on the `yield_curve` example's data. {ref}`[dependencies] <dependencies>` has every detail.
 
 ## Notes and custom pages
 
@@ -238,7 +250,7 @@ tmp = data.scratch() / "raw_download.csv"     # <pipeline>/_data/_scratch/raw_do
 
 It is created on first use, ignores itself in git, and is never documented, published or treated as an input. Delete it whenever you like. (Avoid declaring a dataframe whose `path` is a glob over all of `_data/`, such as `./_data/**/*.parquet`; it would sweep scratch files in.)
 
-Only names declared in the current pipeline resolve today. References to another pipeline's assets (`other_pipeline:asset`) are reserved syntax; to locate one through a catalog, use `data.get_data_path()` ({doc}`catalogs-and-data`).
+A name with a pipeline in front, `data.path("fed_yield_curve:treasury_rates")`, is another pipeline's asset: the pinned copy of it, as described under "Depending on another pipeline" above. That path is for reading only. To find a dataframe through a catalog instead, from a notebook that belongs to no pipeline, use `data.get_data_path()` ({doc}`catalogs-and-data`).
 
 ## Finding project paths from code
 

@@ -309,9 +309,12 @@ page for the model with its write-up, a "Trained On" link to the Term Premium da
 and a table with `rmse`, `mae`, `n_train` and `n_test`. The catalog built over the example has a
 Models page listing it, and `index.json` has its `Model` record.
 
-A second example comes later, once dependencies exist: a separate `examples/rate_forecast`
-pipeline whose model is `trained_on = ["yield_curve:fed_yield_curve"]`. That one is the first
-real cross-pipeline example, for models and dataframes alike.
+A second example, `examples/rate_forecast`, is a separate pipeline whose model is
+`trained_on = ["yield_curve:fed_yield_curve"]`. It is the first real cross-pipeline example,
+for models and dataframes alike. *(Built 2026-10-12, with step 3d.)* It declares
+`yield_curve` in `[dependencies]`, pins it, trains on
+`data.load("yield_curve:fed_yield_curve")`, and its `Model` record names the bytes it was
+pinned at.
 
 ## Phasing
 
@@ -321,7 +324,7 @@ Each slice is useful by itself. The step numbers are the {doc}`overview`'s build
 |---|---|---|
 | **M1. Declared models** (step 2) — **built** | The index | The `[models]` table in the loader, with validation. `model` added to `RESOLVABLE_KINDS`, so `chartbook path model/x` works. `chartbook.models.path()`. `chartbook check` covers `path`, `metrics_path` and `docs_path` (the first two are build outputs, so `--skip-outputs` skips them). The model page. The `Model` record. Policy support: `[policy.required] models = […]`. The worked example above. **No versions** |
 | **M2. Parts** (with M1 or soon after) | M1 | `model/x#file` resolves to a file inside a directory model. Refuse a part that escapes the directory (`..`) |
-| **M3. Cross-pipeline** (step 3) | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. Training data in another pipeline, which can already be *stated*, becomes a real dependency: declared, fetched, pinned, and recorded by hash. The `examples/rate_forecast` pipeline |
+| **M3. Cross-pipeline** (step 3) — **built**, for a dependency on disk | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. Training data in another pipeline is a real dependency: declared, pinned, read from the pinned copy, and recorded by hash (`pinned_inputs`). The `examples/rate_forecast` pipeline. Not yet: a dependency fetched with `git` |
 | **M4. Versions and labels** (step 4) | Build records | Versions on new content hashes, `@v3`, `[models.x.aliases]`, `@champion`, the versions table on the page, staleness when inputs move |
 
 (models-built)=
@@ -342,9 +345,13 @@ Slice M1, in these places:
 | The tests | `tests/test_models.py` |
 | Training data in a declared dependency: checked, and named by the dependency's name (step 3a) | `chartbook/check.py` (`check_model_lineage`), `chartbook/index.py`, `tests/test_dependencies.py` |
 
-Not built: versions and labels (`@v3`, `@champion`, `[models.x.aliases]`), parts
-(`model/x#file`), and *asking for* a model in another pipeline. Each is refused with "reserved
-syntax and not yet supported".
+Not built: versions and labels (`@v3`, `@champion`, `[models.x.aliases]`) and parts
+(`model/x#file`). Each is refused with "reserved syntax and not yet supported".
+
+Slice M3 is built too, with step 3 of {doc}`overview`, for a dependency that is a directory
+on disk: `models.path("other:rate_forecaster")` is the pinned copy of another pipeline's
+model, and a model's training data in another pipeline is declared, pinned, read from the
+pinned copy and named by hash. A `git` dependency is the part that is left.
 
 ```{admonition} Training data in another pipeline is the point, not an edge case
 :class: important
@@ -377,8 +384,17 @@ by an entry in `[dependencies]`; until then it is taken on trust.
 - A `trained_on` that names a pipeline `[dependencies]` does not declare still loads, and now
   warns, saying what to add.
 
-Still not done: fetching, pinning, and recording which bytes. See "3a, as built" in
-{doc}`overview`.
+*Later the same day, the rest of step 3 for a dependency on disk:*
+
+- `chartbook pin` freezes the other pipeline's data, and the training code reads the frozen
+  copy with `data.load("fed_yield_curve:treasury_rates")`.
+- The model's record gains `pinned_inputs`: that input's ID, and the content hash it is pinned
+  at. *(Decided by the maintainer: a field beside `inputs`, which stays a list of IDs.)*
+- A `trained_on` that names an undeclared pipeline is now an error, as this box always said it
+  would become.
+
+`pinned_inputs` says what is pinned, which is what training code is handed. It does not prove
+what one training run read; a build record will. See "3d, as built" in {doc}`overview`.
 ```
 
 ### Decided while building it

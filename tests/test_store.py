@@ -383,6 +383,56 @@ class TestLinks:
         assert store.verify() == []
 
 
+class TestAskingForAFrozenObject:
+    """A caller that must not see an object change asks for a clone or a copy."""
+
+    FROZEN = ("reflink", "copy")
+
+    def test_one_that_is_there_as_a_link_is_replaced(self, store, rates):
+        linked = store.put(rates, links=("hardlink",))
+        assert (linked.path / "rates.parquet").samefile(rates)
+
+        frozen = store.put(rates, links=self.FROZEN)
+        assert frozen.content_hash == linked.content_hash == HELLO
+        assert frozen.created is True and frozen.frozen is True
+        held = frozen.path / "rates.parquet"
+        assert not held.samefile(rates) and not held.is_symlink()
+        assert list(store.hashes()) == [HELLO]
+        assert list((store.root / "tmp").iterdir()) == []
+
+        _rewrite(rates, b"changed upstream")
+        assert held.read_bytes() == b"hello" and store.verify() == []
+
+    def test_a_symlinked_directory_is_replaced_too(self, store, partitioned):
+        store.put(partitioned, links=("symlink",))
+        frozen = store.put(partitioned, links=self.FROZEN)
+        assert frozen.created is True
+        assert not any(
+            (frozen.path / name).is_symlink() for name in frozen.files
+        )
+        assert store.verify() == []
+
+    def test_one_that_is_already_the_stores_own_is_left_alone(self, store, rates):
+        first = store.put(rates, links=self.FROZEN)
+        held = first.path / "rates.parquet"
+        inode = os.stat(held).st_ino
+        again = store.put(rates, links=self.FROZEN)
+        assert again.created is False
+        assert os.stat(held).st_ino == inode
+
+    def test_a_cheaper_put_does_not_thaw_a_frozen_object(self, store, rates):
+        store.put(rates, links=self.FROZEN)
+        again = store.put(rates, links=("hardlink",))
+        assert again.created is False
+        assert not (again.path / "rates.parquet").samefile(rates)
+
+    def test_a_hard_link_whose_original_is_gone_is_the_stores_own(self, store, rates):
+        """With no other name left, nothing outside the store can change it."""
+        stored = store.put(rates, links=("hardlink",))
+        rates.unlink()
+        assert store_module._is_frozen(stored.path) is True
+
+
 class TestGetHasDelete:
     def test_has_and_get(self, store, rates):
         assert store.has(HELLO) is False

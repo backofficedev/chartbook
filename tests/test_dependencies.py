@@ -33,10 +33,10 @@ from chartbook.manifest import (
     resolve_project_type,
     validate_dependencies,
 )
+from chartbook.errors import AssetNotPinnedError
 from chartbook.resolve import (
     PipelineLocation,
     PipelineNotFoundError,
-    UnsupportedReferenceError,
     known_as,
     locate_in_catalog,
     locate_pipeline,
@@ -404,21 +404,16 @@ class TestKnownAs:
 class TestTrainedOnADependency:
     """A model's training data in another pipeline should name a declared one."""
 
-    def test_an_undeclared_pipeline_loads_with_a_warning(self, two_pipelines):
+    def test_an_undeclared_pipeline_does_not_load(self, two_pipelines):
+        """It was a warning until references to other pipelines resolved."""
         downstream, _ = two_pipelines
         _add_model(downstream, ["acme/rates:dataframe_0"])
-        with pytest.warns(UserWarning) as caught:
-            manifest = load_manifest(downstream)
-        (warning,) = [w for w in caught if "[dependencies]" in str(w.message)]
-        message = str(warning.message)
-        assert str(downstream / "chartbook.toml") in message
+        with pytest.raises(ValueError) as e:
+            load_manifest(downstream)
+        message = str(e.value)
         assert "[models.m]: trained_on names 'acme/rates:dataframe_0'" in message
+        assert "which [dependencies] does not declare" in message
         assert '"acme/rates" = { path = "../rates" }' in message
-        assert "taken on trust for now" in message
-        # ...and it is still recorded
-        assert [str(r) for r in manifest["models"]["m"]["_trained_on"]] == [
-            "acme/rates:dataframe_0"
-        ]
 
     @pytest.mark.parametrize("reference", ["rates:dataframe_0", "acme/rates:dataframe_0"])
     def test_a_declared_pipeline_loads_quietly(self, two_pipelines, recwarn, reference):
@@ -443,12 +438,13 @@ class TestTrainedOnADependency:
         assert "[models.m]: trained_on:" in str(e.value)
         assert "ambiguous in [dependencies]" in str(e.value)
 
-    def test_asking_for_its_path_is_still_refused(self, two_pipelines):
-        """Declaring a dependency does not make its assets resolve. Not yet."""
+    def test_declaring_is_not_pinning(self, two_pipelines):
+        """Its assets resolve to pinned copies, so there has to be a pin."""
         downstream, _ = two_pipelines
         _depend(downstream, rates={"path": "../rates"})
-        with pytest.raises(UnsupportedReferenceError, match="not yet supported"):
+        with pytest.raises(AssetNotPinnedError, match="Run `chartbook pin`") as e:
             data.path("rates:dataframe_0", project_dir=downstream)
+        assert e.value.reason == "no_lockfile"
 
 
 class TestInTheIndex:
@@ -572,12 +568,11 @@ class TestInTheIndex:
         """``rates`` in a reference is the pipeline declared as ``acme/rates``."""
         downstream, _ = two_pipelines
         _depend(downstream, acme__rates={"path": "../rates"})
-        _add_model(downstream, ["dataframe_0", "rates:dataframe_0", "elsewhere:x"])
+        _add_model(downstream, ["dataframe_0", "rates:dataframe_0"])
         built = index.build_index(load_manifest(downstream))
         assert self._model_record(built)["inputs"] == [
             "downstream:dataframe_0",
             "acme/rates:dataframe_0",
-            "elsewhere:x",
         ]
 
     def test_in_a_catalog_a_dependency_goes_by_the_catalogs_name(self, tmp_path):
@@ -810,12 +805,12 @@ class TestCheckCommand:
             result.output
         )
 
-    def test_an_undeclared_pipeline_is_a_warning(self, two_pipelines, monkeypatch):
+    def test_an_undeclared_pipeline_fails(self, two_pipelines, monkeypatch):
         downstream, _ = two_pipelines
         _add_model(downstream, ["rates:dataframe_0"])
         result = self._check(downstream, monkeypatch)
-        assert result.exit_code == 0, result.output
-        assert "warning: " in result.output
+        assert result.exit_code == 1
+        assert result.output.startswith("Error: [models.m]: trained_on names")
         assert "which [dependencies] does not declare" in result.output
 
     def test_a_git_dependency_is_a_warning(self, two_pipelines, monkeypatch):

@@ -1,0 +1,15 @@
+# What the build makes
+/_output/*
+/_models/*
+_docs/
+_docs_src/
+__pycache__/
+*.py[cod]
+
+# A real project COMMITS chartbook.lock. It is what says which data the
+# project was built against, and a change to it should show up in a diff.
+#
+# This example cannot. Its upstream, ../yield_curve, pulls live data, so the
+# bytes it depends on are different on every build, and a committed lockfile
+# would name data that no clone could get back.
+chartbook.lock

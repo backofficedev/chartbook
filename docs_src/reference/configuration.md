@@ -357,15 +357,34 @@ Then say where that pipeline is, in {ref}`[dependencies] <dependencies>`:
 "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
 ```
 
-With that, `chartbook check` opens the other pipeline's `chartbook.toml` and reports a dataframe it does not declare. The training data is recorded in `index.json`, listed on the model's page, and linked to the dataframe's page when both pipelines are in the same catalog.
+With that, `chartbook check` opens the other pipeline's `chartbook.toml` and reports a dataframe it does not declare. The training data is recorded in `index.json`, listed on the model's page, and linked to the dataframe's page when both pipelines are in the same catalog. Without the `[dependencies]` entry the manifest does not load, and the error shows the line to add.
 
-Without the `[dependencies]` entry the manifest still loads, with a warning, and the reference is taken on trust. That will become an error.
+Then pin it, and train on the pinned copy:
 
-This is still a statement of lineage. ChartBook does not yet fetch that data or record which version of it the model was trained on; pinning is the next piece.
+```console
+$ chartbook pin
+```
+
+```python
+from chartbook import data
+
+rates = data.load("fed_yield_curve:treasury_rates", format="pandas")   # as pinned
+```
+
+The model's record in `index.json` then says which bytes that was, under `pinned_inputs`:
+
+```json
+"inputs": ["ftsfr/fed_yield_curve:treasury_rates"],
+"pinned_inputs": { "ftsfr/fed_yield_curve:treasury_rates": "sha256:4b1f…" }
+```
+
+`pinned_inputs` says what `chartbook.lock` pins, which is what your training code is handed. It is not yet a record of what one particular training run read; that comes with build records.
 
 **What you get.** A page for the model with its write-up, a table of its scores, links to the dataframes it was trained on, and its files if it is a directory. A `Model` record in `index.json` with its content hash. And `chartbook check` reports a missing model file, metrics file or write-up, a metrics file that is not a flat object, and (by default) a model with no `name`, `description`, `trained_on` or write-up. `--skip-outputs` leaves out the model and its metrics, which training produces.
 
-Not yet: versions of a model (`model/rate_forecaster@v3`), labels such as `@champion`, one file inside a directory model (`model/x#weights.pt`), and asking for the path of a model in another pipeline.
+A model in another pipeline is read the same way as its data: `models.path("forecasting:rate_forecaster")` is the pinned copy of a declared dependency's model.
+
+Not yet: versions of a model (`model/rate_forecaster@v3`), labels such as `@champion`, and one file inside a directory model (`model/x#weights.pt`).
 
 (dependencies)=
 ## `[dependencies]` — Other Pipelines This One Reads From
@@ -399,13 +418,14 @@ An entry has `path` or `git`, not both.
 - `index.json` lists them, under `dependencies` in the pipeline's record.
 - A model's training data in another pipeline is written by the dependency's name, so `fed_yield_curve:treasury_rates` becomes `ftsfr/fed_yield_curve:treasury_rates`.
 
-- `chartbook pin` freezes what each `path` dependency has now. Every asset it declares is put in the store, and its content hash is written to `chartbook.lock`, which you commit. `chartbook update` moves the pins forward. See {doc}`cli`.
+- `chartbook pin` freezes what each `path` dependency has now. Every asset it declares is copied into the store, and its content hash is written to `chartbook.lock`, which you commit. `chartbook update` moves the pins forward. See {doc}`cli`.
+- **Your code reads the pinned copy.** `data.path("fed_yield_curve:treasury_rates")`, `data.load(…)`, `assets.path(…)`, `models.path(…)` and `chartbook path …` all resolve a reference to another pipeline's asset through `chartbook.lock` into the store, never to that pipeline's working directory. No catalog is needed.
+- A reference to a pipeline that is not in this table fails, and shows the line to add.
 
 **What it does not do yet.**
 
-- A `git` dependency is recorded and not fetched; `check` and `pin` each say so.
-- `chartbook path fed_yield_curve:treasury_rates` is still refused. A reference to another pipeline's asset will resolve through `chartbook.lock` to the pinned copy, never to that pipeline's working directory. That is the next piece.
-- `data.load(pipeline=…, dataframe=…)` still looks in a catalog, as it always has. It does not read this table.
+- A `git` dependency is recorded and not fetched; `check` and `pin` each say so, and its assets cannot be read.
+- `data.load(pipeline=…, dataframe=…)`, with two arguments, still looks in a catalog and reads the other pipeline's own file, as it always has. It does not read this table.
 
 A catalog has no `[dependencies]`. It reads from no pipeline; it lists them in `[pipelines]`. The design is {doc}`../design/asset-graph`.
 

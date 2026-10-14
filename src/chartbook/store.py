@@ -134,6 +134,9 @@ class StoredObject:
         path: The object's directory in the store.
         files: Its files, as paths inside that directory with forward
             slashes, sorted.
+        entries: For an asset of several files, each file with its own
+            size and hash, as it was just stored. Empty for an asset that
+            is one file.
         links: The kinds of link that were used to make it, in the order of
             :data:`LINKS`. Empty when the object was already there.
         created: True if this call made the object; False if the store
@@ -146,6 +149,7 @@ class StoredObject:
     files: tuple[str, ...]
     links: tuple[str, ...] = ()
     created: bool = True
+    entries: tuple[hashing.FileEntry, ...] = ()
 
     @property
     def frozen(self) -> bool:
@@ -284,6 +288,18 @@ def _make_removable(path: str) -> None:
         os.chmod(path, stat.S_IWUSR | stat.S_IRUSR)
 
 
+def _is_frozen(directory: Path) -> bool:
+    """Whether every file under a directory is the store's own bytes.
+
+    A symlink is not, and neither is a file that has another name somewhere:
+    a hard link to a file outside the store.
+    """
+    for file in hashing.directory_files(directory):
+        if file.is_symlink() or os.lstat(file).st_nlink > 1:
+            return False
+    return True
+
+
 def _remove_tree(directory: Path) -> None:
     """Remove a directory and what is in it, read-only files included."""
 
@@ -356,7 +372,9 @@ class Store:
         :param path: An absolute path, which may contain glob characters.
         :param links: The kinds of link to try, in order; see :data:`LINKS`.
             Pass ``("reflink", "copy")`` for an object that must not change
-            when the original does.
+            when the original does. If the store already holds this content
+            as a link to a file outside it, the object is then replaced by
+            one that is the store's own.
         :returns: The stored object.
         :raises FileNotFoundError: If nothing is at *path*.
         :raises StoreError: If no kind of link works, or the store's layout
@@ -391,7 +409,12 @@ class Store:
             else:
                 content = hashing.hash_directory(staging)
             final = self.object_path(content.content_hash)
-            created = self._move_into_place(staging, final, single=found.single)
+            created = self._move_into_place(
+                staging,
+                final,
+                single=found.single,
+                frozen=set(links) <= FROZEN_LINKS,
+            )
         finally:
             if staging.exists():
                 _remove_tree(staging)
@@ -408,6 +431,7 @@ class Store:
             ),
             links=tuple(kind for kind in LINKS if kind in used) if created else (),
             created=created,
+            entries=content.files,
         )
 
     def _check_layout(self, create: bool = False) -> None:
@@ -449,14 +473,31 @@ class Store:
         self._layout_checked = True
 
     @staticmethod
-    def _move_into_place(staging: Path, final: Path, single: bool) -> bool:
+    def _move_into_place(
+        staging: Path, final: Path, single: bool, frozen: bool = False
+    ) -> bool:
         """Move a finished object to its name. Returns False if it was there.
 
         The move is one rename, so another process sees the whole object or
         none of it. If two processes store the same content at once, one
         rename wins and the other finds the object already there.
+
+        :param frozen: True if the caller asked for an object that cannot
+            change. One that is already there as a link to a file outside
+            the store is then replaced by the one just made, which is not.
         """
         final.parent.mkdir(parents=True, exist_ok=True)
+        if frozen and final.is_dir() and not _is_frozen(final):
+            aside = staging.with_name(staging.name + ".linked")
+            os.rename(final, aside)
+            try:
+                os.rename(staging, final)
+            except OSError:
+                if not final.is_dir():
+                    os.rename(aside, final)
+                    raise
+            _remove_tree(aside)
+            return True
         if not final.is_dir():
             try:
                 os.rename(staging, final)

@@ -529,7 +529,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     "walking up from here (default: the current directory)",
 )
 def path_command(ref, kind, project_dir):
-    """Print the path the manifest declares for an asset.
+    """Print the path of an asset: this pipeline's, or a pinned copy of another's.
 
     REF names an asset declared in the enclosing chartbook.toml. A dataframe
     is named by its key alone; anything else has its kind in front:
@@ -548,22 +548,32 @@ def path_command(ref, kind, project_dir):
     \b
         MERGED := $(shell chartbook path merged_rates)
 
-    Only assets of the current pipeline resolve. An undeclared name fails,
-    naming the table to add.
+    An undeclared name fails, naming the table to add.
+
+    An asset of another pipeline has that pipeline in front:
+
+    \b
+        fed_yield_curve:treasury_rates
+        fed_yield_curve:chart/curve_today
+
+    The pipeline must be in [dependencies], and what is printed is the path
+    of the copy that chartbook.lock pins, in the store: not the other
+    pipeline's own directory. Run `chartbook pin` first. That copy stays as
+    it is until `chartbook update`.
 
     Examples:
         chartbook path repo_public
         chartbook path chart/repo_rates
         chartbook path repo_rates --kind chart --project-dir ../yield_curve
+        chartbook path fed_yield_curve:treasury_rates
     """
     from chartbook.assets import path as resolve_path
-    from chartbook.errors import AssetNotDeclaredError
 
     try:
         asset_path = resolve_path(
             ref, kind=kind, project_dir=project_dir or Path.cwd()
         )
-    except (AssetNotDeclaredError, FileNotFoundError, ValueError, TypeError) as e:
+    except (LookupError, FileNotFoundError, ValueError, TypeError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         raise SystemExit(1)
     # Nothing but the path on stdout: this output gets captured
@@ -1608,14 +1618,6 @@ def _echo_pin_report(report):
         click.echo(
             f"{stale} pinned asset(s) have changed upstream. `chartbook update` "
             f"moves the pins."
-        )
-    linked = sum(event.linked for event in report.events)
-    if linked:
-        click.echo(
-            f"{linked} of the asset(s) just stored are held as links to the "
-            f"other pipeline's own files, and change if those are rewritten in "
-            f"place. `chartbook store verify` finds one that has.",
-            err=True,
         )
 
 

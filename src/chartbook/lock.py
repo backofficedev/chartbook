@@ -32,9 +32,14 @@ changed writes the same bytes.
 An asset the other pipeline declares and has not built is recorded without
 a ``content_hash``. It is not pinned, and asking for it will fail.
 
-Nothing reads the lockfile to resolve a reference yet; that is the next
-part. The design is "Pinning and isolation" in
-``docs_src/design/asset-graph.md``.
+A pin is stored as a copy-on-write clone, or as a copy where the disk has
+no clones (:data:`PIN_LINKS`), and never as a link to the other pipeline's
+own file, so it cannot change when that file is rewritten.
+
+A reference to another pipeline's asset, ``data.path("rates:treasury")``,
+resolves through the lockfile to the pinned copy
+(:func:`chartbook.resolve.resolve`). The design is "Pinning and isolation"
+in ``docs_src/design/asset-graph.md``.
 """
 
 from __future__ import annotations
@@ -57,13 +62,20 @@ from chartbook.manifest import (
 )
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, declared_files, locate_pipeline
-from chartbook.store import FROZEN_LINKS, Store, default_store
+from chartbook.store import Store, default_store
+from chartbook.utils import is_glob_pattern
 
 #: The lockfile's name, beside ``chartbook.toml``.
 LOCK_FILE = "chartbook.lock"
 
 #: The version of the lockfile's envelope.
 SCHEMA = "chartbook/lock/v1"
+
+#: The kinds of link a pin may be stored with: a copy-on-write clone, or a
+#: copy. Decided by the maintainer: a pin must not change when the other
+#: pipeline rewrites its file, so it is never a hard link or a symlink,
+#: which are that file. On a disk with no clones a pin costs the file's size.
+PIN_LINKS = ("reflink", "copy")
 
 #: An unreferenced object stored more recently than this is not removed by
 #: :func:`plan_gc`. Someone may be in the middle of pinning it: it is in
@@ -223,8 +235,6 @@ class PinEvent:
         old: The content hash it was pinned at, if it was.
         new: The content hash it is pinned at now, if it is.
         detail: More to say: a path, or why.
-        linked: True if the bytes just stored are a hard link or a symlink
-            to the other pipeline's own file, and so can still change.
     """
 
     status: str
@@ -233,7 +243,6 @@ class PinEvent:
     old: Optional[str] = None
     new: Optional[str] = None
     detail: str = ""
-    linked: bool = False
 
 
 #: The statuses that mean a project is not fully pinned, and should fail CI.
@@ -304,9 +313,15 @@ def _dependency_entry(key: str, entry: dict) -> dict:
 
 
 def _asset_record(
-    ref: AssetRef, dependency: str, declared_path: str, content
+    ref: AssetRef, dependency: str, declared_path: str, content, single: bool
 ) -> dict:
-    """An asset as the lockfile records it; pinned if *content* is given."""
+    """An asset as the lockfile records it; pinned if *content* is given.
+
+    :param content: What was stored: its hash, its size and its files.
+    :param single: Whether the asset's ``path`` named one file. A directory
+        has its files listed, as the index lists a directory model's:
+        ``files`` is what tells a directory from a file.
+    """
     record = {
         "kind": record_kind(ref.kind),
         "version": RECORD_VERSION,
@@ -318,6 +333,15 @@ def _asset_record(
     if content is not None:
         record["content_hash"] = content.content_hash
         record["size_bytes"] = content.size_bytes
+        if not single and not is_glob_pattern(declared_path):
+            record["files"] = [
+                {
+                    "path": file.path,
+                    "size_bytes": file.size_bytes,
+                    "content_hash": file.content_hash,
+                }
+                for file in content.entries
+            ]
     return record
 
 
@@ -490,11 +514,6 @@ def _pin_asset(
     asset_id = str(ref)
     old = (had or {}).get("content_hash")
 
-    def put() -> tuple:
-        stored = store.put(absolute)
-        linked = stored.created and not set(stored.links) <= FROZEN_LINKS
-        return stored, linked
-
     if old is None or may_move:
         found = hashing.find_files(absolute)
         if found is None or not found.files:
@@ -505,8 +524,8 @@ def _pin_asset(
             report.events.append(
                 PinEvent("not_built", key, asset_id, detail=declared_path)
             )
-            return _asset_record(ref, key, declared_path, None)
-        stored, linked = put()
+            return _asset_record(ref, key, declared_path, None, True)
+        stored = store.put(absolute, links=PIN_LINKS)
         if old is None:
             status = "pinned"
         elif stored.content_hash == old:
@@ -514,11 +533,9 @@ def _pin_asset(
         else:
             status = "moved"
         report.events.append(
-            PinEvent(
-                status, key, asset_id, old=old, new=stored.content_hash, linked=linked
-            )
+            PinEvent(status, key, asset_id, old=old, new=stored.content_hash)
         )
-        return _asset_record(ref, key, declared_path, stored)
+        return _asset_record(ref, key, declared_path, stored, found.single)
 
     # It has a pin, and `pin` does not move one
     try:
@@ -531,10 +548,8 @@ def _pin_asset(
         status = "kept" if same else "stale"
         report.events.append(PinEvent(status, key, asset_id, old=old, new=old))
     elif same:
-        _, linked = put()
-        report.events.append(
-            PinEvent("restored", key, asset_id, old=old, new=old, linked=linked)
-        )
+        store.put(absolute, links=PIN_LINKS)
+        report.events.append(PinEvent("restored", key, asset_id, old=old, new=old))
     else:
         report.events.append(
             PinEvent(

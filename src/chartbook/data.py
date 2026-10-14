@@ -16,6 +16,13 @@ of repeating its path in code::
     # A throwaway directory for intermediates: _data/_scratch/ in the pipeline
     raw.to_csv(data.scratch() / "raw_download.csv")
 
+Load a dataframe by reference: one of this pipeline, or the pinned copy of
+one that belongs to a pipeline declared in ``[dependencies]``::
+
+    lf = data.load("repo_public")                    # mine, as it is now
+    lf = data.load("yield_curve:fed_yield_curve")    # theirs, as pinned
+    path = data.path("yield_curve:fed_yield_curve")  # just the path
+
 Load dataframes from registered pipelines in a catalog::
 
     # Load as Polars LazyFrame (default)
@@ -83,11 +90,17 @@ def path(
     same path, in any language, works just as well; ``chartbook path`` on the
     command line gives the same answer to a shell, Make, R or Stata.
 
-    Only local references resolve today. The rest of the reference grammar —
-    ``other_pipeline:asset``, ``asset#part``, ``@rev`` — is reserved and
-    raises "not yet supported".
+    A dataframe of another pipeline is named with the pipeline in front,
+    ``data.path("fed_yield_curve:treasury_rates")``. That pipeline must be
+    declared in ``[dependencies]``, and the path is the copy that
+    ``chartbook.lock`` pins, in the store, not the other pipeline's working
+    directory; see :func:`chartbook.assets.path`. Read it; never write to it.
 
-    :param ref: The dataframe's name: its key in ``[dataframes]``.
+    The rest of the reference grammar, ``asset#part`` and ``@rev``, is
+    reserved and raises "not yet supported".
+
+    :param ref: The dataframe's name: its key in ``[dataframes]``; or
+        ``"pipeline:name"`` for another pipeline's.
     :type ref: str
     :param project_dir: Where to look for the pipeline. The enclosing
         ``chartbook.toml`` is found by walking up from here. By default the
@@ -98,6 +111,10 @@ def path(
         glob characters for partitioned data).
     :rtype: Path
     :raises AssetNotDeclaredError: If the manifest declares no such dataframe.
+    :raises DependencyNotDeclaredError: If the reference names a pipeline
+        that ``[dependencies]`` does not declare.
+    :raises AssetNotPinnedError: If another pipeline's dataframe has no
+        pinned copy in the store.
     :raises ManifestNotFoundError: If no ``chartbook.toml`` encloses the
         starting directory.
     :raises ValueError: If the reference names another kind of asset, uses
@@ -206,9 +223,11 @@ def get_data_path(
     For glob patterns (e.g., ``**/*.parquet``), returns a ``Path`` containing
     the glob pattern characters.
 
-    :func:`path` supersedes this for assets of the current pipeline, and will
-    for other pipelines' once cross-pipeline references resolve. Until then
-    this remains the way to locate another pipeline's dataframe.
+    :func:`path` supersedes this inside a pipeline: ``data.path("name")`` for
+    its own dataframes, and ``data.path("pipeline:name")`` for the pinned
+    copy of a declared dependency's. This remains the way to find a
+    dataframe through a catalog, from a notebook that belongs to no
+    pipeline, say. It gives the file in that pipeline's own directory.
 
     :param pipeline: The pipeline reference — a bare name
         (``"crsp_treasury"``, if unambiguous), a scoped ID
@@ -305,56 +324,126 @@ def get_docs(
 
 
 def load(
-    pipeline: str,
-    dataframe: str,
+    ref: Optional[Union[str, AssetRef]] = None,
+    dataframe: Optional[str] = None,
     format: str = "polars",
     catalog_path: Optional[Union[str, Path]] = None,
+    *,
+    pipeline: Optional[str] = None,
+    project_dir: Optional[Union[str, Path]] = None,
 ):
-    """Load a dataframe from a registered pipeline in a catalog.
+    """Load a dataframe: by reference, or from a pipeline in a catalog.
 
-    :param pipeline: The pipeline reference — a bare name
-        (``"crsp_treasury"``, if unambiguous), a scoped ID
-        (``"ftsfr/crsp_treasury"``), or a repository URL.
-    :type pipeline: str
-    :param dataframe: The dataframe identifier within the pipeline.
-    :type dataframe: str
+    **By reference**, with one argument. A dataframe of the pipeline you
+    are in is loaded from where its manifest says it is. A dataframe of
+    another pipeline is loaded from the copy that ``chartbook.lock`` pins,
+    so it does not change until you run ``chartbook update``:
+
+    >>> from chartbook import data
+    >>> mine = data.load("term_premium")  # doctest: +SKIP
+    >>> theirs = data.load("yield_curve:fed_yield_curve")  # doctest: +SKIP
+
+    The other pipeline must be declared in ``[dependencies]`` and pinned
+    with ``chartbook pin``. No catalog is involved.
+
+    **Through a catalog**, with a pipeline and a dataframe. This reads the
+    file in the other pipeline's own directory, as it is now:
+
+    >>> lf = data.load(pipeline="yield_curve", dataframe="repo_public",
+    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
+
+    :param ref: A reference to a dataframe: ``"name"`` for one of the
+        current pipeline, ``"pipeline:name"`` for another pipeline's. (With
+        *dataframe* also given, this is the pipeline, as it used to be the
+        first argument.)
+    :type ref: Optional[Union[str, AssetRef]]
+    :param dataframe: The dataframe identifier within *pipeline*, to load
+        through a catalog.
+    :type dataframe: Optional[str]
     :param format: Output format — ``"polars"`` (default, returns LazyFrame),
         ``"polars_eager"``, ``"pandas"``, or ``"polars-lazyframe"`` (deprecated
         alias for ``"polars"``).  Glob patterns in a dataframe's ``path`` only
         support ``"polars"`` (LazyFrame).
     :type format: str
     :param catalog_path: Path to a catalog ``chartbook.toml`` or its parent
-        directory.  If ``None``, the global default from
+        directory, to load through.  If ``None``, the global default from
         ``~/.chartbook/settings.toml`` is used.
     :type catalog_path: Optional[Union[str, Path]]
+    :param pipeline: The pipeline to load from through a catalog — a bare
+        name (``"crsp_treasury"``, if unambiguous), a scoped ID
+        (``"ftsfr/crsp_treasury"``), or a repository URL.
+    :type pipeline: Optional[str]
+    :param project_dir: Where to look for the current pipeline when loading
+        by reference, as for :func:`path`.
+    :type project_dir: Optional[Union[str, Path]]
     :returns: The loaded dataframe in the requested format.
     :rtype: pandas.DataFrame or polars.DataFrame or polars.LazyFrame
-    :raises CatalogNotConfiguredError: If no catalog is configured.
-    :raises KeyError: If the pipeline or dataframe is not found.
+    :raises AssetNotDeclaredError: If the manifest declares no such dataframe.
+    :raises DependencyNotDeclaredError: If a reference names a pipeline that
+        ``[dependencies]`` does not declare.
+    :raises AssetNotPinnedError: If another pipeline's dataframe has no
+        pinned copy in the store.
+    :raises CatalogNotConfiguredError: If a catalog is needed and none is
+        configured.
+    :raises KeyError: If the pipeline or dataframe is not in the catalog.
+    :raises TypeError: If the arguments are neither one reference nor a
+        pipeline and a dataframe.
     :raises ValueError: If *format* is not one of the supported values, or if
         a glob path is used with a non-LazyFrame format.
 
     **Examples**
 
-    Load as a Polars LazyFrame (default):
-
-    >>> from chartbook import data
-    >>> lf = data.load(pipeline="yield_curve", dataframe="repo_public",
-    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
-
     Load as a Polars eager DataFrame:
 
-    >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
-    ...               format="polars_eager",
-    ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
+    >>> df = data.load("yield_curve:fed_yield_curve",
+    ...               format="polars_eager")  # doctest: +SKIP
 
-    Load as a pandas DataFrame:
+    Load as a pandas DataFrame, through a catalog:
 
     >>> df = data.load(pipeline="yield_curve", dataframe="repo_public",
     ...               format="pandas",
     ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
     """
-    location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path)
+    if dataframe is not None or pipeline is not None:
+        # Through a catalog: a pipeline, and one of its dataframes
+        if pipeline is None:
+            pipeline = ref
+        elif ref is not None:
+            raise TypeError(
+                "data.load() was given a reference and a pipeline. Pass one "
+                "reference, data.load('pipeline:name'), or a pipeline and a "
+                "dataframe, data.load(pipeline=..., dataframe=...)."
+            )
+        if pipeline is None or dataframe is None:
+            raise TypeError(
+                "To load through a catalog, data.load() needs both a pipeline "
+                "and a dataframe: data.load(pipeline=..., dataframe=...)."
+            )
+        location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path)
+    else:
+        if ref is None:
+            raise TypeError(
+                "data.load() needs a reference to a dataframe, e.g. "
+                "data.load('treasury_rates') or data.load('pipeline:name')."
+            )
+        if catalog_path is not None:
+            raise TypeError(
+                "catalog_path goes with data.load(pipeline=..., dataframe=...). "
+                "A reference resolves against the pipeline you are in, with no "
+                "catalog."
+            )
+        start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+        try:
+            asset = _assets.parse(ref, kind="dataframe")
+        except KindMismatchError as e:
+            raise KindMismatchError(
+                str(ref),
+                e.found,
+                e.expected,
+                hint=f"data.load() loads dataframes only, not a {e.found}.",
+            ) from None
+        location = resolve(asset, start_dirs=start_dirs)
+        dataframe = str(asset)
     if not isinstance(location, FileLocation):
         raise NotImplementedError(
             f"Dataframe {dataframe!r} is {location.kind}-backed; only "

@@ -154,14 +154,19 @@ table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git
   a catalog, or is the pipeline itself, and a model whose `trained_on` names a
   dataframe the dependency does not declare.
 - `index.json` lists them under `dependencies` in the pipeline's record.
-- A model's `trained_on = ["fed_yield_curve:treasury_rates"]` should name a
+- A model's `trained_on = ["fed_yield_curve:treasury_rates"]` must name a
   declared dependency (the scope may be left off when unambiguous). If it does
-  not, the manifest loads with a warning.
-- `chartbook pin` copies (or links) every asset of each `path` dependency into the
-  store and writes their content hashes to `chartbook.lock`, which is committed.
-  It never moves an existing pin; `chartbook update [dep...]` does.
-- A `git` dependency is recorded only: not fetched, not pinned.
-  `chartbook path other:asset` is still refused. A catalog cannot have this table.
+  not, the manifest does not load, and the error shows the line to add.
+- `chartbook pin` copies every asset of each `path` dependency into the store (a
+  free copy-on-write clone where the disk has them, a full copy otherwise) and
+  writes their content hashes to `chartbook.lock`, which is committed. It never
+  moves an existing pin; `chartbook update [dep...]` does.
+- Code then reads the pinned copy by reference: `data.load("fed_yield_curve:treasury_rates")`,
+  `data.path(...)`, `assets.path("fed_yield_curve:chart/x")`, `models.path(...)`,
+  or `chartbook path fed_yield_curve:treasury_rates` from a shell. It never
+  resolves to the other pipeline's working directory, and is read-only.
+- A `git` dependency is recorded only: not fetched, not pinned, not readable.
+  A catalog cannot have this table.
 
 A minimal — but complete and valid — pipeline manifest:
 
