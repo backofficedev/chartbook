@@ -217,18 +217,35 @@ class TestCalledFromItsOwnScript:
 
     def test_running(self, tmp_path, monkeypatch):
         assert not run.running(tmp_path, "build")
-        monkeypatch.setenv(run.RUN_STACK_ENV_VAR, f"{tmp_path}\tbuild")
+        import json
+
+        monkeypatch.setenv(run.RUN_STACK_ENV_VAR, json.dumps([[str(tmp_path), "build"]]))
         assert run.running(tmp_path, "build")
         assert not run.running(tmp_path, "test")  # another script of the same pipeline
         assert not run.running(tmp_path / "other", "build")  # the same script of another
 
     def test_running_sees_every_script_above_not_only_the_innermost(self, tmp_path, monkeypatch):
         """Two pipelines whose build scripts run each other would loop for ever."""
+        import json
+
         outer, inner = tmp_path / "r1", tmp_path / "r2"
         monkeypatch.setenv(run.RUN_DIR_ENV_VAR, str(inner))
         monkeypatch.setenv(run.RUN_SCRIPT_ENV_VAR, "build")
-        monkeypatch.setenv(run.RUN_STACK_ENV_VAR, os.pathsep.join([f"{outer}\tbuild", f"{inner}\tbuild"]))
+        monkeypatch.setenv(run.RUN_STACK_ENV_VAR, json.dumps([[str(outer), "build"], [str(inner), "build"]]))
         assert run.running(inner, "build") and run.running(outer, "build")
+
+    def test_a_directory_with_a_colon_or_a_tab_in_its_name_is_still_guarded(self, tmp_path, monkeypatch):
+        import json
+
+        odd = tmp_path / "a:b\tc"
+        odd.mkdir()
+        monkeypatch.setenv(run.RUN_STACK_ENV_VAR, json.dumps([[str(odd), "build"]]))
+        assert run.running(odd, "build")
+        # ...and a mangled stack still stops the simplest loop
+        monkeypatch.setenv(run.RUN_STACK_ENV_VAR, "not json")
+        monkeypatch.setenv(run.RUN_DIR_ENV_VAR, str(odd))
+        monkeypatch.setenv(run.RUN_SCRIPT_ENV_VAR, "build")
+        assert run.running(odd, "build")
 
     def test_two_pipelines_that_run_each_other_are_stopped(self, tmp_path, monkeypatch):
         """Reproduced by a reviewer: the guard once looked at the innermost only."""
@@ -253,7 +270,9 @@ class TestCalledFromItsOwnScript:
         with open(pipeline_project / "chartbook.toml", "a") as f:
             f.write(f'\n[scripts]\nbuild = "{CHARTBOOK} run > nested.log 2>&1"\n[dependencies]\nother = {{ path = "{other}" }}\n')
         monkeypatch.chdir(pipeline_project)
-        monkeypatch.setenv(run.RUN_STACK_ENV_VAR, f"{pipeline_project}\tbuild")
+        import json
+
+        monkeypatch.setenv(run.RUN_STACK_ENV_VAR, json.dumps([[str(pipeline_project), "build"]]))
         result = CliRunner().invoke(main, ["run"])
         assert result.exit_code == 1 and "run itself without end" in result.output
         assert not (pipeline_project / "chartbook.lock").exists()

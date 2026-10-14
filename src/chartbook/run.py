@@ -42,6 +42,7 @@ is never built from the outside in.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -82,20 +83,33 @@ from chartbook.store import Store
 RUN_DIR_ENV_VAR = "CHARTBOOK_RUN_DIR"
 RUN_SCRIPT_ENV_VAR = "CHARTBOOK_RUN_SCRIPT"
 
-#: Every script ChartBook is running, outermost first, as ``directory\tscript``
-#: entries joined by the path separator. The two variables above are the
-#: innermost; this is the whole chain, so that two pipelines whose scripts
-#: call each other are caught as well as one that calls itself.
+#: Every script ChartBook is running, outermost first, as a JSON list of
+#: ``[directory, script]`` pairs, so that any character a directory can hold
+#: survives. The two variables above are the innermost; this is the whole
+#: chain, so that two pipelines whose scripts call each other are caught as
+#: well as one that calls itself.
 RUN_STACK_ENV_VAR = "CHARTBOOK_RUN_STACK"
 
 
 def _stack() -> list[tuple[str, str]]:
     """The scripts this process is running inside, outermost first."""
-    found = []
-    for entry in os.environ.get(RUN_STACK_ENV_VAR, "").split(os.pathsep):
-        if "\t" in entry:
-            directory, script = entry.split("\t", 1)
-            found.append((directory, script))
+    text = os.environ.get(RUN_STACK_ENV_VAR, "")
+    if not text:
+        return []
+    try:
+        entries = json.loads(text)
+    except ValueError:
+        entries = []
+    found = [
+        (entry[0], entry[1])
+        for entry in entries
+        if isinstance(entry, list) and len(entry) == 2 and all(isinstance(e, str) for e in entry)
+    ]
+    # The innermost is kept separately too, in two plain variables, so a
+    # stack that has been mangled still stops the simplest loop
+    inside, name = os.environ.get(RUN_DIR_ENV_VAR), os.environ.get(RUN_SCRIPT_ENV_VAR)
+    if inside and name and (inside, name) not in found:
+        found.append((inside, name))
     return found
 
 
@@ -388,9 +402,7 @@ def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
         where = str(Path(directory).resolve())
         environment[RUN_DIR_ENV_VAR] = where
         environment[RUN_SCRIPT_ENV_VAR] = name
-        above = environment.get(RUN_STACK_ENV_VAR, "")
-        entry = f"{where}\t{name}"
-        environment[RUN_STACK_ENV_VAR] = f"{above}{os.pathsep}{entry}" if above else entry
+        environment[RUN_STACK_ENV_VAR] = json.dumps([*_stack(), [where, name]])
     code = _execute(script, directory, environment)
     return 128 - code if code < 0 else code
 
@@ -493,6 +505,7 @@ def run(
                     code = snapshots.require_committed(
                         step.directory, step.id, ignoring=(lock.LOCK_FILE,)
                     )
+                    snapshots.check_within(step.directory, step.id)
                 except snapshots.SnapshotError as error:
                     raise RunError(f"{error} Nothing was built.") from None
                 commits_before[step.directory] = code.commit

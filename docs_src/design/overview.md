@@ -1436,10 +1436,12 @@ Would remove 6 snapshot(s):
 **Proposed: implemented, and waiting on the maintainer's yes.** All of it; the maintainer
 asked not to be consulted on rules of this size.
 
-1. **A snapshot is kept if a lockfile pins it, if it is the newest of its pipeline, if a
-   label points at a model version in it, or if it was made in the last 30 days.** Otherwise
-   it may be removed. The four are tried in that order, and the first that holds is the
-   reason the command gives.
+1. **A snapshot is kept if a lockfile pins it, if it is the newest of its pipeline or the
+   newest a branch or tag can pin from, if a label points at a model version in it, or if it
+   was made in the last 30 days.** Otherwise it may be removed. The rules are tried in that
+   order, and the first that holds is the reason the command gives. *(The branch rule was
+   added by the third review, below: `pin` chooses by commit ancestry, so a release branch's
+   last snapshot is what its users pin, and the plain "newest" would have removed it.)*
 2. **Thirty days.** Long enough to come back from a holiday to; short enough that a nightly
    build does not fill a disk. `--keep-days` moves it, down to zero.
 3. **"The newest of its pipeline" is by pipeline ID and folder within its repository**,
@@ -1459,6 +1461,13 @@ asked not to be consulted on rules of this size.
    before, so the run that removes a record may leave its objects for the next.
 8. **The last record at a commit takes its folder and its `origins` note with it.**
 9. **Nothing is removed if any record cannot be read**, as for a lockfile.
+10. **The plan is made again when the yes comes**, and only what both plans say may go is
+    removed. A `pin` that landed while someone was deciding is honoured. *(Third review.)*
+11. **A label shorter than a version's name keeps nothing.** `champion = ""` would otherwise
+    match every version. Only what `[models.x.aliases]` accepts, twelve or more hex digits,
+    is read. *(Third review.)*
+12. **The last record at a commit leaves a half-written one alone.** Only the `origins` note
+    goes with it, and the folder if it is then empty. *(Third review.)*
 
 **Known gaps.**
 
@@ -1504,6 +1513,17 @@ the ones that change a rule are here.
 6. **Names in the store carry a short hash when they would otherwise collide**: a clone's
    folder with a port or a cleaned character, a snapshot folder with `--` or `_top`.
 
+**The third review** read the two commits of this pull request before they were merged, and
+found twelve more. The two that mattered: the gc plan was made before the "yes" and run
+after, so a `pin` landing in between lost its only bytes (now the plan is made again on the
+yes); and the lockfile exemption for `run --snapshot` read `git status` as a terminal would,
+so a folder with a space or an accent in its name was refused all the same (now `-z`). Also:
+the recursion guard's stack is JSON, so a `:` or a tab in a folder's name does not break it;
+a release branch's last snapshot is kept; a too-short label keeps nothing; a path that
+reaches out is refused before the build; `remove()` leaves another process's half-written
+record alone; `pin --from-folder` says `relocated`; an `origins` line that is not an absolute
+folder says nothing.
+
 **Found and left, with the reason.**
 
 - *Two `chartbook snapshot` at once make two identical snapshots.* Cosmetic; the newer wins.
@@ -1512,6 +1532,9 @@ the ones that change a rule are here.
 - *A shallow clone cannot see snapshots beyond its depth*, and the message blames the owner.
 - *`chartbook init` renders whatever is on `main`*, not the installed version; needs tags.
 - *No timeouts on git calls.* Prompts are off; a GUI credential helper could still block.
+- *A lockfile that cannot be found keeps every snapshot that shares one object with it*, for
+  as long as it is missing. Conservative; the command now points at `--forget-missing`.
+- *Store names made before the hashing change are not found again.* Nothing is released.
 
 #### 4e: loading one column. Decided against
 

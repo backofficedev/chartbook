@@ -717,7 +717,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | Kept because | Example |
 |---|---|
 | A lockfile pins it | `rate_forecast` is pinned to it |
-| It is the newest of its pipeline | The last build of `yield_curve` that was declared ready |
+| It is the newest of its pipeline, or the newest a branch or tag can pin from | The last build of `yield_curve` that was declared ready; the last one on its `release` branch |
 | A label points at a model version in it | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml` |
 | It was made in the last 30 days | `--keep-days` changes the number |
 
@@ -746,9 +746,10 @@ Remove them? [y/N]:
 | `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found |
 | `--keep-days DAYS` | Keep an unpinned snapshot that is not the newest of its pipeline for this long. Default 30 |
 
-Four things it is careful about:
+Five things it is careful about:
 
-- **A snapshot's labels are read from the folder it was made from.** The store notes that folder beside each pipeline's snapshots. If the folder is gone, nothing is known about labels, and only the other three rules apply.
+- **It looks again when you say yes.** The list is made before the question, and a `chartbook pin` can land while you decide. Whatever became pinned in between is kept, and the command says so.
+- **A snapshot's labels, and its branches, are read from the folder it was made from.** The store notes that folder beside each pipeline's snapshots. If the folder is gone, nothing is known about labels, and only the other three rules apply.
 - **A lockfile it cannot find still keeps its pins.** The project may be on a drive that is not plugged in. The store remembers what that lockfile named when it was last pinned, and keeps it until you pass `--forget-missing`.
 - **An object stored in the last hour is never removed.** A pin puts files in the store before it writes the lockfile that names them. So the run that removes a snapshot's record may leave its objects for the next run.
 - **If a lockfile or a snapshot's record cannot be read, nothing is removed.** `gc` stops and says which.

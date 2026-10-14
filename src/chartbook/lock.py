@@ -439,6 +439,10 @@ def _sync(
             if not may_move and was is not None and records == had:
                 # Nothing moved, so the pins are still the snapshot's, and
                 # the lockfile goes on saying so
+                if _declared_elsewhere(was, listed):
+                    report.events.append(
+                        PinEvent("relocated", key, detail=_describe(listed["location"]))
+                    )
                 listed = {**was, "location": dict(was["location"])}
         else:
             records, listed = _sync_from_snapshots(
@@ -992,6 +996,9 @@ class GcPlan:
         recent: Objects that nothing names, stored too recently to remove.
         delete: Objects that nothing names, each with its size in bytes.
         forget: Lockfiles that could not be found and are to be forgotten.
+        forget_missing, recent_seconds, keep_days: What the plan was made
+            with, so that it can be made again the same way when it is
+            carried out.
     """
 
     lockfiles: list[tuple[Path, bool]] = field(default_factory=list)
@@ -1002,6 +1009,9 @@ class GcPlan:
     recent: list[str] = field(default_factory=list)
     delete: list[tuple[str, int]] = field(default_factory=list)
     forget: list[Path] = field(default_factory=list)
+    forget_missing: bool = False
+    recent_seconds: float = RECENT_SECONDS
+    keep_days: float = snapshot.KEEP_DAYS
 
     @property
     def size_bytes(self) -> int:
@@ -1039,7 +1049,9 @@ def plan_gc(
         is removed from a store when what it must keep is in doubt.
     """
     store = store if store is not None else default_store()
-    plan = GcPlan()
+    plan = GcPlan(
+        forget_missing=forget_missing, recent_seconds=recent_seconds, keep_days=keep_days
+    )
     keep: set[str] = set()
     pinned_snapshots: set[tuple[str, str]] = set()
     hashes_of_missing: set[str] = set()
@@ -1080,15 +1092,34 @@ def plan_gc(
     return plan
 
 
-def run_gc(plan: GcPlan, store: Optional[Store] = None) -> int:
+def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
     """Carry out a plan from :func:`plan_gc`: remove what it says to remove.
 
-    :returns: How many objects were removed.
+    The plan was made before anyone said yes, and a pin may have landed in
+    between and taken something it names. So the plan is made again now,
+    and only what both say may go is removed.
+
+    :returns: How many snapshots and how many objects were removed.
     """
     store = store if store is not None else default_store()
-    for taken, _ in plan.snapshots_delete:
+    now = plan_gc(
+        store,
+        forget_missing=plan.forget_missing,
+        recent_seconds=plan.recent_seconds,
+        keep_days=plan.keep_days,
+    )
+    still_removable = {taken.path for taken, _ in now.snapshots_delete}
+    removed_snapshots = sum(
         snapshot.remove(store, taken)
-    removed = sum(store.delete(content_hash) for content_hash, _ in plan.delete)
+        for taken, _ in plan.snapshots_delete
+        if taken.path in still_removable
+    )
+    still_unnamed = {content_hash for content_hash, _ in now.delete}
+    removed = sum(
+        store.delete(content_hash)
+        for content_hash, _ in plan.delete
+        if content_hash in still_unnamed
+    )
     for lockfile in plan.forget:
         store.remove_root(lockfile)
-    return removed
+    return removed_snapshots, removed

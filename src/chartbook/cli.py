@@ -2097,6 +2097,14 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
             f"Kept: {len(plan.recent)} object(s) nothing names, stored in the last hour"
         )
 
+    if any(not found for _, found in plan.lockfiles) and any(
+        "cannot be found" in why for _, why in plan.snapshots_kept
+    ):
+        click.echo(
+            "  A lockfile that cannot be found keeps every snapshot that holds "
+            "something it named. --forget-missing lets them go."
+        )
+
     if not plan.delete and not plan.snapshots_delete:
         click.echo("Nothing to remove.")
         if not dry_run:
@@ -2115,19 +2123,24 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
         f"nothing names"
     )
     if dry_run:
-        click.echo(f"Would remove {summary}:")
-        for content_hash, size in plan.delete:
-            click.echo(f"  {content_hash}  {_format_bytes(size)}")
+        if plan.delete:
+            click.echo(f"Would remove {summary}:")
+            for content_hash, size in plan.delete:
+                click.echo(f"  {content_hash}  {_format_bytes(size)}")
         return
-    click.echo(f"Would remove {summary}.")
+    if plan.delete:
+        click.echo(f"Would remove {summary}.")
     if not yes and not click.confirm("Remove them?", default=False):
         click.echo("Nothing was removed.")
         return
-    removed = lock.run_gc(plan, the_store)
+    removed_snapshots, removed = lock.run_gc(plan, the_store)
     click.echo(
-        f"Removed {len(plan.snapshots_delete)} snapshot(s) and {removed} object(s), "
+        f"Removed {removed_snapshots} snapshot(s) and {removed} object(s), "
         f"{_format_bytes(plan.size_bytes)}."
     )
+    spared = len(plan.snapshots_delete) - removed_snapshots + len(plan.delete) - removed
+    if spared:
+        click.echo(f"{spared} of them were pinned while you were deciding, and kept.")
 
 @main.command()
 @click.option(

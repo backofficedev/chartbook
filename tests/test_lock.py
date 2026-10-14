@@ -671,7 +671,7 @@ class TestGc:
         # Planning removes nothing
         assert moved.has(HELLO)
 
-        assert lock.run_gc(plan, moved) == 1
+        assert lock.run_gc(plan, moved) == (0, 1)
         assert not moved.has(HELLO)
         assert set(moved.hashes()) == lock.read_lock(downstream).hashes()
         assert moved.verify() == []
@@ -719,7 +719,7 @@ class TestGc:
         plan = lock.plan_gc(moved, forget_missing=True)
         assert plan.forget == [downstream / LOCK_FILE]
         assert plan.kept == 0 and len(plan.delete) == 4
-        assert lock.run_gc(plan, moved) == 4
+        assert lock.run_gc(plan, moved) == (0, 4)
         assert list(moved.hashes()) == [] and moved.roots() == []
 
     def test_a_lockfile_is_read_as_it_is_now(self, moved, downstream):
@@ -903,3 +903,16 @@ class TestCommands:
         assert _format_bytes(1536) == "1.5 KB"
         assert _format_bytes(5 * 1024**2) == "5.0 MB"
         assert _format_bytes(3 * 1024**4) == "3072.0 GB"
+
+    def test_what_is_pinned_between_the_plan_and_the_yes_is_kept(self, here, downstream, work):
+        """The plan is made again when the yes comes."""
+        _write_manifest(work / "stray", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (work / "stray" / "x.parquet").write_bytes(b"stray bytes")
+        stray = here.put(work / "stray" / "x.parquet")
+        plan = lock.plan_gc(here, recent_seconds=0)
+        assert [h for h, _ in plan.delete] == [stray.content_hash]
+        # ...and before the yes, a project pins it
+        _write_manifest(downstream, {"dependencies": {"stray": {"path": "../stray"}}})
+        pin_folder(downstream, here)
+        removed_snapshots, removed = lock.run_gc(plan, here)
+        assert (removed_snapshots, removed) == (0, 0) and here.has(stray.content_hash)

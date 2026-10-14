@@ -86,7 +86,7 @@ from typing import Optional, Union
 from chartbook import hashing
 from chartbook.identity import derive_pipeline_id
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
-from chartbook.manifest import _read_manifest_file, resolve_project_type
+from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, declared_files
 from chartbook.store import Store, default_store
@@ -357,14 +357,29 @@ def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
     :returns: One line for each, as ``git status --porcelain`` prints it,
         with paths from the top of the repository.
     """
+    # -z: one record per NUL, and paths as they are, not quoted and escaped
+    # as they would be for a terminal. A rename or copy has the old path in
+    # a record of its own, which follows.
     listing = _git(
-        Path(directory).resolve(), "status", "--porcelain", "--untracked-files=all", "--", "."
+        Path(directory).resolve(),
+        "status", "--porcelain", "-z", "--untracked-files=all", "--", ".",
     )
-    return [
-        line
-        for line in listing.splitlines()
-        if line.strip() and os.path.basename(line[3:].split(" -> ")[-1]) not in ignoring
-    ]
+    records = listing.split("\0")
+    found = []
+    index = 0
+    while index < len(records):
+        record = records[index]
+        index += 1
+        if len(record) < 3:
+            continue
+        status, path = record[:2], record[3:]
+        if status[0] in "RC" and index < len(records):
+            path = f"{records[index]} -> {path}"
+            index += 1
+        if os.path.basename(path.split(" -> ")[-1]) in ignoring:
+            continue
+        found.append(f"{status} {path}")
+    return found
 
 
 def _folder(store: Store, commit: str, subdirectory: str) -> Path:
@@ -584,9 +599,12 @@ def origins(store: Store, taken: Snapshot) -> list[Path]:
     """The repository folders a pipeline's snapshots were made from."""
     note = _folder(store, taken.commit, taken.subdirectory) / ORIGINS_FILE
     try:
-        return [Path(line) for line in note.read_text(encoding="utf-8").splitlines() if line]
+        lines = note.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:
         return []
+    # Only an absolute folder is a place to look; anything else in the
+    # file says nothing
+    return [Path(line) for line in lines if line and os.path.isabs(line)]
 
 
 def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
@@ -617,11 +635,50 @@ def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
                 if not isinstance(aliases, dict):
                     continue
                 for version in aliases.values():
-                    if isinstance(version, str):
+                    # Only what a label may say: twelve or more hex digits.
+                    # Anything shorter would keep every snapshot for ever.
+                    if isinstance(version, str) and VERSION_PATTERN.match(version):
                         pointed.setdefault(f"model/{name}", set()).add(
                             version.split(":", 1)[-1]
                         )
     return pointed
+
+
+def _pinnable(store: Store, group: list[Snapshot]) -> set[Path]:
+    """The snapshots of one pipeline that a branch or a tag can pin from.
+
+    ``pin`` takes the newest snapshot at the nearest commit, at or before
+    the one a folder is on, that has one. So for each branch and tag of
+    each repository the snapshots were made from, the first of its
+    commits, walking back, that has a snapshot is pinnable, and the newest
+    snapshot there is the one. A repository that is gone says nothing.
+
+    :returns: The records' paths.
+    """
+    at_commit: dict[str, list[Snapshot]] = {}
+    for taken in group:
+        at_commit.setdefault(taken.commit, []).append(taken)
+    keep: set[Path] = set()
+    seen: set[Path] = set()
+    for taken in group:
+        for top in origins(store, taken):
+            if top in seen:
+                continue
+            seen.add(top)
+            try:
+                tips = _git(top, "for-each-ref", "--format=%(objectname)", "refs/heads", "refs/tags")
+            except SnapshotError:
+                continue
+            for tip in set(tips.split()):
+                try:
+                    walk = _git(top, "rev-list", tip)
+                except SnapshotError:
+                    continue
+                for commit in walk.split():
+                    if commit in at_commit:
+                        keep.add(at_commit[commit][-1].path)
+                        break
+    return keep
 
 
 def _made_at(taken: Snapshot) -> datetime:
@@ -662,7 +719,8 @@ def plan_removals(
     1. a lockfile pins it (its commit and time are named by a dependency);
     2. a lockfile that cannot be found named one of its objects when it was
        last pinned;
-    3. it is the newest snapshot of its pipeline;
+    3. it is the newest snapshot of its pipeline, or the newest that a
+       branch or a tag of the repository it came from can pin from;
     4. a label in the pipeline's manifest, read from the folder the
        snapshots were made from, points at a model version it holds;
     5. it was made in the last *keep_days* days.
@@ -684,6 +742,7 @@ def plan_removals(
     for group in groups.values():
         newest = group[-1]
         labels = _labels_in(store, group)
+        pinnable = _pinnable(store, group)
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
@@ -691,6 +750,8 @@ def plan_removals(
                 why = "a lockfile that cannot be found named what it holds"
             elif taken is newest:
                 why = "it is the newest of its pipeline"
+            elif taken.path in pinnable:
+                why = "it is the newest a branch or tag can pin from"
             elif any(
                 (record.get("content_hash") or "").split(":", 1)[-1].startswith(start)
                 for name, starts in labels.items()
@@ -719,15 +780,18 @@ def remove(store: Store, taken: Snapshot) -> bool:
     taken.path.unlink()
     folder = taken.path.parent
     if not any(folder.glob("*.json")):
-        # The last record of this pipeline at this commit: the folder and
-        # its note of origins go too, then the commit's folder if empty
-        for stray in folder.iterdir():
-            stray.unlink()
-        folder.rmdir()
+        # The last record of this pipeline at this commit: its note of
+        # origins goes too, and the folders if nothing else is in them. A
+        # record another process is writing this moment is left alone.
         try:
-            folder.parent.rmdir()
+            (folder / ORIGINS_FILE).unlink()
         except OSError:
             pass
+        for empty in (folder, folder.parent):
+            try:
+                empty.rmdir()
+            except OSError:
+                break
     return True
 
 
@@ -793,6 +857,26 @@ def require_committed(
             f"everything in the pipeline's folder must be committed first."
         )
     return code
+
+
+def check_within(directory: Union[str, Path], pipeline: str) -> None:
+    """Refuse a manifest whose declared paths reach outside the pipeline's folder.
+
+    What :func:`make` checks when it stores; here, so that it can be found
+    out before a build, not after one.
+
+    :raises SnapshotError: Naming the first asset that reaches out.
+    """
+    directory = Path(directory).resolve()
+    for local, declared_path, absolute in declared_files(directory):
+        reached = hashing.escapes(absolute, directory)
+        if reached is not None:
+            raise SnapshotError(
+                f"{pipeline} declares {str(local.in_pipeline(pipeline))!r} at "
+                f"{declared_path!r}, which reaches {reached}, outside the "
+                f"pipeline's folder. A snapshot is what the pipeline built, so "
+                f"everything in it must be under {directory}."
+            )
 
 
 def _built_with(run: bool) -> dict:
@@ -901,16 +985,9 @@ def make(
     raw = _read_manifest_file(directory)
     assets: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []
+    check_within(directory, pipeline)
     for local, declared_path, absolute in declared_files(directory):
         ref = local.in_pipeline(pipeline)
-        reached = hashing.escapes(absolute, directory)
-        if reached is not None:
-            raise SnapshotError(
-                f"{pipeline} declares {str(ref)!r} at {declared_path!r}, which "
-                f"reaches {reached}, outside the pipeline's folder. A snapshot is "
-                f"what the pipeline built, so everything in it must be under "
-                f"{directory}."
-            )
         found = hashing.find_files(absolute)
         if found is None or not found.files:
             assets[str(local)] = asset_record(ref, pipeline, declared_path, None, True)

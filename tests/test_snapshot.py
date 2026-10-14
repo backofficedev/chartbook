@@ -790,6 +790,24 @@ class TestKeeping:
         assert [why for _, why in plan.snapshots_kept] == ["it is the newest of its pipeline"]
         assert snapshot.all_hashes(store) == taken.hashes()
 
+    def test_uncommitted_reads_a_path_git_would_quote(self, work):
+        """A space or an accent in a folder name; the lockfile still does not count."""
+        directory = _manifest(work / "my données", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (directory / "x.parquet").write_bytes(b"x")
+        (work / ".gitignore").write_text("_data/\n_output/\n")
+        _git(work, "init", "--quiet", "-b", "main")
+        _git(work, "add", "-A")
+        _git(work, "commit", "--quiet", "-m", "Work")
+        (directory / "chartbook.lock").write_text("{}")
+        (directory / "new file.txt").write_text("new")
+        assert snapshot.uncommitted(directory) == ["?? my données/chartbook.lock", "?? my données/new file.txt"]
+        assert snapshot.uncommitted(directory, ignoring=("chartbook.lock",)) == ["?? my données/new file.txt"]
+        # A rename shows both names
+        _git(work, "add", "-A")
+        _git(work, "commit", "--quiet", "-m", "More")
+        _git(work, "mv", "my données/new file.txt", "my données/renamed.txt")
+        assert snapshot.uncommitted(directory) == ["R  my données/new file.txt -> my données/renamed.txt"]
+
     def test_the_folder_a_snapshot_came_from_is_noted(self, maker, work):
         taken = snapshot.make(maker).snapshot
         assert snapshot.origins(default_store(), taken) == [work]
@@ -886,6 +904,86 @@ class TestClearingOldSnapshots:
         plan = _plan(default_store())
         assert (only, "it is the newest of its pipeline") in plan.keep
 
+    def test_a_pin_that_lands_while_someone_is_deciding_is_honoured(self, user, maker, work):
+        """Found by a reviewer: the plan was made before the yes, and run after.
+
+        A `pin` in between took the old snapshot (the folder was checked out
+        at that commit), and the removal then took the pin's only bytes.
+        """
+        first = snapshot.make(maker, made_at=OLDER).snapshot
+        (maker / "pull.py").write_text("print(1)\n")
+        second_commit = _commit(work)
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker, made_at=OLD).snapshot
+        (maker / "pull.py").write_text("print(2)\n")
+        _commit(work)
+        _build(maker, rates=b"rates-3")
+        snapshot.make(maker)
+        store = default_store()
+        plan = lock.plan_gc(store, recent_seconds=0)
+        assert [t for t, _ in plan.snapshots_delete] == [first, second]
+
+        # ...the user says yes slowly, and meanwhile a pin lands on `second`
+        _git(work, "checkout", "--quiet", second_commit)
+        report = lock.pin(user)
+        _git(work, "checkout", "--quiet", "main")
+        assert report.snapshots["acme/maker"] == second
+        removed_snapshots, removed = lock.run_gc(plan, store)
+        assert removed_snapshots == 1 and second.path.exists() and not first.path.exists()
+        for content_hash in second.hashes():
+            assert store.has(content_hash)
+
+    def test_the_newest_a_branch_or_tag_can_pin_from_is_kept(self, maker, work):
+        """A release branch's last snapshot is what its users pin; it stays."""
+        release = snapshot.make(maker, made_at=OLDER).snapshot
+        _git(work, "tag", "v1")
+        (maker / "pull.py").write_text("print('main moves on')\n")
+        _commit(work)
+        _build(maker, rates=b"rates-2")
+        snapshot.make(maker)
+        plan = _plan(default_store())
+        assert (release, "it is the newest a branch or tag can pin from") in plan.keep
+        assert plan.remove == []
+        # ...and not once the tag is gone
+        _git(work, "tag", "-d", "v1")
+        plan = _plan(default_store())
+        assert [t for t, _ in plan.remove] == [release]
+
+    def test_a_label_too_short_to_name_a_version_keeps_nothing(self, work):
+        directory = _manifest(
+            work / "forecast",
+            {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json", "aliases": {"champion": "7f3a"}}}},
+        )
+        (directory / "_output").mkdir()
+        (directory / "_output" / "m.json").write_bytes(b"v1")
+        _commit(work)
+        first = snapshot.make(directory, made_at=OLDER).snapshot
+        (directory / "_output" / "m.json").write_bytes(b"v2")
+        snapshot.make(directory)
+        assert [t for t, _ in _plan(default_store()).remove] == [first]
+
+    def test_a_line_in_origins_that_is_not_a_folder_says_nothing(self, three):
+        first, second, third = three
+        note = third.path.parent / "origins"
+        note.write_text("relative/thing\n" + note.read_text())
+        assert all(path.is_absolute() for path in snapshot.origins(default_store(), third))
+        plan = _plan(default_store())  # no crash, and the same answer
+        assert [t for t, _ in plan.remove] == [first, second]
+
+    def test_removing_the_last_record_leaves_anothers_half_written_one_alone(self, maker, work):
+        first = snapshot.make(maker, made_at=OLDER).snapshot
+        (maker / "pull.py").write_text("print(1)\n")
+        _commit(work)
+        _build(maker, rates=b"rates-2")
+        snapshot.make(maker)
+        folder = first.path.parent
+        half = folder / "deadbeef.tmp"  # another process, writing a record here now
+        half.write_text("{")
+        store = default_store()
+        lock.run_gc(lock.plan_gc(store, recent_seconds=0), store)
+        assert not first.path.exists()
+        assert half.exists() and folder.exists() and not (folder / "origins").exists()
+
     def test_gc_removes_the_record_and_then_what_only_it_named(self, three):
         first, second, third = three
         store = default_store()
@@ -924,6 +1022,8 @@ class TestClearingOldSnapshots:
 
         kept = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "100000"])
         assert "Would remove" not in kept.output and "Nothing to remove." in kept.output
+
+        assert "Would remove 0 object(s)" not in said  # no empty object list
 
         done = CliRunner().invoke(main, ["store", "gc", "--yes"])
         assert done.exit_code == 0, done.output

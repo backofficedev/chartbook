@@ -560,6 +560,17 @@ class TestRunThenSnapshot:
         report = run.run(reader, echo=_quiet, snapshot=True)
         assert report.failed is None, report.reason
 
+    def test_a_path_that_reaches_out_is_refused_before_the_build(self, work):
+        directory = _with_data(work / "upstream", {"build": "echo ran >> ../upstream_runs.log"})
+        with open(directory / "chartbook.toml", "a") as f:
+            f.write('\n[dataframes.other]\npath = "../secret.txt"\ndocs = "d"\n')
+        (work / "secret.txt").write_text("mine\n")
+        _commit(work)
+        with pytest.raises(RunError, match="outside the pipeline's folder") as e:
+            run.run(directory, echo=_quiet, snapshot=True)
+        assert str(e.value).endswith("Nothing was built.")
+        assert not (work / "upstream_runs.log").exists()
+
     def test_a_build_that_commits_gets_no_snapshot(self, work):
         """The label would name a commit that did not run the build."""
         directory = _with_data(work / "upstream", {"build": "echo more >> notes.md && git add -A && git -c user.name=T -c user.email=t@e.org commit -q -m built"})
