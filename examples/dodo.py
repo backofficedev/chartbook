@@ -53,13 +53,26 @@ def task_build_fred_charts():
     }
 
 
+def task_snapshot_yield_curve():
+    """Declare yield_curve's build ready for the pipelines that depend on it"""
+    yield_curve_dir = BASE_DIR / "yield_curve"
+    return {
+        # A snapshot is what rate_forecast pins: it never reads yield_curve's
+        # folder. It needs everything in that folder to be committed. With
+        # nothing new built, it makes no new snapshot.
+        "actions": [f"chartbook snapshot --project-dir {yield_curve_dir}"],
+        "task_dep": ["build_yield_curve"],
+        "verbosity": 2,
+    }
+
+
 def task_build_rate_forecast():
     """Run doit in rate_forecast directory, which reads yield_curve's data"""
     rate_forecast_dir = BASE_DIR / "rate_forecast"
     yield_curve_dir = BASE_DIR / "yield_curve"
     return {
-        # Its own first task is `chartbook pin`, which freezes what
-        # yield_curve has just built
+        # Its own first task is `chartbook pin`, which pins yield_curve's
+        # snapshot the first time and leaves the pin alone after that
         "actions": [f"doit -f {rate_forecast_dir / 'dodo.py'}"],
         "file_dep": [
             str(rate_forecast_dir / "dodo.py"),
@@ -67,7 +80,7 @@ def task_build_rate_forecast():
             str(yield_curve_dir / "docs" / "index.html"),
         ],
         "targets": [str(rate_forecast_dir / "docs" / "index.html")],
-        "task_dep": ["build_yield_curve"],
+        "task_dep": ["snapshot_yield_curve"],
         "verbosity": 2,
     }
 

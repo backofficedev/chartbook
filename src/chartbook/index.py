@@ -349,7 +349,9 @@ def _dependency_records(
 
     Each is named by the ID it has in this build when it is one of the
     build's pipelines, and by its key in ``[dependencies]`` otherwise. One
-    that the lockfile pins has its ``pinned_hash``.
+    that the lockfile pins has its ``pinned_hash`` and the commit it is
+    pinned at, and a directory pinned from a snapshot has the snapshot's
+    time.
 
     :param locked: The pipeline's lockfile, if it has one.
     """
@@ -377,12 +379,18 @@ def _dependency_records(
                 "path": entry["path"],
                 "value": location.path.as_posix(),
             }
+            commit = in_lock.get(key, {}).get("location", {}).get("commit")
+            if commit:
+                # The commit of the snapshot the lockfile pins it at
+                where["commit"] = commit
             via = "path"
         record = {
             "id": known_as(location, known_pipelines),
             "via": via,
             "location": where,
         }
+        if in_lock.get(key, {}).get("snapshot"):
+            record["snapshot"] = in_lock[key]["snapshot"]
         if pinned.get(key):
             record["pinned_hash"] = pinned[key]
         records.append(record)

@@ -18,7 +18,7 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import index, lock, run
+from chartbook import index, lock, run, snapshot
 from chartbook.cli import main
 from chartbook.gitcache import GitCache, forget_built, is_built, mark_built
 from chartbook.manifest import load_manifest, read_scripts
@@ -63,12 +63,41 @@ def work(tmp_path):
     return tmp_path.resolve()
 
 
+def _commit(work: Path) -> None:
+    """Commit everything under *work*, making it a repository if it is not one.
+
+    Built data, lockfiles and logs are git-ignored, as in a real project.
+    """
+    if not (work / ".git").exists():
+        (work / ".gitignore").write_text("chartbook.lock\n_data/\n_output/\n*.log\n")
+        _git(work, "init", "--quiet", "-b", "main")
+    _git(work, "add", "-A")
+    _git(work, "commit", "--quiet", "--allow-empty", "-m", "Work")
+
+
+def _with_data(directory: Path, scripts=None, dependencies=None) -> Path:
+    """A pipeline that declares one dataframe, which is a file kept in git."""
+    _pipeline(
+        directory, scripts, dependencies, dataframes={"x": {"path": "./x.parquet", "docs": "d"}}
+    )
+    (directory / "x.parquet").write_bytes(directory.name.encode())
+    return directory
+
+
 @pytest.fixture
 def chain(work):
-    """``top`` depends on ``middle``, which depends on ``bottom``. Each logs its name."""
-    _pipeline(work / "bottom", {"build": LOG})
-    _pipeline(work / "middle", {"build": LOG}, {"bottom": {"path": "../bottom"}})
-    return _pipeline(work / "top", {"build": LOG}, {"middle": {"path": "../middle"}})
+    """``top`` depends on ``middle``, which depends on ``bottom``. Each logs its name.
+
+    They are in one repository, and ``bottom`` and ``middle`` each have a
+    snapshot, so what depends on them has something to pin.
+    """
+    _with_data(work / "bottom", {"build": LOG})
+    _with_data(work / "middle", {"build": LOG}, {"bottom": {"path": "../bottom"}})
+    top = _with_data(work / "top", {"build": LOG}, {"middle": {"path": "../middle"}})
+    _commit(work)
+    snapshot.make(work / "bottom")
+    snapshot.make(work / "middle")
+    return top
 
 
 def _catalog(work: Path, *members: str) -> Path:
@@ -299,9 +328,9 @@ class TestRun:
 
     def test_the_first_failure_stops_the_run(self, work):
         _pipeline(work / "bottom", {"build": LOG})
-        _pipeline(work / "middle", {"build": "exit 3"}, {"bottom": {"path": "../bottom"}})
-        _pipeline(work / "top", {"build": LOG}, {"middle": {"path": "../middle"}})
-        report = run.run(_catalog(work, "top", "middle", "bottom"), echo=lambda line: None)
+        _pipeline(work / "middle", {"build": "exit 3"})
+        _pipeline(work / "top", {"build": LOG})
+        report = run.run(_catalog(work, "bottom", "middle", "top"), echo=lambda line: None)
         assert report.failed.id == "middle" and report.exit_code == 3
         assert report.reason == "its 'build' script exited with 3"
         assert [step.id for step in report.ran] == ["bottom"]
@@ -341,7 +370,7 @@ def reader(work):
 
     The upstream's build writes something new every time it runs, as a
     pipeline that pulls live data does. Each time it runs it says so in
-    ``upstream_runs.log``.
+    ``upstream_runs.log``. Both are in one repository, committed.
     """
     _pipeline(
         work / "upstream",
@@ -352,16 +381,24 @@ def reader(work):
         dataframes={"x": {"path": "./_data/x.parquet", "docs": "d"}},
     )
     chartbook = Path(sys.executable).with_name("chartbook")
-    return _pipeline(
+    reader = _pipeline(
         work / "reader",
         # Stops if the path cannot be had, which `cat $(…)` would not
         {"build": f'mkdir -p _output\nfrom=$({chartbook} path upstream:x)\ncat "$from" > _output/read.txt'},
         {"upstream": {"path": "../upstream"}},
     )
+    _commit(work)
+    return reader
 
 
 def _quiet(line):
     pass
+
+
+def _ready(directory: Path) -> None:
+    """What a pipeline's owner does: build it, and declare the build ready."""
+    assert run.run(directory, echo=_quiet).failed is None
+    snapshot.make(directory)
 
 
 @posix
@@ -372,14 +409,23 @@ class TestPinning:
         report = run.run(reader, echo=_quiet, on_pin=lambda step, pins: pinned.append(pins))
         assert not (work / "upstream_runs.log").exists()
         assert not (work / "upstream" / "_data").exists()
-        # So there is nothing to pin, and the reader's own build cannot read it
-        assert pinned[0].count("not_built") == 1
+        # So there is no snapshot to pin, and the reader is not built
+        assert pinned[0].count("no_snapshot") == 1
         assert report.failed.id == "reader"
-        assert not (reader / "_output" / "read.txt").exists()
+        assert report.reason == "what it depends on could not be pinned"
+        assert not (reader / "_output").exists()
+
+    def test_a_build_that_is_not_declared_ready_cannot_be_pinned(self, reader, work):
+        """Built, and no snapshot: the folder is not read, whatever is in it."""
+        run.run(work / "upstream", echo=_quiet)
+        assert (work / "upstream" / "_data" / "x.parquet").exists()
+        report = run.run(reader, echo=_quiet)
+        assert report.failed.id == "reader"
+        assert report.reason == "what it depends on could not be pinned"
 
     def test_what_a_pipeline_depends_on_is_pinned_before_it_is_built(self, reader, work):
         """So that its code can read it: here, with `chartbook path upstream:x`."""
-        run.run(work / "upstream", echo=_quiet)  # its owner builds it
+        _ready(work / "upstream")
         pinned = []
         report = run.run(
             reader, echo=_quiet, on_pin=lambda step, pins: pinned.append((step.id, pins))
@@ -392,15 +438,31 @@ class TestPinning:
         ).read_text()
         assert (work / "upstream_runs.log").read_text().split() == ["ran"]
 
+    def test_a_rebuild_that_is_not_declared_ready_is_not_seen(self, reader, work):
+        """Its owner can rebuild as often as they like. Nothing here is told."""
+        _ready(work / "upstream")
+        run.run(reader, echo=_quiet)
+        first = (reader / "_output" / "read.txt").read_text()
+
+        run.run(work / "upstream", echo=_quiet)  # rebuilt, and no snapshot
+        assert (work / "upstream" / "_data" / "x.parquet").read_text() != first
+        pinned = []
+        run.run(reader, echo=_quiet, on_pin=lambda step, pins: pinned.append(pins))
+        assert {e.status for e in pinned[0].events} == {"kept"}
+        assert (reader / "_output" / "read.txt").read_text() == first
+
+        # Not even an update moves to it: there is nothing newer to move to
+        moved = lock.update(reader)
+        assert moved.count("moved") == 0 and not moved.written
+
     def test_run_never_moves_a_pin(self, reader, work):
-        """Its owner rebuilds the upstream, and this pipeline keeps its copy."""
-        run.run(work / "upstream", echo=_quiet)
+        """Its owner declares a newer build ready, and this pipeline keeps its copy."""
+        _ready(work / "upstream")
         run.run(reader, echo=_quiet)
         first = (reader / "_output" / "read.txt").read_text()
         before = (reader / lock.LOCK_FILE).read_bytes()
 
-        run.run(work / "upstream", echo=_quiet)
-        assert (work / "upstream" / "_data" / "x.parquet").read_text() != first
+        _ready(work / "upstream")
         pinned = []
         run.run(reader, echo=_quiet, on_pin=lambda step, pins: pinned.append(pins))
         assert (reader / "_output" / "read.txt").read_text() == first
@@ -414,18 +476,18 @@ class TestPinning:
 
     def test_a_pipeline_with_nothing_to_run_is_not_pinned_for(self, work):
         """No script runs in it, so nothing in it needs a pin."""
-        _pipeline(work / "bottom", {"build": LOG}, dataframes={"x": {"path": "./x.parquet", "docs": "d"}})
-        (work / "bottom" / "x.parquet").write_bytes(b"x")
-        middle = _pipeline(work / "middle", None, {"bottom": {"path": "../bottom"}})
-        top = _pipeline(work / "top", {"build": LOG}, {"bottom": {"path": "../bottom"}})
+        _with_data(work / "bottom", {"build": LOG})
+        middle = _with_data(work / "middle", None, {"bottom": {"path": "../bottom"}})
+        top = _with_data(work / "top", {"build": LOG}, {"bottom": {"path": "../bottom"}})
+        _commit(work)
+        snapshot.make(work / "bottom")
         report = run.run(_catalog(work, "top", "middle", "bottom"), echo=_quiet)
         assert [step.id for step in report.ran] == ["bottom", "top"]
         assert not (middle / lock.LOCK_FILE).exists()
         assert (top / lock.LOCK_FILE).exists()
 
     def test_another_script_pins_nothing(self, work):
-        _pipeline(work / "upstream", dataframes={"x": {"path": "./x.parquet", "docs": "d"}})
-        (work / "upstream" / "x.parquet").write_bytes(b"x")
+        _with_data(work / "upstream")
         top = _pipeline(work / "top", {"build": LOG, "test": LOG}, {"upstream": {"path": "../upstream"}})
         run.run(top, "test", echo=_quiet)
         assert not (top / lock.LOCK_FILE).exists()
@@ -438,7 +500,7 @@ class TestPinning:
         assert _order(work) == []
 
     def test_a_dependency_that_has_gone_is_no_trouble_once_it_is_pinned(self, reader, work):
-        run.run(work / "upstream", echo=_quiet)
+        _ready(work / "upstream")
         run.run(reader, echo=_quiet)
         first = (reader / "_output" / "read.txt").read_text()
         os.rename(work / "upstream", work / "moved_away")
@@ -748,21 +810,25 @@ class TestCommand:
             result.output
         )
 
+    def _owner_declares_ready(self, upstream):
+        assert self._run("--project-dir", upstream).exit_code == 0
+        made = CliRunner().invoke(main, ["snapshot", "--project-dir", str(upstream)])
+        assert made.exit_code == 0, made.output
+        return made
+
     def test_it_says_what_it_pinned_and_what_has_changed_since(self, reader, work, monkeypatch):
-        assert self._run("--project-dir", work / "upstream").exit_code == 0
+        self._owner_declares_ready(work / "upstream")
+        commit = _git(work, "rev-parse", "HEAD")
         monkeypatch.chdir(reader)
         first = self._run()
         assert first.exit_code == 0, first.output
-        assert first.output.splitlines() == [
-            "reader: pinning what it depends on",
-            "upstream: 1 pinned",
-            "Wrote chartbook.lock.",
-            "reader: build",
-            "Ran build in 1 pipeline(s).",
-        ]
+        said = first.output.splitlines()
+        assert said[:2] == ["reader: pinning what it depends on", "upstream: 1 pinned"]
+        assert said[2].startswith(f"  From its snapshot at {commit[:7]}, made ")
+        assert said[3:] == ["Wrote chartbook.lock.", "reader: build", "Ran build in 1 pipeline(s)."]
 
-        # Its owner builds the upstream again. This pipeline is told, and stays put.
-        assert self._run("--project-dir", work / "upstream").exit_code == 0
+        # Its owner declares a newer build ready. This pipeline is told, and stays put.
+        self._owner_declares_ready(work / "upstream")
         second = self._run()
         assert "upstream: 1 changed upstream since it was pinned" in second.output
         assert "chartbook.lock is unchanged." in second.output
@@ -772,23 +838,29 @@ class TestCommand:
         assert (work / "upstream_runs.log").read_text().split() == ["ran", "ran"]
 
     def test_an_unchanged_dependency_is_not_mentioned(self, work, monkeypatch):
-        _pipeline(work / "upstream", dataframes={"x": {"path": "./x.parquet", "docs": "d"}})
-        (work / "upstream" / "x.parquet").write_bytes(b"x")
+        _with_data(work / "upstream")
         top = _pipeline(work / "top", {"build": "true"}, {"upstream": {"path": "../upstream"}})
+        _commit(work)
+        snapshot.make(work / "upstream")
         monkeypatch.chdir(top)
         self._run()
         result = self._run()
         assert result.output.splitlines() == ["top: build", "Ran build in 1 pipeline(s)."]
 
-    def test_a_lockfile_is_never_written_without_saying_so(self, chain, monkeypatch):
-        """``middle`` declares nothing to pin, and the lockfile is new all the same."""
-        monkeypatch.chdir(chain)
+    def test_a_dependency_with_no_snapshot_stops_it_and_says_what_to_do(
+        self, reader, work, monkeypatch
+    ):
+        commit = _git(work, "rev-parse", "HEAD")
+        monkeypatch.chdir(reader)
         result = self._run()
-        assert result.output.splitlines() == [
-            "top: wrote chartbook.lock",
-            "top: build",
-            "Ran build in 1 pipeline(s).",
-        ]
+        assert result.exit_code == 1
+        assert (
+            f"upstream: cannot be pinned: it has no snapshot at or before {commit[:7]}, "
+            f"the commit its folder is on. In ../upstream: commit, then run "
+            f"`chartbook snapshot`"
+        ) in result.output.splitlines()
+        assert "Error: reader: what it depends on could not be pinned." in result.output
+        assert not (work / "upstream_runs.log").exists()
 
     def test_force_is_passed_on(self, work, monkeypatch):
         repository = _pipeline(work / "ref", {"build": "echo ran >> build.log"})

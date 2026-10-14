@@ -173,10 +173,20 @@ table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git
 - A model's `trained_on = ["fed_yield_curve:treasury_rates"]` must name a
   declared dependency (the scope may be left off when unambiguous). If it does
   not, the manifest does not load, and the error shows the line to add.
-- `chartbook pin` copies every asset of each `path` dependency into the store (a
-  free copy-on-write clone where the disk has them, a full copy otherwise) and
-  writes their content hashes to `chartbook.lock`, which is committed. It never
-  moves an existing pin; `chartbook update [dep...]` does.
+- A `path` dependency is read through **snapshots**, never through its folder
+  (people and agents work on different pipelines at the same time, and a folder
+  may be half-way through a change). In the OTHER pipeline, its owner runs
+  `chartbook snapshot`: everything in that folder must be committed, and its
+  built assets are copied to the store, labelled with the commit. It is made on
+  purpose, not by every build.
+- `chartbook pin` pins each dependency's newest snapshot (the newest at the
+  commit its folder is on, else at the nearest earlier commit that has one) and
+  writes the content hashes and the commit to `chartbook.lock`, which is
+  committed. With no snapshot it fails and says so. It never moves an existing
+  pin; `chartbook update [dep...]` does, to the newest snapshot. A rebuild with
+  no new snapshot is not seen at all.
+- `--from-folder` on `pin` and `update` takes what is in the folder this minute.
+  It is hidden and off by default: only for working on both pipelines at once.
 - Code then reads the pinned copy by reference: `data.load("fed_yield_curve:treasury_rates")`,
   `data.path(...)`, `assets.path("fed_yield_curve:chart/x")`, `models.path(...)`,
   or `chartbook path fed_yield_curve:treasury_rates` from a shell. It never

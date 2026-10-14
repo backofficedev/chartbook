@@ -418,7 +418,7 @@ An entry has `path` or `git`, not both.
 - `index.json` lists them, under `dependencies` in the pipeline's record.
 - A model's training data in another pipeline is written by the dependency's name, so `fed_yield_curve:treasury_rates` becomes `ftsfr/fed_yield_curve:treasury_rates`.
 
-- `chartbook pin` freezes what each `path` dependency has now. Every asset it declares is copied into the store, and its content hash is written to `chartbook.lock`, which you commit. `chartbook update` moves the pins forward. See {doc}`cli`.
+- `chartbook pin` freezes what each dependency was declared ready with. A folder (`path`) is pinned from its newest **snapshot**, which its owner makes there with `chartbook snapshot`; the folder itself is never read, so it can be half-way through a change. A repository (`git`) is pinned from a clean copy of a commit. The content hash of every asset, and the commit, are written to `chartbook.lock`, which you commit. `chartbook update` moves the pins forward. See {doc}`cli`.
 - **Your code reads the pinned copy.** `data.path("fed_yield_curve:treasury_rates")`, `data.load(…)`, `assets.path(…)`, `models.path(…)` and `chartbook path …` all resolve a reference to another pipeline's asset through `chartbook.lock` into the store, never to that pipeline's working directory. No catalog is needed.
 - A reference to a pipeline that is not in this table fails, and shows the line to add.
 
@@ -427,7 +427,7 @@ An entry has `path` or `git`, not both.
 - **A `git` dependency has only what its repository commits, until it is built.** `chartbook pin` clones it and pins the declared files that are in git. Data the other pipeline builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build, so those assets are listed as not built. `chartbook run` does build it, in a copy of its checkout, and then they can be pinned. Working out a repository from an ID alone (`{ rev = "…" }` with no `git`) is not supported.
 - `data.load(pipeline=…, dataframe=…)`, with two arguments, still looks in a catalog and reads the other pipeline's own file, as it always has. It does not read this table.
 
-- `chartbook run` pins what has no pin yet, and then builds this pipeline. It never builds in a `path` dependency's folder: that is its owner's to build. It builds a `git` dependency once, in a clean copy. See {ref}`chartbook run <chartbook-run>`.
+- `chartbook run` pins what has no pin yet, and then builds this pipeline. It never builds in a `path` dependency's folder, and never reads one: that folder is its owner's to build and to declare ready. It builds a `git` dependency once, in a clean copy. See {ref}`chartbook run <chartbook-run>`.
 
 A catalog has no `[dependencies]`. It reads from no pipeline; it lists them in `[pipelines]`. The design is {doc}`../design/asset-graph`.
 

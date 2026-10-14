@@ -1586,7 +1586,7 @@ def _echo_pin_report(report):
                 click.echo(f"{dependency}: fetched {event.detail}")
             elif event.status == "removed":
                 summary = "no longer a dependency; its pins are let go"
-            elif event.status in ("unreachable", "unfetched"):
+            elif event.status in ("unreachable", "unfetched", "no_snapshot"):
                 note = f"cannot be pinned: {event.detail}"
                 summary = f"{note}; {summary}" if summary else note
         click.echo(f"{dependency}: {summary or 'declares nothing to pin'}")
@@ -1610,11 +1610,20 @@ def _echo_pin_report(report):
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
                 click.echo(f"  lost: {event.asset} ({event.old}): {event.detail}")
+        if dependency in report.snapshots:
+            taken = report.snapshots[dependency]
+            click.echo(
+                f"  From its snapshot at {taken.commit[:7]}, made {_when(taken.made_at)}."
+            )
+        if dependency in report.from_folder:
+            click.echo("  Taken from its folder as it is now, not from a snapshot.")
         if dependency in report.git and counts.get("let_go"):
             click.echo(
                 "  What was let go was built at the commit pinned before, and is "
                 "not built at this one. `chartbook run` builds it and pins it."
             )
+        elif counts.get("let_go"):
+            click.echo("  What was let go is not built in the snapshot this moved to.")
         if dependency in report.git and counts.get("not_built"):
             click.echo("  A git dependency has only what its repository commits.")
 
@@ -1634,7 +1643,12 @@ def _echo_pin_report(report):
         )
 
 
-def _run_pin(project_dir, dependencies=None):
+def _when(made_at):
+    """A snapshot's time as a person reads it: 2026-10-13 18:22 UTC."""
+    return f"{made_at[:10]} {made_at[11:16]} UTC"
+
+
+def _run_pin(project_dir, dependencies=None, from_folder=False):
     """Run a pin, or an update when *dependencies* is given; exit 1 on a problem."""
     from chartbook import lock
     from chartbook.store import StoreError
@@ -1642,9 +1656,9 @@ def _run_pin(project_dir, dependencies=None):
     project_dir = resolve_project_dir(project_dir)
     try:
         if dependencies is None:
-            report = lock.pin(project_dir)
+            report = lock.pin(project_dir, from_folder=from_folder)
         else:
-            report = lock.update(project_dir, dependencies)
+            report = lock.update(project_dir, dependencies, from_folder=from_folder)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         raise SystemExit(1)
@@ -1656,36 +1670,51 @@ def _run_pin(project_dir, dependencies=None):
         raise SystemExit(1)
 
 
+#: Off by default and left out of --help on purpose: the ordinary way is a
+#: snapshot. It is for someone working on both pipelines at once.
+_from_folder = click.option(
+    "--from-folder",
+    is_flag=True,
+    hidden=True,
+    help="Take a path dependency from what is in its folder now, not from a snapshot",
+)
+
+
 @main.command()
 @click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
-def pin(project_dir):
+@_from_folder
+def pin(project_dir, from_folder):
     """Freeze what this pipeline depends on.
 
-    Every asset that each pipeline in [dependencies] declares is put in the
-    store, and its content hash is written to chartbook.lock. Commit that
+    Each pipeline in [dependencies] is pinned to a snapshot of it: what its
+    owner declared ready, at a commit (`chartbook snapshot`). The content
+    hash of each of its assets is written to chartbook.lock. Commit that
     file: a change to what the project depends on then shows in a diff.
+
+    Nothing in the other pipeline's folder is read. It can be half-way
+    through a change, and what you pin is still the build that was
+    declared ready.
 
     A pin that already exists is never moved, whatever the other pipeline
     has done since; `chartbook update` moves pins. What `pin` does do again
-    is pin anything that has no pin yet, and put back in the store anything
-    the lockfile names that the store has lost, when the other pipeline
-    still has the same bytes. So it is what to run after cloning a project.
+    is pin a dependency that has no pin yet.
 
-    An asset the other pipeline declares and has not built is listed and
-    left unpinned; the rest is pinned all the same.
+    A dependency that is a git repository is fetched, and pinned from a
+    clean copy of the commit.
 
     Examples:
         chartbook pin
         chartbook pin --project-dir ../rate_forecast
     """
-    _run_pin(project_dir)
+    _run_pin(project_dir, from_folder=from_folder)
 
 
 @main.command()
 @click.argument("dependencies", nargs=-1)
 @click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
-def update(dependencies, project_dir):
-    """Move pins forward to what the dependencies have now.
+@_from_folder
+def update(dependencies, project_dir, from_folder):
+    """Move pins forward to the newest snapshot of each dependency.
 
     With no argument, every dependency is updated. Name some to update only
     those, as they are written in [dependencies]; the scope may be left off
@@ -1698,7 +1727,61 @@ def update(dependencies, project_dir):
         chartbook update
         chartbook update fed_yield_curve
     """
-    _run_pin(project_dir, dependencies=list(dependencies))
+    _run_pin(project_dir, dependencies=list(dependencies), from_folder=from_folder)
+
+
+@main.command()
+@click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
+def snapshot(project_dir):
+    """Declare this pipeline's build ready for the pipelines that depend on it.
+
+    Every asset the pipeline declares and has built is copied into the
+    store, labelled with the commit the pipeline is at. That is a snapshot,
+    and it is what other pipelines pin: they never read this folder.
+
+    Everything in the pipeline's folder must be committed first. The label
+    says "this is what that commit built", and with uncommitted changes it
+    would not be true. What git ignores, such as built data, does not count.
+
+    A snapshot is made when you ask for one, not by every build. Until you
+    make another, pipelines that depend on this one keep getting this one,
+    however much you change here. When you do, they get it with
+    `chartbook update`, and not before.
+
+    Build first: this does not run the build. `chartbook run` does.
+
+    Examples:
+        chartbook run && chartbook snapshot
+        chartbook snapshot --project-dir ../fed_yield_curve
+    """
+    from chartbook import snapshot as snapshots
+    from chartbook.store import StoreError
+
+    project_dir = resolve_project_dir(project_dir)
+    try:
+        report = snapshots.make(project_dir)
+    except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+
+    taken = report.snapshot
+    built = sum(1 for record in taken.assets.values() if record.get("content_hash"))
+    summary = f"{built} asset(s) in the store"
+    if report.not_built:
+        summary += f", {len(report.not_built)} not built"
+    click.echo(f"{taken.pipeline} at {taken.commit[:7]}: {summary}")
+    for asset, declared_path in report.not_built:
+        click.echo(f"  not built: {asset} ({declared_path})")
+    if report.made:
+        click.echo(
+            "Snapshot made. A pipeline that depends on this one gets it with "
+            "`chartbook update`."
+        )
+    else:
+        click.echo(
+            f"Nothing has changed since the snapshot of {_when(taken.made_at)}. "
+            f"No new one was made."
+        )
 
 
 @main.command("run")
@@ -1750,11 +1833,10 @@ def run_command(script, project_dir, force):
     def show_pins(step, pins):
         # Said only when there is something to say: a pin that is not
         # simply still in place, or a lockfile that was written
-        if any(event.status != "kept" for event in pins.events):
+        quiet = ("kept", "not_built")  # as they were the last time
+        if pins.written or any(event.status not in quiet for event in pins.events):
             click.echo(f"{step.id}: pinning what it depends on")
             _echo_pin_report(pins)
-        elif pins.written:
-            click.echo(f"{step.id}: wrote {lock.LOCK_FILE}")
 
     project_dir = resolve_project_dir(project_dir)
     try:
@@ -1890,6 +1972,11 @@ def store_gc(dry_run, yes, forget_missing):
         else:
             note = "  (not found; its pins are kept)"
         click.echo(f"  {lockfile}{note}")
+    if plan.snapshots:
+        click.echo(
+            f"  A snapshot names {plan.snapshots} of them. What a snapshot names "
+            f"is never removed."
+        )
     if plan.recent:
         click.echo(
             f"Kept: {len(plan.recent)} object(s) no lockfile names, stored in "

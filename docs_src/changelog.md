@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — snapshots: `chartbook snapshot`
+
+A pipeline's owner now says when a build is ready for others, and that is the only thing another pipeline ever reads.
+
+```console
+$ chartbook run            # build it
+$ chartbook snapshot       # and say it is ready
+ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+```
+
+A **snapshot** is every asset a pipeline declares, as built at one commit, copied into the store and labelled with that commit.
+
+The reason is that pipelines are worked on at the same time, by people and by agents, one to a pipeline. Someone is always half-way through a change. Until now `chartbook pin` and `chartbook update` copied whatever was in the other pipeline's folder at the moment they ran, so an update made during a rebuild pinned a half-built folder, and one pipeline's work reached into another's working directory. Now nothing does. The store is the read-only middle that every pipeline reads from, and it changes slowly and on purpose. The maintainer decided this model on 2026-10-13; it is written up in the design overview.
+
+Three rules. **Everything in the pipeline's folder must be committed before a snapshot**, because the label says "this is what that commit built"; what git ignores, such as built data, does not count. **A snapshot is made when its owner asks, not by every build.** And **nobody is moved to it**: a pipeline that depends on this one gets a new snapshot with `chartbook update`, and not before.
+
+**This changes `chartbook pin` and `chartbook update` for a `path` dependency** (they are described under "pinning" below, and have not been released). They now choose among snapshots. `pin` takes the newest at the commit the other folder is on or, if that commit has none, at the nearest one before it; `update` moves to the newest. `chartbook.lock` records the snapshot's commit and time beside the hashes, so it says which code as well as which data, as it already did for a `git` dependency. A pipeline whose owner has made no snapshot cannot be pinned, and the command says what the owner has to do. A rebuild that has not been declared ready is not seen at all. A dependency is pinned to one snapshot, whole.
+
+One commit can have several snapshots, since a pipeline that pulls data from outside builds other bytes on another day; rebuilding and making a snapshot again gives a new one at the same commit, and making one when nothing was rebuilt gives none. `chartbook store gc` never removes what a snapshot names.
+
+For working on two pipelines at once, `chartbook pin --from-folder` and `chartbook update --from-folder` still take what is in the folder this minute. The option is off by default and left out of `--help` on purpose, and a lockfile made with it names no commit.
+
+Not built yet: clearing old snapshots (the store grows with each one), sharing them between machines, and running the build as part of making one. `chartbook snapshot` takes its owner's word that what is on disk was built by the commit they are on.
+
 ### Added — `[scripts]` and `chartbook run`
 
 A pipeline can now say how it is built, and one command gets it built.
@@ -40,7 +65,7 @@ Until now, a pipeline that read another's data was built by hand in steps: `char
 
 `index.json` lists all of a pipeline's scripts under `scripts`, where it had only `build`.
 
-Not built yet: a way for a pipeline's owner to say "this build is ready for others", so that pinning takes from that and never from the working folder (today `chartbook pin` and `chartbook update` still copy what is in a `path` dependency's folder at that moment), and `--frozen` for CI. Scripts are not tasks, and that part is on purpose: one does not depend on another, and there are no retries, no schedule and no history.
+Not built yet: `--frozen` for CI. Scripts are not tasks, and that part is on purpose: one does not depend on another, and there are no retries, no schedule and no history.
 
 ### Added — `git` dependencies
 

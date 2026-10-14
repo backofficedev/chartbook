@@ -26,7 +26,15 @@ curve = data.load("yield_curve:fed_yield_curve", format="pandas")
 
 ## Quick Start
 
-Build `yield_curve` first, in its own folder, since this pipeline reads what it produces. Then, here:
+Build `yield_curve` first, in its own folder, and declare the build ready:
+
+```bash
+cd ../yield_curve
+chartbook run          # build it
+chartbook snapshot     # copy what it built into the store, labelled with the commit
+```
+
+Then, here:
 
 ```bash
 chartbook run
@@ -34,7 +42,7 @@ chartbook run
 
 That one command does two things, in order:
 
-1. Pins what `yield_curve` has now, and writes `chartbook.lock`.
+1. Pins `yield_curve`'s snapshot, and writes `chartbook.lock`.
 2. Builds this pipeline: trains the model on the pinned copy, and builds the site.
 
 "Builds" means it runs the `build` script this pipeline names in its `chartbook.toml`:
@@ -44,22 +52,24 @@ That one command does two things, in order:
 build = "doit"
 ```
 
-`chartbook run` does not build `yield_curve`. That folder is somebody's work, and this pipeline reads the pinned copy of its data, not the folder.
+`chartbook run` does not build `yield_curve`, and does not read its folder. That folder is somebody's work. This pipeline reads the snapshot.
 
 The same by hand:
 
 ```bash
-chartbook pin      # freeze what yield_curve has now; writes chartbook.lock
+chartbook pin      # pin yield_curve's snapshot; writes chartbook.lock
 doit               # train the model on the pinned copy, and build the site
 ```
 
 `doit` runs `chartbook pin` itself, so the second command alone is enough.
 
-## What pinning does here
+## What a snapshot and a pin do here
 
-`chartbook pin` copies `yield_curve`'s data into the store (`~/.chartbook/store/`) and writes the hash of each file to `chartbook.lock`. From then on, `data.load("yield_curve:fed_yield_curve")` reads that copy, not `../yield_curve/_data/`.
+`chartbook snapshot`, run in `yield_curve`, copies what it has built into the store (`~/.chartbook/store/`) and labels it with the commit `yield_curve` is at. It needs everything in that folder to be committed.
 
-So if `yield_curve` is rebuilt tomorrow with a newer download, this model is **not** retrained on it, and `chartbook pin` says so:
+`chartbook pin`, run here, writes the hash of each of those files to `chartbook.lock`, with the commit. From then on, `data.load("yield_curve:fed_yield_curve")` reads that copy, not `../yield_curve/_data/`.
+
+So if `yield_curve` is rebuilt tomorrow with a newer download, this model is **not** retrained on it. Nothing here is even told, until `yield_curve`'s owner runs `chartbook snapshot` again. After that, `chartbook pin` says so, and still does not move:
 
 ```console
 $ chartbook pin
@@ -71,7 +81,7 @@ chartbook.lock is unchanged.
 
 `chartbook run` says the same: it never moves a pin.
 
-To train on the newer data, move the pin and build again:
+To train on the newer snapshot, move the pin and build again:
 
 ```bash
 chartbook update

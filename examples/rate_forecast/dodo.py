@@ -20,9 +20,10 @@ def task_pin():
     """Freeze what this pipeline reads from the pipelines it depends on"""
     return {
         # It has no dependencies of its own, so doit runs it every time. That
-        # is cheap and safe: `pin` never moves a pin. It pins what has none,
-        # and puts back in the store what the store has lost. To pick up
-        # newer data from yield_curve, run `chartbook update` by hand.
+        # is cheap and safe: `pin` never moves a pin. The first time, it pins
+        # yield_curve's newest snapshot, which is made in yield_curve with
+        # `chartbook snapshot`; it never reads yield_curve's folder. To pick
+        # up a newer snapshot, run `chartbook update` by hand.
         "actions": ["chartbook pin"],
         "targets": [LOCK_FILE],
     }

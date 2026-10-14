@@ -14,11 +14,12 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
+| `chartbook snapshot` | Declare this pipeline's build ready for the pipelines that depend on it |
 | `chartbook pin` | Freeze what this pipeline depends on, in `chartbook.lock` |
-| `chartbook update` | Move pins forward to what the dependencies have now |
+| `chartbook update` | Move pins forward to each dependency's newest snapshot |
 | `chartbook run [SCRIPT]` | Run a named script in this pipeline; `build` by default, after pinning what it depends on |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
-| `chartbook store gc` | Remove from the store what no lockfile names |
+| `chartbook store gc` | Remove from the store what no lockfile and no snapshot names |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install skill` | Install the bundled Claude Code skill (user-level by default) |
 
@@ -325,24 +326,91 @@ chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-thre
 
 The manifest is the only source of the list. Nothing about how the project is built is consulted, so a pipeline built with doit, Snakemake, Make or plain scripts gets the same report, and a data file the manifest does not declare is not included. Partitioned dataframes (a glob `path`) are summarized as one dataset. Declared dataframes whose files do not exist yet are skipped with a note. Run in a catalog, the report covers every member pipeline.
 
+(chartbook-snapshot)=
+## chartbook snapshot
+
+```console
+chartbook snapshot [--project-dir PATH]
+```
+
+Declare this pipeline's build ready for the pipelines that depend on it. Every asset the pipeline declares and has built is copied into the store, labelled with the commit the pipeline is at. That is a **snapshot**.
+
+```console
+$ chartbook run            # build it
+$ chartbook snapshot       # and say it is ready
+ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+```
+
+**Why.** People, and agents, work on different pipelines at the same time. Someone is always half-way through a change. So a pipeline that depends on this one never reads this folder. It reads the last snapshot you made, and your folder can be in any state in between.
+
+Three rules:
+
+1. **Everything in the pipeline's folder must be committed first.** The label says "this is what that commit built", and with uncommitted changes that would not be true. What git ignores, such as built data, does not count. Neither does other work elsewhere in the same repository.
+2. **It is made when you ask, not by every build.** Until you make another, pipelines that depend on this one keep getting this one, however much you change here.
+3. **Nobody is moved to it.** A pipeline that depends on this one gets a new snapshot with `chartbook update`, and not before.
+
+```console
+$ chartbook snapshot
+Error: ftsfr/fed_yield_curve has changes that are not committed:
+   M fed_yield_curve/src/pull_fred.py
+  ?? fed_yield_curve/src/new_script.py
+A snapshot is labelled with the commit it was built from, so everything in the pipeline's folder must be committed first. Commit, then run `chartbook snapshot` again.
+```
+
+**New data, same code.** A pipeline that pulls data from outside builds other bytes on another day, with no file changed. Build again and snapshot again: the commit is the same and the snapshot is new. If nothing was rebuilt, nothing is made:
+
+```console
+$ chartbook snapshot
+ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+Nothing has changed since the snapshot of 2026-10-13 18:22 UTC. No new one was made.
+```
+
+An asset that is declared and not built is listed, and the rest is in the snapshot all the same. A pipeline that has built nothing has no snapshot to make.
+
+Things to know:
+
+- **It does not run the build.** It takes your word that what is on disk was built by the commit you are on. Build first.
+- **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). Every snapshot is kept; nothing clears old ones yet.
+- **It is found by commit.** So it is found by a pipeline that depends on this folder, and by one that depends on the same repository by URL, on this machine. It is not shared between machines.
+
 ## chartbook pin
 
 ```console
 chartbook pin [--project-dir PATH]
 ```
 
-Freeze what this pipeline depends on. For each pipeline in {ref}`[dependencies] <dependencies>`, every asset it declares is put in the store, and its content hash is written to `chartbook.lock`, beside `chartbook.toml`.
+Freeze what this pipeline depends on. Each pipeline in {ref}`[dependencies] <dependencies>` is pinned to a snapshot of it, and the content hash of each of its assets is written to `chartbook.lock`, beside `chartbook.toml`.
 
 ```console
 $ chartbook pin
 ftsfr/fed_yield_curve: 3 pinned, 1 not built
   not built: ftsfr/fed_yield_curve:model/term_premium_ar1 (./_models/term_premium_ar1.json)
+  From its snapshot at 4f2a91c, made 2026-10-13 18:22 UTC.
 Wrote chartbook.lock.
 ```
 
-**Commit `chartbook.lock`.** It is source. A change to what the project depends on then shows up in a diff, and someone who clones the project sees which data it was built against. It holds no path from your machine and no timestamp, so pinning twice with nothing changed leaves the file as it was.
+**Commit `chartbook.lock`.** It is source. A change to what the project depends on then shows up in a diff, and someone who clones the project sees which data it was built against. It holds no path from your machine, so pinning twice with nothing changed leaves the file as it was.
 
-**A pin never moves by itself.** Run `pin` again a week later, after the other pipeline has rebuilt, and nothing changes; it tells you what has moved on without you:
+**What is asked for, and what was got.** It is the split between `requirements.txt` and `uv.lock`:
+
+| | File | Says |
+|---|---|---|
+| What you ask for | `chartbook.toml` | Which pipeline, and where: a folder, or a repository at a tag or a branch |
+| What you got | `chartbook.lock` | The exact commit, and the hash of every file |
+
+A commit alone would not be enough: the same code gives other data on another day. The hashes are what say which data.
+
+**The other pipeline's folder is not read.** `pin` takes the newest snapshot at the commit that folder is on or, if that commit has none, at the nearest commit before it that has one. So its owner can be several commits past the last build they declared ready, with the folder in any state, and you still get that build.
+
+**A pipeline with no snapshot cannot be pinned**, and the command says what its owner has to do:
+
+```console
+$ chartbook pin
+ftsfr/fed_yield_curve: cannot be pinned: it has no snapshot at or before 4f2a91c, the commit its folder is on. In ../fed_yield_curve: commit, then run `chartbook snapshot`
+```
+
+**A pin never moves by itself.** Run `pin` again after the other pipeline's owner has made a newer snapshot, and nothing changes; it tells you what the newer one would change:
 
 ```console
 $ chartbook pin
@@ -353,16 +421,13 @@ chartbook.lock is unchanged.
 1 pinned asset(s) have changed upstream. `chartbook update` moves the pins.
 ```
 
-What a second `pin` does do:
+A rebuild that its owner has not made a snapshot of is not mentioned, because it is not seen.
 
-- **Pins what has no pin yet**: a new dependency, an asset the other pipeline has started to declare, or one that was not built last time.
-- **Puts back what the store has lost.** The lockfile is in git and the store is not. After cloning a project, `chartbook pin` fills the store again, as long as the other pipeline still has the same bytes. If it does not, the asset is reported as `lost` and the command exits `1`: the pin is not quietly moved to something else.
+**A dependency is pinned to one snapshot, whole.** `pin` does not take one asset from a newer snapshot and leave the rest. What a second `pin` does do is pin a dependency that has no pin yet.
 
-An asset the other pipeline declares and has not built is listed and left unpinned. The rest is pinned all the same.
+`pin` exits `1` when something could not be pinned: a dependency with no snapshot, a repository that cannot be fetched, or a pin whose bytes are not in the store.
 
-`pin` exits `1` when something could not be pinned: a dependency whose `path` holds no pipeline, a repository that cannot be fetched, or a lost pin.
-
-**A `git` dependency** is fetched first, into `~/.chartbook/git/`, and then pinned like a directory:
+**A `git` dependency** is fetched first, into `~/.chartbook/git/`, and pinned from ChartBook's own clean copy of the commit:
 
 ```console
 $ chartbook pin
@@ -373,13 +438,28 @@ ftsfr/ref_data: 2 pinned, 1 not built
 Wrote chartbook.lock.
 ```
 
-That last line matters. A clone has the other pipeline's code and whatever data it keeps in git. Data that it builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build. So with `pin` alone, a `git` dependency suits reference data, small tables and models that are committed. For a pipeline whose data is built, either depend on a `path` where it has been built, or use {ref}`chartbook run <chartbook-run>`, which builds the dependency in a copy of its checkout and pins what that produces.
+That last line matters. A clone has the other pipeline's code and whatever data it keeps in git. Data that it builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build. So with `pin` alone, a `git` dependency suits reference data, small tables and models that are committed. For a pipeline whose data is built, use {ref}`chartbook run <chartbook-run>`, which builds the dependency once in a clean copy of that commit and pins what that produces.
 
 The lockfile records the commit. `pin` stays at that commit and uses the network only if this machine has lost its copy; `chartbook update` fetches again and asks what the `rev` means now, so a branch moves forward and a tag or a commit does not. If you change `rev` in `chartbook.toml`, `pin` says so and stays where it was, and `update` follows the change. ChartBook runs your own `git`, so your SSH keys and credential helpers work as they do by hand; it never asks for a password, and fails instead.
 
 Once it is pinned, your code reads the pinned copy: `chartbook path fed_yield_curve:treasury_rates`, `data.path("fed_yield_curve:treasury_rates")` and `data.load("fed_yield_curve:treasury_rates")` all go through `chartbook.lock` into the store.
 
-**A pin is a copy that cannot change.** It is a copy-on-write clone where the disk has them (a Mac; Linux with btrfs or XFS), which costs nothing, and a full copy everywhere else, which costs the file's size. It is never a hard link or a symlink to the other pipeline's file, because that file gets rewritten in place when the other pipeline rebuilds.
+**A pin is a copy that cannot change.** A snapshot's files are copy-on-write clones where the disk has them (a Mac; Linux with btrfs or XFS), which cost nothing, and full copies everywhere else, which cost the files' size. They are never hard links or symlinks to the other pipeline's files, because those get rewritten in place when the other pipeline rebuilds.
+
+### Working on two pipelines at once
+
+There is one way to pin what is in a folder this minute, with no snapshot: `chartbook pin --from-folder` and `chartbook update --from-folder`. It is off by default and left out of `--help` on purpose. It is for when you are changing both pipelines yourself and want to see one change in the other without committing each try.
+
+```console
+$ chartbook update --from-folder
+ftsfr/fed_yield_curve: 1 moved, 2 already pinned
+  ftsfr/fed_yield_curve:treasury_rates
+    sha256:4b1f… -> sha256:99ab…
+  Taken from its folder as it is now, not from a snapshot.
+Wrote chartbook.lock.
+```
+
+The folder may be half-built, and the lockfile then names no commit, because nothing says which one those bytes came from. Do not commit a lockfile made this way. The next plain `chartbook update` moves back to a snapshot.
 
 ## chartbook update
 
@@ -387,19 +467,31 @@ Once it is pinned, your code reads the pinned copy: `chartbook path fed_yield_cu
 chartbook update [DEPENDENCY...] [--project-dir PATH]
 ```
 
-Move pins forward to what the dependencies have now, and rewrite `chartbook.lock`. With no argument every dependency is updated. Name some to update only those, as they are written in `[dependencies]`; the scope may be left off when only one has that name.
+Move pins forward, and rewrite `chartbook.lock`. A folder you depend on moves to its newest snapshot. A repository is fetched again, and moves to what its `rev` means now. With no argument every dependency is updated. Name some to update only those, as they are written in `[dependencies]`; the scope may be left off when only one has that name.
 
 ```console
 $ chartbook update fed_yield_curve
 ftsfr/fed_yield_curve: 1 moved, 2 already pinned, 1 not built
   ftsfr/fed_yield_curve:treasury_rates
     sha256:4b1f… -> sha256:99ab…
+  not built: ftsfr/fed_yield_curve:model/term_premium_ar1 (./_models/term_premium_ar1.json)
+  From its snapshot at 9c1d2e3, made 2026-10-14 09:00 UTC.
 Wrote chartbook.lock.
 ```
 
-An asset the other pipeline no longer declares is dropped from the lockfile. One that it declares and no longer has on disk keeps its pin. Nothing of this pipeline is rebuilt. The object a pin moved away from stays in the store until `chartbook store gc`.
+**Newer code, or only newer data**, depends on what you asked for in `chartbook.toml`:
 
-**One exception, for a `git` dependency that `chartbook run` built.** When an update moves it to a new commit, data that was built at the old commit, and is not built at the new one yet, is let go: its pin is removed.
+| You depend on | `chartbook update` brings |
+|---|---|
+| A folder | Whatever its owner last declared ready: newer code if they committed any, newer data if they only rebuilt |
+| A repository at a tag or a commit | The same code. Newer data only if it was built again (`chartbook run --force`) |
+| A repository at a branch | Newer code, when the branch has moved |
+
+If the other pipeline's owner has rebuilt and made no snapshot, there is nothing to move to, and `update` changes nothing.
+
+An asset the newer snapshot no longer declares is dropped from the lockfile. One it declares and did not build is let go: a pin from an older snapshot does not belong beside a newer one's commit. Nothing of this pipeline is rebuilt. The object a pin moved away from stays in the store.
+
+**A `git` dependency that `chartbook run` built** is treated the same way. When an update moves it to a new commit, data that was built at the old commit, and is not built at the new one yet, is let go:
 
 ```console
 $ chartbook update
@@ -438,14 +530,14 @@ Ran build in 1 pipeline(s).
 What `chartbook run` does for `build`, in order:
 
 1. **Builds a `git` dependency that is not built yet**, in ChartBook's own clean copy of the commit.
-2. **Pins what has no pin yet**, so this pipeline's code can read it.
+2. **Pins what has no pin yet**, so this pipeline's code can read it: a folder you depend on from its newest {ref}`snapshot <chartbook-snapshot>`, a repository from that clean copy.
 3. **Runs this pipeline's `build`**, in its own directory. What the script prints is shown as it runs. If it fails, the command exits with the script's exit code.
 
 In a fresh clone, `chartbook run` is the only command you need: there is no `chartbook pin` to remember first.
 
-**It never builds in a folder this pipeline depends on.** A `path` dependency is a folder somebody works in. They may be half-way through a change. This pipeline reads what is pinned, not what is in that folder, so building there would disturb its owner and change nothing this pipeline reads. That folder is its owner's to build.
+**It never builds in a folder this pipeline depends on, and never reads one.** A `path` dependency is a folder somebody works in. They may be half-way through a change. This pipeline reads the snapshot it pinned, not what is in that folder, so building there would disturb its owner and change nothing this pipeline reads. That folder is its owner's to build, and to declare ready with `chartbook snapshot`. If its owner has made no snapshot yet, `chartbook run` stops and says so.
 
-**It never moves a pin.** If the other pipeline has newer data, this one is still built against the copy it pinned, and you are told:
+**It never moves a pin.** If the other pipeline's owner has made a newer snapshot, this one is still built against the one it pinned, and you are told:
 
 ```console
 $ chartbook run
@@ -458,7 +550,7 @@ ftsfr/rate_forecast: build
 Ran build in 1 pipeline(s).
 ```
 
-To build against the newer data, run `chartbook update` and then `chartbook run`. The lockfile changes only when you ask it to, so it only ever changes in a commit you meant to make.
+To build against the newer snapshot, run `chartbook update` and then `chartbook run`. The lockfile changes only when you ask it to, so it only ever changes in a commit you meant to make.
 
 **A `git` dependency is built once.** Nobody works in ChartBook's copy of a commit, so there is nothing to disturb. Its `build` runs in a writable copy of the checkout, under `~/.chartbook/git/work/`, and that is how data the repository builds, and does not commit, comes to be there to pin. That build needs whatever it needs: its tools, its credentials, its network.
 
@@ -540,9 +632,9 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 chartbook store gc [--dry-run] [--yes] [--forget-missing]
 ```
 
-Remove from the store what no lockfile names: what an update moved a pin away from, and what a removed dependency used to need.
+Remove from the store what no lockfile and no snapshot names. In practice that is what a `git` dependency's pin moved away from, and what was pinned with `--from-folder` and is pinned no longer.
 
-The store is shared by all your projects. Every `chartbook pin` and `chartbook update` notes its lockfile in the store, and `gc` keeps whatever any of those lockfiles names. It lists what it would remove and asks before removing anything:
+The store is shared by all your projects. Every `chartbook pin` and `chartbook update` notes its lockfile in the store, and `gc` keeps whatever any of those lockfiles names. It also keeps everything any {ref}`snapshot <chartbook-snapshot>` names, whether or not anything pins it yet. It lists what it would remove and asks before removing anything:
 
 ```console
 $ chartbook store gc
@@ -560,11 +652,12 @@ Remove them? [y/N]:
 | `--yes`, `-y` | Do not ask |
 | `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found |
 
-Three things it is careful about:
+Four things it is careful about:
 
+- **A snapshot is never removed.** It was declared ready on purpose, and some pipeline may pin it tomorrow. Nothing clears old snapshots yet, so a store grows with each one made.
 - **A lockfile it cannot find still keeps its pins.** The project may be on a drive that is not plugged in. The store remembers what that lockfile named when it was last pinned, and keeps it until you pass `--forget-missing`.
 - **An object stored in the last hour is never removed.** A pin puts files in the store before it writes the lockfile that names them.
-- **If a lockfile cannot be read, nothing is removed.** `gc` stops and says which.
+- **If a lockfile or a snapshot's record cannot be read, nothing is removed.** `gc` stops and says which.
 
 A lockfile is read as it is now. If you check out an older commit and run `gc` without pinning, the pins of the commit you left are not named by anything and can be removed; run `chartbook pin` after switching back.
 

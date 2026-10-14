@@ -679,7 +679,9 @@ and `Model` records; `dependencies` on a `Pipeline` that declares some, each wit
 `pinned_hash` once pinned; and `pinned_inputs` on a `Model`. Not yet: `Build`
 records and `built_by`;
 `inputs` on a dataframe or a notebook (the manifest has no field to declare them); `rendered`
-in `docs`. A pipeline's scripts are written as `"scripts": { "build": …, "test": … }`,
+in `docs`. A dependency that is a directory, once pinned from a snapshot, has the
+snapshot's commit in its `location.commit` and its time in `snapshot` *(2026-10-13, proposed;
+a `git` dependency already had `commit`)*. A pipeline's scripts are written as `"scripts": { "build": …, "test": … }`,
 sorted by name: all of `[scripts]`, with `[project] build` as `build` *(all of them since
 2026-10-13; before the table was read, only `build`)*.
 

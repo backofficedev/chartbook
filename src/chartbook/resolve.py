@@ -579,8 +579,8 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"{pinned.name!r} when it was pinned."
             f"{f' Did you mean {close[0]!r}?' if close else ''} Its "
             f"{KIND_TABLES[pinned.kind]} in {manifest_dir / 'chartbook.lock'} "
-            f"are: {', '.join(same_kind) or '(none)'}. If it has started to "
-            f"declare one since, run `chartbook pin`.",
+            f"are: {', '.join(same_kind) or '(none)'}. If it has declared "
+            f"one since, `chartbook update` pins it.",
         )
     content_hash = record.get("content_hash")
     if not content_hash:
@@ -589,7 +589,9 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             "not_built",
             f"{asset_id!r} is not pinned: the pipeline {dependency.id!r} "
             f"declares it, and had not built it when it was pinned. Build it "
-            f"there, then run `chartbook pin` in {manifest_dir}.",
+            f"there and declare the build ready (`chartbook snapshot` in its "
+            f"folder; for a git repository, `chartbook run` here). Then "
+            f"`chartbook update` in {manifest_dir} pins it.",
         )
     store = default_store()
     if not store.has(content_hash):
@@ -598,7 +600,8 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             "not_in_store",
             f"{asset_id!r} is pinned at {content_hash}, and the store at "
             f"{store.root} does not have it. Run `chartbook pin` in "
-            f"{manifest_dir} to put it back.",
+            f"{manifest_dir}: it puts it back if it can, and says what to do "
+            f"if it cannot.",
         )
 
     held = store.object_path(content_hash)

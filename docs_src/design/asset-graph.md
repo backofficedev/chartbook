@@ -29,8 +29,8 @@ otherwise by the maintainer first, and {doc}`overview` ("The snapshot model", un
 is what holds where this page differs. `run` never moves a pin ("Two verbs"). And a pipeline
 never reads, hashes or builds in a folder it depends on, so `run` builds the pipeline it is
 run in and does not walk the graph ("Running things", "Relationship to orchestrators"). What
-others read of a pipeline is a snapshot its owner makes on purpose, at a commit. Snapshots
-are not built yet.
+others read of a pipeline is a snapshot its owner makes on purpose, at a commit, with
+`chartbook snapshot`; `pin` and `update` choose among snapshots and never read a folder.
 ```
 
 ## The problem
@@ -319,8 +319,8 @@ is incomplete, which is not built.*
 *Decided the same day, and larger: where a pin's bytes come from. As built in step 3, `pin`
 and `update` copy what is in a `path` dependency's folder at that moment. The maintainer's
 model is that they choose among **snapshots**, which a pipeline's owner makes on purpose at a
-commit, and never look in the folder. See {doc}`overview`, "The snapshot model". Not built
-yet.*
+commit, and never look in the folder. See {doc}`overview`, "The snapshot model". Built the
+same day: `chartbook.snapshot`, and {doc}`overview`, "4b, as built".*
 
 *The resolution rule at the top of this section is built: `chartbook.resolve._resolve_pinned`.
 A reference to another pipeline's asset goes to `[dependencies]` for the pipeline, to
@@ -379,6 +379,11 @@ on 2026-10-12 is one directory per asset, `objects/sha256/7f/3a9c…/`, holding 
 under their own names; the single file `store/7f3a9c…-crsp_treasury-treasury_rates.parquet`
 sketched above is not how it is laid out. The other index is `builds/` in the same store: the
 name is kept free, and nothing writes to it until build records exist.)*
+
+*(2026-10-13: the second index that was built is `snapshots/`, and it is not keyed by an input
+hash. It maps a commit of a pipeline to the hashes of what that commit built, with the bytes
+kept as objects. The commit is the input a person can name and check out. Nothing looks an
+input hash up, and `builds/` is still empty. {doc}`overview`, "4b, as built".)*
 
 ### Links, not copies
 

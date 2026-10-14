@@ -128,9 +128,13 @@
               "commit": {
                 "type": "string",
                 "pattern": "^[0-9a-f]{40}$",
-                "description": "The commit that `rev` meant when the dependency was pinned. Present once chartbook.lock has pinned it."
+                "description": "The commit the dependency is pinned at. For a repository, what `rev` meant when it was pinned. For a directory, the commit its snapshot was built from. Present once chartbook.lock has pinned it; absent for a directory pinned from its folder as it stood."
               }
             }
+          },
+          "snapshot": {
+            "type": "string",
+            "description": "For a directory: when the snapshot it is pinned from was made, in UTC. With `location.commit`, it names the snapshot."
           },
           "pinned_hash": {
             "type": "string",
