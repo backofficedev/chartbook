@@ -8,7 +8,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from chartbook import markdown_generator
+from chartbook import hashing, markdown_generator
 from chartbook.diagnostics import generate_metadata_diagnostics
 from chartbook.errors import MissingSourceFilesError, ValidationError, handle_validation_error
 from chartbook.manifest import (
@@ -48,6 +48,7 @@ def run_build_markdown(
     skip_pipelines: set[str] | None = None,
     reuse_pipelines: set[str] | None = None,
     code_times: dict[str, str] | None = None,
+    hash_cache=None,
 ):
     """Run the pipeline publish script to generate markdown files.
 
@@ -85,6 +86,7 @@ def run_build_markdown(
         skip_pipelines=skip_pipelines,
         reuse_pipelines=reuse_pipelines,
         code_times=code_times,
+        hash_cache=hash_cache,
     )
 
 
@@ -143,6 +145,7 @@ def _write_sphinx_project(
     skip_pipelines: set[str],
     reuse_pipelines: set[str] | None = None,
     code_times: dict[str, str] | None = None,
+    hash_cache=None,
 ):
     """Write the complete Sphinx project for a site into a directory.
 
@@ -205,6 +208,7 @@ def _write_sphinx_project(
         skip_pipelines=skip_pipelines,
         reuse_pipelines=reuse_pipelines,
         code_times=code_times,
+        hash_cache=hash_cache,
     )
 
     # Strip MathJax 2 from notebook outputs (prevents Plotly/Sphinx conflict)
@@ -542,6 +546,9 @@ def _generate_docs_incremental(
                 skip_pipelines=skip_pipelines,
                 reuse_pipelines=set(plan.reuse),
                 code_times=plan.code_times,
+                # The pages' index reads and writes the hash cache that is
+                # kept in the build directory, not one in the staging copy
+                hash_cache=hashing.HashCache(_docs_dir / hashing.CACHE_FILE),
             )
             sources = incremental.sync_tree(
                 staging_dir,

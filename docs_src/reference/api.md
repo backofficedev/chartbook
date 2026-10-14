@@ -21,6 +21,7 @@ chartbook
 ../apidocs/chartbook/chartbook.incremental
 ../apidocs/chartbook/chartbook.index
 ../apidocs/chartbook/chartbook.indexdiff
+../apidocs/chartbook/chartbook.provenance
 ../apidocs/chartbook/chartbook.hashing
 ../apidocs/chartbook/chartbook.store
 ../apidocs/chartbook/chartbook.snapshot

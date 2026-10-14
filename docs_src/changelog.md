@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a provenance panel on every dataframe, chart and model page
+
+Each page now carries a **Provenance** section that says, from `index.json` alone: what this is and where it is; its content hash, size, rows and columns (or its definition hash, for a table or query); which pipeline built it and with what script; what it was made from, at which hash, pinned from which snapshot at which commit, and whether that has moved since the model was trained; and what is made from it. The page generator builds the index first and hands each page its record, so the pages are readers of the index and say what it says; `chartbook.provenance.panel()` is the reader. The index is still written beside the site at the end of the build, as before.
+
 ### Added — `chartbook index diff`: what changed between two builds
 
 The first reader of the index. Two `index.json` files, from two builds, say what a change did without anyone opening the site: records added and removed, and for each changed one, in a reviewer's words, whether its data moved (with the hashes and row counts), its pins moved, a model got a new version or its labels moved, it went out of date or came back up to date, or it is declared differently. The two are compared as published, so a build directory's index and the site's compare as equals, and `generated_at` is ignored. `--json` for a script or a bot; `--exit-code` for CI. In Python it is `chartbook.indexdiff.diff()`. A review of it found that a Plotly chart written without a fixed `div_id` embeds a fresh id on every render, so its hash in the index moved with nothing changed: ChartBook's plotting helpers, the examples and the template now pass one, and the docs say what to do in your own code.

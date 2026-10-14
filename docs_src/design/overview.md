@@ -2042,6 +2042,42 @@ site showed this. A `Series` record follows its dataframe and is listed on its o
 `trained_with` and `stale_inputs` are the building machine's. Nothing yet fetches the *before*
 index from git or from a deployed site; the reviewer brings both files.
 
+#### 6b. The provenance panel — as built
+
+*Added 2026-10-14, by the maintainer's choice of what to build next.* Every dataframe, chart and
+model page ends with a **Provenance** section: what this is and where it is; its content hash,
+size, rows and columns, or its definition hash; which pipeline built it and with what script;
+what it was made from, at which hash, pinned from which snapshot of which commit, and whether
+that has moved since the model was trained; what is made from it; and, for a model, which
+version the file is and its labels. `chartbook/provenance.py`, `panel()`; the include
+`provenance.md` in both themes; `tests/test_provenance.py`.
+
+**Proposed: decided here.**
+
+1. **The pages are readers of the index.** `build_all()` builds the index first, with the same
+   hash cache the end of the build uses, and hands each page generator the records; a page's
+   panel is `panel(record_id, records)`, which reads the index and nothing else. The index is
+   still written beside the site at the end of the build, as before, from the same cache, so a
+   build hashes nothing twice. This is the first step toward rendering the site from the index,
+   which the maintainer wants to discuss before it is built: a page already carries one section
+   written from its record.
+2. **Facts, not links.** The panel names assets by ID in code, and does not link them; the
+   pages' existing sections link. A link scheme that works for both themes belongs to the
+   site-from-index design.
+3. **The panel is the record's.** Nothing in it is computed from a manifest or a file; what the
+   index does not have (a pipeline's own commit, a build time) the panel does not say. Those
+   are the `Build` records the index design leaves for later.
+
+**Decisions by the maintainer, 2026-10-14, on the other readers.** An MCP server is an idea for
+later, filed as GitHub issue 54, not to be built now. Rendering the site from the index is to be
+discussed very soon and is not to be built before that conversation. A Dagster export is not
+wanted at all for now.
+
+**Known gaps.** A panel says nothing of a pipeline's own commit or of when the build ran: the
+index has no `Build` record yet. An input not in the site (another pipeline's dataframe, when the
+site is one pipeline's) is named and shown at its pinned hash only. The `Pipeline` page has no
+panel; its dependencies' pins are in the pipeline manifest section already.
+
 ## Working in the code
 
 The contributing guide ({doc}`../contributing`) has setup and style. These are the things that
@@ -2119,6 +2155,7 @@ maintainer.
 | 2026-10-13 | The project template moves into this repository, as `template/` | Step 4 above, "The project template, moved in" |
 | 2026-10-13 | The command rename is made now and is breaking: `chartbook docs` renders the site, `chartbook build` runs the build script and then renders. No compatibility beyond a warning | Step 4 above, "4c, as built" |
 | 2026-10-13 | No backwards compatibility in this work: the right design, even if it breaks, with a warning at most. The order of the remaining work is the builder's to choose | Step 4 above, "4c, as built" |
+| 2026-10-14 | Of step 6's readers: the provenance panel now; an MCP server later (issue 54); the site rendered from the index only after a conversation, very soon; no Dagster export for now | "6b, as built", above |
 
 ## Open questions, collected
 
