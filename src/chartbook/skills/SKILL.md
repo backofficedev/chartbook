@@ -47,6 +47,7 @@ chartbook run --snapshot    # In a pipeline OTHERS depend on: build, then declar
 chartbook snapshot          # The second half alone: copies its built assets to the store, labelled with the commit. Takes your word that they were built by that commit
 chartbook pin               # Freeze what [dependencies] have: each one's newest snapshot (never its folder); hashes and commit into chartbook.lock (commit it); clones git dependencies
 chartbook pin --frozen      # Writes NOTHING. Exit 1 unless chartbook.lock is complete and every pin is in the store. For CI and a read-only shared store
+chartbook index diff BEFORE AFTER  # What changed between two builds from their index.json (or site folders): data, pins, versions, labels, staleness. --json, --exit-code
 chartbook update [dep...]   # Move pins forward to each dependency's newest snapshot (pin never moves an existing pin)
 chartbook run               # Pin what has no pin, then run this pipeline's [scripts] build. Never moves a pin. NEVER builds in a folder it depends on
 chartbook run --frozen      # Pin nothing, fetch nothing, write nothing; build only if every pin is in the store (CI). Not with --snapshot

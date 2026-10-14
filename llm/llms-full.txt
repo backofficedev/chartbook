@@ -59,6 +59,7 @@ pip install -e ".[dev]"
 | `run` | Run a named script in this pipeline (default `build`, after pinning what has no pin). Never builds in a folder it depends on |
 | `store verify` | Hash every object in the store again; exit nonzero if one has changed |
 | `store gc` | Remove old snapshots and what nothing names; lists and asks first |
+| `index diff BEFORE AFTER` | What changed between two builds, from their `index.json` (files or site folders), compared as published: added, removed, and each changed record in a reviewer's words (data changed with hashes and row counts, pins moved, new versions, labels moved, out of date, declared differently); `--json`, `--exit-code` |
 | `config` | Configure the default catalog path for data loading |
 | `install skill` | Install the bundled Claude Code skill (user-level by default; `--project` for the repo) |
 

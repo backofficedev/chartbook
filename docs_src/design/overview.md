@@ -1999,6 +1999,49 @@ Once the index is stable: render the site from it, a Dagster export, an MCP serv
 provenance panel on each page, a diff of two indexes. Each is a reader of one file
 ({doc}`index-schema`, "What this unblocks").
 
+#### 6a. A diff of two indexes — as built
+
+*Added 2026-10-14.* The smallest reader, and the one a reviewer of any build wants:
+`chartbook index diff BEFORE AFTER` says what changed between two builds from their
+`index.json` files alone. `chartbook/indexdiff.py`; `tests/test_index_diff.py`.
+
+**Proposed: decided here.** The two indexes are compared *as published* (`index.published()`
+applied to both), so a build directory's full index and the site's compare as equals and no
+local path is ever in the output; `generated_at` is ignored. Records are matched by kind and
+ID. A changed record is described in words a reviewer uses, worked out from which fields
+differ: *data changed* for a content or definition hash, size, row count, columns or files;
+*pins moved* for a pipeline's dependencies; *N new version(s)*; *labels moved*; *out of date* or
+*up to date again*; *scores changed*; else *declared differently* with the field names. The
+hashes and row counts are printed for data. `--json` gives every changed field before and
+after; `--exit-code` exits 1 on any difference, as `git diff --exit-code` does. The index was
+judged stable enough for this: the diff reads only `kind`, `id` and whole fields, so a field
+added to a record later shows as *declared differently* and breaks nothing.
+
+**What an adversarial review found before merge** (2026-10-14; eleven findings, each fixed
+with a test unless said otherwise): a Plotly chart written without a fixed `div_id` embeds a
+fresh id on every render, so every chart's `content_hash` moved on every build and
+`--exit-code` would have fired for nothing (ChartBook's plotting helpers, the examples and the
+template pass a `div_id` now; a chart's change reads *rendered differently*; the docs say what
+to do in one's own code); the reference's example output could not be produced (a pipeline's
+`assets` changes with every asset added; the example shows it); *declared differently* was
+said of fields nobody declared (`assets`, `pinned_inputs`, `trained_with`, `inputs`,
+`location` have words of their own); the inputs out of date were cut at sixty characters
+(lists are printed whole); a different `root` or `schema` was silent (said first); *pins
+moved* fired for a dependency relocated with no pin moving (it reads the pinned hashes);
+a malformed record crashed (refused with a message); dead label parameters on
+`format_diff()` (gone); the model fields read from the local store make two machines' indexes
+differ for no change (not fixed; said in the docs); a test comment was false and an assertion
+passed for the wrong reason (fixed; Pipeline wording, a folder without `index.json`, a
+columns-only change and the envelope are tested); *versions changed* did not tell a version
+lost from one replaced (new and gone are counted and named).
+
+**Known gaps.** A record whose ID changes (a renamed asset) is a removal and an addition, not a
+rename. An executed notebook's HTML carries ids and times from its run, so its hash moves on
+every render and the diff says *rendered differently* of it, as of a chart; the live example
+site showed this. A `Series` record follows its dataframe and is listed on its own. A model's `versions`,
+`trained_with` and `stale_inputs` are the building machine's. Nothing yet fetches the *before*
+index from git or from a deployed site; the reviewer brings both files.
+
 ## Working in the code
 
 The contributing guide ({doc}`../contributing`) has setup and style. These are the things that

@@ -249,3 +249,6 @@ src/z_scratch_project_template.ipynb
 *Thumbs.db
 
 src/z_scratch_pipeline_template.ipynb
+
+# The Markdown chartbook docs writes before Sphinx runs; a build makes and removes it
+_docs_src/

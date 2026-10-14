@@ -87,7 +87,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(assets.path("chart/term_premium_10y_1y"), include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/term_premium_10y_1y"), include_plotlyjs="cdn", div_id="chart")
 
 # %% [markdown]
 # ## Chart 2: 10-Year minus 2-Year Spread
@@ -116,7 +116,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(assets.path("chart/term_premium_10y_2y"), include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/term_premium_10y_2y"), include_plotlyjs="cdn", div_id="chart")
 
 # %% [markdown]
 # ## Chart 3: 10-Year minus 3-Year Spread
@@ -145,7 +145,7 @@ fig.update_layout(
 )
 
 fig.show()
-fig.write_html(assets.path("chart/term_premium_10y_3y"), include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/term_premium_10y_3y"), include_plotlyjs="cdn", div_id="chart")
 
 # %% [markdown]
 # ## Save Data

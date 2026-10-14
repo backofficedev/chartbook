@@ -251,7 +251,7 @@ class ChartResult:
         :returns: HTML representation of the Plotly figure.
         :rtype: str
         """
-        return self.figure.to_html(include_plotlyjs="cdn", full_html=False)
+        return self.figure.to_html(include_plotlyjs="cdn", full_html=False, div_id="chartbook-figure")
 
     def save(
         self,
