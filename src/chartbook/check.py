@@ -2,9 +2,9 @@
 
 ``chartbook check`` runs everything here and exits nonzero when any problem
 is found. It looks at *metadata and paths* only — required fields under the
-active policy, the files a manifest points at, and license expiration
-dates. It never opens a data file; data-quality checks (row counts, null
-rates, schema assertions) are a separate concern.
+active policy, the files a manifest points at, the pipelines it depends on,
+and license expiration dates. It never opens a data file; data-quality
+checks (row counts, null rates, schema assertions) are a separate concern.
 
 The checks are thin wrappers over machinery the build already uses:
 :func:`chartbook.conf_validation.validate_source_files` for paths and
@@ -14,6 +14,7 @@ The checks are thin wrappers over machinery the build already uses:
 from __future__ import annotations
 
 import os
+import warnings
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -23,11 +24,16 @@ import tomli
 
 from chartbook.conf_validation import validate_source_files
 from chartbook.diagnostics import build_diagnostics
+from chartbook.identity import strip_url_credentials
 from chartbook.manifest import (
+    _read_manifest_file,
     _resolve_policy,
+    get_pipeline_dirs,
     get_pipeline_ids,
     get_pipeline_manifest,
+    resolve_project_type,
 )
+from chartbook.resolve import declared_assets, known_as, locate_pipeline
 from chartbook.utils import is_glob_pattern
 
 #: Default window, in days, inside which an unexpired license still fails.
@@ -242,40 +248,138 @@ def check_model_metrics(manifest: dict, base_dir: Path) -> list[Problem]:
     return problems
 
 
+def _dependency_table(key: str) -> str:
+    """A dependency's table as TOML writes it: ``dependencies."scope/name"``."""
+    bare = all(c.isascii() and (c.isalnum() or c in "_-") for c in key)
+    return f"dependencies.{key}" if bare else f'dependencies."{key}"'
+
+
+def _pipeline_at(directory: Path) -> Optional[str]:
+    """What is wrong with *directory* as a pipeline; None if nothing is."""
+    if not directory.is_dir():
+        return f"directory not found: {directory}"
+    toml_file = directory / "chartbook.toml"
+    if not toml_file.is_file():
+        return (
+            f"no chartbook.toml in {directory}; a dependency is a pipeline, "
+            f"and its chartbook.toml is what says what it has"
+        )
+    try:
+        raw = _read_manifest_file(directory)
+        project_type = resolve_project_type(raw, source=str(toml_file))
+    except tomli.TOMLDecodeError as error:
+        return f"cannot read {toml_file}: {error}"
+    except (ValueError, OSError) as error:
+        return str(error)  # these name the file themselves
+    if project_type != "pipeline":
+        return (
+            f"{directory} is a catalog, not a pipeline; depend on the "
+            f"pipelines it lists"
+        )
+    return None
+
+
+def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Report every declared dependency that cannot be found.
+
+    A ``path`` dependency must be a directory with a pipeline's
+    ``chartbook.toml`` in it, and not the pipeline's own. Nothing in it is
+    built, read or copied. A ``git`` dependency is not fetched yet, so it
+    cannot be looked at: it draws a warning that says so, not a problem.
+
+    In a catalog, a dependency whose key is one of the catalog's own
+    pipelines must be that pipeline. One ID that means two directories in
+    one build is reported, naming both.
+    """
+    problems = []
+    in_build = get_pipeline_dirs(manifest)
+    is_catalog = manifest["project"]["type"] == "catalog"
+    for pipeline_id, pipeline_dir in in_build.items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        toml_file = pipeline_dir / "chartbook.toml"
+        for key, entry in (pipeline_manifest.get("dependencies") or {}).items():
+            table = _dependency_table(key)
+            location = locate_pipeline(key, dependencies={key: entry})
+            if location.kind == "git":
+                warnings.warn(
+                    f"{toml_file}: [{table}] git: not checked. ChartBook does "
+                    f"not fetch git dependencies yet, so it cannot see whether "
+                    f"{strip_url_credentials(location.url)} holds a pipeline.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                continue
+
+            wrong = _pipeline_at(location.path)
+            if wrong is None and location.path.samefile(pipeline_dir):
+                wrong = (
+                    "this is the pipeline's own directory; a pipeline cannot "
+                    "depend on itself"
+                )
+            if wrong is not None:
+                problems.append(Problem(toml_file, table, "path", wrong))
+                continue
+
+            claimed = in_build.get(key) if is_catalog else None
+            if claimed is not None and not location.path.samefile(claimed):
+                problems.append(
+                    Problem(
+                        toml_file,
+                        table,
+                        "path",
+                        f"{key!r} is {location.path} here, and {claimed} in "
+                        f"this catalog: one ID for two pipelines. Point both "
+                        f"at one directory, or give this dependency another "
+                        f"key (a key in [dependencies] is a local name)",
+                    )
+                )
+    return problems
+
+
 def check_model_lineage(manifest: dict, base_dir: Path) -> list[Problem]:
     """Report training data that names a dataframe which is known not to exist.
 
-    A model may be trained on another pipeline's dataframe. When that
-    pipeline is part of the same catalog, its manifest is at hand, and a
-    dataframe it does not declare is a mistake. When it is not, nothing can
-    be said, and nothing is.
+    A model may be trained on another pipeline's dataframe. That pipeline
+    is looked for where anything else would look for it: in the
+    ``[dependencies]`` of the pipeline that declares the model, then among
+    the pipelines being checked with it. Where its ``chartbook.toml`` can
+    be read, a dataframe it does not declare is a mistake. Where the
+    pipeline is nowhere to be seen, or is in a git repository that has not
+    been fetched, nothing can be said, and nothing is.
     """
-    from chartbook.identity import resolve_pipeline_ref
-
     problems = []
-    pipeline_ids = get_pipeline_ids(manifest)
-    for pipeline_id in pipeline_ids:
+    in_build = get_pipeline_dirs(manifest)
+    for pipeline_id, pipeline_dir in in_build.items():
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
-        pipeline_dir = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
+        dependencies = pipeline_manifest.get("dependencies") or {}
         for model_id, model in (pipeline_manifest.get("models") or {}).items():
             for reference in model.get("_trained_on", []):
                 if reference.is_local:
                     continue  # the loader has already checked it
                 try:
-                    known_as = resolve_pipeline_ref(pipeline_ids, reference.pipeline_id)
+                    location = locate_pipeline(
+                        reference.pipeline_id,
+                        dependencies=dependencies,
+                        catalog=in_build,
+                    )
                 except (KeyError, ValueError):
                     continue
-                other = get_pipeline_manifest(manifest, known_as)
-                if reference.name not in (other.get("dataframes") or {}):
-                    declared = ", ".join(sorted(other.get("dataframes") or {})) or "(none)"
+                if location.path is None:
+                    continue
+                try:
+                    dataframes = declared_assets(location.path)["dataframes"]
+                except (OSError, ValueError):
+                    continue  # check_dependencies says what is wrong there
+                if reference.name not in dataframes:
                     problems.append(
                         Problem(
                             pipeline_dir / "chartbook.toml",
                             f"models.{model_id}",
                             "trained_on",
                             f"{str(reference)!r} names a dataframe that the "
-                            f"pipeline {known_as!r} does not declare. Its "
-                            f"dataframes are: {declared}",
+                            f"pipeline {known_as(location, in_build)!r} does "
+                            f"not declare. Its dataframes are: "
+                            f"{', '.join(dataframes) or '(none)'}",
                         )
                     )
     return problems
@@ -385,6 +489,7 @@ def run_checks(
     problems = [
         *check_required_fields(manifest, base_dir, policy_label=policy_label),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
+        *check_dependencies(manifest, base_dir),
         *check_model_metrics(manifest, base_dir),
         *check_model_lineage(manifest, base_dir),
         *check_licenses(manifest, base_dir, within_days=within_days, today=today),

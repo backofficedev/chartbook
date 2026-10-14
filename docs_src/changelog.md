@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — dependencies: `[dependencies]`
+
+A pipeline can now say which other pipelines it reads from, and where each one is:
+
+```toml
+[dependencies]
+"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+"ftsfr/crsp_compustat"  = { git = "https://gitlab.example.org/ftsfr/crsp_compustat", rev = "a1b2c3d" }
+```
+
+Until now a pipeline could *state* that a model was trained on another pipeline's dataframe, and nothing knew where that pipeline was. So nothing could be checked unless both happened to sit in one catalog. The key is the name this pipeline uses for the other one, and the value is where to find it. Keeping the two apart means a repository can move and only one line changes: code, lineage and the index keep saying `ftsfr/fed_yield_curve`.
+
+What declaring a dependency does today:
+
+- **`chartbook check` says whether it can be found.** A `path` that is not there, has no `chartbook.toml`, is a catalog, or is the pipeline's own directory is reported, naming the entry. So is a model whose `trained_on` names a dataframe the other pipeline does not declare, which until now was caught only inside a catalog.
+- **`index.json` lists them**, as `dependencies` in the pipeline's record. A model's training data in another pipeline is written by the dependency's name, so `fed_yield_curve:treasury_rates` in a manifest becomes `ftsfr/fed_yield_curve:treasury_rates` in the index. In a catalog, a dependency that is one of the catalog's own pipelines is written by the catalog's ID for it, so the entry matches a record in the same file.
+- **A `trained_on` that names a pipeline not in `[dependencies]` now warns** when the manifest loads, and says what to add. It still loads. It will become an error once references to other pipelines resolve.
+
+What it does not do yet: nothing is fetched, copied or pinned. A `git` dependency is recorded and not looked at, and `check` says so in a warning. `chartbook path other:asset` and `data.path("other:asset")` are still refused, because such a reference is meant to resolve to a frozen copy and not to the other pipeline's working directory, and that needs the lockfile and the store. `data.load(pipeline=…, dataframe=…)` still looks in a catalog and does not read this table.
+
+A `[dependencies]` table used to be ignored. One that is malformed now stops the manifest from loading, with a message naming the entry, and a catalog that has one is refused: a catalog reads from no pipeline. This is the first of five parts of step 3 in {doc}`design/overview`; the design is {doc}`design/asset-graph`.
+
 ### Added — models: `[models]` and `chartbook.models`
 
 A pipeline can now declare a trained model, the way it declares a dataframe or a chart:

@@ -249,6 +249,30 @@ def remote_to_web_url(remote: Optional[str]) -> str:
     return f"{scheme}://{host}/{path}" if path else ""
 
 
+def strip_url_credentials(url: str) -> str:
+    """Take any user name and password out of a repository URL.
+
+    For anything that shows or publishes a URL a manifest wrote: an index,
+    a warning in a CI log. ``https://user:token@host/…`` becomes
+    ``https://host/…``. An ssh URL keeps its user (``ssh://git@host/…``),
+    which is part of the address and not a secret, and loses only a
+    password. A URL with no scheme (``git@host:acme/rates.git``, a path on
+    disk) is returned as it is.
+
+    Unlike :func:`remote_to_web_url`, the result is still the address git
+    fetches from.
+
+    :param url: The URL as written.
+    :returns: The URL without credentials.
+    """
+    match = re.match(r"^(?P<scheme>[A-Za-z][A-Za-z0-9+.-]*)://(?P<user>[^@/]*)@", url)
+    if not match:
+        return url
+    user = match["user"].split(":", 1)[0]
+    keep = f"{user}@" if match["scheme"].lower() not in ("http", "https") else ""
+    return f"{match['scheme']}://{keep}{url[match.end():]}"
+
+
 def clear_git_remote_cache() -> None:
     """Clear the cached git remote lookups (mainly for tests)."""
     _git_remote_cache.clear()
@@ -302,10 +326,12 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
     return name_part
 
 
-def resolve_pipeline_ref(keys: Iterable[str], ref: str) -> str:
-    """Resolve a user-supplied pipeline reference against catalog keys.
+def match_pipeline_ref(
+    keys: Iterable[str], ref: str, where: str = "this catalog"
+) -> Optional[str]:
+    """Match a user-supplied pipeline reference against a set of pipeline IDs.
 
-    Resolution order:
+    Matching order:
 
     1. Exact match on the (possibly scoped) key.
     2. URL references are normalized to ``scope/name`` and matched exactly.
@@ -313,13 +339,20 @@ def resolve_pipeline_ref(keys: Iterable[str], ref: str) -> str:
        if exactly one does; multiple matches raise an error listing the
        candidates.
 
-    :param keys: The catalog's pipeline keys.
-    :param ref: The reference to resolve (bare, scoped, or URL).
-    :returns: The matching catalog key.
+    Finding nothing is not an error here, so that a caller with somewhere
+    else to look can go on to it. :func:`resolve_pipeline_ref` is this
+    function for a caller with nowhere else.
+
+    :param keys: The pipeline IDs to match against: a catalog's keys, or
+        those of a ``[dependencies]`` table.
+    :param ref: The reference to match (bare, scoped, or URL).
+    :param where: What *keys* are the keys of, to say where a name is
+        ambiguous.
+    :returns: The matching key, or None if there is none.
     :raises UnsupportedRevisionError: If the reference carries ``@rev``.
     :raises UnsupportedRegistryError: If the reference carries a registry
         prefix.
-    :raises KeyError: If no key matches, or a bare name is ambiguous.
+    :raises KeyError: If a bare name matches more than one key.
     """
     keys = list(keys)
     normalized = normalize_ref_to_id(ref)
@@ -333,11 +366,31 @@ def resolve_pipeline_ref(keys: Iterable[str], ref: str) -> str:
             return matches[0]
         if len(matches) > 1:
             raise KeyError(
-                f"Pipeline reference {ref!r} is ambiguous in this catalog. "
+                f"Pipeline reference {ref!r} is ambiguous in {where}. "
                 f"Matching pipelines: {sorted(matches)}. "
                 f"Use the scoped form, e.g. {matches[0]!r}."
             )
+    return None
 
-    raise KeyError(
-        f"Pipeline {ref!r} not found in catalog. Available pipelines: {sorted(keys)}"
-    )
+
+def resolve_pipeline_ref(keys: Iterable[str], ref: str) -> str:
+    """Resolve a user-supplied pipeline reference against catalog keys.
+
+    The matching rules are :func:`match_pipeline_ref`'s.
+
+    :param keys: The catalog's pipeline keys.
+    :param ref: The reference to resolve (bare, scoped, or URL).
+    :returns: The matching catalog key.
+    :raises UnsupportedRevisionError: If the reference carries ``@rev``.
+    :raises UnsupportedRegistryError: If the reference carries a registry
+        prefix.
+    :raises KeyError: If no key matches, or a bare name is ambiguous.
+    """
+    keys = list(keys)
+    matched = match_pipeline_ref(keys, ref)
+    if matched is None:
+        raise KeyError(
+            f"Pipeline {ref!r} not found in catalog. "
+            f"Available pipelines: {sorted(keys)}"
+        )
+    return matched

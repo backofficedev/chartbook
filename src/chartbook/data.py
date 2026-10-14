@@ -42,12 +42,12 @@ from pathlib import Path
 from typing import Optional, Union
 
 from chartbook import assets as _assets
-from chartbook.identity import resolve_pipeline_ref
 from chartbook.refs import AssetRef, KindMismatchError
 from chartbook.resolve import (
     FileLocation,
     caller_start_dirs,
     find_manifest_dir,
+    locate_in_catalog,
     require_file,
     resolve,
 )
@@ -178,7 +178,7 @@ def _get_dataframe_docs_info_from_catalog(
 
     manifest = load_manifest(base_dir=catalog_path.parent)
 
-    pipeline_key = resolve_pipeline_ref(manifest.get("pipelines", {}).keys(), pipeline)
+    pipeline_key = locate_in_catalog(manifest, pipeline)
 
     pipeline_manifest = manifest["pipelines"][pipeline_key]
     available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())

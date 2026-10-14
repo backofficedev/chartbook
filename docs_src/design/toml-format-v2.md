@@ -578,7 +578,14 @@ that is valid today.
   write-up, given as `docs` or as `docs_path`".
 - **`[models.x]` is read** ({doc}`models`). It declares a trained model: `path`, `trained_on`,
   `metrics_path` and a write-up. A manifest with only `[models]` is a pipeline.
-- **Tables that are designed and not yet read by the loader:** `[dependencies]` and `[scripts]`
+- **`[dependencies]` is read** ({doc}`asset-graph`, "Identity and location"). Each entry names
+  another pipeline and says where it is: `{ path = "../x" }` or
+  `{ git = "https://…", rev = "…" }`. `chartbook check` verifies each `path`. Nothing is fetched
+  or pinned yet. Two things in "Future work" above are not how it was built. `{ rev = "a1b2c3d" }`
+  with no `git` is refused, because working out a repository from an ID needs a default host that
+  is not built. And a `path` dependency is not "unpinned": the asset graph decided that both kinds
+  are pinned. A catalog may not have the table.
+- **Tables that are designed and not yet read by the loader:** `[scripts]`
   ({doc}`asset-graph`), and `[sources.x]` with a dataframe's `table` and `query`
   ({doc}`data-access`). A manifest that contains one of them today loads,
   and the table is ignored.

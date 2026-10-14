@@ -98,7 +98,7 @@ chartbook check [OPTIONS]
 - `--within DAYS`: Fail on licenses that expire within this many days (default: 30)
 - `--policy PATH`: Take required fields from the `[policy]` table of this catalog `chartbook.toml` (or any TOML file with a `[policy]` table)
 
-Reports, one per line as `file: [table] field: message`: fields the policy requires that are missing or empty; declared paths (`path`, `docs_path`, `readme`, `logo`, `favicon`) whose file does not exist; and dataframes whose `license_expiration` (ISO date; `"N/A"` means no expiry) has passed or is inside the window. A catalog is checked against its own `[policy.required]`; a standalone pipeline against the built-in recommended lists unless `--policy` is given. `policy.mode` is ignored — it governs builds. No data file is opened.
+Reports, one per line as `file: [table] field: message`: fields the policy requires that are missing or empty; declared paths (`path`, `docs_path`, `readme`, `logo`, `favicon`) whose file does not exist; entries of `[dependencies]` whose `path` is not a directory holding a pipeline's `chartbook.toml`, and a model's `trained_on` naming a dataframe that pipeline does not declare; and dataframes whose `license_expiration` (ISO date; `"N/A"` means no expiry) has passed or is inside the window. A `git` dependency is not fetched yet, and a `trained_on` naming a pipeline that `[dependencies]` does not declare is taken on trust; each prints a `warning:` line and does not fail. A catalog is checked against its own `[policy.required]`; a standalone pipeline against the built-in recommended lists unless `--policy` is given. `policy.mode` is ignored — it governs builds. No data file is opened.
 
 ### chartbook path
 
@@ -108,9 +108,9 @@ Print the path the enclosing `chartbook.toml` declares for an asset of the curre
 chartbook path REF [--kind KIND] [--project-dir PATH]
 ```
 
-`REF` names the asset. A dataframe is its key in `[dataframes]` (`repo_public`); any other asset has its kind in front: `chart/repo_rates`, `notebook/analysis`, `note/methodology`. `--kind chart` is the same as writing `chart/` in front. Each kind has its own names. The manifest is found by walking up from the current directory (or `--project-dir`). The absolute path is the only thing printed, whether or not the file exists, so Make, shell, R and Stata can capture it for inputs and outputs. An undeclared name exits 1 and names the table to add. The rest of the reference grammar, `[registry/][scope/]pipeline:[kind/]name[#part][@rev]` — another pipeline's asset, `#part`, `@rev`, `model/name` — parses and is refused as not yet supported.
+`REF` names the asset. A dataframe is its key in `[dataframes]` (`repo_public`); any other asset has its kind in front: `chart/repo_rates`, `notebook/analysis`, `note/methodology`. `--kind chart` is the same as writing `chart/` in front. Each kind has its own names. The manifest is found by walking up from the current directory (or `--project-dir`). The absolute path is the only thing printed, whether or not the file exists, so Make, shell, R and Stata can capture it for inputs and outputs. An undeclared name exits 1 and names the table to add. The rest of the reference grammar, `[registry/][scope/]pipeline:[kind/]name[#part][@rev]` — another pipeline's asset, `#part`, `@rev` — parses and is refused as not yet supported.
 
-A trained model is declared in `[models.<id>]` with `path` (a file or a directory; required), `trained_on` (a list of this pipeline's dataframe keys), `metrics_path` (a flat JSON object of scores written by the training code), and `docs_path` or `docs`. It is addressed as `model/<id>`, gets a page (write-up, scores, links to the dataframes it was trained on) and a `Model` record in `index.json`. ChartBook never loads or runs a model; `chartbook.models.path("<id>")` returns its path. Versions (`@v3`), labels (`@champion`) and parts (`#file`) are not supported yet.
+A trained model is declared in `[models.<id>]` with `path` (a file or a directory; required), `trained_on` (a list of dataframes: this pipeline's keys, or `other_pipeline:key` for a pipeline declared in `[dependencies]`), `metrics_path` (a flat JSON object of scores written by the training code), and `docs_path` or `docs`. It is addressed as `model/<id>`, gets a page (write-up, scores, links to the dataframes it was trained on) and a `Model` record in `index.json`. ChartBook never loads or runs a model; `chartbook.models.path("<id>")` returns its path. Versions (`@v3`), labels (`@champion`) and parts (`#file`) are not supported yet.
 
 Python equivalents, both returning a `pathlib.Path`: `chartbook.assets.path("chart/repo_rates")` (or `assets.path("repo_rates", kind="chart")`) for any asset, and `chartbook.data.path("repo_public")` for dataframes only.
 
@@ -275,6 +275,8 @@ ChartBook uses a TOML configuration file (`chartbook.toml`) to define your proje
 [dataframes]       # Dataframe definitions
 [notes]            # Additional documentation notes
 [notebooks]        # Jupyter notebook references
+[models]           # Trained models
+[dependencies]     # Other pipelines this one reads from
 ```
 
 There is no format version key. The minimal valid pipeline manifest is an empty file — its presence alone marks a directory as a ChartBook pipeline.
@@ -451,6 +453,16 @@ path = "_output/01_exploratory_analysis.ipynb"
 description = "Time series models for revenue forecasting"
 path = "_output/02_model_development.ipynb"
 ```
+
+### [dependencies] - Other Pipelines This One Reads From
+
+```toml
+[dependencies]
+"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+"ftsfr/crsp_compustat"  = { git = "https://gitlab.example.org/ftsfr/crsp_compustat", rev = "a1b2c3d" }
+```
+
+The key is the name this pipeline knows the other one by: a pipeline ID, `name` or `scope/name` (quote a key that has a `/`). The value says where it is: `path` (a directory holding its `chartbook.toml`, relative to this pipeline's root or absolute) or `git` (a repository URL, with an optional `rev`), never both. `chartbook check` verifies that each `path` holds a pipeline and that it declares any dataframe a model's `trained_on` names (`trained_on = ["fed_yield_curve:treasury_rates"]`; the scope may be left off when only one dependency has that name). `index.json` lists them under `dependencies` in the pipeline's record. Nothing is fetched, copied or pinned yet: a `git` dependency is only recorded, and `chartbook path fed_yield_curve:treasury_rates` is still refused. A catalog cannot have this table.
 
 ---
 

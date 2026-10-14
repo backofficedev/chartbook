@@ -28,15 +28,23 @@ Two forms of reference resolve today:
 The rest of the grammar (``pipeline:asset``, ``#part``, ``@rev``, a
 registry prefix) is recognized and refused as not yet supported. See
 ``docs_src/design/references.md``.
+
+Finding *a pipeline* by name is here too, in :func:`locate_pipeline`: the
+one resolution chain, which asks the ``[dependencies]`` of the pipeline
+that wants to know, then the catalog. ``chartbook check``, the index and
+the catalog lookups above all go through it. It says where a pipeline is;
+it does not yet make ``pipeline:asset`` resolve to a path, which waits for
+the lockfile and the store (``docs_src/design/asset-graph.md``).
 """
 
 from __future__ import annotations
 
 import dataclasses
+import difflib
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Iterable, Optional, Union
+from typing import ClassVar, Iterable, Mapping, Optional, Union
 
 import tomli
 
@@ -49,7 +57,7 @@ from chartbook.errors import (
 from chartbook.identity import (
     UnsupportedRegistryError,
     UnsupportedRevisionError,
-    resolve_pipeline_ref,
+    match_pipeline_ref,
 )
 from chartbook.refs import DEFAULT_KIND, KIND_TABLES, AssetRef, parse_asset_ref
 
@@ -101,6 +109,186 @@ class FileLocation(Location):
     kind: ClassVar[str] = "file"
 
     path: Path
+
+
+@dataclass(frozen=True)
+class PipelineLocation:
+    """Where a pipeline's source is, and which step of the chain said so.
+
+    Attributes:
+        id: The name the pipeline goes by where it was found: its key in
+            ``[dependencies]``, or its key in the catalog.
+        found_in: ``"dependencies"`` or ``"catalog"``.
+        kind: ``"path"``, a directory on this machine, or ``"git"``, a
+            repository that has to be fetched.
+        path: The pipeline's directory, when *kind* is ``"path"``. Absolute;
+            nothing has checked that it exists.
+        url: The repository, when *kind* is ``"git"``.
+        rev: The revision of it to fetch, if the manifest names one.
+    """
+
+    id: str
+    found_in: str
+    kind: str
+    path: Optional[Path] = None
+    url: Optional[str] = None
+    rev: Optional[str] = None
+
+
+class PipelineNotFoundError(KeyError):
+    """Raised when no step of the resolution chain knows a pipeline.
+
+    Attributes:
+        pipeline: The reference that was looked up.
+        candidates: The pipelines each step that was asked does know, by
+            step: ``"dependencies"`` and ``"catalog"``.
+    """
+
+    def __init__(self, pipeline: str, candidates: dict[str, list[str]]):
+        self.pipeline = pipeline
+        self.candidates = candidates
+        labels = {
+            "dependencies": "Declared in [dependencies]",
+            "catalog": "In the catalog",
+        }
+        known = [name for names in candidates.values() for name in names]
+        close = difflib.get_close_matches(pipeline, known, n=1)
+        parts = [f"Pipeline {pipeline!r} not found."]
+        if close:
+            parts.append(f"Did you mean {close[0]!r}?")
+        parts += [
+            f"{labels[step]}: {', '.join(names) or '(none)'}."
+            for step, names in candidates.items()
+        ]
+        super().__init__(" ".join(parts))
+
+    def __str__(self) -> str:
+        # KeyError shows its message as a quoted string
+        return self.args[0]
+
+
+def locate_pipeline(
+    pipeline: str,
+    *,
+    dependencies: Optional[Mapping[str, dict]] = None,
+    catalog: Optional[Mapping[str, Union[str, Path]]] = None,
+) -> PipelineLocation:
+    """Find where a pipeline is. This is the one resolution chain.
+
+    Each place a pipeline's location can come from is asked in turn, and
+    the first that knows the name answers:
+
+    1. ``[dependencies]`` of the pipeline that is asking: an explicit
+       location, written down by the project that needs it.
+    2. The local catalog.
+    3. *(Reserved)* configured registries. Nothing is asked today.
+    4. Otherwise an error that lists what steps 1 and 2 do know.
+
+    At each step the name is matched as a catalog matches one
+    (:func:`chartbook.identity.match_pipeline_ref`): a scoped ID exactly,
+    a bare name if exactly one entry has it, a URL by the ID it reduces to.
+    A bare name that fits two entries of one step is an error there; it
+    does not fall through to the next step to be guessed at.
+
+    Nothing on disk is looked at. The caller gathers the two tables, and
+    what comes back is where the pipeline is said to be, whether or not it
+    is there.
+
+    :param pipeline: A reference to a pipeline: bare name, scoped ID or URL.
+    :param dependencies: The asking pipeline's ``[dependencies]``, as
+        :func:`chartbook.manifest.validate_dependencies` returns it.
+    :param catalog: The catalog's pipelines: each key and its directory.
+    :returns: Where the pipeline is.
+    :raises PipelineNotFoundError: If no step knows it. A ``KeyError``.
+    :raises KeyError: If a bare name is ambiguous within one step.
+    :raises UnsupportedRevisionError: If the reference carries ``@rev``.
+    :raises UnsupportedRegistryError: If it carries a registry prefix.
+    """
+    dependencies = dependencies or {}
+    catalog = catalog or {}
+
+    # 1. An explicit location in [dependencies]
+    key = match_pipeline_ref(dependencies, pipeline, where="[dependencies]")
+    if key is not None:
+        entry = dependencies[key]
+        if "git" in entry:
+            return PipelineLocation(
+                id=key,
+                found_in="dependencies",
+                kind="git",
+                url=entry["git"],
+                rev=entry.get("rev"),
+            )
+        return PipelineLocation(
+            id=key,
+            found_in="dependencies",
+            kind="path",
+            path=Path(entry["_resolved_path"]),
+        )
+
+    # 2. The local catalog
+    key = match_pipeline_ref(catalog, pipeline, where="the catalog")
+    if key is not None:
+        return PipelineLocation(
+            id=key, found_in="catalog", kind="path", path=Path(catalog[key])
+        )
+
+    # 3. Configured registries. Reserved: a registry-qualified reference is
+    #    refused above, and there is nothing to ask about any other.
+
+    # 4. Nothing knows it
+    raise PipelineNotFoundError(
+        pipeline,
+        {"dependencies": sorted(dependencies), "catalog": sorted(catalog)},
+    )
+
+
+def known_as(
+    location: PipelineLocation, pipelines: Mapping[str, Union[str, Path]]
+) -> str:
+    """The ID a located pipeline has among the pipelines of one build.
+
+    A dependency's key is a local name: one pipeline may call
+    ``../fed_yield_curve`` ``yield_curve`` while the catalog it is built in
+    calls the same directory ``ftsfr/fed_yield_curve``. Within a build the
+    catalog's name is the one every record uses, so a located pipeline that
+    is one of the build's own is known by the build's ID for it. One that is
+    not keeps the name it was found under.
+
+    :param location: A pipeline, from :func:`locate_pipeline`.
+    :param pipelines: The pipelines of the build: each ID and its directory.
+    """
+    if location.path is not None:
+        for pipeline_id, directory in pipelines.items():
+            if _same_directory(location.path, directory):
+                return pipeline_id
+    return location.id
+
+
+def locate_in_catalog(catalog_manifest: dict, pipeline: str) -> str:
+    """Find a pipeline in a loaded catalog, and return its key there.
+
+    For callers that name a catalog outright, as ``data.load(pipeline=...,
+    dataframe=...)`` does. They enter the chain at its second step: there
+    is no asking pipeline, so no ``[dependencies]`` to look in first.
+
+    :param catalog_manifest: A catalog, from
+        :func:`chartbook.manifest.load_manifest`.
+    :param pipeline: A reference to a pipeline: bare name, scoped ID or URL.
+    :raises KeyError: If the catalog has no such pipeline, or a bare name
+        is ambiguous in it.
+    """
+    pipelines = catalog_manifest.get("pipelines", {})
+    catalog = {key: entry["pipeline_base_dir"] for key, entry in pipelines.items()}
+    return locate_pipeline(pipeline, catalog=catalog).id
+
+
+def _same_directory(first: Union[str, Path], second: Union[str, Path]) -> bool:
+    """Whether two paths are one directory; by name if either is not there."""
+    try:
+        return os.path.samefile(first, second)
+    except OSError:
+        return Path(first) == Path(second)
 
 
 def resolve_catalog_path(catalog_path: Optional[Union[str, Path]] = None) -> Path:
@@ -167,6 +355,21 @@ def _read_raw_manifest(manifest_path: Path) -> dict:
         raw = tomli.load(f)
     _raw_manifest_cache[manifest_path] = (stamp, raw)
     return raw
+
+
+def declared_assets(manifest_dir: Union[str, Path]) -> dict[str, list[str]]:
+    """The names of the assets a pipeline declares, by manifest table.
+
+    Read from the raw ``chartbook.toml`` and nothing else, as a local
+    reference is resolved.
+
+    :param manifest_dir: The pipeline's directory.
+    :returns: The keys of each table in :data:`ASSET_TABLES`, sorted.
+    :raises OSError: If there is no ``chartbook.toml`` there to read.
+    :raises ValueError: If it is not valid TOML.
+    """
+    raw = _read_raw_manifest(Path(manifest_dir) / MANIFEST_NAME)
+    return {table: sorted(raw.get(table) or {}) for table in ASSET_TABLES}
 
 
 def parse_declared_ref(
@@ -272,7 +475,7 @@ def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
 
     # Only the table for the reference's kind is searched. The others are
     # read so that a miss can say what the name is, if it is something else.
-    declared = {t: sorted(raw.get(t) or {}) for t in ASSET_TABLES}
+    declared = declared_assets(manifest_dir)
     if name not in declared[table]:
         raise AssetNotDeclaredError(
             name,
@@ -302,7 +505,7 @@ def _resolve_in_catalog(
 
     manifest = load_manifest(base_dir=catalog_path.parent)
 
-    pipeline_key = resolve_pipeline_ref(manifest.get("pipelines", {}).keys(), pipeline)
+    pipeline_key = locate_in_catalog(manifest, pipeline)
 
     pipeline_manifest = manifest["pipelines"][pipeline_key]
     available_dataframes = list(pipeline_manifest.get("dataframes", {}).keys())

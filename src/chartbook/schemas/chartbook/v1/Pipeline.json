@@ -79,8 +79,58 @@
     },
     "dependencies": {
       "type": "array",
+      "description": "The pipelines this one declares in [dependencies]. Absent when the manifest has no such table.",
       "items": {
-        "type": "object"
+        "type": "object",
+        "required": [
+          "id",
+          "via",
+          "location"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The pipeline's ID in this index when it is one of its pipelines; otherwise its key in [dependencies]."
+          },
+          "via": {
+            "enum": [
+              "path",
+              "rev"
+            ],
+            "description": "Whether it comes from a local directory or a fetched revision."
+          },
+          "location": {
+            "type": "object",
+            "description": "Where the dependency's source comes from. For a directory, `path` is as declared and `value` is absolute and absent from a published index.",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "path",
+                  "git"
+                ]
+              },
+              "path": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "rev": {
+                "type": "string"
+              }
+            }
+          },
+          "pinned_hash": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+          }
+        }
       }
     },
     "assets": {

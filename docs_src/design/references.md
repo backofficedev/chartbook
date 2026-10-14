@@ -110,6 +110,16 @@ a key of `[dependencies]`, a key of a catalog's `[pipelines]`. Those take a pipe
 they also accept a repository URL. The `pipeline-id` half of an asset reference follows the same
 rules, minus the URL form.
 
+*(Corrected 2026-10-12, proposed.)* That is true of a *lookup*, such as `data.load(pipeline=…)`.
+A **key** of `[dependencies]` or of `[pipelines]` is narrower: a plain ID, `name` or
+`scope/name`. A URL is never an identity, so it is not a key; and a dependency's revision is
+written in its entry (`rev = "a1b2c3d"`), so `@rev` in a key is refused as reserved.
+
+Where a pipeline is found, given its name, is one function: `chartbook.resolve.locate_pipeline`.
+It asks the `[dependencies]` of the pipeline that wants to know, then the catalog. A scoped name
+must match exactly. A bare name matches if exactly one entry has it, so with
+`"ftsfr/fed_yield_curve"` declared, `fed_yield_curve:treasury_rates` names that pipeline.
+
 ## Kinds
 
 | Kind | Manifest table | Index record | What `#part` means | Python front door |
@@ -275,7 +285,7 @@ first asset that needs them.
 | Local dataframe | `treasury_rates` | **Resolves** |
 | Local chart, notebook, note | `chart/curve_today` | **Resolves** |
 | A dataframe through a catalog | `data.load(pipeline="fed_yield_curve", dataframe="treasury_rates")` | **Resolves**, by the older two-argument call |
-| Another pipeline's asset | `fed_yield_curve:treasury_rates` | Parses. Asking for its path raises `UnsupportedReferenceError`. It may be *stated* as a model's training data ({doc}`models`) |
+| Another pipeline's asset | `fed_yield_curve:treasury_rates` | Parses. Asking for its path raises `UnsupportedReferenceError`. It may be *stated* as a model's training data ({doc}`models`), and its pipeline may be declared in `[dependencies]`, which lets `check` verify it |
 | A part | `treasury_rates#dgs10` | Parses. `UnsupportedReferenceError` |
 | A version | `treasury_rates@a1b2c3d` | Parses. `UnsupportedRevisionError` |
 | A registry | `charthub.example/acme/rates:gdp` | Parses. `UnsupportedRegistryError` |
@@ -292,7 +302,7 @@ What unlocks each row is in the {doc}`overview`'s build order.
 | Module | What it does |
 |---|---|
 | `chartbook/refs.py` | The grammar. `AssetRef`, `parse_asset_ref()`, `KINDS`, `KIND_TABLES`, `KindMismatchError`. Parses and formats; knows nothing about what resolves |
-| `chartbook/resolve.py` | The one resolver. `resolve(ref, kind=…)` returns a typed `Location`. Reserved forms are refused in two functions: `parse_declared_ref()` says what a manifest may *state* (this pipeline's assets and other pipelines'), and `parse_local_ref()` says what *resolves* (this pipeline's only) |
+| `chartbook/resolve.py` | The one resolver. `resolve(ref, kind=…)` returns a typed `Location`. Reserved forms are refused in two functions: `parse_declared_ref()` says what a manifest may *state* (this pipeline's assets and other pipelines'), and `parse_local_ref()` says what *resolves* (this pipeline's only). `locate_pipeline()` is the resolution chain: where a *pipeline* is, from `[dependencies]` and then the catalog |
 | `chartbook/assets.py` | The general front door: `assets.path()`, `assets.parse()`, `assets.AssetRef` |
 | `chartbook/data.py` | The dataframe front door: `data.path()`, `data.load()`, `data.scratch()` |
 | `chartbook/models.py` | The model front door: `models.path()` |
@@ -313,6 +323,9 @@ Rules for whoever extends this:
 - **To unlock a form**, remove its refusal in `parse_local_ref()` (or `parse_declared_ref()`, for
   parts, versions and registries) and add the resolution next to `_resolve_local()`. The
   grammar does not change.
+- **To make `pipeline:asset` resolve** (step 3d): `locate_pipeline()` already says where the
+  pipeline is and whether `[dependencies]` or the catalog said so. What is missing is the
+  lockfile and the store between that answer and a path.
 
 ## Why this shape
 

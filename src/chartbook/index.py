@@ -9,8 +9,9 @@ need nothing else.
 
 The format is specified in ``docs_src/design/index-schema.md``. This module
 writes ``Catalog``, ``Pipeline``, ``Dataframe``, ``Series``, ``Chart``,
-``Notebook``, ``Note`` and ``Model`` records. ``Build`` records and
-dependencies come with the parts of the asset graph that produce them.
+``Notebook``, ``Note`` and ``Model`` records, and each pipeline's declared
+``dependencies``. ``Build`` records and pinned hashes come with the parts
+of the asset graph that produce them.
 
 Two forms of the same index are written:
 
@@ -38,13 +39,18 @@ import os
 import warnings
 from datetime import date, datetime, time, timezone
 from pathlib import Path
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Iterable, Mapping, Optional, Union
 
 from chartbook import hashing
 from chartbook.__about__ import __version__
-from chartbook.identity import ID_COMPONENT_PATTERN, resolve_pipeline_ref
-from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest
+from chartbook.identity import ID_COMPONENT_PATTERN, strip_url_credentials
+from chartbook.manifest import (
+    get_pipeline_dirs,
+    get_pipeline_ids,
+    get_pipeline_manifest,
+)
 from chartbook.refs import KIND_TABLES, AssetRef, parse_asset_ref
+from chartbook.resolve import known_as, locate_pipeline
 
 #: The version of the file's envelope.
 SCHEMA = "chartbook/index/v1"
@@ -294,21 +300,60 @@ def _series_records(
     return records
 
 
-def _input_id(reference: AssetRef, pipeline_id: str, known_pipelines: Iterable[str]) -> str:
+def _input_id(
+    reference: AssetRef,
+    pipeline_id: str,
+    dependencies: Mapping[str, dict],
+    known_pipelines: Mapping[str, Path],
+) -> str:
     """The ID of an asset that another one was made from.
 
     A local reference belongs to the pipeline that states it. One that
-    names another pipeline is written as that pipeline is known in this
-    build, if it is in it (a catalog knows ``rates`` as ``ftsfr/rates``),
-    and as stated otherwise.
+    names another pipeline is written by the ID that pipeline has in this
+    build, if it is in it (a catalog knows ``rates`` as ``ftsfr/rates``);
+    otherwise by the name ``[dependencies]`` declares it under; and as
+    stated if nothing knows it.
     """
     if reference.is_local:
         return str(reference.in_pipeline(pipeline_id))
     try:
-        known_as = resolve_pipeline_ref(known_pipelines, reference.pipeline_id)
+        location = locate_pipeline(
+            reference.pipeline_id, dependencies=dependencies, catalog=known_pipelines
+        )
     except (KeyError, ValueError):
         return str(reference)
-    return str(reference.in_pipeline(known_as))
+    return str(reference.in_pipeline(known_as(location, known_pipelines)))
+
+
+def _dependency_records(
+    dependencies: Mapping[str, dict], known_pipelines: Mapping[str, Path]
+) -> list[dict]:
+    """A pipeline's declared dependencies, as its record lists them.
+
+    Each is named by the ID it has in this build when it is one of the
+    build's pipelines, and by its key in ``[dependencies]`` otherwise.
+    Nothing is pinned yet, so there is no ``pinned_hash``.
+    """
+    records = []
+    for key, entry in dependencies.items():
+        location = locate_pipeline(key, dependencies={key: entry})
+        if location.kind == "git":
+            # The index is published; a token in the manifest's URL is not
+            where = {"kind": "git", "url": strip_url_credentials(location.url)}
+            if location.rev:
+                where["rev"] = location.rev
+            via = "rev"
+        else:
+            where = {
+                "kind": "path",
+                "path": entry["path"],
+                "value": location.path.as_posix(),
+            }
+            via = "path"
+        records.append(
+            {"id": known_as(location, known_pipelines), "via": via, "location": where}
+        )
+    return sorted(records, key=lambda record: record["id"])
 
 
 def _asset_records(
@@ -318,7 +363,8 @@ def _asset_records(
     pipeline_id: str,
     base_dir: Path,
     cache: Optional[hashing.HashCache],
-    known_pipelines: Iterable[str] = (),
+    dependencies: Mapping[str, dict],
+    known_pipelines: Mapping[str, Path],
 ) -> list[dict]:
     """The record for one asset, followed by its series if it is a dataframe."""
     ref = AssetRef(kind=kind, name=name).in_pipeline(pipeline_id)
@@ -362,7 +408,7 @@ def _asset_records(
         skip = ("trained_on", "metrics_path")
         if "trained_on" in entry:
             record["inputs"] = [
-                _input_id(reference, pipeline_id, known_pipelines)
+                _input_id(reference, pipeline_id, dependencies, known_pipelines)
                 for reference in entry.get("_trained_on", [])
             ]
         metrics = _model_metrics(base_dir, name, entry)
@@ -397,7 +443,7 @@ def pipeline_records(
     pipeline_id: str,
     pipeline_manifest: dict,
     cache: Optional[hashing.HashCache] = None,
-    known_pipelines: Iterable[str] = (),
+    known_pipelines: Optional[Mapping[str, Path]] = None,
 ) -> list[dict]:
     """The records for one pipeline: itself, then its assets.
 
@@ -407,11 +453,13 @@ def pipeline_records(
     :param pipeline_id: The pipeline's ID in this build (a catalog's key).
     :param pipeline_manifest: Its loaded manifest.
     :param cache: A hash cache, so unchanged files are not read again.
-    :param known_pipelines: The IDs of every pipeline in this build, so an
-        input in another one of them is written by the ID it has here.
+    :param known_pipelines: Every pipeline in this build, each ID and its
+        directory (:func:`chartbook.manifest.get_pipeline_dirs`), so that
+        another one of them is written by the ID it has here.
     """
     base_dir = Path(pipeline_manifest["pipeline_base_dir"])
-    known_pipelines = list(known_pipelines)
+    known_pipelines = dict(known_pipelines or {})
+    dependencies = pipeline_manifest.get("dependencies") or {}
     project = pipeline_manifest["project"]
 
     assets: list[dict] = []
@@ -427,6 +475,7 @@ def pipeline_records(
                     pipeline_id,
                     base_dir,
                     cache,
+                    dependencies,
                     known_pipelines,
                 )
             except ValueError as error:
@@ -454,6 +503,10 @@ def pipeline_records(
     record["location"] = {"kind": "path", "value": base_dir.as_posix()}
     if project.get("build"):
         record["scripts"] = {"build": project["build"]}
+    if "dependencies" in pipeline_manifest:
+        # Absent when the manifest has no [dependencies]; empty when it has
+        # the table and nothing in it
+        record["dependencies"] = _dependency_records(dependencies, known_pipelines)
     record["assets"] = [a["id"] for a in assets if a["kind"] != "Series"]
     record["docs"] = {"path": project.get("readme") or "./README.md"}
     return [record, *assets]
@@ -502,12 +555,16 @@ def build_index(
             catalog["policy"] = _jsonable(manifest["policy"])
         records.append(catalog)
 
+    directories = get_pipeline_dirs(manifest)
+    known_pipelines = {
+        pipeline_id: directories[pipeline_id] for pipeline_id in pipeline_ids
+    }
     for pipeline_id in pipeline_ids:
         records += pipeline_records(
             pipeline_id,
             get_pipeline_manifest(manifest, pipeline_id),
             cache,
-            known_pipelines=pipeline_ids,
+            known_pipelines=known_pipelines,
         )
 
     moment = generated_at or datetime.now(timezone.utc)
@@ -524,8 +581,9 @@ def published(index: dict) -> dict:
     """The index as it may leave this machine: no local absolute paths.
 
     Drops ``resolved_path`` from every asset's ``location``, and the
-    ``value`` of a pipeline's ``location`` when it is a local directory.
-    Everything else, hashes included, is unchanged.
+    ``value`` of a pipeline's ``location`` when it is a local directory,
+    which goes for each of its dependencies too. Everything else, hashes
+    included, is unchanged.
     """
     public = copy.deepcopy(index)
     for record in public.get("records", []):
@@ -533,8 +591,12 @@ def published(index: dict) -> dict:
         if not isinstance(location, dict):
             continue
         location.pop("resolved_path", None)
-        if record.get("kind") == "Pipeline" and location.get("kind") == "path":
-            location.pop("value", None)
+        if record.get("kind") == "Pipeline":
+            places = [location]
+            places += [d.get("location") for d in record.get("dependencies", [])]
+            for place in places:
+                if isinstance(place, dict) and place.get("kind") == "path":
+                    place.pop("value", None)
     return public
 
 
