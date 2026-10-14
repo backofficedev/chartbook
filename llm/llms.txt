@@ -7,7 +7,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ## Quick Start
 
 - [Getting Started](docs_src/getting-started.md): `pip install chartbook` — one install, everything included
-- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook build`, `chartbook browse`, `chartbook check`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook config`
+- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs`, `chartbook build`, `chartbook run`, `chartbook snapshot`, `chartbook pin`, `chartbook update`, `chartbook browse`, `chartbook check`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook config`
 
 ## Guides
 
@@ -27,9 +27,10 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ```bash
 chartbook init            # Scaffold a new pipeline project
 chartbook init --github   # ...then git init, commit, create a private GitHub repo with gh, and push
-chartbook build           # Generate HTML documentation website
-chartbook build -f        # Force overwrite existing docs
-chartbook build -f --watch  # Rebuild incrementally on every file change
+chartbook docs           # Render the HTML documentation website (was `chartbook build`)
+chartbook build -f       # Make everything current: run [scripts] build, then render the site
+chartbook docs -f        # Force overwrite existing docs
+chartbook docs -f --watch  # Rebuild incrementally on every file change
 chartbook browse          # Open the generated site
 chartbook check              # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 # every build also writes docs/index.json: a record per pipeline, dataframe, column, chart,

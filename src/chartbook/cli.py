@@ -32,76 +32,151 @@ def main():
     """chartbook CLI tool for generating documentation websites."""
 
 
+def _site_options(command):
+    """Give a command the arguments of rendering the site.
+
+    `docs` renders it, and `build` renders it after running the build
+    script, so both take the same ones.
+    """
+    options = [
+        click.argument("output_dir", type=click.Path(), default="./docs", required=False),
+        click.option("--project-dir", type=click.Path(), help="Path to project directory"),
+        click.option(
+            "--publish-dir",
+            type=click.Path(),
+            default="./_output/to_be_published/",
+            help="Directory where files will be published",
+        ),
+        click.option(
+            "--docs-build-dir",
+            type=click.Path(),
+            default="./_docs",
+            help="Directory where documentation will be built",
+        ),
+        click.option(
+            "--temp-docs-src-dir",
+            type=click.Path(),
+            default="./_docs_src",
+            help="Directory where documentation source files are temporarily stored in two stage procedure",
+        ),
+        click.option(
+            "--keep-build-dirs",
+            is_flag=True,
+            default=False,
+            help="Keep temporary build directory after generation",
+        ),
+        click.option(
+            "--force-write",
+            "-f",
+            is_flag=True,
+            default=False,
+            help="Overwrite existing output directory by deleting it first",
+        ),
+        click.option(
+            "--size-threshold",
+            type=float,
+            default=50,
+            help="File size threshold in MB above which to use memory-efficient loading (default: 50)",
+        ),
+        click.option(
+            "--strict/--no-strict",
+            default=True,
+            help="Fail on missing source files (default). Use --no-strict to skip affected pipelines instead.",
+        ),
+        click.option(
+            "--strip-mathjax2/--no-strip-mathjax2",
+            default=True,
+            help="Strip Plotly's MathJax 2 scripts from notebook outputs to prevent conflicts with Sphinx's MathJax 3 (default: enabled)",
+        ),
+        click.option(
+            "--incremental",
+            is_flag=True,
+            default=False,
+            help="Keep the build directory between builds and redo only what changed since the last incremental build",
+        ),
+        click.option(
+            "--watch",
+            is_flag=True,
+            default=False,
+            help="Render incrementally, then again whenever the project's files change, until Ctrl-C",
+        ),
+        click.option(
+            "--watch-interval",
+            type=click.FloatRange(min=0.1),
+            default=None,
+            metavar="SECONDS",
+            help="How often --watch checks for changes (default: 1)",
+        ),
+    ]
+    for option in reversed(options):
+        command = option(command)
+    return command
+
+
 @main.command()
-@click.argument("output_dir", type=click.Path(), default="./docs", required=False)
-@click.option("--project-dir", type=click.Path(), help="Path to project directory")
-@click.option(
-    "--publish-dir",
-    type=click.Path(),
-    default="./_output/to_be_published/",
-    help="Directory where files will be published",
-)
-@click.option(
-    "--docs-build-dir",
-    type=click.Path(),
-    default="./_docs",
-    help="Directory where documentation will be built",
-)
-@click.option(
-    "--temp-docs-src-dir",
-    type=click.Path(),
-    default="./_docs_src",
-    help="Directory where documentation source files are temporarily stored in two stage procedure",
-)
-@click.option(
-    "--keep-build-dirs",
-    is_flag=True,
-    default=False,
-    help="Keep temporary build directory after generation",
-)
-@click.option(
-    "--force-write",
-    "-f",
-    is_flag=True,
-    default=False,
-    help="Overwrite existing output directory by deleting it first",
-)
-@click.option(
-    "--size-threshold",
-    type=float,
-    default=50,
-    help="File size threshold in MB above which to use memory-efficient loading (default: 50)",
-)
-@click.option(
-    "--strict/--no-strict",
-    default=True,
-    help="Fail on missing source files (default). Use --no-strict to skip affected pipelines instead.",
-)
-@click.option(
-    "--strip-mathjax2/--no-strip-mathjax2",
-    default=True,
-    help="Strip Plotly's MathJax 2 scripts from notebook outputs to prevent conflicts with Sphinx's MathJax 3 (default: enabled)",
-)
-@click.option(
-    "--incremental",
-    is_flag=True,
-    default=False,
-    help="Keep the build directory between builds and redo only what changed since the last incremental build",
-)
-@click.option(
-    "--watch",
-    is_flag=True,
-    default=False,
-    help="Build incrementally, then rebuild whenever the project's files change, until Ctrl-C",
-)
-@click.option(
-    "--watch-interval",
-    type=click.FloatRange(min=0.1),
-    default=None,
-    metavar="SECONDS",
-    help="How often --watch checks for changes (default: 1)",
-)
-def build(
+@_site_options
+def docs(**site):
+    """Render the documentation site, in OUTPUT_DIR (./docs by default).
+
+    This renders the site and writes index.json beside it. It does not
+    build the project's data: `chartbook run` does that, and
+    `chartbook build` does both.
+
+    By default every render starts from nothing. With --incremental the
+    intermediate build directory (--docs-build-dir) is kept, pipelines whose
+    files have not changed are not regenerated, and only pages that differ
+    are rendered again. --watch does that in a loop: render, then again each
+    time a file changes. Open the site with `chartbook browse` and refresh.
+
+    \b
+    Examples:
+        chartbook docs -f
+        chartbook docs -f --incremental
+        chartbook docs -f --watch
+    """
+    _render_site(**site)
+
+
+@main.command()
+@_site_options
+def build(**site):
+    """Make everything current: run the build script, then render the site.
+
+    The same as `chartbook run` followed by `chartbook docs`, and it takes
+    the arguments of `chartbook docs`. In a catalog, the build script is run
+    in each of the catalog's pipelines before the catalog's site is rendered.
+
+    With no `build` script in [scripts], there is nothing to run, and only
+    the site is rendered.
+
+    Inside a build script, say `chartbook docs`. `chartbook build` there
+    would run the script that called it; it renders the site and says so.
+
+    \b
+    Examples:
+        chartbook build -f
+        chartbook build -f --project-dir ../rate_forecast
+    """
+    from chartbook import run as runner
+    from chartbook.manifest import BUILD_SCRIPT
+
+    project_dir = resolve_project_dir(site["project_dir"])
+    if runner.running(project_dir, BUILD_SCRIPT):
+        click.echo(
+            click.style("Warning: ", fg="yellow", bold=True)
+            + "`chartbook build` was called from this pipeline's own build script. "
+            "It runs that script and then renders the site, so here it only "
+            "renders the site. In a build script, say `chartbook docs`.",
+            err=True,
+        )
+    elif _has_script(project_dir, BUILD_SCRIPT):
+        _run_script(project_dir, BUILD_SCRIPT)
+    else:
+        click.echo("No `build` script here, so only the site is rendered.")
+    _render_site(**site)
+
+
+def _render_site(
     output_dir,
     project_dir,
     publish_dir,
@@ -116,40 +191,21 @@ def build(
     watch,
     watch_interval,
 ):
-    """Generate HTML documentation in the specified output directory.
-
-    By default every build starts from nothing. With --incremental the
-    intermediate build directory (--docs-build-dir) is kept, pipelines whose
-    files have not changed are not regenerated, and only pages that differ
-    are rendered again. --watch does that in a loop: build, then rebuild each
-    time a file changes. Open the site with `chartbook browse` and refresh.
+    """Render the documentation site: what `docs` does, and `build` does last.
 
     :param output_dir: Directory where output will be generated.
-    :type output_dir: str
     :param project_dir: Root directory of the project.
-    :type project_dir: str
     :param publish_dir: Directory where files will be published.
-    :type publish_dir: str
     :param docs_build_dir: Directory where documentation will be built.
-    :type docs_build_dir: str
     :param temp_docs_src_dir: Temporary directory for documentation source files.
-    :type temp_docs_src_dir: str
     :param keep_build_dirs: If True, keeps temporary build directory after generation.
-    :type keep_build_dirs: bool
     :param force_write: If True, overwrites existing output directory.
-    :type force_write: bool
     :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
-    :type size_threshold: float
     :param strict: If True, error and exit on missing source files.
-    :type strict: bool
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
-    :type strip_mathjax2: bool
     :param incremental: If True, keep the build directory and redo only what changed.
-    :type incremental: bool
-    :param watch: If True, build incrementally and rebuild on every change.
-    :type watch: bool
+    :param watch: If True, render incrementally and again on every change.
     :param watch_interval: Seconds between checks for changes in watch mode.
-    :type watch_interval: float
     """
     # Validate paths for shell/platform mismatches
     from chartbook.path_validation import detect_shell_environment, validate_cli_paths
@@ -287,7 +343,7 @@ def browse(output_dir, project_dir):
         click.echo("Error: Documentation not found.", err=True)
         click.echo(f"  Expected: {index_path}", err=True)
         click.echo("", err=True)
-        click.echo("Run 'chartbook build' first.", err=True)
+        click.echo("Run 'chartbook docs' first.", err=True)
         raise SystemExit(1)
 
     import webbrowser
@@ -1702,6 +1758,7 @@ def pin(project_dir, from_folder):
     A dependency that is a git repository is fetched, and pinned from a
     clean copy of the commit.
 
+    \b
     Examples:
         chartbook pin
         chartbook pin --project-dir ../rate_forecast
@@ -1723,6 +1780,7 @@ def update(dependencies, project_dir, from_folder):
 
     Nothing is rebuilt: this pipeline's own outputs are as they were.
 
+    \b
     Examples:
         chartbook update
         chartbook update fed_yield_curve
@@ -1750,6 +1808,7 @@ def snapshot(project_dir):
 
     Build first: this does not run the build. `chartbook run` does.
 
+    \b
     Examples:
         chartbook run && chartbook snapshot
         chartbook snapshot --project-dir ../fed_yield_curve
@@ -1821,11 +1880,29 @@ def run_command(script, project_dir, force):
 
     In a catalog, the script is run in each of the catalog's pipelines.
 
+    \b
     Examples:
         chartbook run
         chartbook run test
         chartbook run --force
     """
+    _run_script(resolve_project_dir(project_dir), script, force=force)
+
+
+def _has_script(project_dir, script):
+    """Whether a pipeline, or any pipeline of a catalog, has a script by this name."""
+    from chartbook import run as runner
+
+    try:
+        steps = runner.plan(project_dir, git=False)
+    except (runner.RunError, ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+    return any(script in step.scripts for step in steps if step.source == "asked")
+
+
+def _run_script(project_dir, script, force=False):
+    """Run a named script as `chartbook run` does; exit with its code if it fails."""
     from chartbook import lock
     from chartbook import run as runner
     from chartbook.store import StoreError
@@ -1838,7 +1915,6 @@ def run_command(script, project_dir, force):
             click.echo(f"{step.id}: pinning what it depends on")
             _echo_pin_report(pins)
 
-    project_dir = resolve_project_dir(project_dir)
     try:
         report = runner.run(
             project_dir, script, echo=click.echo, on_pin=show_pins, force=force

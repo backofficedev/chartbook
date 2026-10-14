@@ -557,9 +557,9 @@ class TestExampleProjects:
         self._build_rate_forecast(tmp_path / "store")
         lockfile = rate_forecast_path / "chartbook.lock"
         try:
-            # Now run chartbook build -f on catalog
+            # Now render the catalog's site
             result = subprocess.run(
-                ["chartbook", "build", "-f"],
+                ["chartbook", "docs", "-f"],
                 cwd=catalog_path,
                 capture_output=True,
                 text=True,
@@ -567,7 +567,7 @@ class TestExampleProjects:
                 env=self._get_env_with_pythonpath(),
             )
 
-            assert result.returncode == 0, f"chartbook build failed: {result.stderr}"
+            assert result.returncode == 0, f"chartbook docs failed: {result.stderr}"
 
             # Verify outputs exist
             assert (catalog_path / "docs" / "index.html").exists()

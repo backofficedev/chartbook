@@ -46,8 +46,9 @@ docs_path = data.get_docs_path(pipeline="markets", dataframe="market_data")
 
 ```bash
 chartbook init               # Scaffold a new pipeline project
-chartbook build              # Generate HTML documentation
-chartbook build -f           # Force overwrite existing docs
+chartbook docs              # Render the HTML documentation (was `chartbook build`)
+chartbook build -f          # Run the project's build script, then render the documentation
+chartbook docs -f           # Force overwrite existing docs
 chartbook browse             # Open the generated site
 chartbook publish            # Stage publishable files to a directory
 chartbook catalog add <dir>  # Register a pipeline in the catalog

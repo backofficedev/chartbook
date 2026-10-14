@@ -43,7 +43,8 @@ pip install -e ".[dev]"
 | Command | Description |
 |---------|-------------|
 | `init` | Scaffold a new pipeline project from the cookiecutter template (via cruft); `--git` adds `git init` and a first commit, `--github` also creates a GitHub repo with `gh` and pushes (`--public`/`--private`, default private) |
-| `build` | Generate HTML documentation website |
+| `docs` | Render the HTML documentation website |
+| `build` | Make everything current: run the `build` script, then render the website |
 | `browse` | Open the generated site in the default browser |
 | `check` | CI gate: exit nonzero on missing required metadata, broken paths, or expiring licenses |
 | `path` | Print the path the enclosing chartbook.toml declares for an asset |
@@ -61,15 +62,15 @@ pip install -e ".[dev]"
 | `config` | Configure the default catalog path for data loading |
 | `install skill` | Install the bundled Claude Code skill (user-level by default; `--project` for the repo) |
 
-### chartbook build
+### chartbook docs
 
-Generate HTML documentation in the specified output directory.
+Render the HTML documentation site in the specified output directory. It does not build the project's data (`chartbook run` does; `chartbook docs` does both). `chartbook docs` used to be the name of this command.
 
 ```bash
-chartbook build [OPTIONS] [OUTPUT_DIR]
+chartbook docs [OPTIONS] [OUTPUT_DIR]
 ```
 
-Beside the HTML, every build writes `index.json`: a flat list of records, one per pipeline, dataframe, column ("Series"), chart, notebook, note and model. Each has `kind`, `version`, a fully qualified `id` (`scope/pipeline:name` for a dataframe, `scope/pipeline:chart/name` for a chart, `scope/pipeline:name#column` for a series), the same address as named fields in `ref`, a `content_hash` (`sha256:<hex>`) of its file, and every field its `chartbook.toml` entry declares. A dataframe record also has `columns` (name and dtype) and `row_count`; a chart record has `inputs`. The published file holds no machine-specific path. From Python: `chartbook.index.build_index(load_manifest("."))`. A column is documented with a `[dataframes.<id>.series.<key>]` table (`name`, `column`, `units`, `frequency`, `docs_path`).
+Beside the HTML, every render writes `index.json`: a flat list of records, one per pipeline, dataframe, column ("Series"), chart, notebook, note and model. Each has `kind`, `version`, a fully qualified `id` (`scope/pipeline:name` for a dataframe, `scope/pipeline:chart/name` for a chart, `scope/pipeline:name#column` for a series), the same address as named fields in `ref`, a `content_hash` (`sha256:<hex>`) of its file, and every field its `chartbook.toml` entry declares. A dataframe record also has `columns` (name and dtype) and `row_count`; a chart record has `inputs`. The published file holds no machine-specific path. From Python: `chartbook.index.build_index(load_manifest("."))`. A column is documented with a `[dataframes.<id>.series.<key>]` table (`name`, `column`, `units`, `frequency`, `docs_path`).
 
 **Arguments:**
 - `OUTPUT_DIR`: Directory where HTML will be generated (default: `./docs`)
@@ -85,11 +86,19 @@ Beside the HTML, every build writes `index.json`: a flat list of records, one pe
 
 **Examples:**
 ```bash
-chartbook build                    # Basic usage
-chartbook build -f                 # Force overwrite
-chartbook build ./my-docs -f       # Custom directory
-chartbook build --keep-build-dirs  # Debug mode
+chartbook docs                    # Basic usage
+chartbook docs -f                 # Force overwrite
+chartbook docs ./my-docs -f       # Custom directory
+chartbook docs --keep-build-dirs  # Debug mode
 ```
+
+### chartbook build
+
+```bash
+chartbook build [OPTIONS] [OUTPUT_DIR]
+```
+
+Make everything current: run the project's `build` script (as `chartbook run` does: git dependencies built once, what has no pin pinned, then the script), and then render the site (as `chartbook docs` does, with the same arguments and options). If the script fails, the site is not rendered and the exit code is the script's. With no `build` script in `[scripts]` it says so and only renders. In a catalog the script is run in each of the catalog's pipelines before the catalog's site is rendered. **Breaking:** `chartbook build` used to mean "render the site", which is now `chartbook docs`; a build script (a `dodo.py` task) that says `chartbook build -f` must say `chartbook docs -f`. Called from inside the build script it is itself running, `chartbook build` renders the site and prints a warning instead of running the script again.
 
 ### chartbook check
 
@@ -922,7 +931,7 @@ docs = "Detailed sales transaction records from the CRM system."
 
 ```bash
 doit                    # Generate data using task automation
-chartbook build -f  # Generate documentation
+chartbook docs -f  # Render the documentation site
 chartbook publish      # Publish to production
 ```
 
@@ -930,7 +939,7 @@ chartbook publish      # Publish to production
 
 ```bash
 chartbook create-data-glimpses -o ./docs/  # Create data summary
-chartbook build --keep-build-dirs       # Generate with debug files
+chartbook docs --keep-build-dirs       # Render with debug files
 python -m http.server -d ./docs             # Test locally
 ```
 

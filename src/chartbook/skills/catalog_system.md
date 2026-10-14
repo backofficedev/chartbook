@@ -297,10 +297,10 @@ Creates a new pipeline project from the cookiecutter template. Projects can late
 ## CLI Build & Publish Reference
 
 ```bash
-chartbook build [OUTPUT_DIR]     # Generate HTML documentation
-chartbook build -f               # Force overwrite existing output
-chartbook build --strict         # Error on missing files
-chartbook build --keep-build-dirs  # Keep temp build directories
+chartbook docs [OUTPUT_DIR]     # Generate HTML documentation
+chartbook docs -f               # Force overwrite existing output
+chartbook docs --strict         # Error on missing files
+chartbook docs --keep-build-dirs  # Keep temp build directories
 chartbook publish                # Publish to directory
 chartbook create-data-glimpses   # Create data summary report
 ```

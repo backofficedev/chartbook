@@ -131,7 +131,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built. Local references resolve live; another pipeline's resolve pinned |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Steps 4a and 4b built: `[scripts]`, `chartbook run` and snapshots. **Next to build**: step 4c, the command rename. The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Steps 4a, 4b and 4c built: `[scripts]`, `chartbook run`, snapshots and the command rename. **Next to build**: step 4d, model versions and `@rev`. The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -147,7 +147,7 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Capability | Where | Notes |
 |---|---|---|
 | Manifest format v2, pipeline IDs, catalogs, policy | `manifest.py`, `identity.py` | `repo_url` defaults to the git remote |
-| The documentation site | `build_docs.py`, `markdown_generator.py`, `docs_src_pipeline/`, `docs_src_catalog/` | Two stages: write Markdown into `_docs/`, then run Sphinx |
+| The documentation site | `build_docs.py`, `markdown_generator.py`, `docs_src_pipeline/`, `docs_src_catalog/`, `chartbook docs` | Two stages: write Markdown into `_docs/`, then run Sphinx. `chartbook build` runs the build script first |
 | Incremental builds and `--watch` | `incremental.py` | A state file of file sizes and times. No server. Catalog builds are incremental by default |
 | `chartbook check`, the CI gate | `check.py` | Required fields, broken paths, expiring licenses. `--skip-outputs` for CI that does not build data |
 | The reference grammar | `refs.py` | All of it parses |
@@ -170,8 +170,8 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: `--frozen`, the command rename, model versions, `[sources]` and SQL access, any
-export, and anything that *reads* the index.
+Not built: `--frozen`, model versions, `[sources]` and SQL access, any export, and anything
+that *reads* the index.
 
 ## What to build next, in order
 
@@ -189,7 +189,7 @@ pull request.
 
 ### Step 1. The index — built
 
-`chartbook build` also writes one JSON file that describes everything: `index.json`, beside the
+`chartbook docs` also writes one JSON file that describes everything: `index.json`, beside the
 HTML. It has `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook` and `Note`
 records, each asset with a fully qualified `id`, a structured `ref` and a content hash. The code
 is `chartbook/index.py` and `chartbook/hashing.py`; the JSON Schemas are in `chartbook/schemas/`;
@@ -869,8 +869,8 @@ rebuild `yield_curve` as often as it likes while another builds `rate_forecast`,
 |---|---|---|
 | 4a | `[scripts]` and `chartbook run` | Built |
 | 4b | Snapshots: an owner declares a build ready, and pinning takes from that and never from the folder | Built |
-| 4c | The command rename: `build` makes everything current, `docs` renders the site. Breaking | Next |
-| 4d | `@rev` resolves. Model versions and labels | |
+| 4c | The command rename: `build` makes everything current, `docs` renders the site. Breaking | Built |
+| 4d | `@rev` resolves. Model versions and labels | Next |
 | 4e | Parts: `dataframe#series` for `data.load()` | |
 
 `--frozen`, for CI, has no part yet. *Proposed:* it follows snapshots, since what it has to
@@ -1177,6 +1177,69 @@ before, from ChartBook's clean copy of the commit, and does not look for a snaps
    6), with its note that a remembered hash would make that cheap. For a `path` dependency
    there is nothing to hash any more.
 
+#### 4c, as built
+
+*Added 2026-10-13.* Each word means the plain thing.
+
+| Command | Builds the data | Renders the site |
+|---|---|---|
+| `chartbook run` | Yes | No |
+| `chartbook docs` | No | Yes |
+| `chartbook build` | Yes | Yes |
+
+| What | Where |
+|---|---|
+| `chartbook docs`: what `chartbook build` was | `chartbook/cli.py`, `docs()`, `_render_site()` |
+| `chartbook build`: run, then docs | `chartbook/cli.py`, `build()` |
+| A script is told which pipeline and script it is | `chartbook/run.py`, `execute()`, `running()` |
+| The tests | `tests/test_build_command.py` |
+
+**Decided by the maintainer, 2026-10-13:** make the rename now, as designed, and breaking.
+"I don't care about backwards compatibility. Let's do the right thing. We can add warning
+maybe. But that's as far as I'd go."
+
+**Proposed: implemented in 4c, and waiting on the maintainer's yes.**
+
+1. **`chartbook build` takes exactly the arguments of `chartbook docs`.** It does not take
+   `chartbook run`'s `--force`. To rebuild a git dependency and then render: `chartbook run
+   --force`, then `chartbook docs`.
+2. **With no `build` script, `chartbook build` says so and renders the site.** A project that
+   only documents files it already has is not an error.
+3. **If the script fails, the site is not rendered**, and the exit code is the script's.
+4. **In a catalog, the script is run in each of the catalog's pipelines**, and then the
+   catalog's site is rendered.
+5. **The one protection, and the only compatibility.** A script is told which pipeline and
+   script it is, in two environment variables (`CHARTBOOK_RUN_DIR`, `CHARTBOOK_RUN_SCRIPT`).
+   `chartbook build` called from inside the build script it is running renders the site and
+   prints a warning that says to use `chartbook docs`. `chartbook run` called from inside the
+   script it is running is refused. Without this, an old build script would run itself
+   without end.
+6. **`chartbook catalog build` is unchanged.** It renders the global catalog's site and runs
+   no script.
+
+**Known gaps in 4c.**
+
+1. **The project template still says `chartbook build`.** It is in another repository
+   (`cookiecutter_chartbook`), which this work does not touch. Its `dodo.py` needs the
+   one-line change before this is released, or every new project starts with the warning.
+2. **An old `dodo.py` started with plain `doit`** runs its own build a second time, nested,
+   before the warning stops it, and may trip over doit's own lock on its database. The fix is
+   the one-line change.
+3. **A build script that renders the site itself, as the examples' do, has it rendered
+   twice** by `chartbook build`. Taking that step out of a build script means plain `doit` no
+   longer makes the site.
+4. **`chartbook catalog build` now disagrees with `chartbook build`** about what "build"
+   means. What it should be called is not settled.
+
+**Where the design said less than it seemed to.**
+
+1. *"The rename is one breaking change, made once."* ({doc}`asset-graph`.) It did not say
+   that the build script of every existing pipeline calls `chartbook build`, so that under
+   its new meaning the command runs the script that called it.
+2. *"`chartbook build` — make everything current: data, then site."* Most build scripts
+   already render the site as their last step. So "data, then site" is, for now, "data and
+   site, then site".
+
 ### Step 5. Data in databases
 
 **Goal:** a dataframe can be a table, and `data.load()` does not change.
@@ -1261,6 +1324,8 @@ maintainer.
 | 2026-10-13 | Taking whatever is in a folder stays possible only as an option that is off by default and out of the way | Step 4 above, "The snapshot model" |
 | 2026-10-13 | The purpose: people and agents work on different pipelines in parallel. The store is the read-only middle they all depend on, updated slowly and on purpose | Step 4 above, "The snapshot model" |
 | 2026-10-13 | Step 4 is built in parts, one pull request each, stacked | Step 4 above |
+| 2026-10-13 | The command rename is made now and is breaking: `chartbook docs` renders the site, `chartbook build` runs the build script and then renders. No compatibility beyond a warning | Step 4 above, "4c, as built" |
+| 2026-10-13 | No backwards compatibility in this work: the right design, even if it breaks, with a warning at most. The order of the remaining work is the builder's to choose | Step 4 above, "4c, as built" |
 
 ## Open questions, collected
 
@@ -1281,6 +1346,9 @@ Each is explained where it lives.
   gaps, the ones that most need an answer: whether making a snapshot should run the build
   first, and how old snapshots are cleared. (Step 4 above, "4b, as built")
 - `--frozen`, for CI: what it checks, and when it is built. (Step 4 above)
+- What `chartbook catalog build` should be called now that `chartbook build` runs a build
+  script, and whether a build script should still render the site itself. (Step 4 above, "4c,
+  as built")
 - A shared store, as a second way for a `git` dependency's built data to get here. The first
   is built: `chartbook run` builds it. (Step 4 above, "4a, as built")
 - How a chart says it was made from another pipeline's data. (Step 3 above)

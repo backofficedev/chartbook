@@ -538,6 +538,6 @@ chartbook validates the manifest when running commands. Common errors:
 - Both or neither of `docs_path` / `docs` provided
 - A chart's `dataframe` key referencing a missing dataframe
 - Explicit `type` contradicting the file's structure
-- Referenced files that don't exist (run `chartbook check`, or `chartbook build`)
+- Referenced files that don't exist (run `chartbook check`, or `chartbook docs`)
 
-Warnings (unknown `[project]` keys, missing policy-required fields) appear during `chartbook build` and on the catalog's diagnostics page. `chartbook check` turns missing required fields, missing files and expiring licenses into a nonzero exit code for CI.
+Warnings (unknown `[project]` keys, missing policy-required fields) appear during `chartbook docs` and on the catalog's diagnostics page. `chartbook check` turns missing required fields, missing files and expiring licenses into a nonzero exit code for CI.

@@ -75,6 +75,28 @@ from chartbook.resolve import MANIFEST_NAME
 from chartbook.store import Store
 
 
+#: Set for a script while ChartBook runs it: the pipeline's directory, and
+#: the script's name. They are how a command that would run that same
+#: script again can tell that it was called from inside it.
+RUN_DIR_ENV_VAR = "CHARTBOOK_RUN_DIR"
+RUN_SCRIPT_ENV_VAR = "CHARTBOOK_RUN_SCRIPT"
+
+
+def running(directory: Union[str, Path], script: str) -> bool:
+    """Whether this process was started by that script of that pipeline.
+
+    A build script that calls ``chartbook build`` or ``chartbook run`` in
+    its own pipeline would be run by the command it calls, without end.
+    """
+    inside = os.environ.get(RUN_DIR_ENV_VAR)
+    if not inside or os.environ.get(RUN_SCRIPT_ENV_VAR) != script:
+        return False
+    try:
+        return Path(inside).resolve() == Path(directory).resolve()
+    except OSError:
+        return False
+
+
 class RunError(Exception):
     """Raised when the pipelines to run cannot be put in an order, or found."""
 
@@ -309,7 +331,7 @@ def plan(
     return order
 
 
-def execute(script: str, directory: Path) -> int:
+def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
     """Run one script in a directory, and return its exit code.
 
     The script is handed to a shell whole, so a value of several lines is
@@ -320,6 +342,8 @@ def execute(script: str, directory: Path) -> int:
     ``module load`` or a ``conda activate`` expects, and ``sh`` otherwise.
     On Windows it is ``cmd``.
 
+    :param name: The script's name in ``[scripts]``. With it, the script
+        is told which pipeline and which script it is (:func:`running`).
     :returns: The script's exit code. One that a signal stopped gives 128
         plus the signal's number, as a shell reports it.
     """
@@ -330,24 +354,34 @@ def execute(script: str, directory: Path) -> int:
             stream.flush()
         except (AttributeError, OSError, ValueError):
             pass
-    code = _execute(script, directory)
+    environment = dict(os.environ)
+    if name is not None:
+        environment[RUN_DIR_ENV_VAR] = str(Path(directory).resolve())
+        environment[RUN_SCRIPT_ENV_VAR] = name
+    code = _execute(script, directory, environment)
     return 128 - code if code < 0 else code
 
 
-def _execute(script: str, directory: Path) -> int:
+def _execute(script: str, directory: Path, environment: dict) -> int:
     if os.name == "nt":
         if "\n" not in script.strip():
-            return subprocess.run(script, shell=True, cwd=directory).returncode
+            return subprocess.run(
+                script, shell=True, cwd=directory, env=environment
+            ).returncode
         # cmd takes one line; several go in a file
         handle, name = tempfile.mkstemp(suffix=".cmd", text=True)
         try:
             with os.fdopen(handle, "w") as f:
                 f.write("@echo off\n" + script + "\n")
-            return subprocess.run(["cmd", "/d", "/c", name], cwd=directory).returncode
+            return subprocess.run(
+                ["cmd", "/d", "/c", name], cwd=directory, env=environment
+            ).returncode
         finally:
             os.unlink(name)
     shell = shutil.which("bash") or "/bin/sh"
-    return subprocess.run([shell, "-e", "-c", script], cwd=directory).returncode
+    return subprocess.run(
+        [shell, "-e", "-c", script], cwd=directory, env=environment
+    ).returncode
 
 
 def run(
@@ -438,9 +472,16 @@ def run(
                 report.reason = "what it depends on could not be pinned"
                 break
 
+        if running(step.directory, script):
+            raise RunError(
+                f"`chartbook run {script}` was called from {step.id}'s own "
+                f"{script!r} script, which would then run itself without end. "
+                f"Take it out of the script."
+            )
+
         where = "" if step.directory == here else f"    in {step.directory}"
         echo(f"{step.id}: {script}{where}")
-        code = execute(command, step.directory)
+        code = execute(command, step.directory, script)
         if code != 0:
             report.failed, report.exit_code = step, code
             report.reason = f"its {script!r} script exited with {code}"

@@ -21,7 +21,7 @@ path = "../old_thing"
 disabled = true          # kept, but skipped during builds
 ```
 
-`chartbook build` inside the catalog directory renders the combined site: chart and dataframe listings across all member pipelines, per-pipeline pages, and a diagnostics page showing metadata completeness.
+`chartbook docs` inside the catalog directory renders the combined site: chart and dataframe listings across all member pipelines, per-pipeline pages, and a diagnostics page showing metadata completeness.
 
 ## The global catalog
 

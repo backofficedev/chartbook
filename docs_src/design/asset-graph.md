@@ -641,10 +641,9 @@ thing — `run` runs a script, `docs` builds docs, `build` builds everything.
 Of these, `check`, `path`, `browse`, `ls`, `catalog` and `install` exist. `build` still means
 "render the website" and keeps doing so until `run` exists; the rename is one breaking change,
 made once, in the same release as `run`. `docs` and `run` do not exist yet. *(`pin`, `update`,
-`store verify` and `store gc` were added 2026-10-12. `run` was added 2026-10-13. The rename
-has not been made: it is its own part of the same step, so until then `chartbook build`
-renders the website and `[scripts] build` builds a pipeline's data. `docs` does not exist
-yet.)*
+`store verify` and `store gc` were added 2026-10-12. `run` and `snapshot` were added
+2026-10-13, and the rename was made the same day: `chartbook docs` renders the website, and
+`chartbook build` runs the build script and then renders. {doc}`overview`, "4c, as built".)*
 
 `pin` and `update` stay top-level rather than sitting under `build`, because they change the
 project's dependency state rather than performing a build step — the same level as `cargo update` or

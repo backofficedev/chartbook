@@ -86,13 +86,13 @@ def task_build_rate_forecast():
 
 
 def task_generate_catalog():
-    """Run chartbook build in catalog directory"""
+    """Render the catalog's site"""
     catalog_dir = BASE_DIR / "catalog"
     yield_curve_dir = BASE_DIR / "yield_curve"
     fred_charts_dir = BASE_DIR / "fred_charts"
     rate_forecast_dir = BASE_DIR / "rate_forecast"
     return {
-        "actions": [f"cd {catalog_dir} && chartbook build -f"],
+        "actions": [f"cd {catalog_dir} && chartbook docs -f"],
         "file_dep": [
             str(catalog_dir / "chartbook.toml"),
             str(yield_curve_dir / "docs" / "index.html"),

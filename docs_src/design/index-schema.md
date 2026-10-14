@@ -686,7 +686,8 @@ sorted by name: all of `[scripts]`, with `[project] build` as `build` *(all of t
 2026-10-13; before the table was read, only `build`)*.
 
 **Where it is written.** The `_build/` layout at the top of this document is a destination, not
-today's layout. `chartbook build` writes two files:
+today's layout. `chartbook build` *(since 2026-10-13, `chartbook docs`: the command that
+renders the site was renamed)* writes two files:
 
 - the **published** index, `index.json` beside the HTML (`docs/index.json`), so that it travels
   with the site and a browser can fetch it. It has no `resolved_path` anywhere, and a pipeline's
