@@ -43,6 +43,14 @@ one record for each asset, each with its content hash. The bytes are
 objects in the store like any other, and a snapshot keeps them from being
 cleared (:func:`chartbook.lock.plan_gc`).
 
+**Clearing old ones.** Every snapshot is kept until ``chartbook store gc``
+is run, and then one is kept if a lockfile pins it, if it is the newest of
+its pipeline, if a label in that pipeline's manifest points at a model
+version in it, or if it was made in the last :data:`KEEP_DAYS` days
+(:func:`plan_removals`). The rest may be removed, and the command asks
+first. Beside each pipeline's records the store notes the folder they were
+made from (``origins``), which is how it finds that manifest.
+
 A snapshot is found by commit, and a commit is the same in every clone of
 a repository. So one made in a folder is found by a pipeline that depends
 on that folder, and by one that depends on the same repository by URL.
@@ -63,6 +71,7 @@ secrets, and a store is something to share.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import platform
@@ -77,7 +86,7 @@ from typing import Optional, Union
 from chartbook import hashing
 from chartbook.identity import derive_pipeline_id
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
-from chartbook.manifest import _read_manifest_file, resolve_project_type
+from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, declared_files
 from chartbook.store import Store, default_store
@@ -91,6 +100,17 @@ SNAPSHOTS_DIR = "snapshots"
 
 #: The folder, under a commit's, for a pipeline at the top of its repository.
 TOP = "_top"
+
+#: How long a snapshot that nothing pins, that is not the newest of its
+#: pipeline and that no label points into is kept, in days. Long enough to
+#: come back from a holiday to; short enough that a nightly build does not
+#: fill a disk that has no copy-on-write clones.
+KEEP_DAYS = 30
+
+#: Beside a pipeline's records: the folders its snapshots were made from, one
+#: per line. Not a record, so it has no ``.json``. It is how ``store gc`` finds
+#: the manifest whose labels say which versions to keep.
+ORIGINS_FILE = "origins"
 
 #: The kinds of link a snapshot's files are stored with: a copy-on-write
 #: clone, or a copy. Never a hard link or a symlink, which are the
@@ -276,7 +296,7 @@ def local_name(record: dict) -> str:
     return str(AssetRef(kind=record["ref"]["kind"], name=record["ref"]["name"]))
 
 
-def _git(directory: Path, *arguments: str) -> str:
+def _git(directory: Path, *arguments: str, stdin: str = "") -> str:
     """Run git in a directory and return what it printed.
 
     It takes no lock it does not need, so that looking at a repository
@@ -289,6 +309,7 @@ def _git(directory: Path, *arguments: str) -> str:
             capture_output=True,
             text=True,
             env=environment,
+            input=stdin,
         )
     except OSError as error:
         raise SnapshotError(f"git could not be run: {error}") from None
@@ -323,7 +344,7 @@ def code_of(directory: Union[str, Path]) -> Code:
     return Code(top, commit, "" if subdirectory == "." else subdirectory)
 
 
-def uncommitted(directory: Union[str, Path]) -> list[str]:
+def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
     """What in a pipeline's folder is not committed, as ``git status`` lists it.
 
     A changed file, a staged one, and a new file that git does not ignore
@@ -331,20 +352,50 @@ def uncommitted(directory: Union[str, Path]) -> list[str]:
     out of it. Only the pipeline's own folder is looked at, so other work
     in the same repository does not hold a snapshot up.
 
+    :param ignoring: File names that do not count, wherever they are. The
+        lockfile that ``chartbook run`` writes before a build is one.
     :returns: One line for each, as ``git status --porcelain`` prints it,
         with paths from the top of the repository.
     """
+    # -z: one record per NUL, and paths as they are, not quoted and escaped
+    # as they would be for a terminal. A rename or copy has the old path in
+    # a record of its own, which follows.
     listing = _git(
-        Path(directory).resolve(), "status", "--porcelain", "--untracked-files=all", "--", "."
+        Path(directory).resolve(),
+        "status", "--porcelain", "-z", "--untracked-files=all", "--", ".",
     )
-    return [line for line in listing.splitlines() if line.strip()]
+    records = listing.split("\0")
+    found = []
+    index = 0
+    while index < len(records):
+        record = records[index]
+        index += 1
+        if len(record) < 3:
+            continue
+        status, path = record[:2], record[3:]
+        if status[0] in "RC" and index < len(records):
+            path = f"{records[index]} -> {path}"
+            index += 1
+        if os.path.basename(path.split(" -> ")[-1]) in ignoring:
+            continue
+        found.append(f"{status} {path}")
+    return found
 
 
 def _folder(store: Store, commit: str, subdirectory: str) -> Path:
-    """Where the records of one pipeline at one commit are kept."""
+    """Where the records of one pipeline at one commit are kept.
+
+    The pipeline's folder in its repository names it, with ``--`` for
+    ``/``. A folder whose own name holds ``--``, or is ``_top``, would then
+    be mistaken for another; such a one gets a short hash of itself as
+    well, so that two pipelines never share a folder here.
+    """
     if not _FULL_COMMIT.match(commit):
         raise ValueError(f"{commit!r} is not a full commit hash.")
-    name = subdirectory.strip("/").replace("/", "--") or TOP
+    clean = subdirectory.strip("/")
+    name = clean.replace("/", "--") or TOP
+    if clean and ("--" in clean or name == TOP):
+        name += "~" + hashlib.sha256(clean.encode("utf-8")).hexdigest()[:8]
     return store.root / SNAPSHOTS_DIR / commit / name
 
 
@@ -433,8 +484,11 @@ def newest_for(
 def history(directory: Union[str, Path], store: Optional[Store] = None) -> list[Snapshot]:
     """Every snapshot of the pipeline in a folder, oldest first.
 
-    At any commit of its repository, on any branch: a snapshot made on a
-    branch that was never merged is still something that was built.
+    At any commit the repository still has, on any branch or on none: a
+    snapshot made on a branch that was never merged, or at a commit that
+    was then amended away, is still something that was built. Only a
+    commit git has pruned is gone, and so are its snapshots to this
+    repository.
 
     :raises SnapshotError: If the folder is not in a git repository.
     """
@@ -447,8 +501,16 @@ def history(directory: Union[str, Path], store: Optional[Store] = None) -> list[
         return []
     if not commits:
         return []
-    # A store holds snapshots of many repositories; these are this one's
-    ours = commits & set(_git(code.top, "rev-list", "--all", "HEAD").split())
+    # A store holds snapshots of many repositories; these are this one's.
+    # Asked of the object store, not of the branches, so a commit that was
+    # amended away still counts while git keeps it.
+    answers = _git(
+        code.top, "cat-file", "--batch-check=%(objectname) %(objecttype)",
+        stdin="".join(f"{commit}\n" for commit in sorted(commits)),
+    )
+    ours = {
+        line.split()[0] for line in answers.splitlines() if line.endswith(" commit")
+    }
     found = [taken for commit in ours for taken in find(store, commit, code.subdirectory)]
     return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
 
@@ -499,19 +561,238 @@ def version_name(content_hash: str, among: Optional[list[str]] = None) -> str:
     return digits[:length]
 
 
-def all_hashes(store: Store) -> set[str]:
-    """Every object any snapshot in a store names: what must not be cleared.
+def all_snapshots(store: Store) -> list[Snapshot]:
+    """Every snapshot in a store, oldest first.
 
     :raises SnapshotError: If a record cannot be read. Nothing should be
         removed from a store that cannot say what it is keeping.
     """
-    kept: set[str] = set()
     directory = store.root / SNAPSHOTS_DIR
     if not directory.is_dir():
-        return kept
-    for file in directory.glob("*/*/*.json"):
-        kept |= read(file).hashes()
+        return []
+    found = [read(file) for file in directory.glob("*/*/*.json")]
+    return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
+
+
+def all_hashes(store: Store) -> set[str]:
+    """Every object any snapshot in a store names."""
+    kept: set[str] = set()
+    for taken in all_snapshots(store):
+        kept |= taken.hashes()
     return kept
+
+
+def _note_origin(folder: Path, top: Path) -> None:
+    """Note, beside a pipeline's records, the repository folder they came from."""
+    note = folder / ORIGINS_FILE
+    line = str(top)
+    try:
+        known = note.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        known = []
+    if line not in known:
+        with open(note, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+
+
+def origins(store: Store, taken: Snapshot) -> list[Path]:
+    """The repository folders a pipeline's snapshots were made from."""
+    note = _folder(store, taken.commit, taken.subdirectory) / ORIGINS_FILE
+    try:
+        lines = note.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return []
+    # Only an absolute folder is a place to look; anything else in the
+    # file says nothing
+    return [Path(line) for line in lines if line and os.path.isabs(line)]
+
+
+def _labels_in(store: Store, group: list[Snapshot]) -> dict[str, set[str]]:
+    """The labels of each model of one pipeline, as its manifest has them now.
+
+    Read from the manifest in each folder the pipeline's snapshots were
+    made from. A folder that is gone, or whose manifest cannot be read,
+    says nothing.
+
+    :returns: For each model's reference, the starts of the hashes its
+        labels point at.
+    """
+    pointed: dict[str, set[str]] = {}
+    seen: set[Path] = set()
+    for taken in group:
+        for top in origins(store, taken):
+            directory = top / taken.subdirectory if taken.subdirectory else top
+            if directory in seen:
+                continue
+            seen.add(directory)
+            try:
+                raw = _read_manifest_file(directory)
+            except (OSError, ValueError):
+                continue
+            models = raw.get("models") if isinstance(raw.get("models"), dict) else {}
+            for name, entry in models.items():
+                aliases = entry.get("aliases") if isinstance(entry, dict) else None
+                if not isinstance(aliases, dict):
+                    continue
+                for version in aliases.values():
+                    # Only what a label may say: twelve or more hex digits.
+                    # Anything shorter would keep every snapshot for ever.
+                    if isinstance(version, str) and VERSION_PATTERN.match(version):
+                        pointed.setdefault(f"model/{name}", set()).add(
+                            version.split(":", 1)[-1]
+                        )
+    return pointed
+
+
+def _pinnable(store: Store, group: list[Snapshot]) -> set[Path]:
+    """The snapshots of one pipeline that a branch or a tag can pin from.
+
+    ``pin`` takes the newest snapshot at the nearest commit, at or before
+    the one a folder is on, that has one. So for each branch and tag of
+    each repository the snapshots were made from, the first of its
+    commits, walking back, that has a snapshot is pinnable, and the newest
+    snapshot there is the one. A repository that is gone says nothing.
+
+    :returns: The records' paths.
+    """
+    at_commit: dict[str, list[Snapshot]] = {}
+    for taken in group:
+        at_commit.setdefault(taken.commit, []).append(taken)
+    keep: set[Path] = set()
+    seen: set[Path] = set()
+    for taken in group:
+        for top in origins(store, taken):
+            if top in seen:
+                continue
+            seen.add(top)
+            try:
+                tips = _git(top, "for-each-ref", "--format=%(objectname)", "refs/heads", "refs/tags")
+            except SnapshotError:
+                continue
+            for tip in set(tips.split()):
+                try:
+                    walk = _git(top, "rev-list", tip)
+                except SnapshotError:
+                    continue
+                for commit in walk.split():
+                    if commit in at_commit:
+                        keep.add(at_commit[commit][-1].path)
+                        break
+    return keep
+
+
+def _made_at(taken: Snapshot) -> datetime:
+    return datetime.fromisoformat(taken.made_at.rstrip("Z")).replace(tzinfo=timezone.utc)
+
+
+@dataclass
+class SnapshotPlan:
+    """Which snapshots a store keeps and which it may let go of.
+
+    Attributes:
+        keep: Each snapshot that is kept, with why.
+        remove: Each snapshot that may be removed, with why it may.
+    """
+
+    keep: list[tuple[Snapshot, str]] = field(default_factory=list)
+    remove: list[tuple[Snapshot, str]] = field(default_factory=list)
+
+    def kept_hashes(self) -> set[str]:
+        """The objects the kept snapshots name."""
+        hashes: set[str] = set()
+        for taken, _ in self.keep:
+            hashes |= taken.hashes()
+        return hashes
+
+
+def plan_removals(
+    store: Store,
+    pinned: set[tuple[str, str]],
+    hashes_of_missing: set[str] = frozenset(),
+    keep_days: float = KEEP_DAYS,
+    now: Optional[datetime] = None,
+) -> SnapshotPlan:
+    """Say which snapshots may be removed. Nothing is removed.
+
+    A snapshot is kept if, in this order:
+
+    1. a lockfile pins it (its commit and time are named by a dependency);
+    2. a lockfile that cannot be found named one of its objects when it was
+       last pinned;
+    3. it is the newest snapshot of its pipeline, or the newest that a
+       branch or a tag of the repository it came from can pin from;
+    4. a label in the pipeline's manifest, read from the folder the
+       snapshots were made from, points at a model version it holds;
+    5. it was made in the last *keep_days* days.
+
+    Otherwise it may be removed. What it names and nothing else names is
+    then removed with it, by :func:`chartbook.lock.plan_gc`.
+
+    :param pinned: The ``(commit, made_at)`` pairs that readable lockfiles
+        pin.
+    :param hashes_of_missing: The objects named by lockfiles that cannot be
+        found and are not to be forgotten.
+    :raises SnapshotError: If a record cannot be read.
+    """
+    now = now if now is not None else datetime.now(timezone.utc)
+    plan = SnapshotPlan()
+    groups: dict[tuple[str, str], list[Snapshot]] = {}
+    for taken in all_snapshots(store):
+        groups.setdefault((taken.pipeline, taken.subdirectory), []).append(taken)
+    for group in groups.values():
+        newest = group[-1]
+        labels = _labels_in(store, group)
+        pinnable = _pinnable(store, group)
+        for taken in group:
+            if (taken.commit, taken.made_at) in pinned:
+                why = "a lockfile pins it"
+            elif taken.hashes() & set(hashes_of_missing):
+                why = "a lockfile that cannot be found named what it holds"
+            elif taken is newest:
+                why = "it is the newest of its pipeline"
+            elif taken.path in pinnable:
+                why = "it is the newest a branch or tag can pin from"
+            elif any(
+                (record.get("content_hash") or "").split(":", 1)[-1].startswith(start)
+                for name, starts in labels.items()
+                for record in [taken.assets.get(name) or {}]
+                for start in starts
+            ):
+                why = "a label points at a version in it"
+            elif (now - _made_at(taken)).total_seconds() < keep_days * 86400:
+                why = f"it was made in the last {keep_days:g} days"
+            else:
+                plan.remove.append(
+                    (taken, f"nothing pins it, it is not the newest, and it is older than {keep_days:g} days")
+                )
+                continue
+            plan.keep.append((taken, why))
+    return plan
+
+
+def remove(store: Store, taken: Snapshot) -> bool:
+    """Remove one snapshot's record. Its objects are the store's to clear.
+
+    :returns: True if the record was there.
+    """
+    if taken.path is None or not taken.path.is_file():
+        return False
+    taken.path.unlink()
+    folder = taken.path.parent
+    if not any(folder.glob("*.json")):
+        # The last record of this pipeline at this commit: its note of
+        # origins goes too, and the folders if nothing else is in them. A
+        # record another process is writing this moment is left alone.
+        try:
+            (folder / ORIGINS_FILE).unlink()
+        except OSError:
+            pass
+        for empty in (folder, folder.parent):
+            try:
+                empty.rmdir()
+            except OSError:
+                break
+    return True
 
 
 def _count(path: Path) -> int:
@@ -541,16 +822,24 @@ def _write(snapshot: Snapshot, store: Store) -> Path:
         count += 1
         final = folder / f"{stamp}-{count}.json"
     temporary = folder / f"{uuid.uuid4().hex}.tmp"
-    with open(temporary, "w", encoding="utf-8") as f:
-        json.dump(snapshot.to_document(), f, indent=2, ensure_ascii=False)
-        f.write("\n")
-    os.replace(temporary, final)
+    try:
+        with open(temporary, "w", encoding="utf-8") as f:
+            json.dump(snapshot.to_document(), f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        os.replace(temporary, final)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
     return final
 
 
-def require_committed(directory: Union[str, Path], pipeline: str) -> Code:
+def require_committed(
+    directory: Union[str, Path], pipeline: str, ignoring: tuple = ()
+) -> Code:
     """Check that a pipeline can have a snapshot now, and say where it is in git.
 
+    :param ignoring: File names that may be uncommitted all the same; see
+        :func:`uncommitted`.
     :raises SnapshotError: If its folder is not in git, or anything in it
         is not committed. The message lists what.
     """
@@ -558,7 +847,7 @@ def require_committed(directory: Union[str, Path], pipeline: str) -> Code:
         code = code_of(directory)
     except SnapshotError as error:
         raise SnapshotError(f"{pipeline} cannot have a snapshot: {error}.") from None
-    changes = uncommitted(directory)
+    changes = uncommitted(directory, ignoring)
     if changes:
         shown = "\n".join(f"  {line}" for line in changes[:10])
         more = f"\n  and {len(changes) - 10} more" if len(changes) > 10 else ""
@@ -568,6 +857,26 @@ def require_committed(directory: Union[str, Path], pipeline: str) -> Code:
             f"everything in the pipeline's folder must be committed first."
         )
     return code
+
+
+def check_within(directory: Union[str, Path], pipeline: str) -> None:
+    """Refuse a manifest whose declared paths reach outside the pipeline's folder.
+
+    What :func:`make` checks when it stores; here, so that it can be found
+    out before a build, not after one.
+
+    :raises SnapshotError: Naming the first asset that reaches out.
+    """
+    directory = Path(directory).resolve()
+    for local, declared_path, absolute in declared_files(directory):
+        reached = hashing.escapes(absolute, directory)
+        if reached is not None:
+            raise SnapshotError(
+                f"{pipeline} declares {str(local.in_pipeline(pipeline))!r} at "
+                f"{declared_path!r}, which reaches {reached}, outside the "
+                f"pipeline's folder. A snapshot is what the pipeline built, so "
+                f"everything in it must be under {directory}."
+            )
 
 
 def _built_with(run: bool) -> dict:
@@ -644,6 +953,7 @@ def make(
     store: Optional[Store] = None,
     made_at: Optional[str] = None,
     built_by_run: bool = False,
+    ignoring: tuple = (),
 ) -> SnapshotReport:
     """Make a snapshot of a pipeline: what it has built, at the commit it is on.
 
@@ -661,18 +971,21 @@ def make(
     :param made_at: The time to record, for a test; now by default.
     :param built_by_run: Whether the build was run by the command that is
         making this snapshot (``chartbook run --snapshot``).
+    :param ignoring: File names that may be uncommitted; see
+        :func:`uncommitted`.
     :returns: The snapshot, and whether it is new.
     :raises SnapshotError: If the folder holds no pipeline, is not in git,
         has anything uncommitted, or has built nothing.
     """
     directory = Path(project_dir).resolve()
     pipeline = pipeline_in(directory)
-    code = require_committed(directory, pipeline)
+    code = require_committed(directory, pipeline, ignoring)
 
     store = store if store is not None else default_store()
     raw = _read_manifest_file(directory)
     assets: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []
+    check_within(directory, pipeline)
     for local, declared_path, absolute in declared_files(directory):
         ref = local.in_pipeline(pipeline)
         found = hashing.find_files(absolute)
@@ -713,6 +1026,7 @@ def make(
     before = find(store, code.commit, code.subdirectory)
     if before and before[0].content() == snapshot.content():
         if before[0].built_by_run or not built_by_run:
+            _note_origin(before[0].path.parent, code.top)
             return SnapshotReport(before[0], False, not_built)
 
     # A model whose bytes no snapshot of this pipeline has had is a new version
@@ -726,6 +1040,7 @@ def make(
             new_versions.append((name, version_name(content_hash, had)))
 
     path = _write(snapshot, store)
+    _note_origin(path.parent, code.top)
     snapshot = Snapshot(
         snapshot.pipeline,
         snapshot.commit,

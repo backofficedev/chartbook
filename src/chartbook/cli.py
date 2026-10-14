@@ -1630,6 +1630,7 @@ def _echo_pin_report(report):
             "kept": "already pinned",
             "stale": "changed upstream since it was pinned",
             "not_built": "not built",
+            "outside": "outside the repository",
             "let_go": "let go",
             "dropped": "no longer declared",
             "lost": "lost",
@@ -1662,6 +1663,8 @@ def _echo_pin_report(report):
                 click.echo(f"  changed upstream: {event.asset}")
             elif event.status == "let_go":
                 click.echo(f"  let go: {event.asset} ({event.detail})")
+            elif event.status == "outside":
+                click.echo(f"  not pinned: {event.asset}: {event.detail}")
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
@@ -2016,29 +2019,32 @@ def _format_bytes(size):
 
 
 @store.command("gc")
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    default=False,
-    help="Show what would be removed, and remove nothing",
-)
-@click.option(
-    "--yes", "-y", is_flag=True, default=False, help="Remove without asking first"
-)
+@click.option("--dry-run", is_flag=True, help="List what would be removed, and remove nothing")
+@click.option("--yes", "-y", is_flag=True, help="Do not ask")
 @click.option(
     "--forget-missing",
     is_flag=True,
-    default=False,
-    help="Stop keeping the pins of a lockfile that can no longer be found",
+    help="Stop keeping the pins of a lockfile that cannot be found",
 )
-def store_gc(dry_run, yes, forget_missing):
-    """Remove from the store what no lockfile names.
+@click.option(
+    "--keep-days",
+    type=click.FloatRange(min=0),
+    default=None,
+    metavar="DAYS",
+    help="Keep a snapshot that nothing pins and that is not the newest of its pipeline for this long (default: 30)",
+)
+def store_gc(dry_run, yes, forget_missing, keep_days):
+    """Remove from the store what nothing needs any more.
 
-    The store is shared by every project of yours that pins into it. Each
-    `chartbook pin` and `chartbook update` notes its lockfile there, and
-    this keeps every object that any of those lockfiles names. Whatever is
-    left is what an update moved a pin away from, or what a deleted
-    dependency used to need.
+    The store is shared by every project of yours. Two things keep what is
+    in it. A lockfile: each `chartbook pin` and `chartbook update` notes
+    its lockfile here, and every object one of them names is kept. And a
+    snapshot: what `chartbook snapshot` kept of a pipeline at a commit.
+
+    A snapshot is kept if a lockfile pins it, if it is the newest of its
+    pipeline, if a label in that pipeline's chartbook.toml points at a model
+    version in it, or if it was made in the last 30 days (--keep-days).
+    Otherwise it may be removed, and what only it named goes with it.
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
@@ -2048,25 +2054,27 @@ def store_gc(dry_run, yes, forget_missing):
     yes. An object stored in the last hour is never removed: a pin puts
     files in the store before it writes the lockfile that names them.
 
+    \b
     Examples:
         chartbook store gc --dry-run
         chartbook store gc
+        chartbook store gc --keep-days 7
         chartbook store gc --yes --forget-missing
     """
     from chartbook import lock
+    from chartbook import snapshot as snapshots
     from chartbook.store import StoreError, default_store
 
+    days = keep_days if keep_days is not None else snapshots.KEEP_DAYS
     try:
         the_store = default_store()
-        plan = lock.plan_gc(the_store, forget_missing=forget_missing)
+        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days)
     except (StoreError, lock.LockError, ValueError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
 
-    click.echo(
-        f"Kept: {plan.kept} object(s), named by {len(plan.lockfiles)} lockfile(s)"
-    )
+    click.echo(f"Kept: {plan.kept} object(s), named by {len(plan.lockfiles)} lockfile(s)")
     for lockfile, found in plan.lockfiles:
         if found:
             note = ""
@@ -2075,39 +2083,64 @@ def store_gc(dry_run, yes, forget_missing):
         else:
             note = "  (not found; its pins are kept)"
         click.echo(f"  {lockfile}{note}")
-    if plan.snapshots:
+    if plan.snapshots_kept:
+        reasons = {}
+        for _, why in plan.snapshots_kept:
+            reasons[why] = reasons.get(why, 0) + 1
+        said = ", ".join(f"{count} because {why}" for why, count in reasons.items())
         click.echo(
-            f"  A snapshot names {plan.snapshots} of them. What a snapshot names "
-            f"is never removed."
+            f"Kept: {len(plan.snapshots_kept)} snapshot(s), naming {plan.snapshots} "
+            f"object(s): {said}"
         )
     if plan.recent:
         click.echo(
-            f"Kept: {len(plan.recent)} object(s) no lockfile names, stored in "
-            f"the last hour"
+            f"Kept: {len(plan.recent)} object(s) nothing names, stored in the last hour"
         )
 
-    if not plan.delete:
+    if any(not found for _, found in plan.lockfiles) and any(
+        "cannot be found" in why for _, why in plan.snapshots_kept
+    ):
+        click.echo(
+            "  A lockfile that cannot be found keeps every snapshot that holds "
+            "something it named. --forget-missing lets them go."
+        )
+
+    if not plan.delete and not plan.snapshots_delete:
         click.echo("Nothing to remove.")
         if not dry_run:
             lock.run_gc(plan, the_store)  # forgets the missing, if asked to
         return
 
+    if plan.snapshots_delete:
+        click.echo(f"Would remove {len(plan.snapshots_delete)} snapshot(s):")
+        for taken, why in plan.snapshots_delete:
+            click.echo(
+                f"  {taken.pipeline} at {taken.commit[:7]}, made "
+                f"{_when(taken.made_at)}: {why}"
+            )
     summary = (
-        f"{len(plan.delete)} object(s), {_format_bytes(plan.size_bytes)}, that no "
-        f"lockfile names"
+        f"{len(plan.delete)} object(s), {_format_bytes(plan.size_bytes)}, that "
+        f"nothing names"
     )
     if dry_run:
-        click.echo(f"Would remove {summary}:")
-        for content_hash, size in plan.delete:
-            click.echo(f"  {content_hash}  {_format_bytes(size)}")
+        if plan.delete:
+            click.echo(f"Would remove {summary}:")
+            for content_hash, size in plan.delete:
+                click.echo(f"  {content_hash}  {_format_bytes(size)}")
         return
-    click.echo(f"Would remove {summary}.")
+    if plan.delete:
+        click.echo(f"Would remove {summary}.")
     if not yes and not click.confirm("Remove them?", default=False):
         click.echo("Nothing was removed.")
         return
-    removed = lock.run_gc(plan, the_store)
-    click.echo(f"Removed {removed} object(s), {_format_bytes(plan.size_bytes)}.")
-
+    removed_snapshots, removed = lock.run_gc(plan, the_store)
+    click.echo(
+        f"Removed {removed_snapshots} snapshot(s) and {removed} object(s), "
+        f"{_format_bytes(plan.size_bytes)}."
+    )
+    spared = len(plan.snapshots_delete) - removed_snapshots + len(plan.delete) - removed
+    if spared:
+        click.echo(f"{spared} of them were pinned while you were deciding, and kept.")
 
 @main.command()
 @click.option(
@@ -2193,7 +2226,12 @@ def init(use_git, use_github, public):
             )
 
     if not use_git:
-        subprocess.run(scaffold.template_command(), check=True)
+        try:
+            rendered = subprocess.run(scaffold.template_command())
+        except KeyboardInterrupt:
+            raise SystemExit(130)
+        if rendered.returncode != 0:
+            raise SystemExit(rendered.returncode)
         return
 
     # The project's directory is named from an answer at cruft's prompt, so

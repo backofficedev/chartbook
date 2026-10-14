@@ -690,11 +690,20 @@ def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Locati
     from chartbook.store import default_store
 
     local = str(dataclasses.replace(asset, rev=None))
-    labels = entry.get("aliases") if isinstance(entry.get("aliases"), dict) else {}
+    aliases = entry.get("aliases") if isinstance(entry.get("aliases"), dict) else {}
+    labels = {name: value for name, value in aliases.items() if isinstance(value, str)}
     label = asset.rev if asset.rev in labels else None
-    wanted = str(labels[label]) if label else asset.rev
-    digits = wanted.split(":", 1)[-1]
+    wanted = labels[label] if label else asset.rev
+    algorithm, _, digits = wanted.rpartition(":")
     pointing = f" (the label {label!r} points at it)" if label else ""
+    if algorithm and algorithm != "sha256":
+        raise VersionNotFoundError(
+            local,
+            asset.rev,
+            "no_such_version",
+            f"{str(asset)!r}: a version is named by its sha256 hash, and "
+            f"{wanted!r} names a {algorithm} one{pointing}.",
+        )
 
     try:
         versions = snapshot.versions_of(manifest_dir, local)

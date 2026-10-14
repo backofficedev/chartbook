@@ -671,7 +671,7 @@ class TestGc:
         # Planning removes nothing
         assert moved.has(HELLO)
 
-        assert lock.run_gc(plan, moved) == 1
+        assert lock.run_gc(plan, moved) == (0, 1)
         assert not moved.has(HELLO)
         assert set(moved.hashes()) == lock.read_lock(downstream).hashes()
         assert moved.verify() == []
@@ -719,7 +719,7 @@ class TestGc:
         plan = lock.plan_gc(moved, forget_missing=True)
         assert plan.forget == [downstream / LOCK_FILE]
         assert plan.kept == 0 and len(plan.delete) == 4
-        assert lock.run_gc(plan, moved) == 4
+        assert lock.run_gc(plan, moved) == (0, 4)
         assert list(moved.hashes()) == [] and moved.roots() == []
 
     def test_a_lockfile_is_read_as_it_is_now(self, moved, downstream):
@@ -838,7 +838,7 @@ class TestCommands:
         assert result.output.splitlines() == [
             "Kept: 3 object(s), named by 1 lockfile(s)",
             f"  {downstream / LOCK_FILE}",
-            "Would remove 1 object(s), 5 bytes, that no lockfile names:",
+            "Would remove 1 object(s), 5 bytes, that nothing names:",
             f"  {HELLO}  5 bytes",
         ]
         assert garbage.has(HELLO)
@@ -846,13 +846,13 @@ class TestCommands:
     def test_gc_asks_first(self, garbage):
         result = self._run("store", "gc", input="n\n")
         assert result.exit_code == 0, result.output
-        assert "Would remove 1 object(s), 5 bytes, that no lockfile names." in result.output
+        assert "Would remove 1 object(s), 5 bytes, that nothing names." in result.output
         assert "Remove them? [y/N]" in result.output
         assert "Nothing was removed." in result.output
         assert garbage.has(HELLO)
 
         result = self._run("store", "gc", input="y\n")
-        assert "Removed 1 object(s), 5 bytes." in result.output
+        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
         assert not garbage.has(HELLO)
 
     def test_gc_with_no_answer_removes_nothing(self, garbage):
@@ -864,7 +864,7 @@ class TestCommands:
         result = self._run("store", "gc", "--yes")
         assert result.exit_code == 0, result.output
         assert "Remove them?" not in result.output
-        assert "Removed 1 object(s), 5 bytes." in result.output
+        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
         assert not garbage.has(HELLO)
         assert "Nothing to remove." in self._run("store", "gc").output
 
@@ -873,7 +873,7 @@ class TestCommands:
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
         self._run("update")
         result = self._run("store", "gc", "--yes")
-        assert "Kept: 1 object(s) no lockfile names, stored in the last hour" in result.output
+        assert "Kept: 1 object(s) nothing names, stored in the last hour" in result.output
         assert "Nothing to remove." in result.output
         assert here.has(HELLO)
 
@@ -885,7 +885,7 @@ class TestCommands:
 
         result = self._run("store", "gc", "--yes", "--forget-missing")
         assert f"  {downstream / LOCK_FILE}  (not found; forgotten)" in result.output
-        assert "Removed 3 object(s)" in result.output
+        assert "Removed 0 snapshot(s) and 3 object(s)" in result.output
         assert list(garbage.hashes()) == [] and garbage.roots() == []
 
     def test_gc_stops_at_a_lockfile_it_cannot_read(self, garbage, downstream):
@@ -903,3 +903,16 @@ class TestCommands:
         assert _format_bytes(1536) == "1.5 KB"
         assert _format_bytes(5 * 1024**2) == "5.0 MB"
         assert _format_bytes(3 * 1024**4) == "3072.0 GB"
+
+    def test_what_is_pinned_between_the_plan_and_the_yes_is_kept(self, here, downstream, work):
+        """The plan is made again when the yes comes."""
+        _write_manifest(work / "stray", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (work / "stray" / "x.parquet").write_bytes(b"stray bytes")
+        stray = here.put(work / "stray" / "x.parquet")
+        plan = lock.plan_gc(here, recent_seconds=0)
+        assert [h for h, _ in plan.delete] == [stray.content_hash]
+        # ...and before the yes, a project pins it
+        _write_manifest(downstream, {"dependencies": {"stray": {"path": "../stray"}}})
+        pin_folder(downstream, here)
+        removed_snapshots, removed = lock.run_gc(plan, here)
+        assert (removed_snapshots, removed) == (0, 0) and here.has(stray.content_hash)

@@ -144,19 +144,32 @@ class TestSlug:
         [
             ("https://gitlab.example.org/ftsfr/ref_data.git", "gitlab.example.org/ftsfr/ref_data"),
             ("https://gitlab.example.org/ftsfr/ref_data/", "gitlab.example.org/ftsfr/ref_data"),
-            ("https://user:token@gitlab.example.org:8443/ftsfr/ref_data.git", "gitlab.example.org/ftsfr/ref_data"),
+            # A port stays: another port is another server
+            ("https://user:token@gitlab.example.org:8443/ftsfr/ref_data.git", "gitlab.example.org_8443/ftsfr/ref_data"),
             ("git@github.com:acme/rates.git", "github.com/acme/rates"),
-            ("ssh://git@github.com:2222/acme/rates", "github.com/acme/rates"),
+            ("ssh://git@github.com:2222/acme/rates", "github.com_2222/acme/rates"),
             ("https://host/group/sub/group/name.git", "host/group/sub/group/name"),
             ("/srv/git/x.git", "local/srv/git/x"),
             ("file:///srv/git/x.git", "local/srv/git/x"),
-            ("C:\\repos\\x", "local/C_/repos/x"),
+            # A component with a character that is not kept carries a hash
+            # of itself, so that `a b` and `a_b` are two repositories
+            ("C:\\repos\\x", "local/C_~82179da1/repos/x"),
             ("https://host/a/../../etc/b", "host/a/etc/b"),
-            ("https://host/we ird/na;me", "host/we_ird/na_me"),
+            ("https://host/we ird/na;me", "host/we_ird~260a1c9a/na_me~f029f14e"),
         ],
     )
     def test_a_repository_gets_a_path_made_from_its_url(self, url, slug):
         assert repository_slug(url).as_posix() == slug
+
+    def test_two_different_repositories_never_share_a_clone(self):
+        pairs = [
+            ("https://h/o/a b", "https://h/o/a_b"),
+            ("https://h/o/r", "https://h:8443/o/r"),
+            ("https://h/o/r", "ssh://git@h:2222/o/r"),
+            ("/tmp/x%y", "/tmp/x_y"),
+        ]
+        for one, other in pairs:
+            assert repository_slug(one) != repository_slug(other), (one, other)
 
     def test_one_repository_reached_two_ways_is_one_clone(self, cache):
         assert cache.repo_path("https://github.com/acme/rates.git") == cache.repo_path(

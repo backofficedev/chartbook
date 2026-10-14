@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed — a series address documents a column; it does not load one
+### Fixed — what two adversarial reviews of the asset graph found
+
+None of this was released. It is listed because each item changes something the entries below describe.
+
+- **A git dependency's manifest could name files outside its repository, and `chartbook pin` copied them.** An absolute `path`, a `..`, or a committed symlink pointing at, say, `~/.ssh/id_rsa` had `pin` copy that file into the store and write its hash into the committed lockfile, without running anything. Now a repository gives up nothing but its own files: every declared path is followed to where it really is, and one that reaches outside is reported as `outside the repository`, not pinned, and counted as a problem. `chartbook snapshot` refuses a pipeline whose manifest reaches outside its folder for the same reason.
+- **`chartbook update` could write a lockfile that named a new snapshot beside an old asset's bytes**, when the store had lost one of the new snapshot's objects. A snapshot is now taken whole or not at all: if any object it names is missing, nothing moves, the lockfile is left as it was, and the missing object is reported.
+- **`chartbook run --snapshot` refused itself in a project that commits `chartbook.lock`**, because the pin it made before the build changed that file and the check after the build blamed the build. The lockfile ChartBook itself writes no longer counts as an uncommitted change, before or after the build. A build that *commits* is refused: the label would name a commit that did not run the build.
+- **Two pipelines whose build scripts ran each other looped without end.** The guard against a build script calling `chartbook build` or `chartbook run` saw only the innermost call. Every script ChartBook is running is now in `CHARTBOOK_RUN_STACK`, and a pipeline anywhere in it is refused. The guard also comes before the pin, so a refused call writes no lockfile.
+- **A model version at a commit that was amended away was lost.** Amending right after `chartbook run --snapshot` is routine. Versions are now found among every commit the repository still has, not only those a branch points at.
+- **A git dependency with `build = "./build.sh"` could not run**: the checkout made every file read-only and dropped the executable bit. It is kept.
+- **Two different repositories could share one clone**, when their URLs differed only in port or in a character the cache does not keep (`a b` and `a_b`). A port stays in the clone's name, and a component that had to be cleaned carries a short hash of itself.
+- **Two pipelines could share one folder of snapshots** (`a--b/c` and `a/b--c`; a folder named `_top` and the repository's top). Such names carry a short hash of themselves.
+- **A frozen pin of bytes already in the store under another name dropped that name**, when the earlier object was a hard link or symlink made through the Python API. The other names are kept, as frozen copies.
+- Smaller: two `pin`s at once no longer trip over one temporary file name; `pin` now says `relocated` and stays put when a `path` dependency is pointed at another folder, as it does for `git`; `pin --from-folder` that moves nothing keeps saying which snapshot the pins came from; `model/x@md5:…` is refused instead of being read as sha256; a label that is not text is not a label; `chartbook init` interrupted at the prompt exits cleanly; the template no longer ships a path from its author's machine.
+
+
+Every snapshot was kept for ever, and on a disk without copy-on-write clones each one is a full copy of a pipeline's data. `chartbook store gc` now lets old ones go. A snapshot is kept if a lockfile pins it, if it is the newest of its pipeline or the newest that a branch or tag of its repository can pin from, if a label in that pipeline's `chartbook.toml` points at a model version it holds, or if it was made in the last 30 days (`--keep-days` changes the number). The rest are listed, and removed when you say yes, together with whatever only they named. The list is made again when the yes comes, so a pin that landed in between is kept.
+
+```console
+$ chartbook store gc --dry-run
+Kept: 4 snapshot(s), naming 9 object(s): 1 because a lockfile pins it, 2 because it is the newest of its pipeline, 1 because it was made in the last 30 days
+Would remove 6 snapshot(s):
+  ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: nothing pins it, it is not the newest, and it is older than 30 days
+```
+
+For the labels, the store notes beside each pipeline's snapshots the folder they were made from, and reads that folder's manifest when it clears. A folder that is gone says nothing, and the other three rules still hold.
+
 
 `treasury_rates#dgs10` is the address of one column of a dataframe. It is what a `[dataframes.treasury_rates.series.dgs10]` table documents and what `index.json` lists. The design also had `data.load("treasury_rates#dgs10")` hand back that column, as the last part of this step.
 
@@ -61,7 +87,7 @@ models.versions("rate_forecaster")         # all of them, with scores and commit
 
 **A version is named by the start of its content hash**, as git names a commit. The design proposed `v1`, `v2`, `v3`, and listed the problem with it as an open question: two branches that each retrain both make a `v4`, and the merge conflicts. A name worked out from the bytes is the same on every machine and every branch and never needs renumbering. The names people use are labels, in the manifest, so promoting a model is a one-line change reviewed in a pull request.
 
-The model's page lists its versions, newest first, with their scores, and `index.json` has them under `versions` on the `Model` record. `chartbook check` warns about a label whose version is not on this machine, and does not fail: the version may be in the store of the machine that made it.
+The model's page lists its versions, newest first, with their scores, and `index.json` has them under `versions` on the `Model` record. `chartbook check` warns about a label whose version is not on this machine, and does not fail: the version may be in the store of the machine that made it. A labelled version is kept by `chartbook store gc` for as long as the label is in a manifest the store knows about.
 
 `@` in a reference used to be refused everywhere as reserved. It now resolves for one thing, a version of one of this pipeline's own models. Not built: a version of another pipeline's model (`other:model/x@champion`), versions of anything but a model, and versions that travel between machines, which need a store to share.
 
@@ -109,7 +135,7 @@ Three rules. **Everything in the pipeline's folder must be committed before a sn
 
 **This changes `chartbook pin` and `chartbook update` for a `path` dependency** (they are described under "pinning" below, and have not been released). They now choose among snapshots. `pin` takes the newest at the commit the other folder is on or, if that commit has none, at the nearest one before it; `update` moves to the newest. `chartbook.lock` records the snapshot's commit and time beside the hashes, so it says which code as well as which data, as it already did for a `git` dependency. A pipeline whose owner has made no snapshot cannot be pinned, and the command says what the owner has to do. A rebuild that has not been declared ready is not seen at all. A dependency is pinned to one snapshot, whole.
 
-One commit can have several snapshots, since a pipeline that pulls data from outside builds other bytes on another day; rebuilding and making a snapshot again gives a new one at the same commit, and making one when nothing was rebuilt gives none. `chartbook store gc` never removes what a snapshot names.
+One commit can have several snapshots, since a pipeline that pulls data from outside builds other bytes on another day; rebuilding and making a snapshot again gives a new one at the same commit, and making one when nothing was rebuilt gives none. `chartbook store gc` keeps what a snapshot names for as long as it keeps the snapshot; see the entry above.
 
 For working on two pipelines at once, `chartbook pin --from-folder` and `chartbook update --from-folder` still take what is in the folder this minute. The option is off by default and left out of `--help` on purpose, and a lockfile made with it names no commit.
 
@@ -117,7 +143,7 @@ For working on two pipelines at once, `chartbook pin --from-folder` and `chartbo
 
 **What a snapshot records, and what it never does.** Which data: the hash of every file. Which code: the commit. What it was built from: `inputs`, what the pipeline was itself pinned to, so a snapshot of `rate_forecast` names the snapshot of `fed_yield_curve` it read. And a note of the conditions, `built_with`: whether the build ran in the same command, and the ChartBook, Python and platform versions. The note is there to explain a difference between two snapshots, not to make a build repeatable. Nothing of a pipeline's `.env` is copied, ever: it holds secrets, and a store is something to share.
 
-Not built yet: clearing old snapshots (the store grows with each one), and sharing them between machines.
+Not built yet: sharing snapshots between machines.
 
 ### Added — `[scripts]` and `chartbook run`
 

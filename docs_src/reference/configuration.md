@@ -483,7 +483,7 @@ An entry has `path` or `git`, not both.
 
 **What it does not do yet.**
 
-- **A `git` dependency has only what its repository commits, until it is built.** `chartbook pin` clones it and pins the declared files that are in git. Data the other pipeline builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build, so those assets are listed as not built. `chartbook run` does build it, in a copy of its checkout, and then they can be pinned. Working out a repository from an ID alone (`{ rev = "…" }` with no `git`) is not supported.
+- **A `git` dependency has only what its repository commits, until it is built.** `chartbook pin` clones it and pins the declared files that are in git, and only files inside the repository: a path in its manifest that reaches outside is not pinned. `chartbook run` builds it, which runs that repository's code with your environment, so depend on repositories you would run code from. Data the other pipeline builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build, so those assets are listed as not built. `chartbook run` does build it, in a copy of its checkout, and then they can be pinned. Working out a repository from an ID alone (`{ rev = "…" }` with no `git`) is not supported.
 - `data.load(pipeline=…, dataframe=…)`, with two arguments, still looks in a catalog and reads the other pipeline's own file, as it always has. It does not read this table.
 
 - `chartbook run` pins what has no pin yet, and then builds this pipeline. It never builds in a `path` dependency's folder, and never reads one: that folder is its owner's to build and to declare ready. It builds a `git` dependency once, in a clean copy. See {ref}`chartbook run <chartbook-run>`.

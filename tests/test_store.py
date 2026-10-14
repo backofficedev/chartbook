@@ -750,3 +750,22 @@ class TestVerifyCommand:
         result = CliRunner().invoke(main, ["store", "--help"])
         assert result.exit_code == 0
         assert "verify" in result.output
+
+
+class TestAFrozenPutOverALinkedObject:
+    def test_keeps_every_name_the_object_had(self, store, work):
+        """Found by a reviewer: the same bytes under two names, from two
+        pipelines; a frozen put of the second once dropped the first."""
+        (work / "a.parquet").write_bytes(b"same bytes")
+        (work / "b.parquet").write_bytes(b"same bytes")
+        first = store.put(work / "a.parquet", links=("hardlink",))
+        assert sorted(p.name for p in store.object_path(first.content_hash).iterdir()) == ["a.parquet"]
+        second = store.put(work / "b.parquet", links=("reflink", "copy"))
+        assert second.content_hash == first.content_hash
+        held = store.object_path(first.content_hash)
+        assert sorted(p.name for p in held.iterdir()) == ["a.parquet", "b.parquet"]
+        assert (held / "a.parquet").read_bytes() == b"same bytes"
+        # ...and now the whole object is the store's own
+        (work / "a.parquet").write_bytes(b"rewritten")
+        assert (held / "a.parquet").read_bytes() == b"same bytes"
+

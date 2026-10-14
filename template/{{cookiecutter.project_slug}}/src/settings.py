@@ -69,7 +69,7 @@ def find_all_caps_cli_vars(argv=sys.argv):
     ```
     >>> argv = [
         '/opt/homebrew/Caskroom/mambaforge/base/envs/ftsf/lib/python3.12/site-packages/ipykernel_launcher.py',
-        '--f=/Users/jbejarano/Library/Jupyter/runtime/kernel-v37ea18e94713e364855d5610175b766ee99909eab.json',
+        '--f=/home/you/.local/share/jupyter/runtime/kernel-0123456789abcdef.json',
         '--DATA_DIR=/path/to/data',
         '--MANUAL_DATA_DIR=/path/to/manual_data'
     ]

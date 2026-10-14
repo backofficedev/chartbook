@@ -53,6 +53,7 @@ itself is never written to.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shutil
@@ -168,22 +169,33 @@ def repository_slug(url: str) -> Path:
 
     The same repository reached two ways (``https://host/a/b.git``,
     ``git@host:a/b``) gets one path, and so one clone. A repository on this
-    disk goes under ``local/``. Nothing of a URL's user name, password or
-    port is in it, and no component can climb out of the cache.
+    disk goes under ``local/``. Nothing of a URL's user name or password is
+    in it, and no component can climb out of the cache. A port stays, as
+    ``host_8443``, and a component with a character that is not kept gets
+    a short hash of itself, so that two different repositories never share
+    a clone.
     """
     text = strip_url_credentials(url.strip())
     scp_like = _SCP_LIKE.match(text)
-    with_scheme = re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://(?:[^@/]*@)?([^/:]*)(?::\d+)?/(.*)$", text)
+    with_scheme = re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://(?:[^@/]*@)?([^/:]*)(?::(\d+))?/(.*)$", text)
     if with_scheme and not text.lower().startswith("file:"):
-        host, path = with_scheme.group(1), with_scheme.group(2)
+        host, port, path = with_scheme.group(1), with_scheme.group(2), with_scheme.group(3)
+        if port:
+            host = f"{host}_{port}"
     elif scp_like and "://" not in text:
         host, path = scp_like.group(1), scp_like.group(2)
     else:
         host, path = "local", re.sub(r"^file://", "", text)
     path = re.sub(r"\.git/?$", "", path.rstrip("/"))
     components = [host, *re.split(r"[/\\]+", path)]
-    safe = [re.sub(r"[^A-Za-z0-9._-]", "_", part) for part in components]
-    safe = [part for part in safe if part and set(part) != {"."}]
+    safe = []
+    for part in components:
+        if not part or set(part) == {"."}:
+            continue
+        cleaned = re.sub(r"[^A-Za-z0-9._-]", "_", part)
+        if cleaned != part:
+            cleaned += "~" + hashlib.sha256(part.encode("utf-8")).hexdigest()[:8]
+        safe.append(cleaned)
     return Path(*safe) if safe else Path("local", "repository")
 
 
@@ -400,7 +412,9 @@ class GitCache:
                 for name in names:
                     file = os.path.join(folder, name)
                     if not os.path.islink(file):
-                        os.chmod(file, _READ_ONLY)
+                        # Read-only, but a script stays runnable
+                        mode = os.stat(file).st_mode
+                        os.chmod(file, _READ_ONLY | (mode & 0o111))
             try:
                 os.rename(staging, final)
             except OSError:

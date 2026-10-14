@@ -131,6 +131,27 @@ class TestMaking:
             jsonschema.validate(record, json.loads(index.schema_path(record["kind"]).read_text()))
         assert snapshot.read(taken.path) == taken
 
+    def test_it_gives_up_nothing_but_the_pipelines_own_files(self, maker, work):
+        """A declared path that reaches outside the folder is refused."""
+        secret = work / "secret.txt"
+        secret.write_text("mine\n")
+        _manifest(
+            maker,
+            {
+                "project": {"id": "acme/maker"},
+                "dataframes": {
+                    "rates": {"path": "./_data/rates.parquet", "docs": "d"},
+                    "other": {"path": "../secret.txt", "docs": "d"},
+                },
+            },
+        )
+        _commit(work)
+        with pytest.raises(SnapshotError) as e:
+            snapshot.make(maker)
+        assert "'acme/maker:other' at '../secret.txt'" in str(e.value)
+        assert "outside the pipeline's folder" in str(e.value)
+        assert not (default_store().root / "snapshots").exists()
+
     def test_it_is_frozen(self, maker):
         """Its owner rewrites the file in place. The snapshot keeps what it had."""
         taken = snapshot.make(maker).snapshot
@@ -147,6 +168,16 @@ class TestMaking:
         assert taken.subdirectory == ""
         assert taken.path.parent == default_store().root / "snapshots" / commit / "_top"
         assert "subdirectory" not in json.loads(taken.path.read_text())["code"]
+
+    def test_two_pipelines_never_share_a_folder_in_the_store(self, work):
+        """``a--b/c`` and ``a/b--c`` would both be ``a--b--c``; so would ``_top`` and the top."""
+        store = default_store()
+        commit = "0" * 40
+        names = ["", "_top", "a--b/c", "a/b--c", "a/b/c"]
+        folders = [snapshot._folder(store, commit, name) for name in names]
+        assert len(set(folders)) == len(names)
+        assert folders[0].name == "_top" and folders[4].name == "a--b--c"
+        assert folders[1].name.startswith("_top~") and folders[2].name.startswith("a--b--c~")
 
     def test_a_pipeline_deep_in_its_repository(self, work):
         directory = _manifest(
@@ -635,6 +666,47 @@ class TestPinning:
         assert _statuses(report) == {"rates": "lost", "chart/curve": "kept"}
         assert len(report.problems) == 1
 
+    def test_update_to_a_snapshot_the_store_has_lost_part_of_moves_nothing(self, user, maker):
+        """Found by a reviewer: the lockfile once named the new snapshot
+        beside the old asset's bytes. A snapshot is taken whole or not at all."""
+        first = snapshot.make(maker).snapshot
+        lock.pin(user)
+        before = (user / lock.LOCK_FILE).read_bytes()
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker).snapshot
+        default_store().delete(second.content()["rates"])
+
+        report = lock.update(user)
+        assert _statuses(report) == {"rates": "lost", "chart/curve": "kept"}
+        assert len(report.problems) == 1
+        assert "nothing was moved" in report.problems[0].detail
+        assert not report.written and (user / lock.LOCK_FILE).read_bytes() == before
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["commit"] == first.commit and listed["snapshot"] == first.made_at
+
+    def test_moving_the_dependency_to_another_folder_is_followed_by_update_not_pin(
+        self, user, maker, work
+    ):
+        snapshot.make(maker)
+        lock.pin(user)
+        other = _manifest(work / "elsewhere", {"project": {"id": "acme/maker"}, "dataframes": {"rates": {"path": "./_data/rates.parquet", "docs": "d"}}})
+        _build(other, rates=b"elsewhere")
+        _commit(work)
+        snapshot.make(other)
+        _manifest(user, {"project": {"id": "acme/user"}, "dependencies": {"acme/maker": {"path": "../elsewhere"}}})
+
+        report = lock.pin(user)
+        assert [e.status for e in report.events if e.asset is None] == ["relocated"]
+        # It says what the new folder's snapshot would change, and stays put
+        assert _statuses(report) == {"rates": "stale", "chart/curve": "kept"}
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["path"] == "../maker"  # still where the pins came from
+
+        moved = lock.update(user)
+        assert _statuses(moved) == {"rates": "moved", "chart/curve": "dropped"}
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["path"] == "../elsewhere"
+
     def test_the_index_names_the_snapshot(self, user, maker):
         taken = snapshot.make(maker).snapshot
         lock.pin(user)
@@ -687,15 +759,277 @@ class TestFromFolder:
         (listed,) = lock.read_lock(user).dependencies
         assert "commit" not in listed["location"] and "snapshot" not in listed
 
+    def test_pin_from_the_folder_that_moves_nothing_keeps_saying_where_the_pins_came_from(
+        self, user, maker
+    ):
+        taken = snapshot.make(maker).snapshot
+        lock.pin(user)
+        _build(maker, rates=b"rates-2")
+        report = lock.pin(user, from_folder=True)  # pin never moves, so nothing moved
+        assert _statuses(report) == {"rates": "stale", "chart/curve": "kept"}
+        (listed,) = lock.read_lock(user).dependencies
+        assert listed["location"]["commit"] == taken.commit and listed["snapshot"] == taken.made_at
+
+
+OLD = "2026-01-01T00:00:00.000000Z"  # long before any keep window
+OLDER = "2025-12-01T00:00:00.000000Z"
+
+
+def _plan(store, pinned=(), missing=(), keep_days=30):
+    return snapshot.plan_removals(store, set(pinned), set(missing), keep_days=keep_days)
+
 
 class TestKeeping:
-    def test_a_snapshot_keeps_its_objects_from_being_cleared(self, maker):
+    def test_a_new_snapshot_keeps_its_objects_from_being_cleared(self, maker):
         """Nothing pins it yet. It was declared ready, and that is enough."""
         taken = snapshot.make(maker).snapshot
         store = default_store()
         plan = lock.plan_gc(store, recent_seconds=0)
         assert plan.delete == [] and plan.kept == 2 and plan.snapshots == 2
+        assert plan.snapshots_delete == []
+        assert [why for _, why in plan.snapshots_kept] == ["it is the newest of its pipeline"]
         assert snapshot.all_hashes(store) == taken.hashes()
+
+    def test_uncommitted_reads_a_path_git_would_quote(self, work):
+        """A space or an accent in a folder name; the lockfile still does not count."""
+        directory = _manifest(work / "my données", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (directory / "x.parquet").write_bytes(b"x")
+        (work / ".gitignore").write_text("_data/\n_output/\n")
+        _git(work, "init", "--quiet", "-b", "main")
+        _git(work, "add", "-A")
+        _git(work, "commit", "--quiet", "-m", "Work")
+        (directory / "chartbook.lock").write_text("{}")
+        (directory / "new file.txt").write_text("new")
+        assert snapshot.uncommitted(directory) == ["?? my données/chartbook.lock", "?? my données/new file.txt"]
+        assert snapshot.uncommitted(directory, ignoring=("chartbook.lock",)) == ["?? my données/new file.txt"]
+        # A rename shows both names
+        _git(work, "add", "-A")
+        _git(work, "commit", "--quiet", "-m", "More")
+        _git(work, "mv", "my données/new file.txt", "my données/renamed.txt")
+        assert snapshot.uncommitted(directory) == ["R  my données/new file.txt -> my données/renamed.txt"]
+
+    def test_the_folder_a_snapshot_came_from_is_noted(self, maker, work):
+        taken = snapshot.make(maker).snapshot
+        assert snapshot.origins(default_store(), taken) == [work]
+        snapshot.make(maker)  # again, with nothing changed: noted once
+        assert (taken.path.parent / "origins").read_text().splitlines() == [str(work)]
+
+
+class TestClearingOldSnapshots:
+    """Which snapshots `chartbook store gc` keeps, and which it lets go."""
+
+    @pytest.fixture
+    def three(self, maker):
+        """Three snapshots of ``maker``, oldest first; the first two long ago."""
+        first = snapshot.make(maker, made_at=OLDER).snapshot
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker, made_at=OLD).snapshot
+        _build(maker, rates=b"rates-3")
+        third = snapshot.make(maker).snapshot
+        return first, second, third
+
+    def test_the_newest_is_kept_and_old_unpinned_ones_may_go(self, three):
+        first, second, third = three
+        plan = _plan(default_store())
+        assert [t for t, _ in plan.keep] == [third]
+        assert [(t, why) for t, why in plan.remove] == [
+            (first, "nothing pins it, it is not the newest, and it is older than 30 days"),
+            (second, "nothing pins it, it is not the newest, and it is older than 30 days"),
+        ]
+
+    def test_a_recent_one_is_kept(self, maker):
+        snapshot.make(maker, made_at=OLD)
+        _build(maker, rates=b"rates-2")
+        recent = snapshot.make(maker).snapshot  # now
+        _build(maker, rates=b"rates-3")
+        snapshot.make(maker)
+        plan = _plan(default_store())
+        assert (recent, "it was made in the last 30 days") in plan.keep
+        assert len(plan.remove) == 1
+        # ...unless the window is shorter
+        assert len(_plan(default_store(), keep_days=0).remove) == 2
+
+    def test_one_a_lockfile_pins_is_kept(self, three, user):
+        first, second, third = three
+        plan = _plan(default_store(), pinned={(first.commit, first.made_at)})
+        assert (first, "a lockfile pins it") in plan.keep
+        assert [t for t, _ in plan.remove] == [second]
+
+    def test_one_a_missing_lockfile_named_is_kept(self, three):
+        first, second, third = three
+        plan = _plan(default_store(), missing={first.content()["rates"]})
+        assert (first, "a lockfile that cannot be found named what it holds") in plan.keep
+        assert [t for t, _ in plan.remove] == [second]
+
+    def test_one_a_label_points_into_is_kept(self, work):
+        """The manifest in the folder the snapshots came from says which."""
+        directory = _manifest(
+            work / "forecast",
+            {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json"}}},
+        )
+        (directory / "_output").mkdir()
+        (directory / "_output" / "m.json").write_bytes(b"v1")
+        _commit(work)
+        first = snapshot.make(directory, made_at=OLDER).snapshot
+        (directory / "_output" / "m.json").write_bytes(b"v2")
+        second = snapshot.make(directory, made_at=OLD).snapshot
+        (directory / "_output" / "m.json").write_bytes(b"v3")
+        snapshot.make(directory)
+
+        # The label is added afterwards and not committed: the manifest is
+        # read as it is, since a label is what someone is relying on now
+        champion = first.content()["model/m"].split(":")[1][:12]
+        _manifest(
+            directory,
+            {
+                "project": {"id": "acme/forecast"},
+                "models": {"m": {"path": "./_output/m.json", "aliases": {"champion": champion}}},
+            },
+        )
+        plan = _plan(default_store())
+        assert (first, "a label points at a version in it") in plan.keep
+        assert [t for t, _ in plan.remove] == [second]
+
+    def test_a_folder_that_is_gone_says_nothing_about_labels(self, three, work):
+        first, second, third = three
+        os.rename(work / "maker", work / "moved")
+        plan = _plan(default_store())
+        assert [t for t, _ in plan.remove] == [first, second]
+
+    def test_pipelines_are_kept_apart(self, three, work):
+        other = _manifest(work / "other", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
+        (other / "x.parquet").write_bytes(b"x")
+        _commit(work)
+        only = snapshot.make(other, made_at=OLDER).snapshot
+        plan = _plan(default_store())
+        assert (only, "it is the newest of its pipeline") in plan.keep
+
+    def test_a_pin_that_lands_while_someone_is_deciding_is_honoured(self, user, maker, work):
+        """Found by a reviewer: the plan was made before the yes, and run after.
+
+        A `pin` in between took the old snapshot (the folder was checked out
+        at that commit), and the removal then took the pin's only bytes.
+        """
+        first = snapshot.make(maker, made_at=OLDER).snapshot
+        (maker / "pull.py").write_text("print(1)\n")
+        second_commit = _commit(work)
+        _build(maker, rates=b"rates-2")
+        second = snapshot.make(maker, made_at=OLD).snapshot
+        (maker / "pull.py").write_text("print(2)\n")
+        _commit(work)
+        _build(maker, rates=b"rates-3")
+        snapshot.make(maker)
+        store = default_store()
+        plan = lock.plan_gc(store, recent_seconds=0)
+        assert [t for t, _ in plan.snapshots_delete] == [first, second]
+
+        # ...the user says yes slowly, and meanwhile a pin lands on `second`
+        _git(work, "checkout", "--quiet", second_commit)
+        report = lock.pin(user)
+        _git(work, "checkout", "--quiet", "main")
+        assert report.snapshots["acme/maker"] == second
+        removed_snapshots, removed = lock.run_gc(plan, store)
+        assert removed_snapshots == 1 and second.path.exists() and not first.path.exists()
+        for content_hash in second.hashes():
+            assert store.has(content_hash)
+
+    def test_the_newest_a_branch_or_tag_can_pin_from_is_kept(self, maker, work):
+        """A release branch's last snapshot is what its users pin; it stays."""
+        release = snapshot.make(maker, made_at=OLDER).snapshot
+        _git(work, "tag", "v1")
+        (maker / "pull.py").write_text("print('main moves on')\n")
+        _commit(work)
+        _build(maker, rates=b"rates-2")
+        snapshot.make(maker)
+        plan = _plan(default_store())
+        assert (release, "it is the newest a branch or tag can pin from") in plan.keep
+        assert plan.remove == []
+        # ...and not once the tag is gone
+        _git(work, "tag", "-d", "v1")
+        plan = _plan(default_store())
+        assert [t for t, _ in plan.remove] == [release]
+
+    def test_a_label_too_short_to_name_a_version_keeps_nothing(self, work):
+        directory = _manifest(
+            work / "forecast",
+            {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json", "aliases": {"champion": "7f3a"}}}},
+        )
+        (directory / "_output").mkdir()
+        (directory / "_output" / "m.json").write_bytes(b"v1")
+        _commit(work)
+        first = snapshot.make(directory, made_at=OLDER).snapshot
+        (directory / "_output" / "m.json").write_bytes(b"v2")
+        snapshot.make(directory)
+        assert [t for t, _ in _plan(default_store()).remove] == [first]
+
+    def test_a_line_in_origins_that_is_not_a_folder_says_nothing(self, three):
+        first, second, third = three
+        note = third.path.parent / "origins"
+        note.write_text("relative/thing\n" + note.read_text())
+        assert all(path.is_absolute() for path in snapshot.origins(default_store(), third))
+        plan = _plan(default_store())  # no crash, and the same answer
+        assert [t for t, _ in plan.remove] == [first, second]
+
+    def test_removing_the_last_record_leaves_anothers_half_written_one_alone(self, maker, work):
+        first = snapshot.make(maker, made_at=OLDER).snapshot
+        (maker / "pull.py").write_text("print(1)\n")
+        _commit(work)
+        _build(maker, rates=b"rates-2")
+        snapshot.make(maker)
+        folder = first.path.parent
+        half = folder / "deadbeef.tmp"  # another process, writing a record here now
+        half.write_text("{")
+        store = default_store()
+        lock.run_gc(lock.plan_gc(store, recent_seconds=0), store)
+        assert not first.path.exists()
+        assert half.exists() and folder.exists() and not (folder / "origins").exists()
+
+    def test_gc_removes_the_record_and_then_what_only_it_named(self, three):
+        first, second, third = three
+        store = default_store()
+        plan = lock.plan_gc(store, recent_seconds=0)
+        assert [t for t, _ in plan.snapshots_delete] == [first, second]
+        gone = {first.content()["rates"], second.content()["rates"]}
+        assert {h for h, _ in plan.delete} == gone  # the chart is shared with the third
+        lock.run_gc(plan, store)
+        assert not first.path.exists() and not second.path.exists() and third.path.exists()
+        assert all(not store.has(h) for h in gone)
+        assert store.has(third.content()["rates"]) and store.has(third.content()["chart/curve"])
+        assert snapshot.all_snapshots(store) == [third]
+
+    def test_removing_the_last_record_at_a_commit_removes_its_folders(self, three, work):
+        first, second, third = three
+        (maker_dir,) = [work / "maker"]
+        # Move on a commit so the old ones are alone at theirs
+        store = default_store()
+        plan = lock.plan_gc(store, recent_seconds=0)
+        lock.run_gc(plan, store)
+        assert not first.path.parent.exists() or any(first.path.parent.glob("*.json"))
+        assert third.path.parent.exists() and (third.path.parent / "origins").exists()
+
+    def test_the_command(self, three, monkeypatch):
+        first, second, third = three
+        result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
+        assert result.exit_code == 0, result.output
+        said = result.output
+        assert "Kept: 1 snapshot(s), naming 2 object(s): 1 because it is the newest of its pipeline" in said
+        assert "Would remove 2 snapshot(s):" in said
+        assert f"  acme/maker at {first.commit[:7]}, made 2025-12-01 00:00 UTC: nothing pins it" in said
+        # Their objects were stored a moment ago, so this run spares them;
+        # the next run, an hour on, removes them
+        assert "Kept: 2 object(s) nothing names, stored in the last hour" in said
+        assert first.path.exists()  # a dry run
+
+        kept = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "100000"])
+        assert "Would remove" not in kept.output and "Nothing to remove." in kept.output
+
+        assert "Would remove 0 object(s)" not in said  # no empty object list
+
+        done = CliRunner().invoke(main, ["store", "gc", "--yes"])
+        assert done.exit_code == 0, done.output
+        assert "Removed 2 snapshot(s) and 0 object(s)" in done.output
+        assert not first.path.exists() and third.path.exists()
+        assert snapshot.all_snapshots(default_store()) == [third]
 
     def test_what_no_snapshot_and_no_lockfile_names_is_cleared(self, maker, work):
         snapshot.make(maker)

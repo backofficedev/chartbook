@@ -20,7 +20,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook update` | Move pins forward to each dependency's newest snapshot |
 | `chartbook run [SCRIPT]` | Run a named script in this pipeline; `build` by default, after pinning what it depends on |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
-| `chartbook store gc` | Remove from the store what no lockfile and no snapshot names |
+| `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install skill` | Install the bundled Claude Code skill (user-level by default) |
 
@@ -421,9 +421,9 @@ Snapshot made. A pipeline that depends on this one gets it with `chartbook updat
 Ran build in 1 pipeline(s).
 ```
 
-1. It checks that everything is committed **before** it builds, so you are not refused after an hour.
+1. It checks that everything is committed **before** it builds, so you are not refused after an hour. `chartbook.lock` does not count: the pin before the build is about to write it, and the snapshot records what it says.
 2. It builds.
-3. It checks again. A build that changes a committed file leaves a folder the commit does not describe, and gets no snapshot.
+3. It checks again. A build that changes a committed file leaves a folder the commit does not describe, and gets no snapshot. So does a build that makes a commit.
 4. It makes the snapshot, and records in it that the build ran in the same command.
 
 With `--force` as well, it is the weekly refresh in one line: `chartbook run --force --snapshot`. In a catalog, each pipeline is built and declared ready in turn, so a pipeline later in the catalog pins what an earlier one has just declared ready.
@@ -442,7 +442,7 @@ With `--force` as well, it is the weekly refresh in one line: `chartbook run --f
 Things to know:
 
 - **`chartbook snapshot` does not run the build.** `chartbook run --snapshot` does.
-- **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). Every snapshot is kept; nothing clears old ones yet.
+- **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). {ref}`chartbook store gc <chartbook-store-gc>` clears old ones: those nothing pins, that are not the newest of their pipeline, that no label points into, and that are over 30 days old.
 - **It is found by commit.** So it is found by a pipeline that depends on this folder, and by one that depends on the same repository by URL, on this machine. It is not shared between machines.
 
 ## chartbook pin
@@ -625,6 +625,8 @@ To build against the newer snapshot, run `chartbook update` and then `chartbook 
 
 **A `git` dependency is built once.** Nobody works in ChartBook's copy of a commit, so there is nothing to disturb. Its `build` runs in a writable copy of the checkout, under `~/.chartbook/git/work/`, and that is how data the repository builds, and does not commit, comes to be there to pin. That build needs whatever it needs: its tools, its credentials, its network.
 
+**That is running the repository's code, with your environment.** Add a `git` dependency only from a repository you would run code from. `chartbook pin` by itself runs nothing, and pins nothing a repository's manifest declares outside the repository's own files: an absolute path, a `..` or a symlink that reaches out is reported as `outside the repository` and left alone.
+
 ```console
 $ chartbook run
 ftsfr/ref_data: build    in /Users/you/.chartbook/git/work/gitlab.example.org/ftsfr/ref_data/4f2a91c0…
@@ -699,15 +701,29 @@ sha256:3e744b9d…: its content is no longer what its name says (now sha256:64da
 
 `chartbook pin` asks for the first or the last of these only, so a pin is always frozen. The two in the middle are there for what is cheap to make again, a build cache, which is not built yet. `verify` is how you find out that an object has changed. It reads every byte, so on a large store it takes a while.
 
+(chartbook-store-gc)=
 ### store gc
 
 ```console
-chartbook store gc [--dry-run] [--yes] [--forget-missing]
+chartbook store gc [--dry-run] [--yes] [--forget-missing] [--keep-days DAYS]
 ```
 
-Remove from the store what no lockfile and no snapshot names. In practice that is what a `git` dependency's pin moved away from, and what was pinned with `--from-folder` and is pinned no longer.
+Remove from the store what nothing needs any more: old snapshots, and the objects that only they, or a pin that has since moved, named.
 
-The store is shared by all your projects. Every `chartbook pin` and `chartbook update` notes its lockfile in the store, and `gc` keeps whatever any of those lockfiles names. It also keeps everything any {ref}`snapshot <chartbook-snapshot>` names, whether or not anything pins it yet. It lists what it would remove and asks before removing anything:
+The store is shared by all your projects. Two things keep what is in it. Every `chartbook pin` and `chartbook update` notes its lockfile in the store, and `gc` keeps whatever any of those lockfiles names. And every {ref}`snapshot <chartbook-snapshot>` keeps what it names, for as long as the snapshot is kept.
+
+**Which snapshots are kept.** A snapshot is kept if any of these holds:
+
+| Kept because | Example |
+|---|---|
+| A lockfile pins it | `rate_forecast` is pinned to it |
+| It is the newest of its pipeline, or the newest a branch or tag can pin from | The last build of `yield_curve` that was declared ready; the last one on its `release` branch |
+| A label points at a model version in it | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml` |
+| It was made in the last 30 days | `--keep-days` changes the number |
+
+Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last month of snapshots, the ones somebody pins, and the ones a label names.
+
+It lists what it would remove and asks before removing anything:
 
 ```console
 $ chartbook store gc
@@ -715,21 +731,27 @@ Kept: 14 object(s), named by 3 lockfile(s)
   /work/crsp_treasury/chartbook.lock
   /work/rate_forecast/chartbook.lock
   /Volumes/usb/old_project/chartbook.lock  (not found; its pins are kept)
-Would remove 5 object(s), 2.1 GB, that no lockfile names.
+Kept: 4 snapshot(s), naming 9 object(s): 1 because a lockfile pins it, 2 because it is the newest of its pipeline, 1 because it was made in the last 30 days
+Would remove 6 snapshot(s):
+  ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: nothing pins it, it is not the newest, and it is older than 30 days
+  …
+Would remove 5 object(s), 2.1 GB, that nothing names.
 Remove them? [y/N]:
 ```
 
 | Option | Effect |
 |--------|--------|
-| `--dry-run` | List each object that would be removed, with its size, and remove nothing |
+| `--dry-run` | List each snapshot and object that would be removed, with sizes, and remove nothing |
 | `--yes`, `-y` | Do not ask |
 | `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found |
+| `--keep-days DAYS` | Keep an unpinned snapshot that is not the newest of its pipeline for this long. Default 30 |
 
-Four things it is careful about:
+Five things it is careful about:
 
-- **A snapshot is never removed.** It was declared ready on purpose, and some pipeline may pin it tomorrow. Nothing clears old snapshots yet, so a store grows with each one made.
+- **It looks again when you say yes.** The list is made before the question, and a `chartbook pin` can land while you decide. Whatever became pinned in between is kept, and the command says so.
+- **A snapshot's labels, and its branches, are read from the folder it was made from.** The store notes that folder beside each pipeline's snapshots. If the folder is gone, nothing is known about labels, and only the other three rules apply.
 - **A lockfile it cannot find still keeps its pins.** The project may be on a drive that is not plugged in. The store remembers what that lockfile named when it was last pinned, and keeps it until you pass `--forget-missing`.
-- **An object stored in the last hour is never removed.** A pin puts files in the store before it writes the lockfile that names them.
+- **An object stored in the last hour is never removed.** A pin puts files in the store before it writes the lockfile that names them. So the run that removes a snapshot's record may leave its objects for the next run.
 - **If a lockfile or a snapshot's record cannot be read, nothing is removed.** `gc` stops and says which.
 
 A lockfile is read as it is now. If you check out an older commit and run `gc` without pinning, the pins of the commit you left are not named by anything and can be removed; run `chartbook pin` after switching back.

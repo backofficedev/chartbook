@@ -128,6 +128,15 @@ class TestAVersionIsMadeByASnapshot:
         assert first.made_at < second.made_at
         assert first.content_hash != second.content_hash
 
+    def test_one_at_a_commit_that_was_amended_away_is_still_a_version(self, forecast):
+        """Amending right after a snapshot is routine; the version stays."""
+        name = _version(forecast)
+        (forecast / "notes.md").write_text("fixed a typo\n")
+        _git(forecast, "add", "-A")
+        _git(forecast, "commit", "--quiet", "--amend", "--no-edit")
+        assert [v.name for v in models.versions("m", project_dir=forecast)] == [name]
+        assert models.path(f"m@{name}", project_dir=forecast).read_bytes() == b"weights-1"
+
     def test_one_made_on_another_branch_is_still_a_version(self, forecast):
         on_main = _version(forecast)
         _git(forecast, "checkout", "--quiet", "-b", "experiment")
@@ -218,6 +227,23 @@ class TestNamingAVersion:
             f"No version 000000000000 of model/m is on this machine. Its versions here "
             f"are: {name}. A version is made by a snapshot: `chartbook run --snapshot`."
         )
+
+    def test_another_algorithm_is_not_a_version(self, forecast):
+        name = _version(forecast)
+        (version,) = models.versions("m", project_dir=forecast)
+        digits = version.content_hash.split(":")[1]
+        with pytest.raises(VersionNotFoundError, match="names a md5 one"):
+            models.path(f"m@md5:{digits[:12]}", project_dir=forecast)
+        assert models.path(f"m@sha256:{digits}", project_dir=forecast).read_bytes() == b"weights-1"
+
+    def test_a_label_that_is_not_text_is_not_a_label(self, forecast):
+        name = _version(forecast)
+        (forecast / "chartbook.toml").write_text(
+            (forecast / "chartbook.toml").read_text() + '\n[models.m.aliases]\nflag = true\n'
+        )
+        with pytest.raises(VersionNotFoundError) as e:
+            models.path("m@flag", project_dir=forecast)
+        assert "its labels in [models.m.aliases] are: (none)" in str(e.value)
 
     def test_something_that_is_neither_a_label_nor_a_hash(self, forecast):
         _version(forecast)
