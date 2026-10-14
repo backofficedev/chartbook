@@ -626,6 +626,71 @@ def origins(store: Store, taken: Snapshot) -> list[Path]:
     return [Path(line) for line in lines if line and os.path.isabs(line)]
 
 
+def _first_holding(directory: Path, name: str, content_hash: str, store: Store) -> Optional[dict]:
+    """The record of an asset in the first snapshot of this pipeline that held these bytes."""
+    try:
+        for held, taken in versions_of(directory, name, store):
+            if held == content_hash:
+                return taken.assets.get(name)
+    except SnapshotError:
+        return None
+    return None
+
+
+def training_inputs(directory: Path, raw: dict, assets: dict) -> dict[str, dict[str, str]]:
+    """For each model with ``trained_on``, the content hash of each input now.
+
+    A local dataframe's hash is the one this snapshot records for it; another
+    pipeline's is the one the folder's lockfile pins, under the ID the
+    lockfile uses (the dependency's key). An input that is not built, not
+    pinned, or not a reference that parses is left out; ``chartbook check``
+    reports those.
+
+    :returns: By the model's reference, ``{input_id: content_hash}``.
+    """
+    from chartbook.lock import LOCK_FILE, LockError, read_lock
+    from chartbook.manifest import validate_dependencies
+    from chartbook.resolve import locate_pipeline, parse_declared_ref
+
+    models = raw.get("models") if isinstance(raw.get("models"), dict) else {}
+    if not models:
+        return {}
+    try:
+        dependencies = validate_dependencies(raw.get("dependencies") or {}, directory)
+    except ValueError:
+        dependencies = {}
+    try:
+        locked = read_lock(directory / LOCK_FILE)
+    except LockError:
+        locked = None
+    found: dict[str, dict[str, str]] = {}
+    for name, entry in models.items():
+        references = entry.get("trained_on") if isinstance(entry, dict) else None
+        if not isinstance(references, list):
+            continue
+        inputs: dict[str, str] = {}
+        for text in references:
+            try:
+                ref = parse_declared_ref(text, kind="dataframe")
+            except ValueError:
+                continue
+            if ref.is_local:
+                key = str(ref)
+                content_hash = (assets.get(key) or {}).get("content_hash")
+            else:
+                try:
+                    location = locate_pipeline(ref.pipeline_id, dependencies=dependencies)
+                except (KeyError, ValueError):
+                    continue
+                key = str(ref.in_pipeline(location.id))
+                content_hash = ((locked.assets.get(key) if locked else None) or {}).get("content_hash")
+            if content_hash:
+                inputs[key] = content_hash
+        if inputs:
+            found[f"model/{name}"] = inputs
+    return found
+
+
 def labels_of(raw: dict) -> dict[str, dict[str, str]]:
     """The labels a manifest's ``[models.x.aliases]`` give, and what they name.
 
@@ -738,7 +803,9 @@ def label_records(
                 unresolved.append((name, label, start, why))
                 continue
             content_hash, taken = named[0]
-            record = renamed(taken.assets[name], key)
+            # What the version was trained on is the owner's record, keyed in
+            # the owner's names; a dependant's lockfile does not carry it
+            record = {k: v for k, v in renamed(taken.assets[name], key).items() if k != "trained_on"}
             ref = AssetRef.from_dict(record["ref"])
             ref = dataclasses.replace(ref, rev=label)
             records[str(ref)] = {**record, "id": str(ref), "ref": ref.to_dict(), "label": label}
@@ -1140,6 +1207,20 @@ def make(
                 # after the metrics file has been written over
                 record["metrics"] = scores
         assets[str(local)] = record
+
+    # What each model was trained on: the hashes staleness is later judged
+    # against. A version keeps the inputs it was first made with, so a later
+    # snapshot of the same bytes copies the first one's record forward;
+    # only bytes no snapshot has held yet take the inputs as they are now
+    now = training_inputs(directory, raw, assets)
+    for model_name, record in assets.items():
+        if not model_name.startswith("model/") or not record.get("content_hash"):
+            continue
+        first = _first_holding(directory, model_name, record["content_hash"], store)
+        if first is not None and first.get("trained_on"):
+            record["trained_on"] = dict(first["trained_on"])
+        elif model_name in now:
+            record["trained_on"] = now[model_name]
 
     if not assets:
         raise SnapshotError(

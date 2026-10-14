@@ -906,7 +906,10 @@ def _sync_from_snapshots(
 
     records: dict[str, dict] = {}
     for name in sorted(newest.assets):
-        record = snapshot.renamed(newest.assets[name], key)
+        # `trained_on` is the owner's record, keyed in the owner's names,
+        # and would read as asset IDs here that are not; it stays with the
+        # snapshot
+        record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k != "trained_on"}
         asset_id = record["id"]
         before = had.get(asset_id)
         old = (before or {}).get("content_hash")

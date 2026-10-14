@@ -269,7 +269,9 @@ In order, the loop this is meant to support:
    path. It never hardcodes a file name.
 6. **Audit.** For the model in use, the page shows exactly which data and which commit made it.
 7. **Retrain.** When upstream data changes, the model's inputs no longer match, so it shows as
-   out of date. `chartbook update` and a rebuild make `v5`.
+   out of date. `chartbook update` and a rebuild make `v5`. *(Built 2026-10-14: the model's page
+   says "Out of date" and which inputs moved, the index record has `stale_inputs`, and
+   `chartbook check` warns.)*
 
 Everything outside that loop belongs to another tool: experiment tracking (MLflow, Weights &
 Biases), serving (whatever the team runs), scheduling (cron, CI, an orchestrator), feature
@@ -345,7 +347,7 @@ Each slice is useful by itself. The step numbers are the {doc}`overview`'s build
 | **M1. Declared models** (step 2) — **built** | The index | The `[models]` table in the loader, with validation. `model` added to `RESOLVABLE_KINDS`, so `chartbook path model/x` works. `chartbook.models.path()`. `chartbook check` covers `path`, `metrics_path` and `docs_path` (the first two are build outputs, so `--skip-outputs` skips them). The model page. The `Model` record. Policy support: `[policy.required] models = […]`. The worked example above. **No versions** |
 | **M2. Parts** (with M1 or soon after) — *proposed 2026-10-13: not to be built* | M1 | `model/x#file` resolves to a file inside a directory model. Refuse a part that escapes the directory (`..`). *(The maintainer decided that a reference does not select data ({doc}`overview`, step 4, "4e"). By the same reasoning a file inside a model is `models.path("x") / "file"`, and the message for `model/x#file` says so. That extension is the builder's, and waits on his yes.)* |
 | **M3. Cross-pipeline** (step 3) — **built** | Dependencies, lockfile, store | `other:model/x` resolves through the lockfile. Training data in another pipeline is a real dependency: declared, pinned, read from the pinned copy, and recorded by hash (`pinned_inputs`). The `examples/rate_forecast` pipeline. A dependency fetched with `git` has only what its repository commits |
-| **M4. Versions and labels** (step 4) — **built, except staleness** | Snapshots | A version on each new content hash a snapshot holds, `@7f3a9c2e41b0`, `[models.x.aliases]`, `@champion`, the versions table on the page. Not built: staleness when inputs move |
+| **M4. Versions and labels** (step 4) — **built** | Snapshots | A version on each new content hash a snapshot holds, `@7f3a9c2e41b0`, `[models.x.aliases]`, `@champion`, the versions table on the page. Staleness: a snapshot records what each model was trained on, and the page, the index and `check` say when those inputs have moved (2026-10-14; {doc}`overview`, "4i, as built") |
 
 (models-built)=
 ## What is built

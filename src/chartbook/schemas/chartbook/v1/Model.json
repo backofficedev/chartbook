@@ -135,6 +135,21 @@
         "pattern": "^[a-z0-9]+:[0-9a-f]+$"
       }
     },
+    "trained_with": {
+      "type": "object",
+      "description": "The content hash of each input when the model file's bytes were trained, by the input's ID as the lockfile writes it, as the snapshot that first held these bytes recorded it. Absent when no snapshot holds these bytes or none recorded inputs.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+      }
+    },
+    "stale_inputs": {
+      "type": "array",
+      "description": "The inputs in `trained_with` whose content now differs: a local dataframe as it is in the folder, another pipeline's as chartbook.lock pins it. Empty when the model is up to date; absent with `trained_with`.",
+      "items": {
+        "type": "string"
+      }
+    },
     "metrics": {
       "type": "object",
       "description": "The model's scores, from its metrics file: a flat object.",
@@ -197,6 +212,14 @@
           "inputs": {
             "type": "array",
             "description": "What the pipeline was pinned to when the snapshot was made: which data."
+          },
+          "trained_on": {
+            "type": "object",
+            "description": "The content hash of each `trained_on` input when this version was first made, by the input's ID: exactly which data made it.",
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+            }
           }
         }
       }
