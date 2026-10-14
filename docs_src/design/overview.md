@@ -1700,7 +1700,7 @@ hash, read-only connections, DuckDB as the engine and the fallback, and the work
    implementation after parquet, and the rule is three.
 6. **`data.load()` of a table or query returns a LazyFrame that DuckDB backs.** The engine
    binds the query at once; collecting the frame runs it, and an error only running can find
-   is Polars' `ComputeError` with DuckDB's message. A file is opened afresh for each load;
+   is raised then with DuckDB's message. A file is opened afresh for each load;
    the frame keeps its connection while it lives.
 7. **The default policy's `path` requirement is met by a `table` or a `query`.** The rule
    asks where the dataframe is; a source answers.
@@ -1717,7 +1717,9 @@ with a test unless said otherwise):
    it, refuses a machine URL for another engine, and the index records the manifest's URL only.
 2. A query that bound but failed when run (a cast that fails on one value) aborted the whole
    site build; `describe` and `count(*)` had both passed. The page now says what happened and
-   the site is built. Such an error is Polars' `ComputeError`, and the docs say so.
+   the site is built. Such an error carries DuckDB's message; whether Polars wraps it as
+   `ComputeError` or lets DuckDB's exception through depends on the Polars version (CI's newer
+   Polars did the second), so the page catches `Exception` and the docs promise the message only.
 3. One in-memory connection was shared by every `:memory:` source and by files-only
    `data.sql()`, so a table a user made through `connect()` showed up in SQL over files. Files-only
    SQL now runs in a fresh engine of its own; a `:memory:` source is one writable connection, by

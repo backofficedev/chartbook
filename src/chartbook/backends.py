@@ -309,8 +309,8 @@ class DuckDBBackend:
         The engine binds the query here, so a name it does not know or SQL
         it cannot parse is refused at once. Collecting the frame runs it;
         an error that only running can find, such as a cast that fails on
-        a value, is raised then by Polars as a ``ComputeError`` carrying
-        DuckDB's message.
+        a value, is raised then with DuckDB's message: as Polars'
+        ``ComputeError`` or as DuckDB's own exception, by Polars version.
 
         :raises BackendError: If DuckDB refuses the query. The message is
             DuckDB's own; the SQL is the user's.

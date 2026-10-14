@@ -576,7 +576,8 @@ def sql(
     :param project_dir: Where to look for the pipeline, as for :func:`path`.
     :returns: A Polars LazyFrame. Collect it to run the query. An error that
         only running can find, such as a cast that fails on one value, is
-        raised then, by Polars, with DuckDB's message in it.
+        raised then with DuckDB's message in it, as Polars' ``ComputeError``
+        or as DuckDB's own exception, by Polars version.
     :raises ValueError: If the query has no reference in it, or names
         dataframes of two different sources.
     :raises chartbook.backends.BackendError: If the engine refuses the SQL
