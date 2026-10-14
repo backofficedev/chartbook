@@ -2017,9 +2017,28 @@ after; `--exit-code` exits 1 on any difference, as `git diff --exit-code` does. 
 judged stable enough for this: the diff reads only `kind`, `id` and whole fields, so a field
 added to a record later shows as *declared differently* and breaks nothing.
 
+**What an adversarial review found before merge** (2026-10-14; eleven findings, each fixed
+with a test unless said otherwise): a Plotly chart written without a fixed `div_id` embeds a
+fresh id on every render, so every chart's `content_hash` moved on every build and
+`--exit-code` would have fired for nothing (ChartBook's plotting helpers, the examples and the
+template pass a `div_id` now; a chart's change reads *rendered differently*; the docs say what
+to do in one's own code); the reference's example output could not be produced (a pipeline's
+`assets` changes with every asset added; the example shows it); *declared differently* was
+said of fields nobody declared (`assets`, `pinned_inputs`, `trained_with`, `inputs`,
+`location` have words of their own); the inputs out of date were cut at sixty characters
+(lists are printed whole); a different `root` or `schema` was silent (said first); *pins
+moved* fired for a dependency relocated with no pin moving (it reads the pinned hashes);
+a malformed record crashed (refused with a message); dead label parameters on
+`format_diff()` (gone); the model fields read from the local store make two machines' indexes
+differ for no change (not fixed; said in the docs); a test comment was false and an assertion
+passed for the wrong reason (fixed; Pipeline wording, a folder without `index.json`, a
+columns-only change and the envelope are tested); *versions changed* did not tell a version
+lost from one replaced (new and gone are counted and named).
+
 **Known gaps.** A record whose ID changes (a renamed asset) is a removal and an addition, not a
-rename. A `Series` record follows its dataframe and is listed on its own. Nothing yet fetches
-the *before* index from git or from a deployed site; the reviewer brings both files.
+rename. A `Series` record follows its dataframe and is listed on its own. A model's `versions`,
+`trained_with` and `stale_inputs` are the building machine's. Nothing yet fetches the *before*
+index from git or from a deployed site; the reviewer brings both files.
 
 ## Working in the code
 

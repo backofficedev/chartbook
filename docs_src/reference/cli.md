@@ -703,15 +703,18 @@ Say what changed between two builds, from the `index.json` each wrote beside its
 $ chartbook index diff docs-main/ docs/
 Added 1:
   Chart ftsfr/fed_yield_curve:chart/curve_slope
-Changed 2:
+Changed 3:
   Dataframe ftsfr/fed_yield_curve:treasury_rates: data changed
     content_hash: sha256:2c7ffc38b1c1… -> sha256:9ab40d12e77e…
     row_count: 17043 -> 17044
-  Model ftsfr/rate_forecast:model/rate_forecaster: out of date
+  Model ftsfr/rate_forecast:model/rate_forecaster: out of date; pins moved
     stale_inputs: [] -> ["fed_yield_curve:treasury_rates"]
+  Pipeline ftsfr/fed_yield_curve: assets changed
 ```
 
-A changed record is described in a reviewer's words: *data changed* (a content or definition hash, a size, a row count, columns or files), *pins moved* (a pipeline's dependencies), *N new version(s)*, *labels moved*, *out of date* or *up to date again*, *scores changed*, and *declared differently* with the fields. `--json` prints the same as JSON, each changed field with its value before and after, for a script or a bot that comments on a pull request. `--exit-code` exits `1` when the two differ, as `git diff --exit-code` does, so CI can ask "did this change what the site says?". This is the first reader of the index ({doc}`../design/index-schema`, "What this unblocks").
+A changed record is described in a reviewer's words: *data changed* (a content or definition hash, a size, a row count, columns or files; a chart says *rendered differently*, since a chart is a rendering of its dataframe), *pins moved* (a dependency's pinned hash, on a pipeline; or a model's pinned inputs), *dependencies changed* (a dependency added, removed or relocated without a pin moving), *N new version(s)* and *N version(s) gone*, *labels moved*, *out of date* or *up to date again*, *scores changed*, *trained on other data*, *assets changed*, *inputs changed*, *moved*, and *declared differently* with the fields, for what the manifest declares. Under the line: the hashes and row counts, the columns added or gone, the versions new or gone, and the inputs out of date, whole. A different `root` or `schema` between the two files is said first: they may not be the same site, or not written the same way. `--json` prints the same as JSON, each changed field with its value before and after, for a script or a bot that comments on a pull request. `--exit-code` exits `1` when the two differ, as `git diff --exit-code` does, so CI can ask "did this change what the site says?". This is the first reader of the index ({doc}`../design/index-schema`, "What this unblocks").
+
+**Two things that look like changes and are not.** A chart file that Plotly writes without a fixed `div_id` has a fresh id in it on every render, so its hash moves with nothing changed; pass `div_id=` to `write_html` (the examples and the template do; ChartBook's own plotting helpers always do), or read *rendered differently* on a chart as noise. And a model's `versions`, `trained_with` and `stale_inputs` are read from the store of the machine that built the index, so two indexes from two machines differ in them for no change.
 
 ## chartbook store
 

@@ -64,7 +64,7 @@ fig.update_xaxes(
 )
 
 # The chart's location comes from [charts.yield_curve_current] in chartbook.toml
-fig.write_html(assets.path("chart/yield_curve_current"), include_plotlyjs="cdn")
+fig.write_html(assets.path("chart/yield_curve_current"), include_plotlyjs="cdn", div_id="chart")
 
 ##################################
 ## Save data

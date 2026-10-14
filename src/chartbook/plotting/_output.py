@@ -153,7 +153,9 @@ def save_chart_from_result(
     # Note: No explicit dimensions set to enable responsive behavior in browser
     if interactive:
         html_path = out_dir / f"{chart_id}.html"
-        result.figure.write_html(str(html_path), include_plotlyjs="cdn")
+        # A fixed div id: Plotly would otherwise embed a fresh UUID on every
+        # render, and the file's hash in the index would move with nothing changed
+        result.figure.write_html(str(html_path), include_plotlyjs="cdn", div_id=f"chartbook-{chart_id}")
         result.html_path = html_path
 
     # Generate static formats (Matplotlib)

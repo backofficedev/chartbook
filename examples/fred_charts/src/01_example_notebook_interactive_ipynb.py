@@ -57,7 +57,7 @@ fig
 # %%
 # Save the chart as HTML
 chart_path = OUTPUT_DIR / "01_gdp_chart.html"
-fig.write_html(chart_path)
+fig.write_html(chart_path, div_id="chart")
 print(f"Chart saved to: {chart_path}")
 
 # %%

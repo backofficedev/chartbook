@@ -240,7 +240,7 @@ end_date = datetime.today().strftime("%Y-%m-%d")
 fig.update_xaxes(type="date", range=[start_date, end_date])
 fig.update_layout(title_text="Repo Rates and the Fed Funds Rate")
 fig.update_yaxes(title_text="Percent")
-fig.write_html(OUTPUT_DIR / "repo_rates.html", include_plotlyjs="cdn")
+fig.write_html(OUTPUT_DIR / "repo_rates.html", include_plotlyjs="cdn", div_id="chart")
 
 ##################################
 ## Normalized repo rates plot
@@ -329,7 +329,7 @@ fig.update_xaxes(type="date", range=[start_date, end_date])
 fig.update_yaxes(range=[-0.2, 0.2])
 fig.update_layout(title_text="Rates Relative to Fed Funds Target Midpoint")
 fig.update_yaxes(title_text="Percent Less Midpoint")
-fig.write_html(OUTPUT_DIR / "repo_rates_normalized.html", include_plotlyjs="cdn")
+fig.write_html(OUTPUT_DIR / "repo_rates_normalized.html", include_plotlyjs="cdn", div_id="chart")
 
 
 ##################################
@@ -490,5 +490,5 @@ fig.update_layout(
 fig.update_yaxes(title_text="Percent Less Midpoint", secondary_y=False)
 fig.update_yaxes(title_text="Ratio", secondary_y=True)
 fig.write_html(
-    OUTPUT_DIR / "repo_rates_normalized_w_balance_sheet.html", include_plotlyjs="cdn"
+    OUTPUT_DIR / "repo_rates_normalized_w_balance_sheet.html", include_plotlyjs="cdn", div_id="chart"
 )
