@@ -332,6 +332,7 @@ ChartBook uses a TOML configuration file (`chartbook.toml`) to define your proje
 [models]           # Trained models
 [dependencies]     # Other pipelines this one reads from
 [scripts]          # Named commands; `build` is what `chartbook run` runs
+[sources]          # Databases the pipeline's dataframes may live in (backend = "duckdb", url)
 ```
 
 There is no format version key. The minimal valid pipeline manifest is an empty file — its presence alone marks a directory as a ChartBook pipeline.
@@ -522,6 +523,24 @@ python src/pull_wrds.py
 ```
 
 Each entry is a name and one command string. `chartbook run <name>` runs it in this pipeline; `chartbook run` alone runs `build`, the one reserved name, which means "make this pipeline's data current". A name matches `[A-Za-z0-9._-]+`; a script may not be empty; a script of several lines is one script, run in the pipeline's directory and stopped at its first failing command. `[project] build` is the same as `[scripts] build` and is still read; giving both with different text is an error. All scripts are written to the pipeline's record in `index.json` under `scripts`. Scripts do not depend on each other. A catalog cannot have this table.
+
+### [sources] - Where a Dataframe Lives Besides a File
+
+```toml
+[sources.local]
+backend = "duckdb"
+url = "duckdb:///./_data/local.duckdb"
+
+[dataframes.curve]
+source = "local"
+table = "fed_yield_curve"
+
+[dataframes.slopes]
+source = "local"
+query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
+```
+
+A dataframe is in exactly one place: a parquet file (`path`), a table in a source (`source` + `table`, one to three dot-separated parts), or a query in a source (`source` + `query`, SQL in the engine's dialect, run when the dataframe is read). `backend` is the engine; only `duckdb` is built, and another name is refused. `url` is the public part only (`duckdb:///./x.duckdb` relative to the pipeline root, `duckdb:////abs/x.duckdb` absolute, `duckdb:///:memory:`); a url with credentials does not load, and the machine supplies them from `CHARTBOOK_SOURCE_<NAME>_URL`, then `url` under `[<name>]` in `~/.chartbook/sources.toml`, then the manifest. Connections are read-only; ChartBook never writes a table. `data.load("slopes")` returns a LazyFrame that runs the query when collected; `data.sql("select * from {slopes} s join {rates} r using (Date)")` runs SQL with dataframes named in braces, substituting `read_parquet('…')` for a file, the quoted identifier for a table and a parenthesised sub-select for a query, in one engine (the source named, or in-memory DuckDB for files alone; two sources are refused); `data.ref("slopes")` gives that name for SQL run elsewhere; `data.connect("local")` is the raw duckdb connection. ChartBook never parses or rewrites SQL. A table or query dataframe has no file: `data.path()` and `chartbook path` refuse it; it is not pinned, not in a snapshot, and cannot be read across pipelines. The index records `location` as `{kind: table|query, source, backend, identifier|sql}` with columns from the engine and a `definition_hash` (identifier or SQL plus the described columns) in place of `content_hash`; the page shows columns and first rows. `chartbook check` reports a DuckDB file that is not built (skipped with `--skip-outputs`). A catalog cannot have `[sources]`.
 
 ### [dependencies] - Other Pipelines This One Reads From
 

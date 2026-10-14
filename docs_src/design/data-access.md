@@ -5,9 +5,10 @@ A design document, not a user guide. It records how `data.load()` grows from "a 
 resolves to a parquet file" into "a name that resolves to a location, which may be a database
 table", and why ChartBook stays a thin layer over the database rather than becoming one.
 
-Status: design agreed, implementation after the {doc}`index <index-schema>` (step 5 in
-{doc}`overview`; GitHub issue 9). The seam it plugs into is built: one resolver behind `path()`
-and `load()` that returns a typed location (`chartbook.resolve`); see "Phasing".
+Status: built for DuckDB on 2026-10-13 (step 5 in {doc}`overview`, "Step 5, as built"; GitHub
+issue 9): `[sources]`, `table`, `query`, `data.sql()`, `data.ref()`, `data.connect()`, the typed
+`location` in the index, and the worked example. Where what was built departs from this page,
+the overview says so and this page keeps its text with a dated note.
 Companion to the {doc}`asset graph <asset-graph>`, whose rules and "not doing" list apply here.
 
 Revised 2026-10-12: `chartbook.data` is now the front door for **dataframes only**. Everything
@@ -108,6 +109,9 @@ cb.connect("warehouse")                          # -> the raw duckdb / snowflake
   source, the query runs there, in that dialect, with that engine's pushdown. If references span
   sources, the query runs in DuckDB with each non-DuckDB reference registered as a view or temp
   table first, and the SQL is DuckDB's dialect. That is the whole rule; there is no third case.
+  *(As built, 2026-10-13: one source per query, plus any files, which DuckDB reads alongside. Two
+  sources are refused. With DuckDB the only engine the mixed case is two DuckDB files, and
+  `ATTACH` through `connect()` is the honest answer until there is a second engine.)*
 - **`ref`** exists so a user can paste the identifier into SQL they run with their own tooling.
 - **`connect`** hands back the client object. Anything ChartBook does not expose is reachable here.
 
@@ -116,7 +120,9 @@ The reference grammar is the one in {doc}`references`: `treasury_rates` is local
 fully scoped. Every function in `chartbook.data` takes dataframes only, so a reference that names
 another kind (`chart/gdp`, `model/x`) is refused, and a `{ref}` inside `sql()` must be a
 dataframe. Cross-pipeline references need the resolution chain (step 3 in {doc}`overview`); the
-first implementation of this design is local-only.
+first implementation of this design is local-only. *(As built: the chain existed first, so a
+cross-pipeline file dataframe works in `sql()` and `ref()`, as the pinned copy. A table or
+query of another pipeline is not pinned and cannot be read across pipelines.)*
 
 Because `sql()` puts dataframes' columns into SQL that the user writes, column names should be
 SQL-compatible: letters, digits and underscores, starting with a letter. ChartBook recommends
@@ -212,7 +218,9 @@ dataframe's location is a typed object, not a bare path, is settled, and the ind
 2. **After the index.** `[sources]`, `table`, `query`; the `duckdb` backend; `sql()`, `ref()`,
    `connect()`; local references only; the index's typed `location`. Worked example: the
    `yield_curve` example pipeline gains one `query`-backed dataframe over a DuckDB file.
-3. **With P1 resolution.** Cross-pipeline references in `sql()` and `ref()`.
+   *(Built 2026-10-13.)*
+3. **With P1 resolution.** Cross-pipeline references in `sql()` and `ref()`. *(Built with 2,
+   for file dataframes.)*
 4. **On demand.** `snowflake` and `databricks` as plugins, then extract the Protocol.
 
 ## Prior art

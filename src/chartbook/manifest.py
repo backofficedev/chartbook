@@ -430,6 +430,111 @@ def read_scripts(raw_manifest: dict) -> dict:
     return found
 
 
+#: The keys a source in ``[sources]`` may have.
+SOURCE_KEYS = ("backend", "url")
+
+#: What says where a dataframe's content is. Exactly one of them.
+DATAFRAME_LOCATION_KEYS = ("path", "table", "query")
+
+
+def validate_sources(raw_sources, base_dir: Path) -> dict:
+    """Validate a pipeline's ``[sources]``: the engines its dataframes may live in.
+
+    A source is a named, configured instance of a backend::
+
+        [sources.local]
+        backend = "duckdb"
+        url = "duckdb:///./_data/local.duckdb"
+
+    See ``docs_src/design/data-access.md``. Each source gains
+    ``_resolved_url``: the URL with a relative DuckDB file made absolute.
+
+    :raises ValueError: If the table is malformed, a name is not a legal
+        name, a backend is not built, a url carries credentials, or a url
+        does not match its backend.
+    """
+    from chartbook.backends import check_backend, check_url, duckdb_path
+
+    if raw_sources is None:
+        return {}
+    if not isinstance(raw_sources, dict):
+        raise ValueError("[sources] must be a table of tables, one per source, e.g. [sources.local].")
+    sources = {}
+    for name, entry in raw_sources.items():
+        where = f"[sources.{name}]"
+        if not isinstance(entry, dict):
+            raise ValueError(f"{where} must be a table with 'backend' and 'url'.")
+        if not ID_COMPONENT_PATTERN.match(name):
+            raise ValueError(
+                f"{where}: {name!r} is not a legal source name; it must match [A-Za-z0-9._-]+."
+            )
+        unknown = sorted(set(entry) - set(SOURCE_KEYS))
+        if unknown:
+            raise ValueError(
+                f"{where} has {', '.join(map(repr, unknown))}. A source has only "
+                f"{' and '.join(SOURCE_KEYS)}; credentials go in the environment or "
+                f"~/.chartbook/sources.toml."
+            )
+        for key in SOURCE_KEYS:
+            if not isinstance(entry.get(key), str) or not entry[key].strip():
+                raise ValueError(f"{where} needs {key!r}, a string.")
+        check_backend(entry["backend"], where)
+        check_url(entry["url"], entry["backend"], where)
+        resolved = dict(entry)
+        if entry["backend"] == "duckdb":
+            path = duckdb_path(entry["url"], base_dir)
+            resolved["_resolved_url"] = "duckdb://" + (path if path == ":memory:" else "/" + path)
+        else:  # pragma: no cover - no other backend is built
+            resolved["_resolved_url"] = entry["url"]
+        sources[name] = resolved
+    return sources
+
+
+def validate_dataframe_location(entry: dict, dataframe_id: str, sources: dict) -> str:
+    """Say where one dataframe's content is: a file, a table or a query.
+
+    Exactly one of ``path``, ``table`` and ``query``. The last two need a
+    ``source`` that ``[sources]`` declares; ``path`` takes none.
+
+    :returns: ``"file"``, ``"table"`` or ``"query"``.
+    :raises ValueError: If the entry says two things, or none, or names a
+        source that is not declared.
+    """
+    where = f"[dataframes.{dataframe_id}]"
+    given = [key for key in DATAFRAME_LOCATION_KEYS if entry.get(key)]
+    if len(given) > 1:
+        raise ValueError(
+            f"{where} has {' and '.join(given)}. A dataframe is in one place: "
+            f"a file (path), a table (source and table) or a query (source and query)."
+        )
+    if "path" in given:
+        if entry.get("source"):
+            raise ValueError(
+                f"{where} has both path and source. A file needs no source; a table "
+                f"or a query in a source has no path."
+            )
+        return "file"
+    if not given:
+        return "file"  # a dataframe without a path: declared, and documented only
+    kind = given[0]
+    value = entry[kind]
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{where}: {kind!r} must be a string.")
+    source = entry.get("source")
+    if not isinstance(source, str) or not source.strip():
+        raise ValueError(
+            f"{where} has {kind!r} and no source. Say which source holds it: "
+            f'source = "local", with [sources.local] declared.'
+        )
+    if source not in sources:
+        declared = ", ".join(sorted(sources)) or "(none)"
+        raise ValueError(
+            f"{where}: source {source!r} is not declared. Its sources are: "
+            f"{declared}. Add [sources.{source}] with a backend and a url."
+        )
+    return kind
+
+
 #: The keys an entry of ``[dependencies]`` may have.
 DEPENDENCY_KEYS = ("path", "git", "rev")
 
@@ -869,6 +974,13 @@ def _load_pipeline_manifest(raw_manifest):
             note_manifest = manifest["notes"][note_id]
             note_manifest["_resolved_path"] = Path(base_dir) / note_manifest["path"]
 
+    try:
+        manifest["sources"] = validate_sources(raw_manifest.get("sources"), Path(base_dir))
+    except ValueError as error:
+        raise ValueError(f"{Path(base_dir) / 'chartbook.toml'}: {error}") from None
+    if not manifest["sources"] and "sources" not in raw_manifest:
+        del manifest["sources"]
+
     # Create a mapping of dataframe id to linked chart ids
     if "dataframes" in manifest:
         dataframe_to_charts = {
@@ -877,6 +989,15 @@ def _load_pipeline_manifest(raw_manifest):
 
         for dataframe_id in manifest["dataframes"]:
             dataframe_manifest = manifest["dataframes"][dataframe_id]
+            try:
+                dataframe_manifest["_location_kind"] = validate_dataframe_location(
+                    dataframe_manifest, dataframe_id, manifest.get("sources") or {}
+                )
+            except ValueError as error:
+                raise ValueError(f"{Path(base_dir) / 'chartbook.toml'}: {error}") from None
+            if dataframe_manifest["_location_kind"] != "file":
+                # The source it lives in, for the index and the page
+                dataframe_manifest["_source"] = manifest["sources"][dataframe_manifest["source"]]
             raw_parquet_path = dataframe_manifest.get("path", "")
             dataframe_manifest["_is_glob"] = is_glob_pattern(raw_parquet_path)
             dataframe_manifest["_resolved_path"] = (
@@ -1192,6 +1313,11 @@ def _load_catalog_manifest(raw_manifest):
         raise ValueError(
             f"{source}: a catalog has no [scripts]. `chartbook run` in a "
             f"catalog runs each of its pipelines' own scripts."
+        )
+    if "sources" in raw_manifest:
+        raise ValueError(
+            f"{source}: a catalog has no [sources]. A pipeline declares the "
+            f"sources its own dataframes live in."
         )
 
     pipelines_raw = manifest.get("pipelines") or {}

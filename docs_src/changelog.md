@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a dataframe can be a table or a query: `[sources]`, `data.sql()`, `data.ref()`, `data.connect()`
+
+A dataframe was a parquet file. It can now be a table, or a query, in a database the pipeline names, and the same name loads it.
+
+```toml
+[sources.local]
+backend = "duckdb"
+url = "duckdb:///./_data/yield_curve.duckdb"
+
+[dataframes.yield_slopes]
+source = "local"
+query = "select Date, SVENY10 - SVENY02 as slope_10y_2y from fed_yield_curve"
+```
+
+```python
+data.load("yield_slopes")                                          # runs the query; a LazyFrame
+data.sql("select * from {yield_slopes} s join {fed_yield_curve} r on r.Date = s.Date")
+data.ref("yield_slopes")                                           # its name, for SQL you run yourself
+data.connect("local")                                              # the raw connection, read-only
+```
+
+This is step 5 of the design, `data-access.md`, and the second of the two ways the maintainer said data should be read (2026-10-13): SQL that ChartBook passes through, or a path handed to polars. The rule is the design's: a name resolves to a location, the engine runs the query, Arrow comes back, Polars wraps it. ChartBook never parses, plans or rewrites SQL. In `data.sql()` the only thing it touches is what is between braces, which it replaces with the dataframe's name in SQL: `read_parquet('…')` for a file, a quoted identifier for a table, a sub-select for a query. Everything else is the user's, in the engine's dialect.
+
+DuckDB is the engine that is built: a file the pipeline makes, or `:memory:`, opened read-only, and the fallback engine for SQL over files. It reads parquet, so one query can join a table with a file. Other engines are refused by name until they exist. A query runs in one source; one that names two is refused. A dataframe in a source has no file, so it is not pinned and not in a snapshot, and `data.path()` says so.
+
+A source's `url` is the public part; a manifest with credentials in it does not load. The machine supplies the rest, from `CHARTBOOK_SOURCE_<NAME>_URL`, then `~/.chartbook/sources.toml`, then the manifest alone. The index records a table or query dataframe's `location` with its source, backend and identifier or SQL, its columns as the engine describes them, and a `definition_hash` in place of a `content_hash`. The page shows the columns and first rows. `chartbook check` reports a DuckDB file that is not built yet. The `yield_curve` example gains `yield_slopes`, a query over a DuckDB table the pipeline builds from its own parquet. `duckdb` is a dependency of `chartbook`.
+
 ### Fixed — what two adversarial reviews of the asset graph found
 
 None of this was released. It is listed because each item changes something the entries below describe.

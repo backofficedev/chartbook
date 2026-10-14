@@ -594,11 +594,14 @@ class TestSharedResolver:
         assert len(spy) == 1
 
     def test_load_refuses_a_location_it_cannot_scan(self, catalog_project, monkeypatch):
-        class TableLocation(Location):
-            kind = "table"
+        """A table or a query is read now (tests/test_data_access.py); a kind
+        nothing reads is still refused with a clear word."""
 
-        monkeypatch.setattr(data, "resolve", lambda *a, **k: TableLocation())
-        with pytest.raises(NotImplementedError, match="table-backed"):
+        class GraphLocation(Location):
+            kind = "graph"
+
+        monkeypatch.setattr(data, "resolve", lambda *a, **k: GraphLocation())
+        with pytest.raises(NotImplementedError, match="graph-backed"):
             data.load("pipeline_a", "dataframe_0", catalog_path=catalog_project)
 
     def test_get_data_path_raises_for_a_location_that_is_not_a_file(

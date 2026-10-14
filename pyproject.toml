@@ -33,6 +33,8 @@ dependencies = [
     "packaging",
     "polars>=1.9.0",
     "pyarrow",
+    # The local SQL engine: [sources] with backend = "duckdb", and data.sql()
+    "duckdb>=1.1",
     "python-decouple>=3.8",
     # Plotting
     "matplotlib>=3.7.0",

@@ -70,7 +70,7 @@ ASSET_KINDS = ("dataframe", "chart", "notebook", "note", "model")
 
 # Manifest keys that the index states in another form, or not at all
 _STRUCTURAL_KEYS = frozenset(
-    {"path", "docs", "docs_path", "series", "dataframe", "linked_charts"}
+    {"path", "docs", "docs_path", "series", "dataframe", "linked_charts", "source", "table", "query"}
 )
 
 
@@ -192,6 +192,61 @@ def _file_facts(
                 for file in content.files
             ]
     return facts
+
+
+def _source_facts(entry: dict) -> dict:
+    """The location of a dataframe that is a table or a query in a source."""
+    source = entry.get("_source") or {}
+    location = {
+        "kind": "table" if entry.get("table") else "query",
+        "source": entry.get("source"),
+        "backend": source.get("backend"),
+    }
+    if entry.get("table"):
+        location["identifier"] = entry["table"]
+    else:
+        location["sql"] = entry["query"]
+    return {"location": location}
+
+
+def _describe_in_source(entry: dict, base_dir: Path) -> Optional[tuple[list[dict], int]]:
+    """A table or query's columns and row count, asked of its engine.
+
+    None when the engine cannot answer: the DuckDB file is not built yet,
+    or the query does not run. ``chartbook check`` is what reports that.
+    """
+    from chartbook.backends import BackendError, DuckDBBackend
+    from chartbook.resolve import QueryLocation, TableLocation
+
+    source = entry.get("_source") or {}
+    url = source.get("_resolved_url")
+    if not url:
+        return None
+    if entry.get("table"):
+        location = TableLocation(entry["source"], source["backend"], url, entry["table"])
+    else:
+        location = QueryLocation(entry["source"], source["backend"], url, entry["query"])
+    try:
+        return DuckDBBackend(url).describe(location)
+    except (BackendError, OSError):
+        return None
+
+
+def _definition_hash(location: dict, columns: list[dict]) -> str:
+    """A hash of what defines a table or query dataframe, with its schema.
+
+    A warehouse table cannot be content-hashed cheaply, and a query is not
+    bytes at all. What can be hashed is the definition and the described
+    columns; what cannot is recorded as absent.
+    """
+    import hashlib
+
+    definition = location.get("identifier") or location.get("sql") or ""
+    text = json.dumps(
+        {"kind": location["kind"], "definition": definition, "columns": columns},
+        sort_keys=True,
+    )
+    return hashing.format_hash(hashlib.sha256(text.encode("utf-8")).hexdigest())
 
 
 def _describe_parquet(resolved_path: str) -> Optional[tuple[list[dict], int]]:
@@ -452,7 +507,14 @@ def _asset_records(
 
     if kind == "dataframe":
         described = None
-        if "content_hash" in facts:
+        if entry.get("table") or entry.get("query"):
+            # In a source: no file, so no content hash. The definition is
+            # hashed instead, and the engine describes the columns.
+            record.update(_source_facts(entry))
+            described = _describe_in_source(entry, base_dir)
+            if described is not None:
+                record["definition_hash"] = _definition_hash(record["location"], described[0])
+        elif "content_hash" in facts:
             described = _describe_parquet(facts["location"]["resolved_path"])
         columns = None
         where = f"{base_dir / 'chartbook.toml'}: [dataframes.{name}]"

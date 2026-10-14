@@ -119,6 +119,25 @@ where = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public") # th
 
 All of these accept `catalog_path="/path/to/catalog"` to bypass the global setting. Inside a pipeline, `data.path("repo_public")` gives the path of one of its *own* dataframes straight from its `chartbook.toml`, with no catalog involved (and `assets.path("chart/repo_rates")` that of a chart, notebook or note) — see {doc}`documenting-a-pipeline`. Hive-partitioned (glob-path) dataframes support only the LazyFrame default — call `.collect()` to materialize.
 
+### SQL
+
+Inside a pipeline, write SQL and name dataframes in braces. ChartBook puts each name in and the engine runs the rest:
+
+```python
+from chartbook import data
+
+recent = data.sql("""
+    select r.Date, r.SVENY10, s.slope_10y_2y
+    from {fed_yield_curve} r
+    join {yield_slopes} s on r.Date = s.Date
+    where r.Date >= '2024-01-01'
+""")                                      # a LazyFrame; .collect() runs it
+```
+
+A file is read as a table (`read_parquet('…')`), a table in a source by its name, a query dataframe as a sub-select. The SQL runs in one engine: the source the tables and queries are in, or an in-memory DuckDB when the query names only files. Another pipeline's file, `{fed_yield_curve:treasury_rates}`, is the pinned copy, as everywhere else. ChartBook does not parse or rewrite the SQL; what is between the braces is a reference, and everything else is yours, in DuckDB's dialect.
+
+For SQL you run with your own tooling, `data.ref("yield_slopes")` gives the name to paste in, and `data.connect("local")` is the raw, read-only connection to a source. {ref}`[sources] <sources>` says how a pipeline declares one.
+
 The same lookups exist on the command line, for shell scripts and quick checks:
 
 ```console

@@ -584,6 +584,50 @@ def get_package_templates_path() -> Path:
     return Path(str(package_path)) / "templates"
 
 
+def _source_glimpse(dataframe_manifest) -> str:
+    """A glimpse of a table or query dataframe, read from its engine."""
+    from chartbook.backends import BackendError, DuckDBBackend
+    from chartbook.resolve import QueryLocation, TableLocation
+
+    source = dataframe_manifest.get("_source") or {}
+    url = source.get("_resolved_url")
+    where = (
+        f"table {dataframe_manifest['table']}"
+        if dataframe_manifest.get("table")
+        else "query"
+    ) + f" in source {dataframe_manifest.get('source')!r} ({source.get('backend')})"
+    if not url:
+        return f"A {where}."
+    if dataframe_manifest.get("table"):
+        location = TableLocation(dataframe_manifest["source"], source["backend"], url, dataframe_manifest["table"])
+    else:
+        location = QueryLocation(dataframe_manifest["source"], source["backend"], url, dataframe_manifest["query"])
+    try:
+        backend = DuckDBBackend(url)
+        columns, rows = backend.describe(location)
+        sample = backend.scan(location).head(5).collect()
+    except (BackendError, OSError) as error:
+        return f"A {where}. It could not be read when the site was built: {error}"
+    lines = [f"A {where}: {rows} rows, {len(columns)} columns.", ""]
+    lines += [f"  {column['name']}: {column['dtype']}" for column in columns]
+    lines += ["", "First rows:", str(sample)]
+    return "\n".join(lines)
+
+
+def _source_freshness(dataframe_manifest):
+    """When a DuckDB source's file was last written, if it has one."""
+    from chartbook.backends import duckdb_path
+
+    source = dataframe_manifest.get("_source") or {}
+    url = source.get("_resolved_url") or ""
+    if not url.startswith("duckdb://"):
+        return None
+    path = duckdb_path(url, Path.cwd())
+    if path == ":memory:":
+        return None
+    return freshness_fact("Data updated", data_last_modified(path))
+
+
 def generate_dataframe_docs(
     dataframe_id,
     pipeline_id,
@@ -696,34 +740,40 @@ def generate_dataframe_docs(
     link_to_dataframe_docs = (
         Path(dataframe_path_prefix) / _fs_slug(pipeline_id) / f"{dataframe_id}.md"
     ).as_posix()
-    # Compute the absolute path to the parquet file
-    raw_parquet_path = dataframe_manifest.get("path", "")
-    if is_glob_pattern(raw_parquet_path):
-        parquet_path = pipeline_base_dir / raw_parquet_path
-    else:
-        parquet_path = (
-            pipeline_base_dir / raw_parquet_path
-        ).resolve()
-
-    # Process the parquet file and get the min and max dates
-    try:
-        most_recent_data_min, most_recent_data_max = find_most_recent_valid_datapoints(
-            parquet_path, date_col, size_threshold_mb=size_threshold
-        )
-    except:
+    if dataframe_manifest.get("table") or dataframe_manifest.get("query"):
+        # In a source: the engine describes it, and there is no file to date
         most_recent_data_min, most_recent_data_max = None, None
+        dataframe_glimpse = _source_glimpse(dataframe_manifest)
+        freshness = [_source_freshness(dataframe_manifest)]
+    else:
+        # Compute the absolute path to the parquet file
+        raw_parquet_path = dataframe_manifest.get("path", "")
+        if is_glob_pattern(raw_parquet_path):
+            parquet_path = pipeline_base_dir / raw_parquet_path
+        else:
+            parquet_path = (
+                pipeline_base_dir / raw_parquet_path
+            ).resolve()
 
-    # Get the dataframe glimpse
-    dataframe_glimpse = get_dataframe_glimpse(
-        parquet_path, size_threshold_mb=size_threshold
-    )
+        # Process the parquet file and get the min and max dates
+        try:
+            most_recent_data_min, most_recent_data_max = find_most_recent_valid_datapoints(
+                parquet_path, date_col, size_threshold_mb=size_threshold
+            )
+        except:
+            most_recent_data_min, most_recent_data_max = None, None
 
-    # How fresh the page's data is, shown under the title. Only facts about
-    # this dataframe: when the pipeline's code changed is said once, on the
-    # pipeline's own page, so that a code edit does not alter every page.
-    freshness = [
-        freshness_fact("Data updated", data_last_modified(parquet_path)),
-    ]
+        # Get the dataframe glimpse
+        dataframe_glimpse = get_dataframe_glimpse(
+            parquet_path, size_threshold_mb=size_threshold
+        )
+
+        # How fresh the page's data is, shown under the title. Only facts about
+        # this dataframe: when the pipeline's code changed is said once, on the
+        # pipeline's own page, so that a code edit does not alter every page.
+        freshness = [
+            freshness_fact("Data updated", data_last_modified(parquet_path)),
+        ]
 
     # Render the template with the new variables
     table_page = template.render(

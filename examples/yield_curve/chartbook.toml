@@ -76,6 +76,33 @@ path = "./_data/fed_yield_curve.parquet"
 date_col = "Date"
 docs_path = "./docs_src/dataframes/fed_yield_curve.md"
 
+# Where a dataframe may live besides a file. `yield_slopes` below is a query
+# that DuckDB runs over a table the pipeline builds (src/build_duckdb.py).
+[sources.local]
+backend = "duckdb"
+url = "duckdb:///./_data/yield_curve.duckdb"
+
+[dataframes.yield_slopes]
+name = "Yield Curve Slopes"
+description = "Slopes of the zero-coupon yield curve: the 10-year yield less the 1-, 2- and 3-year yields, as a query over the Fed yield curve."
+sources = [
+    "Federal Reserve Board",
+]
+providers = [
+    "Federal Reserve Board",
+]
+provider_links = [
+    "https://www.federalreserve.gov/data/yield-curve-tables/feds200628.csv",
+]
+tags = [
+    "Yield Curve",
+]
+pull_method = "A SQL query over the fed_yield_curve table, run by DuckDB when the dataframe is read"
+source = "local"
+query = "select Date, SVENY10 - SVENY01 as slope_10y_1y, SVENY10 - SVENY02 as slope_10y_2y, SVENY10 - SVENY03 as slope_10y_3y from fed_yield_curve order by Date"
+date_col = "Date"
+docs_path = "./docs_src/dataframes/yield_slopes.md"
+
 [dataframes.term_premium]
 name = "Term Premium"
 description = "Term premium measures derived from the yield curve."

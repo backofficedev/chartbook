@@ -179,6 +179,16 @@ def task_pull():
     }
 
 
+def task_build_duckdb():
+    """Put the Fed yield curve into a DuckDB file, for the query-backed dataframe"""
+    return {
+        "actions": ["ipython ./src/build_duckdb.py"],
+        "file_dep": ["./src/build_duckdb.py", data.path("fed_yield_curve")],
+        "targets": [DATA_DIR / "yield_curve.duckdb"],
+        "clean": True,
+    }
+
+
 def task_example_plot():
     """Example plots"""
     file_dep = [Path("./src") / file for file in ["example_plot.py", "pull_fred.py"]]
@@ -344,6 +354,7 @@ def task_compile_sphinx_docs():
     file_dep = [
         "./README.md",
         "./chartbook.toml",
+        DATA_DIR / "yield_curve.duckdb",  # the page of `yield_slopes` reads it
         *notebook_scripts,
     ]
 
@@ -356,6 +367,7 @@ def task_compile_sphinx_docs():
         "task_dep": [
             "run_notebooks",
             "train_term_premium_ar1",
+            "build_duckdb",
         ],
         "clean": True,
     }

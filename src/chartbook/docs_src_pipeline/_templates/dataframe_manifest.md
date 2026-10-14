@@ -9,8 +9,10 @@
 | How is data pulled?            | {{dataframe_manifest.pull_method}}                                                   |
 | Data available up to (min)     | {{most_recent_data_min}}                                                             |
 | Data available up to (max)     | {{most_recent_data_max}}                                                             |
-| Dataframe Path                 | {{dataframe_manifest['_resolved_path']}}                                             |
-{% if enable_data_download %}
+{% if dataframe_manifest.table %}| Table                          | `{{dataframe_manifest.table}}` in source `{{dataframe_manifest.source}}`             |
+{% elif dataframe_manifest.query %}| Query                          | `{{dataframe_manifest.query}}` in source `{{dataframe_manifest.source}}`             |
+{% else %}| Dataframe Path                 | {{dataframe_manifest['_resolved_path']}}                                             |
+{% endif %}{% if enable_data_download %}
 | Download Data as Parquet       | [Parquet](../../download_dataframe/{{pipeline_id | replace('/', '--')}}/{{dataframe_id}}.parquet)         |
 | Download Data as Excel         | [Excel](../../download_dataframe/{{pipeline_id | replace('/', '--')}}/{{dataframe_id}}.xlsx)              |
 {% endif %}

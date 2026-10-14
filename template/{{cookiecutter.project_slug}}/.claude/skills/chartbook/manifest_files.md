@@ -159,6 +159,33 @@ path = "./docs_src/methodology.md"
 "myorg/fed_yield_curve" = { path = "../fed_yield_curve" }
 ```
 
+### Sources
+
+A dataframe is in one place: a file (`path`), or a table or query in a source.
+
+```toml
+[sources.local]
+backend = "duckdb"                          # the only backend built; others are refused
+url = "duckdb:///./_data/local.duckdb"      # public part only; NEVER credentials
+
+[dataframes.curve]
+source = "local"
+table = "fed_yield_curve"                   # one to three dot-separated parts
+[dataframes.slopes]
+source = "local"
+query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
+```
+
+- Exactly one of `path`, `table`, `query`. `table`/`query` need `source`; `path` forbids it.
+- A table/query dataframe has no file: `data.path()`/`chartbook path` refuse it; use
+  `data.load()`, `data.sql()`, `data.ref()`. It is not pinned and not in a snapshot.
+- The URL is relative to the pipeline root (`duckdb:///./x.duckdb`), absolute with four
+  slashes, or `duckdb:///:memory:`. Credentials come from `CHARTBOOK_SOURCE_<NAME>_URL`,
+  then `~/.chartbook/sources.toml`, then the manifest URL. Connections are read-only.
+- ChartBook never parses or rewrites SQL. The index records `location` kind
+  `table`/`query` with a `definition_hash` instead of a `content_hash`.
+- A catalog cannot have `[sources]`.
+
 ### Dependencies
 
 `[dependencies]` names the other pipelines a pipeline reads from. The key is a

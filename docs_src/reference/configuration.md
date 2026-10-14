@@ -212,7 +212,7 @@ Exactly one of `docs_path` (a markdown file) or `docs` (inline markdown, usually
 
 ## `[dataframes]` — Dataframe Definitions
 
-`path` points at the parquet artifact — a single file or a glob pattern for hive-partitioned data:
+A dataframe is in one place: a parquet file (`path`), or a table or a query in one of the pipeline's {ref}`[sources] <sources>` (`source` with `table` or `query`). `path` points at the parquet artifact — a single file or a glob pattern for hive-partitioned data:
 
 ```toml
 [dataframes.revenue_data]
@@ -245,6 +245,59 @@ path = "./_data/revenue_data/**/*.parquet"
 Glob paths only support `format="polars"` (LazyFrame) in `data.load`. As with charts, exactly one of `docs_path` / `docs` is required.
 
 `date_col` must be the column's name exactly as it is in the data, capitals included. The build warns when the data has no such column.
+
+(sources)=
+## `[sources]` — Where Data Lives Besides a File
+
+A dataframe does not have to be a file. It can be a table, or a query, in a **source**: a database the pipeline names.
+
+```toml
+[sources.local]
+backend = "duckdb"
+url = "duckdb:///./_data/local.duckdb"
+
+[dataframes.curve]
+name = "Yield Curve"
+source = "local"
+table = "fed_yield_curve"                 # a table or view that already exists
+docs = "The Fed's zero-coupon curve, as a table."
+
+[dataframes.slopes]
+name = "Yield Curve Slopes"
+source = "local"
+query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"   # a view ChartBook names
+docs = "The 10-year yield less the 2-year, computed when read."
+```
+
+**The rule.** A name resolves to a location. The engine runs the query. Arrow comes back. Polars wraps it. ChartBook never parses, plans or rewrites SQL: it knows *where* a name lives and *which* engine lives there, and puts the name in. The SQL is yours.
+
+| Field | Meaning |
+|---|---|
+| `backend` | The engine. `duckdb` is the one that is built. Another name is refused, so that nothing guesses |
+| `url` | Where the engine's data is, public part only. `duckdb:///./_data/x.duckdb` is a file relative to the pipeline's root; `duckdb:////abs/path.duckdb` is absolute; `duckdb:///:memory:` is nothing on disk |
+
+| On a dataframe | Meaning |
+|---|---|
+| `source` | Which source it is in. Needed with `table` or `query`; not allowed with `path` |
+| `table` | A table or view that already exists there: one to three dot-separated parts |
+| `query` | SQL the engine runs when the dataframe is read, in the engine's dialect |
+
+Exactly one of `path`, `table` and `query`. A dataframe in a source has no file, so `data.path()` and `chartbook path` refuse it and say what to use instead.
+
+**Reading one.** `data.load("slopes")` gives a Polars LazyFrame, as for a file; collecting it runs the query and fetches the result whole. `data.sql()` runs your own SQL with dataframes named in braces, `data.ref()` gives a dataframe's name in SQL for a query you run yourself, and `data.connect()` is the raw connection. See {doc}`../guide/catalogs-and-data`, "Loading data".
+
+**Credentials never enter the manifest.** A `url` with a user name or a password in it does not load. The machine supplies the rest, in this order: the environment variable `CHARTBOOK_SOURCE_<NAME>_URL` holding a complete URL (`CHARTBOOK_SOURCE_LOCAL_URL` for `local`); `url` under `[local]` in `~/.chartbook/sources.toml`; the manifest's URL alone, which is all a DuckDB file needs.
+
+**No writes.** A DuckDB file is opened read-only. The pipeline's own tools make the tables (`src/build_duckdb.py` in the `yield_curve` example); ChartBook names them.
+
+**In the index and on the page.** The dataframe's `location` is `{ "kind": "table", "source", "backend", "identifier" }` or `{ "kind": "query", "source", "backend", "sql" }`. There is no `content_hash`, since a table is not bytes on disk; `definition_hash` hashes the identifier or the SQL together with the described columns, so a changed definition or schema shows. The page shows the columns and the first rows, read from the engine when the site is built.
+
+**What it does not do.**
+
+- **Only DuckDB.** Snowflake, Databricks and Postgres are not built. A manifest that names one is refused.
+- **A table is not pinned.** A snapshot holds files, so a table or query of another pipeline cannot be read across pipelines yet. `data.sql()` and `data.ref()` take another pipeline's *file* dataframes, as pinned.
+- **One source per query.** `data.sql()` runs in one engine: the source its tables and queries are in, with any files it names read alongside. A query that names two sources is refused.
+- A catalog has no `[sources]`.
 
 ### Naming columns
 

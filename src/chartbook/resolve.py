@@ -119,6 +119,43 @@ class FileLocation(Location):
 
 
 @dataclass(frozen=True)
+class TableLocation(Location):
+    """A dataframe that is a table or view in a source.
+
+    Attributes:
+        source: The source's name in ``[sources]``.
+        backend: The source's backend, ``duckdb``.
+        url: The source's URL, public part only, with a relative DuckDB
+            file made absolute.
+        identifier: The table, as declared: one to three dot-separated parts.
+    """
+
+    kind: ClassVar[str] = "table"
+
+    source: str
+    backend: str
+    url: str
+    identifier: str
+
+
+@dataclass(frozen=True)
+class QueryLocation(Location):
+    """A dataframe that is a query run in a source: a view ChartBook names.
+
+    Attributes:
+        source, backend, url: As for :class:`TableLocation`.
+        sql: The query, in the source's dialect, as declared.
+    """
+
+    kind: ClassVar[str] = "query"
+
+    source: str
+    backend: str
+    url: str
+    sql: str
+
+
+@dataclass(frozen=True)
 class PipelineLocation:
     """Where a pipeline's source is, and which step of the chain said so.
 
@@ -788,7 +825,10 @@ def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
             example_path=_EXAMPLE_PATHS[table].format(name=name),
         )
 
-    declared_path = raw[table][name].get("path")
+    entry = raw[table][name]
+    if table == "dataframes" and (entry.get("table") or entry.get("query")):
+        return _resolve_in_source(entry, name, raw, manifest_dir)
+    declared_path = entry.get("path")
     if not isinstance(declared_path, str) or not declared_path.strip():
         example = _EXAMPLE_PATHS[table].format(name=name)
         raise ValueError(
@@ -801,6 +841,22 @@ def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
     # Joined lexically, not resolved: the declared path is the asset's real
     # location even when something has since linked another file into it.
     return FileLocation(Path(os.path.normpath(manifest_dir / declared_path)))
+
+
+def _resolve_in_source(entry: dict, name: str, raw: dict, manifest_dir: Path) -> Location:
+    """Resolve a dataframe that lives in a source, as its manifest declares."""
+    from chartbook.manifest import validate_dataframe_location, validate_sources
+
+    manifest_path = manifest_dir / MANIFEST_NAME
+    try:
+        sources = validate_sources(raw.get("sources"), manifest_dir)
+        kind = validate_dataframe_location(entry, name, sources)
+    except ValueError as error:
+        raise ValueError(f"{manifest_path}: {error}") from None
+    source = sources[entry["source"]]
+    if kind == "table":
+        return TableLocation(entry["source"], source["backend"], source["_resolved_url"], entry["table"])
+    return QueryLocation(entry["source"], source["backend"], source["_resolved_url"], entry["query"])
 
 
 def _resolve_in_catalog(
@@ -919,5 +975,6 @@ def require_file(location: Location, what: str) -> Path:
         return location.path
     raise TypeError(
         f"{what} is {location.kind}-backed, so it has no file path. "
-        f"Use data.load() to read it."
+        f"Use data.load() to read it, data.sql() to query it, or data.ref() "
+        f"for its name in SQL."
     )
