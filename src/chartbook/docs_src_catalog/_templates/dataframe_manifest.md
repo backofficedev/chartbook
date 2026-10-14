@@ -10,14 +10,20 @@
 | Data available up to (min)     | {{most_recent_data_min}}                                                             |
 | Data available up to (max)     | {{most_recent_data_max}}                                                             |
 {% if dataframe_manifest.table %}| Table                          | `{{dataframe_manifest.table}}` in source `{{dataframe_manifest.source}}`             |
-{% elif dataframe_manifest.query %}| Query                          | `{{dataframe_manifest.query}}` in source `{{dataframe_manifest.source}}`             |
+{% elif dataframe_manifest.query %}| Query                          | in source `{{dataframe_manifest.source}}`; the SQL is below                          |
 {% else %}| Dataframe Path                 | {{dataframe_manifest['_resolved_path']}}                                             |
 {% endif %}{% if enable_data_download %}
 | Download Data as Parquet       | [Parquet](../../download_dataframe/{{pipeline_id | replace('/', '--')}}/{{dataframe_id}}.parquet)         |
 | Download Data as Excel         | [Excel](../../download_dataframe/{{pipeline_id | replace('/', '--')}}/{{dataframe_id}}.xlsx)              |
 {% endif %}
 
-**Linked Charts:**
+{% if dataframe_manifest.query %}**Query:**
+
+```sql
+{{dataframe_manifest.query}}
+```
+
+{% endif %}**Linked Charts:**
 {% if dataframe_manifest.linked_charts %}
 {% for chart_id in dataframe_manifest.linked_charts %}
 - [{{pipeline_id}}:{{chart_id}}](../../charts/{{pipeline_id | replace('/', '--')}}.{{chart_id}}.md)

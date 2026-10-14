@@ -584,34 +584,63 @@ def get_package_templates_path() -> Path:
     return Path(str(package_path)) / "templates"
 
 
-def _source_glimpse(dataframe_manifest) -> str:
-    """A glimpse of a table or query dataframe, read from its engine."""
-    from chartbook.backends import BackendError, DuckDBBackend
+def _source_location(dataframe_manifest):
+    """Where a table or query dataframe is, or None when its source has no URL."""
     from chartbook.resolve import QueryLocation, TableLocation
 
     source = dataframe_manifest.get("_source") or {}
     url = source.get("_resolved_url")
+    if not url:
+        return None
+    if dataframe_manifest.get("table"):
+        return TableLocation(dataframe_manifest["source"], source["backend"], url, dataframe_manifest["table"])
+    return QueryLocation(dataframe_manifest["source"], source["backend"], url, dataframe_manifest["query"])
+
+
+def _source_glimpse(dataframe_manifest) -> str:
+    """A glimpse of a table or query dataframe, read from its engine.
+
+    Whatever goes wrong in reading it, the page says so and the site is
+    built: a query that fails on one value fails when the first rows are
+    collected, in Polars' words, and that is not a reason to have no page.
+    """
+    from chartbook.backends import DuckDBBackend
+
+    source = dataframe_manifest.get("_source") or {}
     where = (
         f"table {dataframe_manifest['table']}"
         if dataframe_manifest.get("table")
         else "query"
     ) + f" in source {dataframe_manifest.get('source')!r} ({source.get('backend')})"
-    if not url:
+    location = _source_location(dataframe_manifest)
+    if location is None:
         return f"A {where}."
-    if dataframe_manifest.get("table"):
-        location = TableLocation(dataframe_manifest["source"], source["backend"], url, dataframe_manifest["table"])
-    else:
-        location = QueryLocation(dataframe_manifest["source"], source["backend"], url, dataframe_manifest["query"])
     try:
-        backend = DuckDBBackend(url)
+        backend = DuckDBBackend(location.url)
         columns, rows = backend.describe(location)
         sample = backend.scan(location).head(5).collect()
-    except (BackendError, OSError) as error:
+    except Exception as error:
         return f"A {where}. It could not be read when the site was built: {error}"
     lines = [f"A {where}: {rows} rows, {len(columns)} columns.", ""]
     lines += [f"  {column['name']}: {column['dtype']}" for column in columns]
     lines += ["", "First rows:", str(sample)]
     return "\n".join(lines)
+
+
+def _source_span(dataframe_manifest):
+    """The least and greatest ``date_col`` of a table or query, asked of its
+    engine; ``(None, None)`` when there is no date_col or it cannot say."""
+    from chartbook.backends import DuckDBBackend
+
+    date_col = dataframe_manifest.get("date_col")
+    location = _source_location(dataframe_manifest)
+    if not date_col or location is None:
+        return None, None
+    try:
+        low, high = DuckDBBackend(location.url).span(location, date_col)
+    except Exception:
+        return None, None
+    return low, high
 
 
 def _source_freshness(dataframe_manifest):
@@ -741,8 +770,8 @@ def generate_dataframe_docs(
         Path(dataframe_path_prefix) / _fs_slug(pipeline_id) / f"{dataframe_id}.md"
     ).as_posix()
     if dataframe_manifest.get("table") or dataframe_manifest.get("query"):
-        # In a source: the engine describes it, and there is no file to date
-        most_recent_data_min, most_recent_data_max = None, None
+        # In a source: the engine describes it and dates it
+        most_recent_data_min, most_recent_data_max = _source_span(dataframe_manifest)
         dataframe_glimpse = _source_glimpse(dataframe_manifest)
         freshness = [_source_freshness(dataframe_manifest)]
     else:

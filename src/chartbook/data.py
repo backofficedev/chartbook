@@ -449,9 +449,8 @@ def load(
         location = resolve(asset, start_dirs=start_dirs)
         dataframe = str(asset)
     if not isinstance(location, FileLocation):
-        # A table or a query in a source: the backend runs it, Arrow comes
-        # back, Polars wraps it. Fetched when asked for, not lazily: a
-        # database has no lazy scan, and the docstring says so.
+        # A table or a query in a source: the backend binds it now, runs it
+        # when the frame is collected, Arrow comes back, Polars wraps it.
         from chartbook.backends import backend_for
 
         frame = backend_for(location).scan(location)
@@ -511,8 +510,11 @@ def load(
         )
 
 
-# A {reference} in SQL: anything between braces that is not itself a brace
+# A {reference} in SQL: anything between braces that is not itself a brace.
+# A doubled brace is a literal one, for DuckDB's own {'a': 1} syntax; it is
+# set aside before references are found and put back after.
 _REFERENCE_IN_SQL = re.compile(r"\{([^{}]+)\}")
+_LITERAL_OPEN, _LITERAL_CLOSE = "\0open\0", "\0close\0"
 
 
 def ref(
@@ -561,29 +563,36 @@ def sql(
 
     Each ``{reference}`` is replaced by what :func:`ref` gives for it, and
     the SQL runs in one engine: the source that the tables and queries in it
-    live in, or an in-memory DuckDB when it names only files. ChartBook
-    never parses or rewrites the SQL; what is between the braces is a
-    reference, and everything else is yours, in DuckDB's dialect.
+    live in, or a fresh in-memory DuckDB of its own when it names only
+    files. ChartBook never parses or rewrites the SQL; what is between the
+    braces is a reference, and everything else is yours, in DuckDB's
+    dialect. A literal brace, as in DuckDB's ``{'a': 1}`` struct syntax or
+    inside a string, is written twice: ``{{'a': 1}}``.
 
     A dataframe of another pipeline, ``{fed_yield_curve:treasury_rates}``,
     is the pinned copy, as everywhere else.
 
     :param query: The SQL, with references in braces.
     :param project_dir: Where to look for the pipeline, as for :func:`path`.
-    :returns: A Polars LazyFrame. Collect it to run the query.
+    :returns: A Polars LazyFrame. Collect it to run the query. An error that
+        only running can find, such as a cast that fails on one value, is
+        raised then, by Polars, with DuckDB's message in it.
     :raises ValueError: If the query has no reference in it, or names
         dataframes of two different sources.
-    :raises chartbook.backends.BackendError: If the engine refuses the SQL.
+    :raises chartbook.backends.BackendError: If the engine refuses the SQL
+        as it binds it: a name it does not know, or SQL it cannot parse.
     """
     from chartbook.backends import DuckDBBackend, backend_for
 
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    query = query.replace("{{", _LITERAL_OPEN).replace("}}", _LITERAL_CLOSE)
     found = _REFERENCE_IN_SQL.findall(query)
     if not found:
         raise ValueError(
             "data.sql() runs SQL that names dataframes in braces, e.g. "
             "\"select * from {treasury_rates}\". This query has none; for SQL "
-            "with no ChartBook reference in it, use data.connect(source).sql(...)."
+            "with no ChartBook reference in it, use data.connect(source).sql(...). "
+            "A doubled brace, {{ or }}, is a literal one."
         )
     engines: dict[str, str] = {}
     substitutions = {}
@@ -601,7 +610,10 @@ def sql(
         )
     for text, replacement in substitutions.items():
         query = query.replace("{" + text + "}", replacement)
-    (url,) = engines or ["duckdb://:memory:"]
+    query = query.replace(_LITERAL_OPEN, "{").replace(_LITERAL_CLOSE, "}")
+    if not engines:
+        return DuckDBBackend.scratch().sql(query)
+    (url,) = engines
     return DuckDBBackend(url).sql(query)
 
 
@@ -615,9 +627,13 @@ def connect(
     >>> con = data.connect("local")  # doctest: +SKIP
     >>> con.sql("select 1").fetchall()  # doctest: +SKIP
 
-    For a DuckDB source that is a ``duckdb`` connection, opened read-only.
-    Anything ChartBook does not expose is reachable here, and the SQL you
-    run with it is between you and the engine.
+    For a DuckDB file that is a ``duckdb`` connection, opened read-only and
+    afresh for each call; close it when you are done, or let it go. For a
+    ``:memory:`` source it is the one connection that source is, for the
+    life of the process, and it is writable: such a source holds what you
+    put in it, and nothing else. Anything ChartBook does not expose is
+    reachable here, and the SQL you run with it is between you and the
+    engine.
 
     :param source: The source's name in ``[sources]``.
     :param project_dir: Where to look for the pipeline, as for :func:`path`.

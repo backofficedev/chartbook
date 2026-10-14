@@ -181,6 +181,7 @@ one = data.load("my_data").select("date", "DGS10")
 # SQL: name dataframes in braces; ChartBook substitutes names and DuckDB runs the rest.
 # A file is read_parquet('…'), a [sources] table its identifier, a query a sub-select.
 joined = data.sql("select a.date, a.x, b.y from {my_data} a join {other} b using (date)")
+# A literal brace is written twice: data.sql("select {{'a': 1}} s from {my_data}")
 data.ref("my_data")        # the name to paste into SQL you run yourself
 data.connect("local")      # the raw read-only duckdb connection to [sources.local]
 # A dataframe may live in a source instead of a file (then it has no path):

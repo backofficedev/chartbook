@@ -31,10 +31,11 @@ dependencies = [
     "tomli-w>=1.1.0",
     # Data loading
     "packaging",
-    "polars>=1.9.0",
+    # 1.20 has the IO-plugin seam that DuckDB's lazy frames are built on
+    "polars>=1.20",
     "pyarrow",
     # The local SQL engine: [sources] with backend = "duckdb", and data.sql()
-    "duckdb>=1.1",
+    "duckdb>=1.4",  # .pl(lazy=True) arrived in 1.4
     "python-decouple>=3.8",
     # Plotting
     "matplotlib>=3.7.0",

@@ -115,6 +115,19 @@ class TestManifest:
         with pytest.raises(ValueError, match=message):
             validate_dataframe_location(entry, "x", sources)
 
+    @pytest.mark.parametrize(
+        "entry, message",
+        [
+            ({"path": "", "source": "local"}, "has both path and source"),
+            ({"table": "", "source": "local"}, "'table' must be a string, and not empty"),
+            ({"source": "local"}, "has a source and neither table nor query"),
+        ],
+    )
+    def test_an_empty_value_is_not_an_absent_one(self, entry, message):
+        """Found by a reviewer: truthiness let `path = ""` with a source through."""
+        with pytest.raises(ValueError, match=message):
+            validate_dataframe_location(entry, "x", {"local": {}})
+
     def test_the_loader_reads_them_and_names_the_file(self, pipeline):
         loaded = load_manifest(pipeline)
         assert loaded["sources"]["local"]["backend"] == "duckdb"
@@ -141,6 +154,22 @@ class TestManifest:
         )
         with pytest.raises(ValueError, match=r"a catalog has no \[sources\]"):
             load_manifest(tmp_path)
+
+    @pytest.mark.parametrize(
+        "url, message",
+        [
+            ("duckdb://host/x.duckdb", "has a host or a user, 'host'"),
+            ("duckdb://user@/x.duckdb", "has a host or a user, 'user@'"),
+            ("duckdb:///x.duckdb?access_mode=read_only", "has connection options after the file"),
+            ("duckdb:///:memory:?x=1", "has connection options after the file"),
+            ("duckdb:///x.duckdb#frag", "has connection options after the file"),
+        ],
+    )
+    def test_a_duckdb_url_is_a_file_and_nothing_else(self, url, message):
+        """Found by a reviewer: a host became a folder, options became part of
+        the file's name, and a user name passed."""
+        with pytest.raises(ValueError, match=message):
+            validate_sources({"local": {"backend": "duckdb", "url": url}}, Path("/p"))
 
     def test_the_duckdb_url_convention(self, tmp_path):
         assert duckdb_path("duckdb:///rel.db", tmp_path) == str(tmp_path / "rel.db")
@@ -190,7 +219,6 @@ class TestLoading:
 
     def test_a_source_whose_file_is_not_built_yet(self, pipeline):
         (pipeline / "_data" / "local.duckdb").unlink()
-        DuckDBBackend._connections.clear()
         with pytest.raises(BackendError, match="is not there. The pipeline builds it"):
             data.load("curve", project_dir=pipeline).collect()
 
@@ -205,6 +233,40 @@ class TestLoading:
             data.load("bad", project_dir=pipeline).collect()
 
 
+    def test_an_error_only_running_can_find_is_polars_and_the_page_survives(self, pipeline):
+        """Found by a reviewer: DESCRIBE binds, count(*) prunes the cast, and
+        the cast fails when the first rows are collected. The site is still
+        built, and the page says what happened."""
+        from chartbook.markdown_generator import _source_glimpse
+
+        broken = {**RATES}
+        broken["dataframes"] = {
+            **RATES["dataframes"],
+            "bad": {"source": "local", "query": "select cast(d as int) as di from curve", "docs": "d"},
+        }
+        _manifest(pipeline, broken)
+        frame = data.load("bad", project_dir=pipeline)  # binds: no error yet
+        with pytest.raises(pl.exceptions.ComputeError, match="Conversion"):
+            frame.collect()
+        glimpse = _source_glimpse(load_manifest(pipeline)["dataframes"]["bad"])
+        assert glimpse.startswith("A query in source 'local' (duckdb). It could not be read when the site was built:")
+        assert "Conversion" in glimpse
+
+    def test_a_rebuilt_file_is_seen_and_a_dropped_frame_lets_a_writer_in(self, pipeline):
+        """Found by a reviewer: a connection kept for the process read stale data
+        and held the file's lock. Now each load opens the file afresh, and the
+        frame it returns keeps its own connection only while it lives."""
+        import gc
+
+        first = data.load("curve", project_dir=pipeline).collect()
+        assert first.height == 2
+        gc.collect()
+        writer = duckdb.connect(str(pipeline / "_data" / "local.duckdb"))
+        writer.sql("insert into curve values ('2024-01-03', 1.2, 4.4)")
+        writer.close()
+        assert data.load("curve", project_dir=pipeline).collect().height == 3
+
+
 class TestRef:
     def test_a_file_a_table_and_a_query(self, pipeline):
         assert data.ref("rates", project_dir=pipeline) == (
@@ -212,8 +274,22 @@ class TestRef:
         )
         assert data.ref("curve", project_dir=pipeline) == '"curve"'
         assert data.ref("slopes", project_dir=pipeline) == (
-            "(select d, y10 - y02 as slope from curve order by d)"
+            "(\nselect d, y10 - y02 as slope from curve order by d\n)"
         )
+
+    def test_a_query_that_ends_with_a_semicolon_or_a_comment_still_loads(self, pipeline):
+        """Found by a reviewer: spliced as `(sql)`, a trailing `;` or `--` broke load()."""
+        with_more = {**RATES}
+        with_more["dataframes"] = {
+            **RATES["dataframes"],
+            "semi": {"source": "local", "query": "select d from curve; ", "docs": "d"},
+            "noted": {"source": "local", "query": "select d from curve -- the dates", "docs": "d"},
+        }
+        _manifest(pipeline, with_more)
+        assert data.load("semi", project_dir=pipeline).collect().height == 2
+        assert data.load("noted", project_dir=pipeline).collect().height == 2
+        assert data.ref("semi", project_dir=pipeline) == "(\nselect d from curve\n)"
+        assert data.sql("select count(*) n from {noted}", project_dir=pipeline).collect()["n"][0] == 2
 
     def test_identifiers_are_quoted_part_by_part(self):
         assert backends.quote_identifier("a.b.c") == '"a"."b"."c"'
@@ -270,6 +346,35 @@ class TestSql:
         with pytest.raises(BackendError, match="nope"):
             data.sql("select nope from {curve}", project_dir=pipeline).collect()
 
+    def test_a_literal_brace_is_written_twice(self, pipeline):
+        """Found by a reviewer: DuckDB's own {'a': 1} syntax, and braces in
+        strings, collided with the reference grammar."""
+        got = data.sql(
+            "select {{'a': 1}} as s, '{{x}}' as t, count(*) as n from {curve}", project_dir=pipeline
+        ).collect()
+        assert got["s"][0] == {"a": 1} and got["t"][0] == "{x}" and got["n"][0] == 2
+        with pytest.raises(ValueError, match="A doubled brace"):
+            data.sql("select {{'a': 1}} as s", project_dir=pipeline)
+
+    def test_sql_over_files_runs_in_an_engine_of_its_own(self, pipeline):
+        """Found by a reviewer: files-only SQL shared the one in-memory
+        connection with every :memory: source, so a table a user made there
+        showed up in it."""
+        with_memory = {**RATES}
+        with_memory["sources"] = {**RATES["sources"], "mem": {"backend": "duckdb", "url": "duckdb:///:memory:"}}
+        with_memory["dataframes"] = {
+            **RATES["dataframes"],
+            "answer": {"source": "mem", "table": "t", "docs": "What was put in the memory source."},
+        }
+        _manifest(pipeline, with_memory)
+        data.connect("mem", project_dir=pipeline).sql("create table t as select 42 as answer")
+        # A :memory: source holds what is put in it, for the process
+        assert data.load("answer", project_dir=pipeline).collect()["answer"][0] == 42
+        # ...and SQL over files alone does not see it
+        with pytest.raises(BackendError, match="Table with name t does not exist"):
+            data.sql("select answer from t, {rates}", project_dir=pipeline)
+        assert DuckDBBackend.scratch().connect() is not DuckDBBackend.scratch().connect()
+
     def test_the_same_reference_twice(self, pipeline):
         got = data.sql(
             "select a.d from {curve} a join {curve} b on a.d = b.d", project_dir=pipeline
@@ -291,6 +396,39 @@ class TestConnect:
 
 class TestCredentials:
     """The manifest holds the public part. The machine supplies the rest."""
+
+    @staticmethod
+    def _other_file(directory: Path, label: str) -> Path:
+        other = directory / f"{label}.duckdb"
+        con = duckdb.connect(str(other))
+        con.sql(f"create table curve as select '{label}' as d, 0.0 as y02, 0.0 as y10")
+        con.close()
+        return other
+
+    def test_the_machine_url_is_what_opens_the_source(self, pipeline, tmp_path, monkeypatch):
+        """Found by a reviewer: the chain was documented and never called."""
+        monkeypatch.setattr(backends, "get_global_config_dir", lambda: tmp_path / "home")
+        (tmp_path / "home").mkdir()
+        from_file = self._other_file(tmp_path, "FROM-FILE")
+        (tmp_path / "home" / "sources.toml").write_text(f'[local]\nurl = "duckdb:///{from_file}"\n')
+        assert data.load("curve", project_dir=pipeline).collect()["d"].to_list() == ["FROM-FILE"]
+        assert data.connect("local", project_dir=pipeline).sql("select d from curve").fetchone() == ("FROM-FILE",)
+        from_env = self._other_file(tmp_path, "FROM-ENV")
+        monkeypatch.setenv("CHARTBOOK_SOURCE_LOCAL_URL", f"duckdb:///{from_env}")
+        assert data.load("curve", project_dir=pipeline).collect()["d"].to_list() == ["FROM-ENV"]
+        assert resolve("curve", start_dirs=[pipeline]).url == f"duckdb:///{from_env}"
+        # The index describes what the machine opens, and records the manifest's url
+        record = {r["id"]: r for r in index.build_index(load_manifest(pipeline))["records"]}["acme/rates:curve"]
+        assert record["row_count"] == 1 and "FROM-ENV" not in json.dumps(record)
+
+    def test_a_machine_url_for_another_engine_is_refused(self, pipeline, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_SOURCE_LOCAL_URL", "postgres://warehouse/db")
+        with pytest.raises(ValueError, match="begins with postgres:// and the backend is duckdb"):
+            load_manifest(pipeline)
+
+    def test_the_hint_names_the_variable_as_a_person_would_write_it(self):
+        with pytest.raises(ValueError, match=r"CHARTBOOK_SOURCE_<NAME>_URL"):
+            backends.check_url("duckdb://user:pw@host/x", "duckdb", "[sources.x]")
 
     def test_the_environment_wins(self, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_SOURCE_WARE_HOUSE_URL", "duckdb:///from-env.db")
@@ -322,7 +460,7 @@ class TestIndexAndSite:
         assert table["location"] == {"kind": "table", "source": "local", "backend": "duckdb", "identifier": "curve"}
         assert "content_hash" not in table and table["definition_hash"].startswith("sha256:")
         assert table["row_count"] == 2 and [c["name"] for c in table["columns"]] == ["d", "y02", "y10"]
-        assert table["columns"][1]["dtype"] in ("DECIMAL(2,1)", "DOUBLE", "DECIMAL(3,1)")
+        assert table["columns"][1]["dtype"] == "DECIMAL(2,1)"  # DuckDB's name, as the engine has it
         query = records["acme/rates:slopes"]
         assert query["location"]["kind"] == "query" and query["location"]["sql"].startswith("select d,")
         assert "source" not in query and "query" not in query  # in the location, not beside it
@@ -342,10 +480,59 @@ class TestIndexAndSite:
         assert before["acme/rates:slopes"]["definition_hash"] != after["acme/rates:slopes"]["definition_hash"]
         assert before["acme/rates:curve"]["definition_hash"] == after["acme/rates:curve"]["definition_hash"]
 
+    def test_a_table_that_is_not_there_is_said_so_when_the_index_is_built(self, pipeline):
+        """Found by a reviewer: a typo in `table` left the record silently bare."""
+        typo = {**RATES}
+        typo["dataframes"] = {**RATES["dataframes"], "curve": {"source": "local", "table": "curv", "docs": "d"}}
+        _manifest(pipeline, typo)
+        with pytest.warns(UserWarning, match=r"\[dataframes.curve\]: the engine could not describe it.*curv"):
+            built = index.build_index(load_manifest(pipeline))
+        (record,) = [r for r in built["records"] if r["id"] == "acme/rates:curve"]
+        assert "columns" not in record
+
+    def test_the_same_table_in_two_sources_has_two_definition_hashes(self, pipeline, tmp_path):
+        """Found by a reviewer: the hash left out where the table is."""
+        other = tmp_path / "other.duckdb"
+        con = duckdb.connect(str(other))
+        con.sql("create table curve as select '2020-01-01' as d, 0.0 as y02, 0.0 as y10")
+        con.close()
+        two = {**RATES}
+        two["sources"] = {**RATES["sources"], "other": {"backend": "duckdb", "url": f"duckdb:///{other}"}}
+        two["dataframes"] = {
+            **RATES["dataframes"],
+            "curve_elsewhere": {"source": "other", "table": "curve", "docs": "d"},
+        }
+        _manifest(pipeline, two)
+        records = {r["id"]: r for r in index.build_index(load_manifest(pipeline))["records"]}
+        assert records["acme/rates:curve"]["definition_hash"] != records["acme/rates:curve_elsewhere"]["definition_hash"]
+
+    def test_the_page_dates_the_data_and_shows_a_long_query_whole(self, pipeline, monkeypatch):
+        """Found by a reviewer: the dates were None, and a query with a newline
+        or a pipe broke the table it was printed in."""
+        dated = {**RATES}
+        dated["dataframes"] = {
+            **RATES["dataframes"],
+            "slopes": {
+                "source": "local",
+                "query": "select d,\n  y10 || '-' || y02 as pair\nfrom curve",
+                "date_col": "d",
+                "docs": "A query.",
+            },
+        }
+        _manifest(pipeline, dated)
+        monkeypatch.chdir(pipeline)
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+        assert result.exit_code == 0, result.output
+        page = (pipeline / "_docs" / "cb" / "dataframes" / "acme--rates" / "slopes.md").read_text()
+        assert "| Data available up to (min)     | 2024-01-01" in page
+        assert "| Data available up to (max)     | 2024-01-02" in page
+        assert "| Query                          | in source `local`; the SQL is below" in page
+        assert "```sql\nselect d,\n  y10 || '-' || y02 as pair\nfrom curve\n```" in page
+
     def test_a_source_that_is_not_built_yet_has_no_columns(self, pipeline):
         (pipeline / "_data" / "local.duckdb").unlink()
-        DuckDBBackend._connections.clear()
-        built = index.build_index(load_manifest(pipeline))
+        with pytest.warns(UserWarning, match=r"\[dataframes.curve\]: the engine could not describe it"):
+            built = index.build_index(load_manifest(pipeline))
         (table,) = [r for r in built["records"] if r["id"] == "acme/rates:curve"]
         assert "columns" not in table and "definition_hash" not in table
         assert table["location"]["kind"] == "table"
@@ -374,6 +561,31 @@ class TestNotPinnedAcrossPipelines:
     def test_a_table_of_another_pipeline_is_not_in_a_snapshot(self, pipeline, tmp_path):
         """A snapshot holds files. A table has none, so it is not pinned, and
         a reference to it from another pipeline says so."""
-        from chartbook.resolve import declared_files
+        from chartbook import lock
+        from chartbook.errors import AssetNotPinnedError
+        from chartbook.resolve import FileLocation, declared_files
 
         assert [str(ref) for ref, _, _ in declared_files(pipeline)] == ["rates"]
+        downstream = _manifest(
+            tmp_path / "down",
+            {"project": {"id": "acme/down"}, "dependencies": {"rates": {"path": "../rates"}}},
+        )
+        lock.pin(downstream, from_folder=True)
+        assert isinstance(resolve("rates:rates", start_dirs=[downstream]), FileLocation)
+        with pytest.raises(AssetNotPinnedError, match="is a table in a source of the pipeline 'rates'.*cannot be read across pipelines yet") as e:
+            resolve("rates:curve", start_dirs=[downstream])
+        assert e.value.reason == "in_source"
+        with pytest.raises(AssetNotPinnedError, match="is a query in a source"):
+            resolve("rates:slopes", start_dirs=[downstream])
+        with pytest.raises(AssetNotPinnedError, match="had no dataframe named 'nope'"):
+            resolve("rates:nope", start_dirs=[downstream])
+
+    def test_a_catalog_reaches_a_table_of_a_pipeline_it_lists(self, pipeline, tmp_path):
+        """Found by a reviewer: the catalog path blamed a missing `path`."""
+        (tmp_path / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"acme/rates": {"path": "rates"}}})
+        )
+        location = resolve("curve", pipeline="acme/rates", catalog_path=tmp_path / "chartbook.toml")
+        assert isinstance(location, TableLocation) and location.identifier == "curve"
+        frame = data.load("acme/rates", "slopes", catalog_path=tmp_path / "chartbook.toml")
+        assert frame.collect().height == 2

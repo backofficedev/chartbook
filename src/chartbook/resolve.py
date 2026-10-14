@@ -657,6 +657,17 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
         )
     record = of_dependency.get(asset_id)
     if record is None:
+        in_source = pinned.kind == "dataframe" and _declared_in_source(dependency, pinned.name)
+        if in_source:
+            raise AssetNotPinnedError(
+                asset_id,
+                "in_source",
+                f"{asset_id!r} is a {in_source} in a source of the pipeline "
+                f"{dependency.id!r}, not a file. A snapshot holds files, so it is "
+                f"not pinned and cannot be read across pipelines yet. Read it from "
+                f"inside that pipeline, or have that pipeline write it to a parquet "
+                f"file and declare the file.",
+            )
         same_kind = sorted(
             AssetRef.from_dict(other["ref"]).name
             for other in of_dependency.values()
@@ -798,6 +809,21 @@ def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Locati
     return _held(store, records[matches[0]])
 
 
+def _declared_in_source(dependency: PipelineLocation, name: str) -> Optional[str]:
+    """``"table"`` or ``"query"`` if the dependency's manifest, where it can be
+    read on this machine, declares the dataframe in a source; else None."""
+    if dependency.path is None:
+        return None
+    try:
+        raw = _read_raw_manifest(Path(dependency.path) / MANIFEST_NAME)
+    except (OSError, ValueError):
+        return None
+    entry = (raw.get("dataframes") or {}).get(name)
+    if not isinstance(entry, dict):
+        return None
+    return "table" if "table" in entry else "query" if "query" in entry else None
+
+
 def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
     """Resolve a local reference against one pipeline's raw manifest."""
     from chartbook.manifest import resolve_project_type
@@ -826,7 +852,7 @@ def _resolve_local(asset: AssetRef, manifest_dir: Path) -> Location:
         )
 
     entry = raw[table][name]
-    if table == "dataframes" and (entry.get("table") or entry.get("query")):
+    if table == "dataframes" and ("table" in entry or "query" in entry):
         return _resolve_in_source(entry, name, raw, manifest_dir)
     declared_path = entry.get("path")
     if not isinstance(declared_path, str) or not declared_path.strip():
@@ -877,7 +903,13 @@ def _resolve_in_catalog(
             f"Available dataframes: {available_dataframes}"
         )
 
-    resolved = pipeline_manifest["dataframes"][dataframe].get("_resolved_path")
+    entry = pipeline_manifest["dataframes"][dataframe]
+    if entry.get("_location_kind") in ("table", "query"):
+        source = entry["_source"]
+        if entry["_location_kind"] == "table":
+            return TableLocation(entry["source"], source["backend"], source["_resolved_url"], entry["table"])
+        return QueryLocation(entry["source"], source["backend"], source["_resolved_url"], entry["query"])
+    resolved = entry.get("_resolved_path")
     if resolved is None:
         raise KeyError(
             f"Dataframe {dataframe!r} in pipeline {pipeline_key!r} has no "

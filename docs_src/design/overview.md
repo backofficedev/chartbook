@@ -1698,8 +1698,10 @@ hash, read-only connections, DuckDB as the engine and the fallback, and the work
    the loader enforces it.
 5. **An unknown backend is refused by name.** No plugin seam yet: DuckDB is the second
    implementation after parquet, and the rule is three.
-6. **`data.load()` of a table or query returns a LazyFrame that DuckDB backs**, through one
-   connection per URL kept for the process. Collecting it runs the query.
+6. **`data.load()` of a table or query returns a LazyFrame that DuckDB backs.** The engine
+   binds the query at once; collecting the frame runs it, and an error only running can find
+   is Polars' `ComputeError` with DuckDB's message. A file is opened afresh for each load;
+   the frame keeps its connection while it lives.
 7. **The default policy's `path` requirement is met by a `table` or a `query`.** The rule
    asks where the dataframe is; a source answers.
 8. **`check` reports a DuckDB file that is not built**, and skips that with `--skip-outputs`,
@@ -1707,10 +1709,47 @@ hash, read-only connections, DuckDB as the engine and the fallback, and the work
 9. **The page is read from the engine when the site is built**: columns, row count, first
    five rows. A source that cannot be read gets a page that says so.
 
+**What an adversarial review found before merge** (2026-10-13; fifteen findings, each fixed
+with a test unless said otherwise):
+
+1. The credential chain, `source_url()`, was documented everywhere and called nowhere: the
+   manifest's URL was what opened every source. The loader now resolves each source through
+   it, refuses a machine URL for another engine, and the index records the manifest's URL only.
+2. A query that bound but failed when run (a cast that fails on one value) aborted the whole
+   site build; `describe` and `count(*)` had both passed. The page now says what happened and
+   the site is built. Such an error is Polars' `ComputeError`, and the docs say so.
+3. One in-memory connection was shared by every `:memory:` source and by files-only
+   `data.sql()`, so a table a user made through `connect()` showed up in SQL over files. Files-only
+   SQL now runs in a fresh engine of its own; a `:memory:` source is one writable connection, by
+   nature, and the docs say so.
+4. A query spliced as `(sql)` broke on a trailing `;` or `--` comment; it is `(\nsql\n)` now,
+   with the semicolon dropped.
+5. A table or query of another pipeline was reported as "had no dataframe named … `update`
+   pins it", which was false. It now says it is a table in a source and cannot be read across
+   pipelines yet. The catalog's two-argument path blamed a missing `path`; it resolves the table.
+6. A query with a newline or a `|` broke the manifest table on its page; the SQL is in a fenced
+   block below it now.
+7. `{'a': 1}` and `'{x}'` in `data.sql()` were read as references; a doubled brace is a literal.
+8. A connection kept for the process read stale data after a rebuild and held the file's lock.
+   A file is opened afresh for each load; a frame keeps its own connection while it lives, which
+   is the lock's true scope, and the docs say to drop it before rebuilding.
+9. `duckdb>=1.1` was below `.pl(lazy=True)`, which arrived in 1.4; the floor is 1.4, and polars
+   1.20 for the IO-plugin seam it uses. No test: every environment has a newer one.
+10. `duckdb://host/x` became a folder, `?options` part of the file's name, and `user@` passed.
+    A DuckDB URL is a file and nothing else; the rest is refused with a reason.
+11. A typo in `table` left the record silently without columns; the index warns.
+12. The page's first and last dates were `None` for a table with a `date_col`; the engine is
+    asked for `min` and `max`.
+13. `path = ""` with a `source` passed as a file; presence is tested, not truthiness.
+14. `definition_hash` left out the source, so the same table name in two sources hashed alike.
+15. Test hygiene: the dtype in the index test is pinned, and the tests no longer reach into a
+    connection cache, since there is none.
+
 **Known gaps.** A table or query is not pinned and not in a snapshot, so it is not reproducible
-across time or pipelines the way a file is. Only DuckDB. One source per query. The DuckDB
-connection is opened read-only, which a user can get round with their own `duckdb.connect`;
-ChartBook does not police the engine.
+across time or pipelines the way a file is. Only DuckDB. One source per query. A DuckDB file
+is opened read-only, which a user can get round with their own `duckdb.connect`; ChartBook
+does not police the engine. A column of a DuckDB `UNION` type makes `.pl(lazy=True)` panic
+inside DuckDB (a `BaseException`), which nothing here catches.
 
 
 ### Step 6. Readers of the index

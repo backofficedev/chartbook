@@ -181,7 +181,9 @@ query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
   `data.load()`, `data.sql()`, `data.ref()`. It is not pinned and not in a snapshot.
 - The URL is relative to the pipeline root (`duckdb:///./x.duckdb`), absolute with four
   slashes, or `duckdb:///:memory:`. Credentials come from `CHARTBOOK_SOURCE_<NAME>_URL`,
-  then `~/.chartbook/sources.toml`, then the manifest URL. Connections are read-only.
+  then `~/.chartbook/sources.toml`, then the manifest URL. Connections are read-only and
+  opened afresh per load; a `:memory:` source is one writable connection for the process.
+  A DuckDB url is the file alone: no host, user or `?options`.
 - ChartBook never parses or rewrites SQL. The index records `location` kind
   `table`/`query` with a `definition_hash` instead of a `content_hash`.
 - A catalog cannot have `[sources]`.

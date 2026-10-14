@@ -447,13 +447,24 @@ def validate_sources(raw_sources, base_dir: Path) -> dict:
         url = "duckdb:///./_data/local.duckdb"
 
     See ``docs_src/design/data-access.md``. Each source gains
-    ``_resolved_url``: the URL with a relative DuckDB file made absolute.
+    ``_resolved_url``: the URL the machine opens it with, from
+    :func:`chartbook.backends.source_url`, with a relative DuckDB file made
+    absolute. That URL may carry credentials; it is never written anywhere.
 
     :raises ValueError: If the table is malformed, a name is not a legal
         name, a backend is not built, a url carries credentials, or a url
         does not match its backend.
     """
-    from chartbook.backends import check_backend, check_url, duckdb_path
+    from chartbook.backends import (
+        MEMORY_URL,
+        BackendError,
+        check_backend,
+        check_url,
+        duckdb_path,
+        scheme_of,
+        source_env_var,
+        source_url,
+    )
 
     if raw_sources is None:
         return {}
@@ -480,12 +491,27 @@ def validate_sources(raw_sources, base_dir: Path) -> dict:
                 raise ValueError(f"{where} needs {key!r}, a string.")
         check_backend(entry["backend"], where)
         check_url(entry["url"], entry["backend"], where)
+        try:
+            machine_url = source_url(name, entry["url"])
+        except BackendError as error:
+            raise ValueError(f"{where}: {error}") from None
+        if scheme_of(machine_url) != entry["backend"]:
+            raise ValueError(
+                f"{where}: the machine's url for this source, from {source_env_var(name)} "
+                f"or ~/.chartbook/sources.toml, begins with "
+                f"{scheme_of(machine_url) or 'no scheme'}:// and the backend is "
+                f"{entry['backend']}. The manifest names the engine; the machine says "
+                f"where it is, not which it is."
+            )
         resolved = dict(entry)
         if entry["backend"] == "duckdb":
-            path = duckdb_path(entry["url"], base_dir)
-            resolved["_resolved_url"] = "duckdb://" + (path if path == ":memory:" else "/" + path)
+            try:
+                path = duckdb_path(machine_url, base_dir)
+            except ValueError as error:
+                raise ValueError(f"{where}: {error}") from None
+            resolved["_resolved_url"] = MEMORY_URL if path == ":memory:" else "duckdb:///" + path
         else:  # pragma: no cover - no other backend is built
-            resolved["_resolved_url"] = entry["url"]
+            resolved["_resolved_url"] = machine_url
         sources[name] = resolved
     return sources
 
@@ -501,25 +527,30 @@ def validate_dataframe_location(entry: dict, dataframe_id: str, sources: dict) -
         source that is not declared.
     """
     where = f"[dataframes.{dataframe_id}]"
-    given = [key for key in DATAFRAME_LOCATION_KEYS if entry.get(key)]
+    given = [key for key in DATAFRAME_LOCATION_KEYS if key in entry]
     if len(given) > 1:
         raise ValueError(
             f"{where} has {' and '.join(given)}. A dataframe is in one place: "
             f"a file (path), a table (source and table) or a query (source and query)."
         )
     if "path" in given:
-        if entry.get("source"):
+        if "source" in entry:
             raise ValueError(
                 f"{where} has both path and source. A file needs no source; a table "
                 f"or a query in a source has no path."
             )
         return "file"
     if not given:
+        if "source" in entry:
+            raise ValueError(
+                f"{where} has a source and neither table nor query. Say which it is: "
+                f'table = "name", or query = "select ...".'
+            )
         return "file"  # a dataframe without a path: declared, and documented only
     kind = given[0]
     value = entry[kind]
     if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{where}: {kind!r} must be a string.")
+        raise ValueError(f"{where}: {kind!r} must be a string, and not empty.")
     source = entry.get("source")
     if not isinstance(source, str) or not source.strip():
         raise ValueError(

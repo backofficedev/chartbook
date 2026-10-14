@@ -209,11 +209,12 @@ def _source_facts(entry: dict) -> dict:
     return {"location": location}
 
 
-def _describe_in_source(entry: dict, base_dir: Path) -> Optional[tuple[list[dict], int]]:
+def _describe_in_source(entry: dict, where: str) -> Optional[tuple[list[dict], int]]:
     """A table or query's columns and row count, asked of its engine.
 
-    None when the engine cannot answer: the DuckDB file is not built yet,
-    or the query does not run. ``chartbook check`` is what reports that.
+    None, with a warning, when the engine cannot answer: the DuckDB file is
+    not built yet (which ``chartbook check`` also reports), the table is
+    not there, or the query does not bind.
     """
     from chartbook.backends import BackendError, DuckDBBackend
     from chartbook.resolve import QueryLocation, TableLocation
@@ -228,22 +229,35 @@ def _describe_in_source(entry: dict, base_dir: Path) -> Optional[tuple[list[dict
         location = QueryLocation(entry["source"], source["backend"], url, entry["query"])
     try:
         return DuckDBBackend(url).describe(location)
-    except (BackendError, OSError):
+    except (BackendError, OSError) as error:
+        warnings.warn(
+            f"{where}: the engine could not describe it, so the index has no "
+            f"columns for it. {error}",
+            stacklevel=2,
+        )
         return None
 
 
-def _definition_hash(location: dict, columns: list[dict]) -> str:
+def _definition_hash(location: dict, columns: list[dict], url: Optional[str]) -> str:
     """A hash of what defines a table or query dataframe, with its schema.
 
     A warehouse table cannot be content-hashed cheaply, and a query is not
-    bytes at all. What can be hashed is the definition and the described
+    bytes at all. What can be hashed is the definition, where it is (the
+    source, its backend and the manifest's url for it) and the described
     columns; what cannot is recorded as absent.
     """
     import hashlib
 
     definition = location.get("identifier") or location.get("sql") or ""
     text = json.dumps(
-        {"kind": location["kind"], "definition": definition, "columns": columns},
+        {
+            "kind": location["kind"],
+            "source": location.get("source"),
+            "backend": location.get("backend"),
+            "url": url,
+            "definition": definition,
+            "columns": columns,
+        },
         sort_keys=True,
     )
     return hashing.format_hash(hashlib.sha256(text.encode("utf-8")).hexdigest())
@@ -511,9 +525,11 @@ def _asset_records(
             # In a source: no file, so no content hash. The definition is
             # hashed instead, and the engine describes the columns.
             record.update(_source_facts(entry))
-            described = _describe_in_source(entry, base_dir)
+            described = _describe_in_source(entry, f"{base_dir / 'chartbook.toml'}: [dataframes.{name}]")
             if described is not None:
-                record["definition_hash"] = _definition_hash(record["location"], described[0])
+                record["definition_hash"] = _definition_hash(
+                    record["location"], described[0], (entry.get("_source") or {}).get("url")
+                )
         elif "content_hash" in facts:
             described = _describe_parquet(facts["location"]["resolved_path"])
         columns = None

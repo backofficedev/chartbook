@@ -134,7 +134,7 @@ recent = data.sql("""
 """)                                      # a LazyFrame; .collect() runs it
 ```
 
-A file is read as a table (`read_parquet('…')`), a table in a source by its name, a query dataframe as a sub-select. The SQL runs in one engine: the source the tables and queries are in, or an in-memory DuckDB when the query names only files. Another pipeline's file, `{fed_yield_curve:treasury_rates}`, is the pinned copy, as everywhere else. ChartBook does not parse or rewrite the SQL; what is between the braces is a reference, and everything else is yours, in DuckDB's dialect.
+A file is read as a table (`read_parquet('…')`), a table in a source by its name, a query dataframe as a sub-select. The SQL runs in one engine: the source the tables and queries are in, or a fresh in-memory DuckDB when the query names only files. Another pipeline's file, `{fed_yield_curve:treasury_rates}`, is the pinned copy, as everywhere else. ChartBook does not parse or rewrite the SQL; what is between the braces is a reference, and everything else is yours, in DuckDB's dialect. A literal brace, as in DuckDB's `{'a': 1}` struct syntax or inside a string, is written twice: `{{'a': 1}}`.
 
 For SQL you run with your own tooling, `data.ref("yield_slopes")` gives the name to paste in, and `data.connect("local")` is the raw, read-only connection to a source. {ref}`[sources] <sources>` says how a pipeline declares one.
 
