@@ -275,7 +275,15 @@ units = "Percentage points"
 
 The column a table names may be spelled any way at all, which is how one called `10Y 2Y Spread` gets an address when the data cannot be changed. Every field is optional, and you may add fields of your own.
 
-You do not have to declare a series for it to exist. Every column except the `date_col` is listed in the build's `index.json` whether or not it has a table; a table only documents one. Series are not shown on the dataframe's page yet, and `data.load()` does not take a series address yet. `chartbook check` reports a `docs_path` that points at no file.
+You do not have to declare a series for it to exist. Every column except the `date_col` is listed in the build's `index.json` whether or not it has a table; a table only documents one. Series are not shown on the dataframe's page yet.
+
+**A series address is for documentation, not for loading.** `treasury_rates#dgs10` names the column so that a name, units and a write-up can be attached to it. It does not load it: `data.load("treasury_rates#dgs10")` is refused, on purpose. ChartBook says where a dataframe is and which copy you get; picking columns and rows is for polars or SQL.
+
+```python
+rates = data.load("treasury_rates").select("date", "DGS10")     # polars
+path = data.path("treasury_rates")                              # or the file, for anything else
+```
+ `chartbook check` reports a `docs_path` that points at no file.
 
 ## `[notebooks]` — Jupyter Notebooks
 

@@ -261,7 +261,7 @@ Three things have to be true, and each has its own message when it is not:
 
 The scope may be left off when only one dependency has that name. The path is for reading; never write to it.
 
-The rest of the {doc}`reference grammar <../design/references>` — `asset#part`, `asset@rev`, a registry in front — is reserved and refused as not yet supported. To find a dataframe through a catalog, from outside any pipeline, use `chartbook data get-path`.
+Two more parts of the {doc}`reference grammar <../design/references>` do not give a path. `dataframe#series` is the address of one column, for documentation: use the dataframe's path and pick the column yourself. A registry in front is reserved and refused as not yet supported. To find a dataframe through a catalog, from outside any pipeline, use `chartbook data get-path`.
 
 ## chartbook publish
 

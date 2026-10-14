@@ -294,7 +294,7 @@ $(MERGED): $(TREASURY)
 This is a convenience, never a requirement. A pipeline that writes straight to `_data/merged_rates.parquet` — from Python, R, Stata or a shell script — works exactly as before. The manifest is the contract; `data.path()` and `assets.path()` only save you from stating it twice.
 ```
 
-These names are the local end of a longer address — `scope/pipeline:kind/name#part@rev` — that will also reach other pipelines' assets, columns inside a dataframe, and versions. Only the local form works today; {doc}`../design/references` has the whole grammar.
+These names are the local end of a longer address, `scope/pipeline:kind/name#part@rev`. With a pipeline in front, `fed_yield_curve:treasury_rates`, it reaches another pipeline's asset, as pinned. With `@`, `model/rate_forecaster@champion`, it reaches a version of a model. `#` names one column, `treasury_rates#dgs10`, so that it can be documented; it does not load the column, which is for polars or SQL to do. {doc}`../design/references` has the whole grammar.
 
 For files that are *not* assets — a partial download, a cache between two steps — `data.scratch()` gives you a throwaway directory instead:
 

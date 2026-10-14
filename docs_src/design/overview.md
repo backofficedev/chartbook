@@ -131,7 +131,7 @@ Decided by the maintainer, 2026-10-12.
 | 1 | This page | The map | |
 | 2 | {doc}`toml-format-v2` | The manifest: tables, fields, pipeline IDs, catalogs, policy | Built |
 | 3 | {doc}`references` | How an asset is addressed | Parser built. Local references resolve live; another pipeline's resolve pinned |
-| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Steps 4a to 4d built: `[scripts]`, `chartbook run`, snapshots, the command rename, and versions of a model. **Next to build**: step 4e, parts. The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
+| 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Step 4 is done: `[scripts]`, `chartbook run`, snapshots, the command rename, and versions of a model. Its last listed part, loading one column, was decided against. **Nothing is next by default**: what is open is listed under "Open questions" The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
@@ -170,8 +170,9 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: `--frozen`, parts (`dataframe#series`), a version of another pipeline's model,
-`[sources]` and SQL access, any export, and anything that *reads* the index.
+Not built: `--frozen`, a version of another pipeline's model, `[sources]` and SQL access, any
+export, and anything that *reads* the index. Not to be built: loading one column by its
+address (`data.load("dataframe#series")`).
 
 ## What to build next, in order
 
@@ -795,7 +796,8 @@ with 3e. All seven are **decided**.*
   current, `docs` renders the site.
 - `@rev` resolves. Model versions and labels (slice M4 of {doc}`models`). Settle the open
   questions there first.
-- Parts: `dataframe#series` resolves for `data.load()`.
+- Parts: `dataframe#series` resolves for `data.load()`. *(Decided against, 2026-10-13: "4e",
+  below.)*
 
 **Done when:** changing one upstream script and running `chartbook run` in the downstream
 example rebuilds exactly the pipelines that depend on it, and running it again does nothing.
@@ -871,7 +873,7 @@ rebuild `yield_curve` as often as it likes while another builds `rate_forecast`,
 | 4b | Snapshots: an owner declares a build ready, and pinning takes from that and never from the folder | Built |
 | 4c | The command rename: `build` makes everything current, `docs` renders the site. Breaking | Built |
 | 4d | `@rev` resolves. Model versions and labels | Built, for a pipeline's own models |
-| 4e | Parts: `dataframe#series` for `data.load()` | Next |
+| 4e | Parts: `dataframe#series` for `data.load()` | **Not to be built.** Decided 2026-10-13, below |
 
 `--frozen`, for CI, has no part yet. *Proposed:* it follows snapshots, since what it has to
 check is that the lockfile is complete and that every pin can be had.
@@ -1406,6 +1408,50 @@ maybe. But that's as far as I'd go."
    already render the site as their last step. So "data, then site" is, for now, "data and
    site, then site".
 
+#### 4e: loading one column. Decided against
+
+*Added 2026-10-13.* This step's list ends with *"Parts: `dataframe#series` resolves for
+`data.load()`."* Asked what `data.load("treasury_rates#dgs10")` should hand back, the
+maintainer answered a larger question:
+
+> "I don't think I want to develop a domain-specific language. I don't want to recommend that
+> people load data this way. At this point, they write an SQL an chartbook passes through, or
+> access tha path to the parquet and pass over to polars. I don't want chartbook's scope to
+> get too large here."
+
+**Decided.**
+
+1. **A reference never selects data.** Not a column, not a date range, not rows. ChartBook
+   says where a dataframe is, what it is and which copy you get.
+2. **There are two ways to read one**: SQL that ChartBook passes through ({doc}`data-access`),
+   or `data.path()` handed to polars or to anything else. `data.load()` of a whole dataframe
+   stays, as the short form of the second.
+3. **A series address stays what it was first for**: a name to hang documentation, units, a
+   frequency and an index record on. `[dataframes.x.series.y]` and the `Series` records are
+   unchanged.
+
+**What was built for it.** Only the message. `data.load("treasury_rates#dgs10")`,
+`data.path(…)` and `chartbook path …` still refuse a `#`. They said "reserved syntax and not
+yet supported", which promised something that is not coming. They now say what the address is
+for and what to do instead. `chartbook/resolve.py`, `parse_declared_ref(resolving=True)`.
+
+**Proposed, and waiting on the maintainer's yes.**
+
+1. **A column named in a manifest still says "not yet".** `trained_on =
+   ["treasury_rates#dgs10"]` would say which column a model was trained on. That is a
+   statement about lineage, loads nothing, and {doc}`index-schema` has a chart's `inputs` name
+   a series. It stays reserved, with its old message.
+2. **A file inside a model, `model/x#weights.pt`, is not built either** (slice M2 of
+   {doc}`models`), by the same reasoning: it is `models.path("x") / "weights.pt"`, and the
+   message now says so. This one is the builder's reading of the decision, not the
+   maintainer's words.
+
+**Where the design said something else.** *"The reference grammar has an optional segment for
+this … `ftsfr/fed_yield_curve:treasury_rates#dgs10`"* ({doc}`asset-graph`) and the table in
+{doc}`references` that has `treasury_rates#dgs10` mean "the series `dgs10` of that
+dataframe". Both stand, as addresses. What does not stand is this step's bullet, and "M2.
+Parts" in {doc}`models` as something to resolve.
+
 #### The project template, moved in
 
 *Added 2026-10-13. Decided by the maintainer the same day:* "Should we move the project
@@ -1556,6 +1602,7 @@ maintainer.
 | 2026-10-13 | A version of a model is made by a snapshot: the first that holds new bytes for it. Not by every build | Step 4 above, "4d, as built"; {doc}`models` |
 | 2026-10-13 | A version is named by the start of its content hash: twelve digits, with the whole hash stored. The names people use are labels in the manifest, `[models.x.aliases]` | Step 4 above, "4d, as built"; {doc}`models` |
 | 2026-10-13 | Building and making a snapshot together has one spelling, `chartbook run --snapshot`. Recording named environment variables in a snapshot waits until a pipeline needs it | Step 4 above, "4b, continued" |
+| 2026-10-13 | A reference never selects data. No language for loading: SQL passed through, or `data.path()` to polars. `data.load("dataframe#series")` will not be built; a series address is for documentation | Step 4 above, "4e" |
 | 2026-10-13 | The project template moves into this repository, as `template/` | Step 4 above, "The project template, moved in" |
 | 2026-10-13 | The command rename is made now and is breaking: `chartbook docs` renders the site, `chartbook build` runs the build script and then renders. No compatibility beyond a warning | Step 4 above, "4c, as built" |
 | 2026-10-13 | No backwards compatibility in this work: the right design, even if it breaks, with a warning at most. The order of the remaining work is the builder's to choose | Step 4 above, "4c, as built" |

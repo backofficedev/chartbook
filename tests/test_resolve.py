@@ -103,10 +103,32 @@ class TestParseSupportedRef:
             parse_declared_ref("chart/curve@a1b2c3d")
         assert "use 'chart/curve' instead" in str(e.value)
 
-    def test_part_is_reserved(self):
+    def test_part_is_reserved_in_a_manifest(self):
+        """There it would say which column something was made from. Not yet."""
         with pytest.raises(UnsupportedReferenceError, match="not yet supported") as e:
             parse_declared_ref("treasury_rates#dgs10")
         assert "'treasury_rates' to get the dataframe that holds it" in str(e.value)
+
+    def test_a_column_is_an_address_for_documentation_and_does_not_load(self):
+        """Decided: ChartBook is not a language for picking columns."""
+        with pytest.raises(UnsupportedReferenceError) as e:
+            parse_declared_ref("treasury_rates#dgs10", resolving=True)
+        said = str(e.value)
+        assert "names one column of a dataframe" in said
+        assert "ChartBook does not select columns" in said
+        assert "Use 'treasury_rates' to get the dataframe" in said
+        assert "pick the column with polars or SQL" in said
+        assert "not yet" not in said  # it is not coming
+
+    def test_a_file_inside_a_model_is_joined_by_hand(self):
+        with pytest.raises(UnsupportedReferenceError) as e:
+            parse_declared_ref("model/encoder#weights/best.pt", resolving=True)
+        assert "Use 'model/encoder' to get the model's path" in str(e.value)
+        assert "join 'weights/best.pt' to it" in str(e.value)
+
+    def test_a_chart_has_no_parts(self):
+        with pytest.raises(UnsupportedReferenceError, match="A chart has no parts"):
+            parse_declared_ref("chart/curve#axis", resolving=True)
 
     @pytest.mark.parametrize(
         "ref",
