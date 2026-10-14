@@ -44,6 +44,7 @@ Load dataframes from registered pipelines in a catalog::
     docs_path = data.get_docs_path(pipeline="yield_curve", dataframe="repo_public")
 """
 
+import re
 import sys
 from pathlib import Path
 from typing import Optional, Union
@@ -335,9 +336,12 @@ def load(
     """Load a dataframe: by reference, or from a pipeline in a catalog.
 
     **By reference**, with one argument. A dataframe of the pipeline you
-    are in is loaded from where its manifest says it is. A dataframe of
-    another pipeline is loaded from the copy that ``chartbook.lock`` pins,
-    so it does not change until you run ``chartbook update``:
+    are in is loaded from where its manifest says it is: a parquet file, or
+    a table or query in one of its ``[sources]``, in which case the source's
+    engine runs it and the frame is fetched whole when it is collected. A
+    dataframe of another pipeline is loaded from the copy that
+    ``chartbook.lock`` pins, so it does not change until you run
+    ``chartbook update``:
 
     >>> from chartbook import data
     >>> mine = data.load("term_premium")  # doctest: +SKIP
@@ -445,9 +449,20 @@ def load(
         location = resolve(asset, start_dirs=start_dirs)
         dataframe = str(asset)
     if not isinstance(location, FileLocation):
-        raise NotImplementedError(
-            f"Dataframe {dataframe!r} is {location.kind}-backed; only "
-            f"file-backed dataframes can be loaded."
+        # A table or a query in a source: the backend binds it now, runs it
+        # when the frame is collected, Arrow comes back, Polars wraps it.
+        from chartbook.backends import backend_for
+
+        frame = backend_for(location).scan(location)
+        if format in ("polars", "polars-lazyframe"):
+            return frame
+        if format == "polars_eager":
+            return frame.collect()
+        if format == "pandas":
+            return frame.collect().to_pandas()
+        raise ValueError(
+            f"Invalid format: {format!r}. Must be 'polars', 'polars_eager', "
+            f"'pandas', or 'polars-lazyframe'."
         )
     file_path = location.path
     _is_glob = is_glob_pattern(file_path)
@@ -493,3 +508,151 @@ def load(
             f"Invalid format: {format!r}. Must be 'polars', 'polars_eager', "
             f"'pandas', or 'polars-lazyframe'."
         )
+
+
+# A {reference} in SQL: anything between braces that is not itself a brace.
+# A doubled brace is a literal one, for DuckDB's own {'a': 1} syntax; it is
+# set aside before references are found and put back after.
+_REFERENCE_IN_SQL = re.compile(r"\{([^{}]+)\}")
+_LITERAL_OPEN, _LITERAL_CLOSE = "\0open\0", "\0close\0"
+
+
+def ref(
+    reference: Union[str, AssetRef],
+    project_dir: Optional[Union[str, Path]] = None,
+) -> str:
+    """The name a dataframe goes by in SQL, for a query you run yourself.
+
+    >>> from chartbook import data
+    >>> data.ref("treasury_rates")  # doctest: +SKIP
+    "read_parquet('/work/rates/_data/treasury_rates.parquet')"
+    >>> data.ref("slopes")  # doctest: +SKIP
+    '(select Date, SVENY10 - SVENY02 as slope from fed_yield_curve)'
+
+    A file is ``read_parquet('…')``, which DuckDB reads as a table. A table
+    in a source is its quoted identifier. A query in a source is the query,
+    in parentheses, so it stands where a table would. Paste it into SQL you
+    run with :func:`connect`, or with your own tooling.
+
+    :param reference: The dataframe: a name of this pipeline's, or
+        ``pipeline:name`` for a pinned one of another's.
+    :param project_dir: Where to look for the pipeline, as for :func:`path`.
+    :raises AssetNotDeclaredError: If the manifest declares no such dataframe.
+    :raises AssetNotPinnedError: If another pipeline's dataframe has no
+        pinned copy.
+    """
+    from chartbook.backends import backend_for
+
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    asset = _assets.parse(reference, kind="dataframe")
+    location = resolve(asset, start_dirs=start_dirs)
+    return backend_for(location).ref(location)
+
+
+def sql(
+    query: str,
+    project_dir: Optional[Union[str, Path]] = None,
+):
+    """Run SQL that names dataframes by their ChartBook references.
+
+    >>> from chartbook import data
+    >>> rates = data.sql(
+    ...     "select Date, SVENY10 from {fed_yield_curve} where Date >= '2024-01-01'"
+    ... )  # doctest: +SKIP
+    >>> rates.collect()  # doctest: +SKIP
+
+    Each ``{reference}`` is replaced by what :func:`ref` gives for it, and
+    the SQL runs in one engine: the source that the tables and queries in it
+    live in, or a fresh in-memory DuckDB of its own when it names only
+    files. ChartBook never parses or rewrites the SQL; what is between the
+    braces is a reference, and everything else is yours, in DuckDB's
+    dialect. A literal brace, as in DuckDB's ``{'a': 1}`` struct syntax or
+    inside a string, is written twice: ``{{'a': 1}}``.
+
+    A dataframe of another pipeline, ``{fed_yield_curve:treasury_rates}``,
+    is the pinned copy, as everywhere else.
+
+    :param query: The SQL, with references in braces.
+    :param project_dir: Where to look for the pipeline, as for :func:`path`.
+    :returns: A Polars LazyFrame. Collect it to run the query. An error that
+        only running can find, such as a cast that fails on one value, is
+        raised then with DuckDB's message in it, as Polars' ``ComputeError``
+        or as DuckDB's own exception, by Polars version.
+    :raises ValueError: If the query has no reference in it, or names
+        dataframes of two different sources.
+    :raises chartbook.backends.BackendError: If the engine refuses the SQL
+        as it binds it: a name it does not know, or SQL it cannot parse.
+    """
+    from chartbook.backends import DuckDBBackend, backend_for
+
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    query = query.replace("{{", _LITERAL_OPEN).replace("}}", _LITERAL_CLOSE)
+    found = _REFERENCE_IN_SQL.findall(query)
+    if not found:
+        raise ValueError(
+            "data.sql() runs SQL that names dataframes in braces, e.g. "
+            "\"select * from {treasury_rates}\". This query has none; for SQL "
+            "with no ChartBook reference in it, use data.connect(source).sql(...). "
+            "A doubled brace, {{ or }}, is a literal one."
+        )
+    engines: dict[str, str] = {}
+    substitutions = {}
+    for text in dict.fromkeys(found):
+        asset = _assets.parse(text.strip(), kind="dataframe")
+        location = resolve(asset, start_dirs=start_dirs)
+        substitutions[text] = backend_for(location).ref(location)
+        if location.kind != "file":
+            engines[location.url] = location.source
+    if len(engines) > 1:
+        raise ValueError(
+            f"The query names dataframes in {len(engines)} sources, "
+            f"{', '.join(sorted(engines.values()))}. One source at a time: an "
+            f"engine runs SQL over its own tables, and files it can read."
+        )
+    for text, replacement in substitutions.items():
+        query = query.replace("{" + text + "}", replacement)
+    query = query.replace(_LITERAL_OPEN, "{").replace(_LITERAL_CLOSE, "}")
+    if not engines:
+        return DuckDBBackend.scratch().sql(query)
+    (url,) = engines
+    return DuckDBBackend(url).sql(query)
+
+
+def connect(
+    source: str,
+    project_dir: Optional[Union[str, Path]] = None,
+):
+    """The raw connection to one of this pipeline's ``[sources]``.
+
+    >>> from chartbook import data
+    >>> con = data.connect("local")  # doctest: +SKIP
+    >>> con.sql("select 1").fetchall()  # doctest: +SKIP
+
+    For a DuckDB file that is a ``duckdb`` connection, opened read-only and
+    afresh for each call; close it when you are done, or let it go. For a
+    ``:memory:`` source it is the one connection that source is, for the
+    life of the process, and it is writable: such a source holds what you
+    put in it, and nothing else. Anything ChartBook does not expose is
+    reachable here, and the SQL you run with it is between you and the
+    engine.
+
+    :param source: The source's name in ``[sources]``.
+    :param project_dir: Where to look for the pipeline, as for :func:`path`.
+    :raises LookupError: If the manifest declares no such source.
+    :raises chartbook.backends.BackendError: If it cannot be opened.
+    """
+    from chartbook.backends import DuckDBBackend
+    from chartbook.manifest import validate_sources
+    from chartbook.resolve import MANIFEST_NAME, _read_raw_manifest, find_manifest_dir
+
+    manifest_dir = find_manifest_dir(*caller_start_dirs(project_dir, sys._getframe(1)))
+    raw = _read_raw_manifest(manifest_dir / MANIFEST_NAME)
+    sources = validate_sources(raw.get("sources"), manifest_dir)
+    if source not in sources:
+        declared = ", ".join(sorted(sources)) or "(none)"
+        raise LookupError(
+            f"No source named {source!r} in {manifest_dir / MANIFEST_NAME}. Its "
+            f"sources are: {declared}."
+        )
+    return DuckDBBackend(sources[source]["_resolved_url"]).connect()
+

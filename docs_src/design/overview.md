@@ -66,7 +66,7 @@ assets alike.
 | **reference** | The address of an asset: `[registry/][scope/]pipeline:[kind/]name[#part][@rev]`. Specified in {doc}`references` |
 | **local reference** | A reference with no `pipeline:` in front. It means "in the pipeline I am in" |
 | **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.models` for models, `chartbook.assets` for any kind |
-| **location** | Where an asset physically is. A file today; a database table later ({doc}`data-access`) |
+| **location** | Where an asset physically is: a file, or a table or query in a source ({doc}`data-access`) |
 | **index** | One JSON file describing everything a catalog contains. A build product. Planned ({doc}`index-schema`) |
 | **record** | One entry in the index. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
 | **store** | A local folder of files named by their hash, used for caching and pinning. One per user, shared by their projects ({doc}`asset-graph`) |
@@ -76,7 +76,7 @@ assets alike.
 | **lockfile** | `chartbook.lock`: the exact bytes of the upstream assets a project uses, by content hash. JSON in the index's format. Committed |
 | **pin** | To freeze which version of an upstream asset a project reads. Also the record of it: an asset's entry in the lockfile, with a `content_hash`. `chartbook pin` makes pins and never moves one; `chartbook update` moves them |
 | **build record** | A written description of how one asset was made: inputs, code, tools, output hash. Planned |
-| **source / backend** | A named database connection in a manifest / the engine behind it. Planned ({doc}`data-access`) |
+| **source / backend** | A named database connection in a manifest / the engine behind it. Built: DuckDB ({doc}`data-access`) |
 | **scratch** | `_data/_scratch/` inside a pipeline: throwaway files that are not assets |
 
 Three different things are called "kind", and they do not mix:
@@ -134,7 +134,7 @@ Decided by the maintainer, 2026-10-12.
 | 4 | {doc}`asset-graph` | Dependencies, pinning, the store, build records, what ChartBook will not do | Step 3 built: declared dependencies, the store, pinning, cross-pipeline references, `git` dependencies. Step 4 is done: `[scripts]`, `chartbook run`, snapshots, the command rename, and versions of a model. Its last listed part, loading one column, was decided against. **Nothing is next by default**: what is open is listed under "Open questions" The model the maintainer decided on 2026-10-13 is in this page, under step 4, and overrides {doc}`asset-graph` where they differ |
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
-| 7 | {doc}`data-access` | Dataframes that live in a database | Designed, not built |
+| 7 | {doc}`data-access` | Dataframes that live in a database | Built for DuckDB, 2026-10-13: `[sources]`, `table`, `query`, `data.sql()` |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
@@ -170,8 +170,8 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
 | Reserved for later, and refused | `refs.py`, `resolve.py`, `identity.py`, `cli.py` | `#part`, `@rev`, registry prefixes, `chartbook push` |
 
-Not built: `--frozen`, a version of another pipeline's model, `[sources]` and SQL access, any
-export, and anything that *reads* the index. Not to be built: loading one column by its
+Not built: `--frozen`, a version of another pipeline's model, any export, and anything that
+*reads* the index. Not to be built: loading one column by its
 address (`data.load("dataframe#series")`).
 
 ## What to build next, in order
@@ -1651,6 +1651,109 @@ This is {doc}`data-access` and GitHub issue 9. It depends only on step 1 (it cha
 `Dataframe` record's `location`), so it can be done any time after that, by someone else, in
 parallel with steps 2 to 4.
 
+#### Step 5, as built
+
+*Added 2026-10-13.* Built after step 4, as the second of the two ways the maintainer said data
+should be read: SQL that ChartBook passes through, or a path handed to polars.
+
+```toml
+[sources.local]
+backend = "duckdb"
+url = "duckdb:///./_data/yield_curve.duckdb"
+
+[dataframes.yield_slopes]
+source = "local"
+query = "select Date, SVENY10 - SVENY02 as slope_10y_2y from fed_yield_curve"
+```
+
+| What | Where |
+|---|---|
+| `[sources]`, and a dataframe's `table` or `query` | `chartbook/manifest.py`, `validate_sources()`, `validate_dataframe_location()` |
+| The two new location kinds | `chartbook/resolve.py`, `TableLocation`, `QueryLocation`, `_resolve_in_source()` |
+| The engines: parquet, and DuckDB | `chartbook/backends.py` |
+| `data.sql()`, `data.ref()`, `data.connect()`; `load()` of a table or query | `chartbook/data.py` |
+| Where a machine keeps credentials | `chartbook/backends.py`, `source_url()` |
+| The index: `location` kinds, `definition_hash`, columns from the engine | `chartbook/index.py`, `schemas/chartbook/v1/Dataframe.json` |
+| The page | `chartbook/markdown_generator.py`, `_source_glimpse()` |
+| `check`: a DuckDB file not built | `chartbook/check.py`, `check_sources()` |
+| The example | `examples/yield_curve`: `yield_slopes`, `src/build_duckdb.py` |
+| The tests | `tests/test_data_access.py` |
+
+**Built as designed.** The manifest shape, the four Python calls, the rule that SQL is never
+parsed, the credential order, the typed `location`, `definition_hash` in place of a content
+hash, read-only connections, DuckDB as the engine and the fallback, and the worked example.
+
+**Proposed: where the design was silent or is departed from.**
+
+1. **Cross-pipeline references work in `data.sql()` and `data.ref()` for file dataframes**, as
+   the pinned copy. The design put that in a later phase; the resolution chain exists, so it
+   costs nothing. A table or query of another pipeline is not pinned (a snapshot holds files)
+   and cannot be read across pipelines; the known gap.
+2. **A query names one source.** The design's mixed-source rule (register each foreign table in
+   DuckDB first) is not built: with DuckDB the only engine, the case is two DuckDB files, and
+   the honest answer is `ATTACH`, which the user can do through `data.connect()`. A query
+   that names two sources is refused and says so.
+3. **`duckdb` is a dependency of `chartbook`**, not an extra, by the one-install rule.
+4. **A `url` with credentials in it does not load.** The design said "no credentials, ever";
+   the loader enforces it.
+5. **An unknown backend is refused by name.** No plugin seam yet: DuckDB is the second
+   implementation after parquet, and the rule is three.
+6. **`data.load()` of a table or query returns a LazyFrame that DuckDB backs.** The engine
+   binds the query at once; collecting the frame runs it, and an error only running can find
+   is raised then with DuckDB's message. A file is opened afresh for each load;
+   the frame keeps its connection while it lives.
+7. **The default policy's `path` requirement is met by a `table` or a `query`.** The rule
+   asks where the dataframe is; a source answers.
+8. **`check` reports a DuckDB file that is not built**, and skips that with `--skip-outputs`,
+   as for any output. It does not connect.
+9. **The page is read from the engine when the site is built**: columns, row count, first
+   five rows. A source that cannot be read gets a page that says so.
+
+**What an adversarial review found before merge** (2026-10-13; fifteen findings, each fixed
+with a test unless said otherwise):
+
+1. The credential chain, `source_url()`, was documented everywhere and called nowhere: the
+   manifest's URL was what opened every source. The loader now resolves each source through
+   it, refuses a machine URL for another engine, and the index records the manifest's URL only.
+2. A query that bound but failed when run (a cast that fails on one value) aborted the whole
+   site build; `describe` and `count(*)` had both passed. The page now says what happened and
+   the site is built. Such an error carries DuckDB's message; whether Polars wraps it as
+   `ComputeError` or lets DuckDB's exception through depends on the Polars version (CI's newer
+   Polars did the second), so the page catches `Exception` and the docs promise the message only.
+3. One in-memory connection was shared by every `:memory:` source and by files-only
+   `data.sql()`, so a table a user made through `connect()` showed up in SQL over files. Files-only
+   SQL now runs in a fresh engine of its own; a `:memory:` source is one writable connection, by
+   nature, and the docs say so.
+4. A query spliced as `(sql)` broke on a trailing `;` or `--` comment; it is `(\nsql\n)` now,
+   with the semicolon dropped.
+5. A table or query of another pipeline was reported as "had no dataframe named … `update`
+   pins it", which was false. It now says it is a table in a source and cannot be read across
+   pipelines yet. The catalog's two-argument path blamed a missing `path`; it resolves the table.
+6. A query with a newline or a `|` broke the manifest table on its page; the SQL is in a fenced
+   block below it now.
+7. `{'a': 1}` and `'{x}'` in `data.sql()` were read as references; a doubled brace is a literal.
+8. A connection kept for the process read stale data after a rebuild and held the file's lock.
+   A file is opened afresh for each load; a frame keeps its own connection while it lives, which
+   is the lock's true scope, and the docs say to drop it before rebuilding.
+9. `duckdb>=1.1` was below `.pl(lazy=True)`, which arrived in 1.4; the floor is 1.4, and polars
+   1.20 for the IO-plugin seam it uses. No test: every environment has a newer one.
+10. `duckdb://host/x` became a folder, `?options` part of the file's name, and `user@` passed.
+    A DuckDB URL is a file and nothing else; the rest is refused with a reason.
+11. A typo in `table` left the record silently without columns; the index warns.
+12. The page's first and last dates were `None` for a table with a `date_col`; the engine is
+    asked for `min` and `max`.
+13. `path = ""` with a `source` passed as a file; presence is tested, not truthiness.
+14. `definition_hash` left out the source, so the same table name in two sources hashed alike.
+15. Test hygiene: the dtype in the index test is pinned, and the tests no longer reach into a
+    connection cache, since there is none.
+
+**Known gaps.** A table or query is not pinned and not in a snapshot, so it is not reproducible
+across time or pipelines the way a file is. Only DuckDB. One source per query. A DuckDB file
+is opened read-only, which a user can get round with their own `duckdb.connect`; ChartBook
+does not police the engine. A column of a DuckDB `UNION` type makes `.pl(lazy=True)` panic
+inside DuckDB (a `BaseException`), which nothing here catches.
+
+
 ### Step 6. Readers of the index
 
 Once the index is stable: render the site from it, a Dagster export, an MCP server, a
@@ -1755,6 +1858,9 @@ Each is explained where it lives.
   answered the same day: `chartbook run --snapshot` builds first, and "Clearing old
   snapshots" says how old ones go. (Step 4 above, "4b, as built")
 - `--frozen`, for CI: what it checks, and when it is built. (Step 4 above)
+- For data in a database: when a second engine is wanted and the backend contract is
+  extracted; whether a table-backed dataframe can be pinned, by hash of a snapshot of its
+  rows or not at all. (Step 5 above)
 - What `chartbook catalog build` should be called now that `chartbook build` runs a build
   script, and whether a build script should still render the site itself. (Step 4 above, "4c,
   as built")

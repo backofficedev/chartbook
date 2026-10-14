@@ -88,6 +88,22 @@ path = "./_data/market_data/**/*.parquet"
 
 Glob-path dataframes load as polars LazyFrames only, with partition columns appearing automatically; see {doc}`catalogs-and-data`.
 
+A dataframe can also be a table, or a query, in a database the pipeline names:
+
+```toml
+[sources.local]
+backend = "duckdb"
+url = "duckdb:///./_data/local.duckdb"
+
+[dataframes.slopes]
+name = "Yield Curve Slopes"
+source = "local"
+query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
+docs = "The 10-year yield less the 2-year, computed when read."
+```
+
+It gets the same page, with its columns and first rows read from the engine, and `data.load("slopes")` runs the query. {ref}`[sources] <sources>` has every field. The `yield_curve` example has one.
+
 ## Notebooks
 
 ```toml

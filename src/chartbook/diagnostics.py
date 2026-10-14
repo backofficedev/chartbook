@@ -125,6 +125,12 @@ def _collect_missing_fields(
             # A write-up counts whichever way it is given
             if all(_value_is_missing(spec.get(key)) for key in DOCS_FIELDS):
                 missing.append(field)
+        elif field == "path" and not all(
+            _value_is_missing(spec.get(key)) for key in ("table", "query")
+        ):
+            # A dataframe in a source has a table or a query where a file
+            # has a path: the place is given, which is what the rule asks
+            continue
         elif field not in spec or _value_is_missing(spec[field]):
             missing.append(field)
     return missing

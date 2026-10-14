@@ -510,6 +510,38 @@ def check_licenses(
     return problems
 
 
+def check_sources(manifest: dict, base_dir: Path, skip_outputs: bool = False) -> list[Problem]:
+    """Report a source that is not there: a DuckDB file that does not exist.
+
+    A source's file is something the pipeline builds, so with
+    *skip_outputs* it is not reported. Whether the engine *connects* is not
+    checked, as the data-access design says: a source has to resolve, and
+    whether a table or query in it runs is found out when it is read.
+    """
+    from chartbook.backends import duckdb_path
+
+    if skip_outputs:
+        return []
+    problems = []
+    for pipeline_id, pipeline_dir in get_pipeline_dirs(manifest).items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        toml_file = Path(pipeline_dir) / "chartbook.toml"
+        for name, source in (pipeline_manifest.get("sources") or {}).items():
+            if source.get("backend") != "duckdb":
+                continue
+            path = duckdb_path(source["_resolved_url"], pipeline_dir)
+            if path != ":memory:" and not Path(path).is_file():
+                problems.append(
+                    Problem(
+                        toml_file,
+                        f"sources.{name}",
+                        "url",
+                        f"the DuckDB file is not there: {path}. The pipeline builds it.",
+                    )
+                )
+    return problems
+
+
 def check_model_labels(manifest: dict, base_dir: Path) -> list[Problem]:
     """Look at each model's labels: does each point at a version that is here?
 
@@ -591,6 +623,7 @@ def run_checks(
         *check_model_metrics(manifest, base_dir),
         *check_model_lineage(manifest, base_dir),
         *check_model_labels(manifest, base_dir),
+        *check_sources(manifest, base_dir, skip_outputs=skip_outputs),
         *check_licenses(manifest, base_dir, within_days=within_days, today=today),
     ]
     return sorted(problems, key=lambda p: (str(p.file), p.table, p.field))
