@@ -14,6 +14,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
+| `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install skill` | Install the bundled Claude Code skill (user-level by default) |
 
@@ -295,6 +296,46 @@ chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-thre
 ```
 
 The manifest is the only source of the list. Nothing about how the project is built is consulted, so a pipeline built with doit, Snakemake, Make or plain scripts gets the same report, and a data file the manifest does not declare is not included. Partitioned dataframes (a glob `path`) are summarized as one dataset. Declared dataframes whose files do not exist yet are skipped with a note. Run in a catalog, the report covers every member pipeline.
+
+## chartbook store
+
+The store is a folder of files kept under the hash of what is in them. It is where pinned copies of other pipelines' data will be kept. Nothing puts anything in it yet; it is the piece that pinning is built on.
+
+It is at `~/.chartbook/store/`. To put it somewhere else, set `CHARTBOOK_STORE`, or add this to `~/.chartbook/settings.toml`:
+
+```toml
+[store]
+path = "/a/bigger/disk/chartbook-store"
+```
+
+### store verify
+
+```console
+chartbook store verify
+```
+
+Hash every object in the store again, and exit `1` if any is no longer what its name says.
+
+```console
+$ chartbook store verify
+/Users/x/.chartbook/store: OK (14 object(s))
+
+$ chartbook store verify
+sha256:3e744b9d…: its content is no longer what its name says (now sha256:64daa44a…). rates.parquet is a hard link to a file outside the store, which has been rewritten
+
+1 of 14 object(s) in /Users/x/.chartbook/store are not what their names say.
+```
+
+**Why an object can change.** The store never moves or copies a file if it can avoid it. It tries four ways to hold one, cheapest first:
+
+| Way | Cost | Can it change after it is stored? |
+|-----|------|-----------------------------------|
+| reflink (a copy-on-write clone; APFS, btrfs, XFS) | free | No |
+| hardlink (a second name for the same file) | free | Yes, if the original is rewritten in place. Not if it is replaced by a new file |
+| symlink (a pointer to the file) | free | Yes, whenever the original changes. It breaks if the original is moved |
+| copy | the file's size | No |
+
+So on a Mac, or on Linux with btrfs or XFS, a stored file is frozen. On ext4 it is a hard link when the store and the data are on one disk, and a symlink when they are not. `verify` is how you find out that one has changed. It reads every byte, so on a large store it takes a while.
 
 ## chartbook config
 

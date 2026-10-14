@@ -16,10 +16,11 @@ gained asset kinds (`chart/…`, `model/…`). Models became assets ({doc}`model
 rule, the scratch directory and the surface table below were brought in line with what was
 decided while building the groundwork. Each change is marked where it was made.
 
-Later the same day: the first part of the graph is built. A pipeline can declare
-`[dependencies]`, and `chartbook check` says whether each can be found. Nothing is fetched or
-pinned yet. The notes marked *(Built: …)* under "Identity and location" say exactly what, and
-{doc}`overview` ("3a, as built") lists what was settled on the way, as *proposed*.
+Later the same day: the first two parts of the graph are built. A pipeline can declare
+`[dependencies]`, and `chartbook check` says whether each can be found. The store exists, and
+nothing uses it. Nothing is fetched or pinned yet. The notes marked *(Built: …)* under "Identity
+and location" and "The store" say exactly what, and {doc}`overview` ("3a, as built" and "3b, as
+built") lists what was settled on the way, as *proposed*.
 ```
 
 ## The problem
@@ -319,6 +320,12 @@ the build record maps input hash → output hash, and objects are held by output
 byte-identical file become one object with ten references. Building only one index and adding the
 other later is a migration, so both exist from the start.
 
+*(Built: objects, held by content hash, in `chartbook.store`. The layout the maintainer decided
+on 2026-10-12 is one directory per asset, `objects/sha256/7f/3a9c…/`, holding the asset's files
+under their own names; the single file `store/7f3a9c…-crsp_treasury-treasury_rates.parquet`
+sketched above is not how it is laid out. The other index is `builds/` in the same store: the
+name is kept free, and nothing writes to it until build records exist.)*
+
 ### Links, not copies
 
 A **hardlink** is a second directory entry pointing at the same inode — the same bytes under two
@@ -336,12 +343,32 @@ This ladder is DVC's, and the copy rung will be exercised rather than theoretica
 mount is a different filesystem, so neither reflinks nor hardlinks reach it. On Windows, NTFS
 supports hardlinks while symlinks have historically needed elevated privileges.
 
+*(Built: `chartbook.store.Store.put()` tries the four in this order. The maintainer confirmed
+the order on 2026-10-12, when asked whether to drop the two middle rungs. Two things in this
+section are not what a disk does, and are corrected here as built; proposed 2026-10-12.*
+
+*First, "make the store side read-only". A hard link has no store side: both names are one file
+with one set of permissions. Making it read-only would make the upstream pipeline's own file
+read-only, and its next build would fail. So a hard-linked object is left as it is. A reflink
+and a copy are the store's own bytes, and those are made read-only.*
+
+*Second, the copy rung is rarely reached. A symlink comes before it and does cross filesystems,
+so on a shared network mount an object is a symlink to the original, not a copy.*
+
+*What follows from both: an object held by hardlink changes if the original is rewritten in
+place, and one held by symlink changes whenever the original does. `chartbook store verify`
+hashes every object again and reports the ones that have. The step's promise that a downstream
+reads a frozen copy holds without it only on a filesystem with reflinks.)*
+
 ### Garbage collection, designed in rather than bolted on
 
 An object is reachable if some lockfile references it; everything else is collectible. This is Nix's
 GC-roots model, and it is the discipline Nextflow omitted — which is why long-lived `work/`
 directories reach terabytes. Pinning makes the store grow faster than building alone would, so this
 is not optional.
+
+*(Not built. It needs the lockfile for its roots, and comes with pinning. `Store.delete()` and
+`Store.hashes()` are what it will be written with.)*
 
 ## The build record, and why lineage is provable
 

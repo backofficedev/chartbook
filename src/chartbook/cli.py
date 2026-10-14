@@ -1543,6 +1543,52 @@ def data_get_docs_path(pipeline, dataframe, catalog):
         raise SystemExit(1)
 
 
+@main.group()
+def store():
+    """Look after the store: the local folder of pinned files.
+
+    The store keeps files under the hash of what is in them. It is at
+    ~/.chartbook/store unless CHARTBOOK_STORE, or [store] path in
+    ~/.chartbook/settings.toml, says otherwise.
+    """
+
+
+@store.command("verify")
+def store_verify():
+    """Hash every object in the store again; exit nonzero if one has changed.
+
+    An object's name is the hash of its content, so this finds whatever has
+    changed since it was stored: a file the store hard-linked or symlinked
+    to that has since been rewritten, a link whose file has gone, or
+    anything edited in the store by hand. Every byte is read, so on a large
+    store it takes a while.
+
+    Examples:
+        chartbook store verify
+        CHARTBOOK_STORE=/shared/store chartbook store verify
+    """
+    from chartbook.store import StoreError, default_store
+
+    try:
+        the_store = default_store()
+        total = len(list(the_store.hashes()))
+        problems = the_store.verify()
+    except (StoreError, ValueError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+
+    for problem in problems:
+        click.echo(problem.format())
+    if problems:
+        click.echo(
+            f"\n{len(problems)} of {total} object(s) in {the_store.root} are "
+            f"not what their names say.",
+            err=True,
+        )
+        raise SystemExit(1)
+    click.echo(f"{the_store.root}: OK ({total} object(s))")
+
+
 @main.command()
 @click.option(
     "--git",

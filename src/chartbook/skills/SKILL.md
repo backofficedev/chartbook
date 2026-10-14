@@ -39,6 +39,7 @@ chartbook path <name>       # Print the path chartbook.toml declares for a dataf
 chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
 chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
+chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, or CHARTBOOK_STORE); exit 1 if an object changed
 chartbook config            # Configure default catalog path (interactive)
 chartbook catalog init      # Create global catalog at ~/.chartbook/chartbook.toml
 chartbook catalog add <path>     # Add pipeline(s) to catalog

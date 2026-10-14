@@ -157,10 +157,17 @@ exactly one implementation ({ref}`not-doing`):
   fixed prefix, with forward slashes>`, newline; lines sorted by path (by code point, which is
   what `LC_ALL=C sort` gives). The fixed prefix of a glob is its leading directories that
   contain no wildcard: `_data/rates` for `_data/rates/**/*.parquet`. This is the output format
-  of `sha256sum`, so anyone can reproduce it by hand, and a test does. Every file counts,
-  hidden ones included. A glob that matches one file is still a listing. *(Decided 2026-10-12;
-  implemented in `chartbook.hashing`. Once a release carries it, it must not change without a
-  new algorithm prefix.)*
+  of `sha256sum`, so anyone can reproduce it by hand, and a test does. A glob that matches one
+  file is still a listing. *(Decided 2026-10-12; implemented in `chartbook.hashing`. Once a
+  release carries it, it must not change without a new algorithm prefix.)*
+- **Which files count:** every file, hidden ones included, except a short, fixed list that
+  operating systems create by themselves: `.DS_Store`, `Thumbs.db`, `desktop.ini`, and any file
+  whose name starts with `._`, compared without regard to case. So opening a model's folder in
+  Finder does not change the model's hash, and a Zarr dataset's `.zarray` still counts. The
+  list applies to a directory and to a glob. A `path` that names one file is that file,
+  whatever it is called. *(Decided by the maintainer 2026-10-12, replacing "every file counts,
+  hidden ones included". No release carried the earlier rule, so the algorithm prefix is
+  unchanged. `chartbook.hashing.is_ignored`.)*
 
 **Location.** Where an asset's content is, as a typed object. Today there is one kind:
 
@@ -664,7 +671,9 @@ Each of these was open or unstated when the build began.
 
 **Decided by the maintainer, 2026-10-12:**
 
-1. The hashing rule for a glob or a directory, as written under "Conventions".
+1. The hashing rule for a glob or a directory, as written under "Conventions". Which files
+   count was decided a second time the same day, when the store was built: a short fixed
+   list of operating-system files is left out.
 2. Columns whose names are not legal parts have no `Series` record until a table names them.
    Columns should have SQL-compatible names; the readable name is metadata.
 3. `generated_at` is when the index last changed; an unchanged index is not rewritten.

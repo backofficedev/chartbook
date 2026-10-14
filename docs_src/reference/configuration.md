@@ -439,6 +439,15 @@ df = data.load(pipeline="yield_curve", dataframe="repo_public")
 
 An explicit `catalog_path` argument always takes priority over the global setting. See the {doc}`cli` reference for details.
 
+The same file says where the store is, if it is not at `~/.chartbook/store/`:
+
+```toml
+[store]
+path = "/a/bigger/disk/chartbook-store"
+```
+
+The store is a folder of files kept under the hash of their content, where pinned copies of other pipelines' data will live. The `CHARTBOOK_STORE` environment variable overrides the setting, for one shell or one CI job. Nothing uses the store yet; `chartbook store verify` ({doc}`cli`) checks one.
+
 ## Best Practices
 
 1. **Let defaults work**: omit fields whose defaults are right; the file stays small
