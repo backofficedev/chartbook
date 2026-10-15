@@ -470,6 +470,16 @@ and `versions`, oldest first: each with `version` (its name), `content_hash`, `m
 `commit`, and where there are any `labels`, `metrics` and `inputs`. They are the versions in
 the store of the machine that built the index.)*
 
+*(2026-10-14, built: when the model file's bytes are a version whose snapshot recorded what they
+were trained on, the record has `trained_with`, the content hash of each input then, keyed as the
+lockfile writes an input (`d`, `rates:treasury`), and `stale_inputs`, the keys whose content now
+differs. 2026-10-15: `inputs_now` beside them, each input's content hash now under the same keys
+— a local dataframe's as it is in the folder, another pipeline's as `chartbook.lock` pins it —
+so that the record alone says which input moved from what to what. A writer cannot derive it:
+`inputs` and `pinned_inputs` are keyed by build ID, and the index does not state which
+lockfile-style key is which build ID once a declaration is reordered or two upstreams share a
+dataframe name.)*
+
 `Model` records are written (step 2), without `built_by`. An entry of a model's `inputs` that
 is in another pipeline is written by the ID that pipeline has in this build when it is part of
 it (a catalog knows `rates` as `ftsfr/rates`); otherwise by the name `[dependencies]` declares

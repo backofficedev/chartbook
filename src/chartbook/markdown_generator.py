@@ -63,6 +63,14 @@ def data_last_modified(data_path):
         if not part_files:
             return None
         return max(get_file_modified_datetime(f) for f in part_files)
+    if Path(data_path).is_dir():
+        # A directory's own time moves only when an entry is added or
+        # removed; its newest counted file says when it was last written,
+        # and a directory with none has not been. As the index has it
+        files = directory_files(data_path)
+        if not files:
+            return None
+        return max(get_file_modified_datetime(f) for f in files)
     if not Path(data_path).exists():
         return None
     return get_file_modified_datetime(data_path)
@@ -860,13 +868,6 @@ def model_last_modified(model_path):
     :returns: The modification time, or None if nothing is on disk.
     :rtype: datetime or None
     """
-    model_path = Path(model_path)
-    if model_path.is_dir():
-        # The files that make up the model, as its hash counts them
-        files = directory_files(model_path)
-        if not files:
-            return None
-        return max(get_file_modified_datetime(f) for f in files)
     return data_last_modified(model_path)
 
 
@@ -1063,17 +1064,15 @@ def _trained_on_entries(model_manifest, pipeline_id, pipeline_manifest, site_man
                 }
             )
         else:
-            # Known by a declared name only when the site has no page for it
-            declared = owner_id is not None and owner is None
-            named = reference.in_pipeline(owner_id) if declared else reference
-            entries.append(
-                {
-                    "label": str(named),
-                    "name": "",
-                    "link": "",
-                    "note": "in another pipeline, which is not part of this site",
-                }
+            # Named by the ID its pipeline has in this build when something
+            # knows that pipeline, as every record is; as stated otherwise
+            named = reference.in_pipeline(owner_id) if owner_id is not None else reference
+            note = (
+                "which that pipeline does not declare"
+                if owner is not None
+                else "in another pipeline, which is not part of this site"
             )
+            entries.append({"label": str(named), "name": "", "link": "", "note": note})
     return entries
 
 
@@ -1176,7 +1175,8 @@ def generate_model_docs(
                 "path": file.relative_to(model_path).as_posix(),
                 "size": _format_size(file.stat().st_size),
             }
-            for file in sorted(directory_files(model_path))
+            # In the order the index lists them: by path as text
+            for file in sorted(directory_files(model_path), key=lambda f: f.relative_to(model_path).as_posix())
         ]
 
     # Newest first: the one someone is most likely to be looking for
@@ -1196,9 +1196,11 @@ def generate_model_docs(
         for version in reversed(kept)
     ]
 
-    template = environment.from_string(_MODEL_PAGE_HEAD + write_up + _MODEL_PAGE_TAIL)
+    # The write-up is text, not a template, as on the other pages
+    template = environment.from_string(_MODEL_PAGE_HEAD + "{{ write_up }}" + _MODEL_PAGE_TAIL)
     page = template.render(
         model_manifest,
+        write_up=write_up,
         provenance=_panel(index_records, f"{pipeline_id}:model/{model_id}"),
         model_manifest=model_manifest,
         model_id=model_id,

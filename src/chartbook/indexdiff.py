@@ -115,7 +115,8 @@ class Change:
             if name in self.fields:
                 said.append(words)
         handled = set(DATA_FIELDS) | set(COMPUTED_WORDS) | {
-            "dependencies", "versions", "aliases", "stale_inputs", "metrics", "date_range"
+            "dependencies", "versions", "aliases", "stale_inputs", "metrics", "date_range",
+            "inputs_now",  # said by stale_inputs when it matters; the inputs' own records say the rest
         }
         rest = sorted(name for name in self.fields if name not in handled)
         if rest:

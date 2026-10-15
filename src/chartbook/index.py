@@ -183,8 +183,10 @@ def _modified_at(resolved: str) -> Optional[str]:
         paths = globbing.glob(resolved, recursive=True)
     elif os.path.isdir(resolved):
         # A directory's own time moves only when an entry is added or
-        # removed; the newest file inside says when it was last written
-        paths = [os.path.join(root, name) for root, _, names in os.walk(resolved) for name in names] or [resolved]
+        # removed; the newest file inside says when it was last written.
+        # The files that count are the ones its hash counts; a directory
+        # with none has not been written
+        paths = [str(path) for path in hashing.directory_files(resolved)]
     else:
         paths = [resolved]
     stamps = []
@@ -715,7 +717,10 @@ def _asset_records(
             record["versions"] = versions
         stale = _model_staleness(base_dir, name, entry)
         if stale is not None:
+            # Then, now, and the comparison: keyed alike, so a reader of the
+            # record needs nothing else to say which input moved from what
             record["trained_with"] = stale.trained_with
+            record["inputs_now"] = stale.now
             record["stale_inputs"] = stale.stale
 
     return [_finish(record, entry, skip=skip, base_dir=base_dir, cache=cache), *series]
