@@ -3,9 +3,9 @@
 ```{note}
 A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
 vocabulary ({doc}`../guide/vocabulary`), then this inventory, then the Sphinx writer, then the
-documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's first slice built
-(2026-10-15): the dataframe page, held equal to the generator's by a golden test. The generator
-still writes the site.** The decisions it
+documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's first two slices
+built (2026-10-15): the dataframe page and the chart page, each held equal to the generator's by a
+golden test. The generator still writes the site.** The decisions it
 proposes are marked *proposed* until the maintainer takes them.
 ```
 
@@ -185,6 +185,29 @@ a bare `KeyError` (a message says the writer needs the full index); `docs_src_di
 the override paths (it defaults as the generator's). Known: the pipeline table's code-change time
 is converted back from UTC to local for the page and can land on the other side of a repeated
 DST hour.
+
+*2026-10-15, slice 2: the chart page.* `SphinxWriter.chart_page()`. The chart's record gives its
+declared fields and its file's path and `modified_at`; its `inputs` name the dataframe it was
+drawn from, whose record gives the dataframe manifest table, the link and "Data updated"; the
+pipeline's record gives the pipeline table and the fallback date for the listing's front matter;
+the write-up is read at the path the record gives. The chart's HTML is not read: the page embeds
+it by its path under the site, and the build copies it there (that copy is the build's, not the
+writer's, as the inventory said). The link scheme gained the chart page's own forms, which the
+generator had: a chart links to the pipeline's page from one folder less deep, and to its
+dataframe through `../dataframes/` in both themes. Decided with it, proposed: **a chart's
+write-up is text too**, as a dataframe's became; and **"Data updated" on a chart of a table or
+query is the engine file's time** — the generator had taken the pipeline folder's own
+modification time for it, since a table has no `path`, and now says what the writer says. The
+writer does not refuse an index that a build could not have made (a chart whose dataframe record
+is missing, or whose file has no `modified_at`): it writes the page with no data line and no
+dataframe table, and takes the listing's date from the pipeline's code-change time, as the
+generator would; the manifest loader and a strict build refuse both cases before an index exists.
+The golden test covers the chart pages of the file-backed pipeline, of a chart drawn from a DuckDB
+table (with a `series` list, which the index had been dropping from charts: `series` was treated
+as structural for every kind, where only a dataframe's become Series records — an adversarial
+review of the slice found it), and of the catalog. The same review found the generator's
+provenance-panel cache keyed by the `id()` of the records dict, which a later build in the same
+process could reuse after the first was freed; it holds the records themselves now.
 
 ## What this does not decide
 

@@ -1,11 +1,12 @@
 """The Sphinx writer: pages for Sphinx, from the index and the files it names.
 
-The first slice is the dataframe page. It renders today's templates with a
-context built from the dataframe's record, its pipeline's record and the
-files the records name, and it writes the same page the generator writes,
-which a golden test holds it to. The pipeline and dataframe "manifests"
-the templates read are made here from the records; the templates are
-unchanged until the generator is gone, so that the two can be compared.
+The slices so far are the dataframe page and the chart page. Each renders
+today's templates with a context built from the asset's record, its
+pipeline's record, the records of its inputs and the files the records
+name, and writes the same page the generator writes, which a golden test
+holds it to. The pipeline, dataframe and chart "manifests" the templates
+read are made here from the records; the templates are unchanged until the
+generator is gone, so that the two can be compared.
 """
 
 from __future__ import annotations
@@ -43,6 +44,15 @@ _DATAFRAME_PAGE = (
 {% include "pipeline_manifest.md" %}
 
 """
+)
+
+#: The sections of a chart page, as the generator orders them: the entry's
+#: top (front matter, title, freshness, the chart itself), the write-up,
+#: the provenance panel, then the specs and the two manifests.
+_CHART_PAGE = (
+    """{% include "chart_entry_top.md" %}\n\n\n\n"""
+    """{{ write_up }}"""
+    """\n\n\n{% include "provenance.md" %}\n\n{% include "chart_entry_bottom.md" %}\n"""
 )
 
 
@@ -87,17 +97,27 @@ class SphinxWriter:
 
     # --- the link scheme ---------------------------------------------------
 
-    def pipeline_page_link(self, pipeline_id: str) -> str:
+    def pipeline_page_link(self, pipeline_id: str, page_path: str) -> str:
+        """The link from the page at *page_path* to its pipeline's page."""
         if self.theme == "pipeline":
-            return "../../../index.md"
+            return "../" * page_path.count("/") + "index.md"
         return f"../pipelines/{_slug(pipeline_id)}_README.md"
 
     def dataframe_page_path(self, record: dict) -> str:
         """Where a dataframe's page is, under the pages folder."""
         return f"cb/dataframes/{_slug(record['pipeline'])}/{_local_name(record)}.md"
 
-    def link_to_dataframe(self, record: dict) -> str:
-        prefix = "../dataframes/" if self.theme == "pipeline" else ""
+    def chart_page_path(self, record: dict) -> str:
+        """Where a chart's page is, under the pages folder."""
+        return f"cb/charts/{_slug(record['pipeline'])}.{_local_name(record)}.md"
+
+    def link_to_dataframe(self, record: dict, from_kind: str = "Dataframe") -> str:
+        """The link to a dataframe's page from a page of the given kind.
+
+        The links are the generator's, as they are: from a dataframe page
+        the catalog theme links by the pipeline's folder alone.
+        """
+        prefix = "../dataframes/" if (self.theme == "pipeline" or from_kind == "Chart") else ""
         return f"{prefix}{_slug(record['pipeline'])}/{_local_name(record)}.md"
 
     # --- the pages ---------------------------------------------------------
@@ -137,13 +157,65 @@ class SphinxWriter:
             dataframe_id=_local_name(record),
             pipeline_id=record["pipeline"],
             pipeline_manifest=self._pipeline_manifest(pipeline),
-            pipeline_page_link=self.pipeline_page_link(record["pipeline"]),
+            pipeline_page_link=self.pipeline_page_link(record["pipeline"], self.dataframe_page_path(record)),
             most_recent_data_min=first,
             most_recent_data_max=last,
             dot_or_dotdot="../..",
             dataframe_glimpse=glimpse,
             enable_data_download=self.enable_data_download,
             freshness=[fact for fact in freshness if fact],
+        )
+
+    def chart_page(self, record_id: str) -> str:
+        """The Markdown page of one chart, from its record, its dataframe's record and the write-up.
+
+        The chart's HTML is not read: the page embeds it by its path under
+        the site, and the build copies the file there. "Chart updated" is
+        the chart file's ``modified_at``; "Data updated" is its dataframe's,
+        which for a table or query is the engine file's.
+        """
+        record = self.records[record_id]
+        pipeline = self.records[record["pipeline"]]
+        base_dir = Path(pipeline["location"]["value"])
+        environment = self._environment(base_dir)
+        dataframe = self._input_dataframe(record)
+        location = record.get("location") or {}
+        pipeline_manifest = self._pipeline_manifest(pipeline)
+        chart_manifest = self._chart_manifest(record, dataframe)
+        chart_updated = _as_local(location.get("modified_at"))
+        if chart_updated is not None:
+            chart_date = chart_updated.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            chart_date = pipeline_manifest.get("source_last_modified_date")
+        if dataframe is not None:
+            dataframe_manifest = self._dataframe_manifest(dataframe, base_dir)
+            data_updated = (dataframe.get("location") or {}).get("modified_at")
+            link_to_dataframe_docs = self.link_to_dataframe(dataframe, from_kind="Chart")
+            dataframe_id = _local_name(dataframe)
+        else:
+            dataframe_manifest, data_updated, link_to_dataframe_docs, dataframe_id = {}, None, "", ""
+        freshness = [
+            _freshness("Chart updated", location.get("modified_at")),
+            _freshness("Data updated", data_updated),
+        ]
+        template = environment.from_string(_CHART_PAGE)
+        return template.render(
+            chart_manifest,
+            write_up=self._write_up(record, base_dir, environment),
+            provenance=panel(record_id, self.records, self._reversed),
+            chart_manifest=chart_manifest,
+            chart_id=_local_name(record),
+            dataframe_id=dataframe_id,
+            dataframe_manifest=dataframe_manifest,
+            link_to_dataframe_docs=link_to_dataframe_docs,
+            pipeline_id=record["pipeline"],
+            pipeline_manifest=pipeline_manifest,
+            path_to_html_chart_unix=base_dir / Path(location.get("path", "")),
+            pipeline_page_link=self.pipeline_page_link(record["pipeline"], self.chart_page_path(record)),
+            freshness=[fact for fact in freshness if fact],
+            chart_date=chart_date,
+            dot_or_dotdot="..",
+            enable_data_download=self.enable_data_download,
         )
 
     # --- what the templates read, made from records ------------------------
@@ -169,6 +241,24 @@ class SphinxWriter:
             shown["path"] = location.get("path", "")
             shown["_resolved_path"] = location.get("resolved_path") or str(base_dir / location.get("path", ""))
         return shown
+
+    def _chart_manifest(self, record: dict, dataframe: Optional[dict]) -> dict:
+        """The chart as the templates read it: its declared fields, its file and its dataframe."""
+        skip = {"kind", "version", "id", "ref", "pipeline", "location", "content_hash", "size_bytes",
+                "inputs", "docs"}
+        shown = {key: value for key, value in record.items() if key not in skip}
+        shown["path"] = (record.get("location") or {}).get("path", "")
+        if dataframe is not None:
+            shown["dataframe"] = _local_name(dataframe)
+        return shown
+
+    def _input_dataframe(self, record: dict) -> Optional[dict]:
+        """The dataframe a chart was made from: the first of its inputs that is one."""
+        for input_id in record.get("inputs", []):
+            other = self.records.get(input_id)
+            if other is not None and other.get("kind") == "Dataframe":
+                return other
+        return None
 
     def _pipeline_manifest(self, pipeline: dict) -> dict:
         """The pipeline as the templates read it: a `project` table, and its dataframes."""
@@ -206,7 +296,11 @@ class SphinxWriter:
         if self.docs_src_dir is not None:
             paths += [Path(self.docs_src_dir), Path(self.docs_src_dir) / "_templates"]
         paths += [package / "templates", theme_dir, theme_dir / "_templates"]
-        return jinja2.Environment(loader=jinja2.FileSystemLoader([str(p) for p in paths]))
+        environment = jinja2.Environment(loader=jinja2.FileSystemLoader([str(p) for p in paths]))
+        from chartbook.markdown_generator import _yaml_escape_filter
+
+        environment.filters["yaml_escape"] = _yaml_escape_filter
+        return environment
 
 
 def _slug(pipeline_id: str) -> str:
@@ -217,13 +311,18 @@ def _local_name(record: dict) -> str:
     return record["ref"]["name"]
 
 
+def _as_local(modified_at: Optional[str]) -> Optional[datetime]:
+    """An index timestamp (UTC, to the second) as a local time, or None."""
+    if not modified_at:
+        return None
+    return datetime.strptime(modified_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).astimezone()
+
+
 def _freshness(label: str, modified_at: Optional[str]):
     from chartbook.markdown_generator import freshness_fact
 
-    if not modified_at:
-        return None
-    moment = datetime.strptime(modified_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-    return freshness_fact(label, moment)
+    moment = _as_local(modified_at)
+    return None if moment is None else freshness_fact(label, moment)
 
 
 def _source_glimpse(record: dict, base_dir: Path) -> str:

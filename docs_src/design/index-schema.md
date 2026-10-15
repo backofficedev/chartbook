@@ -200,8 +200,10 @@ layout; it is not written until that layout exists.
 **Declared metadata.** An asset record carries every field its manifest entry declares
 (`sources`, `tags`, `license`, `units`, a field of your own), as declared, with keys sorted. TOML
 dates become ISO strings. What the index states in another form is left out: `path` (it is in
-`location`), `docs` and `docs_path` (in `docs`), a chart's `dataframe` (in `inputs`), and
-`series` (they are records of their own).
+`location`), `docs` and `docs_path` (in `docs`), a chart's `dataframe` (in `inputs`), and a
+dataframe's `series` (they are records of their own). A chart's `series`, the list of what it
+shows, is declared metadata and stays (so written 2026-10-15; before that the index dropped it
+from every kind).
 
 **Timestamps** are RFC 3339 with an explicit offset, in UTC.
 

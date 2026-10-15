@@ -69,8 +69,12 @@ SCHEMAS_DIR = Path(__file__).parent / "schemas" / "chartbook"
 ASSET_KINDS = ("dataframe", "chart", "notebook", "note", "model")
 
 # Manifest keys that the index states in another form, or not at all
+#: Manifest keys that become a record's structure (its location, its
+#: write-up, its inputs) rather than declared metadata carried as it is.
+#: A dataframe's ``series`` become Series records and are skipped where
+#: that happens; a chart's ``series`` is metadata (the series it shows).
 _STRUCTURAL_KEYS = frozenset(
-    {"path", "docs", "docs_path", "series", "dataframe", "linked_charts", "source", "table", "query"}
+    {"path", "docs", "docs_path", "dataframe", "linked_charts", "source", "table", "query"}
 )
 
 
@@ -645,6 +649,7 @@ def _asset_records(
     skip: tuple = ()
 
     if kind == "dataframe":
+        skip = ("series",)  # they become Series records below
         described = None
         if entry.get("table") or entry.get("query"):
             # In a source: no file, so no content hash. The definition is

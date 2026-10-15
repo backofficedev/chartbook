@@ -657,6 +657,8 @@ def _source_freshness(dataframe_manifest):
     url = source.get("_resolved_url") or ""
     if not url.startswith("duckdb://"):
         return None
+    # The resolved url is absolute (the loader made it so against the
+    # pipeline's folder), so the directory passed here is never used
     path = duckdb_path(url, Path.cwd())
     if path == ":memory:":
         return None
@@ -1023,11 +1025,12 @@ def _panel(index_records, record_id):
 
     if not index_records:
         return None
-    # The reverse map of one index serves every page of the build
-    key = id(index_records)
-    if _REVERSED.get("key") != key:
+    # The reverse map of one index serves every page of the build. The cache
+    # holds the records themselves, not their id(): a later build's dict can
+    # land at a freed one's address, and would have got the stale map
+    if _REVERSED.get("records") is not index_records:
         _REVERSED.clear()
-        _REVERSED.update({"key": key, "map": reverse(index_records)})
+        _REVERSED.update({"records": index_records, "map": reverse(index_records)})
     return panel(record_id, index_records, _REVERSED["map"])
 
 
@@ -1354,12 +1357,13 @@ def generate_chart_docs(
     else:  # doc_mode == "str"
         source = chart_manifest["docs"]
 
-    # Use filenames instead of paths for includes
+    # The write-up is text, not a template: what the author wrote is what
+    # the page shows, as on the dataframe page
     modified_source = (
         """{% include "chart_entry_top.md" %}
 \n\n
 """
-        + source
+        + """{{ write_up }}"""
         + """\n\n
 {% include "provenance.md" %}
 
@@ -1391,12 +1395,14 @@ def generate_chart_docs(
     path_to_html_chart_unix = pipeline_base_dir / Path(chart_manifest["path"])
 
     # How fresh the chart and its data are, shown under the title. Like a
-    # dataframe page, this says nothing about the pipeline's code.
+    # dataframe page, this says nothing about the pipeline's code. A table
+    # or query has no file of its own: its engine's file says, if it has one
     chart_updated = data_last_modified(path_to_html_chart_unix)
-    freshness = [
-        freshness_fact("Chart updated", chart_updated),
-        freshness_fact("Data updated", data_last_modified(parquet_path)),
-    ]
+    if dataframe_manifest.get("table") or dataframe_manifest.get("query"):
+        data_updated = _source_freshness(dataframe_manifest)
+    else:
+        data_updated = freshness_fact("Data updated", data_last_modified(parquet_path))
+    freshness = [freshness_fact("Chart updated", chart_updated), data_updated]
     # The chart's date in listings is when the chart itself was last written
     if chart_updated is not None:
         chart_date = chart_updated.strftime("%Y-%m-%d %H:%M:%S")
@@ -1410,6 +1416,7 @@ def generate_chart_docs(
     # Render chart page
     chart_page = template.render(
         chart_manifest,
+        write_up=source,
         provenance=_panel(index_records, f"{pipeline_id}:chart/{chart_id}"),
         chart_manifest=chart_manifest,
         chart_id=chart_id,
