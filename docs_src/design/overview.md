@@ -1899,8 +1899,9 @@ hash, read-only connections, DuckDB as the engine and the fallback, and the work
 
 1. **Cross-pipeline references work in `data.sql()` and `data.ref()` for file dataframes**, as
    the pinned copy. The design put that in a later phase; the resolution chain exists, so it
-   costs nothing. A table or query of another pipeline is not pinned (a snapshot holds files)
-   and cannot be read across pipelines; the known gap.
+   costs nothing. A table or query of another pipeline was not pinned at first (a snapshot
+   holds files); since 2026-10-15 the snapshot writes it out as parquet into the store, so it is
+   pinned and read across pipelines like a file. The gap is closed in that simple form.
 2. **A query names one source.** The design's mixed-source rule (register each foreign table in
    DuckDB first) is not built: with DuckDB the only engine, the case is two DuckDB files, and
    the honest answer is `ATTACH`, which the user can do through `data.connect()`. A query

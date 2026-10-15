@@ -456,6 +456,26 @@ def declared_files(
     return found
 
 
+def declared_in_source(manifest_dir: Union[str, Path]) -> list[tuple[AssetRef, dict]]:
+    """Every dataframe a pipeline declares as a table or a query in a source.
+
+    Read from the raw ``chartbook.toml`` and nothing else, as
+    :func:`declared_files` is; a key that cannot be written in a reference
+    is left out.
+    """
+    raw = _read_raw_manifest(Path(manifest_dir) / MANIFEST_NAME)
+    found = []
+    for name in sorted(raw.get("dataframes") or {}):
+        entry = (raw.get("dataframes") or {})[name]
+        if not isinstance(entry, dict) or not (entry.get("table") or entry.get("query")):
+            continue
+        try:
+            found.append((AssetRef(kind="dataframe", name=name), entry))
+        except ValueError:
+            continue
+    return found
+
+
 def parse_declared_ref(
     ref: Union[str, AssetRef], kind: Optional[str] = None, resolving: bool = False
 ) -> AssetRef:
@@ -659,10 +679,10 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
                 asset_id,
                 "in_source",
                 f"{asset_id!r} is a {in_source} in a source of the pipeline "
-                f"{dependency.id!r}, not a file. A snapshot holds files, so it is "
-                f"not pinned and cannot be read across pipelines yet. Read it from "
-                f"inside that pipeline, or have that pipeline write it to a parquet "
-                f"file and declare the file.",
+                f"{dependency.id!r}, and the snapshot that is pinned was made before "
+                f"it was declared, or before tables were written out as parquet. "
+                f"`chartbook snapshot` in that pipeline's folder writes it out; then "
+                f"`chartbook update` in {manifest_dir} pins it.",
             )
         same_kind = sorted(
             AssetRef.from_dict(other["ref"]).name
@@ -691,6 +711,16 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"{asset_id!r} was pinned without its bytes: "
             f"{record.get('missing') or 'the store could not supply the version the label names'}. "
             f"{remedy[0].upper()}{remedy[1:]}, in {manifest_dir}.",
+        )
+    if not content_hash and record["location"].get("kind") in ("table", "query"):
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_built",
+            f"{asset_id!r} is a {record['location']['kind']} in a source of the pipeline "
+            f"{dependency.id!r} and has no pinned copy: a pin from a folder takes no table, "
+            f"and a snapshot writes one out only from a DuckDB file (`chartbook snapshot` "
+            f"there says what it could not). `chartbook snapshot` in that pipeline's folder, "
+            f"then `chartbook update` in {manifest_dir}, pins it.",
         )
     if not content_hash:
         raise AssetNotPinnedError(
@@ -722,6 +752,11 @@ def _held(store, record: dict) -> Location:
     from chartbook.utils import is_glob_pattern
 
     held = store.object_path(record["content_hash"])
+    if record["location"].get("kind") in ("table", "query"):
+        # Written out as parquet when the snapshot was made
+        from chartbook.snapshot import materialized_name
+
+        return FileLocation(held / materialized_name(record))
     declared_path = record["location"]["path"]
     if is_glob_pattern(declared_path):
         # The files are laid out from the glob's fixed prefix

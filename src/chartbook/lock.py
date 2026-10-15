@@ -638,6 +638,14 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                         f"{label_remedy(assets[asset_id].get('missing'), key)[1:]}.",
                     )
                 )
+            elif not content_hash and assets[asset_id].get("location", {}).get("kind") in ("table", "query"):
+                report.problems.append(
+                    FrozenProblem(
+                        key, asset_id, "is a table or query in a source and has no pinned copy: a pin from a "
+                        "folder takes no table, and a snapshot writes one out only from a DuckDB file. "
+                        "`chartbook snapshot` there, then `chartbook update`.",
+                    )
+                )
             elif not content_hash:
                 report.problems.append(
                     FrozenProblem(
@@ -685,6 +693,16 @@ def _declared_elsewhere(was: dict, now: dict) -> bool:
         return {k: v for k, v in entry.get("location", {}).items() if k != "commit"}
 
     return declared(was) != declared(now)
+
+
+def _where(record: dict) -> str:
+    """Where an asset's record says it is: its path, or its table or query in a source."""
+    location = record.get("location") or {}
+    if location.get("kind") == "table":
+        return f"table {location.get('identifier')} in source {location.get('source')!r}"
+    if location.get("kind") == "query":
+        return f"query in source {location.get('source')!r}"
+    return str(location.get("path"))
 
 
 def _describe(location: dict) -> str:
@@ -823,7 +841,7 @@ def _sync_from_snapshots(
             old = record.get("content_hash")
             if not old:
                 report.events.append(
-                    PinEvent("not_built", key, record["id"], detail=record["location"]["path"])
+                    PinEvent("not_built", key, record["id"], detail=_where(record))
                 )
             elif not store.has(old):
                 report.events.append(
@@ -914,7 +932,7 @@ def _sync_from_snapshots(
         before = had.get(asset_id)
         old = (before or {}).get("content_hash")
         new = record.get("content_hash")
-        declared_path = record["location"]["path"]
+        declared_path = _where(record)
         if new is None:
             # Not built when the snapshot was made. A pin from an earlier
             # snapshot does not belong beside this one's commit.
@@ -1030,12 +1048,40 @@ def _sync_dependency(
             within,
         )
 
+    # A table or query in a source has no file in the folder to take: a pin
+    # of it comes from a snapshot, and stays as the lockfile has it. One the
+    # lockfile does not have yet is listed without a hash, and said so
+    from chartbook.resolve import declared_in_source
+    from chartbook.snapshot import source_record
+
+    try:
+        in_source = declared_in_source(directory)
+    except (OSError, ValueError):
+        in_source = []
+    for ref, entry in in_source:
+        asset_id = str(ref.in_pipeline(key))
+        if asset_id in had:
+            continue
+        records[asset_id] = source_record(ref.in_pipeline(key), key, entry, None, None)
+        report.events.append(
+            PinEvent(
+                "not_built", key, asset_id,
+                detail="a table or query in a source is not taken from a folder; "
+                "`chartbook snapshot` there writes it out, then `chartbook update` pins it",
+            )
+        )
+
     # What the lockfile has that the other pipeline no longer declares
     for asset_id in sorted(set(had) - set(records)):
         old = had[asset_id].get("content_hash")
         if not old:
             continue  # it was never pinned; there is nothing to let go of
-        if may_move:
+        if had[asset_id].get("location", {}).get("kind") in ("table", "query"):
+            # A table or query has no file in the folder to take: its pin
+            # is the snapshot's parquet, and stays until a snapshot moves it
+            records[asset_id] = had[asset_id]
+            _report_kept(had[asset_id], key, store, report)
+        elif may_move:
             report.events.append(PinEvent("dropped", key, asset_id, old=old))
         else:
             records[asset_id] = had[asset_id]

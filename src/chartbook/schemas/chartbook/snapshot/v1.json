@@ -89,7 +89,7 @@
     },
     "records": {
       "type": "array",
-      "description": "One record per asset the pipeline declares with a `path`, sorted by the asset's reference. One with a `content_hash` was built; one without was declared and not built when the snapshot was made.",
+      "description": "One record per asset the pipeline declares with a `path`, and per dataframe that is a table or a query in a source (written out as `<name>.parquet` into the store when the source is a DuckDB file; its `location` is the source's), sorted by the asset's reference. One with a `content_hash` was built; one without was declared and not built when the snapshot was made.",
       "items": {
         "type": "object",
         "required": [

@@ -376,7 +376,7 @@ The manifest is the only source of the list. Nothing about how the project is bu
 chartbook snapshot [--project-dir PATH]
 ```
 
-Declare this pipeline's build ready for the pipelines that depend on it. Every asset the pipeline declares and has built is copied into the store, labelled with the commit the pipeline is at. That is a **snapshot**.
+Declare this pipeline's build ready for the pipelines that depend on it. Every asset the pipeline declares and has built is copied into the store, labelled with the commit the pipeline is at; a dataframe that is a table or a query in a DuckDB file is written out as a parquet file there, so that it can be pinned and read like any other. That is a **snapshot**.
 
 ```console
 $ chartbook run            # build it
