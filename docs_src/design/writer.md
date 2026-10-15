@@ -3,8 +3,9 @@
 ```{note}
 A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
 vocabulary ({doc}`../guide/vocabulary`), then this inventory, then the Sphinx writer, then the
-documentation site. Status: **inventory done; the index additions it asks for are built (2026-10-14); nothing of the
-writer is built.** The decisions it
+documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's first slice built
+(2026-10-15): the dataframe page, held equal to the generator's by a golden test. The generator
+still writes the site.** The decisions it
 proposes are marked *proposed* until the maintainer takes them.
 ```
 
@@ -150,6 +151,24 @@ in the files the index names.
   whole. The index is small enough to keep as a fixture.
 - **MkDocs and Next.js** are later writers reading the same index; they are why the index stays
   free of renderings. Not scheduled.
+
+## As built, slice by slice
+
+*2026-10-15, slice 1: the dataframe page.* `chartbook/writers/sphinx.py`, `SphinxWriter`. Its
+input is the **full** index (with `resolved_path`, since it reads the files the index names) and
+the files; it takes the theme, the project's own `docs_src` for template overrides, and the two
+build options the page depends on. It renders today's templates unchanged, from a context made
+of records: the dataframe's declared fields and location; a `project` table and the dataframes
+list made from the `Pipeline` record; the write-up read at the path the record gives; the glimpse
+and the per-column date rows from the data file, or from the engine for a table or a query,
+opened through `chartbook.backends.source_url()` from the public `url` the location now carries;
+the freshness line from `modified_at`; the panel from the records. The link scheme is three
+functions on the writer. A golden test (`tests/test_writer_sphinx.py`) builds the site with the
+generator and asserts the writer's page is the same text, on a file-backed pipeline and on one
+with a DuckDB table and query. Two facts were added for it: `site_url` on the `Pipeline` record
+(dropped from the published index when it is a local `file://` path, as `resolved_path` is) and
+`url` on a table or query location. Not yet: the chart, model, notebook, note and pipeline pages,
+the catalog's list pages, and the build calling the writer instead of the generator.
 
 ## What this does not decide
 

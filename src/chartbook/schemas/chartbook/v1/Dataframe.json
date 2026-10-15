@@ -108,6 +108,14 @@
             "identifier": {
               "type": "string",
               "description": "The table, as declared: one to three dot-separated parts."
+            },
+            "url": {
+              "type": "string",
+              "description": "The source's url as the manifest declares it: the public part, never credentials. A reader opens the engine through chartbook.backends.source_url() from it."
+            },
+            "modified_at": {
+              "type": "string",
+              "description": "When the engine's file was last written, in UTC, for a DuckDB file. Absent for an in-memory engine."
             }
           },
           "required": [
@@ -132,6 +140,14 @@
             "sql": {
               "type": "string",
               "description": "The query, in the source's dialect, as declared."
+            },
+            "url": {
+              "type": "string",
+              "description": "The source's url as the manifest declares it: the public part, never credentials. A reader opens the engine through chartbook.backends.source_url() from it."
+            },
+            "modified_at": {
+              "type": "string",
+              "description": "When the engine's file was last written, in UTC, for a DuckDB file. Absent for an in-memory engine."
             }
           },
           "required": [

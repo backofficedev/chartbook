@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the Sphinx writer's first slice: the dataframe page from the index
+
+`chartbook.writers.sphinx.SphinxWriter` writes a dataframe's page from the index and the files the index names, and nothing else: the record for its declared fields, hashes, counts and dates; the pipeline's record for the manifest table; the write-up at the path the record gives; the data file for the glimpse, or the engine for a table or query, opened from the public `url` the location now carries. A golden test holds its page equal to the generator's, section for section, on a file-backed pipeline and on one with a DuckDB table and query. The generator still writes the site; the writer replaces it one page kind at a time. Two facts the slice needed are in the index: a pipeline's `site_url` (left out of the published index when it is a local `file://` path) and a table or query location's `url`.
+
 ### Added — the four facts a writer needs, in the index
 
 From the page inventory: every write-up (an asset's `docs`, a pipeline's README) now carries its `content_hash`, so a build says which text it showed and `index diff` says *write-up changed*; a `file` location carries `modified_at`, when the file was last written, for the freshness lines; a dataframe with a `date_col` carries `date_range`, the first and last date in its data; a `Pipeline` record carries `code_changed_at`, when its code last changed as the docs build worked it out (git where the source is committed and unmodified, else the newest file time; absent from an index built outside a docs build). `index diff` reads what a file holds, not when it was written, so a touch is not a change; it says *write-up changed*, *data reaches further* or *less far*, and *source changed*.

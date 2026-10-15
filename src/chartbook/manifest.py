@@ -1068,7 +1068,7 @@ def _load_pipeline_manifest(raw_manifest):
                     )
 
             for dataframe_id, chart_ids in dataframe_to_charts.items():
-                manifest["dataframes"][dataframe_id]["linked_charts"] = chart_ids
+                manifest["dataframes"][dataframe_id]["linked_charts"] = sorted(chart_ids)
 
     try:
         scripts = read_scripts(raw_manifest)

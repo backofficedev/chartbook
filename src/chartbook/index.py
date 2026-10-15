@@ -280,11 +280,27 @@ def _source_facts(entry: dict) -> dict:
         "kind": "table" if entry.get("table") else "query",
         "source": entry.get("source"),
         "backend": source.get("backend"),
+        # The manifest's public url, never the machine's: a reader opens
+        # the engine through chartbook.backends.source_url() from it
+        "url": source.get("url"),
     }
     if entry.get("table"):
         location["identifier"] = entry["table"]
     else:
         location["sql"] = entry["query"]
+    # A DuckDB file is a file: when it was last written is a fact about it
+    resolved_url = source.get("_resolved_url") or ""
+    if resolved_url.startswith("duckdb://"):
+        from chartbook.backends import duckdb_path
+
+        try:
+            path = duckdb_path(resolved_url, ".")
+        except ValueError:
+            path = ":memory:"
+        if path != ":memory:":
+            modified = _modified_at(path)
+            if modified:
+                location["modified_at"] = modified
     return {"location": location}
 
 
@@ -787,7 +803,7 @@ def pipeline_records(
         "id": pipeline_id,
         "name": project["name"],
     }
-    for key in ("description", "maintainer", "contributors", "repo_url"):
+    for key in ("description", "maintainer", "contributors", "repo_url", "site_url"):
         if project.get(key):
             record[key] = _jsonable(project[key])
     compatibility = project.get("os_compatibility")
@@ -930,6 +946,8 @@ def published(index: dict) -> dict:
         if not isinstance(location, dict):
             continue
         location.pop("resolved_path", None)
+        if record.get("kind") == "Pipeline" and str(record.get("site_url", "")).startswith("file://"):
+            record.pop("site_url")  # a local path, not a site
         if record.get("kind") == "Pipeline":
             places = [location]
             places += [d.get("location") for d in record.get("dependencies", [])]
