@@ -7,6 +7,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 ## Quick Start
 
 - [Getting Started](docs_src/getting-started.md): `pip install chartbook` — one install, everything included
+- [Vocabulary](docs_src/guide/vocabulary.md): the words, defined once. A manifest asks, a lockfile records what was got, a snapshot records what was made, an index records what a site shows; repository → index → pages → site; a writer per site tool
 - [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs`, `chartbook build`, `chartbook run`, `chartbook snapshot`, `chartbook pin`, `chartbook update`, `chartbook browse`, `chartbook check`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook config`
 
 ## Guides
