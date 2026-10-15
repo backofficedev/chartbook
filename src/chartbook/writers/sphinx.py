@@ -73,6 +73,17 @@ class SphinxWriter:
     def __post_init__(self):
         self.records = {record["id"]: record for record in self.index.get("records", [])}
         self._reversed = reverse(self.records)
+        if self.docs_src_dir is None:
+            from chartbook.markdown_generator import DOCS_SRC_DIR
+
+            self.docs_src_dir = Path(DOCS_SRC_DIR)
+        for record in self.records.values():
+            if record.get("kind") == "Pipeline" and not (record.get("location") or {}).get("value"):
+                raise ValueError(
+                    "SphinxWriter needs the full index, the one the build directory holds, "
+                    "not the published one beside the site: it reads the files the index "
+                    "names, and the published index has no local paths."
+                )
 
     # --- the link scheme ---------------------------------------------------
 
@@ -100,7 +111,7 @@ class SphinxWriter:
         location = record.get("location") or {}
         dataframe_manifest = self._dataframe_manifest(record, base_dir)
         if location.get("kind") in ("table", "query"):
-            glimpse = _source_glimpse(record)
+            glimpse = _source_glimpse(record, base_dir)
             span = record.get("date_range") or {}
             first, last = span.get("first"), span.get("last")
             freshness = [_freshness("Data updated", location.get("modified_at"))]
@@ -215,9 +226,15 @@ def _freshness(label: str, modified_at: Optional[str]):
     return freshness_fact(label, moment)
 
 
-def _source_glimpse(record: dict) -> str:
-    """A table or query's glimpse, from the engine the record's location names."""
-    from chartbook.backends import DuckDBBackend, source_url
+def _source_glimpse(record: dict, base_dir: Path) -> str:
+    """A table or query's glimpse, from the engine the record's location names.
+
+    The location's url is the manifest's, relative to the pipeline's folder
+    for a DuckDB file; the machine's url comes through ``source_url()``, and
+    a relative file is made absolute against the pipeline's folder, never
+    against where the build happens to run.
+    """
+    from chartbook.backends import MEMORY_URL, DuckDBBackend, duckdb_path, source_url
     from chartbook.resolve import QueryLocation, TableLocation
 
     location = record["location"]
@@ -226,7 +243,13 @@ def _source_glimpse(record: dict) -> str:
     ) + f" in source {location.get('source')!r} ({location.get('backend')})"
     if not location.get("url"):
         return f"A {where}."
-    url = source_url(location["source"], location["url"])
+    try:
+        url = source_url(location["source"], location["url"])
+        if url.startswith("duckdb://"):
+            path = duckdb_path(url, base_dir)
+            url = MEMORY_URL if path == ":memory:" else "duckdb:///" + path
+    except Exception as error:  # noqa: BLE001 - a page, not a crash
+        return f"A {where}. It could not be read when the site was built: {error}"
     if location["kind"] == "table":
         typed = TableLocation(location["source"], location["backend"], url, location["identifier"])
     else:

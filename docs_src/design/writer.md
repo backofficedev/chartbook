@@ -112,8 +112,8 @@ reused on a machine in another zone, or a stamp in the repeated hour of a DST ch
    write-up changed.
 2. **`modified_at`** on every `file` location: when the file was last written, in UTC. The
    freshness lines and ABlog's dates come from it. *Proposed.*
-3. **`date_range`** on a dataframe record with a `date_col` of a date or datetime type: the
-   first and last date in the data, in ISO 8601. *Proposed.* The engine answers it for a table
+3. **`date_range`** on a dataframe record with a `date_col`: the first and last date in the
+   data, in ISO 8601; a text column is parsed as dates, and what does not parse is left out. *Proposed.* The engine answers it for a table
    or a query; for a file it is one column, read from the parquet statistics. The file page's
    per-column "available up to" rows are a different quantity, a comparison across columns,
    which the writer computes from the file it names.
@@ -169,6 +169,22 @@ with a DuckDB table and query. Two facts were added for it: `site_url` on the `P
 (dropped from the published index when it is a local `file://` path, as `resolved_path` is) and
 `url` on a table or query location. Not yet: the chart, model, notebook, note and pipeline pages,
 the catalog's list pages, and the build calling the writer instead of the generator.
+
+*Decided with the slice, proposed:* **a write-up is text, not a template.** The generator had
+concatenated the write-up into the page's Jinja source, so `{{ name }}` or `{% if %}` inside a
+write-up was evaluated, and `{{'a': 1}}` crashed the build; nothing documented it and no example
+used it. The writer passes the write-up as a value, and the generator's dataframe page does the
+same now, so what the author wrote is what the page shows. **The date rows of a table or query
+come from the index's `date_range`**, which parses a text column as dates, where the generator had
+shown the engine's least and greatest text. **A declared path is shown normalized**
+(`../shared/x` as the folder it names), as the index and the resolver have it. An adversarial
+review of the slice found the writer resolving a relative DuckDB url against the process's
+working directory instead of the pipeline's folder, which the golden test's `chdir` had hidden
+(fixed; the catalog theme, built from the catalog's root, is tested now); a published index gave
+a bare `KeyError` (a message says the writer needs the full index); `docs_src_dir` unset dropped
+the override paths (it defaults as the generator's). Known: the pipeline table's code-change time
+is converted back from UTC to local for the page and can land on the other side of a repeated
+DST hour.
 
 ## What this does not decide
 

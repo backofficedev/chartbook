@@ -1031,8 +1031,10 @@ def _load_pipeline_manifest(raw_manifest):
                 dataframe_manifest["_source"] = manifest["sources"][dataframe_manifest["source"]]
             raw_parquet_path = dataframe_manifest.get("path", "")
             dataframe_manifest["_is_glob"] = is_glob_pattern(raw_parquet_path)
+            # Normalized, as the index and the resolver write it: a declared
+            # `../shared/x.parquet` is shown as the folder it names
             dataframe_manifest["_resolved_path"] = (
-                Path(base_dir) / raw_parquet_path if raw_parquet_path else None
+                Path(os.path.normpath(Path(base_dir) / raw_parquet_path)) if raw_parquet_path else None
             )
             if "tags" in dataframe_manifest:
                 dataframe_manifest["tags"] = normalize_tags(dataframe_manifest["tags"])

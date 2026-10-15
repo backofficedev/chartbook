@@ -242,7 +242,7 @@
         "first",
         "last"
       ],
-      "description": "The first and last value of `date_col`, in ISO 8601 as the column has it (a date, or a datetime): how far the data reaches. Only for a column of a date or datetime type. Absent without a `date_col`, for a text or number column, or when the data cannot be read.",
+      "description": "The first and last date in `date_col`, in ISO 8601 (a date, or a datetime): how far the data reaches. A date or datetime column as it is; a text column parsed as dates, what does not parse left out. Absent without a `date_col`, for a column with no date in it, or when the data cannot be read.",
       "properties": {
         "first": {
           "type": "string"
