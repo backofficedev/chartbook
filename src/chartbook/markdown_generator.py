@@ -447,8 +447,10 @@ def generate_all_pipeline_docs(
         # Remove the first two lines and join the rest
         readme_text = "".join(readme_content[2:])
 
+        # Notebooks and notes by name, as the index lists them: a reordered
+        # chartbook.toml does not reorder the page
         notebook_list = []
-        for notebook_id in pipeline_manifest["notebooks"]:
+        for notebook_id in sorted(pipeline_manifest["notebooks"]):
             nb_manifest = pipeline_manifest["notebooks"][notebook_id]
             nb_filename = Path(nb_manifest["path"]).stem
             nb_path = f"cb/notebooks/{_fs_slug(pipeline_id)}/{nb_filename}"
@@ -459,7 +461,7 @@ def generate_all_pipeline_docs(
         notes_list = []
         if "notes" in pipeline_manifest:
             # Copy markdown files to docs build directory
-            for note_id in pipeline_manifest["notes"]:
+            for note_id in sorted(pipeline_manifest["notes"]):
                 note_manifest = pipeline_manifest["notes"][note_id]
                 source_file = note_manifest["_resolved_path"]
 
@@ -1576,18 +1578,16 @@ def discover_site_pages(site_dir):
     :rtype: list[str]
     """
     site_dir = Path(site_dir)
-    pages = []
-
-    for md_file in sorted(site_dir.rglob("*.md")):
-        rel_path = md_file.relative_to(site_dir)
-
-        # Skip special files at the root of site_dir
-        if rel_path.parent == Path(".") and rel_path.name in ("index_toc.md", "index.md"):
-            continue
-
-        pages.append(rel_path.as_posix())
-
-    return pages
+    # Files only, by path as text: the order the index lists them in, which
+    # any reader of the JSON reproduces (Path objects order `a/b.md` before
+    # `a-x.md`; text the other way)
+    pages = sorted(
+        md_file.relative_to(site_dir).as_posix()
+        for md_file in site_dir.rglob("*.md")
+        if md_file.is_file()
+    )
+    # Skip special files at the root of site_dir
+    return [page for page in pages if "/" in page or page not in ("index_toc.md", "index.md")]
 
 
 def copy_site_dir_to_build(site_dir, docs_build_dir):

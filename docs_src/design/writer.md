@@ -3,9 +3,9 @@
 ```{note}
 A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
 vocabulary ({doc}`../guide/vocabulary`), then this inventory, then the Sphinx writer, then the
-documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's first three slices
-built (2026-10-15): the dataframe, chart and model pages, each held equal to the generator's by a
-golden test. The generator still writes the site.** The decisions it
+documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's first four slices
+built (2026-10-15): the dataframe, chart, model and pipeline pages, each held equal to the
+generator's by a golden test. The generator still writes the site.** The decisions it
 proposes are marked *proposed* until the maintainer takes them.
 ```
 
@@ -239,6 +239,31 @@ model with scores, a bare directory model, one with nothing counted in it, a mod
 versions that is out of date on a local and on another pipeline's dataframe, the same model in a
 catalog that also holds the other pipeline (where "Trained On" links to it), and one trained on a
 name its upstream does not declare.
+
+*2026-10-15, slice 4: the pipeline page.* `SphinxWriter.pipeline_page()`. In the pipeline theme
+it is the site's front page: the theme's `index.md` (or the project's override) rendered with the
+README's text from the file the `Pipeline` record's `docs` names, the tables of contents made from
+the records — notebooks and notes of this pipeline, dataframes and models of the site, each by
+name — and "Code updated" from `code_changed_at`. In a catalog it is the pipeline's README page,
+`cb/pipelines/<slug>_README.md`, with the repository and site named above the text from the
+record's `repo_url` and `site_url`. One fact was added for it: a pipeline's own **site pages**.
+The generator found them by walking `[project] site_dir` (or `docs_src/site/`), which the writer
+may not do; the `Pipeline` record now carries `site_dir` (`path`, and `resolved_path` until
+published) and `site_pages`, every Markdown file under it by relative path, sorted. The build
+copies them beside the generated pages, as before; the writer lists them in the front page's
+table of contents and reads `index_toc.md`, if it is one of them, to merge in. Decided with it,
+proposed: **notebooks and notes are listed by name**, as the index has them, where the generator
+had kept the manifest's order; the generator does the same now. Notebooks and notes themselves
+are files the build copies, not pages the writer renders (the inventory above). The golden test
+covers a pipeline site with and without its own site pages, one with notes, and a catalog's
+README pages. An adversarial review found the generator ordering the site pages as `Path` objects
+(`guide/intro.md` before `guide.md`) where the index orders them as text, and listing a directory
+named `*.md`; the generator now does as the index does, since the index's order is the one any
+reader of the JSON reproduces. It also found the writer splitting the README with `splitlines()`,
+which breaks on a form feed where the generator's `readlines()` does not; both read lines now. A
+diff says "site pages changed" when one appears or goes. Known: the site pages are listed without
+hashes, so a diff cannot say *which* page changed. *Proposed:* give each the same `path` +
+`content_hash` shape as a write-up when a reader needs it.
 
 ## What this does not decide
 

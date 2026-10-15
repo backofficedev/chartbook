@@ -49,6 +49,7 @@ COMPUTED_WORDS = {
     "inputs": "inputs changed",
     "location": "moved",
     "series": "series changed",
+    "site_pages": "site pages changed",
 }
 
 #: Envelope fields a difference in which is said before anything else.

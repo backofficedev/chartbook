@@ -839,10 +839,35 @@ def pipeline_records(
         )
     record["assets"] = [a["id"] for a in assets if a["kind"] != "Series"]
     record["docs"] = _docs({"docs_path": project.get("readme") or "./README.md"}, base_dir, cache)
+    site = _site_pages(project, base_dir)
+    if site is not None:
+        record["site_dir"], record["site_pages"] = site
     changed = code_changed_at(pipeline_manifest)
     if changed:
         record["code_changed_at"] = changed
     return [record, *assets]
+
+
+def _site_pages(project: dict, base_dir: Path) -> Optional[tuple[dict, list[str]]]:
+    """The pages a pipeline supplies for its own site, and the folder they are in.
+
+    The folder is ``[project] site_dir``, or ``docs_src/site/`` when that
+    exists; None when the pipeline supplies none. The pages are every
+    Markdown file under it, by path relative to the folder, sorted. The
+    build copies them beside the generated pages; a writer lists them in
+    the front page's table of contents and reads ``index_toc.md`` if it is
+    one of them.
+    """
+    resolved = project.get("_resolved_site_dir")
+    if not resolved:
+        return None
+    folder = Path(resolved)
+    pages = sorted(page.relative_to(folder).as_posix() for page in folder.rglob("*.md") if page.is_file())
+    where = {
+        "path": Path(os.path.relpath(folder, base_dir)).as_posix(),
+        "resolved_path": folder.as_posix(),
+    }
+    return where, pages
 
 
 def code_changed_at(pipeline_manifest: dict) -> Optional[str]:
@@ -968,6 +993,8 @@ def published(index: dict) -> dict:
             for place in places:
                 if isinstance(place, dict) and place.get("kind") == "path":
                     place.pop("value", None)
+            if isinstance(record.get("site_dir"), dict):
+                record["site_dir"].pop("resolved_path", None)
     return public
 
 
