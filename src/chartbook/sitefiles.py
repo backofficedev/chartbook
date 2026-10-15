@@ -1,0 +1,281 @@
+"""The build that writes a site: the writer's pages, and the files beside them.
+
+A site is a pure function of an index and the files the index names. The
+Sphinx writer (:mod:`chartbook.writers.sphinx`) renders the pages from the
+records; this module copies the files themselves into the Sphinx tree —
+charts, notebooks, notes, data downloads, the theme's own files and a
+pipeline's own site pages — driven by the same index, and :func:`write_site`
+puts the two together. Nothing here reads a manifest to decide what to copy:
+the index says what the site has.
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+import warnings
+from pathlib import Path
+from typing import Iterable, Optional
+
+from chartbook.utils import is_glob_pattern
+
+#: Files of the theme that are not copied to the root of the Sphinx tree:
+#: generated folders and pages the writer renders, and the theme's charts
+#: listing, which goes under ``cb/``.
+THEME_FILES_NOT_AT_ROOT = (
+    "charts",
+    "dataframes",
+    "notebooks",
+    "index.md",
+    "pipelines.md",
+    "dataframes.md",
+    "models",
+    "models.md",
+    "diagnostics.md",
+    "charts.md",
+    "site",
+)
+
+
+def _slug(pipeline_id: str) -> str:
+    return pipeline_id.replace("/", "--")
+
+
+def copy_plan(
+    index: dict,
+    docs_build_dir: Path,
+    enable_data_download: bool = False,
+    skip: Iterable[str] = (),
+    reused: Iterable[str] = (),
+    with_notes: bool = True,
+) -> list[tuple[Path, Path]]:
+    """Where each file the index names goes under the Sphinx tree, as (source, destination) pairs.
+
+    A chart's HTML goes to ``cb/download_chart/<slug>/<name>.html`` and to
+    ``_static/<slug>/<name>.html`` (the page embeds the latter); a notebook
+    to ``cb/notebooks/<slug>/<its file name>``; a note to ``cb/<name>.md``;
+    and, when downloads are enabled, a dataframe that is one file to
+    ``cb/download_dataframe/<slug>/<name>.parquet``. A table, a query or a
+    folder of parts has no file to offer.
+
+    :param skip: Pipelines the build leaves out: nothing of theirs is copied.
+    :param reused: Pipelines an incremental build keeps from an earlier one:
+        their charts, notebooks and downloads stay as they are, but their
+        notes are copied again, since the front page that lists them is
+        written on every build and the tree is synced to what was written.
+    :param with_notes: Whether notes are copied at all: the pipeline theme's
+        front page lists them; a catalog has no page that does.
+    """
+    root = Path(docs_build_dir)
+    skipped, kept = set(skip), set(reused)
+    plan: list[tuple[Path, Path]] = []
+    for record in index.get("records", []):
+        kind = record.get("kind")
+        if kind not in ("Chart", "Notebook", "Note", "Dataframe") or record.get("pipeline") in skipped:
+            continue
+        if kind == "Note" and not with_notes:
+            continue
+        if kind != "Note" and record.get("pipeline") in kept:
+            continue
+        location = record.get("location") or {}
+        source = location.get("resolved_path")
+        if not source or location.get("kind") != "file":
+            continue
+        slug, name = _slug(record["pipeline"]), record["ref"]["name"]
+        if kind == "Chart":
+            plan.append((Path(source), root / "cb" / "download_chart" / slug / f"{name}.html"))
+            plan.append((Path(source), root / "_static" / slug / f"{name}.html"))
+        elif kind == "Notebook":
+            plan.append((Path(source), root / "cb" / "notebooks" / slug / Path(source).name))
+        elif kind == "Note":
+            plan.append((Path(source), root / "cb" / f"{name}.md"))
+        elif enable_data_download and not is_glob_pattern(source) and not Path(source).is_dir():
+            plan.append((Path(source), root / "cb" / "download_dataframe" / slug / f"{name}.parquet"))
+    return plan
+
+
+def copy_files(plan: Iterable[tuple[Path, Path]]) -> None:
+    """Copy each file to where the plan says, making the folders on the way."""
+    for source, destination in plan:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+
+
+def ensure_notebook_titles(index: dict, docs_build_dir: Path, skip: Iterable[str] = ()) -> None:
+    """Give each copied notebook a title cell if its first cell is not a heading.
+
+    Sphinx needs a title for every document, and skips one without saying
+    so. The title is the notebook's ``name``, or its key.
+    """
+    root = Path(docs_build_dir)
+    skipped = set(skip)
+    for record in index.get("records", []):
+        if record.get("kind") != "Notebook" or record.get("pipeline") in skipped:
+            continue
+        location = record.get("location") or {}
+        if not location.get("path"):
+            continue
+        copied = root / "cb" / "notebooks" / _slug(record["pipeline"]) / Path(location["path"]).name
+        if not copied.exists():
+            continue
+        with open(copied, "r", encoding="utf-8") as file:
+            notebook = json.load(file)
+        cells = notebook.get("cells", [])
+        if cells and cells[0].get("cell_type") == "markdown":
+            if "".join(cells[0].get("source", [])).lstrip().startswith("#"):
+                continue
+        title = record.get("name", record["ref"]["name"])
+        notebook.setdefault("cells", []).insert(
+            0, {"cell_type": "markdown", "metadata": {}, "source": [f"# {title}\n"]}
+        )
+        with open(copied, "w", encoding="utf-8") as file:
+            json.dump(notebook, file, indent=1, ensure_ascii=False)
+            file.write("\n")
+
+
+def copy_theme_files(docs_src_dir: Path, docs_build_dir: Path) -> None:
+    """Copy the theme's own files to the root of the Sphinx tree, and its charts listing under ``cb/``.
+
+    Everything under the theme's ``docs_src`` but what the writer renders and
+    the generated folders (:data:`THEME_FILES_NOT_AT_ROOT`); the folder
+    structure is kept, and only file contents are copied.
+    """
+    docs_src_dir, docs_build_dir = Path(docs_src_dir), Path(docs_build_dir)
+    docs_build_dir.mkdir(parents=True, exist_ok=True)
+    for source in docs_src_dir.rglob("*"):
+        # The parts under the theme folder, not of the machine's path to it:
+        # a project in a folder named `models` still gets its theme
+        relative = source.relative_to(docs_src_dir)
+        if any(part in THEME_FILES_NOT_AT_ROOT for part in relative.parts) or not source.is_file():
+            continue
+        destination = docs_build_dir / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, destination)
+    charts = docs_src_dir / "charts.md"
+    if charts.exists():
+        (docs_build_dir / "cb").mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(charts, docs_build_dir / "cb" / "charts.md")
+
+
+def copy_site_pages(index: dict, docs_build_dir: Path) -> None:
+    """Copy a pipeline's own site pages (its `site_dir`) to the root of the Sphinx tree.
+
+    Every file under the folder, but ``index_toc.md`` at its root, which the
+    writer merges into the front page instead. A pipeline site's one
+    pipeline supplies them; the catalog theme has no front page that lists
+    them, so a catalog copies none.
+    """
+    root = Path(docs_build_dir)
+    for record in index.get("records", []):
+        if record.get("kind") != "Pipeline":
+            continue
+        folder = (record.get("site_dir") or {}).get("resolved_path")
+        if not folder:
+            continue
+        folder = Path(folder)
+        for source in folder.rglob("*"):
+            if not source.is_file():
+                continue
+            relative = source.relative_to(folder)
+            if relative.parent == Path(".") and relative.name == "index_toc.md":
+                continue
+            if relative.parent == Path(".") and relative.name == "index.md":
+                warnings.warn(
+                    f"Ignoring '{source}': a root index.md in site_dir would replace the "
+                    f"site's front page. Put what it should show in index_toc.md instead.",
+                    stacklevel=2,
+                )
+                continue
+            destination = root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, destination)
+
+
+def write_site(
+    docs_build_dir: Path,
+    base_dir: Path,
+    pipeline_theme: str = "pipeline",
+    docs_src_dir: Optional[Path] = None,
+    size_threshold: float = 50,
+    skip_pipelines: Optional[Iterable[str]] = None,
+    reuse_pipelines: Optional[Iterable[str]] = None,
+    code_times: Optional[dict] = None,
+    hash_cache=None,
+    built_index: Optional[dict] = None,
+) -> dict:
+    """Write the Sphinx tree of a site: the index first, then its pages and files.
+
+    The index is built once, before any page, so that every page is a
+    reader of it and says what it says. Then the writer renders a page for
+    every record of a pipeline this build generates — a pipeline the build
+    skips, or an incremental build keeps, has none written — plus the
+    catalog's own pages, and the files the index names are copied beside
+    them: charts, notebooks, notes, downloads, the theme's files and, in
+    the pipeline theme, the pipeline's own site pages.
+
+    :param code_times: Code-change times already known, by pipeline ID (see
+        ``manifest.apply_code_change_times``). Others are worked out here.
+    :param built_index: The index, when the caller built it already.
+    :returns: The index the site was written from.
+    """
+    from chartbook import hashing
+    from chartbook import index as index_module
+    from chartbook.manifest import apply_code_change_times, load_manifest
+    from chartbook.writers.sphinx import SphinxWriter, check_front_matter
+
+    docs_build_dir = Path(docs_build_dir)
+    docs_build_dir.mkdir(parents=True, exist_ok=True)
+    not_generated = set(skip_pipelines or ()) | set(reuse_pipelines or ())
+    docs_src_dir = Path(docs_src_dir) if docs_src_dir is not None else Path(base_dir) / "_docs_src"
+
+    manifest = load_manifest(base_dir=base_dir)
+    # Pages say when the code changed according to git, not the file system
+    apply_code_change_times(manifest, known=code_times)
+    if built_index is None:
+        cache = hash_cache if hash_cache is not None else hashing.HashCache(docs_build_dir / hashing.CACHE_FILE)
+        built_index = index_module.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines or ())
+        cache.save()
+    enable_data_download = bool(manifest["project"].get("enable_data_download", False))
+
+    writer = SphinxWriter(
+        built_index,
+        theme=pipeline_theme,
+        docs_src_dir=docs_src_dir,
+        size_threshold=size_threshold,
+        enable_data_download=enable_data_download,
+    )
+    for record in built_index["records"]:
+        kind = record.get("kind")
+        if kind not in ("Dataframe", "Chart", "Model", "Pipeline"):
+            continue
+        owner = record["id"] if kind == "Pipeline" else record.get("pipeline")
+        # A pipeline site's front page is the site's, written whatever is reused
+        site_wide = kind == "Pipeline" and pipeline_theme == "pipeline"
+        if owner in not_generated and not site_wide:
+            continue
+        page = docs_build_dir / writer.page_path(record)
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text(writer.page(record), encoding="utf-8")
+        if kind == "Chart":
+            check_front_matter(page, owner, record["ref"]["name"])
+    if pipeline_theme == "catalog":
+        for page_path in writer.catalog_page_paths():
+            page = docs_build_dir / page_path
+            page.parent.mkdir(parents=True, exist_ok=True)
+            page.write_text(writer.catalog_page(page_path), encoding="utf-8")
+
+    copy_files(
+        copy_plan(
+            built_index,
+            docs_build_dir,
+            enable_data_download,
+            skip=set(skip_pipelines or ()),
+            reused=set(reuse_pipelines or ()),
+            with_notes=pipeline_theme == "pipeline",
+        )
+    )
+    ensure_notebook_titles(built_index, docs_build_dir, skip=not_generated)
+    copy_theme_files(docs_src_dir, docs_build_dir)
+    if pipeline_theme == "pipeline":
+        copy_site_pages(built_index, docs_build_dir)
+    return built_index

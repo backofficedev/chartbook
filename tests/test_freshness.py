@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from chartbook import markdown_generator
+from chartbook import sitefiles
 from chartbook.build_docs import generate_docs, get_docs_src_path
 from chartbook.manifest import load_manifest
-from chartbook.markdown_generator import data_last_modified, freshness_fact
+from chartbook.writers.sphinx import freshness_fact
 from tests.fixtures import create_pipeline_project
 
 TIME_TAG = re.compile(
@@ -37,40 +37,14 @@ def _facts(page_text: str) -> dict:
 
 
 def _generate(project: Path, docs_build_dir: Path):
-    """Generate one pipeline's asset pages the way a build does."""
-    manifest = load_manifest(project)
-    pipeline_id = manifest["project"]["id"]
-    markdown_generator.generate_pipeline_docs(
-        pipeline_id,
-        manifest,
-        pipeline_base_dir=project,
-        docs_build_dir=docs_build_dir,
+    """Write one pipeline's pages the way a build does: from the index, by the writer."""
+    sitefiles.write_site(
+        docs_build_dir,
+        base_dir=project,
         pipeline_theme="pipeline",
         docs_src_dir=get_docs_src_path("pipeline"),
     )
-    return pipeline_id
-
-
-class TestDataLastModified:
-    def test_single_file(self, tmp_path):
-        data_file = tmp_path / "data.parquet"
-        data_file.write_text("x")
-        moment = datetime(2024, 3, 5, 12, 0, 0)
-        _set_mtime(data_file, moment)
-        assert data_last_modified(data_file) == moment
-
-    def test_partitioned_data_uses_the_newest_part(self, tmp_path):
-        older, newer = datetime(2024, 1, 1, 9, 0, 0), datetime(2024, 6, 1, 9, 0, 0)
-        for name, moment in (("a", older), ("b", newer)):
-            part = tmp_path / f"part={name}" / "data.parquet"
-            part.parent.mkdir()
-            part.write_text("x")
-            _set_mtime(part, moment)
-        assert data_last_modified(tmp_path / "**" / "*.parquet") == newer
-
-    def test_missing_data_is_unknown(self, tmp_path):
-        assert data_last_modified(tmp_path / "nope.parquet") is None
-        assert data_last_modified(tmp_path / "nope" / "*.parquet") is None
+    return load_manifest(project)["project"]["id"]
 
 
 class TestFreshnessFact:

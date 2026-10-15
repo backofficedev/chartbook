@@ -82,7 +82,7 @@ _docs_src/
 
 ### Stage 1: Markdown Generation (`_docs/`)
 
-This is the core of the build. The `build_all()` function in `markdown_generator.py` orchestrates all file copying and Markdown generation:
+This is the core of the build. `write_site()` in `sitefiles.py` builds the index first, then has the Sphinx writer (`chartbook.writers.sphinx`) render every page from the index and the files it names, and copies the files themselves into position:
 
 All generated content is namespaced under a `cb/` subdirectory, keeping it separate from your custom site pages (which are copied to the docs root) so the two can never collide. In file paths, `{pipeline_id}` is the scoped ID with `/` replaced by `--` (e.g. `acme/yield_curve` → `acme--yield_curve`) so IDs stay filesystem-safe.
 

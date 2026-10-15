@@ -3,10 +3,9 @@
 ```{note}
 A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
 vocabulary ({doc}`../guide/vocabulary`), then this inventory, then the Sphinx writer, then the
-documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's five slices
-built (2026-10-15): the dataframe, chart, model and pipeline pages and the catalog's own pages,
-each held equal to the generator's by a golden test. The generator still writes the site; the
-next step is for the build to call the writer instead.** The decisions it
+documentation site. Status: **built (2026-10-15). The writer renders every page from the index
+and the files it names, the build calls it (`sitefiles.write_site()`), and the generator is
+gone.** The decisions it
 proposes are marked *proposed* until the maintainer takes them.
 ```
 
@@ -304,6 +303,35 @@ catalog's `location` is dropped entirely from the published index, not left as a
 which a diff against an older index had called "moved". With this, every page the generator
 renders has a writer; what remains is for the build to call the writer and copy the files, and
 for the generator to go.
+
+*2026-10-15, the build calls the writer; the generator goes.* `chartbook/sitefiles.py`,
+`write_site()`, replaces the generator's `build_all()`: it builds the index first (or takes the
+one the incremental build made), then writes a page for every `Dataframe`, `Chart`, `Model` and
+`Pipeline` record of a pipeline the build generates — one the build skips, or an incremental
+build keeps, has none written, except a pipeline site's front page, which is the site's — and
+the catalog's own pages; then it copies the files the index names beside them, from the records
+rather than from the manifests: a chart's HTML to the download folder and to `_static`, a
+notebook to `cb/notebooks/`, a note to `cb/`, a dataframe's one file to the download folder when
+downloads are enabled; gives a copied notebook a title cell if it lacks one, from its record's
+`name`; copies the theme's own files and, in the pipeline theme, the pipeline's own site pages
+from `site_dir`. The page skeletons and helpers the writer had imported from the generator
+(the model page's two template strings, the freshness fact, the two number formats, the YAML
+escape, the front-matter check, the per-column date range) live in the writer now;
+`markdown_generator.py` is deleted. The golden tests keep their shape — build the site with the
+CLI, compare each page with the writer's — and now guard the plumbing: that the build writes
+every page at its path and leaves out what it should. Two behaviours changed with it, both
+proposed: a catalog copies no pipeline's site pages (the generator had copied the first
+pipeline's to the catalog's root, where no front page listed them), and the generated folders
+`cb/download_chart/<slug>/`, `_static/<slug>/` and `cb/notebooks/<slug>/` exist only when
+something is copied into them. An adversarial review of the step found a regression and two
+smaller things: an incremental rebuild had deleted a reused pipeline's notes — nothing of a reused
+pipeline was copied, and the sync removes what a build did not write, while the front page,
+written on every build, still listed them; a reused pipeline's notes are copied again now, since
+the page that lists them is. Notes are copied in the pipeline theme only, as the generator did (a
+catalog has no page that lists them, and two pipelines' notes of one name would collide at
+`cb/<name>.md`). And the theme files to leave out are matched against their path under the theme
+folder, not the machine's whole path, so a project under a folder named `models` gets its theme
+(the generator had the same fault).
 
 ## What this does not decide
 
