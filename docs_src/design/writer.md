@@ -3,7 +3,8 @@
 ```{note}
 A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
 vocabulary ({doc}`../guide/vocabulary`), then this inventory, then the Sphinx writer, then the
-documentation site. Status: **inventory done; nothing of the writer is built.** The decisions it
+documentation site. Status: **inventory done; the index additions it asks for are built (2026-10-14); nothing of the
+writer is built.** The decisions it
 proposes are marked *proposed* until the maintainer takes them.
 ```
 
@@ -50,7 +51,7 @@ index names); where the generator gets it today; and whether the index has it.
 | Section | Shows | Is | Today from | In the index |
 |---|---|---|---|---|
 | Glimpse | Row and column counts, dtypes, one sample row | counts and dtypes: fact (`row_count`, `columns`); the sample row: **file** | the parquet file | counts and columns yes; the sample is read from the file the location names |
-| Data available up to (min/max) | The first and last value of `date_col` | fact about the data | the parquet file; the engine for a table or query | **no.** Add `date_range: {first, last}` where `date_col` is set. A build diff then says the data advanced |
+| Data available up to (min/max) | For a file: the least and the greatest, over the other columns, of the last date at which that column is non-null (a staleness measure across columns); for a table or query: the first and last date | a **comparison the writer makes from the file**, for a file; a fact, for a table or query | the parquet file; the engine | the plain first and last date are now a fact, `date_range`, for both; the per-column measure the file page shows stays a rendering the writer computes from the file it names |
 | Table / query row | Source, identifier or SQL | fact | manifest | yes (location) |
 | Linked charts | Charts whose `dataframe` is this one | rendering of a comparison | manifest | yes: the charts' `inputs`; the panel's reverse map |
 | Series tables | Documented columns | fact | manifest | yes (`Series` records) |
@@ -93,18 +94,33 @@ index names); where the generator gets it today; and whether the index has it.
 
 ## What the index must gain
 
-In the order a writer needs them. Each is a fact, and each is small.
+In the order a writer needs them. Each is a fact, and each is small. *(All built 2026-10-14,
+the same day, as 6c; `tests/test_index.py`, `TestWhatTheWriterNeeds`. The diff reads what a
+file holds, not when it was written, so `modified_at` alone is not a change; a changed write-up
+reads "write-up changed", a `date_range` whose last date moved "data reaches further" or "less
+far", a pipeline's `code_changed_at` "source changed". A review found and fixed: `code_changed_at`
+was written from file times by any `build_index()` while the schema promised git — it is present
+only in an index a docs build writes; a directory's `modified_at` was the directory's own; a text
+`date_col` gave a lexical range — only temporal columns are read, in ISO 8601; the diff said
+"reaches further" whatever the direction. Known: the time is carried as an instant when freshly
+worked out, and from the incremental state's local-time string when remembered, so a state file
+reused on a machine in another zone, or a stamp in the repeated hour of a DST change, can be off.)*
 
 1. **The write-up's path and hash** on every asset record and on the `Pipeline` record (its
    README). *Decided 2026-10-14.* A build then says which text it showed, and a diff says the
    write-up changed.
 2. **`modified_at`** on every `file` location: when the file was last written, in UTC. The
    freshness lines and ABlog's dates come from it. *Proposed.*
-3. **`date_range`** on a dataframe record with a `date_col`: the first and last date in the
-   data. *Proposed.* The engine answers it for a table or a query already (the page's min and
-   max); for a file it is one scan of one column.
-4. **`code_changed_at`** on the `Pipeline` record: when the pipeline's code last changed,
-   according to git, which the pipeline page shows today. *Proposed.* It is the first field of
+3. **`date_range`** on a dataframe record with a `date_col` of a date or datetime type: the
+   first and last date in the data, in ISO 8601. *Proposed.* The engine answers it for a table
+   or a query; for a file it is one column, read from the parquet statistics. The file page's
+   per-column "available up to" rows are a different quantity, a comparison across columns,
+   which the writer computes from the file it names.
+4. **`code_changed_at`** on the `Pipeline` record: when the pipeline's code last changed, as
+   the build works it out (the last commit that touched the source where it is committed and
+   unmodified, else the newest modification time), which the pipeline page shows today.
+   *Proposed.* The index asks git for nothing itself: the build works the times out once, and
+   an incremental build remembers them for the pipelines it reuses. It is the first field of
    the `Build` record the index design leaves for later; the rest of that record (the commit
    the site was built at, the time, the tool versions) belongs with it, and the envelope's
    `generator` already carries the versions.

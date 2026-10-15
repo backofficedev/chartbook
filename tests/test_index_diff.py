@@ -87,7 +87,7 @@ class TestDiff:
         second = index.build_index(load_manifest(directory))
         found = indexdiff.diff(first, second)
         change = _changes(found)[("Dataframe", "acme/rates:rates")]
-        assert change.words == ["data changed", "declared differently: docs"]
+        assert change.words == ["data changed", "write-up changed"]
         text = indexdiff.format_diff(found)
         assert "    columns added: spread" in text and "    columns gone: r" in text
 
@@ -148,6 +148,28 @@ class TestDiff:
         assert not found.empty and set(found.envelope) == {"root", "schema"}
         text = indexdiff.format_diff(found)
         assert text.startswith("The root differs: ") and "different layouts" in text
+
+    def test_when_a_file_was_written_is_not_a_change(self, before):
+        """The diff reads what a file holds, not when: a touch is nothing."""
+        import os
+        import time
+
+        directory, first = before
+        parquet = directory / "_data" / "rates.parquet"
+        later = time.time() + 120
+        os.utime(parquet, (later, later))
+        second = index.build_index(load_manifest(directory))
+        rates_before = next(r for r in first["records"] if r["id"] == "acme/rates:rates")
+        rates_after = next(r for r in second["records"] if r["id"] == "acme/rates:rates")
+        assert rates_after["location"]["modified_at"] != rates_before["location"]["modified_at"]
+        assert indexdiff.diff(first, second).empty
+
+    def test_a_date_range_says_which_way_it_moved(self):
+        further = indexdiff.Change("Dataframe", "d", {"date_range": ({"first": "2000-01-01", "last": "2020-12-31"}, {"first": "2000-01-01", "last": "2024-12-31"})})
+        less = indexdiff.Change("Dataframe", "d", {"date_range": ({"first": "2000-01-01", "last": "2024-12-31"}, {"first": "2010-01-01", "last": "2020-12-31"})})
+        moved = indexdiff.Change("Dataframe", "d", {"date_range": ({"first": "2000-01-01", "last": "2024-12-31"}, {"first": "2001-01-01", "last": "2024-12-31"})})
+        assert further.words == ["data reaches further"] and less.words == ["data reaches less far"] and moved.words == ["date range moved"]
+        assert indexdiff.Change("Pipeline", "p", {"code_changed_at": ("a", "b")}).words == ["source changed"]
 
     def test_to_dict_is_json(self, before):
         directory, first = before

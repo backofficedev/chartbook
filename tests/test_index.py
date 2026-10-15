@@ -109,7 +109,7 @@ class TestPipelineRecord:
         (record,) = _of_kind(_build(project), "Pipeline")
         assert record["id"] == "notes_pipeline"
         assert record["location"] == {"kind": "path", "value": project.as_posix()}
-        assert record["docs"] == {"path": "./README.md"}
+        assert record["docs"]["path"] == "./README.md" and record["docs"]["content_hash"].startswith("sha256:")
         assert record["assets"] == [
             "notes_pipeline:dataframe_0",
             "notes_pipeline:chart/chart_0_0",
@@ -144,11 +144,13 @@ class TestAssetRecords:
         }
         assert record["pipeline"] == "notes_pipeline"
         assert record["name"] == "Dataframe 0"
-        assert record["location"] == {
+        assert {k: v for k, v in record["location"].items() if k != "modified_at"} == {
             "kind": "file",
             "path": "_data/notes_pipeline/dataframe_0.parquet",
             "resolved_path": str(parquet),
         }
+        # When the file was last written, in UTC, for the freshness line and the chart listing
+        assert record["location"]["modified_at"].endswith("Z") and len(record["location"]["modified_at"]) == 20
         assert record["content_hash"] == hashing.hash_file(parquet).content_hash
         assert record["size_bytes"] == parquet.stat().st_size
         assert record["row_count"] == 10
@@ -159,7 +161,8 @@ class TestAssetRecords:
             {"name": "amount", "dtype": "float64"},
         ]
         assert record["date_col"] == "date"
-        assert record["docs"] == {"path": "docs_src/dataframes/dataframe_0.md"}
+        assert record["docs"]["path"] == "docs_src/dataframes/dataframe_0.md"
+        assert record["docs"]["content_hash"].startswith("sha256:")
 
     def test_chart_names_its_dataframe_as_an_input(self, project):
         record = _by_id(_build(project), "notes_pipeline:chart/chart_0_0")
@@ -174,7 +177,8 @@ class TestAssetRecords:
         record = _by_id(_build(project), "notes_pipeline:note/note1")
         assert record["kind"] == "Note"
         assert record["location"]["path"] == "docs_src/note1.md"
-        assert record["docs"] == {"path": "docs_src/note1.md"}
+        assert record["docs"]["path"] == "docs_src/note1.md"
+        assert record["docs"]["content_hash"] == hashing.hash_file(project / "docs_src" / "note1.md").content_hash
         assert record["content_hash"].startswith("sha256:")
 
     def test_notebook(self, project):
@@ -189,7 +193,7 @@ class TestAssetRecords:
     def test_inline_docs_are_carried_as_text(self, tmp_path):
         project = create_pipeline_project(tmp_path / "inline", use_inline_docs=True)
         (record,) = _of_kind(_build(project), "Dataframe")
-        assert set(record["docs"]) == {"text"}
+        assert set(record["docs"]) == {"text", "content_hash"}  # the text, and the hash that names this version of it
 
     def test_declared_metadata_is_carried_as_it_is(self, project):
         def edit(config):
@@ -592,7 +596,8 @@ class TestPublished:
         full = _by_id(built, "notes_pipeline:dataframe_0")
         shown = _by_id(public, "notes_pipeline:dataframe_0")
         assert "resolved_path" in full["location"]
-        assert shown["location"] == {"kind": "file", "path": full["location"]["path"]}
+        assert {k: v for k, v in shown["location"].items() if k != "modified_at"} == {"kind": "file", "path": full["location"]["path"]}
+        assert shown["location"]["modified_at"] == full["location"]["modified_at"]  # a time is not a local path
         assert {k: v for k, v in shown.items() if k != "location"} == (
             {k: v for k, v in full.items() if k != "location"}
         )
@@ -783,3 +788,79 @@ class TestBuildWritesTheIndex:
             "pipeline_a",
             "pipeline_b",
         ]
+
+
+class TestWhatTheWriterNeeds:
+    """The facts the page inventory found missing (design/writer.md), each a field."""
+
+    def test_a_dated_dataframe_says_how_far_its_data_reaches(self, tmp_path):
+        import datetime
+
+        import polars as pl
+        import tomli_w
+
+        directory = tmp_path.resolve() / "p"
+        (directory / "_data").mkdir(parents=True)
+        (directory / "README.md").write_text("# P\n")
+        (directory / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d", "date_col": "Date"}}})
+        )
+        pl.DataFrame({"Date": [datetime.date(2024, 1, 3), datetime.date(2024, 1, 1), datetime.date(2024, 1, 2)], "x": [1.0, 2.0, 3.0]}).write_parquet(
+            directory / "_data" / "d.parquet"
+        )
+        built = index.build_index(load_manifest(directory))
+        record = _by_id(built, "acme/p:d")
+        assert record["date_range"] == {"first": "2024-01-01", "last": "2024-01-03"}
+        _validate(built)
+        # A text column that holds dates is not read: its least text is not its first date
+        pl.DataFrame({"Date": ["01/03/2024", "12/31/2023"], "x": [1.0, 2.0]}).write_parquet(directory / "_data" / "d.parquet")
+        assert "date_range" not in _by_id(index.build_index(load_manifest(directory)), "acme/p:d")
+        # A datetime column is ISO 8601 too
+        pl.DataFrame({"Date": [datetime.datetime(2024, 1, 3, 9, 30), datetime.datetime(2024, 1, 1)], "x": [1.0, 2.0]}).write_parquet(directory / "_data" / "d.parquet")
+        assert _by_id(index.build_index(load_manifest(directory)), "acme/p:d")["date_range"] == {"first": "2024-01-01T00:00:00", "last": "2024-01-03T09:30:00"}
+        # No date_col, no range
+        (directory / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d"}}})
+        )
+        assert "date_range" not in _by_id(index.build_index(load_manifest(directory)), "acme/p:d")
+
+    def test_a_directory_is_as_new_as_its_newest_file(self, tmp_path):
+        """Found by a reviewer: a directory's own time moves only when an entry is added."""
+        import os
+        import time
+
+        directory = tmp_path / "model"
+        directory.mkdir()
+        (directory / "weights.bin").write_bytes(b"w")
+        old = time.time() - 10 * 86400
+        os.utime(directory / "weights.bin", (old, old))
+        os.utime(directory, (old, old))
+        before = index._modified_at(str(directory))
+        (directory / "weights.bin").write_bytes(b"ww")  # rewritten in place
+        os.utime(directory, (old, old))
+        assert index._modified_at(str(directory)) > before
+
+    def test_code_changed_at_is_a_docs_builds_fact_only(self, project):
+        """Found by a reviewer: a file's modification time was passed off as the code's history."""
+        from chartbook.manifest import apply_code_change_times
+
+        manifest = load_manifest(project)
+        (bare,) = _of_kind(index.build_index(manifest), "Pipeline")
+        assert "code_changed_at" not in bare
+        apply_code_change_times(manifest)
+        (dated,) = _of_kind(index.build_index(manifest), "Pipeline")
+        assert dated["code_changed_at"].endswith("Z") and "T" in dated["code_changed_at"]
+
+    def test_the_policy_is_on_the_catalog_record(self, tmp_path):
+        import tomli_w
+
+        from tests.fixtures import create_catalog_project
+
+        catalog = create_catalog_project(tmp_path / "cat")
+        config = catalog / "chartbook.toml"
+        text = config.read_text()
+        if "[policy" not in text:
+            config.write_text(text + "\n[policy]\nmode = \"warn\"\n[policy.required]\ndataframes = [\"name\"]\n")
+        built = index.build_index(load_manifest(catalog))
+        (record,) = _of_kind(built, "Catalog")
+        assert record["policy"]["required"]["dataframes"] == ["name"]

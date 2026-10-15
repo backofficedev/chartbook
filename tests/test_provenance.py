@@ -200,6 +200,8 @@ class TestIncrementalBuildsKeepThePanelsCurrent:
         first = runner.invoke(main, ["docs", "./docs", "-f", "--incremental"])
         assert first.exit_code == 0, first.output
         assert len(builds) == 1  # the index is built once per build, and handed to the pages
+        pipelines = {r["id"]: r for r in json.loads((catalog / "_docs" / "index.json").read_text())["records"] if r["kind"] == "Pipeline"}
+        assert all(p["code_changed_at"].endswith("Z") for p in pipelines.values())  # a docs build dates the code
         index_1 = json.loads((catalog / "_docs" / "index.json").read_text())
         hash_1 = next(r for r in index_1["records"] if r["id"] == "acme/pipeline_b:dataframe_0")["content_hash"]
         # The model page, built for real, carries the panel from the index, in the catalog theme

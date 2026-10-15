@@ -327,7 +327,7 @@ class TestModelRecord:
             "name": "forecaster",
         }
         assert record["name"] == "Rate Forecaster"
-        assert record["location"] == {
+        assert {k: v for k, v in record["location"].items() if k != "modified_at"} == {
             "kind": "file",
             "path": "./_models/forecaster.json",
             "resolved_path": str(model_file),
@@ -337,7 +337,8 @@ class TestModelRecord:
         assert record["inputs"] == ["test_pipeline:dataframe_0"]
         assert record["metrics"] == METRICS
         assert record["tags"] == ["Forecast"]
-        assert record["docs"] == {"path": "docs_src/models/forecaster.md"}
+        assert record["docs"]["path"] == "docs_src/models/forecaster.md"
+        assert record["docs"]["content_hash"].startswith("sha256:")
         assert "files" not in record
         self._validate(record)
 
