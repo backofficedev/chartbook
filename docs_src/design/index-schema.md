@@ -272,6 +272,12 @@ An index for a single pipeline omits the `Catalog` record and sets `root` to tha
 local directory or a fetched revision — the field that keeps "was this built against a stable
 upstream?" answerable.
 
+*(2026-10-15, built: a pipeline that supplies pages for its own site — `[project] site_dir`, or
+`docs_src/site/` when that exists — has `site_dir` (`path` relative to its root, and
+`resolved_path` until published) and `site_pages`, every Markdown file under it by relative path,
+sorted. The build copies them beside the generated pages; a writer lists them in the front page's
+table of contents and reads `index_toc.md` if it is one of them. Without hashes for now.)*
+
 *(Added 2026-10-12 with the implementation; proposed.)* The example above shows a `git`
 dependency. One that is a directory is written like this:
 

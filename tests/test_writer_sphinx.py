@@ -26,10 +26,13 @@ _PAGES = {
     "Dataframe": ("dataframe_page_path", "dataframe_page"),
     "Chart": ("chart_page_path", "chart_page"),
     "Model": ("model_page_path", "model_page"),
+    "Pipeline": ("pipeline_page_path", "pipeline_page"),
 }
 
+KINDS = ("Dataframe", "Chart", "Model", "Pipeline")
 
-def _same_pages(writer: SphinxWriter, index: dict, build_dir: Path, kinds=("Dataframe", "Chart", "Model")) -> None:
+
+def _same_pages(writer: SphinxWriter, index: dict, build_dir: Path, kinds=KINDS) -> None:
     """Every page of the given kinds the generator wrote, the writer writes the same."""
     seen = 0
     for record in [r for r in index["records"] if r["kind"] in kinds]:
@@ -38,6 +41,82 @@ def _same_pages(writer: SphinxWriter, index: dict, build_dir: Path, kinds=("Data
         assert getattr(writer, page_of)(record["id"]) == generated, record["id"]
         seen += 1
     assert seen, f"no {kinds} pages to compare"
+
+
+class TestThePipelinePage:
+    def test_the_front_page_of_a_pipeline_site(self, pipeline_project, monkeypatch):
+        index = _built(pipeline_project, monkeypatch)
+        (pipeline,) = [r for r in index["records"] if r["kind"] == "Pipeline"]
+        assert "site_dir" not in pipeline and "site_pages" not in pipeline
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=pipeline_project / "_docs_src")
+        _same_pages(writer, index, pipeline_project / "_docs", kinds=("Pipeline",))
+        page = writer.pipeline_page(pipeline["id"])
+        assert page.startswith(f"# {pipeline['name']}\n") and "## Pipeline Specs" in page
+        assert "cb/dataframes/test_pipeline/dataframe_0.md" in page and "Code updated" in page
+
+    def test_the_pipelines_own_site_pages_are_a_fact_in_the_index(self, pipeline_project_with_site_dir, monkeypatch):
+        from chartbook import index as index_module
+
+        project = pipeline_project_with_site_dir.resolve()
+        index = _built(project, monkeypatch)
+        (pipeline,) = [r for r in index["records"] if r["kind"] == "Pipeline"]
+        assert pipeline["site_dir"]["path"] == "docs_src/site"
+        assert pipeline["site_dir"]["resolved_path"] == (project / "docs_src" / "site").as_posix()
+        assert "index_toc.md" in pipeline["site_pages"] and "sample_page.md" in pipeline["site_pages"]
+        (public,) = [r for r in index_module.published(index)["records"] if r["kind"] == "Pipeline"]
+        assert "resolved_path" not in public["site_dir"] and public["site_pages"] == pipeline["site_pages"]
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=project / "_docs_src")
+        _same_pages(writer, index, project / "_docs", kinds=("Pipeline",))
+        page = writer.pipeline_page(pipeline["id"])
+        assert ":caption: Site Pages\nsample_page.md" in page  # index_toc.md, merged in
+
+    def test_site_pages_are_ordered_as_text_and_are_files(self, pipeline_project, monkeypatch):
+        """Found by a reviewer: the generator sorted Path objects (`guide/intro.md` before
+        `guide.md`) and listed a directory named `dir.md`; the index sorts the paths as text and
+        lists files. The generator does the same now. Also found: the writer split the README
+        with splitlines(), which breaks on a form feed; readlines() on both sides."""
+        from chartbook import indexdiff
+
+        project = pipeline_project.resolve()
+        site = project / "docs_src" / "site"
+        (site / "guide").mkdir(parents=True)
+        (site / "dir.md").mkdir()
+        (site / "guide.md").write_text("# Guide\n")
+        (site / "guide" / "intro.md").write_text("# Intro\n")
+        (site / "a-x.md").write_text("# A-X\n")
+        (site / "a").mkdir()
+        (site / "a" / "b.md").write_text("# B\n")
+        readme = project / "README.md"
+        readme.write_text("# Title \x0c subtitle\n\nBody with a form feed \x0c inside.\n")
+        index = _built(project, monkeypatch)
+        (pipeline,) = [r for r in index["records"] if r["kind"] == "Pipeline"]
+        assert pipeline["site_pages"] == ["a-x.md", "a/b.md", "guide.md", "guide/intro.md"]
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=project / "_docs_src")
+        _same_pages(writer, index, project / "_docs", kinds=("Pipeline",))
+        page = writer.pipeline_page(pipeline["id"])
+        assert "a-x.md\na/b.md\nguide.md\nguide/intro.md" in page and "Body with a form feed \x0c inside." in page
+        assert indexdiff.Change("Pipeline", "p", {"site_pages": ([], ["a.md"])}).words == ["site pages changed"]
+
+    def test_notebooks_and_notes_are_listed_by_name(self, pipeline_project_with_notes, monkeypatch):
+        """Decided with the slice: by name on both sides, as the index lists them, so a
+        reordered chartbook.toml does not reorder the front page."""
+        project = pipeline_project_with_notes.resolve()
+        index = _built(project, monkeypatch)
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=project / "_docs_src")
+        _same_pages(writer, index, project / "_docs", kinds=("Pipeline",))
+        page = writer.pipeline_page("notes_pipeline")
+        assert ":caption: Notes 📝\n" in page
+        notes = sorted(r for r in index["records"] if r["kind"] == "Note")
+        assert notes and all(f"cb/{r['ref']['name']}.md" in page for r in notes)
+
+    def test_a_catalogs_readme_page_per_pipeline(self, catalog_project, monkeypatch):
+        index = _built(catalog_project, monkeypatch)
+        writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog_project / "_docs_src")
+        _same_pages(writer, index, catalog_project / "_docs")
+        pipelines = [r for r in index["records"] if r["kind"] == "Pipeline"]
+        assert len(pipelines) > 1
+        page = writer.pipeline_page(pipelines[0]["id"])
+        assert page.startswith(f"# `{pipelines[0]['id']}` {pipelines[0]['name']} \n") and "Pipeline GitHub Repo" in page
 
 
 class TestTheModelPage:

@@ -1,12 +1,12 @@
 """The Sphinx writer: pages for Sphinx, from the index and the files it names.
 
-The slices so far are the dataframe page and the chart page. Each renders
-today's templates with a context built from the asset's record, its
-pipeline's record, the records of its inputs and the files the records
-name, and writes the same page the generator writes, which a golden test
-holds it to. The pipeline, dataframe and chart "manifests" the templates
-read are made here from the records; the templates are unchanged until the
-generator is gone, so that the two can be compared.
+The slices so far are the dataframe, chart, model and pipeline pages. Each
+renders today's templates with a context built from the record, its
+pipeline's record, the records of its inputs or assets and the files the
+records name, and writes the same page the generator writes, which a
+golden test holds it to. The "manifests" the templates read are made here
+from the records; the templates are unchanged until the generator is gone,
+so that the two can be compared.
 """
 
 from __future__ import annotations
@@ -109,12 +109,19 @@ class SphinxWriter:
         return f"{up}pipelines/{_slug(record['pipeline'])}_README.md"
 
     def page_path(self, record: dict) -> str:
-        """Where an asset's page is, under the pages folder."""
+        """Where a record's page is, under the pages folder."""
         return {
             "Dataframe": self.dataframe_page_path,
             "Chart": self.chart_page_path,
             "Model": self.model_page_path,
+            "Pipeline": self.pipeline_page_path,
         }[record["kind"]](record)
+
+    def pipeline_page_path(self, record: dict) -> str:
+        """Where a pipeline's page is: the site's front page in the pipeline theme, a README page in a catalog."""
+        if self.theme == "pipeline":
+            return "index.md"
+        return f"cb/pipelines/{_slug(record['id'])}_README.md"
 
     def dataframe_page_path(self, record: dict) -> str:
         """Where a dataframe's page is, under the pages folder."""
@@ -288,6 +295,67 @@ class SphinxWriter:
             ],
             freshness=[fact for fact in [_freshness("Model updated", location.get("modified_at"))] if fact],
         )
+
+    def pipeline_page(self, pipeline_id: str) -> str:
+        """The Markdown page of one pipeline, from its record, its assets' records and the files they name.
+
+        In the pipeline theme this is the site's front page: the README's
+        text under the theme's `index.md`, with the tables of contents made
+        from the records (notebooks, notes, dataframes, models, by name) and
+        from the pipeline's own site pages (`site_pages`; `index_toc.md`
+        among them is read and merged in). In a catalog it is the pipeline's
+        README page, with its repository and site named above the text.
+        """
+        pipeline = self.records[pipeline_id]
+        base_dir = Path(pipeline["location"]["value"])
+        readme = self._readme_lines(pipeline, base_dir)
+        if self.theme == "catalog":
+            repo_url, site_url = pipeline.get("repo_url", ""), pipeline.get("site_url", "")
+            return f"# `{pipeline_id}` {pipeline.get('name', '')} \n\n " + (
+                f'Pipeline GitHub Repo <a href="{repo_url}">{repo_url}.</a>\n\n\n'
+                + f'Pipeline Web Page <a href="{site_url}">{site_url}.</a>\n\n\n'
+                + "".join(readme[2:])
+            )
+        environment = self._environment(base_dir)
+        own = [self.records[i] for i in pipeline.get("assets", []) if i in self.records]
+        notebooks = sorted((r for r in own if r["kind"] == "Notebook"), key=_local_name)
+        notes = sorted((r for r in own if r["kind"] == "Note"), key=_local_name)
+        slug = _slug(pipeline_id)
+        site_pages = pipeline.get("site_pages") or []
+        index_toc_content = ""
+        if "index_toc.md" in site_pages and (pipeline.get("site_dir") or {}).get("resolved_path"):
+            index_toc_content = (Path(pipeline["site_dir"]["resolved_path"]) / "index_toc.md").read_text()
+        template = environment.get_template("index.md")
+        return template.render(
+            pipeline_manifest=self._pipeline_manifest(pipeline),
+            dataframe_file_list=[self.dataframe_page_path(r) for r in self.records.values() if r["kind"] == "Dataframe"],
+            model_file_list=[self.model_page_path(r) for r in self.records.values() if r["kind"] == "Model"],
+            readme_text="".join(readme[2:]),
+            pipeline_page_link="./index.md",
+            dot_or_dotdot="cb",
+            pipeline_id=pipeline_id,
+            notebook_list=[
+                f"{r.get('name', _local_name(r))} <cb/notebooks/{slug}/{Path((r.get('location') or {}).get('path', '')).stem}>"
+                for r in notebooks
+            ],
+            notes_list=[f"cb/{_local_name(r)}.md" for r in notes],
+            # The theme's front page lists the pipeline's own pages, but not
+            # the two it merges or replaces at the root
+            site_pages_list=[p for p in site_pages if "/" in p or p not in ("index_toc.md", "index.md")],
+            index_toc_content=index_toc_content,
+            show_code_updated=True,
+            freshness=[fact for fact in [_freshness("Code updated", pipeline.get("code_changed_at"))] if fact],
+        )
+
+    def _readme_lines(self, pipeline: dict, base_dir: Path) -> list:
+        """The pipeline's README, line by line, from the file its record names."""
+        docs = pipeline.get("docs") or {}
+        if not docs.get("path"):
+            return []
+        # readlines(), not splitlines(): a form feed or a NEL inside a line
+        # is not a line break to the page
+        with open(base_dir / docs["path"], encoding="utf-8") as file:
+            return file.readlines()
 
     def _model_manifest(self, record: dict) -> dict:
         """The model as the templates read it: its declared fields and its path."""

@@ -183,6 +183,29 @@
     "site_url": {
       "type": "string",
       "description": "Where the pipeline's own site is published, as the manifest declares it. Absent from a published index when it is a local file:// path."
+    },
+    "site_dir": {
+      "type": "object",
+      "description": "The folder of pages the pipeline supplies for its own site: `[project] site_dir`, or `docs_src/site/` when that exists. Absent when it supplies none.",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Relative to the pipeline's root."
+        },
+        "resolved_path": {
+          "type": "string",
+          "description": "Absolute path on the machine that built the index. Absent from a published index."
+        }
+      }
+    },
+    "site_pages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Every Markdown file under `site_dir`, by path relative to it, sorted. The build copies them beside the generated pages; `index_toc.md` at the root, if present, is merged into the front page instead."
     }
   },
   "additionalProperties": true
