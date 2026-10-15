@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a table or query is pinned, and read across pipelines
+
+`chartbook snapshot` writes a dataframe that is a table or a query in a DuckDB file out as a parquet file into the store, under the dataframe's name. Its record keeps the source's location and carries the parquet's hash, so `chartbook pin` pins it, `data.load("rates:curve")` and `data.path()` read the pinned copy by name, a model trained on it records its hash and goes out of date when the table moves. A query's rows are written sorted on every column, so the same rows give the same bytes whatever order the engine found them in. A table the machine cannot write out (one in `:memory:`, one the engine cannot read, one with a column Polars cannot import) is recorded as not built, and the snapshot says why; A folder has no table to take, so `update --from-folder` keeps such pins from the snapshot, and a fresh `pin --from-folder` lists them as not built and says that a snapshot writes them out. The file is read on one thread, so that a floating-point aggregate gives the same bytes run after run; a query the author ordered keeps that order in the pinned copy, and only an unordered one is sorted. A reference to a table that was pinned before it was written out says what to do.
+
 ### Documentation — the site, in the vocabulary, with diagrams
 
 The front page now says what ChartBook is in the words of the vocabulary page, with two diagrams: the chain *repository → index → pages → site*, and the four documents and what each records. {doc}`guide/how-the-build-works` is rewritten around the three steps the build actually takes (resolve the index, write the pages, build the site) and what the index holds; it had still described the generator and said nothing read the index. A new page, {doc}`guide/depending-on-pipelines`, gathers snapshots, pins, the lockfile, `chartbook run`, the frozen check for CI and model versions in one place, with a diagram, where they had been two sections of the pipeline guide. Getting Started ends by pointing at the index the build wrote.

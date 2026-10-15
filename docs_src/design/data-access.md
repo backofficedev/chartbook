@@ -122,7 +122,8 @@ another kind (`chart/gdp`, `model/x`) is refused, and a `{ref}` inside `sql()` m
 dataframe. Cross-pipeline references need the resolution chain (step 3 in {doc}`overview`); the
 first implementation of this design is local-only. *(As built: the chain existed first, so a
 cross-pipeline file dataframe works in `sql()` and `ref()`, as the pinned copy. A table or
-query of another pipeline is not pinned and cannot be read across pipelines.)*
+query of another pipeline was not pinned at first; since 2026-10-15 a snapshot writes a table or
+query in a DuckDB file out as parquet into the store, so it is pinned and read like a file.)*
 
 Because `sql()` puts dataframes' columns into SQL that the user writes, column names should be
 SQL-compatible: letters, digits and underscores, starting with a letter. ChartBook recommends

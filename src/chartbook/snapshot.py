@@ -296,6 +296,169 @@ def asset_record(
     return record
 
 
+def source_record(ref: AssetRef, pipeline: str, entry: dict, source: Optional[dict], content) -> dict:
+    """A dataframe that is a table or a query in a source, as a snapshot records it.
+
+    Its ``location`` is the source's, as the index writes it: the kind, the
+    source's name and backend, the manifest's public url, and the table's
+    name or the query's text. With *content*, the hash of the parquet file
+    the table was written out to, which is what a pin copies.
+    """
+    location: dict = {
+        "kind": "table" if entry.get("table") else "query",
+        "source": entry.get("source"),
+        "backend": (source or {}).get("backend"),
+    }
+    if source is not None:
+        location["url"] = source.get("url")
+    if entry.get("table"):
+        location["identifier"] = entry["table"]
+    else:
+        location["sql"] = entry["query"]
+    record = {
+        "kind": record_kind(ref.kind),
+        "version": RECORD_VERSION,
+        "id": str(ref),
+        "ref": ref.to_dict(),
+        "pipeline": pipeline,
+        "location": location,
+    }
+    if content is not None:
+        record["content_hash"] = content.content_hash
+        record["size_bytes"] = content.size_bytes
+    return record
+
+
+def _has_order_by(connection, sql: str) -> Optional[bool]:
+    """Whether a query's outermost statement has its own ORDER BY.
+
+    Asked of the engine's parser. None for a query the parser refuses: it
+    is then run as the author wrote it, so that the engine's error names
+    the author's text and not a wrapper around it.
+    """
+    import json
+
+    try:
+        (serialized,) = connection.execute("select json_serialize_sql(?)", [sql]).fetchone()
+        statements = json.loads(serialized).get("statements") or []
+    except Exception:  # noqa: BLE001 - not SQL the engine can parse; the scan says so
+        return None
+    if not statements:
+        return None
+    modifiers = (statements[0].get("node") or {}).get("modifiers") or []
+    return any(modifier.get("type") == "ORDER_MODIFIER" for modifier in modifiers)
+
+
+def materialized_name(record: dict) -> str:
+    """The file a table or query is written out as, inside its store object: ``<name>.parquet``."""
+    return f"{record['ref']['name']}.parquet"
+
+
+def materialize_in_source(
+    directory: Path, pipeline: str, raw: dict, store: Store
+) -> list[tuple[AssetRef, dict, Optional[str]]]:
+    """Write each table or query dataframe out as parquet, into the store.
+
+    A table in a DuckDB file is what the pipeline made, as much as a parquet
+    file is; a snapshot holds files, so the table is written out as one.
+    The record's location stays the source's, and its ``content_hash`` is
+    the parquet's. A table in ``:memory:``, one the engine cannot read, or
+    one with a column Polars cannot import, is recorded without a hash,
+    with the reason, as an asset that is not built is. The file is read on
+    one thread, and a query that has no ORDER BY of its own is written
+    sorted on every column, so that the same rows give the same bytes
+    whatever order the engine found them in; a query the author ordered
+    keeps that order.
+
+    :returns: For each such dataframe, in name order: its local reference,
+        its record, and why it was not written out, or None.
+    """
+    import tempfile
+
+    import duckdb
+    import polars as pl
+
+    from chartbook.backends import MEMORY_URL, DuckDBBackend, duckdb_path
+    from chartbook.manifest import validate_sources
+    from chartbook.resolve import QueryLocation, TableLocation
+
+    entries = raw.get("dataframes") or {}
+    in_source = {
+        name: entry
+        for name, entry in entries.items()
+        if isinstance(entry, dict) and (entry.get("table") or entry.get("query"))
+    }
+    if not in_source:
+        return []
+    try:
+        sources = validate_sources(raw.get("sources"), directory)
+    except ValueError as error:
+        raise SnapshotError(f"{pipeline}: {error}") from None
+    found = []
+    for name in sorted(in_source):
+        entry = in_source[name]
+        try:
+            local = AssetRef(kind="dataframe", name=name)
+        except ValueError:
+            continue  # a key that is not an address has no reference
+        ref = local.in_pipeline(pipeline)
+        source = sources.get(entry.get("source"))
+        what = f"table {entry['table']}" if entry.get("table") else "query"
+        where = f"{what} in source {entry.get('source')!r}"
+        if source is None:
+            found.append((local, source_record(ref, pipeline, entry, None, None), f"{where}: no such source"))
+            continue
+        url = source["_resolved_url"]
+        if url == MEMORY_URL:  # the only backend that is built is DuckDB
+            found.append((local, source_record(ref, pipeline, entry, source, None),
+                          f"{where}: only a table in a DuckDB file is written out as parquet"))
+            continue
+        if not Path(duckdb_path(url, directory)).is_file():
+            found.append((local, source_record(ref, pipeline, entry, source, None),
+                          f"{where}: the DuckDB file is not there"))
+            continue
+        with tempfile.TemporaryDirectory() as scratch:
+            out = Path(scratch) / f"{name}.parquet"
+            try:
+                # The file is read on one thread: a parallel aggregate of
+                # floats is not bit-stable from run to run, and a hash that is
+                # to say "unchanged" must be
+                connection = duckdb.connect(duckdb_path(url, directory), read_only=True)
+                connection.sql("set threads = 1")
+                backend = DuckDBBackend(url, connection=connection)
+                if entry.get("table"):
+                    # A scan of a table comes out in insertion order, every time
+                    typed = TableLocation(entry["source"], "duckdb", url, entry["table"])
+                elif _has_order_by(connection, entry["query"]) in (True, None):
+                    # The author chose the order, and it is the pinned copy's
+                    # too; or the parser refused the text, and the scan is to
+                    # say so about the author's own SQL
+                    typed = QueryLocation(entry["source"], "duckdb", url, entry["query"])
+                else:
+                    # An unordered query's rows come out in whatever order the
+                    # engine found them, and the file's hash must not depend on
+                    # that: sorted on every column, the same rows give the same bytes
+                    typed = QueryLocation(entry["source"], "duckdb", url, f"select * from ({entry['query']}) as q order by all")
+                # A table streams; a query the engine must sort is sorted there first
+                backend.scan(typed).sink_parquet(out)
+            except (Exception, pl.exceptions.PanicException) as error:  # noqa: BLE001
+                # The engine's own error, whatever it is; and Polars panics,
+                # which are not Exceptions, for a type it cannot import
+                # (an INTERVAL column). One such table must not stop the snapshot
+                found.append((local, source_record(ref, pipeline, entry, source, None),
+                              f"{where}: could not be read: {error}"))
+                continue
+            finally:
+                try:
+                    connection.close()
+                except Exception:  # noqa: BLE001 - never opened, or closed already
+                    pass
+            # A copy, never a link: the file is about to be deleted with its folder
+            stored = store.put(out, links=("reflink", "copy"))
+        found.append((local, source_record(ref, pipeline, entry, source, stored), None))
+    return found
+
+
 def renamed(record: dict, pipeline: str) -> dict:
     """An asset's record under another name for its pipeline.
 
@@ -1207,6 +1370,14 @@ def make(
                 # after the metrics file has been written over
                 record["metrics"] = scores
         assets[str(local)] = record
+
+    # A dataframe that is a table or a query in a DuckDB file has no file of
+    # its own: it is written out as parquet into the store, so that a pin
+    # copies it like any file and another pipeline reads it by name
+    for local, record, reason in materialize_in_source(directory, pipeline, raw, store):
+        assets[str(local)] = record
+        if reason is not None:
+            not_built.append((record["id"], reason))
 
     # What each model was trained on: the hashes staleness is later judged
     # against. A version keeps the inputs it was first made with, so a later

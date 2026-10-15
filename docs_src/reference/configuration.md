@@ -295,7 +295,7 @@ Exactly one of `path`, `table` and `query`. A dataframe in a source has no file,
 **What it does not do.**
 
 - **Only DuckDB.** Snowflake, Databricks and Postgres are not built. A manifest that names one is refused.
-- **A table is not pinned.** A snapshot holds files, so a table or query of another pipeline cannot be read across pipelines yet; a reference to one says so. `data.sql()` and `data.ref()` take another pipeline's *file* dataframes, as pinned.
+- **A table is pinned as parquet.** A snapshot holds files, so `chartbook snapshot` writes a table or query in a DuckDB file out as a parquet file into the store, and another pipeline reads that copy by name, as it reads any pinned dataframe. A query's rows are written sorted on every column, so that the same rows give the same bytes. A table in `:memory:`, or one that cannot be read, is recorded as not built, and the snapshot says why.
 - **One source per query.** `data.sql()` runs in one engine: the source its tables and queries are in, with any files it names read alongside. A query that names two sources is refused.
 - A catalog has no `[sources]`.
 

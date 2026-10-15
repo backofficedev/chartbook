@@ -567,9 +567,9 @@ class TestIndexAndSite:
 
 
 class TestNotPinnedAcrossPipelines:
-    def test_a_table_of_another_pipeline_is_not_in_a_snapshot(self, pipeline, tmp_path):
-        """A snapshot holds files. A table has none, so it is not pinned, and
-        a reference to it from another pipeline says so."""
+    def test_a_table_pinned_from_a_folder_is_not_there_and_says_what_writes_it_out(self, pipeline, tmp_path):
+        """`pin --from-folder` takes files as they are in the folder, and a table has none;
+        a snapshot writes it out as parquet, and a reference to it says so."""
         from chartbook import lock
         from chartbook.errors import AssetNotPinnedError
         from chartbook.resolve import FileLocation, declared_files
@@ -581,9 +581,9 @@ class TestNotPinnedAcrossPipelines:
         )
         lock.pin(downstream, from_folder=True)
         assert isinstance(resolve("rates:rates", start_dirs=[downstream]), FileLocation)
-        with pytest.raises(AssetNotPinnedError, match="is a table in a source of the pipeline 'rates'.*cannot be read across pipelines yet") as e:
+        with pytest.raises(AssetNotPinnedError, match="is a table in a source of the pipeline 'rates' and has no pinned copy: a pin from a folder takes no table") as e:
             resolve("rates:curve", start_dirs=[downstream])
-        assert e.value.reason == "in_source"
+        assert e.value.reason == "not_built"
         with pytest.raises(AssetNotPinnedError, match="is a query in a source"):
             resolve("rates:slopes", start_dirs=[downstream])
         with pytest.raises(AssetNotPinnedError, match="had no dataframe named 'nope'"):
