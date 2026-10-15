@@ -12,11 +12,12 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 ## Guides
 
-- [Documenting a Pipeline](docs_src/guide/documenting-a-pipeline.md): Describe charts, dataframes, and notebooks in `chartbook.toml`
+- [Documenting a Pipeline](docs_src/guide/documenting-a-pipeline.md): Describe charts, dataframes, notebooks, notes and models in `chartbook.toml`
+- [Depending on Another Pipeline](docs_src/guide/depending-on-pipelines.md): snapshots, pins and the lockfile; `chartbook run --snapshot` (them), `chartbook pin` / `update` (you); never read another pipeline's folder; `--frozen` in CI; model versions and labels
 - [Catalogs and Data Access](docs_src/guide/catalogs-and-data.md): Aggregate pipelines; load any cataloged dataset with `data.load()`
 - [Plotting](docs_src/guide/plotting.md): One call produces interactive HTML plus static PNG/PDF
 - [Writing a Plotting Backend](docs_src/guide/plotting-backends.md): The `PlottingBackend` contract, the `chartbook_plotting` entry-point group, and a complete example
-- [How the Build Works](docs_src/guide/how-the-build-works.md): Two-stage build internals and template overrides
+- [How the Build Works](docs_src/guide/how-the-build-works.md): resolve (the index) → write (the Sphinx writer: pages from the index and the files it names) → build (Sphinx); incremental builds; template overrides in the project root
 
 ## Reference
 

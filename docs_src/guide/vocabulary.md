@@ -41,7 +41,7 @@ disguise.
 | Document | File | Records | Written by | Where it lives |
 |---|---|---|---|---|
 | **manifest** | `chartbook.toml` | What a pipeline *asks*: which assets it declares, where they are, what it depends on, what its scripts are | People | In the repository, committed |
-| **lockfile** | `chartbook.lock` | What was *got*: for each dependency, which snapshot was pinned and the content hash of each of its assets | `chartbook pin`, `chartbook update` | In the repository, committed. No timestamp on purpose: a `git diff` of it means "a pin moved" |
+| **lockfile** | `chartbook.lock` | What was *got*: for each dependency, which snapshot was pinned and the content hash of each of its assets | `chartbook pin`, `chartbook update` (and `chartbook run`, for a first pin) | In the repository, committed. No timestamp on purpose: a `git diff` of it means "a pin moved" |
 | **snapshot** | `<store>/snapshots/<commit>/…/<time>.json` | What was *made*: every asset one pipeline built at one commit, with its hash, declared ready by its owner | `chartbook snapshot`, `chartbook run --snapshot` | In the store, with the bytes. Not in git, since one commit can have several |
 | **index** | `index.json` beside the site | What a site *shows*: every record of every pipeline the site contains, as built now, with each dependency's pins reported | `chartbook docs`, `chartbook build` | Beside the site, so it travels with it |
 
@@ -89,7 +89,7 @@ is the direction; it is not built.
 | **object** | One asset in the store: a directory named by the asset's content hash, holding its files under their own names |
 | **dependency** | Another pipeline this one reads from, declared in `[dependencies]`: a name, and where to find it (`path` or `git`) |
 | **pin** | To freeze which snapshot of a dependency a pipeline reads; also the record of it in the lockfile. `chartbook pin` makes pins and never moves one; `chartbook update` moves them |
-| **version** | A model's bytes as a snapshot first held them, named by the first twelve digits of their hash; `[models.x.aliases]` gives labels such as `champion` |
+| **version** | A model's bytes as a snapshot first held them, named by the first twelve digits of their hash (more, if two would otherwise share a name); `[models.x.aliases]` gives labels such as `champion` |
 | **source / backend** | A named database connection in a manifest / the engine behind it. DuckDB is the engine that is built |
 | **writer** | What turns the index into pages for one site tool |
 | **scratch** | `_data/_scratch/` inside a pipeline: throwaway files that are not assets |

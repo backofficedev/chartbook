@@ -117,6 +117,8 @@ chartbook browse
 
 The site lands in `./docs/`: a front page from your README, a page per chart (the interactive plot, your write-up, a spec table), and a page per dataframe (a schema glimpse read from the parquet, plus a provenance table). Rebuild after changes with `chartbook docs -f`.
 
+Beside the site is `docs/index.json`, the **index**: one record for the pipeline, the dataframe, each of its columns and the chart, with an ID (`my_pipeline:walks`, `my_pipeline:chart/random_walks`: the folder's name with `-` written `_`, until `[project] id` or a git remote gives the pipeline a scoped one), a content hash for each file and what each asset was made from. The pages were written from it, and anything else can read it too. {doc}`guide/vocabulary` says what the words mean; {doc}`guide/how-the-build-works` says what happened.
+
 ## Where next
 
 - {doc}`guide/documenting-a-pipeline` — the full manifest vocabulary: notebooks, metadata, custom site pages

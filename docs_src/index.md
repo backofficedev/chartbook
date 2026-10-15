@@ -1,24 +1,72 @@
 # ChartBook
 
-**Catalog and publish your team's data science work.**
+**Turn a data pipeline into a documented, searchable site, and let other pipelines build on
+what it made.**
 
-<!-- ```{image} _static/logo.png
-:alt: ChartBook logo
-:width: 300px
+A pipeline is a folder of code in git: a manifest, scripts, write-ups, and the data, charts and
+models the scripts produce. ChartBook reads that folder, records what is in it, and writes a
+site. Many pipelines make a catalog: one site over all of them, where any dataset can be loaded
+by name, and where one pipeline can pin exactly what another one built.
+
+```{image} _static/diagrams/chain-light.svg
+:alt: repository, resolved into an index, written into pages, built into a site
+:class: only-light
 :align: center
-``` -->
+```
 
-ChartBook turns an analytics project — code, parquet files, chart HTML — into a documented website, and aggregates many projects into a searchable catalog with programmatic data access. If you know [Backstage](https://backstage.io/), Spotify's service catalog for software teams: ChartBook plays that role for data science teams, so pipelines, datasets, and charts are registered and discoverable instead of scattered across notebooks and shared drives.
+```{image} _static/diagrams/chain-dark.svg
+:alt: repository, resolved into an index, written into pages, built into a site
+:class: only-dark
+:align: center
+```
 
-Everything hangs off two kinds of `chartbook.toml`:
+Three steps, each a transformation of the one before. The **index** in the middle is the point
+of the design: one JSON file that says what the site shows, with an ID and a content hash for
+everything, so that pages can be written for any site tool, two builds can be compared, and
+another program can read what you published without scraping it. {doc}`guide/vocabulary` defines
+these words, and every page here uses them in those senses.
 
-- A **pipeline** is any project directory whose `chartbook.toml` describes its charts, dataframes, and notebooks. `chartbook docs` renders it into a static documentation site.
-- A **catalog** is a `chartbook.toml` that registers many pipelines. It builds one combined, searchable site — and lets anyone load any cataloged dataset by name:
+## Start
 
-```python
-from chartbook import data
+::::{grid} 1 1 3 3
+:gutter: 3
 
-df = data.load(pipeline="fred_charts", dataframe="fred", format="pandas")
+:::{grid-item-card} Install and build
+:link: getting-started
+:link-type: doc
+`pip install chartbook`, scaffold a project with `chartbook init`, and have a site in a minute.
+:::
+
+:::{grid-item-card} Document a pipeline
+:link: guide/documenting-a-pipeline
+:link-type: doc
+Describe charts, dataframes, notebooks, notes and models in `chartbook.toml`; each gets a page.
+:::
+
+:::{grid-item-card} Depend on another pipeline
+:link: guide/depending-on-pipelines
+:link-type: doc
+Snapshots, pins and the lockfile: read exactly what another pipeline built, and nothing else.
+:::
+
+::::
+
+## The four documents
+
+Four files, one record format, and none is another in disguise. **A manifest asks, a lockfile
+records what was got, a snapshot records what was made, and an index records what a site
+shows.**
+
+```{image} _static/diagrams/documents-light.svg
+:alt: the manifest, the lockfile, the snapshot and the index: what each records, who writes it, where it lives
+:class: only-light
+:align: center
+```
+
+```{image} _static/diagrams/documents-dark.svg
+:alt: the manifest, the lockfile, the snapshot and the index: what each records, who writes it, where it lives
+:class: only-dark
+:align: center
 ```
 
 ## From zero to a documented pipeline
@@ -26,25 +74,45 @@ df = data.load(pipeline="fred_charts", dataframe="fred", format="pandas")
 ```console
 pip install chartbook
 chartbook init            # scaffold a pipeline project
-cd my-pipeline
-chartbook docs           # generate its documentation site
-chartbook browse          # open it in your browser
+cd <your-project>
+chartbook docs            # write the site, and index.json beside it
+chartbook browse          # open it
 ```
 
-{doc}`getting-started` walks through this and ends with your first chart on a page.
+```python
+from chartbook import data
+
+df = data.load(pipeline="fred_charts", dataframe="fred", format="pandas")   # any cataloged dataset
+rates = data.load("fed_yield_curve:treasury_rates")   # a dependency's dataframe: the pinned copy, by name
+```
 
 ## Where things are
 
-- {doc}`getting-started` — install, scaffold, first build
-- {doc}`guide/documenting-a-pipeline` — describe your charts, dataframes, and notebooks
-- {doc}`guide/catalogs-and-data` — aggregate pipelines and load data from anywhere
-- {doc}`guide/plotting` — one call, five output files (interactive HTML plus static PNG/PDF)
-- {doc}`guide/plotting-backends` — write a plotting backend for another library
-- {doc}`reference/configuration` — every `chartbook.toml` field, type, and default
-- {doc}`reference/cli` — every command
-- {doc}`reference/stability` — ChartBook is experimental; what that means for you
+::::{grid} 1 1 2 2
+:gutter: 3
 
-Working with an AI assistant? The built docs site ships [llms.txt](https://llmstxt.org/) files (`llms.txt` and `llms-full.txt` at the site root), and `chartbook install skill` installs a ChartBook skill for Claude Code — user-level by default, or `--project` to vendor it into a repo.
+:::{grid-item-card} Learn
+- {doc}`getting-started`: install, scaffold, first build
+- {doc}`guide/vocabulary`: the words, defined once
+- {doc}`guide/documenting-a-pipeline`: the manifest and the pages it makes
+- {doc}`guide/depending-on-pipelines`: snapshots, pins, the lockfile
+- {doc}`guide/catalogs-and-data`: one site over many pipelines; `data.load()`
+- {doc}`guide/plotting`: one call, five chart files
+- {doc}`guide/how-the-build-works`: the index, the writer, Sphinx
+:::
+
+:::{grid-item-card} Reference
+- {doc}`reference/configuration`: every `chartbook.toml` field
+- {doc}`reference/cli`: every command
+- {doc}`reference/api`: the Python modules
+- {doc}`reference/stability`: what "experimental" means here
+- {doc}`design/overview`: the design, decision by decision
+:::
+
+::::
+
+Working with an AI assistant? The built site ships [llms.txt](https://llmstxt.org/) files at its
+root, and `chartbook install skill` installs a ChartBook skill for Claude Code.
 
 ```{toctree}
 :hidden:
@@ -53,6 +121,7 @@ Working with an AI assistant? The built docs site ships [llms.txt](https://llmst
 getting-started
 guide/vocabulary
 guide/documenting-a-pipeline
+guide/depending-on-pipelines
 guide/catalogs-and-data
 guide/plotting
 guide/plotting-backends

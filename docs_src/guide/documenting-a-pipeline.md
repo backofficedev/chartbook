@@ -146,81 +146,10 @@ Promoting a newer version is changing that one line. See {ref}`Versions and labe
 
 ## Depending on another pipeline
 
-If the pipeline uses another pipeline's data, say which pipeline and where it is:
-
-```toml
-[dependencies]
-"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
-
-[models.rate_forecaster]
-path = "./_models/rate_forecaster.joblib"
-trained_on = ["fed_yield_curve:treasury_rates"]
-```
-
-`chartbook check` then confirms that the other pipeline is there and that it declares that dataframe.
-
-**The other pipeline's owner says when a build is ready.** In its folder, with everything committed:
-
-```console
-$ chartbook run --snapshot     # build it, and copy what it built into the store, labelled with the commit
-```
-
-That is a snapshot, and it is the only thing of theirs you ever read. You never read their folder. (`chartbook run` and then `chartbook snapshot` are the same two steps, apart.)
-
-Then freeze what you depend on, and read it by name:
-
-```console
-$ chartbook pin          # pin their newest snapshot; write chartbook.lock
-$ git add chartbook.lock
-```
-
-```python
-from chartbook import data
-
-rates = data.load("fed_yield_curve:treasury_rates")     # the pinned copy
-path = data.path("fed_yield_curve:treasury_rates")      # or just where it is
-```
-
-What you get is the build they declared ready, not whatever is in `../fed_yield_curve/_data/` this minute. They can rebuild, or be half-way through a change, and your results do not move. When they have made a newer snapshot and you want it:
-
-```console
-$ chartbook update       # move the pins; chartbook.lock shows the change in a diff
-```
-
-| Who | Does | When |
-|---|---|---|
-| The other pipeline's owner | `chartbook run --snapshot` | When a build is ready for others |
-| You | `chartbook pin`, once | To start depending on it |
-| You | `chartbook update` | When you want their newer snapshot |
-
-The `rate_forecast` example does exactly this, with a model trained on the `yield_curve` example's data. {ref}`[dependencies] <dependencies>` and {ref}`chartbook snapshot <chartbook-snapshot>` have every detail.
-
-### Building it
-
-Say how the pipeline is built, in its `chartbook.toml`:
-
-```toml
-[scripts]
-build = "doit"
-```
-
-Then one command pins what you depend on, if nothing is pinned yet, and builds:
-
-```console
-$ chartbook run
-ftsfr/rate_forecast: pinning what it depends on
-ftsfr/fed_yield_curve: 3 pinned
-  From its snapshot at 4f2a91c, made 2026-10-13 18:22 UTC.
-Wrote chartbook.lock.
-ftsfr/rate_forecast: build
-Ran build in 1 pipeline(s).
-```
-
-`chartbook run` does not build `../fed_yield_curve`, and does not read it. That folder is somebody's work, perhaps in the middle of a change. Whoever owns it builds it and makes the snapshot.
-
-It never moves a pin either. If the other pipeline has a newer snapshot, yours is still built against the one you pinned, and the command tells you so. `chartbook update` is what moves a pin. See {ref}`chartbook run <chartbook-run>`.
-
-A dependency can also be a git repository, `{ git = "https://…", rev = "v1.2" }`, for one that is not on your disk. `chartbook pin` clones it, and can pin only what that repository keeps in git: reference data and models that are committed. For data that the other pipeline builds, use `chartbook run`, which builds it once in a clean copy of that commit.
+A pipeline that uses another pipeline's data declares it in `[dependencies]`, pins a **snapshot**
+of it with `chartbook pin`, and reads the pinned copy by name. It never reads the other
+pipeline's folder. {doc}`depending-on-pipelines` has the whole of it: snapshots, pins, the
+lockfile, `chartbook run`, and a diagram.
 
 ## Notes and custom pages
 
