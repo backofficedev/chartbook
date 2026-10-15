@@ -812,11 +812,44 @@ class TestWhatTheWriterNeeds:
         record = _by_id(built, "acme/p:d")
         assert record["date_range"] == {"first": "2024-01-01", "last": "2024-01-03"}
         _validate(built)
+        # A text column that holds dates is not read: its least text is not its first date
+        pl.DataFrame({"Date": ["01/03/2024", "12/31/2023"], "x": [1.0, 2.0]}).write_parquet(directory / "_data" / "d.parquet")
+        assert "date_range" not in _by_id(index.build_index(load_manifest(directory)), "acme/p:d")
+        # A datetime column is ISO 8601 too
+        pl.DataFrame({"Date": [datetime.datetime(2024, 1, 3, 9, 30), datetime.datetime(2024, 1, 1)], "x": [1.0, 2.0]}).write_parquet(directory / "_data" / "d.parquet")
+        assert _by_id(index.build_index(load_manifest(directory)), "acme/p:d")["date_range"] == {"first": "2024-01-01T00:00:00", "last": "2024-01-03T09:30:00"}
         # No date_col, no range
         (directory / "chartbook.toml").write_text(
             tomli_w.dumps({"project": {"id": "acme/p"}, "dataframes": {"d": {"path": "./_data/d.parquet", "docs": "d"}}})
         )
         assert "date_range" not in _by_id(index.build_index(load_manifest(directory)), "acme/p:d")
+
+    def test_a_directory_is_as_new_as_its_newest_file(self, tmp_path):
+        """Found by a reviewer: a directory's own time moves only when an entry is added."""
+        import os
+        import time
+
+        directory = tmp_path / "model"
+        directory.mkdir()
+        (directory / "weights.bin").write_bytes(b"w")
+        old = time.time() - 10 * 86400
+        os.utime(directory / "weights.bin", (old, old))
+        os.utime(directory, (old, old))
+        before = index._modified_at(str(directory))
+        (directory / "weights.bin").write_bytes(b"ww")  # rewritten in place
+        os.utime(directory, (old, old))
+        assert index._modified_at(str(directory)) > before
+
+    def test_code_changed_at_is_a_docs_builds_fact_only(self, project):
+        """Found by a reviewer: a file's modification time was passed off as the code's history."""
+        from chartbook.manifest import apply_code_change_times
+
+        manifest = load_manifest(project)
+        (bare,) = _of_kind(index.build_index(manifest), "Pipeline")
+        assert "code_changed_at" not in bare
+        apply_code_change_times(manifest)
+        (dated,) = _of_kind(index.build_index(manifest), "Pipeline")
+        assert dated["code_changed_at"].endswith("Z") and "T" in dated["code_changed_at"]
 
     def test_the_policy_is_on_the_catalog_record(self, tmp_path):
         import tomli_w

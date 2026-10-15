@@ -175,7 +175,14 @@ def _modified_at(resolved: str) -> Optional[str]:
 
     from chartbook.utils import is_glob_pattern
 
-    paths = globbing.glob(resolved, recursive=True) if is_glob_pattern(resolved) else [resolved]
+    if is_glob_pattern(resolved):
+        paths = globbing.glob(resolved, recursive=True)
+    elif os.path.isdir(resolved):
+        # A directory's own time moves only when an entry is added or
+        # removed; the newest file inside says when it was last written
+        paths = [os.path.join(root, name) for root, _, names in os.walk(resolved) for name in names] or [resolved]
+    else:
+        paths = [resolved]
     stamps = []
     for path in paths:
         try:
@@ -188,16 +195,20 @@ def _modified_at(resolved: str) -> Optional[str]:
 
 
 def _date_range(resolved: str, date_col: str) -> Optional[dict]:
-    """The first and last value of a dataframe's date column, as text.
+    """The first and last value of a dataframe's date column, in ISO 8601.
 
-    One column is read, lazily, so a large file costs one column and not the
-    whole. None when the column is not there or cannot be read.
+    Only a column of a date or datetime type: a text column that holds
+    dates in some format is not read, since its least and greatest text
+    need not be its first and last date. One column is read, lazily, so a
+    large file costs one column and not the whole. None when the column is
+    not there, not temporal, or cannot be read.
     """
     import polars as pl
 
     try:
         frame = pl.scan_parquet(resolved, hive_partitioning=True)
-        if date_col not in frame.collect_schema().names():
+        schema = frame.collect_schema()
+        if date_col not in schema.names() or not schema[date_col].is_temporal():
             return None
         first, last = (
             frame.select(pl.col(date_col).min().alias("first"), pl.col(date_col).max().alias("last"))
@@ -206,9 +217,16 @@ def _date_range(resolved: str, date_col: str) -> Optional[dict]:
         )
     except Exception:  # noqa: BLE001 - polars raises many types for "not readable"
         return None
-    if first is None or last is None:
+    return _span_as_text(first, last)
+
+
+def _span_as_text(first, last) -> Optional[dict]:
+    """A first and last date or datetime as ISO 8601 text; None for anything else."""
+    import datetime as dt
+
+    if not isinstance(first, (dt.date, dt.datetime)) or not isinstance(last, (dt.date, dt.datetime)):
         return None
-    return {"first": str(first), "last": str(last)}
+    return {"first": first.isoformat(), "last": last.isoformat()}
 
 
 def _file_facts(
@@ -316,9 +334,7 @@ def _describe_span_in_source(entry: dict, date_col: str) -> Optional[dict]:
         first, last = DuckDBBackend(url).span(location, date_col)
     except (BackendError, OSError, ValueError):
         return None
-    if first is None or last is None:
-        return None
-    return {"first": str(first), "last": str(last)}
+    return _span_as_text(first, last)
 
 
 def _definition_hash(location: dict, columns: list[dict], url: Optional[str]) -> str:
@@ -800,25 +816,18 @@ def pipeline_records(
 
 
 def code_changed_at(pipeline_manifest: dict) -> Optional[str]:
-    """When the pipeline's code last changed, as the build worked it out, in UTC.
+    """When the pipeline's code last changed, as a docs build worked it out, in UTC.
 
-    Read from the manifest's ``source_last_modified_date``: the last commit
-    that touched the source where it is committed and unmodified, else the
-    newest modification time (:func:`chartbook.manifest.apply_code_change_times`,
-    which the build runs once per pipeline and remembers across incremental
-    builds; loading a manifest stamps it from modification times). The
-    index asks git for nothing itself.
+    Present only when :func:`chartbook.manifest.apply_code_change_times` has
+    run on the manifest, which a docs build does once per pipeline and
+    remembers across incremental builds: the last commit that touched the
+    source where it is committed and unmodified, else the newest
+    modification time. An index built from a manifest as loaded says
+    nothing here, rather than passing off a file's modification time as
+    the code's history. The index asks git for nothing itself.
     """
-    from chartbook.manifest import CODE_TIME_FORMAT
-
-    stamp = pipeline_manifest.get("source_last_modified_date")
-    if not isinstance(stamp, str):
-        return None
-    try:
-        moment = datetime.strptime(stamp, CODE_TIME_FORMAT)
-    except ValueError:
-        return None
-    return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    moment = pipeline_manifest.get("_code_changed_at")
+    return moment if isinstance(moment, str) else None
 
 
 def apply_code_times(index: dict, manifest: dict) -> dict:

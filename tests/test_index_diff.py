@@ -159,8 +159,17 @@ class TestDiff:
         later = time.time() + 120
         os.utime(parquet, (later, later))
         second = index.build_index(load_manifest(directory))
-        assert second["records"][1]["location"]["modified_at"] != first["records"][1]["location"]["modified_at"] or True
+        rates_before = next(r for r in first["records"] if r["id"] == "acme/rates:rates")
+        rates_after = next(r for r in second["records"] if r["id"] == "acme/rates:rates")
+        assert rates_after["location"]["modified_at"] != rates_before["location"]["modified_at"]
         assert indexdiff.diff(first, second).empty
+
+    def test_a_date_range_says_which_way_it_moved(self):
+        further = indexdiff.Change("Dataframe", "d", {"date_range": ({"first": "2000-01-01", "last": "2020-12-31"}, {"first": "2000-01-01", "last": "2024-12-31"})})
+        less = indexdiff.Change("Dataframe", "d", {"date_range": ({"first": "2000-01-01", "last": "2024-12-31"}, {"first": "2010-01-01", "last": "2020-12-31"})})
+        moved = indexdiff.Change("Dataframe", "d", {"date_range": ({"first": "2000-01-01", "last": "2024-12-31"}, {"first": "2001-01-01", "last": "2024-12-31"})})
+        assert further.words == ["data reaches further"] and less.words == ["data reaches less far"] and moved.words == ["date range moved"]
+        assert indexdiff.Change("Pipeline", "p", {"code_changed_at": ("a", "b")}).words == ["source changed"]
 
     def test_to_dict_is_json(self, before):
         directory, first = before

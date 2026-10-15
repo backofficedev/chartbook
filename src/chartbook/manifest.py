@@ -18,7 +18,7 @@ import os
 import re
 import subprocess
 import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Union
 
@@ -1539,7 +1539,11 @@ def apply_code_change_times(manifest: dict, known: Union[dict, None] = None) -> 
         if stamp is None:
             changed = find_latest_code_change(pipeline_manifest["pipeline_base_dir"])
             stamp = changed.strftime(CODE_TIME_FORMAT)
+        else:
+            changed = datetime.strptime(stamp, CODE_TIME_FORMAT)
         pipeline_manifest["source_last_modified_date"] = stamp
+        # The instant, for the index: a naive time is this machine's local time
+        pipeline_manifest["_code_changed_at"] = changed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         times[pipeline_id] = stamp
     return times
 

@@ -42,8 +42,7 @@ RENDERED_KINDS = ("Chart", "Notebook")
 #: Fields that are worked out, not declared, with the words for a change in each.
 COMPUTED_WORDS = {
     "docs": "write-up changed",
-    "date_range": "data reaches further",
-    "code_changed_at": "code changed",
+    "code_changed_at": "source changed",
     "assets": "assets changed",
     "pinned_inputs": "pins moved",
     "trained_with": "trained on other data",
@@ -103,11 +102,20 @@ class Change:
             said.append("out of date" if after else "up to date again")
         if "metrics" in self.fields:
             said.append("scores changed")
+        if "date_range" in self.fields:
+            before, after = self.fields["date_range"]
+            last_before, last_after = (before or {}).get("last"), (after or {}).get("last")
+            if last_before and last_after and last_after > last_before:
+                said.append("data reaches further")
+            elif last_before and last_after and last_after < last_before:
+                said.append("data reaches less far")
+            else:
+                said.append("date range moved")
         for name, words in COMPUTED_WORDS.items():
             if name in self.fields:
                 said.append(words)
         handled = set(DATA_FIELDS) | set(COMPUTED_WORDS) | {
-            "dependencies", "versions", "aliases", "stale_inputs", "metrics"
+            "dependencies", "versions", "aliases", "stale_inputs", "metrics", "date_range"
         }
         rest = sorted(name for name in self.fields if name not in handled)
         if rest:
@@ -254,7 +262,7 @@ def format_diff(found: IndexDiff) -> str:
         lines.append(f"Changed {len(found.changed)}:")
         for change in found.changed:
             lines.append(f"  {change.kind} {change.id}: {'; '.join(change.words)}")
-            for name in ("content_hash", "definition_hash", "row_count", "stale_inputs"):
+            for name in ("content_hash", "definition_hash", "row_count", "stale_inputs", "date_range"):
                 if name in change.fields:
                     b, a = change.fields[name]
                     lines.append(f"    {name}: {_short(b)} -> {_short(a)}")

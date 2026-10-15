@@ -178,7 +178,7 @@
     },
     "code_changed_at": {
       "type": "string",
-      "description": "When the pipeline's code last changed, according to git, in UTC. The first field of the Build record the design leaves for later. Absent where git cannot say."
+      "description": "When the pipeline's code last changed, in UTC, as a docs build worked it out: the last commit that touched the source where it is committed and unmodified, else the newest modification time. Present only in an index a docs build writes; an index built from a manifest as loaded leaves it out."
     }
   },
   "additionalProperties": true

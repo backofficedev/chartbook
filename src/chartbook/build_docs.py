@@ -569,7 +569,7 @@ def _generate_docs_incremental(
     # says when each pipeline's code last changed
     from chartbook.manifest import apply_code_change_times
 
-    apply_code_change_times(manifest, known=plan.code_times)
+    plan.code_times.update(apply_code_change_times(manifest, known=plan.code_times))
     index.apply_code_times(built, manifest)
 
     # FULLY clean temp_docs_src_dir first
