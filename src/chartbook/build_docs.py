@@ -8,7 +8,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from chartbook import hashing, index, markdown_generator
+from chartbook import hashing, index, sitefiles
 from chartbook.diagnostics import generate_metadata_diagnostics
 from chartbook.errors import MissingSourceFilesError, ValidationError, handle_validation_error
 from chartbook.manifest import (
@@ -78,7 +78,7 @@ def run_build_markdown(
     _docs_dir = Path(_docs_dir).resolve()
     docs_src_dir = Path(docs_src_dir).resolve()
 
-    markdown_generator.build_all(
+    sitefiles.write_site(
         docs_build_dir=_docs_dir,
         base_dir=project_dir,
         pipeline_theme=pipeline_theme,

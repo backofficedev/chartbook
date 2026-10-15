@@ -359,7 +359,7 @@ Slice M1, in these places:
 | The `[models]` table, validated when the manifest loads | `chartbook/manifest.py`, `validate_models()` |
 | `model/name` resolves; `chartbook path model/x` | `chartbook/resolve.py` (`RESOLVABLE_KINDS`) |
 | `chartbook.models.path()`, `chartbook.models.read_metrics()` | `chartbook/models.py` |
-| The model's page, and the lists that link to it | `chartbook/markdown_generator.py` (`generate_model_docs`), `model_manifest.md` and `models.md` in the two theme directories |
+| The model's page, and the lists that link to it | `chartbook/writers/sphinx.py` (`model_page()`), `model_manifest.md` and `models.md` in the two theme directories |
 | The `Model` record and its JSON Schema | `chartbook/index.py`, `chartbook/schemas/chartbook/v1/Model.json` |
 | `check`: missing model, metrics or write-up; a malformed metrics file; required fields | `chartbook/check.py`, `chartbook/conf_validation.py`, `chartbook/diagnostics.py` |
 | Incremental builds: a model's files are inputs, its page belongs to its pipeline | `chartbook/incremental.py` |

@@ -5,7 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from chartbook.markdown_generator import _validate_generated_frontmatter, _yaml_escape_filter
+from chartbook.writers.sphinx import check_front_matter as _validate_generated_frontmatter
+from chartbook.writers.sphinx import yaml_escape as _yaml_escape_filter
 
 
 class TestGeneratedFrontmatterValidation:

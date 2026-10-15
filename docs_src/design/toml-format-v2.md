@@ -657,7 +657,7 @@ this repo.
   `name`/`maintainer`/`copyright`; `get_logo_path`/`get_favicon_path` read
   `project.logo`/`favicon`; `site_dir` default-if-exists logic.
 
-**Phase 2 — Consumers** (`markdown_generator.py`, `build_docs.py`,
+**Phase 2 — Consumers** (`writers/sphinx.py` and `sitefiles.py`, then `markdown_generator.py`, `build_docs.py`,
 `publish.py`, `diagnostics.py`, Jinja templates in `docs_src_pipeline/` and
 `docs_src_catalog/`)
 - Templates: `pipeline_manifest.pipeline.pipeline_name` →

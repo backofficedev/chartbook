@@ -120,7 +120,7 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Capability | Where | Notes |
 |---|---|---|
 | Manifest format v2, pipeline IDs, catalogs, policy | `manifest.py`, `identity.py` | `repo_url` defaults to the git remote |
-| The documentation site | `build_docs.py`, `markdown_generator.py`, `docs_src_pipeline/`, `docs_src_catalog/`, `chartbook docs` | Two stages: write Markdown into `_docs/`, then run Sphinx. `chartbook build` runs the build script first |
+| The documentation site | `build_docs.py`, `sitefiles.py`, `writers/sphinx.py`, `docs_src_pipeline/`, `docs_src_catalog/`, `chartbook docs` | Two stages: write Markdown into `_docs/`, then run Sphinx. `chartbook build` runs the build script first |
 | Incremental builds and `--watch` | `incremental.py` | A state file of file sizes and times. No server. Catalog builds are incremental by default |
 | `chartbook check`, the CI gate | `check.py` | Required fields, broken paths, expiring licenses. `--skip-outputs` for CI that does not build data |
 | The reference grammar | `refs.py` | All of it parses |
@@ -130,14 +130,14 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Resolving another pipeline's assets | `resolve.py` (`_resolve_pinned`), `lock.py`, `store.py` | `pipeline:name`, for a declared dependency, resolves through `chartbook.lock` to the pinned copy in the store. Every kind, every front door, and `data.load("pipeline:name")` |
 | The index, `index.json` | `index.py`, `hashing.py`, `schemas/` | Written by every build, beside the HTML. One hash rule; hashes cached in the build directory |
 | Series tables | `manifest.py` (`validate_series`) | `[dataframes.x.series.y]` documents a column. In the index; not on pages yet |
-| Models | `models.py`, `manifest.py` (`validate_models`), `markdown_generator.py` (`generate_model_docs`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. Versions, made by a snapshot and named by the start of the content hash, with labels in `[models.x.aliases]` |
+| Models | `models.py`, `manifest.py` (`validate_models`), `writers/sphinx.py` (`model_page()`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. Versions, made by a snapshot and named by the start of the content hash, with labels in `[models.x.aliases]` |
 | Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked |
 | The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link |
 | Snapshots | `snapshot.py`, `chartbook snapshot` | What one commit of a pipeline built, in the store. Made on purpose by its owner, with everything committed. The only thing of a pipeline that another reads |
 | Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: the commit, and a content hash for every asset, of every dependency. A folder is pinned from a snapshot, a repository from a clean copy. `pin` never moves a pin; `update` does. `pin --frozen` and `run --frozen` write nothing and say whether every pin can be had |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
-| Freshness lines on pages | `markdown_generator.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
+| Freshness lines on pages | `writers/sphinx.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
 | Data glimpses | `create_data_glimpses.py` | Reads the manifest, not `dodo.py` |
 | Scaffolding | `scaffold.py`, `chartbook init --git/--github`, `template/` | Renders the cookiecutter template, which is the `template/` folder of this repository |
 | Plotting helpers and backends | `plotting/` | The one real plugin system. See {doc}`../guide/plotting-backends` |
@@ -1249,7 +1249,7 @@ champion = "7f3a9c2e41b0"
 | `[models.x.aliases]` | `chartbook/manifest.py`, `validate_aliases()` |
 | `model/x@7f3a9c2e41b0` and `model/x@champion` resolve | `chartbook/resolve.py`, `_resolve_version()` |
 | `chartbook.models.versions()`, `Version` | `chartbook/models.py` |
-| Versions and labels on the `Model` record, and on the model's page | `chartbook/index.py`, `chartbook/markdown_generator.py`, `schemas/chartbook/v1/Model.json` |
+| Versions and labels on the `Model` record, and on the model's page | `chartbook/index.py`, `chartbook/writers/sphinx.py`, `schemas/chartbook/v1/Model.json` |
 | A label whose version is not here | `chartbook/check.py`, `check_model_labels()` |
 | The tests | `tests/test_model_versions.py` |
 
@@ -1797,7 +1797,7 @@ that design.
 | A snapshot records what each model was trained on: `trained_on` on the model's record, `{input_id: content_hash}` | `chartbook/snapshot.py`, `training_inputs()`, `make()` |
 | What the model file is now, against that | `chartbook/models.py`, `staleness()`, `Staleness` |
 | The index: `trained_with`, `stale_inputs` on the `Model` record; `inputs_now` beside them since 2026-10-15, so the record alone says which input moved from what to what | `chartbook/index.py`; `schemas/chartbook/v1/Model.json` |
-| The page: "Out of date", with each input then and now | `chartbook/markdown_generator.py`, `_model_staleness()` |
+| The page: "Out of date", with each input then and now | `chartbook/writers/sphinx.py`, `_staleness()` |
 | `check` warns | `chartbook/check.py`, `check_model_staleness()` |
 | The tests | `tests/test_model_versions.py`, `TestStaleness` |
 
@@ -1886,7 +1886,7 @@ query = "select Date, SVENY10 - SVENY02 as slope_10y_2y from fed_yield_curve"
 | `data.sql()`, `data.ref()`, `data.connect()`; `load()` of a table or query | `chartbook/data.py` |
 | Where a machine keeps credentials | `chartbook/backends.py`, `source_url()` |
 | The index: `location` kinds, `definition_hash`, columns from the engine | `chartbook/index.py`, `schemas/chartbook/v1/Dataframe.json` |
-| The page | `chartbook/markdown_generator.py`, `_source_glimpse()` |
+| The page | `chartbook/writers/sphinx.py`, `_source_glimpse()` |
 | `check`: a DuckDB file not built | `chartbook/check.py`, `check_sources()` |
 | The example | `examples/yield_curve`: `yield_slopes`, `src/build_duckdb.py` |
 | The tests | `tests/test_data_access.py` |

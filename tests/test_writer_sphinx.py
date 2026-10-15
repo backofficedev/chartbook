@@ -43,6 +43,52 @@ def _same_pages(writer: SphinxWriter, index: dict, build_dir: Path, kinds=KINDS)
     assert seen, f"no {kinds} pages to compare"
 
 
+class TestTheBuildWritesTheSite:
+    """`sitefiles.write_site()`: the writer's pages at their paths, and the files the index names beside them."""
+
+    def test_an_incremental_rebuild_keeps_a_reused_pipelines_notes(self, pipeline_project_with_notes, monkeypatch):
+        """Found by a reviewer: the first build-through-the-writer copied no file of a reused
+        pipeline, and the incremental sync then deleted its notes while the front page, written
+        on every build, still listed them. Notes are copied again for a reused pipeline."""
+        project = pipeline_project_with_notes.resolve()
+        monkeypatch.chdir(project)
+        for _ in range(2):
+            result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--incremental"])
+            assert result.exit_code == 0, result.output
+            assert (project / "_docs" / "cb" / "note1.md").is_file()
+            assert (project / "docs" / "cb" / "note1.html").is_file()
+            assert "cb/note1.md" in (project / "_docs" / "index.md").read_text()
+        assert "nonexisting document" not in result.output
+
+    def test_a_catalog_copies_no_notes(self, catalog_project, monkeypatch):
+        """Found by a reviewer: the generator copied notes in the pipeline theme only (a catalog
+        has no page that lists them, and two pipelines' notes of one name would collide at
+        `cb/<name>.md`); the build does the same."""
+        import tomli
+        import tomli_w
+
+        catalog = catalog_project.resolve()
+        for pid in ("pipeline_a", "pipeline_b"):
+            folder = catalog / "pipelines" / pid
+            (folder / "docs_src" / "overview.md").write_text(f"# {pid}\n")
+            config = tomli.loads((folder / "chartbook.toml").read_text())
+            config["notes"] = {"overview": {"path": "docs_src/overview.md"}}
+            (folder / "chartbook.toml").write_text(tomli_w.dumps(config))
+        index = _built(catalog, monkeypatch)
+        assert sum(1 for r in index["records"] if r["kind"] == "Note") == 2
+        assert not (catalog / "_docs" / "cb" / "overview.md").exists()
+
+    def test_a_project_in_a_folder_named_like_a_generated_one_still_gets_the_theme(self, tmp_path, monkeypatch):
+        """Found by a reviewer (and true of the generator too): the theme files to leave out
+        were matched against the whole path, so a project under a folder called `models`
+        got no theme at all."""
+        from tests.fixtures import create_pipeline_project
+
+        project = create_pipeline_project(tmp_path / "models" / "p").resolve()
+        index = _built(project, monkeypatch)
+        assert (project / "_docs" / "conf.py").is_file() and index["records"]
+
+
 def _same_catalog_pages(writer: SphinxWriter, build_dir: Path) -> None:
     paths = writer.catalog_page_paths()
     assert "index.md" in paths and "cb/diagnostics.md" in paths

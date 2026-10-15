@@ -237,7 +237,8 @@ class TestLoading:
         """Found by a reviewer: DESCRIBE binds, count(*) prunes the cast, and
         the cast fails when the first rows are collected. The site is still
         built, and the page says what happened."""
-        from chartbook.markdown_generator import _source_glimpse
+        from chartbook import index
+        from chartbook.writers.sphinx import _source_glimpse
 
         broken = {**RATES}
         broken["dataframes"] = {
@@ -250,7 +251,9 @@ class TestLoading:
         # exception through on others; the message is DuckDB's either way
         with pytest.raises((pl.exceptions.ComputeError, duckdb.Error), match="Conversion Error"):
             frame.collect()
-        glimpse = _source_glimpse(load_manifest(pipeline)["dataframes"]["bad"])
+        built = index.build_index(load_manifest(pipeline))
+        record = next(r for r in built["records"] if r["id"] == "acme/rates:bad")
+        glimpse = _source_glimpse(record, pipeline)
         assert glimpse.startswith("A query in source 'local' (duckdb). It could not be read when the site was built:")
         assert "Conversion" in glimpse
 

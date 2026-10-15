@@ -12,14 +12,19 @@ so that the two can be compared.
 from __future__ import annotations
 
 import importlib.resources
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import jinja2
+import polars as pl
+import yaml
 
+from chartbook.errors import ChartBookError
 from chartbook.provenance import panel, reverse
+from chartbook.utils import get_dataframe_glimpse, is_glob_pattern
 
 #: The sections of a dataframe page, as the generator orders them.
 _DATAFRAME_PAGE = (
@@ -55,6 +60,82 @@ _CHART_PAGE = (
     """\n\n\n{% include "provenance.md" %}\n\n{% include "chart_entry_bottom.md" %}\n"""
 )
 
+#: The sections of a model page: title and freshness, the write-up, then the
+#: scores, versions, what it was trained on, files, panel and manifests.
+_MODEL_PAGE_HEAD = """# Model: `{{pipeline_id}}:model/{{model_id}}` - {{model_name}}
+
+{% include "freshness.md" %}
+
+"""
+
+_MODEL_PAGE_TAIL = """
+
+{% if metrics %}
+## Scores
+
+| Metric | Value |
+|--------|-------|
+{% for name, value in metrics.items() %}| `{{name}}` | {{value}} |
+{% endfor %}
+{% endif %}
+
+{% if versions %}
+## Versions
+
+A version is made by a snapshot. Its name is the start of the model's content hash:
+`chartbook path model/{{model_id}}@<version>` gives its path.
+
+| Version | Made | Commit | Labels |{% for name in version_metrics %} `{{name}}` |{% endfor %}
+
+|---------|------|--------|--------|{% for name in version_metrics %}------|{% endfor %}
+
+{% for version in versions %}| `{{version.name}}` | {{version.made}} | `{{version.commit}}` | {{version.labels}} |{% for name in version_metrics %} {{version.metrics.get(name, "")}} |{% endfor %}
+
+{% endfor %}
+{% endif %}
+
+## Trained On
+
+{% if trained_on %}
+{% for dataframe in trained_on %}
+- {% if dataframe.link %}[{{dataframe.label}}]({{dataframe.link}}){% else %}`{{dataframe.label}}`{% endif %}{% if dataframe.name %} - {{dataframe.name}}{% endif %}{% if dataframe.note %} ({{dataframe.note}}){% endif %}
+
+{% endfor %}
+{% else %}
+- Not declared
+{% endif %}
+{% if staleness %}
+
+**Out of date.** This file is version `{{staleness.version}}`, trained on inputs that have since moved:
+
+{% for input in staleness.stale %}
+- `{{input}}`: trained with `{{staleness.trained_with[input][:19]}}…`, now `{{staleness.now[input][:19]}}…`
+{% endfor %}
+
+`chartbook run` retrains it.
+{% endif %}
+
+{% if model_files %}
+## Files
+
+| File | Size |
+|------|------|
+{% for file in model_files %}| `{{file.path}}` | {{file.size}} |
+{% endfor %}
+{% endif %}
+
+{% include "provenance.md" %}
+
+## Model Manifest
+
+{% include "model_manifest.md" %}
+
+## Pipeline Manifest
+
+{% include "pipeline_manifest.md" %}
+
+"""
+
 
 @dataclass
 class SphinxWriter:
@@ -84,9 +165,7 @@ class SphinxWriter:
         self.records = {record["id"]: record for record in self.index.get("records", [])}
         self._reversed = reverse(self.records)
         if self.docs_src_dir is None:
-            from chartbook.markdown_generator import DOCS_SRC_DIR
-
-            self.docs_src_dir = Path(DOCS_SRC_DIR)
+            self.docs_src_dir = Path("_docs_src").resolve()
         for record in self.records.values():
             if record.get("kind") == "Pipeline" and not (record.get("location") or {}).get("value"):
                 raise ValueError(
@@ -161,11 +240,9 @@ class SphinxWriter:
             freshness = [_freshness("Data updated", location.get("modified_at"))]
         else:
             resolved = location.get("resolved_path") or str(base_dir / location.get("path", ""))
-            from chartbook.markdown_generator import find_most_recent_valid_datapoints, get_dataframe_glimpse
-
             glimpse = get_dataframe_glimpse(Path(resolved), size_threshold_mb=self.size_threshold)
             try:
-                first, last = find_most_recent_valid_datapoints(
+                first, last = _most_recent_valid_datapoints(
                     Path(resolved), record.get("date_col", ""), size_threshold_mb=self.size_threshold
                 )
             except Exception:  # noqa: BLE001 - as the generator does: a page, not a crash
@@ -251,8 +328,6 @@ class SphinxWriter:
         own facts: a local dataframe's ``content_hash``, another pipeline's
         pin in ``pinned_inputs``. The model's bytes are never read.
         """
-        from chartbook.markdown_generator import _MODEL_PAGE_HEAD, _MODEL_PAGE_TAIL, _format_metric, _format_size
-
         record = self.records[record_id]
         pipeline = self.records[record["pipeline"]]
         base_dir = Path(pipeline["location"]["value"])
@@ -687,10 +762,19 @@ class SphinxWriter:
             paths += [Path(self.docs_src_dir), Path(self.docs_src_dir) / "_templates"]
         paths += [package / "templates", theme_dir, theme_dir / "_templates"]
         environment = jinja2.Environment(loader=jinja2.FileSystemLoader([str(p) for p in paths]))
-        from chartbook.markdown_generator import _yaml_escape_filter
-
-        environment.filters["yaml_escape"] = _yaml_escape_filter
+        environment.filters["yaml_escape"] = yaml_escape
         return environment
+
+    # --- one entry point for the build ---------------------------------------
+
+    def page(self, record: dict) -> str:
+        """The page of any record that has one: dataframe, chart, model or pipeline."""
+        return {
+            "Dataframe": self.dataframe_page,
+            "Chart": self.chart_page,
+            "Model": self.model_page,
+            "Pipeline": self.pipeline_page,
+        }[record["kind"]](record["id"])
 
 
 def _slug(pipeline_id: str) -> str:
@@ -709,10 +793,105 @@ def _as_local(modified_at: Optional[str]) -> Optional[datetime]:
 
 
 def _freshness(label: str, modified_at: Optional[str]):
-    from chartbook.markdown_generator import freshness_fact
-
     moment = _as_local(modified_at)
     return None if moment is None else freshness_fact(label, moment)
+
+
+def freshness_fact(label: str, moment: Optional[datetime]) -> Optional[dict]:
+    """One "<label> <when>" fact for a page's freshness line.
+
+    The page says *when*, not *how long ago*: a generated page is static, so
+    "2 days ago" worked out at build time would be wrong the next day, and
+    would make every page differ from one build to the next. The timestamp
+    goes into a ``<time>`` element and ``chartbook-freshness.js`` turns it
+    into relative wording when the page is read.
+
+    :returns: ``label``, ``iso`` (ISO 8601 with offset), ``title`` (hover
+        text) and ``date`` (fallback text); None when *moment* is None.
+    """
+    if moment is None:
+        return None
+    local = moment.astimezone()
+    return {
+        "label": label,
+        "iso": local.isoformat(timespec="seconds"),
+        "title": local.strftime("%Y-%m-%d %H:%M %Z").strip(),
+        "date": local.strftime("%Y-%m-%d"),
+    }
+
+
+def yaml_escape(value) -> str:
+    """Escape a value for a YAML double-quoted scalar (the front matter of a chart page)."""
+    return str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def check_front_matter(page: Path, pipeline_id: str, chart_id: str) -> None:
+    """Refuse a chart page whose YAML front matter does not parse: Sphinx would silently misfile it.
+
+    :raises SystemExit: Through :class:`ChartBookError`, with the field to look at.
+    """
+    content = Path(page).read_text(encoding="utf-8")
+    if not content.startswith("---"):
+        return
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        return
+    try:
+        yaml.safe_load(parts[1])
+    except yaml.YAMLError as error:
+        ChartBookError(
+            message="Generated chart has malformed YAML frontmatter",
+            file_path=Path(page),
+            hint=(
+                f"Chart '{pipeline_id}:{chart_id}' produced invalid YAML frontmatter. "
+                f"This usually means a field in chartbook.toml (e.g. sources, "
+                f"tags, name) contains characters that are unsafe in YAML "
+                f"(colons, brackets, etc.).\nYAML error: {error}"
+            ),
+        ).exit_with_message()
+
+
+def _format_size(size_bytes) -> str:
+    """A file size for a person: ``18.2 KB``, ``4.1 MB``."""
+    size = float(size_bytes)
+    for unit in ("bytes", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return f"{int(size)} {unit}" if unit == "bytes" else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} GB"
+
+
+def _format_metric(value) -> str:
+    """A score for a table: whole numbers whole, others to six significant digits."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if not isinstance(value, float):
+        return str(value)
+    return f"{value:.6g}"
+
+
+def _most_recent_valid_datapoints(parquet_path: Path, date_col: str = "date", size_threshold_mb: float = 50):
+    """The least and greatest of each column's last non-null date, as text, for the dataframe table.
+
+    "N/A" without a date column or for a folder of parts; "N/A (large file)"
+    over the size threshold, so a big file is not read for two dates.
+    """
+    if date_col in ("", "NA", "N/A"):
+        return "N/A", "N/A"
+    if is_glob_pattern(str(parquet_path)):
+        return "N/A", "N/A"
+    if os.path.getsize(parquet_path) / (1024 * 1024) > size_threshold_mb:
+        return "N/A (large file)", "N/A (large file)"
+    frame = pl.read_parquet(parquet_path)
+    if frame[date_col].dtype != pl.Datetime:
+        frame = frame.with_columns(pl.col(date_col).cast(pl.Datetime, strict=False))
+    latest = frame.select(
+        [pl.col(date_col).filter(pl.col(col).is_not_null()).max().alias(col) for col in frame.columns if col != date_col]
+    )
+    dates = [date for date in latest.row(0) if date is not None]
+    if not dates:
+        return "N/A", "N/A"
+    return min(dates).strftime("%Y-%m-%d %H:%M:%S"), max(dates).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _source_glimpse(record: dict, base_dir: Path) -> str:
