@@ -82,6 +82,7 @@ design/toml-format-v2
 design/references
 design/asset-graph
 design/index-schema
+design/writer
 design/models
 design/data-access
 ```

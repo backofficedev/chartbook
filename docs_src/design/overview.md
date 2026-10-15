@@ -1985,7 +1985,8 @@ records facts about the build, including comparisons it made, and no renderings;
 record is to gain its write-up's path and hash; `stale_inputs` stays. A **writer** per site tool
 turns the index into **pages**; the Sphinx writer comes first, after a vocabulary page and an
 inventory of what every page shows today; MkDocs and Next.js writers are the roadmap's reason to
-keep the index clean.
+keep the index clean. The inventory of what every page shows, and what the index must gain for a
+writer to show it, is {doc}`writer`.
 
 #### 6a. A diff of two indexes — as built
 

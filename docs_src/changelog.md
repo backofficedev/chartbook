@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation — the vocabulary page, and the inventory for the writer
+
+`docs_src/design/writer.md` inventories every section of every page the generator writes today, says whether each is a fact (belongs in the index), a rendering (the writer makes it) or a file (the writer reads what the index names), and lists what the index must gain before a Sphinx writer can replace the generator: the write-up's path and hash, `modified_at` on file locations, `date_range` on dated dataframes, `code_changed_at` on the pipeline, the policy on the catalog. Nothing is built.
+
 ### Documentation — the vocabulary page
 
 A page that defines ChartBook's words and is the one place they are defined: the chain *repository → index → pages → site*, with a *writer* per site tool; the four documents and the sentence that tells them apart — *a manifest asks, a lockfile records what was got, a snapshot records what was made, and an index records what a site shows*; the three rules that follow (the lockfile is never merged into the index; the index records facts and comparisons, no renderings; write-ups are not pinned, the commit holds them); and where this is going (snapshot and index converge). The design's own Words table now points at it.
