@@ -52,39 +52,12 @@ assets alike.
 
 ## Words
 
-| Word | Means |
-|---|---|
-| **pipeline** | One project with a `chartbook.toml`: code that produces assets. Identified as `scope/name`, e.g. `ftsfr/fed_yield_curve` |
-| **scope** | The organization or owner half of a pipeline's ID. Taken from the git remote's owner |
-| **catalog** | A `chartbook.toml` that lists pipelines and builds one site over all of them. It declares no assets of its own |
-| **manifest** | The `chartbook.toml` file |
-| **asset** | Something a pipeline declares: a dataframe, chart, notebook, note or model |
-| **kind** | Which of those five an asset is. Written singular: `chart` |
-| **dataframe** | A table of data. Today always a parquet file (or a glob of them) |
-| **series** | One column of a dataframe, given its own address and documentation |
-| **part** | Something inside an asset, addressed with `#`. A series is a dataframe's part; a file is a model's part |
-| **reference** | The address of an asset: `[registry/][scope/]pipeline:[kind/]name[#part][@rev]`. Specified in {doc}`references` |
-| **local reference** | A reference with no `pipeline:` in front. It means "in the pipeline I am in" |
-| **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.models` for models, `chartbook.assets` for any kind |
-| **location** | Where an asset physically is: a file, or a table or query in a source ({doc}`data-access`) |
-| **index** | One JSON file describing everything a catalog contains. A build product. Planned ({doc}`index-schema`) |
-| **record** | One entry in the index. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
-| **store** | A local folder of files named by their hash, used for caching and pinning. One per user, shared by their projects ({doc}`asset-graph`) |
-| **object** | One asset in the store: a directory named by the asset's content hash, holding its files under their own names |
-| **dependency** | Another pipeline that this one reads from, declared in `[dependencies]`: a name, and where to find it (`path` or `git`) |
-| **resolution chain** | The order in which a pipeline's location is looked for: `[dependencies]`, then the catalog. One function, `chartbook.resolve.locate_pipeline` |
-| **lockfile** | `chartbook.lock`: the exact bytes of the upstream assets a project uses, by content hash. JSON in the index's format. Committed |
-| **pin** | To freeze which version of an upstream asset a project reads. Also the record of it: an asset's entry in the lockfile, with a `content_hash`. `chartbook pin` makes pins and never moves one; `chartbook update` moves them |
-| **build record** | A written description of how one asset was made: inputs, code, tools, output hash. Planned |
-| **source / backend** | A named database connection in a manifest / the engine behind it. Built: DuckDB ({doc}`data-access`) |
-| **scratch** | `_data/_scratch/` inside a pipeline: throwaway files that are not assets |
-
-Three different things are called "kind", and they do not mix:
-
-- an **asset kind**, lowercase, in a reference: `chart`;
-- a **record kind**, capitalized, in the index: `Chart`. It is the asset kind capitalized, plus
-  the non-asset records (`Catalog`, `Pipeline`, `Series`, `Build`);
-- a **location kind**, inside a record's `location`: `file`, `table` or `query`.
+The vocabulary is a page of the documentation, {doc}`../guide/vocabulary`, and that page is the
+one place the words are defined; the design documents use them in those senses. The sentence to
+keep in mind, the maintainer's (2026-10-14): *a manifest asks, a lockfile records what was got,
+a snapshot records what was made, and an index records what a site shows.* The chain is
+*repository → index → pages → site*, with a **writer** per site tool and the site tools called
+by their names.
 
 ## Rules that settle arguments
 
@@ -1999,6 +1972,21 @@ Once the index is stable: render the site from it, a Dagster export, an MCP serv
 provenance panel on each page, a diff of two indexes. Each is a reader of one file
 ({doc}`index-schema`, "What this unblocks").
 
+**Direction, decided by the maintainer 2026-10-14.** The four documents stay as they are:
+manifest, lockfile, snapshot, index ({doc}`../guide/vocabulary`). The lockfile is never merged
+into the index: it is an input to a build and the index is its output, it has no timestamp on
+purpose so that a diff of it means "a pin moved", and it stays committed; the index reports pins
+and never makes one. The pair that converges is snapshot and index: a snapshot is one pipeline's
+index at one commit, kept with the bytes; a site's index is its own pipeline at the current build
+plus each dependency's pinned snapshot plus the catalog; a site is a pure function of an index
+and the write-ups at the commit the index names, so a site can later be built for any snapshot
+and lineage can link across sites by commit. That is a direction, not work for now. The index
+records facts about the build, including comparisons it made, and no renderings; each asset
+record is to gain its write-up's path and hash; `stale_inputs` stays. A **writer** per site tool
+turns the index into **pages**; the Sphinx writer comes first, after a vocabulary page and an
+inventory of what every page shows today; MkDocs and Next.js writers are the roadmap's reason to
+keep the index clean.
+
 #### 6a. A diff of two indexes — as built
 
 *Added 2026-10-14.* The smallest reader, and the one a reviewer of any build wants:
@@ -2175,6 +2163,7 @@ maintainer.
 | 2026-10-13 | The command rename is made now and is breaking: `chartbook docs` renders the site, `chartbook build` runs the build script and then renders. No compatibility beyond a warning | Step 4 above, "4c, as built" |
 | 2026-10-13 | No backwards compatibility in this work: the right design, even if it breaks, with a warning at most. The order of the remaining work is the builder's to choose | Step 4 above, "4c, as built" |
 | 2026-10-14 | Of step 6's readers: the provenance panel now; an MCP server later (issue 54); the site rendered from the index only after a conversation, very soon; no Dagster export for now | "6b, as built", above |
+| 2026-10-14 | Vocabulary: repository → index → pages → site; a writer per site tool; the four documents stay (manifest asks, lockfile records what was got, snapshot what was made, index what a site shows); the lockfile is never merged into the index; snapshot and index converge as a direction; write-ups are not pinned but their path and hash go in the index; the index records facts and comparisons, no renderings; `stale_inputs` stays | {doc}`../guide/vocabulary`; step 6 above |
 
 ## Open questions, collected
 

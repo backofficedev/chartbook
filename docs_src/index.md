@@ -51,6 +51,7 @@ Working with an AI assistant? The built docs site ships [llms.txt](https://llmst
 :caption: Learn
 
 getting-started
+guide/vocabulary
 guide/documenting-a-pipeline
 guide/catalogs-and-data
 guide/plotting

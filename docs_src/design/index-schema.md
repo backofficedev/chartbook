@@ -20,8 +20,10 @@ reasons are in {doc}`references`, {doc}`models` and {doc}`data-access`.
 
 ## What the index is
 
-`chartbook build` produces two things: **content** (markdown, as authored) and an **index** (a
-structured description of everything the catalog contains). The index is a build product, not
+`chartbook build` produces two things: the **write-ups** (markdown, as authored) and an **index** (a
+structured description of everything the catalog contains). *(2026-10-14: the words are now fixed
+in {doc}`../guide/vocabulary`: a writer turns the index into **pages** for a site tool; the index
+records facts and no renderings; the lockfile is never merged into it.)* The index is a build product, not
 source — the resolved, composed view of the manifests, with paths absolutized, cross-pipeline edges
 resolved, defaults filled in, policy inherited and content hashes attached.
 
@@ -49,8 +51,9 @@ Four properties are load-bearing:
 - **Self-contained.** A consumer reads the index and needs nothing else — no catalog lookup, no
   filesystem walk, no manifest parsing.
 - **Versioned per record**, so the format can change without a flag day.
-- **Content-addressed.** Every asset carries its hash, so the index is the lockfile's source of
-  truth rather than a parallel structure.
+- **Content-addressed.** Every asset carries its hash, in the same record format the lockfile
+  and a snapshot use. *(2026-10-14: the lockfile stays its own document, an input to the build
+  where the index is the output; the shared record format is the only merge.)*
 - **Diffable.** `diff(before, after)` answers "what did this build change?" — which assets moved,
   which hashes changed, which upstream inputs shifted.
 
