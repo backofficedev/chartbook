@@ -3,7 +3,8 @@
 ```{note}
 A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
 vocabulary ({doc}`../guide/vocabulary`), then this inventory, then the Sphinx writer, then the
-documentation site. Status: **inventory done; nothing of the writer is built.** The decisions it
+documentation site. Status: **inventory done; the index additions it asks for are built (2026-10-14); nothing of the
+writer is built.** The decisions it
 proposes are marked *proposed* until the maintainer takes them.
 ```
 
@@ -93,7 +94,10 @@ index names); where the generator gets it today; and whether the index has it.
 
 ## What the index must gain
 
-In the order a writer needs them. Each is a fact, and each is small.
+In the order a writer needs them. Each is a fact, and each is small. *(All built 2026-10-14,
+the same day, as 6c; `tests/test_index.py`, `TestWhatTheWriterNeeds`. The diff reads what a
+file holds, not when it was written, so `modified_at` alone is not a change; a changed write-up
+reads "write-up changed", a longer `date_range` "data reaches further".)*
 
 1. **The write-up's path and hash** on every asset record and on the `Pipeline` record (its
    README). *Decided 2026-10-14.* A build then says which text it showed, and a diff says the
@@ -103,8 +107,11 @@ In the order a writer needs them. Each is a fact, and each is small.
 3. **`date_range`** on a dataframe record with a `date_col`: the first and last date in the
    data. *Proposed.* The engine answers it for a table or a query already (the page's min and
    max); for a file it is one scan of one column.
-4. **`code_changed_at`** on the `Pipeline` record: when the pipeline's code last changed,
-   according to git, which the pipeline page shows today. *Proposed.* It is the first field of
+4. **`code_changed_at`** on the `Pipeline` record: when the pipeline's code last changed, as
+   the build works it out (the last commit that touched the source where it is committed and
+   unmodified, else the newest modification time), which the pipeline page shows today.
+   *Proposed.* The index asks git for nothing itself: the build works the times out once, and
+   an incremental build remembers them for the pipelines it reuses. It is the first field of
    the `Build` record the index design leaves for later; the rest of that record (the commit
    the site was built at, the time, the tool versions) belongs with it, and the envelope's
    `generator` already carries the versions.

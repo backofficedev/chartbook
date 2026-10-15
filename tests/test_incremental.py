@@ -580,8 +580,9 @@ class TestIncrementalBuild:
 
         after = _mtimes(project / "_docs")
         touched = sorted(name for name in after if after[name] != before.get(name))
-        # The chart's own page, and the front page that dates the code
-        assert touched == ["cb/charts/multi_df.chart_1_0.md", "index.md"]
+        # The chart's own page, and the front page that dates the code; and the
+        # index, since the write-up's hash is in it, with the hash cache
+        assert touched == [".chartbook-hash-cache.json", "cb/charts/multi_df.chart_1_0.md", "index.json", "index.md"]
         assert summary.sources_written == 2
         assert summary.pages_read == 2
 

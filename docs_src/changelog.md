@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the four facts a writer needs, in the index
+
+From the page inventory: every write-up (an asset's `docs`, a pipeline's README) now carries its `content_hash`, so a build says which text it showed and `index diff` says *write-up changed*; a `file` location carries `modified_at`, when the file was last written, for the freshness lines; a dataframe with a `date_col` carries `date_range`, the first and last date in its data; a `Pipeline` record carries `code_changed_at`, when its code last changed according to git. `index diff` reads what a file holds, not when it was written, so a touch is not a change.
+
 ### Documentation — the vocabulary page, and the inventory for the writer
 
 `docs_src/design/writer.md` inventories every section of every page the generator writes today, says whether each is a fact (belongs in the index), a rendering (the writer makes it) or a file (the writer reads what the index names), and lists what the index must gain before a Sphinx writer can replace the generator: the write-up's path and hash, `modified_at` on file locations, `date_range` on dated dataframes, `code_changed_at` on the pipeline, the policy on the catalog. Nothing is built.

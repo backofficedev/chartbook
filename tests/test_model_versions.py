@@ -411,6 +411,8 @@ class TestStaleness:
         built = index.build_index(load_manifest(forecast))
         (record,) = [r for r in built["records"] if r["id"] == "acme/forecast:model/m"]
         assert set(record["stale_inputs"]) == {"d", "rates:treasury"}
+        (pipeline_record,) = [r for r in built["records"] if r["kind"] == "Pipeline"]
+        assert pipeline_record["code_changed_at"].endswith("Z")  # when the code last changed, from git
         assert set(record["trained_with"]) == {"d", "rates:treasury"}
         schema = json.loads(index.schema_path("Model").read_text())
         jsonschema.validate(record, schema)

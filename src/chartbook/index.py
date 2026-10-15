@@ -144,13 +144,71 @@ def _declared_fields(entry: dict, skip: Iterable[str] = ()) -> dict:
     }
 
 
-def _docs(entry: dict) -> Optional[dict]:
-    """An entry's write-up: the file it is in, or the text itself if inline."""
+def _docs(entry: dict, base_dir: Optional[Path] = None, cache: Optional[hashing.HashCache] = None) -> Optional[dict]:
+    """An entry's write-up: the file it is in, or the text itself if inline.
+
+    With *base_dir*, the write-up's content hash too, so that a build says
+    which text it showed and a diff says the write-up changed. Write-ups
+    are not pinned; the commit holds them, and the hash names the version.
+    """
     if entry.get("docs_path"):
-        return {"path": entry["docs_path"]}
+        docs = {"path": entry["docs_path"]}
+        if base_dir is not None:
+            try:
+                docs["content_hash"] = hashing.hash_file(Path(base_dir) / entry["docs_path"], cache).content_hash
+            except OSError:
+                pass  # a write-up that is not there: `chartbook check` reports it
+        return docs
     if entry.get("docs"):
-        return {"text": entry["docs"]}
+        import hashlib
+
+        return {
+            "text": entry["docs"],
+            "content_hash": hashing.format_hash(hashlib.sha256(entry["docs"].encode("utf-8")).hexdigest()),
+        }
     return None
+
+
+def _modified_at(resolved: str) -> Optional[str]:
+    """When a file, or the newest file a glob names, was last written, in UTC."""
+    import glob as globbing
+
+    from chartbook.utils import is_glob_pattern
+
+    paths = globbing.glob(resolved, recursive=True) if is_glob_pattern(resolved) else [resolved]
+    stamps = []
+    for path in paths:
+        try:
+            stamps.append(os.stat(path).st_mtime)
+        except OSError:
+            continue
+    if not stamps:
+        return None
+    return datetime.fromtimestamp(max(stamps), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _date_range(resolved: str, date_col: str) -> Optional[dict]:
+    """The first and last value of a dataframe's date column, as text.
+
+    One column is read, lazily, so a large file costs one column and not the
+    whole. None when the column is not there or cannot be read.
+    """
+    import polars as pl
+
+    try:
+        frame = pl.scan_parquet(resolved, hive_partitioning=True)
+        if date_col not in frame.collect_schema().names():
+            return None
+        first, last = (
+            frame.select(pl.col(date_col).min().alias("first"), pl.col(date_col).max().alias("last"))
+            .collect()
+            .row(0)
+        )
+    except Exception:  # noqa: BLE001 - polars raises many types for "not readable"
+        return None
+    if first is None or last is None:
+        return None
+    return {"first": str(first), "last": str(last)}
 
 
 def _file_facts(
@@ -182,6 +240,9 @@ def _file_facts(
     if content is not None:
         facts["content_hash"] = content.content_hash
         facts["size_bytes"] = content.size_bytes
+        modified = _modified_at(resolved)
+        if modified:
+            facts["location"]["modified_at"] = modified
         if list_files and os.path.isdir(resolved):
             facts["files"] = [
                 {
@@ -236,6 +297,28 @@ def _describe_in_source(entry: dict, where: str) -> Optional[tuple[list[dict], i
             stacklevel=2,
         )
         return None
+
+
+def _describe_span_in_source(entry: dict, date_col: str) -> Optional[dict]:
+    """The first and last date of a table or query, asked of its engine."""
+    from chartbook.backends import BackendError, DuckDBBackend
+    from chartbook.resolve import QueryLocation, TableLocation
+
+    source = entry.get("_source") or {}
+    url = source.get("_resolved_url")
+    if not url:
+        return None
+    if entry.get("table"):
+        location = TableLocation(entry["source"], source["backend"], url, entry["table"])
+    else:
+        location = QueryLocation(entry["source"], source["backend"], url, entry["query"])
+    try:
+        first, last = DuckDBBackend(url).span(location, date_col)
+    except (BackendError, OSError, ValueError):
+        return None
+    if first is None or last is None:
+        return None
+    return {"first": str(first), "last": str(last)}
 
 
 def _definition_hash(location: dict, columns: list[dict], url: Optional[str]) -> str:
@@ -298,11 +381,17 @@ def _head(kind: str, ref: AssetRef, pipeline_id: str, entry: dict) -> dict:
     return record
 
 
-def _finish(record: dict, entry: dict, skip: Iterable[str] = ()) -> dict:
+def _finish(
+    record: dict,
+    entry: dict,
+    skip: Iterable[str] = (),
+    base_dir: Optional[Path] = None,
+    cache: Optional[hashing.HashCache] = None,
+) -> dict:
     """Add an entry's remaining declared metadata, then its write-up, last."""
     for key, value in _declared_fields(entry, skip=skip).items():
         record.setdefault(key, value)
-    docs = _docs(entry)
+    docs = _docs(entry, base_dir, cache)
     if docs is not None:
         record["docs"] = docs
     return record
@@ -547,6 +636,15 @@ def _asset_records(
                     stacklevel=2,
                 )
         series = _series_records(ref, entry, columns, where)
+        date_col = entry.get("date_col")
+        if date_col and "content_hash" in facts and columns and date_col in {c["name"] for c in columns}:
+            span = _date_range(facts["location"]["resolved_path"], date_col)
+            if span:
+                record["date_range"] = span
+        elif date_col and record.get("location", {}).get("kind") in ("table", "query") and columns:
+            span = _describe_span_in_source(entry, date_col)
+            if span:
+                record["date_range"] = span
     elif kind == "chart" and entry.get("dataframe"):
         source = parse_asset_ref(entry["dataframe"], kind="dataframe")
         if source.is_local:
@@ -579,7 +677,7 @@ def _asset_records(
             record["trained_with"] = stale.trained_with
             record["stale_inputs"] = stale.stale
 
-    return [_finish(record, entry, skip=skip), *series]
+    return [_finish(record, entry, skip=skip, base_dir=base_dir, cache=cache), *series]
 
 
 def _model_staleness(base_dir: Path, name: str, entry: dict):
@@ -694,8 +792,54 @@ def pipeline_records(
             dependencies, known_pipelines, locked
         )
     record["assets"] = [a["id"] for a in assets if a["kind"] != "Series"]
-    record["docs"] = {"path": project.get("readme") or "./README.md"}
+    record["docs"] = _docs({"docs_path": project.get("readme") or "./README.md"}, base_dir, cache)
+    changed = code_changed_at(pipeline_manifest)
+    if changed:
+        record["code_changed_at"] = changed
     return [record, *assets]
+
+
+def code_changed_at(pipeline_manifest: dict) -> Optional[str]:
+    """When the pipeline's code last changed, as the build worked it out, in UTC.
+
+    Read from the manifest's ``source_last_modified_date``: the last commit
+    that touched the source where it is committed and unmodified, else the
+    newest modification time (:func:`chartbook.manifest.apply_code_change_times`,
+    which the build runs once per pipeline and remembers across incremental
+    builds; loading a manifest stamps it from modification times). The
+    index asks git for nothing itself.
+    """
+    from chartbook.manifest import CODE_TIME_FORMAT
+
+    stamp = pipeline_manifest.get("source_last_modified_date")
+    if not isinstance(stamp, str):
+        return None
+    try:
+        moment = datetime.strptime(stamp, CODE_TIME_FORMAT)
+    except ValueError:
+        return None
+    return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def apply_code_times(index: dict, manifest: dict) -> dict:
+    """Set each ``Pipeline`` record's ``code_changed_at`` from the manifest's code times.
+
+    For a build that works the times out after the index is made, as an
+    incremental build does once it knows which pipelines it reuses.
+    """
+    from chartbook.manifest import get_pipeline_manifest
+
+    for record in index.get("records", []):
+        if record.get("kind") != "Pipeline":
+            continue
+        try:
+            pipeline_manifest = get_pipeline_manifest(manifest, record["id"])
+        except KeyError:
+            continue
+        changed = code_changed_at(pipeline_manifest)
+        if changed:
+            record["code_changed_at"] = changed
+    return index
 
 
 def build_index(

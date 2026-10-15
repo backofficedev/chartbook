@@ -347,7 +347,11 @@ def generate_docs(
 
     try:
         # The index first, once: the pages' provenance panels read it, and
-        # it is written beside the site at the end
+        # it is written beside the site at the end. The code-change times
+        # are worked out once here, for the index and then for the pages
+        from chartbook.manifest import apply_code_change_times
+
+        code_times = apply_code_change_times(manifest)
         _docs_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
         built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
@@ -361,6 +365,7 @@ def generate_docs(
             size_threshold=size_threshold,
             strip_mathjax2=strip_mathjax2,
             skip_pipelines=skip_pipelines,
+            code_times=code_times,
             hash_cache=cache,
             built_index=built,
         )
@@ -560,6 +565,12 @@ def _generate_docs_incremental(
             plan.code_times[pipeline_id] = find_latest_code_change(base_dir).strftime(
                 CODE_TIME_FORMAT
             )
+    # The index was made before the plan; now that the times are known it
+    # says when each pipeline's code last changed
+    from chartbook.manifest import apply_code_change_times
+
+    apply_code_change_times(manifest, known=plan.code_times)
+    index.apply_code_times(built, manifest)
 
     # FULLY clean temp_docs_src_dir first
     if temp_docs_src_dir.exists():

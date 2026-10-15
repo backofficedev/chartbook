@@ -1986,7 +1986,10 @@ record is to gain its write-up's path and hash; `stale_inputs` stays. A **writer
 turns the index into **pages**; the Sphinx writer comes first, after a vocabulary page and an
 inventory of what every page shows today; MkDocs and Next.js writers are the roadmap's reason to
 keep the index clean. The inventory of what every page shows, and what the index must gain for a
-writer to show it, is {doc}`writer`.
+writer to show it, is {doc}`writer`; the five facts it found missing were added the same day
+(6c): each write-up's `content_hash`, `modified_at` on file locations, `date_range` on a dated
+dataframe, `code_changed_at` on the pipeline, and the policy, which the catalog record already
+carried.
 
 #### 6a. A diff of two indexes — as built
 

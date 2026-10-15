@@ -685,6 +685,9 @@ Built in `chartbook/index.py` and `chartbook/hashing.py`, with the JSON Schemas 
 `chartbook/schemas/`. `tests/test_index.py` and `tests/test_hashing.py` are the executable form
 of this section.
 
+*(2026-10-14, for the writer, {doc}`writer`: every write-up carries its `content_hash`; a `file`
+location its `modified_at`; a dated dataframe its `date_range`; a pipeline its `code_changed_at`.)*
+
 **What is written.** `Catalog`, `Pipeline`, `Dataframe`, `Series`, `Chart`, `Notebook`, `Note`
 and `Model` records; `dependencies` on a `Pipeline` that declares some, each with its
 `pinned_hash` once pinned; and `pinned_inputs` on a `Model`. Not yet: `Build`

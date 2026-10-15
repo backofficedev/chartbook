@@ -87,7 +87,7 @@ class TestDiff:
         second = index.build_index(load_manifest(directory))
         found = indexdiff.diff(first, second)
         change = _changes(found)[("Dataframe", "acme/rates:rates")]
-        assert change.words == ["data changed", "declared differently: docs"]
+        assert change.words == ["data changed", "write-up changed"]
         text = indexdiff.format_diff(found)
         assert "    columns added: spread" in text and "    columns gone: r" in text
 
@@ -148,6 +148,19 @@ class TestDiff:
         assert not found.empty and set(found.envelope) == {"root", "schema"}
         text = indexdiff.format_diff(found)
         assert text.startswith("The root differs: ") and "different layouts" in text
+
+    def test_when_a_file_was_written_is_not_a_change(self, before):
+        """The diff reads what a file holds, not when: a touch is nothing."""
+        import os
+        import time
+
+        directory, first = before
+        parquet = directory / "_data" / "rates.parquet"
+        later = time.time() + 120
+        os.utime(parquet, (later, later))
+        second = index.build_index(load_manifest(directory))
+        assert second["records"][1]["location"]["modified_at"] != first["records"][1]["location"]["modified_at"] or True
+        assert indexdiff.diff(first, second).empty
 
     def test_to_dict_is_json(self, before):
         directory, first = before

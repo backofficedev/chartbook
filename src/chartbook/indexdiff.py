@@ -41,6 +41,9 @@ RENDERED_KINDS = ("Chart", "Notebook")
 
 #: Fields that are worked out, not declared, with the words for a change in each.
 COMPUTED_WORDS = {
+    "docs": "write-up changed",
+    "date_range": "data reaches further",
+    "code_changed_at": "code changed",
     "assets": "assets changed",
     "pinned_inputs": "pins moved",
     "trained_with": "trained on other data",
@@ -190,8 +193,8 @@ def diff(before: dict, after: dict) -> IndexDiff:
     for name in ENVELOPE_FIELDS:
         if before.get(name) != after.get(name):
             result.envelope[name] = (before.get(name), after.get(name))
-    first = {_key(r): r for r in published(before).get("records", [])}
-    second = {_key(r): r for r in published(after).get("records", [])}
+    first = {_key(r): _timeless(r) for r in published(before).get("records", [])}
+    second = {_key(r): _timeless(r) for r in published(after).get("records", [])}
     for key in sorted(set(second) - set(first)):
         result.added.append(second[key])
     for key in sorted(set(first) - set(second)):
@@ -207,6 +210,14 @@ def diff(before: dict, after: dict) -> IndexDiff:
         }
         result.changed.append(Change(key[0], key[1], fields))
     return result
+
+
+def _timeless(record: dict) -> dict:
+    """A record without when its file was written: the diff reads what a file holds, not when."""
+    location = record.get("location")
+    if isinstance(location, dict) and "modified_at" in location:
+        record = {**record, "location": {k: v for k, v in location.items() if k != "modified_at"}}
+    return record
 
 
 def _short(value) -> str:

@@ -80,6 +80,10 @@
             "resolved_path": {
               "type": "string",
               "description": "Absolute path on the machine that built the index. Absent from a published index."
+            },
+            "modified_at": {
+              "type": "string",
+              "description": "When the file, or the newest file the glob names, was last written, in UTC. Absent when not built."
             }
           },
           "required": [
@@ -207,6 +211,27 @@
           "type": "string"
         },
         "rendered": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$",
+          "description": "The hash of the write-up's text, so a build says which text it showed. Write-ups are not pinned; the commit holds them."
+        }
+      }
+    },
+    "date_range": {
+      "type": "object",
+      "required": [
+        "first",
+        "last"
+      ],
+      "description": "The first and last value of `date_col`, as text: how far the data reaches. Absent without a `date_col`, or when the data cannot be read.",
+      "properties": {
+        "first": {
+          "type": "string"
+        },
+        "last": {
           "type": "string"
         }
       }
