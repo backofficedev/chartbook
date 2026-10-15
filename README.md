@@ -16,7 +16,7 @@ ChartBook supports two project types:
 - **Pipeline** — A single analytics pipeline with its own charts, dataframes, and documentation
 - **Catalog** — A collection of multiple pipelines aggregated into a unified documentation site
 
-See [Documenting a Pipeline](https://backofficedev.github.io/chartbook/guide/documenting-a-pipeline.html) and [Catalogs and Data Access](https://backofficedev.github.io/chartbook/guide/catalogs-and-data.html) for how the two fit together.
+See [Documenting a Pipeline](https://backofficedev.github.io/chartbook/guide/documenting-a-pipeline.html) and [Catalogs and Data Access](https://backofficedev.github.io/chartbook/guide/catalogs-and-data.html) for how the two fit together, and [Vocabulary](https://backofficedev.github.io/chartbook/guide/vocabulary.html) for the words ChartBook uses: a manifest asks, a lockfile records what was got, a snapshot records what was made, and an index records what a site shows.
 
 ## Features
 

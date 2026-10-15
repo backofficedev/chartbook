@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation — the site, in the vocabulary, with diagrams
+
+The front page now says what ChartBook is in the words of the vocabulary page, with two diagrams: the chain *repository → index → pages → site*, and the four documents and what each records. {doc}`guide/how-the-build-works` is rewritten around the three steps the build actually takes (resolve the index, write the pages, build the site) and what the index holds; it had still described the generator and said nothing read the index. A new page, {doc}`guide/depending-on-pipelines`, gathers snapshots, pins, the lockfile, `chartbook run`, the frozen check for CI and model versions in one place, with a diagram, where they had been two sections of the pipeline guide. Getting Started ends by pointing at the index the build wrote.
+
 ### Changed — the build calls the Sphinx writer; the Markdown generator is gone
 
 `chartbook docs` and `chartbook build` now write the site through `chartbook.sitefiles.write_site()`: the index first, then every page rendered by `chartbook.writers.sphinx.SphinxWriter` from the index and the files it names, then the files themselves copied beside the pages from the index's records (charts, notebooks, notes, downloads, the theme's files, a pipeline's own site pages). `chartbook.markdown_generator` is removed; what the writer had still imported from it lives in the writer. Two small behaviours change: a catalog copies no pipeline's site pages (it had copied the first pipeline's to the catalog root, where nothing listed them), and the folders for charts, notebooks and downloads exist only when something is copied into them. Fixed on the way: a project under a folder named `models`, `charts`, `dataframes`, `notebooks` or `site` got no theme files, since the names to leave out were matched against the whole path.
