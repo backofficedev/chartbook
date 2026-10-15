@@ -3,9 +3,10 @@
 ```{note}
 A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
 vocabulary ({doc}`../guide/vocabulary`), then this inventory, then the Sphinx writer, then the
-documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's first four slices
-built (2026-10-15): the dataframe, chart, model and pipeline pages, each held equal to the
-generator's by a golden test. The generator still writes the site.** The decisions it
+documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's five slices
+built (2026-10-15): the dataframe, chart, model and pipeline pages and the catalog's own pages,
+each held equal to the generator's by a golden test. The generator still writes the site; the
+next step is for the build to call the writer instead.** The decisions it
 proposes are marked *proposed* until the maintainer takes them.
 ```
 
@@ -264,6 +265,45 @@ which breaks on a form feed where the generator's `readlines()` does not; both r
 diff says "site pages changed" when one appears or goes. Known: the site pages are listed without
 hashes, so a diff cannot say *which* page changed. *Proposed:* give each the same `path` +
 `content_hash` shape as a write-up when a reader needs it.
+
+*2026-10-15, slice 5: the catalog's own pages.* `SphinxWriter.catalog_page(path)` for
+`index.md`, `cb/dataframes.md`, `cb/models.md` (when some pipeline declares a model),
+`cb/pipelines.md` and `cb/diagnostics.md`; `catalog_page_paths()` says which. The landing page and
+the lists are renderings of the records, as the inventory said; `pipelines.md` reuses the pipeline
+manifest table made from each `Pipeline` record. The diagnostics page is the comparison the
+inventory proposed the writer should make: each record's declared fields against the `required`
+lists of the policy the `Catalog` record carries (always resolved, defaults filled). A record
+carries the fields its entry declared, and its structure stands in for the rest — a `location`
+is the `path`, a `docs` is the write-up, a chart's `inputs` is its `dataframe`, a model's
+`inputs` are its `trained_on` — so the rows come out as the generator's `build_diagnostics()`
+does from the manifests, which the golden test holds them to on a catalog with a `[policy]`, a
+model and assets missing fields. The generator had read the rows back from the CSV the build
+writes; the build still writes that CSV, and the page links to it. `charts.md` and
+`contributing.md` are static files of the theme that the build copies, not pages the writer
+renders. One fact was added: the `Catalog` record's `location`, so the writer looks in the
+catalog's folder for template overrides as it does in a pipeline's. Aligned on both sides: the
+lists and the diagnostics rows are by name (pipelines, then assets), as the index orders records,
+where the generator had kept the manifests' order; and an empty "Missing Fields" cell is empty on
+the page, where the generator's round trip through pandas had printed `nan`. An adversarial
+review found the first version of the comparison treating as missing what a record states in
+another form: a policy may require `readme`, `site_url` or `copyright` of a pipeline, `docs_path`,
+`linked_charts`, `series` or `source` of a dataframe, `metrics_path` of a model, and the writer
+had no such keys to look at. Each is put back under the entry's name now, from the record's
+`docs`, `location`, the records that point at it (charts, declared series) or its own fields; the
+`Pipeline` record carries `copyright` and the `Model` record `metrics_path` for it, as declared.
+A blank inline write-up (`docs = " "`) is missing on both sides, since the record's `docs.text`
+is what is checked, not whether a `docs` exists. The review also found a decision nobody had
+made: a pipeline that `--no-strict` leaves out of the build was still listed by the generator's
+catalog pages (pages that did not exist) and counted in the diagnostics, while the index, and so
+the writer, left it out. *Decided with the slice, proposed:* **a skipped pipeline is not part of
+the site**, so the lists and the diagnostics leave it out; the generator does so now. Two more:
+the loader now refuses a dataframe, chart, notebook or note key that cannot be part of an
+address, as it already did a model's, since the index left such an asset out with a warning while
+the generator rendered its page — the manifest and the index must describe the same set; and a
+catalog's `location` is dropped entirely from the published index, not left as a bare `kind`,
+which a diff against an older index had called "moved". With this, every page the generator
+renders has a writer; what remains is for the build to call the writer and copy the files, and
+for the generator to go.
 
 ## What this does not decide
 

@@ -18,7 +18,7 @@ from click.testing import CliRunner
 
 from chartbook import hashing, index
 from chartbook.cli import main
-from chartbook.manifest import load_manifest
+from chartbook.manifest import get_pipeline_manifest, load_manifest
 from chartbook.refs import AssetRef, parse_asset_ref
 from tests.fixtures import create_pipeline_project
 
@@ -260,16 +260,25 @@ class TestAssetRecords:
         assert "notes_pipeline:chart/dataframe_0" in ids
         assert len(ids) == len(set(ids))
 
-    def test_a_key_that_is_not_an_address_is_left_out_with_a_warning(self, project):
+    def test_a_key_that_is_not_an_address_is_refused_by_the_loader(self, project):
+        """The manifest and the index must describe the same set of assets, so a key
+        that cannot be part of an address is refused when the manifest is loaded
+        (2026-10-15; the index had left it out with a warning while the pages showed it)."""
         def edit(config):
             config["notes"]["two words"] = {"path": "docs_src/note1.md"}
 
         _edit_toml(project, edit)
+        with pytest.raises(ValueError, match=r"\[notes.two words\]: 'two words' is not a legal note key"):
+            _build(project)
+
+    def test_the_index_still_leaves_out_what_it_cannot_address(self, project):
+        """The index's own guard, for a manifest that did not come through the loader."""
+        manifest = load_manifest(project)
+        pipeline_manifest = get_pipeline_manifest(manifest, "notes_pipeline")
+        pipeline_manifest["notes"]["two words"] = {"path": "docs_src/note1.md", "_resolved_path": str(project / "docs_src" / "note1.md")}
         with pytest.warns(UserWarning, match=r"\[notes.two words\] is left out"):
-            built = _build(project)
-        assert [r["id"] for r in _of_kind(built, "Note")] == [
-            "notes_pipeline:note/note1"
-        ]
+            records = index.pipeline_records("notes_pipeline", pipeline_manifest)
+        assert [r["id"] for r in records if r["kind"] == "Note"] == ["notes_pipeline:note/note1"]
 
 
 class TestFilesNotBuiltYet:

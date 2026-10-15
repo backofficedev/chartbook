@@ -43,6 +43,149 @@ def _same_pages(writer: SphinxWriter, index: dict, build_dir: Path, kinds=KINDS)
     assert seen, f"no {kinds} pages to compare"
 
 
+def _same_catalog_pages(writer: SphinxWriter, build_dir: Path) -> None:
+    paths = writer.catalog_page_paths()
+    assert "index.md" in paths and "cb/diagnostics.md" in paths
+    for page_path in paths:
+        assert writer.catalog_page(page_path) == (build_dir / page_path).read_text(), page_path
+
+
+class TestTheCatalogsOwnPages:
+    def test_the_landing_page_and_the_lists(self, catalog_project, monkeypatch):
+        index = _built(catalog_project, monkeypatch)
+        (catalog,) = [r for r in index["records"] if r["kind"] == "Catalog"]
+        assert catalog["location"] == {"kind": "path", "value": catalog_project.resolve().as_posix()}
+        assert catalog["policy"]["required"]["dataframes"]  # the resolved policy, defaults filled
+        writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog_project / "_docs_src")
+        _same_catalog_pages(writer, catalog_project / "_docs")
+        assert "cb/models.md" not in writer.catalog_page_paths()  # no pipeline declares a model
+        page = writer.catalog_page("cb/dataframes.md")
+        assert "dataframes/pipeline_a/dataframe_0.md\n" in page
+
+    def test_the_diagnostics_page_is_a_comparison_the_writer_makes(self, catalog_project, monkeypatch):
+        """Each record's declared fields against the Catalog record's policy, as the generator
+        works out from the manifests (and writes as a CSV, which the build keeps doing)."""
+        import tomli
+        import tomli_w
+
+        from tests.test_models import add_models
+
+        catalog = catalog_project.resolve()
+        config = tomli.loads((catalog / "chartbook.toml").read_text())
+        config["policy"] = {"mode": "warn", "required": {"charts": ["name", "units"], "models": ["name", "docs"]}}
+        (catalog / "chartbook.toml").write_text(tomli_w.dumps(config))
+        add_models(catalog / "pipelines" / "pipeline_b")
+        pipeline_a = tomli.loads((catalog / "pipelines" / "pipeline_a" / "chartbook.toml").read_text())
+        pipeline_a["charts"]["chart_0_0"].pop("tags", None)
+        pipeline_a["dataframes"]["dataframe_0"]["providers"] = []
+        (catalog / "pipelines" / "pipeline_a" / "chartbook.toml").write_text(tomli_w.dumps(pipeline_a))
+        index = _built(catalog, monkeypatch)
+        writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
+        _same_catalog_pages(writer, catalog / "_docs")
+        _same_pages(writer, index, catalog / "_docs")
+        assert "cb/models.md" in writer.catalog_page_paths()
+        page = writer.catalog_page("cb/diagnostics.md")
+        assert "### Chart Fields (2 required)" in page and "### Model Fields" not in page
+        rows = {
+            (row["Object Type"], row["Pipeline"], row["Identifier"]): row
+            for row in writer._diagnostics(next(r for r in index["records"] if r["kind"] == "Catalog"))
+        }
+        assert rows[("chart", "pipeline_a", "chart_0_0")]["Missing Fields"] == "units"
+        assert "providers" in rows[("dataframe", "pipeline_a", "dataframe_0")]["Missing Fields"]
+        assert "providers" not in rows[("dataframe", "pipeline_b", "dataframe_0")]["Missing Fields"]
+        assert rows[("model", "pipeline_b", "encoder")]["Missing Fields"] == "name, docs"
+        assert rows[("model", "pipeline_b", "forecaster")]["Metadata Complete"] is True
+        assert [row["Pipeline"] for row in rows.values()] == sorted(row["Pipeline"] for row in rows.values())
+
+    def test_a_policy_may_require_what_a_record_states_in_another_form(self, catalog_project, monkeypatch):
+        """Found by a reviewer: a policy naming `readme`, `site_url`, `copyright`, `docs_path`,
+        `linked_charts`, `series`, `source`, `metrics_path` or a blank inline write-up made the
+        writer's rows differ from the generator's. Each is put back under the entry's name."""
+        import duckdb
+        import tomli
+        import tomli_w
+
+        from tests.test_models import add_models
+
+        catalog = catalog_project.resolve()
+        config = tomli.loads((catalog / "chartbook.toml").read_text())
+        config["policy"] = {
+            "required": {
+                "project": ["name", "site_url", "readme", "copyright", "id", "type"],
+                "dataframes": ["docs_path", "linked_charts", "series", "source", "path"],
+                "charts": ["dataframe", "docs_path", "docs"],
+                "models": ["metrics_path", "trained_on", "docs"],
+            }
+        }
+        (catalog / "chartbook.toml").write_text(tomli_w.dumps(config))
+        add_models(catalog / "pipelines" / "pipeline_b")
+        b = catalog / "pipelines" / "pipeline_b"
+        config_b = tomli.loads((b / "chartbook.toml").read_text())
+        config_b["models"]["encoder"]["docs"] = "   "  # blank: missing on both sides
+        config_b["sources"] = {"local": {"backend": "duckdb", "url": "duckdb:///./_data/local.duckdb"}}
+        config_b["dataframes"]["curve"] = {"source": "local", "table": "curve", "docs": "A table.", "series": {"y": {"name": "Y"}}}
+        (b / "chartbook.toml").write_text(tomli_w.dumps(config_b))
+        (b / "_data").mkdir(exist_ok=True)
+        con = duckdb.connect(str(b / "_data" / "local.duckdb"))
+        con.sql("create table curve as select * from (values (date '2024-01-01', 1.0)) t(d, y)")
+        con.close()
+        index = _built(catalog, monkeypatch)
+        writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
+        _same_catalog_pages(writer, catalog / "_docs")
+        rows = {
+            (row["Object Type"], row["Pipeline"], row["Identifier"]): row["Missing Fields"]
+            for row in writer._diagnostics(next(r for r in index["records"] if r["kind"] == "Catalog"))
+        }
+        assert rows[("pipeline", "pipeline_a", "pipeline_a")] == ""
+        assert rows[("dataframe", "pipeline_b", "curve")] == "docs_path, linked_charts"  # a table has a source and a series
+        assert rows[("dataframe", "pipeline_a", "dataframe_0")] == "series, source"
+        assert rows[("model", "pipeline_b", "encoder")] == "metrics_path, trained_on, docs"
+        assert rows[("model", "pipeline_b", "forecaster")] == ""
+        (public,) = [r for r in __import__("chartbook.index", fromlist=["index"]).published(index)["records"] if r["kind"] == "Catalog"]
+        assert "location" not in public
+
+    def test_a_pipeline_the_build_skips_is_not_in_the_catalogs_pages(self, catalog_project, monkeypatch):
+        """Decided with the slice: a pipeline `--no-strict` leaves out is not part of the site,
+        so the lists and the diagnostics leave it out too (the generator had listed pages that
+        did not exist, and counted the pipeline's rows)."""
+        catalog = catalog_project.resolve()
+        for html in (catalog / "pipelines" / "pipeline_b" / "_output" / "charts").glob("*.html"):
+            html.unlink()
+        monkeypatch.chdir(catalog)
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs", "--no-strict"])
+        assert result.exit_code == 0, result.output
+        index = json.loads((catalog / "_docs" / "index.json").read_text())
+        (record,) = [r for r in index["records"] if r["kind"] == "Catalog"]
+        assert record["pipelines"] == ["pipeline_a"]
+        writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
+        _same_catalog_pages(writer, catalog / "_docs")
+        assert "pipeline_b" not in writer.catalog_page("cb/pipelines.md")
+        assert "pipeline_b" not in writer.catalog_page("cb/dataframes.md")
+        assert all(row["Pipeline"] == "pipeline_a" for row in writer._diagnostics(record))
+
+    def test_an_asset_key_that_cannot_be_an_address_is_refused_by_the_loader(self, pipeline_project):
+        """Found by a reviewer: `[dataframes."my df"]` loaded, had a page and a diagnostics row,
+        and was left out of the index with a warning, so the writer's pages differed. The
+        manifest and the index must describe the same set; models were already checked."""
+        import tomli
+        import tomli_w
+
+        from chartbook.manifest import load_manifest
+
+        project = pipeline_project.resolve()
+        config = tomli.loads((project / "chartbook.toml").read_text())
+        config["dataframes"]["my df"] = {"path": "./_data/x.parquet", "docs": "x"}
+        (project / "chartbook.toml").write_text(tomli_w.dumps(config))
+        with pytest.raises(ValueError, match=r"'my df' is not a legal dataframe key"):
+            load_manifest(base_dir=project)
+
+    def test_a_pipelines_index_has_no_catalog_pages(self, pipeline_project, monkeypatch):
+        index = _built(pipeline_project, monkeypatch)
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=pipeline_project / "_docs_src")
+        with pytest.raises(ValueError, match="no Catalog record"):
+            writer.catalog_page("index.md")
+
+
 class TestThePipelinePage:
     def test_the_front_page_of_a_pipeline_site(self, pipeline_project, monkeypatch):
         index = _built(pipeline_project, monkeypatch)

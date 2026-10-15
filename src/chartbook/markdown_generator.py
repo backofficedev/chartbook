@@ -297,14 +297,21 @@ def generate_all_pipeline_docs(
                 file.write(readme_text)
 
     ## Dataframe and Pipeline List in index.md
+    # Both lists sorted, as the index would list them: the catalog's pages
+    # take them as they come. A skipped pipeline is not part of the site,
+    # so none of its pages are listed
     table_file_map = get_dataframes_and_dataframe_docs(base_dir=base_dir)
-    dataframe_file_list = list(table_file_map.values())
+    dataframe_file_list = sorted(
+        path
+        for dataframe_ref, path in table_file_map.items()
+        if dataframe_ref.rsplit(":", 1)[0] not in (skip_pipelines or ())
+    )
     # Models of every pipeline in the site, skipped ones aside
-    model_file_list = [
+    model_file_list = sorted(
         path
         for model_ref, path in get_model_docs(manifest).items()
         if model_ref.split(":model/")[0] not in (skip_pipelines or ())
-    ]
+    )
 
     # Get package templates directory
     package_templates_dir = get_package_templates_path()
@@ -356,11 +363,17 @@ def generate_all_pipeline_docs(
             with open(docs_build_dir / "cb" / "models.md", mode="w", encoding="utf-8") as file:
                 file.write(rendered_page)
 
-        # Render pipelines.md
+        # Render pipelines.md, for the pipelines that are part of the site
         template_path = "pipelines.md"
         template = environment.get_template(template_path)
+        in_site = {
+            **manifest,
+            "pipelines": {
+                key: value for key, value in manifest["pipelines"].items() if key not in (skip_pipelines or ())
+            },
+        }
         rendered_page = template.render(
-            manifest=manifest,
+            manifest=in_site,
             dot_or_dotdot=".",
             docs_src_dir=docs_src_dir.relative_to(base_dir),  # Pass relative path
             show_code_updated=True,
@@ -387,7 +400,8 @@ def generate_all_pipeline_docs(
         if diagnostics_csv_path.exists():
             import pandas as pd
 
-            df = pd.read_csv(diagnostics_csv_path)
+            # An empty cell is an empty string, not "nan" on the page
+            df = pd.read_csv(diagnostics_csv_path, keep_default_na=False)
 
             # Page links are already relative to the cb/ directory
             df["Page Link (HTML)"] = df["Page Link"]

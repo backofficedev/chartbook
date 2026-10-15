@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — the Sphinx writer's fifth slice: the catalog's own pages
+
+`SphinxWriter.catalog_page()` writes the catalog's landing page, its lists of dataframes, models and pipelines, and its diagnostics page from the `Catalog` record and the records of the site. The diagnostics are a comparison the writer makes, each record's declared fields against the policy the `Catalog` record carries, where the generator read back the CSV the build had written; the build still writes that CSV, which the page links to. The `Catalog` record gains a `location`, as a pipeline's has, dropped when published; the `Pipeline` record carries `copyright` and the `Model` record `metrics_path`, as declared, so a policy may require them. Aligned on both sides: the lists and the diagnostics rows are by name, as the index orders records, and an empty "Missing Fields" cell is empty on the page where it had read "nan". Decided with it: a pipeline that `--no-strict` leaves out of the build is not part of the site, so the catalog's lists and diagnostics leave it out (they had listed pages that did not exist). The loader now refuses a dataframe, chart, notebook or note key that cannot be part of an address, as it already refused a model's: the index left such an asset out while the pages showed it.
+
 ### Added — the Sphinx writer's fourth slice: the pipeline page
 
 `SphinxWriter.pipeline_page()` writes a pipeline site's front page (the README's text with the tables of contents made from the records) and, in a catalog, each pipeline's README page. For it the `Pipeline` record gains `site_dir` and `site_pages`: the folder of pages a pipeline supplies for its own site and every Markdown file under it, so a reader of the index knows them without walking the folder; `resolved_path` is dropped from the published index as for every location. Decided with it: the front page lists notebooks and notes by name, as the index does, where it had kept the manifest's order.

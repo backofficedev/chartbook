@@ -240,6 +240,13 @@ The root. Exactly one per index.
 
 An index for a single pipeline omits the `Catalog` record and sets `root` to that pipeline's ID.
 
+*(2026-10-15, built: the `Catalog` record also has a `location`, `{"kind": "path", "value":
+"/…/catalog"}`, as a pipeline's has, so a writer knows where the catalog's own template
+overrides are; it is dropped from the published index altogether, since a catalog is only ever
+a folder and a bare `kind` would say nothing. The diagnostics page is a
+comparison a writer makes from the records and this record's `policy`, as the inventory
+proposed; the build still writes the same comparison as a CSV file.)*
+
 ### Pipeline
 
 ```json
