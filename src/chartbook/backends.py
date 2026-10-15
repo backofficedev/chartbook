@@ -338,13 +338,18 @@ class DuckDBBackend:
         return [{"name": row[0], "dtype": row[1]} for row in described], int(rows)
 
     def span(self, location: "Location", column: str) -> tuple:
-        """The least and greatest value of one column: ``min(col), max(col)``."""
+        """The first and last date in one column, read as timestamps.
+
+        ``try_cast(col as timestamp)``: a date or timestamp column is itself,
+        a text column is parsed where it can be, and anything else is null.
+        """
         import duckdb
 
         name = '"' + column.replace('"', '""') + '"'
         try:
             return self.connect().sql(
-                f"select min({name}), max({name}) from {self.ref(location)}"
+                f"select min(try_cast({name} as timestamp)), max(try_cast({name} as timestamp)) "
+                f"from {self.ref(location)}"
             ).fetchone()
         except duckdb.Error as error:
             raise BackendError(str(error)) from None

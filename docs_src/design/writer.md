@@ -3,8 +3,9 @@
 ```{note}
 A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
 vocabulary ({doc}`../guide/vocabulary`), then this inventory, then the Sphinx writer, then the
-documentation site. Status: **inventory done; the index additions it asks for are built (2026-10-14); nothing of the
-writer is built.** The decisions it
+documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's first slice built
+(2026-10-15): the dataframe page, held equal to the generator's by a golden test. The generator
+still writes the site.** The decisions it
 proposes are marked *proposed* until the maintainer takes them.
 ```
 
@@ -111,8 +112,8 @@ reused on a machine in another zone, or a stamp in the repeated hour of a DST ch
    write-up changed.
 2. **`modified_at`** on every `file` location: when the file was last written, in UTC. The
    freshness lines and ABlog's dates come from it. *Proposed.*
-3. **`date_range`** on a dataframe record with a `date_col` of a date or datetime type: the
-   first and last date in the data, in ISO 8601. *Proposed.* The engine answers it for a table
+3. **`date_range`** on a dataframe record with a `date_col`: the first and last date in the
+   data, in ISO 8601; a text column is parsed as dates, and what does not parse is left out. *Proposed.* The engine answers it for a table
    or a query; for a file it is one column, read from the parquet statistics. The file page's
    per-column "available up to" rows are a different quantity, a comparison across columns,
    which the writer computes from the file it names.
@@ -150,6 +151,40 @@ in the files the index names.
   whole. The index is small enough to keep as a fixture.
 - **MkDocs and Next.js** are later writers reading the same index; they are why the index stays
   free of renderings. Not scheduled.
+
+## As built, slice by slice
+
+*2026-10-15, slice 1: the dataframe page.* `chartbook/writers/sphinx.py`, `SphinxWriter`. Its
+input is the **full** index (with `resolved_path`, since it reads the files the index names) and
+the files; it takes the theme, the project's own `docs_src` for template overrides, and the two
+build options the page depends on. It renders today's templates unchanged, from a context made
+of records: the dataframe's declared fields and location; a `project` table and the dataframes
+list made from the `Pipeline` record; the write-up read at the path the record gives; the glimpse
+and the per-column date rows from the data file, or from the engine for a table or a query,
+opened through `chartbook.backends.source_url()` from the public `url` the location now carries;
+the freshness line from `modified_at`; the panel from the records. The link scheme is three
+functions on the writer. A golden test (`tests/test_writer_sphinx.py`) builds the site with the
+generator and asserts the writer's page is the same text, on a file-backed pipeline and on one
+with a DuckDB table and query. Two facts were added for it: `site_url` on the `Pipeline` record
+(dropped from the published index when it is a local `file://` path, as `resolved_path` is) and
+`url` on a table or query location. Not yet: the chart, model, notebook, note and pipeline pages,
+the catalog's list pages, and the build calling the writer instead of the generator.
+
+*Decided with the slice, proposed:* **a write-up is text, not a template.** The generator had
+concatenated the write-up into the page's Jinja source, so `{{ name }}` or `{% if %}` inside a
+write-up was evaluated, and `{{'a': 1}}` crashed the build; nothing documented it and no example
+used it. The writer passes the write-up as a value, and the generator's dataframe page does the
+same now, so what the author wrote is what the page shows. **The date rows of a table or query
+come from the index's `date_range`**, which parses a text column as dates, where the generator had
+shown the engine's least and greatest text. **A declared path is shown normalized**
+(`../shared/x` as the folder it names), as the index and the resolver have it. An adversarial
+review of the slice found the writer resolving a relative DuckDB url against the process's
+working directory instead of the pipeline's folder, which the golden test's `chdir` had hidden
+(fixed; the catalog theme, built from the catalog's root, is tested now); a published index gave
+a bare `KeyError` (a message says the writer needs the full index); `docs_src_dir` unset dropped
+the override paths (it defaults as the generator's). Known: the pipeline table's code-change time
+is converted back from UTC to local for the page and can land on the other side of a repeated
+DST hour.
 
 ## What this does not decide
 

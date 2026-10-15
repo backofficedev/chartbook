@@ -459,7 +459,11 @@ class TestIndexAndSite:
         built = index.build_index(load_manifest(pipeline))
         records = {r["id"]: r for r in built["records"] if r["kind"] == "Dataframe"}
         table = records["acme/rates:curve"]
-        assert table["location"] == {"kind": "table", "source": "local", "backend": "duckdb", "identifier": "curve"}
+        assert {k: v for k, v in table["location"].items() if k != "modified_at"} == {
+            "kind": "table", "source": "local", "backend": "duckdb", "identifier": "curve",
+            "url": "duckdb:///./_data/local.duckdb",  # the manifest's public url, for a reader to open the engine
+        }
+        assert table["location"]["modified_at"].endswith("Z")  # the DuckDB file is a file
         assert "content_hash" not in table and table["definition_hash"].startswith("sha256:")
         assert table["row_count"] == 2 and [c["name"] for c in table["columns"]] == ["d", "y02", "y10"]
         assert table["columns"][1]["dtype"] == "DECIMAL(2,1)"  # DuckDB's name, as the engine has it

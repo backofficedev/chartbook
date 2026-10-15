@@ -1,0 +1,3 @@
+# Rendered site and the Sphinx project `chartbook docs --keep-build-dirs` leaves beside it.
+_docs/
+_docs_src/

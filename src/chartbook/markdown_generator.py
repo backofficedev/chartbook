@@ -738,10 +738,13 @@ def generate_dataframe_docs(
         source = dataframe_manifest["docs"]
 
     # Use filenames instead of paths for includes, so they can be found in any of our search locations
+    # A write-up is text, not a template: what it says is what the page
+    # shows, and Jinja syntax in it is not evaluated (decided 2026-10-15,
+    # with the writer; docs_src/design/writer.md)
     modified_source = (
         """# Dataframe: `{{pipeline_id}}:{{dataframe_id}}` - {{name}}\n\n"""
         + """{% include "freshness.md" %}\n\n"""
-        + source
+        + """{{ write_up }}"""
         + """\n\n
 ## DataFrame Glimpse
 
@@ -779,8 +782,14 @@ def generate_dataframe_docs(
         Path(dataframe_path_prefix) / _fs_slug(pipeline_id) / f"{dataframe_id}.md"
     ).as_posix()
     if dataframe_manifest.get("table") or dataframe_manifest.get("query"):
-        # In a source: the engine describes it and dates it
-        most_recent_data_min, most_recent_data_max = _source_span(dataframe_manifest)
+        # In a source: the engine describes it; the index dates it, with its
+        # `date_range`, so that the page says what the index says
+        record = (index_records or {}).get(f"{pipeline_id}:{dataframe_id}") or {}
+        if "date_range" in record or index_records:
+            span = record.get("date_range") or {}
+            most_recent_data_min, most_recent_data_max = span.get("first"), span.get("last")
+        else:
+            most_recent_data_min, most_recent_data_max = _source_span(dataframe_manifest)
         dataframe_glimpse = _source_glimpse(dataframe_manifest)
         freshness = [_source_freshness(dataframe_manifest)]
     else:
@@ -816,6 +825,7 @@ def generate_dataframe_docs(
     # Render the template with the new variables
     table_page = template.render(
         dataframe_manifest,
+        write_up=source,
         provenance=_panel(index_records, f"{pipeline_id}:{dataframe_id}"),
         dataframe_manifest=dataframe_manifest,
         link_to_dataframe_docs=link_to_dataframe_docs,

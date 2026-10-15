@@ -108,6 +108,14 @@
             "identifier": {
               "type": "string",
               "description": "The table, as declared: one to three dot-separated parts."
+            },
+            "url": {
+              "type": "string",
+              "description": "The source's url as the manifest declares it: the public part, never credentials. A reader opens the engine through chartbook.backends.source_url() from it."
+            },
+            "modified_at": {
+              "type": "string",
+              "description": "When the engine's file was last written, in UTC, for a DuckDB file. Absent for an in-memory engine."
             }
           },
           "required": [
@@ -132,6 +140,14 @@
             "sql": {
               "type": "string",
               "description": "The query, in the source's dialect, as declared."
+            },
+            "url": {
+              "type": "string",
+              "description": "The source's url as the manifest declares it: the public part, never credentials. A reader opens the engine through chartbook.backends.source_url() from it."
+            },
+            "modified_at": {
+              "type": "string",
+              "description": "When the engine's file was last written, in UTC, for a DuckDB file. Absent for an in-memory engine."
             }
           },
           "required": [
@@ -226,7 +242,7 @@
         "first",
         "last"
       ],
-      "description": "The first and last value of `date_col`, in ISO 8601 as the column has it (a date, or a datetime): how far the data reaches. Only for a column of a date or datetime type. Absent without a `date_col`, for a text or number column, or when the data cannot be read.",
+      "description": "The first and last date in `date_col`, in ISO 8601 (a date, or a datetime): how far the data reaches. A date or datetime column as it is; a text column parsed as dates, what does not parse left out. Absent without a `date_col`, for a column with no date in it, or when the data cannot be read.",
       "properties": {
         "first": {
           "type": "string"

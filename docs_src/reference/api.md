@@ -22,6 +22,8 @@ chartbook
 ../apidocs/chartbook/chartbook.index
 ../apidocs/chartbook/chartbook.indexdiff
 ../apidocs/chartbook/chartbook.provenance
+../apidocs/chartbook/chartbook.writers
+../apidocs/chartbook/chartbook.writers.sphinx
 ../apidocs/chartbook/chartbook.hashing
 ../apidocs/chartbook/chartbook.store
 ../apidocs/chartbook/chartbook.snapshot

@@ -812,8 +812,10 @@ class TestWhatTheWriterNeeds:
         record = _by_id(built, "acme/p:d")
         assert record["date_range"] == {"first": "2024-01-01", "last": "2024-01-03"}
         _validate(built)
-        # A text column that holds dates is not read: its least text is not its first date
-        pl.DataFrame({"Date": ["01/03/2024", "12/31/2023"], "x": [1.0, 2.0]}).write_parquet(directory / "_data" / "d.parquet")
+        # A text column that holds dates is parsed: its least text is not its first date
+        pl.DataFrame({"Date": ["2024-01-03", "2023-12-31", "not a date"], "x": [1.0, 2.0, 3.0]}).write_parquet(directory / "_data" / "d.parquet")
+        assert _by_id(index.build_index(load_manifest(directory)), "acme/p:d")["date_range"] == {"first": "2023-12-31T00:00:00", "last": "2024-01-03T00:00:00"}
+        pl.DataFrame({"Date": ["x", "y"], "x": [1.0, 2.0]}).write_parquet(directory / "_data" / "d.parquet")
         assert "date_range" not in _by_id(index.build_index(load_manifest(directory)), "acme/p:d")
         # A datetime column is ISO 8601 too
         pl.DataFrame({"Date": [datetime.datetime(2024, 1, 3, 9, 30), datetime.datetime(2024, 1, 1)], "x": [1.0, 2.0]}).write_parquet(directory / "_data" / "d.parquet")
