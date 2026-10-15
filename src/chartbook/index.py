@@ -697,8 +697,9 @@ def _asset_records(
         # A note is its own write-up
         entry = {**entry, "docs_path": entry["path"]}
     elif kind == "model":
-        # trained_on is this record's inputs, and the metrics file its metrics
-        skip = ("trained_on", "metrics_path")
+        # trained_on is this record's inputs; metrics_path stays as declared
+        # (where the scores come from), and metrics holds what it said
+        skip = ("trained_on",)
         if "trained_on" in entry:
             record["inputs"] = [
                 _input_id(reference, pipeline_id, dependencies, known_pipelines)
@@ -817,7 +818,7 @@ def pipeline_records(
         "id": pipeline_id,
         "name": project["name"],
     }
-    for key in ("description", "maintainer", "contributors", "repo_url", "site_url"):
+    for key in ("description", "maintainer", "contributors", "repo_url", "site_url", "copyright", "logo", "favicon"):
         if project.get(key):
             record[key] = _jsonable(project[key])
     compatibility = project.get("os_compatibility")
@@ -944,6 +945,9 @@ def build_index(
         }
         if project.get("description"):
             catalog["description"] = project["description"]
+        # Where the catalog is, as for a pipeline: a writer looks there for
+        # the catalog's own template overrides. Dropped when published
+        catalog["location"] = {"kind": "path", "value": Path(manifest["base_dir"]).resolve().as_posix()}
         catalog["pipelines"] = pipeline_ids
         if manifest.get("policy"):
             catalog["policy"] = _jsonable(manifest["policy"])
@@ -987,6 +991,10 @@ def published(index: dict) -> dict:
         location.pop("resolved_path", None)
         if record.get("kind") == "Pipeline" and str(record.get("site_url", "")).startswith("file://"):
             record.pop("site_url")  # a local path, not a site
+        if record.get("kind") == "Catalog" and location.get("kind") == "path":
+            # A catalog is only ever a folder: with the folder gone, the
+            # location says nothing, so it goes too
+            record.pop("location", None)
         if record.get("kind") == "Pipeline":
             places = [location]
             places += [d.get("location") for d in record.get("dependencies", [])]

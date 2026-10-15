@@ -983,6 +983,17 @@ def _load_pipeline_manifest(raw_manifest):
     manifest.setdefault("notebooks", {})
     manifest.setdefault("models", {})
 
+    # A key becomes part of an address, so the index can name the asset.
+    # Models are checked in validate_models; the other kinds here, so that
+    # the manifest and the index describe the same set of assets
+    for table, kind in (("dataframes", "dataframe"), ("charts", "chart"), ("notebooks", "notebook"), ("notes", "note")):
+        for key in manifest.get(table) or {}:
+            if not ID_COMPONENT_PATTERN.match(str(key)):
+                raise ValueError(
+                    f"{Path(base_dir) / 'chartbook.toml'}: [{table}.{key}]: {key!r} is not a legal "
+                    f"{kind} key. A key becomes part of an address, so it must match [A-Za-z0-9._-]+."
+                )
+
     # Infer notebook name from the notebook's H1 heading when not explicitly set
     for notebook_id in manifest.get("notebooks", {}):
         nb_manifest = manifest["notebooks"][notebook_id]

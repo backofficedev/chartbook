@@ -27,6 +27,20 @@
     "description": {
       "type": "string"
     },
+    "location": {
+      "type": "object",
+      "description": "Where the catalog is: its folder on the machine that built the index. Absent from a published index.",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "path"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
     "pipelines": {
       "type": "array",
       "items": {

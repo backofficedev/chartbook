@@ -174,7 +174,7 @@ def _write_sphinx_project(
 
     # Generate diagnostics CSV first so it's available during markdown build
     diagnostic_rows = generate_metadata_diagnostics(
-        manifest=manifest, docs_build_dir=sources_dir
+        manifest=manifest, docs_build_dir=sources_dir, skip_pipelines=skip_pipelines
     )
 
     # policy.mode = "strict" fails the build on any missing required

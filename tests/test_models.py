@@ -344,8 +344,11 @@ class TestModelRecord:
 
     def test_what_the_record_restates_is_not_repeated(self, project):
         record = self._models(index.build_index(load_manifest(project)))["forecaster"]
-        for restated in ("trained_on", "metrics_path", "path", "docs_path"):
+        for restated in ("trained_on", "path", "docs_path"):
             assert restated not in record
+        # Where the scores come from stays as declared (a policy may require it);
+        # `metrics` holds what the file said
+        assert record["metrics_path"] == "./_output/forecaster_metrics.json"
 
     def test_a_directory_model_lists_its_files(self, project):
         record = self._models(index.build_index(load_manifest(project)))["encoder"]

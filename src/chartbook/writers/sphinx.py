@@ -347,6 +347,204 @@ class SphinxWriter:
             freshness=[fact for fact in [_freshness("Code updated", pipeline.get("code_changed_at"))] if fact],
         )
 
+    # --- the catalog's own pages ---------------------------------------------
+
+    #: The pages a catalog renders from its records, by path under the pages
+    #: folder. `charts.md` and `contributing.md` are static files of the
+    #: theme that the build copies; they are not rendered.
+    CATALOG_PAGES = ("index.md", "cb/dataframes.md", "cb/models.md", "cb/pipelines.md", "cb/diagnostics.md")
+
+    def catalog_page_paths(self) -> list:
+        """The catalog pages this index has: `cb/models.md` only when some pipeline declares a model."""
+        has_models = any(r["kind"] == "Model" for r in self.records.values())
+        return [p for p in self.CATALOG_PAGES if has_models or p != "cb/models.md"]
+
+    def catalog_page(self, page_path: str) -> str:
+        """One of the catalog's own pages, from the `Catalog` record and the records of the site.
+
+        The landing page and the lists are renderings of the records; the
+        diagnostics page is a comparison the writer makes, of each record's
+        declared fields against the policy the `Catalog` record carries (the
+        build also writes the same comparison as a CSV file, which the page
+        links to).
+        """
+        catalog = next((r for r in self.records.values() if r["kind"] == "Catalog"), None)
+        if catalog is None:
+            raise ValueError("This index has no Catalog record: it is a pipeline's, and a pipeline site has no catalog pages.")
+        base_dir = Path((catalog.get("location") or {}).get("value") or self.docs_src_dir)
+        environment = self._environment(base_dir)
+        dataframes = sorted(self.dataframe_page_path(r) for r in self.records.values() if r["kind"] == "Dataframe")
+        models = sorted(self.model_page_path(r) for r in self.records.values() if r["kind"] == "Model")
+        if page_path == "index.md":
+            return environment.get_template("index.md").render(
+                manifest={"project": {"name": catalog.get("name", "")}},
+                dataframe_file_list=dataframes,
+                model_file_list=models,
+                readme_text="",
+                dot_or_dotdot="cb",
+            )
+        if page_path == "cb/dataframes.md":
+            return environment.get_template("dataframes.md").render(
+                dataframe_file_list=[p.removeprefix("cb/") for p in dataframes]
+            )
+        if page_path == "cb/models.md":
+            return environment.get_template("models.md").render(
+                model_file_list=[p.removeprefix("cb/") for p in models]
+            )
+        if page_path == "cb/pipelines.md":
+            pipelines = {
+                r["id"]: self._pipeline_manifest(r) for r in self.records.values() if r["kind"] == "Pipeline"
+            }
+            try:
+                docs_src = Path(self.docs_src_dir).relative_to(base_dir).as_posix()
+            except ValueError:
+                docs_src = Path(self.docs_src_dir).as_posix()
+            return environment.get_template("pipelines.md").render(
+                manifest={"pipelines": pipelines},
+                dot_or_dotdot=".",
+                docs_src_dir=docs_src,
+                show_code_updated=True,
+            )
+        if page_path == "cb/diagnostics.md":
+            rows = self._diagnostics(catalog)
+            summary = None
+            if rows:
+                complete = sum(1 for row in rows if row["Metadata Complete"])
+                summary = {
+                    "total_count": len(rows),
+                    "complete_count": complete,
+                    "incomplete_count": len(rows) - complete,
+                    "complete_pct": round(100 * complete / len(rows), 1),
+                    "incomplete_pct": round(100 * (1 - complete / len(rows)), 1),
+                }
+            required = self._required_fields(catalog)
+            return environment.get_template("diagnostics.md").render(
+                diagnostics_data=rows,
+                diagnostics_summary=summary,
+                required_fields=required,
+                pipeline_field_count=len(required["project"]),
+                dataframe_field_count=len(required["dataframes"]),
+                chart_field_count=len(required["charts"]),
+            )
+        raise KeyError(f"No catalog page at {page_path!r}; the pages are {', '.join(self.CATALOG_PAGES)}.")
+
+    @staticmethod
+    def _required_fields(catalog: dict) -> dict:
+        """The policy's required fields by object type: the record's, or ChartBook's defaults."""
+        from chartbook.diagnostics import DEFAULT_REQUIRED_FIELDS
+
+        declared = (catalog.get("policy") or {}).get("required") or {}
+        return {kind: list(declared.get(kind, fields)) for kind, fields in DEFAULT_REQUIRED_FIELDS.items()}
+
+    def _diagnostics(self, catalog: dict) -> list:
+        """The diagnostics rows: each pipeline's and asset's declared fields against the policy.
+
+        What the generator works out from the manifests, worked out from the
+        records: a record carries the fields its entry declared, and its
+        structure stands in for the rest — a `location` is the `path`, a
+        `docs` is the write-up, a chart's `inputs` is its `dataframe`, a
+        model's `inputs` are its `trained_on`.
+        """
+        from chartbook.diagnostics import _collect_missing_fields, _value_is_missing
+
+        required = self._required_fields(catalog)
+        rows = []
+        kinds = {"Dataframe": "dataframes", "Chart": "charts", "Model": "models", "Notebook": "notebooks"}
+        for pipeline_id in catalog.get("pipelines", []):
+            pipeline = self.records.get(pipeline_id)
+            if pipeline is None:
+                continue
+            project = {
+                key: pipeline.get(key)
+                for key in ("name", "description", "maintainer", "contributors", "os_compatibility", "repo_url",
+                            "site_url", "copyright", "logo", "favicon")
+            }
+            # What the loader always fills, and the record states in another form
+            project["build"] = (pipeline.get("scripts") or {}).get("build")
+            project["readme"] = (pipeline.get("docs") or {}).get("path")
+            project["site_dir"] = (pipeline.get("site_dir") or {}).get("path")
+            project["id"], project["type"] = pipeline_id, "pipeline"
+            project["enable_data_download"] = self.enable_data_download  # a bool is never missing
+            missing = _collect_missing_fields(project, required["project"])
+            rows.append(self._row("pipeline", pipeline.get("name", pipeline_id), pipeline_id, pipeline_id, missing, "../index.html"))
+            for kind, table in kinds.items():
+                if kind == "Notebook" and not required.get("notebooks"):
+                    continue
+                for record in [self.records[i] for i in pipeline.get("assets", []) if self.records.get(i, {}).get("kind") == kind]:
+                    spec = self._as_declared(record)
+                    missing = _collect_missing_fields(spec, required.get(table, []))
+                    if kind in ("Dataframe", "Chart") and all(
+                        _value_is_missing(spec.get(key)) for key in ("docs_path", "docs")
+                    ):
+                        missing.append("docs_path or docs")
+                    name = _local_name(record)
+                    slug = _slug(pipeline_id)
+                    link = {
+                        "Dataframe": f"./dataframes/{slug}/{name}.html",
+                        "Chart": f"./charts/{slug}.{name}.html",
+                        "Model": f"./models/{slug}/{name}.html",
+                        "Notebook": "",
+                    }[kind]
+                    rows.append(self._row(kind.lower(), record.get("name", name), name, pipeline_id, missing, link))
+        return rows
+
+    def _as_declared(self, record: dict) -> dict:
+        """A record as its manifest entry read, for the policy's rules.
+
+        A record carries the fields its entry declared, and states the rest
+        in another form; each is put back under the name the entry used, so
+        that a policy may require any of them: `path`, `table`, `query` and
+        `source` from the location; `docs_path` or `docs` from the write-up;
+        a chart's `dataframe` from its inputs; a dataframe's `linked_charts`
+        and `series` from the records that point at it; a model's
+        `trained_on` from its inputs.
+        """
+        skip = {"kind", "version", "id", "ref", "pipeline", "location", "content_hash", "size_bytes", "row_count",
+                "columns", "definition_hash", "date_range", "docs", "inputs", "files", "pinned_inputs",
+                "trained_with", "inputs_now", "stale_inputs", "metrics", "versions"}
+        spec = {key: value for key, value in record.items() if key not in skip}
+        location = record.get("location") or {}
+        if location.get("kind") == "file":
+            spec["path"] = location.get("path")
+        elif location.get("kind") in ("table", "query"):
+            spec[location["kind"]] = location.get("identifier") or location.get("sql")
+            spec["source"] = location.get("source")
+        docs = record.get("docs") or {}
+        if "path" in docs:
+            spec["docs_path"] = docs["path"]
+        if "text" in docs:
+            spec["docs"] = docs["text"]
+        kind = record.get("kind")
+        if kind == "Chart" and record.get("inputs"):
+            spec["dataframe"] = record["inputs"][0]
+        if kind == "Dataframe":
+            spec["linked_charts"] = [
+                _local_name(self.records[other])
+                for other in self._reversed["used_by"].get(record["id"], [])
+                if self.records.get(other, {}).get("kind") == "Chart"
+            ]
+            spec["series"] = {
+                _local_name(series): {}
+                for series in self.records.values()
+                if series.get("kind") == "Series" and series.get("declared") and series["id"].startswith(record["id"] + "#")
+            }
+        if kind == "Model":
+            spec["trained_on"] = list(record.get("inputs") or [])
+        return spec
+
+    @staticmethod
+    def _row(object_type, name, identifier, pipeline_id, missing, link) -> dict:
+        return {
+            "Name": name,
+            "Metadata Complete": not missing,
+            "Object Type": object_type,
+            "Identifier": identifier,
+            "Pipeline": pipeline_id,
+            "Missing Fields": ", ".join(missing),
+            "Page Link": link,
+            "Page Link (HTML)": link,
+        }
+
     def _readme_lines(self, pipeline: dict, base_dir: Path) -> list:
         """The pipeline's README, line by line, from the file its record names."""
         docs = pipeline.get("docs") or {}
@@ -456,7 +654,7 @@ class SphinxWriter:
         """The pipeline as the templates read it: a `project` table, and its dataframes."""
         project = {
             key: pipeline.get(key, "")
-            for key in ("name", "maintainer", "contributors", "repo_url", "site_url", "os_compatibility")
+            for key in ("name", "description", "maintainer", "contributors", "repo_url", "site_url", "os_compatibility")
         }
         project["build"] = (pipeline.get("scripts") or {}).get("build", "")
         dataframes = {
