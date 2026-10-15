@@ -1796,7 +1796,7 @@ that design.
 |---|---|
 | A snapshot records what each model was trained on: `trained_on` on the model's record, `{input_id: content_hash}` | `chartbook/snapshot.py`, `training_inputs()`, `make()` |
 | What the model file is now, against that | `chartbook/models.py`, `staleness()`, `Staleness` |
-| The index: `trained_with`, `stale_inputs` on the `Model` record | `chartbook/index.py`; `schemas/chartbook/v1/Model.json` |
+| The index: `trained_with`, `stale_inputs` on the `Model` record; `inputs_now` beside them since 2026-10-15, so the record alone says which input moved from what to what | `chartbook/index.py`; `schemas/chartbook/v1/Model.json` |
 | The page: "Out of date", with each input then and now | `chartbook/markdown_generator.py`, `_model_staleness()` |
 | `check` warns | `chartbook/check.py`, `check_model_staleness()` |
 | The tests | `tests/test_model_versions.py`, `TestStaleness` |

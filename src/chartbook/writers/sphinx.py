@@ -97,11 +97,24 @@ class SphinxWriter:
 
     # --- the link scheme ---------------------------------------------------
 
-    def pipeline_page_link(self, pipeline_id: str, page_path: str) -> str:
-        """The link from the page at *page_path* to its pipeline's page."""
+    def pipeline_page_link(self, record: dict) -> str:
+        """The link from an asset's page to its pipeline's page.
+
+        The forms are the generator's, as they are: in the catalog theme a
+        model's page climbs two folders to `pipelines/`, the others one.
+        """
         if self.theme == "pipeline":
-            return "../" * page_path.count("/") + "index.md"
-        return f"../pipelines/{_slug(pipeline_id)}_README.md"
+            return "../" * self.page_path(record).count("/") + "index.md"
+        up = "../../" if record["kind"] == "Model" else "../"
+        return f"{up}pipelines/{_slug(record['pipeline'])}_README.md"
+
+    def page_path(self, record: dict) -> str:
+        """Where an asset's page is, under the pages folder."""
+        return {
+            "Dataframe": self.dataframe_page_path,
+            "Chart": self.chart_page_path,
+            "Model": self.model_page_path,
+        }[record["kind"]](record)
 
     def dataframe_page_path(self, record: dict) -> str:
         """Where a dataframe's page is, under the pages folder."""
@@ -110,6 +123,10 @@ class SphinxWriter:
     def chart_page_path(self, record: dict) -> str:
         """Where a chart's page is, under the pages folder."""
         return f"cb/charts/{_slug(record['pipeline'])}.{_local_name(record)}.md"
+
+    def model_page_path(self, record: dict) -> str:
+        """Where a model's page is, under the pages folder."""
+        return f"cb/models/{_slug(record['pipeline'])}/{_local_name(record)}.md"
 
     def link_to_dataframe(self, record: dict, from_kind: str = "Dataframe") -> str:
         """The link to a dataframe's page from a page of the given kind.
@@ -157,7 +174,7 @@ class SphinxWriter:
             dataframe_id=_local_name(record),
             pipeline_id=record["pipeline"],
             pipeline_manifest=self._pipeline_manifest(pipeline),
-            pipeline_page_link=self.pipeline_page_link(record["pipeline"], self.dataframe_page_path(record)),
+            pipeline_page_link=self.pipeline_page_link(record),
             most_recent_data_min=first,
             most_recent_data_max=last,
             dot_or_dotdot="../..",
@@ -211,12 +228,119 @@ class SphinxWriter:
             pipeline_id=record["pipeline"],
             pipeline_manifest=pipeline_manifest,
             path_to_html_chart_unix=base_dir / Path(location.get("path", "")),
-            pipeline_page_link=self.pipeline_page_link(record["pipeline"], self.chart_page_path(record)),
+            pipeline_page_link=self.pipeline_page_link(record),
             freshness=[fact for fact in freshness if fact],
             chart_date=chart_date,
             dot_or_dotdot="..",
             enable_data_download=self.enable_data_download,
         )
+
+    def model_page(self, record_id: str) -> str:
+        """The Markdown page of one model, from its record, its inputs' records and the write-up.
+
+        Everything on the page is in the record: scores, versions, files,
+        what it was trained on (its ``inputs``), and whether it is out of
+        date (``stale_inputs``). The notice's "now" hashes are the inputs'
+        own facts: a local dataframe's ``content_hash``, another pipeline's
+        pin in ``pinned_inputs``. The model's bytes are never read.
+        """
+        from chartbook.markdown_generator import _MODEL_PAGE_HEAD, _MODEL_PAGE_TAIL, _format_metric, _format_size
+
+        record = self.records[record_id]
+        pipeline = self.records[record["pipeline"]]
+        base_dir = Path(pipeline["location"]["value"])
+        environment = self._environment(base_dir)
+        location = record.get("location") or {}
+        name = _local_name(record)
+        kept = record.get("versions") or []
+        versions = [
+            {
+                "name": version["version"],
+                "made": f"{version['made_at'][:10]} {version['made_at'][11:16]} UTC",
+                "commit": version["commit"][:7],
+                "labels": ", ".join(f"`{label}`" for label in version.get("labels", [])),
+                "metrics": {k: _format_metric(v) for k, v in (version.get("metrics") or {}).items()},
+            }
+            for version in reversed(kept)
+        ]
+        template = environment.from_string(_MODEL_PAGE_HEAD + "{{ write_up }}" + _MODEL_PAGE_TAIL)
+        model_manifest = self._model_manifest(record)
+        return template.render(
+            model_manifest,
+            write_up=self._write_up(record, base_dir, environment),
+            provenance=panel(record_id, self.records, self._reversed),
+            model_manifest=model_manifest,
+            model_id=name,
+            model_name=record.get("name", name),
+            link_to_model_docs=f"../../models/{_slug(record['pipeline'])}/{name}.md",
+            pipeline_id=record["pipeline"],
+            pipeline_manifest=self._pipeline_manifest(pipeline),
+            pipeline_page_link=self.pipeline_page_link(record),
+            dot_or_dotdot="../..",
+            metrics={k: _format_metric(v) for k, v in (record.get("metrics") or {}).items()},
+            versions=versions,
+            version_metrics=sorted({k for version in kept for k in (version.get("metrics") or {})}),
+            trained_on=self._trained_on(record),
+            staleness=self._staleness(record),
+            model_files=[
+                {"path": file["path"], "size": _format_size(file["size_bytes"])}
+                for file in record.get("files") or []
+            ],
+            freshness=[fact for fact in [_freshness("Model updated", location.get("modified_at"))] if fact],
+        )
+
+    def _model_manifest(self, record: dict) -> dict:
+        """The model as the templates read it: its declared fields and its path."""
+        skip = {"kind", "version", "id", "ref", "pipeline", "location", "content_hash", "size_bytes",
+                "files", "inputs", "pinned_inputs", "trained_with", "inputs_now", "stale_inputs", "metrics",
+                "versions", "docs"}
+        shown = {key: value for key, value in record.items() if key not in skip}
+        shown["path"] = (record.get("location") or {}).get("path", "")
+        return shown
+
+    def _trained_on(self, record: dict) -> list:
+        """What the page lists under "Trained On": a link to each input's page in this site, or its name.
+
+        An input with no record is named with a note: its pipeline is in
+        the site but does not declare it, or its pipeline is not in the site.
+        """
+        entries = []
+        for input_id in record.get("inputs", []):
+            other = self.records.get(input_id)
+            if other is not None and other.get("kind") == "Dataframe":
+                entries.append(
+                    {
+                        "label": input_id,
+                        "name": other.get("name", ""),
+                        "link": f"../../dataframes/{_slug(other['pipeline'])}/{_local_name(other)}.md",
+                        "note": "",
+                    }
+                )
+            else:
+                owner = self.records.get(input_id.rsplit(":", 1)[0]) or {}
+                note = (
+                    "which that pipeline does not declare"
+                    if owner.get("kind") == "Pipeline"
+                    else "in another pipeline, which is not part of this site"
+                )
+                entries.append({"label": input_id, "name": "", "link": "", "note": note})
+        return entries
+
+    def _staleness(self, record: dict) -> Optional[dict]:
+        """The out-of-date notice, if the record says the model is: which version, trained with what, what is there now.
+
+        All three are on the record, keyed alike: ``trained_with`` (then),
+        ``inputs_now`` (now) and ``stale_inputs`` (the comparison).
+        """
+        stale = record.get("stale_inputs") or []
+        trained_with = record.get("trained_with") or {}
+        if not stale or not trained_with:
+            return None
+        version = next(
+            (v["version"] for v in record.get("versions") or [] if v.get("content_hash") == record.get("content_hash")),
+            "",
+        )
+        return {"version": version, "trained_with": trained_with, "now": record.get("inputs_now") or {}, "stale": stale}
 
     # --- what the templates read, made from records ------------------------
 

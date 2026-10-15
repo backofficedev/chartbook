@@ -147,6 +147,14 @@
         "pattern": "^[a-z0-9]+:[0-9a-f]+$"
       }
     },
+    "inputs_now": {
+      "type": "object",
+      "description": "The content hash of each `trained_with` input now, keyed as `trained_with` is: a local dataframe as it is in the folder, another pipeline's as chartbook.lock pins it. Missing where it cannot be told (a file not there, a pin gone). Present with `trained_with`, so the record alone says which input moved from what to what.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+      }
+    },
     "stale_inputs": {
       "type": "array",
       "description": "The inputs in `trained_with` whose content now differs: a local dataframe as it is in the folder, another pipeline's as chartbook.lock pins it. Empty when the model is up to date; absent with `trained_with`.",

@@ -11,6 +11,7 @@ from click.testing import CliRunner
 
 from chartbook.cli import main
 from chartbook.writers.sphinx import SphinxWriter
+from tests.test_model_versions import trained  # noqa: F401 - a fixture: two pipelines, a model trained on both
 
 
 def _built(project: Path, monkeypatch) -> dict:
@@ -21,10 +22,14 @@ def _built(project: Path, monkeypatch) -> dict:
     return json.loads((project / "_docs" / "index.json").read_text())
 
 
-_PAGES = {"Dataframe": ("dataframe_page_path", "dataframe_page"), "Chart": ("chart_page_path", "chart_page")}
+_PAGES = {
+    "Dataframe": ("dataframe_page_path", "dataframe_page"),
+    "Chart": ("chart_page_path", "chart_page"),
+    "Model": ("model_page_path", "model_page"),
+}
 
 
-def _same_pages(writer: SphinxWriter, index: dict, build_dir: Path, kinds=("Dataframe", "Chart")) -> None:
+def _same_pages(writer: SphinxWriter, index: dict, build_dir: Path, kinds=("Dataframe", "Chart", "Model")) -> None:
     """Every page of the given kinds the generator wrote, the writer writes the same."""
     seen = 0
     for record in [r for r in index["records"] if r["kind"] in kinds]:
@@ -33,6 +38,111 @@ def _same_pages(writer: SphinxWriter, index: dict, build_dir: Path, kinds=("Data
         assert getattr(writer, page_of)(record["id"]) == generated, record["id"]
         seen += 1
     assert seen, f"no {kinds} pages to compare"
+
+
+class TestTheModelPage:
+    def test_a_file_model_with_scores_and_a_bare_directory_model(self, pipeline_project, monkeypatch):
+        from tests.test_models import add_models
+
+        project = add_models(pipeline_project.resolve())
+        index = _built(project, monkeypatch)
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=project / "_docs_src")
+        _same_pages(writer, index, project / "_docs", kinds=("Model",))
+        page = writer.model_page("test_pipeline:model/forecaster")
+        assert "## Scores" in page and "| `rmse` | 0.212346 |" in page
+        assert "[test_pipeline:dataframe_0](../../dataframes/test_pipeline/dataframe_0.md) - Dataframe 0" in page
+        assert "## Files" not in page
+        bare = writer.model_page("test_pipeline:model/encoder")
+        assert "## Files" in bare and "| `weights/best.pt` | 2.9 KB |" in bare and "- Not declared" in bare
+
+    def test_a_directory_model_with_nothing_counted_in_it_has_no_time(self, pipeline_project, monkeypatch):
+        """Found by a reviewer: an empty directory, or one holding only `.DS_Store`, got the
+        folder's own time as `modified_at`, and so a "Model updated" line the generator has not."""
+        from tests.test_models import _edit_toml
+
+        project = pipeline_project.resolve()
+        (project / "_models" / "enc").mkdir(parents=True)
+        (project / "_models" / "enc" / ".DS_Store").write_bytes(b"\0")
+        _edit_toml(project, lambda c: c.update(models={"enc": {"path": "./_models/enc"}}))
+        index = _built(project, monkeypatch)
+        (record,) = [r for r in index["records"] if r["id"] == "test_pipeline:model/enc"]
+        assert record["files"] == [] and "modified_at" not in record["location"]
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=project / "_docs_src")
+        _same_pages(writer, index, project / "_docs", kinds=("Model",))
+        assert "Model updated" not in writer.model_page("test_pipeline:model/enc")
+
+    def test_training_data_a_site_pipeline_does_not_declare_is_named_by_its_build_id(self, trained, monkeypatch):
+        """Found by a reviewer: the generator named it as stated (`rates:nope`) while the writer
+        used the build ID (`acme/rates:nope`), and both called it "not part of this site" when
+        its pipeline was. Both now use the build ID and say the pipeline does not declare it."""
+        import tomli_w
+
+        from tests.test_models import _edit_toml
+
+        rates, forecast = trained
+        work = forecast.parent
+        _edit_toml(forecast, lambda c: c["models"]["m"].update(trained_on=["d", "rates:treasury", "rates:nope"]))
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "work"}, "pipelines": {"acme/rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}})
+        )
+        index = _built(work, monkeypatch)
+        writer = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src")
+        _same_pages(writer, index, work / "_docs", kinds=("Model",))
+        page = writer.model_page("forecast:model/m")
+        assert "- `acme/rates:nope` (which that pipeline does not declare)" in page
+        assert "[acme/rates:treasury](../../dataframes/acme--rates/treasury.md)" in page
+        assert "not part of this site" not in page
+
+    def test_versions_and_a_stale_model_trained_on_another_pipelines_data(self, trained, monkeypatch):
+        """The staleness notice needs each input's hash now: a local dataframe's from its
+        record, another pipeline's from the pins the model record carries."""
+        from chartbook import lock, snapshot
+        from tests.test_model_versions import _commit
+
+        rates, forecast = trained
+        snapshot.make(rates)
+        lock.pin(forecast)
+        _commit(forecast.parent)
+        snapshot.make(forecast)
+        # Both inputs move; the pipeline updates its pin; the model is out of date on both
+        (rates / "_data" / "treasury.parquet").write_bytes(b"t2")
+        snapshot.make(rates)
+        lock.update(forecast)
+        (forecast / "_data" / "d.parquet").write_bytes(b"d2")
+        index = _built(forecast, monkeypatch)
+        (record,) = [r for r in index["records"] if r["id"] == "acme/forecast:model/m"]
+        assert set(record["stale_inputs"]) == {"d", "rates:treasury"} and record["versions"]
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=forecast / "_docs_src")
+        _same_pages(writer, index, forecast / "_docs")
+        page = writer.model_page("acme/forecast:model/m")
+        assert "## Versions" in page and f"| `{record['versions'][0]['version']}` |" in page
+        assert "**Out of date.** This file is version `" in page
+        assert "- `rates:treasury`: trained with `sha256:" in page and "- `d`: trained with `sha256:" in page
+        # The notice's "now" hashes are on the record, keyed as `trained_with` is (a reviewer
+        # found the writer matching them to `inputs` by name, which goes wrong when the
+        # declaration is reordered or two inputs share a name); they are the inputs' facts
+        (d,) = [r for r in index["records"] if r["id"] == "acme/forecast:d"]
+        assert record["inputs_now"]["d"] == d["content_hash"]
+        assert record["inputs_now"]["rates:treasury"] == record["pinned_inputs"]["rates:treasury"]
+        assert f"now `{d['content_hash'][:19]}…`" in page
+        # The other pipeline is not part of this site: named, not linked
+        assert "- `rates:treasury` (in another pipeline, which is not part of this site)" in page
+
+    def test_in_a_catalog_the_training_data_of_another_pipeline_is_linked(self, trained, monkeypatch):
+        import tomli_w
+
+        rates, forecast = trained
+        work = forecast.parent
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "work", "name": "Work"}, "pipelines": {"rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}})
+        )
+        index = _built(work, monkeypatch)
+        writer = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src")
+        _same_pages(writer, index, work / "_docs")
+        # The catalog knows the pipelines by its keys for them
+        page = writer.model_page("forecast:model/m")
+        assert "[rates:treasury](../../dataframes/rates/treasury.md)" in page
+        assert "not part of this site" not in page
 
 
 class TestTheChartPage:
@@ -133,6 +243,41 @@ class TestTheDataframePage:
             generated = (directory / "_docs" / writer.dataframe_page_path(record)).read_text()
             assert writer.dataframe_page(record["id"]) == generated, name
         assert next(r for r in index["records"] if r["id"] == "acme/rates:curve")["location"]["url"] == "duckdb:///./_data/local.duckdb"
+
+    def test_a_dataframe_that_is_a_directory_is_as_new_as_its_newest_counted_file(self, tmp_path, monkeypatch):
+        """Found by a reviewer: the generator showed the folder's own time for a directory
+        dataframe (and so a date when the folder was empty), where the index gives the newest
+        counted file's and nothing when there is none."""
+        import os
+        import time
+
+        directory = tmp_path.resolve() / "p"
+        (directory / "_data" / "parts").mkdir(parents=True)
+        (directory / "_data" / "empty").mkdir()
+        (directory / "_data" / "empty" / ".DS_Store").write_bytes(b"\0")
+        (directory / "README.md").write_text("# P\n")
+        (directory / "chartbook.toml").write_text(
+            tomli_w.dumps(
+                {
+                    "project": {"id": "acme/p"},
+                    "dataframes": {
+                        "parts": {"path": "./_data/parts", "docs": "A folder of parts."},
+                        "empty": {"path": "./_data/empty", "docs": "Nothing yet."},
+                    },
+                }
+            )
+        )
+        pl.DataFrame({"x": [1.0]}).write_parquet(directory / "_data" / "parts" / "a.parquet")
+        old = time.time() - 5 * 86400
+        os.utime(directory / "_data" / "parts" / "a.parquet", (old, old))
+        index = _built(directory, monkeypatch)
+        parts = next(r for r in index["records"] if r["id"] == "acme/p:parts")
+        empty = next(r for r in index["records"] if r["id"] == "acme/p:empty")
+        assert parts["location"]["modified_at"] < index["generated_at"]
+        assert "modified_at" not in empty["location"]
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=directory / "_docs_src")
+        _same_pages(writer, index, directory / "_docs", kinds=("Dataframe",))
+        assert "Data updated" not in writer.dataframe_page("acme/p:empty")
 
     def test_the_published_index_keeps_no_local_site_url(self, pipeline_project, monkeypatch):
         from chartbook import index as index_module

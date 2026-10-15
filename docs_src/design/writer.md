@@ -3,8 +3,8 @@
 ```{note}
 A design document, written 2026-10-14 as the second of the four steps the maintainer approved:
 vocabulary ({doc}`../guide/vocabulary`), then this inventory, then the Sphinx writer, then the
-documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's first two slices
-built (2026-10-15): the dataframe page and the chart page, each held equal to the generator's by a
+documentation site. Status: **inventory done; the index additions built (2026-10-14); the writer's first three slices
+built (2026-10-15): the dataframe, chart and model pages, each held equal to the generator's by a
 golden test. The generator still writes the site.** The decisions it
 proposes are marked *proposed* until the maintainer takes them.
 ```
@@ -208,6 +208,37 @@ as structural for every kind, where only a dataframe's become Series records —
 review of the slice found it), and of the catalog. The same review found the generator's
 provenance-panel cache keyed by the `id()` of the records dict, which a later build in the same
 process could reuse after the first was freed; it holds the records themselves now.
+
+*2026-10-15, slice 3: the model page.* `SphinxWriter.model_page()`. The whole page is in the
+`Model` record, as the inventory said it should be: scores from `metrics`, the versions table from
+`versions`, the files table from `files`, "Trained On" from `inputs` (a link when the input's
+record is in this index, which is when its pipeline is part of the site; a name and a note
+otherwise), and the out-of-date notice from `trained_with`, `inputs_now` and `stale_inputs`. The
+third of those is new with this slice, and an adversarial review is why: the notice shows each
+moved input's hash *then* and *now*, and the first version of the writer took "now" from the
+inputs' own records (a local dataframe's `content_hash`, another pipeline's pin in
+`pinned_inputs`), matching the lockfile-style keys of `trained_with` (`d`, `rates:treasury`) to the
+build IDs of `inputs` by name. The review built the cases where that guess is wrong — the
+declaration reordered after the snapshot, two upstream pipelines with a dataframe of the same
+name, an input dropped from `trained_on` but still in the version's record — and showed the page
+naming a wrong hash or raising. The index did not state the mapping, so the writer could not
+derive it; now the record states the three facts of the comparison, keyed alike, and a reader
+needs nothing else. The model's bytes are never read. The page's skeleton is still the generator's
+two template strings, imported, until the generator goes and they move here. Decided with it,
+proposed: **a model's write-up is text too**. Aligned on both sides: a directory model's files are
+listed by path as text, as the index sorts them (the generator had sorted `Path` objects, which
+order `a-b/x` and `a/x` the other way); a directory's `modified_at` in the index counts the files
+its hash counts, and is absent when there are none — an empty folder, or one holding only
+`.DS_Store`, had been given the folder's own time and so a "Model updated" line the generator did
+not show; the generator's "Data updated" for a dataframe that is a directory now says the same
+(it had shown the folder's own modification time, which moves only when an entry is added or
+removed, so a folder of parts written days ago could be dated today); and training data that a pipeline *in the site* does not declare is named by its build
+ID on both sides, with the note "which that pipeline does not declare" (the generator had named it
+as stated and called it "not part of this site", which it was). The golden test covers a file
+model with scores, a bare directory model, one with nothing counted in it, a model with two
+versions that is out of date on a local and on another pipeline's dataframe, the same model in a
+catalog that also holds the other pipeline (where "Trained On" links to it), and one trained on a
+name its upstream does not declare.
 
 ## What this does not decide
 
