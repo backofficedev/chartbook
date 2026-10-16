@@ -65,6 +65,8 @@ A catalog shows every pipeline twice over. The **working version** is the pipeli
 
 A version's site is built once on a machine and kept, under `~/.chartbook/cache/versions/` (`[cache] path`, or `CHARTBOOK_CACHE`), so later builds only copy it. One that cannot be built, an object gone from the store, say, gets a page that says why, and the build prints a `warning:` line. The versions are separate sites: the catalog's search finds the working versions.
 
+**Whose files these are.** A store may be one a team shares, and anyone who can write to it can put a snapshot in it, as anyone whose repository your catalog lists can put pages in it. So a version's site is built as files that are not your own: no template from its folder, every template in Jinja's sandbox, only pages and pictures from its site folder, no page taking in a file, no picture or download from outside the site, no notebook run, and a time limit. A snapshot record that is not what a snapshot writes is not shown, and the build says how many there were.
+
 ## Requiredness is catalog policy
 
 The manifest format itself is permissive — every field optional. Which fields member pipelines *must* fill in is the catalog's decision, declared in `[policy]`:

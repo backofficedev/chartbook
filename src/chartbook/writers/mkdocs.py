@@ -31,7 +31,7 @@ from typing import Optional
 
 import jinja2
 
-from chartbook.writers.sphinx import SphinxWriter, _laid_out_version, _local_name, _slug, yaml_escape
+from chartbook.writers.sphinx import SphinxWriter, _laid_out_version, _local_name, _sandboxed, _slug
 
 #: The install extra that brings MkDocs, the Material theme and the notebook plugin.
 EXTRA = "chartbook[mkdocs]"
@@ -50,17 +50,17 @@ class MkDocsWriter(SphinxWriter):
     CATALOG_PAGES = ("index.md", "cb/charts.md", "cb/dataframes.md", "cb/models.md", "cb/pipelines.md", "cb/diagnostics.md", "cb/versions.md")
 
     def _environment(self, base_dir: Path) -> jinja2.Environment:
-        """The Sphinx writer's search path, with this writer's theme folder first."""
+        """The Sphinx writer's search path, with this writer's theme folder first, in the sandbox."""
+        from chartbook.config import untrusted_source
+
         package = Path(str(importlib.resources.files("chartbook")))
         own = package / "docs_src_mkdocs" / self.theme
         sphinx_theme = package / _SPHINX_THEMES[self.theme]
-        paths = [base_dir]
+        paths = [] if untrusted_source() else [base_dir]
         if self.docs_src_dir is not None:
             paths += [Path(self.docs_src_dir), Path(self.docs_src_dir) / "_templates"]
         paths += [own, own / "_templates", package / "templates", sphinx_theme / "_templates"]
-        environment = jinja2.Environment(loader=jinja2.FileSystemLoader([str(p) for p in paths]))
-        environment.filters["yaml_escape"] = yaml_escape
-        return environment
+        return _sandboxed(paths)
 
     # --- the pages this writer renders besides the records' -------------------
 

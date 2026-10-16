@@ -147,3 +147,132 @@ class TestWithMkDocs:
         assert page.count('href="../versions/pipeline_a/') == 2
         name = versions.version_name(second.commit, second.made_at)
         assert (root / "docs" / versions.site_path("pipeline_a", name) / "index.html").is_file()
+
+
+def _plant(store_root: Path, commit: str, document: dict) -> Path:
+    """Write a snapshot record straight into a folder store, as anyone who can write a shared one could."""
+    folder = store_root / "snapshots" / commit / "_top"
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / "planted.json"
+    path.write_text(json.dumps(document))
+    return path
+
+
+class TestWhatTheReviewFound:
+    def test_a_record_written_to_mislead_names_no_folder(self, catalog, monkeypatch, tmp_path):
+        root, first, second = catalog
+        store_root = Path(str(default_store()))
+        base = {"schema": snapshot.SCHEMA, "root": "pipeline_a", "records": []}
+        _plant(store_root, "a" * 40, {**base, "code": {"commit": "a" * 40}, "made_at": "../../../../escaped"})
+        _plant(store_root, "b" * 40, {**base, "code": {"commit": "../../x"}, "made_at": "2026-01-01T00:00:00Z"})
+        _plant(store_root, "c" * 40, {**base, "root": "..", "code": {"commit": "c" * 40}, "made_at": "2026-01-01T00:00:00Z"})
+        _plant(store_root, "d" * 40, {**base, "schema": "chartbook/snapshot/v9", "code": {"commit": "d" * 40}, "made_at": "2026-01-01T00:00:00Z"})
+        found, unreadable = snapshot.readable_snapshots(default_store())
+        assert len(unreadable) == 4 and {t.made_at for t in found} == {first.made_at, second.made_at}
+        from chartbook import index
+        from chartbook.manifest import load_manifest
+
+        with pytest.warns(UserWarning, match="4 snapshot record\\(s\\) in the store cannot be read and are not shown"):
+            index.build_index(load_manifest(root))
+        _build(root, monkeypatch)
+        # The two real ones are there all the same, and nothing was written anywhere else
+        assert len(list((root / "docs" / "versions" / "pipeline_a").iterdir())) == 2
+        assert not list(tmp_path.rglob("escaped")) and not list(root.rglob("x-2026*"))
+
+    @pytest.mark.parametrize("bad", ["..", ".", "a/..", "a/b/c", "a b", ""])
+    def test_what_names_a_folder_is_checked(self, bad):
+        with pytest.raises(ValueError):
+            versions.slug(bad)
+        with pytest.raises(ValueError):
+            versions.version_name("a" * 40, "../x")
+        with pytest.raises(ValueError):
+            versions.version_name("../x", "2026-01-01T00:00:00Z")
+        with pytest.raises(ValueError):
+            versions.site_path("pipeline_a", "../../x")
+
+    def test_a_pipelines_own_index_lists_no_snapshots(self, catalog, monkeypatch):
+        root, first, second = catalog
+        a = root / "pipelines" / "pipeline_a"
+        _build(a, monkeypatch)
+        index = json.loads((a / "docs" / "index.json").read_text())
+        assert all("snapshots" not in r for r in index["records"])
+
+    def test_a_snapshot_gc_removed_leaves_the_site(self, catalog, monkeypatch):
+        root, first, second = catalog
+        _build(root, monkeypatch, "--incremental")
+        name = versions.version_name(second.commit, second.made_at)
+        assert (root / "docs" / versions.site_path("pipeline_a", name)).is_dir()
+        snapshot.remove(default_store(), second)
+        _build(root, monkeypatch, "--incremental")
+        assert not (root / "docs" / versions.site_path("pipeline_a", name)).exists()
+        assert not (root / "_docs" / "_build" / "html" / versions.site_path("pipeline_a", name)).exists()
+        assert (root / "docs" / versions.site_path("pipeline_a", versions.version_name(first.commit, first.made_at))).is_dir()
+
+    def test_a_version_that_hangs_is_stopped_and_said(self, catalog, monkeypatch):
+        import subprocess
+
+        root, first, second = catalog
+
+        def hang(command, *args, **kwargs):
+            raise subprocess.TimeoutExpired(command, kwargs.get("timeout"))
+
+        monkeypatch.setattr(versions.subprocess, "run", hang)
+        rendered = versions.render(second, timeout=1)
+        assert not rendered.built and "took longer than 1 seconds to build and was stopped" in rendered.why
+        assert "took longer" in (rendered.folder / "index.html").read_text()
+
+    def test_a_change_to_chartbook_builds_a_version_again(self, catalog, monkeypatch):
+        root, first, second = catalog
+        versions.fingerprint.cache_clear()
+        one = versions._kept("pipeline_a", "a" * 7 + "-20260101T000000Z")
+        monkeypatch.setattr(versions, "fingerprint", lambda: "0.0.0-changed")
+        assert versions._kept("pipeline_a", "a" * 7 + "-20260101T000000Z") != one
+
+
+class TestWhoseFilesTheseAre:
+    """A version's files may have been written by anyone who can write the store."""
+
+    def test_a_site_page_cannot_stand_in_for_the_builds_configuration(self, pipeline_project, monkeypatch):
+        project = pipeline_project.resolve()
+        site = project / "docs_src" / "site"
+        site.mkdir(parents=True, exist_ok=True)
+        (site / "guide.md").write_text("# Guide\n")
+        (site / "conf.py.j2").write_text("raise SystemExit('PWNED: the site page ran as conf.py')\n")
+        (site / "_templates").mkdir()
+        (site / "_templates" / "layout.html").write_text("{{ PWNED }}")
+        monkeypatch.chdir(project)
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+        assert result.exit_code == 0, result.output
+        assert "PWNED" not in (project / "_docs" / "conf.py").read_text()
+        assert not (project / "_docs" / "_templates" / "layout.html").exists() or "PWNED" not in (project / "_docs" / "_templates" / "layout.html").read_text()
+        assert (project / "docs" / "guide.html").is_file()
+
+    def test_templates_render_in_the_sandbox(self, tmp_path):
+        import jinja2
+
+        from chartbook.writers.sphinx import _sandboxed
+
+        (tmp_path / "t.md").write_text("{{ ''.__class__.__mro__[1].__subclasses__() }}")
+        with pytest.raises(jinja2.exceptions.SecurityError):
+            _sandboxed([tmp_path]).get_template("t.md").render()
+
+    def test_a_versions_pages_take_in_no_file_from_outside(self, tmp_path, monkeypatch):
+        """In the working version, a write-up may include a file; in a version from the store, it may not."""
+        secret = tmp_path / "outside" / "secret.md"
+        secret.parent.mkdir()
+        secret.write_text("OUTSIDE SECRET TEXT\n")
+        repository = tmp_path.resolve() / "repo"
+        root = create_catalog_project(repository / "cat", pipeline_ids=["pipeline_a"])
+        a = root / "pipelines" / "pipeline_a"
+        climb = "../" * 40 + str(secret.resolve()).lstrip("/")
+        writeup = next(a.rglob("docs_src/dataframes/*.md"))
+        writeup.write_text(f"# Write-up\n\n```{{include}} {climb}\n```\n\n![a picture]({'../' * 40}{str(secret.resolve()).lstrip('/')})\n")
+        (repository / ".gitignore").write_text("docs/\n_docs*/\n")
+        _git(repository, "init", "--quiet", "-b", "main")
+        _commit(repository)
+        taken = snapshot.make(a).snapshot
+        rendered = versions.render(taken)
+        assert rendered.built, rendered.why
+        pages = "".join(p.read_text(errors="replace") for p in rendered.folder.rglob("*") if p.is_file())
+        assert "OUTSIDE SECRET TEXT" not in pages
+        assert not any(p.name == "secret.md" for p in rendered.folder.rglob("*"))

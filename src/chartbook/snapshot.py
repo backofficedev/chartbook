@@ -84,7 +84,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 from chartbook import hashing
-from chartbook.identity import derive_pipeline_id
+from chartbook.identity import derive_pipeline_id, validate_pipeline_id
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import AssetRef
@@ -623,6 +623,16 @@ def read(path: Union[str, Path]) -> Snapshot:
                 f"ChartBook reads {SCHEMA!r}"
             )
         code = document["code"]
+        # A record may come from a store anyone on a team writes; what names
+        # folders and pages must be what it claims to be
+        if not isinstance(code.get("commit"), str) or not _COMMIT.match(code["commit"]):
+            raise ValueError("its commit is not a full commit hash")
+        if not isinstance(document.get("made_at"), str) or not _MADE_AT.match(document["made_at"]):
+            raise ValueError(f"its made_at, {document.get('made_at')!r}, is not a time as a snapshot writes one")
+        validate_pipeline_id(document.get("root"))
+        subdirectory = code.get("subdirectory", "")
+        if subdirectory and safe_relative(subdirectory) != subdirectory:
+            raise ValueError(f"its subdirectory, {subdirectory!r}, is not a plain path")
         assets = {local_name(record): record for record in document["records"]}
         return Snapshot(
             pipeline=document["root"],
@@ -762,6 +772,12 @@ def version_name(content_hash: str, among: Optional[list[str]] = None) -> str:
     return digits[:length]
 
 
+#: A full commit hash, as a record must name one.
+_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+#: When a snapshot was made, as :func:`_now` writes it (a test may leave out the fraction).
+_MADE_AT = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z$")
+
+
 def all_snapshots(store: Store) -> list[Snapshot]:
     """Every snapshot in a store, oldest first.
 
@@ -770,6 +786,23 @@ def all_snapshots(store: Store) -> list[Snapshot]:
     """
     found = [read(file) for file in store.all_snapshot_files()]
     return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
+
+
+def readable_snapshots(store: Store) -> tuple[list[Snapshot], list[tuple[Path, str]]]:
+    """Every snapshot in a store that can be read, oldest first, and each record that cannot, with why.
+
+    For what only shows the store, a catalog's versions: one record a newer
+    ChartBook wrote, or one written to mislead, leaves the rest shown.
+    What removes anything uses :func:`all_snapshots`, which refuses instead.
+    """
+    found, unreadable = [], []
+    for file in store.all_snapshot_files():
+        try:
+            found.append(read(file))
+        except SnapshotError as error:
+            unreadable.append((Path(file), str(error)))
+    found.sort(key=lambda taken: (taken.made_at, _count(taken.path)))
+    return found, unreadable
 
 
 def all_hashes(store: Store) -> set[str]:

@@ -159,11 +159,32 @@ model with where its page is, so that a command-line agent finds its way without
    because the catalog's own pages are written on every build and a pipeline's page is not when
    an incremental build reuses it. Search is scoped by construction: each version is its own site,
    so the catalog's search finds the working versions only.
+
+   *After the review, 2026-10-16.* Building versions automatically means running a docs build on
+   files anyone who can write the store may have written, so a version's build runs as a build of
+   files that are not the user's own (`chartbook.config.untrusted_source`): every template, a
+   project's own included, renders in Jinja's sandbox, and a version takes no template from its
+   folder at all; its site folder gives only pages and pictures; no page takes in a file
+   (`file_insertion_enabled` off) and no picture or download that names a file outside the site is
+   copied; notebooks are never run, as in any build; and each version's build has a time limit.
+   Two holes the review found are closed for every build, not only versions': `conf.py` is
+   rendered from the package's own template, never from the build tree where a site page named
+   `conf.py.j2` could stand in for it, and a site page may not be `conf.py*`, `_templates/` or the
+   tool's configuration. A snapshot record is checked when read (a full commit hash, a time as a
+   snapshot writes one, a pipeline ID, a plain subdirectory), and `.` and `..` are no longer
+   pipeline ID parts, so that no value in a record becomes a path outside the site or the cache;
+   the review showed a forged `made_at` could otherwise delete and write folders anywhere. One
+   record that cannot be read no longer hides every version; only a catalog's index lists
+   snapshots, so a pipeline's published index carries no store history; the store is read twice
+   per catalog build rather than once per pipeline; the kept sites are keyed by ChartBook's
+   version and a fingerprint of its code, so an edit to ChartBook builds them again; a version
+   whose snapshot `store gc` removed is removed from the site, the incremental build's tree
+   included; and a staging folder a stopped build left is cleared.
 3. **All versions.** Every snapshot, links following pins, the version list, snapshot pages kept
    across builds, search scoped. *What remains after step 2:* links following pins, so that a
    page of `C` links to `A` at the version `C` pinned, inside a version's site as in the catalog;
    a catalog entry by pipeline ID alone, for a pipeline whose folder is not on this machine; and
-   clearing the kept sites of snapshots `store gc` removed.
+   clearing the kept sites, in the cache, of snapshots `store gc` removed.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.

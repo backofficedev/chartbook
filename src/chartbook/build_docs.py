@@ -209,23 +209,52 @@ def _write_sphinx_project(
         # Handle with user-friendly CLI output
         handle_validation_error(e, config_path=project_dir / "chartbook.toml")
 
-    # Render conf.py from Jinja2 template
-    conf_template_path = sources_dir / "conf.py.j2"
-    conf_output_path = sources_dir / "conf.py"
+    # Render conf.py from the package's own template, never from the build
+    # tree, where a site page could stand in for it and Sphinx runs conf.py
+    from chartbook.config import untrusted_source
 
+    conf_output_path = sources_dir / "conf.py"
     env = Environment(
-        loader=FileSystemLoader(sources_dir),
+        loader=FileSystemLoader(get_docs_src_path(pipeline_theme)),
         undefined=StrictUndefined,
     )
-
-    template = env.get_template("conf.py.j2")
-    conf_content = template.render(site_config=site_config)
-
+    conf_content = env.get_template("conf.py.j2").render(site_config=site_config)
+    if untrusted_source():
+        conf_content += _UNTRUSTED_CONF
+        # No page takes in a file (include, literalinclude, csv-table)
+        (sources_dir / "docutils.conf").write_text("[general]\nfile_insertion_enabled: false\n", encoding="utf-8")
     with open(conf_output_path, "w") as f:
         f.write(conf_content)
+    (sources_dir / "conf.py.j2").unlink(missing_ok=True)
 
-    # Remove template file after rendering
-    conf_template_path.unlink()
+
+#: Added to conf.py for a build of files from a store: a picture or a download
+#: that names a file outside the site is not copied into it.
+_UNTRUSTED_CONF = """
+
+# A build of files laid out from a store (chartbook.config.untrusted_source):
+# a picture or a download that names a file outside the site is dropped
+def _chartbook_keep_inside(app, doctree):
+    import os
+    from docutils import nodes
+    from sphinx import addnodes
+
+    root = os.path.realpath(app.srcdir)
+    here = os.path.dirname(os.path.realpath(app.env.doc2path(app.env.docname)))
+    named = list(doctree.findall(nodes.image)) + list(doctree.findall(addnodes.download_reference))
+    for node in named:
+        target = str(node.get("uri") or node.get("reftarget") or "")
+        if "://" in target or target.startswith("data:") or not target:
+            continue
+        base = root if target.startswith("/") else here
+        full = os.path.realpath(os.path.join(base, target.lstrip("/")))
+        if full != root and not full.startswith(root + os.sep):
+            node.replace_self(nodes.literal(text=f"[{target}: outside the site, not included]"))
+
+
+def setup(app):
+    app.connect("doctree-read", _chartbook_keep_inside, priority=100)
+"""
 
 
 def generate_docs(

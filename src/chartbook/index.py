@@ -871,10 +871,16 @@ def _add_snapshots(records: list[dict]) -> None:
     from chartbook.versions import version_name
 
     try:
-        found = snapshots.all_snapshots(default_store())
-    except (StoreError, snapshots.SnapshotError, ValueError, OSError) as error:
+        found, unreadable = snapshots.readable_snapshots(default_store())
+    except (StoreError, ValueError, OSError) as error:
         warnings.warn(f"The snapshots in the store are not in the index: {error}", stacklevel=3)
         return
+    if unreadable:
+        warnings.warn(
+            f"{len(unreadable)} snapshot record(s) in the store cannot be read and are not shown, "
+            f"{unreadable[0][0].name} first: {unreadable[0][1]}",
+            stacklevel=3,
+        )
     by_pipeline: dict[str, list] = {}
     for taken in found:
         by_pipeline.setdefault(taken.pipeline, []).append(taken)
@@ -958,6 +964,8 @@ def build_index(
 
     Same manifests and same files give the same index, apart from
     ``generated_at``: records are in a fixed order and so are their keys.
+    A catalog's index also lists the snapshots in this machine's store, as a
+    model's versions are read from it.
 
     A declared asset whose file does not exist still has a record; it has
     no ``content_hash``. The index says what the manifest declares, and
@@ -1004,7 +1012,9 @@ def build_index(
             cache,
             known_pipelines=known_pipelines,
         )
-    _add_snapshots(records)
+    if project["type"] == "catalog":
+        # A catalog shows every version of its pipelines; a pipeline's own site does not
+        _add_snapshots(records)
 
     moment = generated_at or datetime.now(timezone.utc)
     return {

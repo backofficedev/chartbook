@@ -810,23 +810,33 @@ class SphinxWriter:
         """The write-up's text, from the file the record names, rendered as the generator does."""
         docs = record.get("docs") or {}
         if docs.get("text"):
-            source = docs["text"]
-        elif docs.get("path"):
-            source = environment.loader.get_source(environment, Path(docs["path"]).as_posix())[0]
-        else:
-            source = ""
-        return source
+            return docs["text"]
+        if docs.get("path"):
+            # Text, read from the pipeline's folder; never a template, and never from elsewhere
+            from chartbook.snapshot import safe_relative
+
+            plain = safe_relative(docs["path"])
+            if plain is None:
+                raise FileNotFoundError(f"The write-up {docs['path']!r} is not a path inside {base_dir}.")
+            return (Path(base_dir) / plain).read_text(encoding="utf-8")
+        return ""
 
     def _environment(self, base_dir: Path) -> jinja2.Environment:
+        """The templates: the project's own first, then the build's copy of the theme, then the package's.
+
+        Rendered in Jinja's sandbox, so that a template, a project's own
+        included, can read what it is given and nothing of Python beyond it.
+        A build of files from a store takes no template from the project.
+        """
+        from chartbook.config import untrusted_source
+
         package = Path(str(importlib.resources.files("chartbook")))
         theme_dir = package / ("docs_src_catalog" if self.theme == "catalog" else "docs_src_pipeline")
-        paths = [base_dir]
+        paths = [] if untrusted_source() else [base_dir]
         if self.docs_src_dir is not None:
             paths += [Path(self.docs_src_dir), Path(self.docs_src_dir) / "_templates"]
         paths += [package / "templates", theme_dir, theme_dir / "_templates"]
-        environment = jinja2.Environment(loader=jinja2.FileSystemLoader([str(p) for p in paths]))
-        environment.filters["yaml_escape"] = yaml_escape
-        return environment
+        return _sandboxed(paths)
 
     # --- one entry point for the build ---------------------------------------
 
@@ -842,6 +852,15 @@ class SphinxWriter:
 
 def _slug(pipeline_id: str) -> str:
     return pipeline_id.replace("/", "--")
+
+
+def _sandboxed(paths: list) -> jinja2.Environment:
+    """A Jinja environment in the sandbox, loading templates from these folders in order."""
+    from jinja2.sandbox import SandboxedEnvironment
+
+    environment = SandboxedEnvironment(loader=jinja2.FileSystemLoader([str(p) for p in paths]))
+    environment.filters["yaml_escape"] = yaml_escape
+    return environment
 
 
 def _laid_out_version(pipeline: dict) -> Optional[dict]:

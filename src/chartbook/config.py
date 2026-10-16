@@ -48,6 +48,19 @@ SYSTEM_SETTINGS_ENV_VAR = "CHARTBOOK_SYSTEM_SETTINGS"
 GIT_CACHE_ENV_VAR = "CHARTBOOK_GIT_CACHE"
 #: The environment variable that says where a remote store's objects are kept once read.
 CACHE_ENV_VAR = "CHARTBOOK_CACHE"
+#: Set by a catalog build for the build of a version laid out from the store, whose files
+#: anyone who can write the store may have written: see :func:`untrusted_source`.
+UNTRUSTED_ENV_VAR = "CHARTBOOK_UNTRUSTED_SOURCE"
+
+
+def untrusted_source() -> bool:
+    """Whether this build is of files that came from a store, not from a folder of the user's.
+
+    Such a build uses no template from the project's folder, copies only
+    pages and pictures of its site folder, and lets no page take in a file
+    from outside the site (``docs_src/design/versioned-catalog.md``).
+    """
+    return os.environ.get(UNTRUSTED_ENV_VAR, "").strip() == "1"
 
 
 def get_global_config_dir() -> Path:
