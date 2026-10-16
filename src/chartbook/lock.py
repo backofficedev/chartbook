@@ -161,6 +161,21 @@ class Lock:
         }
 
 
+def _a_local_lockfile(path: Union[str, Path]) -> bool:
+    """Whether a path a store names is one to read as a lockfile: absolute, named ``chartbook.lock``, on this machine.
+
+    Not a network path (``\\\\host\\share`` or ``//host/share``), which
+    reading would make this machine connect to.
+    """
+    from pathlib import PureWindowsPath
+
+    text = str(path)
+    if text.startswith(("\\\\", "//")) or PureWindowsPath(text).drive.startswith("\\\\"):
+        return False
+    path = Path(text)
+    return path.is_absolute() and path.name == LOCK_FILE
+
+
 def read_lock(path: Union[str, Path]) -> Optional[Lock]:
     """Read a lockfile.
 
@@ -1375,7 +1390,10 @@ def plan_gc(
     pinned_snapshots: set[tuple[str, str]] = set()
     hashes_of_missing: set[str] = set()
     for root in store.roots():
-        found = read_lock(root.lockfile)
+        # A root is written by whoever can write to the store, and names a
+        # path: only a lockfile on this machine is read, never another file
+        # or a path on another host
+        found = read_lock(root.lockfile) if _a_local_lockfile(root.lockfile) else None
         plan.lockfiles.append((root.lockfile, found is not None))
         if found is not None:
             keep |= found.hashes()

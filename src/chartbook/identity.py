@@ -285,14 +285,14 @@ _WEB_LINK = re.compile(r"[Hh][Tt][Tt][Pp][Ss]?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za
 _BLANKS = frozenset("\u115f\u1160\u3164\uffa0\u2800")
 
 
-def plain_line(value: object, longest: Optional[int] = None) -> str:
+def plain_line(value: object, longest: int = 10_000) -> str:
     """Text someone else wrote, as one line of what can be seen; empty if nothing can.
 
-    Compatibility forms become their plain ones (NFKC: a fullwidth ``＜`` is
-    ``<``, so that it is caught wherever ``<`` is); characters that do not
-    print (controls, format characters, lone surrogates) become spaces; runs
-    of space become one. Text with no character that shows (only spaces,
-    fillers or combining marks) is no text.
+    Characters that do not print (controls, format characters, lone
+    surrogates) become spaces, and runs of space become one; the text is
+    otherwise as written. Text with no character that shows (only spaces,
+    fillers or combining marks) is no text. Long text is cut before it is
+    looked at, so that its length costs nothing.
 
     :param longest: Cut to this many characters.
     """
@@ -300,10 +300,8 @@ def plain_line(value: object, longest: Optional[int] = None) -> str:
 
     if not isinstance(value, str):
         return ""
-    text = unicodedata.normalize("NFKC", "".join(c if c.isprintable() else " " for c in value))
-    line = " ".join("".join(c if c.isprintable() else " " for c in text).split())
-    if longest is not None:
-        line = line[:longest].rstrip()
+    line = " ".join("".join(c if c.isprintable() else " " for c in value[: 4 * longest]).split())
+    line = line[:longest].rstrip()
     shows = any(not c.isspace() and c not in _BLANKS and not unicodedata.category(c).startswith("M") for c in line)
     return line if shows else ""
 

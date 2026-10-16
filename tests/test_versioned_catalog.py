@@ -881,7 +881,7 @@ class TestWhatTheStoreOnlyReviewFound:
 class TestTheTextAndLinkChecks:
     @pytest.mark.parametrize(
         "written, shown",
-        [("Rates\n and  more", "Rates and more"), ("\u3164", ""), ("\u0301", ""), ("ｒａｔｅｓ", "rates"), (None, ""), ("a\ud800b", "a b")],
+        [("Rates\n and  more", "Rates and more"), ("\u3164", ""), ("\u0301", ""), ("R² CO₂ ｒａｔｅｓ", "R² CO₂ ｒａｔｅｓ"), (None, ""), ("a\ud800b", "a b")],
     )
     def test_a_plain_line(self, written, shown):
         from chartbook.identity import plain_line
@@ -896,16 +896,28 @@ class TestTheTextAndLinkChecks:
         assert _as_text("{include}`x`") == "&#123;include&#125;‘x‘"
         assert _as_text("""A & B's "x" """) == "A and B’s ”x”"
         assert _as_text("A&B") == "A and B"
+        # Anything that is not HTML's own stays as written
+        assert _as_text("R² CO₂ x⁻¹ ½ ™ №") == "R² CO₂ x⁻¹ ½ ™ №"
+        assert _as_text("Zürich ±") == "Zürich ±"
+        assert _as_text(None) == "" and _as_text(5) == ""
+        assert _as_text("a\x00b‮c") == "a b c"
         # Decoded again, and normalized (NFKC) besides, nothing of HTML's own is there
         import html
         import unicodedata
 
-        for planted in ("</title><script>&lt;'\"`", "＜script＞＆lt;＂＇｀", "﹤img﹥﹠", "&amp;lt;"):
-            shown = unicodedata.normalize("NFKC", html.unescape(html.unescape(_as_text(planted))))
-            assert not set(shown) & set("<>&'\"`"), (planted, shown)
-        assert _as_text("Zürich ±") == "Zürich ±"
-        assert _as_text(None) == "" and _as_text(5) == ""
-        assert _as_text("a\x00b‮c") == "a b c"
+        for planted in ("</title><script>&lt;'\"`", "＜script＞＆lt;＂＇｀", "﹤img﹥﹠", "&amp;lt;", "≮img≯"):
+            for form in ("NFKC", "NFKD"):
+                shown = unicodedata.normalize(form, html.unescape(html.unescape(_as_text(planted))))
+                assert not set(shown) & set("<>&'\"`"), (planted, form, shown)
+
+    def test_long_text_costs_nothing(self):
+        import time
+
+        from chartbook.identity import plain_line
+
+        started = time.perf_counter()
+        assert len(plain_line("\ufdfa" * 2_000_000, 200)) == 200
+        assert time.perf_counter() - started < 1
 
     @pytest.mark.parametrize(
         "written, shown",

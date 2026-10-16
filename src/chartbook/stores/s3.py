@@ -140,11 +140,12 @@ def _plain_parts(relative: str) -> Optional[list[str]]:
     """The parts of a key's path under a prefix, if it is a plain relative path; else None.
 
     Plain: parts joined by single ``/``, none empty, ``.`` or ``..``, and no
-    backslash, colon or NUL, which some systems read as a separator, a
-    drive or the end. Anyone who can write to the bucket chooses its keys,
-    and a reader makes a file of each.
+    NUL; on Windows, also no backslash or colon, which it reads as a
+    separator or a drive (elsewhere they are ordinary characters of a name,
+    and an object may have a file named with them). Anyone who can write to
+    the bucket chooses its keys, and a reader makes a file of each.
     """
-    if not relative or any(c in relative for c in "\\:\0"):
+    if not relative or "\0" in relative or (os.name == "nt" and any(c in relative for c in "\\:")):
         return None
     parts = relative.split("/")
     if any(part in ("", ".", "..") for part in parts):
@@ -411,6 +412,10 @@ class S3Store(Store):
         except OSError:
             pass
 
+    def _object_keys(self, content_hash: str) -> list[dict]:
+        """Every key under an object's prefix, what the SDK says of each: its files, and any that are not."""
+        return list(self._list(self._object_prefix(content_hash)))
+
     def has(self, content_hash: str) -> bool:
         self._check_layout()
         return bool(self._object_files(content_hash))
@@ -516,9 +521,9 @@ class S3Store(Store):
         )
 
     def delete(self, content_hash: str) -> bool:
-        # Every key under the object, its files and any that are not: none is read here
-        prefix = self._object_prefix(content_hash)
-        keys = [entry["Key"] for entry in self._list(prefix) if entry["Key"] != prefix]
+        # Every key under the object, its files and any that are not (a folder
+        # marker too): none is read here
+        keys = [entry["Key"] for entry in self._object_keys(content_hash)]
         self._forget_verified(content_hash)
         self._cache.delete(content_hash)
         if not keys:
@@ -538,14 +543,15 @@ class S3Store(Store):
             yield hashing.format_hash(digest)
 
     def size_of(self, content_hash: str) -> int:
-        return sum(entry["Size"] for entry in self._object_files(content_hash).values())
+        # Every key under the object, as gc removes every one
+        return sum(entry["Size"] for entry in self._object_keys(content_hash))
 
     def age_of(self, content_hash: str, now: Optional[float] = None) -> float:
-        """Seconds since the object's newest file was written to the bucket."""
-        remote = self._object_files(content_hash)
+        """Seconds since anything under the object's prefix was written to the bucket."""
+        remote = self._object_keys(content_hash)
         if not remote:
             raise ObjectNotFoundError(f"The store {self} has no object {content_hash}.")
-        newest = max(entry["LastModified"].timestamp() for entry in remote.values())
+        newest = max(entry["LastModified"].timestamp() for entry in remote)
         return (time.time() if now is None else now) - newest
 
     def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list[StoreProblem]:
