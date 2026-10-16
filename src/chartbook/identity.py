@@ -291,8 +291,8 @@ def plain_line(value: object, longest: int = 10_000) -> str:
     Characters that do not print (controls, format characters, lone
     surrogates) become spaces, and runs of space become one; the text is
     otherwise as written. Text with no character that shows (only spaces,
-    fillers or combining marks) is no text. Long text is cut before it is
-    looked at, so that its length costs nothing.
+    fillers or combining marks) is no text. It is read only as far as the
+    length kept, so that a long value costs nothing.
 
     :param longest: Cut to this many characters.
     """
@@ -300,8 +300,19 @@ def plain_line(value: object, longest: int = 10_000) -> str:
 
     if not isinstance(value, str):
         return ""
-    line = " ".join("".join(c if c.isprintable() else " " for c in value[: 4 * longest]).split())
-    line = line[:longest].rstrip()
+    kept: list[str] = []
+    space = False
+    for c in value:
+        if c.isspace() or not c.isprintable():
+            space = bool(kept)
+            continue
+        if space:
+            kept.append(" ")
+            space = False
+        kept.append(c)
+        if len(kept) >= longest:
+            break
+    line = "".join(kept)
     shows = any(not c.isspace() and c not in _BLANKS and not unicodedata.category(c).startswith("M") for c in line)
     return line if shows else ""
 

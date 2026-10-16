@@ -231,7 +231,9 @@ model with where its page is, so that a command-line agent finds its way without
    file. A fourth review found that the fix hid legitimate files named with `:` or `\` on
    systems where those are ordinary (now refused on Windows only), that gc stopped on an object
    of stray keys, and that gc read whatever file a store's root note named (now only a local
-   `chartbook.lock`).
+   `chartbook.lock`). A fifth found that a lockfile on a Windows network drive is noted by a
+   network path, which gc then took as gone; a note gc does not read now keeps its pins and is
+   never forgotten.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.

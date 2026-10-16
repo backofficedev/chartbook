@@ -500,3 +500,16 @@ class TestWhatTheFourthReviewFound:
         assert read == []
         # Not read, so taken as a lockfile that cannot be found: what it names is kept
         assert stored.content_hash not in [content_hash for content_hash, _ in plan.delete]
+
+    @pytest.mark.parametrize("named", [r"\\server\share\proj\chartbook.lock", "//server/share/proj/chartbook.lock"])
+    def test_a_lockfile_not_read_is_never_forgotten(self, work, a_file, named):
+        """A project on a network drive has its lockfile noted by a network path: gc does not read it,
+        and does not take it as gone either, even with --forget-missing."""
+        store = FolderStore(work / "store")
+        stored = store.put(a_file)
+        store.add_root(work / "chartbook.lock", [stored.content_hash])
+        (note,) = (work / "store" / "roots").glob("*.json")
+        note.write_text(json.dumps({"lockfile": named, "hashes": [stored.content_hash]}))
+        plan = lock.plan_gc(store=store, forget_missing=True, recent_seconds=0)
+        assert [str(p) for p in plan.not_read] == [str(Path(named))] and plan.forget == []
+        assert stored.content_hash not in [content_hash for content_hash, _ in plan.delete]

@@ -2335,6 +2335,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
     for lockfile, found in plan.lockfiles:
         if found:
             note = ""
+        elif lockfile in plan.not_read:
+            note = "  (not read: not a chartbook.lock on this machine; its pins are kept)"
         elif forget_missing:
             note = "  (not found; forgotten)"
         else:

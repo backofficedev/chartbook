@@ -918,6 +918,9 @@ class TestTheTextAndLinkChecks:
         started = time.perf_counter()
         assert len(plain_line("\ufdfa" * 2_000_000, 200)) == 200
         assert time.perf_counter() - started < 1
+        # Read as far as the length kept, spaces not counted
+        assert plain_line(" " * 800 + "Visible name", 200) == "Visible name"
+        assert len(plain_line(("a" + " " * 9) * 1000, 2000)) >= 1999
 
     @pytest.mark.parametrize(
         "written, shown",
