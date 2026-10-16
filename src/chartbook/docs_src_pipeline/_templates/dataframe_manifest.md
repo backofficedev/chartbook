@@ -13,8 +13,7 @@
 {% elif dataframe_manifest.query %}| Query                          | in source `{{dataframe_manifest.source}}`; the SQL is below                          |
 {% else %}| Dataframe Path                 | {{dataframe_manifest['_resolved_path']}}                                             |
 {% endif %}{% if enable_data_download %}
-| Download Data as Parquet       | [Parquet](../../download_dataframe/{{pipeline_id | replace('/', '--')}}/{{dataframe_id}}.parquet)         |
-| Download Data as Excel         | [Excel](../../download_dataframe/{{pipeline_id | replace('/', '--')}}/{{dataframe_id}}.xlsx)              |
+| Download Data as Parquet       | [Parquet]({{dot_or_dotdot}}/download_dataframe/{{pipeline_id | replace('/', '--')}}/{{dataframe_id}}.parquet)         |
 {% endif %}
 
 {% if dataframe_manifest.query %}**Query:**
@@ -26,7 +25,7 @@
 {% endif %}**Linked Charts:**
 {% if dataframe_manifest.linked_charts %}
 {% for chart_id in dataframe_manifest.linked_charts %}
-- [{{pipeline_id}}:{{chart_id}}](../../charts/{{pipeline_id | replace('/', '--')}}.{{chart_id}}.md)
+- [{{pipeline_id}}:{{chart_id}}]({{dot_or_dotdot}}/charts/{{pipeline_id | replace('/', '--')}}.{{chart_id}}.md)
 {% endfor %}
 {% else %}
 - None

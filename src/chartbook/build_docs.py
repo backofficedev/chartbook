@@ -121,6 +121,7 @@ def run_sphinx_build(_docs_dir: Path):
     result = subprocess.run(build_cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"Sphinx build failed:\n{result.stderr}")
+    _echo_site_tool_warnings(result.stderr, "WARNING:")
     return result.stdout
 
 
@@ -536,7 +537,22 @@ def run_mkdocs_build(_docs_dir: Path) -> str:
     )
     if result.returncode != 0:
         raise RuntimeError(f"mkdocs build failed:\n{result.stdout}\n{result.stderr}")
-    return result.stdout + result.stderr
+    output = result.stdout + result.stderr
+    _echo_site_tool_warnings(output, "WARNING")
+    return output
+
+
+def _echo_site_tool_warnings(output: str, prefix: str) -> None:
+    """Print the site tool's warnings as the build's own ``warning:`` lines.
+
+    Both tools say when a link on a page goes nowhere, and a build that
+    swallowed that would hide a broken link scheme.
+    """
+    import click
+
+    for line in output.splitlines():
+        if line.startswith(prefix):
+            click.echo(click.style("warning: ", fg="yellow") + line.removeprefix(prefix).lstrip(" -"), err=True)
 
 
 def _check_policy(manifest: dict, diagnostic_rows) -> None:

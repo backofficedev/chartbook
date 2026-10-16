@@ -140,7 +140,7 @@ in the files the index names.
 - **One module per site tool**: `chartbook/writers/sphinx.py` first. Its input is the index and
   the files it names; its output is a folder of pages and the files Sphinx needs beside them.
   It takes the theme (`pipeline` or `catalog`) and the build options the pages depend on.
-- **The link scheme is the writer's.** `page_path(record) -> str` and `link(from, to) -> str`,
+- **The link scheme is the writer's.** `page_path(record) -> str`, `pipeline_page_link(record)` and `link_to_dataframe(record, from_kind)`,
   one rule per writer. The provenance panel names assets by ID today because the scheme is not
   yet a function; it becomes one here, and the panel gains links.
 - **Today's Jinja templates become the Sphinx writer's templates.** They already render from a
@@ -202,7 +202,10 @@ resolve, in either site tool: the dataframe page's link to itself in the pipelin
 link to its pipeline (`../pipelines/<slug>_README.md` from `cb/dataframes/<slug>/`), and in the catalog theme a dataframe
 page's link to itself (`<slug>/<name>.md` from `cb/dataframes/<slug>/`); Sphinx renders
 each as an anchor on the same page. MkDocs reports them as warnings. They are the link scheme's to
-fix, for both writers at once, with the golden tests updated; not part of this step.
+fix, for both writers at once, with the golden tests updated; not part of this step. *Fixed
+2026-10-16:* `link_to_dataframe` and `pipeline_page_link` are relative to the page they are on, the
+linked-charts list uses the page's own prefix, and the MkDocs build test asserts that MkDocs reports
+no unresolved link.
 
 *Built 2026-10-16:* `chartbook.writers.mkdocs.MkDocsWriter`, a subclass of the Sphinx writer that
 swaps the template search path for a theme folder of its own
