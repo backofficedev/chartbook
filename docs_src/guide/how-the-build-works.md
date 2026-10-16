@@ -100,8 +100,17 @@ the build directory, `_docs/index.json`, is **full**: each `location` also has t
 incremental build. From Python, `chartbook.index.build_index(load_manifest("."))` returns the
 full index without building a site.
 
+Beside it goes `docs/llms.txt`, written from the same index in the form of
+[llms.txt](https://llmstxt.org): the site's name, then one line per pipeline, dataframe, chart
+and model, with its name linking its page, its ID and, in quotation marks, its owner's
+description, so that an assistant on the command line finds its way around a site without
+reading its HTML. It says how to use an ID. A catalog's lists each pipeline's ten newest
+versions under it, each linking that version's own `llms.txt`, and the versions page for the
+rest. What an owner wrote never starts a line of the file.
+
 If a build finds nothing different from the `index.json` already beside the site, it leaves the
-file alone, so `generated_at` is when the index last changed. `chartbook index diff` says, in
+file alone, so `generated_at` is when the index last changed; an incremental build does the same
+for `llms.txt`. `chartbook index diff` says, in
 words, what changed between two builds: data changed, pins moved, a model out of date.
 
 ## 2. Write: the writer

@@ -234,7 +234,20 @@ model with where its page is, so that a command-line agent finds its way without
    `chartbook.lock`). A fifth found that a lockfile on a Windows network drive is noted by a
    network path, which gc then took as gone; a note gc does not read now keeps its pins and is
    never forgotten.
-4. **An assistant file** for generated sites, written from the index.
+4. **An assistant file** for generated sites, written from the index. *Built 2026-10-16:* it
+   is called `llms.txt`, after the llmstxt.org convention that agents already look for, and
+   sits beside `index.json` at the root of every site. The site's writer writes it from the
+   index: a title and a summary, then a list each of pipelines, dataframes, charts and models,
+   each line the name linking its page, the ID, and the description cut to one line. A
+   version's file says which snapshot the site is; a catalog's lists each pipeline's versions,
+   each linking that version's own `llms.txt`, or the page that says why its site could not be
+   built. Text from a record is one line, with what would start a link escaped, so that the only
+   links in it are the writer's (in CommonMark; a renderer that links bare addresses may link
+   one in a description). After review, the same day: the summary is the file's own words
+   only, and a description is in quotation marks after them, since a description at the start
+   of a line made headings and lists (a version site's summary was its owner's description);
+   a version's file says its names and descriptions are its owner's; a header says how to use
+   an ID; each version is a line of its own, the newest ten, then the versions page.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.
 
@@ -242,4 +255,5 @@ model with where its page is, so that a command-line agent finds its way without
 
 How a version is named on a page (the commit's start and the date is the proposal); whether a
 snapshot should also carry template overrides from `docs_src/_templates`; whether the version
-list should be a drop-down in each theme; what the assistant file is called.
+list should be a drop-down in each theme; what the assistant file is called (*decided
+2026-10-16 when it was built:* `llms.txt`).

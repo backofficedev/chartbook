@@ -10,6 +10,12 @@ writer`` in a manifest names which one builds a site, and
 """
 
 
+#: The assistant file's name, at a site's root beside ``index.json``, after
+#: the llms.txt convention (https://llmstxt.org): what is in the site and
+#: where, for a command-line agent. Every writer writes one.
+ASSISTANT_FILE = "llms.txt"
+
+
 def writer_class(name: str):
     """The writer class for a site tool named in ``[project] writer``.
 
