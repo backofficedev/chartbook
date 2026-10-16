@@ -696,11 +696,11 @@ class TestWhereTheStoreIs:
         monkeypatch.setenv(config.STORE_ENV_VAR, "~/elsewhere")
         assert config.get_store_path() == work / "elsewhere"
 
-    @pytest.mark.parametrize("table", [{}, {"path": ""}, {"path": 3}, {"dir": "/x"}])
-    def test_a_store_table_without_a_path_is_an_error(self, fake_config_dir, table):
+    @pytest.mark.parametrize("table", [{}, {"url": ""}, {"url": 3}, {"path": ""}, {"dir": "/x"}])
+    def test_a_store_table_without_a_url_is_an_error(self, fake_config_dir, table):
         fake_config_dir.mkdir()
         (fake_config_dir / "settings.toml").write_text(tomli_w.dumps({"store": table}))
-        with pytest.raises(ValueError, match=r"\[store\] needs a 'path'"):
+        with pytest.raises(ValueError, match=r"\[store\] needs a 'url'"):
             config.get_store_path()
 
 

@@ -124,8 +124,8 @@ reference data and models that are committed. For data that the other pipeline b
 A build server should change nothing. `chartbook run --frozen` pins nothing, fetches nothing and
 writes nothing: it builds only if the lockfile is complete and every pin is in the store, and
 fails with a list of what is missing otherwise. `chartbook pin --frozen` is the same check alone.
-A team can point every machine at one store (`[store] path` in `~/.chartbook/settings.toml`, or
-`CHARTBOOK_STORE`), which may be read-only for the build server; pinning from a snapshot then
+A team can point every machine at one store (`[store] url` in the organization's settings file or
+the user's `~/.chartbook/settings.toml`, or `CHARTBOOK_STORE`), which may be read-only for the build server; pinning from a snapshot then
 needs no write to it.
 
 ## What the site and the index say

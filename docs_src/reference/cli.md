@@ -723,14 +723,14 @@ A changed record is described in a reviewer's words: *data changed* (a content o
 
 The store is a folder of files kept under the hash of what is in them. It is where `chartbook pin` keeps its copies of other pipelines' data.
 
-It is at `~/.chartbook/store/`. To put it somewhere else, set `CHARTBOOK_STORE`, or add this to `~/.chartbook/settings.toml`:
+It is at `~/.chartbook/store/`. To put it somewhere else, set `CHARTBOOK_STORE`, or add this to `~/.chartbook/settings.toml`, or to the organization's settings file (`/etc/chartbook/settings.toml`, or the file `CHARTBOOK_SYSTEM_SETTINGS` names), which every user on the machine shares and the user's file overrides:
 
 ```toml
 [store]
-path = "/a/bigger/disk/chartbook-store"
+url = "/a/bigger/disk/chartbook-store"
 ```
 
-**A store a team shares.** Point every machine's `[store] path` (or `CHARTBOOK_STORE`) at one folder on a shared disk, and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `roots/` writable for everyone and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin, `--from-folder` and `chartbook snapshot` all put files in. `--frozen` writes nothing at all, and is what CI should run. `store gc` is the owner's to run, from the machine the snapshots were made on, and without `--forget-missing`: a label another machine gave is known here only through the snapshots that recorded it, and another machine's lockfile is one that cannot be found from here.
+**A store a team shares.** Point every machine's `[store] url` (or `CHARTBOOK_STORE`) at one folder on a shared disk, and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `roots/` writable for everyone and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin, `--from-folder` and `chartbook snapshot` all put files in. `--frozen` writes nothing at all, and is what CI should run. `store gc` is the owner's to run, from the machine the snapshots were made on, and without `--forget-missing`: a label another machine gave is known here only through the snapshots that recorded it, and another machine's lockfile is one that cannot be found from here.
 
 ### store verify
 

@@ -326,7 +326,7 @@ $ chartbook store verify
 |---|---|
 | The store: `has`, `get`, `put`, `delete`, and `verify` | `chartbook/store.py`, `Store` |
 | The four kinds of link, and the one place they are tried in order | `chartbook/store.py`: `LINKS`, `_link()`, `_reflink()` |
-| Where the store is: `CHARTBOOK_STORE`, then `[store] path` in `settings.toml`, then `~/.chartbook/store/` | `chartbook/config.py`, `get_store_path()` |
+| Where the store is: `CHARTBOOK_STORE`, then `[store] url` in the user's `settings.toml`, then in the organization's, then `~/.chartbook/store/` | `chartbook/config.py`, `get_store_path()` |
 | `chartbook store verify` | `chartbook/cli.py` |
 | Which files make up an asset, for hashing and storing alike; the files that never do | `chartbook/hashing.py`: `find_files()`, `is_ignored()` |
 | The tests | `tests/test_store.py`, `tests/test_hashing.py` |
@@ -682,7 +682,7 @@ Nothing clears old checkouts; `chartbook store gc` does not touch the git cache.
 with 3e. All seven are **decided**.*
 
 1. **Where the store lives. Decided.** One store per user, at `~/.chartbook/store/`, beside the
-   settings file that is already there. `CHARTBOOK_STORE`, or `[store] path = "…"` in
+   settings file that is already there. `CHARTBOOK_STORE`, or `[store] url = "…"` in
    `settings.toml`, points it somewhere else: a bigger disk, or a drive a team shares. Not one
    store per project, because ten projects that pin the same upstream should hold one copy.
 
@@ -2170,6 +2170,7 @@ maintainer.
 | 2026-10-14 | Of step 6's readers: the provenance panel now; an MCP server later (issue 54); the site rendered from the index only after a conversation, very soon; no Dagster export for now | "6b, as built", above |
 | 2026-10-14 | Vocabulary: repository → index → pages → site; a writer per site tool; the four documents stay (manifest asks, lockfile records what was got, snapshot what was made, index what a site shows); the lockfile is never merged into the index; snapshot and index converge as a direction; write-ups are not pinned but their path and hash go in the index; the index records facts and comparisons, no renderings; `stale_inputs` stays | {doc}`../guide/vocabulary`; step 6 above |
 | 2026-10-15 | Step 6 complete: the Sphinx writer renders every page from the index and the files it names, the build calls it (`sitefiles.write_site()`), the generator is gone (#58–#63). The documentation site is written in the vocabulary: front page with diagrams of the chain and the four documents, the build page around resolve → write → build, a page for depending on other pipelines (branch `docs-site-6f`). Decided along the way, all *proposed*: a write-up is text, not a template; a skipped pipeline is not part of the site; asset keys must be addresses; `inputs_now`, `site_pages`, Catalog `location` in the index | me |
+| 2026-10-16 | Cross-pipeline dependencies mean two pipelines on one machine; several machines use a shared store or a database adapter, never a transport feature. A table or query in a DuckDB file is pinned as parquet (#65). The store is a setting of the machine or the organization, never of the pipeline: settings layers env → user → system-wide → default, the store as a URL; backends stay per pipeline; plugins behind extras; a warehouse pins by version. Written up in `stores-and-backends.md`; settings layers and the store interface first | Jeremy, me |
 
 ## Open questions, collected
 
