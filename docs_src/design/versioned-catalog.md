@@ -222,7 +222,18 @@ model with where its page is, so that a command-line agent finds its way without
    into HTML again, so HTML's own characters (`< > & " '`, backtick) are replaced by look-alikes
    first; the stored index is read only as a regular file, not through a link, and up to a
    limit. Not changed: a version's own site is its owner's pages, raw HTML included, served
-   with the catalog, as a listed repository's pages are; the guide says so.
+   with the catalog, as a listed repository's pages are; the guide says so. A third review
+   (2026-10-16): a character whose normalized form (NFKD) holds one of HTML's own is replaced
+   too, with look-alikes that no normalization turns back, and `&` becomes "and"; other text
+   stays as written; a name of blank fillers is no name; the stored index is read up to 8 MiB.
+   It also found that the S3 store wrote a file for any key under an object or under
+   `snapshots/`, `..` included, outside its cache: a key that is not a plain path is now no
+   file. A fourth review found that the fix hid legitimate files named with `:` or `\` on
+   systems where those are ordinary (now refused on Windows only), that gc stopped on an object
+   of stray keys, and that gc read whatever file a store's root note named (now only a local
+   `chartbook.lock`). A fifth found that a lockfile on a Windows network drive is noted by a
+   network path, which gc then took as gone; a note gc does not read now keeps its pins and is
+   never forgotten.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.

@@ -854,9 +854,10 @@ class TestWhatTheStoreOnlyReviewFound:
         monkeypatch.setattr(snapshot, "STORED_INDEX_LIMIT", 100)
         assert "description" not in self._shown(root, monkeypatch)
 
-    def test_a_name_of_nothing_visible_is_no_name(self, catalog, tmp_path, monkeypatch):
+    @pytest.mark.parametrize("blank", ["\u200b\u200b \u2028", "\u3164", "\u2800\u2800", "\u0301\u0301", "\uffa0 \u115f"])
+    def test_a_name_of_nothing_visible_is_no_name(self, catalog, tmp_path, monkeypatch, blank):
         root, first, second = catalog
-        _elsewhere_with(tmp_path, name="\u200b\u200b \u2028")
+        _elsewhere_with(tmp_path, name=blank)
         record = self._shown(root, monkeypatch)
         assert record["name"] == "pipeline_c"
         page = (root / "docs" / "cb" / "pipelines.html").read_text()
@@ -878,20 +879,48 @@ class TestWhatTheStoreOnlyReviewFound:
 
 
 class TestTheTextAndLinkChecks:
+    @pytest.mark.parametrize(
+        "written, shown",
+        [("Rates\n and  more", "Rates and more"), ("\u3164", ""), ("\u0301", ""), ("R² CO₂ ｒａｔｅｓ", "R² CO₂ ｒａｔｅｓ"), (None, ""), ("a\ud800b", "a b")],
+    )
+    def test_a_plain_line(self, written, shown):
+        from chartbook.identity import plain_line
+
+        assert plain_line(written) == shown
+
     def test_text_is_one_line_with_no_markup(self):
         from chartbook.writers.sphinx import _as_text
 
         assert _as_text("Rates\n\n  and *more*") == "Rates and &#42;more&#42;"
         assert _as_text("<a>") == "‹a›"
         assert _as_text("{include}`x`") == "&#123;include&#125;‘x‘"
-        assert _as_text("""A & B's "x" """) == "A ＆ B’s ”x”"
-        # Decoded again, nothing of HTML's own is there
-        import html
-
-        assert not set(html.unescape(_as_text("</title><script>&lt;'\"`"))) & set("<>&'\"`")
+        assert _as_text("""A & B's "x" """) == "A and B’s ”x”"
+        assert _as_text("A&B") == "A and B"
+        # Anything that is not HTML's own stays as written
+        assert _as_text("R² CO₂ x⁻¹ ½ ™ №") == "R² CO₂ x⁻¹ ½ ™ №"
         assert _as_text("Zürich ±") == "Zürich ±"
         assert _as_text(None) == "" and _as_text(5) == ""
         assert _as_text("a\x00b‮c") == "a b c"
+        # Decoded again, and normalized (NFKC) besides, nothing of HTML's own is there
+        import html
+        import unicodedata
+
+        for planted in ("</title><script>&lt;'\"`", "＜script＞＆lt;＂＇｀", "﹤img﹥﹠", "&amp;lt;", "≮img≯"):
+            for form in ("NFKC", "NFKD"):
+                shown = unicodedata.normalize(form, html.unescape(html.unescape(_as_text(planted))))
+                assert not set(shown) & set("<>&'\"`"), (planted, form, shown)
+
+    def test_long_text_costs_nothing(self):
+        import time
+
+        from chartbook.identity import plain_line
+
+        started = time.perf_counter()
+        assert len(plain_line("\ufdfa" * 2_000_000, 200)) == 200
+        assert time.perf_counter() - started < 1
+        # Read as far as the length kept, spaces not counted
+        assert plain_line(" " * 800 + "Visible name", 200) == "Visible name"
+        assert len(plain_line(("a" + " " * 9) * 1000, 2000)) >= 1999
 
     @pytest.mark.parametrize(
         "written, shown",

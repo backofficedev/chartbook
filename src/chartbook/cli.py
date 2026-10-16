@@ -1024,6 +1024,21 @@ def _load_raw_catalog(catalog_toml_path):
     return data
 
 
+def _off_the_disabled_list(raw_catalog, key) -> bool:
+    """Take a pipeline ID off the catalog's ``[pipelines] disabled`` list, every time it is there.
+
+    :returns: Whether it was on it.
+    """
+    pipelines = raw_catalog.get("pipelines", {})
+    listed = pipelines.get("disabled")
+    if not isinstance(listed, list) or key not in listed:
+        return False
+    pipelines["disabled"] = [other for other in listed if other != key]
+    if not pipelines["disabled"]:
+        pipelines.pop("disabled")
+    return True
+
+
 def _get_existing_absolute_paths(raw_catalog, catalog_dir):
     """Resolve all existing pipeline paths in the catalog to absolute paths.
 
@@ -1305,8 +1320,9 @@ def catalog_add(paths, catalog_path, yes):
         if d in existing_abs:
             key = existing_abs[d]
             entry = raw_catalog["pipelines"][key]
-            if entry.get("disabled", False):
-                entry.pop("disabled")
+            flagged = isinstance(entry, dict) and entry.pop("disabled", False)
+            listed = _off_the_disabled_list(raw_catalog, key)
+            if flagged or listed:
                 reenabled += 1
                 click.echo(f"  Re-enabled '{key}': {d.name}/")
             else:
@@ -1380,19 +1396,17 @@ def catalog_add(paths, catalog_path, yes):
             # Cross-drive on Windows
             rel_path = str(d)
 
+        # What is added is enabled, whatever the disabled list said of its ID
+        listed = _off_the_disabled_list(raw_catalog, key)
+        enabled = " (it was on the disabled list)" if listed else ""
         if fills:
             entry = raw_catalog["pipelines"][key]
             entry["path"] = rel_path
             entry.pop("disabled", None)
-            disabled_list = raw_catalog["pipelines"].get("disabled")
-            if isinstance(disabled_list, list) and key in disabled_list:
-                disabled_list.remove(key)
-                if not disabled_list:
-                    raw_catalog["pipelines"].pop("disabled")
-            click.echo(f"  Added '{key}', which the catalog showed from the store: {name} ({rel_path})")
+            click.echo(f"  Added '{key}', which the catalog showed from the store: {name} ({rel_path}){enabled}")
         else:
             raw_catalog["pipelines"][key] = {"path": rel_path}
-            click.echo(f"  Added '{key}': {name} ({rel_path})")
+            click.echo(f"  Added '{key}': {name} ({rel_path}){enabled}")
         added += 1
 
     # Write back
@@ -2321,6 +2335,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
     for lockfile, found in plan.lockfiles:
         if found:
             note = ""
+        elif lockfile in plan.not_read:
+            note = "  (not read: not a chartbook.lock on this machine; its pins are kept)"
         elif forget_missing:
             note = "  (not found; forgotten)"
         else:

@@ -501,6 +501,28 @@ class TestAddAPipelineShownFromTheStore:
         assert result.exit_code == 0, result.output
         assert _read_catalog(catalog_dir)["pipelines"] == {"my_pipeline": {"path": "../my_pipeline"}}
 
+    def test_a_folder_already_listed_is_taken_off_the_disabled_list(self, tmp_path):
+        catalog_dir = _make_minimal_catalog(
+            tmp_path / "catalog", {"my_pipeline": "../my_pipeline", "disabled": ["my_pipeline", "my_pipeline"]}
+        )
+        result = self._add(catalog_dir, _make_minimal_pipeline(tmp_path / "my_pipeline"))
+        assert result.exit_code == 0, result.output
+        assert "Re-enabled 'my_pipeline'" in result.output
+        assert _read_catalog(catalog_dir)["pipelines"] == {"my_pipeline": "../my_pipeline"}
+
+    def test_a_folder_listed_by_a_plain_path_is_already_there(self, tmp_path):
+        catalog_dir = _make_minimal_catalog(tmp_path / "catalog", {"my_pipeline": "../my_pipeline"})
+        result = self._add(catalog_dir, _make_minimal_pipeline(tmp_path / "my_pipeline"))
+        assert result.exit_code == 0, result.output
+        assert "Already in catalog as 'my_pipeline'" in result.output
+
+    def test_a_new_one_on_the_disabled_list_is_enabled(self, tmp_path):
+        catalog_dir = _make_minimal_catalog(tmp_path / "catalog", {"disabled": ["my_pipeline"]})
+        result = self._add(catalog_dir, _make_minimal_pipeline(tmp_path / "my_pipeline"))
+        assert result.exit_code == 0, result.output
+        assert "it was on the disabled list" in result.output
+        assert _read_catalog(catalog_dir)["pipelines"] == {"my_pipeline": {"path": "../my_pipeline"}}
+
     def test_a_second_folder_of_the_same_id_is_another_pipeline(self, tmp_path):
         catalog_dir = _make_minimal_catalog(tmp_path / "catalog", {"my_pipeline": {}})
         first = _make_minimal_pipeline(tmp_path / "a" / "my_pipeline")

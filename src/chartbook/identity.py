@@ -281,6 +281,42 @@ def strip_url_credentials(url: str) -> str:
 _WEB_LINK = re.compile(r"[Hh][Tt][Tt][Pp][Ss]?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~:/?#@!$&+,;=%-]*)?", re.ASCII)
 
 
+#: Characters that print as nothing: Hangul fillers, the blank Braille pattern
+_BLANKS = frozenset("\u115f\u1160\u3164\uffa0\u2800")
+
+
+def plain_line(value: object, longest: int = 10_000) -> str:
+    """Text someone else wrote, as one line of what can be seen; empty if nothing can.
+
+    Characters that do not print (controls, format characters, lone
+    surrogates) become spaces, and runs of space become one; the text is
+    otherwise as written. Text with no character that shows (only spaces,
+    fillers or combining marks) is no text. It is read only as far as the
+    length kept, so that a long value costs nothing.
+
+    :param longest: Cut to this many characters.
+    """
+    import unicodedata
+
+    if not isinstance(value, str):
+        return ""
+    kept: list[str] = []
+    space = False
+    for c in value:
+        if c.isspace() or not c.isprintable():
+            space = bool(kept)
+            continue
+        if space:
+            kept.append(" ")
+            space = False
+        kept.append(c)
+        if len(kept) >= longest:
+            break
+    line = "".join(kept)
+    shows = any(not c.isspace() and c not in _BLANKS and not unicodedata.category(c).startswith("M") for c in line)
+    return line if shows else ""
+
+
 def web_link(value: object) -> str:
     """The value if it is a plain web address (``http`` or ``https``), with no credentials; else an empty string.
 

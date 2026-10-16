@@ -1653,9 +1653,10 @@ def document_paths(
     return kept, skipped
 
 
-#: The most a snapshot's stored index is read of: more than any pipeline's
-#: index, and less than would trouble the machine reading it
-STORED_INDEX_LIMIT = 64 * 1024 * 1024
+#: The most a snapshot's stored index is read of: more than a pipeline's
+#: index, and little enough that parsing it (JSON takes many times its
+#: size in memory) does not trouble the machine reading it
+STORED_INDEX_LIMIT = 8 * 1024 * 1024
 
 
 def _read_regular_file(path: Path, limit: int) -> bytes:

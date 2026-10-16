@@ -140,26 +140,45 @@ def _is_from_the_store(record: dict) -> bool:
     return record.get("kind") == "Pipeline" and (record.get("location") or {}).get("kind") == "store"
 
 
-#: HTML's own characters, and what stands in for each in someone else's text
-_LOOK_ALIKES = str.maketrans({"<": "‹", ">": "›", "&": "＆", '"': "”", "'": "’", "`": "‘"})
+#: HTML's own characters, and what stands in for each in someone else's text:
+#: look-alikes that no normalization turns back, and a word
+_LOOK_ALIKES = str.maketrans({"<": "‹", ">": "›", "&": " and ", '"': "”", "'": "’", "`": "‘"})
+
+
+def _without_html(character: str) -> str:
+    """A character, or, if any normalization of it holds one of HTML's own characters, that form with look-alikes.
+
+    A fullwidth ``＜`` or a small ``﹠`` normalizes (NFKC) to ``<`` or ``&``,
+    and ``≮`` decomposes (NFKD) to ``<`` and a combining mark; each is
+    caught as ``<`` and ``&`` are. Anything else is kept as written: ``R²``,
+    ``CO₂`` and ``…`` stay. One character at a time is enough, as
+    composing characters never makes an ASCII one.
+    """
+    import unicodedata
+
+    form = unicodedata.normalize("NFKD", character)
+    if any(c in form for c in "<>&\"'`"):
+        return form.translate(_LOOK_ALIKES)
+    return character
 
 
 def _as_text(value: object) -> str:
     """Text someone else wrote, made safe to set into a page: it shows as written and is never read as markup.
 
-    Each run of whitespace or unprintable characters becomes one space, so
-    the text is one line. HTML's own characters (``< > & " '`` and the
-    backtick) are replaced by look-alikes, since a page title, a search
-    index or a theme may decode the text and set it into HTML again; then
-    each other ASCII punctuation character becomes its numeric character
+    The text is one line of what can be seen (:func:`chartbook.identity.plain_line`).
+    HTML's own characters (``< > " '`` and the backtick) are replaced by
+    look-alikes, and ``&`` by "and", as is any character that normalizes to
+    one of them (:func:`_without_html`), since a page title, a search index
+    or a theme may decode the text and set it into HTML again; then each
+    other ASCII punctuation character becomes its numeric character
     reference. CommonMark (and so MyST), Python-Markdown and HTML show a
     character reference as its character and never read it as syntax: no
     role, directive, link, list, table cell or HTML element can start in
     the text, decoded or not, and it cannot leave an HTML attribute either.
     """
-    if not isinstance(value, str):
-        return ""
-    text = " ".join("".join(c if c.isprintable() else " " for c in value).split()).translate(_LOOK_ALIKES)
+    from chartbook.identity import plain_line
+
+    text = " ".join("".join(_without_html(c) for c in plain_line(value)).split())
     return "".join(f"&#{ord(c)};" if c in string.punctuation else c for c in text)
 
 

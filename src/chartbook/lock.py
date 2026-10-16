@@ -161,6 +161,24 @@ class Lock:
         }
 
 
+def _a_local_lockfile(path: Union[str, Path]) -> bool:
+    """Whether a path a store names is one to read as a lockfile: absolute, named ``chartbook.lock``, on this machine.
+
+    Not a network path (``\\\\host\\share`` or ``//host/share``), which
+    reading would make this machine connect to. A lockfile in a project on
+    a network drive is therefore not read by gc; its note's pins are kept.
+    (A path an automounter serves, such as Linux's ``/net/<host>``, is not
+    told apart.)
+    """
+    from pathlib import PureWindowsPath
+
+    text = str(path)
+    if text.startswith(("\\\\", "//")) or PureWindowsPath(text).drive.startswith("\\\\"):
+        return False
+    path = Path(text)
+    return path.is_absolute() and path.name == LOCK_FILE
+
+
 def read_lock(path: Union[str, Path]) -> Optional[Lock]:
     """Read a lockfile.
 
@@ -1312,6 +1330,8 @@ class GcPlan:
             may be.
         recent: Objects that nothing names, stored too recently to remove.
         delete: Objects that nothing names, each with its size in bytes.
+        not_read: Lockfiles a store names that are not read here, as they are
+            not a local ``chartbook.lock``: what their notes name is kept.
         forget: Lockfiles that could not be found and are to be forgotten.
         forget_missing, recent_seconds, keep_days: What the plan was made
             with, so that it can be made again the same way when it is
@@ -1326,6 +1346,7 @@ class GcPlan:
     recent: list[str] = field(default_factory=list)
     delete: list[tuple[str, int]] = field(default_factory=list)
     forget: list[Path] = field(default_factory=list)
+    not_read: list[Path] = field(default_factory=list)
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
@@ -1375,6 +1396,17 @@ def plan_gc(
     pinned_snapshots: set[tuple[str, str]] = set()
     hashes_of_missing: set[str] = set()
     for root in store.roots():
+        # A root is written by whoever can write to the store, and names a
+        # path: only a lockfile on this machine is read, never another file
+        # or a path on another host. One that is not read is never taken
+        # as gone: what its note names is kept, even with forget_missing,
+        # since it may be a real lockfile on a network drive
+        if not _a_local_lockfile(root.lockfile):
+            plan.lockfiles.append((root.lockfile, False))
+            plan.not_read.append(root.lockfile)
+            keep |= set(root.hashes)
+            hashes_of_missing |= set(root.hashes)
+            continue
         found = read_lock(root.lockfile)
         plan.lockfiles.append((root.lockfile, found is not None))
         if found is not None:

@@ -402,3 +402,114 @@ class TestTwoPipelinesOnAnS3Store:
         assert {e.status for e in report.events if e.asset} == {"pinned"}
         assert report.unrooted and "refused to write" in report.unrooted
         assert (forecast / lock.LOCK_FILE).is_file()
+
+
+class TestKeysThatLeaveTheCache:
+    """Anyone who can write to the bucket chooses its keys; a reader never makes a file outside its cache."""
+
+    PLANTED = ("../../../../../OUTSIDE.txt", "../../../../../../OUTSIDE2.txt", "a//b.txt", "./d.txt") + (
+        ("a\\..\\..\\x.txt", "c:x.txt") if os.name == "nt" else ()
+    )
+
+    def _outside(self, work: Path) -> list:
+        return [p for p in work.rglob("*") if p.name.startswith(("OUTSIDE", "ABS", "evil"))]
+
+    def test_an_objects_keys(self, work, client, a_file):
+        first = S3Store(URL, cache=work / "machine-a", client=client)
+        stored = first.put(a_file)
+        (key,) = [k for k in _keys(client) if k.endswith("rates.parquet")]
+        prefix = key[: -len("rates.parquet")]
+        for planted in (*self.PLANTED, str(work / "ABS.txt")):
+            client.put_object(Bucket=BUCKET, Key=prefix + planted, Body=b"planted")
+        second = S3Store(URL, cache=work / "machine-b", client=client)
+        held = second.get(stored.content_hash)
+        # The object is its own files; nothing else was written anywhere
+        assert sorted(p.name for p in held.iterdir()) == ["rates.parquet"]
+        assert self._outside(work) == [] and not (work.parent / "OUTSIDE2.txt").exists()
+        assert second.verify() == []
+        # Deleting the object takes every key under it, planted ones too
+        assert first.delete(stored.content_hash) is True
+        assert _keys(client, prefix) == []
+
+    def test_a_snapshot_records_keys(self, work, client):
+        first = S3Store(URL, cache=work / "machine-a", client=client)
+        written = first.write_snapshot(COMMIT, "_top", "20261016T000000Z", {"a": 1})
+        (key,) = [k for k in _keys(client) if "/snapshots/" in k or k.startswith("snapshots/")]
+        root = key[: key.index("snapshots/") + len("snapshots/")]
+        for planted in ("../../evil.json", "../x/evil2.json", f"{COMMIT}/_top/../../../evil3.json", "a//b/evil4.json"):
+            client.put_object(Bucket=BUCKET, Key=root + planted, Body=b"{}")
+        second = S3Store(URL, cache=work / "machine-b", client=client)
+        seen = second.all_snapshot_files()
+        assert [p.name for p in seen] == [written.name]
+        assert self._outside(work) == [p for p in self._outside(work) if p.is_relative_to(work / "machine-b" / "snapshots")] == []
+
+    def test_a_key_is_never_made_a_path_out_of_the_cache(self, store):
+        with pytest.raises(StoreError, match="not a plain path"):
+            store._local(store.prefix + "/../x.json" if store.prefix else "../x.json")
+
+
+class TestWhatTheFourthReviewFound:
+    @pytest.mark.skipif(os.name == "nt", reason="Windows has no file named with a colon or a backslash")
+    def test_a_file_named_with_a_colon_or_a_backslash_is_read_back(self, work, client):
+        folder = work / "_data" / "daily"
+        folder.mkdir(parents=True)
+        (folder / "2024-01-01T00:00:00.csv").write_bytes(b"a")
+        (folder / "a\\b.csv").write_bytes(b"b")
+        first = S3Store(URL, cache=work / "machine-a", client=client)
+        stored = first.put(folder)
+        second = S3Store(URL, cache=work / "machine-b", client=client)
+        held = second.get(stored.content_hash)
+        assert sorted(p.name for p in held.iterdir()) == ["2024-01-01T00:00:00.csv", "a\\b.csv"]
+        assert second.verify() == []
+        assert first.put(folder).created is False
+
+    def test_an_object_of_keys_that_are_no_files_is_removed_by_gc(self, work, client, a_file):
+        store = S3Store(URL, cache=work / "machine-a", client=client)
+        stored = store.put(a_file)
+        (key,) = [k for k in _keys(client) if k.endswith("rates.parquet")]
+        prefix = key[: -len("rates.parquet")]
+        other = prefix.replace(stored.content_hash[9:], "f" * 62)
+        client.put_object(Bucket=BUCKET, Key=other + "../x", Body=b"planted")
+        client.put_object(Bucket=BUCKET, Key=prefix, Body=b"")  # a folder marker, as the S3 console makes
+        planted = "sha256:" + other.rstrip("/").split("/")[-2] + other.rstrip("/").split("/")[-1]
+        assert planted in set(store.hashes()) and not store.has(planted)
+        assert store.size_of(planted) == len(b"planted") and store.age_of(planted) >= 0
+        plan = lock.plan_gc(store=store, recent_seconds=0)
+        assert planted in [content_hash for content_hash, _ in plan.delete]
+        assert store.delete(planted) is True and _keys(client, other) == []
+        assert store.delete(stored.content_hash) is True and _keys(client, prefix) == []
+
+    @pytest.mark.parametrize(
+        "named", ["notes.txt", "//host/share/chartbook.lock", r"\\host\share\chartbook.lock", "relative/chartbook.lock"]
+    )
+    def test_gc_reads_only_a_lockfile_on_this_machine(self, work, a_file, monkeypatch, named):
+        store = FolderStore(work / "store")
+        stored = store.put(a_file)
+        store.add_root(work / "chartbook.lock", [stored.content_hash])
+        # The note as anyone who can write to the store could write it
+        target = str(work / named) if named == "notes.txt" else named
+        if named == "notes.txt":
+            Path(target).write_text("not a lockfile")
+        (note,) = (work / "store" / "roots").glob("*.json")
+        note.write_text(json.dumps({"lockfile": target, "hashes": [stored.content_hash]}))
+        assert [str(root.lockfile) for root in store.roots()] == [str(Path(target))]
+        read = []
+        original = lock.read_lock
+        monkeypatch.setattr(lock, "read_lock", lambda path: (read.append(str(path)), original(path))[1])
+        plan = lock.plan_gc(store=store, recent_seconds=0)
+        assert read == []
+        # Not read, so taken as a lockfile that cannot be found: what it names is kept
+        assert stored.content_hash not in [content_hash for content_hash, _ in plan.delete]
+
+    @pytest.mark.parametrize("named", [r"\\server\share\proj\chartbook.lock", "//server/share/proj/chartbook.lock"])
+    def test_a_lockfile_not_read_is_never_forgotten(self, work, a_file, named):
+        """A project on a network drive has its lockfile noted by a network path: gc does not read it,
+        and does not take it as gone either, even with --forget-missing."""
+        store = FolderStore(work / "store")
+        stored = store.put(a_file)
+        store.add_root(work / "chartbook.lock", [stored.content_hash])
+        (note,) = (work / "store" / "roots").glob("*.json")
+        note.write_text(json.dumps({"lockfile": named, "hashes": [stored.content_hash]}))
+        plan = lock.plan_gc(store=store, forget_missing=True, recent_seconds=0)
+        assert [str(p) for p in plan.not_read] == [str(Path(named))] and plan.forget == []
+        assert stored.content_hash not in [content_hash for content_hash, _ in plan.delete]
