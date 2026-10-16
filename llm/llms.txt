@@ -17,7 +17,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 - [Catalogs and Data Access](docs_src/guide/catalogs-and-data.md): Aggregate pipelines; load any cataloged dataset with `data.load()`
 - [Plotting](docs_src/guide/plotting.md): One call produces interactive HTML plus static PNG/PDF
 - [Writing a Plotting Backend](docs_src/guide/plotting-backends.md): The `PlottingBackend` contract, the `chartbook_plotting` entry-point group, and a complete example
-- [How the Build Works](docs_src/guide/how-the-build-works.md): resolve (the index) → write (the Sphinx writer: pages from the index and the files it names) → build (Sphinx); incremental builds; template overrides in the project root
+- [How the Build Works](docs_src/guide/how-the-build-works.md): resolve (the index) → write (a writer: pages from the index and the files it names; Sphinx by default, MkDocs with `[project] writer = "mkdocs"` and `pip install chartbook[mkdocs]`) → build (the site tool); incremental builds (Sphinx); template overrides in the project root
 
 ## Reference
 
