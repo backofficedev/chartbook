@@ -631,6 +631,13 @@ The store is a setting of the machine or the organization, never of a pipeline, 
 
 The store is a folder of files kept under the hash of their content. It is where `chartbook pin` keeps its copies of other pipelines' data, and it is shared by all your projects. The `CHARTBOOK_STORE` environment variable overrides the setting, for one shell or one CI job. `chartbook store verify` checks a store and `chartbook store gc` clears out what no project needs ({doc}`cli`).
 
+**A store in a synced folder.** A folder that a sync service such as Google Drive keeps in step between your machines is a store those machines share: point each machine's `[store] url` at the folder's local path. A pipeline cloned on another machine then reads what its committed `chartbook.lock` pins from the store (`chartbook run --frozen`, `data.load("other:name")`), with no folder of the other pipeline there and no build of it, and a catalog there shows every snapshot. Choosing a snapshot (the first `chartbook pin`, `chartbook update`) still needs the other pipeline's folder, and a `git` dependency is built from its clone. Four things to know:
+
+- **Keep the files on this disk**, not online-only (in Google Drive, "Mirror files" rather than "Stream files"). A store is many small files, read often.
+- **A snapshot made on one machine is whole on another only once all its files have synced.** A folder store does not hash what it reads again; `chartbook store verify` checks it.
+- **Run `chartbook store gc` from one machine**, without `--forget-missing`: from any one machine, the others' lockfiles cannot be found.
+- **Anyone who can write to the folder can put snapshots in it**, and the store keeps every snapshot until `gc` removes it.
+
 **A store in S3.** `pip install chartbook[s3]`, and
 
 ```toml

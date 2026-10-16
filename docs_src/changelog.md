@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documented — a store in a synced folder
+
+The configuration reference says how to keep the store in a folder that a sync service such as Google Drive keeps in step between your machines: a pipeline cloned on another machine reads what its lockfile pins from it, with the pipeline it depends on neither there nor built, and a catalog there shows every snapshot. It says what still needs the other pipeline's folder (choosing a snapshot), and four things to know (keep the files on disk, sync lag and `store verify`, `gc` from one machine, who can write). A test covers reading with the other pipeline's folder gone, for a folder store and an S3 store.
+
 ### Added — an assistant file for every site
 
 Every build writes `llms.txt` beside `index.json`, in the form of [llms.txt](https://llmstxt.org): the site's name, then one line per pipeline, dataframe, chart and model with its name linking its page, its ID and, in quotation marks, its owner's description, so that an assistant on the command line finds its way around a site without reading its HTML. It says how to use an ID. A version's site says which snapshot it is and that its names and descriptions are its owner's; a catalog's file lists each pipeline's ten newest versions under it, each linking that version's own `llms.txt`, and the versions page for the rest. What an owner wrote never starts a line, so it can make no heading, list or link of its own. The writer writes it from the index, and an incremental build that changes nothing leaves it alone. Step 4 of {doc}`design/versioned-catalog`.

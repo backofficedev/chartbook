@@ -513,3 +513,35 @@ class TestWhatTheFourthReviewFound:
         plan = lock.plan_gc(store=store, forget_missing=True, recent_seconds=0)
         assert [str(p) for p in plan.not_read] == [str(Path(named))] and plan.forget == []
         assert stored.content_hash not in [content_hash for content_hash, _ in plan.delete]
+
+
+class TestAnotherMachineWithoutTheUpstreamFolder:
+    """A pipeline cloned on another machine reads what its lockfile pins from a shared store,
+    with the pipeline it depends on neither there nor built (docs: "A store in a synced folder")."""
+
+    def _machine_two(self, rates, forecast, monkeypatch):
+        import shutil
+
+        shutil.rmtree(rates)
+        monkeypatch.chdir(forecast)
+        checked = lock.verify(forecast)
+        assert checked.problems == [] and checked.pins == 1
+        assert data.load("rates:treasury").collect().shape == (1, 2)
+        assert {e.status for e in lock.pin(forecast).events if e.asset} == {"kept"}
+
+    def test_a_folder_store(self, work, pipelines, monkeypatch):
+        rates, forecast = pipelines
+        monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "synced" / "store"))
+        snapshot.make(rates)
+        lock.pin(forecast)
+        self._machine_two(rates, forecast, monkeypatch)
+
+    def test_an_s3_store(self, work, client, pipelines, monkeypatch):
+        rates, forecast = pipelines
+        store_module._plugin_store_class.cache_clear()
+        monkeypatch.setenv(config.STORE_ENV_VAR, URL)
+        monkeypatch.setenv(config.CACHE_ENV_VAR, str(work / "machine-a"))
+        snapshot.make(rates)
+        lock.pin(forecast)
+        monkeypatch.setenv(config.CACHE_ENV_VAR, str(work / "machine-b"))
+        self._machine_two(rates, forecast, monkeypatch)
