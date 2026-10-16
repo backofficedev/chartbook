@@ -1384,6 +1384,11 @@ def catalog_add(paths, catalog_path, yes):
             entry = raw_catalog["pipelines"][key]
             entry["path"] = rel_path
             entry.pop("disabled", None)
+            disabled_list = raw_catalog["pipelines"].get("disabled")
+            if isinstance(disabled_list, list) and key in disabled_list:
+                disabled_list.remove(key)
+                if not disabled_list:
+                    raw_catalog["pipelines"].pop("disabled")
             click.echo(f"  Added '{key}', which the catalog showed from the store: {name} ({rel_path})")
         else:
             raw_catalog["pipelines"][key] = {"path": rel_path}

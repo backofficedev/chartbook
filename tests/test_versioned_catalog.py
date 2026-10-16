@@ -2,6 +2,7 @@
 (docs_src/design/versioned-catalog.md, step 2)."""
 
 import json
+import re
 from pathlib import Path
 
 import polars as pl
@@ -720,7 +721,7 @@ class TestWhatTheStoreOnlyReviewFound:
     """What a pipeline's snapshot says of it reaches the catalog's own pages as text, never as markup."""
 
     HOSTILE = {
-        "name": "C\n# <img src=x onerror=alert(2)>",
+        "name": "C\n# <img src=x onerror=alert(2)></title><script>alert(7)</script>",
         "description": (
             "Hi <script>alert(1)</script>\n"
             "```{include} SECRET\n```\n"
@@ -739,6 +740,10 @@ class TestWhatTheStoreOnlyReviewFound:
         return fields, secret
 
     def _no_markup_from_the_store(self, page: Path) -> None:
+        # Not in the file at all, as markup or as text a title or a theme could decode
+        written = page.read_text(encoding="utf-8")
+        for planted in ("<script>alert", "<img src=x", "</title><script", "<b onmouseover"):
+            assert planted not in written, (page, planted)
         read = _Markup(page)
         assert not any("alert(" in script for script in read.scripts), page
         for tag, attributes in read.tags:
@@ -762,9 +767,11 @@ class TestWhatTheStoreOnlyReviewFound:
         for page in own:
             self._no_markup_from_the_store(page)
         readme = own[0].read_text()
-        # Shown as written, on one line
-        assert "Hi &lt;script&gt;alert(1)&lt;/script&gt;" in readme
-        assert "&lt;b onmouseover=alert(4)&gt;M&lt;/b&gt;" in readme
+        # Shown as written, on one line, HTML's own characters by look-alikes
+        assert "Hi ‹script›alert(1)‹/script›" in readme
+        assert "‹b onmouseover=alert(4)›M‹/b›" in readme
+        # Nor in the search index, whose titles Sphinx's search sets into HTML
+        self._no_markup_from_the_store(site / "searchindex.js")
         # Not a web address: no link at all
         assert "Repository:" not in readme and "Web page:" not in readme
         assert not any("TOP-SECRET-TEXT" in page.read_text(errors="ignore") for page in site.rglob("*.html"))
@@ -778,8 +785,13 @@ class TestWhatTheStoreOnlyReviewFound:
         _show_from_the_store(root, writer="mkdocs")
         _build(root, monkeypatch)
         site = root / "docs"
-        for page in [site / "cb" / "pipelines" / "pipeline_c_README.html", site / "cb" / "pipelines.html", site / "index.html"]:
-            self._no_markup_from_the_store(page)
+        for page in [site / "cb" / "pipelines" / "pipeline_c_README.html", site / "cb" / "pipelines.html", site / "index.html",
+                     site / "search" / "search_index.json"]:
+            if page.exists():
+                self._no_markup_from_the_store(page)
+        # The page title, which the theme decodes and writes unescaped
+        title = (site / "cb" / "pipelines" / "pipeline_c_README.html").read_text().split("<title>", 1)[1].split("</title>", 1)[0]
+        assert "<" not in title and "‹" in title
         assert not any("TOP-SECRET-TEXT" in page.read_text(errors="ignore") for page in site.rglob("*.html"))
 
     def test_a_web_address_is_a_link(self, catalog, tmp_path, monkeypatch):
@@ -812,6 +824,44 @@ class TestWhatTheStoreOnlyReviewFound:
         record = next(r for r in json.loads((root / "docs" / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
         assert record["name"] == "pipeline_c" and "description" not in record
 
+    def _held(self, taken) -> Path:
+        import os
+        import stat
+
+        held = Path(default_store().get(taken.index["content_hash"]))
+        os.chmod(held, stat.S_IRWXU)
+        os.chmod(held / "index.json", stat.S_IRUSR | stat.S_IWUSR)
+        return held
+
+    def _shown(self, root: Path, monkeypatch) -> dict:
+        _show_from_the_store(root)
+        _build(root, monkeypatch)
+        return next(r for r in json.loads((root / "docs" / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
+
+    def test_a_stored_index_is_not_read_through_a_link(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        taken = _elsewhere_with(tmp_path)
+        held = self._held(taken)
+        outside = tmp_path / "outside.json"
+        outside.write_text(json.dumps({"records": [{"kind": "Pipeline", "id": "pipeline_c", "description": "From outside."}]}))
+        (held / "index.json").unlink()
+        (held / "index.json").symlink_to(outside)
+        assert "description" not in self._shown(root, monkeypatch)
+
+    def test_nor_past_a_limit(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        _elsewhere_with(tmp_path, description="Long enough.")
+        monkeypatch.setattr(snapshot, "STORED_INDEX_LIMIT", 100)
+        assert "description" not in self._shown(root, monkeypatch)
+
+    def test_a_name_of_nothing_visible_is_no_name(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        _elsewhere_with(tmp_path, name="\u200b\u200b \u2028")
+        record = self._shown(root, monkeypatch)
+        assert record["name"] == "pipeline_c"
+        page = (root / "docs" / "cb" / "pipelines.html").read_text()
+        assert not re.search(r"<h2[^>]*>\s*(<a [^>]*>[^<]*</a>)?\s*</h2>", page)
+
     def test_the_description_is_the_linked_snapshots(self, catalog, tmp_path, monkeypatch):
         """The newest snapshot is the one described and the one linked, even when it has no index."""
         import dataclasses
@@ -832,8 +882,13 @@ class TestTheTextAndLinkChecks:
         from chartbook.writers.sphinx import _as_text
 
         assert _as_text("Rates\n\n  and *more*") == "Rates and &#42;more&#42;"
-        assert _as_text("<a>") == "&#60;a&#62;"
-        assert _as_text("{include}`x`") == "&#123;include&#125;&#96;x&#96;"
+        assert _as_text("<a>") == "‹a›"
+        assert _as_text("{include}`x`") == "&#123;include&#125;‘x‘"
+        assert _as_text("""A & B's "x" """) == "A ＆ B’s ”x”"
+        # Decoded again, nothing of HTML's own is there
+        import html
+
+        assert not set(html.unescape(_as_text("</title><script>&lt;'\"`"))) & set("<>&'\"`")
         assert _as_text("Zürich ±") == "Zürich ±"
         assert _as_text(None) == "" and _as_text(5) == ""
         assert _as_text("a\x00b‮c") == "a b c"
@@ -851,6 +906,9 @@ class TestTheTextAndLinkChecks:
             ("https://acme.org/(x)", ""),
             ("https://acme.org/<script>", ""),
             ("ftp://acme.org/x", ""),
+            ("httpſ://acme.org/x", ""),
+            ("https://acme.org/\u212a", ""),
+            ("HTTPS://Acme.org/X", "HTTPS://Acme.org/X"),
             ("https://", ""),
             ("https://acme.org/" + "a" * 3000, ""),
             (5, ""),

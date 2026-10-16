@@ -930,8 +930,12 @@ def _describe_from_the_store(records: list[dict]) -> None:
         )
         own = snapshots.stored_pipeline_record(taken, store) if taken is not None else {}
         for key, longest in (("name", 200), ("description", 2000), ("maintainer", 200)):
-            if isinstance(own.get(key), str) and own[key].strip():
-                record[key] = " ".join(own[key].split())[:longest]
+            if not isinstance(own.get(key), str):
+                continue
+            # One line of what can be seen: no control or format characters
+            text = " ".join("".join(c if c.isprintable() else " " for c in own[key]).split())[:longest]
+            if text:
+                record[key] = text
         for key in ("repo_url", "site_url"):
             if web_link(own.get(key)):
                 record[key] = web_link(own[key])

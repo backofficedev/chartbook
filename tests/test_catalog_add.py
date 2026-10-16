@@ -495,6 +495,12 @@ class TestAddAPipelineShownFromTheStore:
         assert result.exit_code == 0, result.output
         assert _read_catalog(catalog_dir)["pipelines"] == {"my_pipeline": {"path": "../my_pipeline"}}
 
+    def test_and_taken_off_the_disabled_list(self, tmp_path):
+        catalog_dir = _make_minimal_catalog(tmp_path / "catalog", {"my_pipeline": {}, "disabled": ["my_pipeline"]})
+        result = self._add(catalog_dir, _make_minimal_pipeline(tmp_path / "my_pipeline"))
+        assert result.exit_code == 0, result.output
+        assert _read_catalog(catalog_dir)["pipelines"] == {"my_pipeline": {"path": "../my_pipeline"}}
+
     def test_a_second_folder_of_the_same_id_is_another_pipeline(self, tmp_path):
         catalog_dir = _make_minimal_catalog(tmp_path / "catalog", {"my_pipeline": {}})
         first = _make_minimal_pipeline(tmp_path / "a" / "my_pipeline")

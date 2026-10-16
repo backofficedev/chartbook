@@ -278,7 +278,7 @@ def strip_url_credentials(url: str) -> str:
 #: none of the characters that end a link, an attribute or a line in
 #: Markdown or HTML (no space, quote, angle bracket, parenthesis, square
 #: bracket, brace, backtick or backslash).
-_WEB_LINK = re.compile(r"https?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~:/?#@!$&+,;=%-]*)?", re.IGNORECASE)
+_WEB_LINK = re.compile(r"[Hh][Tt][Tt][Pp][Ss]?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~:/?#@!$&+,;=%-]*)?", re.ASCII)
 
 
 def web_link(value: object) -> str:

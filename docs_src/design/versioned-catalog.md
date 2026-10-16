@@ -217,7 +217,12 @@ model with where its page is, so that a command-line agent finds its way without
    description and maintainer as plain text (each ASCII punctuation character a character
    reference) and its links only when they are plain web addresses; the description is the
    newest snapshot's, the one the page links. A `[pipelines]` entry takes only `path` and
-   `disabled`, and a folder of the entry's ID fills it in.
+   `disabled`, and a folder of the entry's ID fills it in. A second review found that a page
+   title (MkDocs) and Sphinx's search results decode character references and set the text
+   into HTML again, so HTML's own characters (`< > & " '`, backtick) are replaced by look-alikes
+   first; the stored index is read only as a regular file, not through a link, and up to a
+   limit. Not changed: a version's own site is its owner's pages, raw HTML included, served
+   with the catalog, as a listed repository's pages are; the guide says so.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.

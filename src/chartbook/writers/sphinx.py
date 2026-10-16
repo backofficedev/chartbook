@@ -140,19 +140,26 @@ def _is_from_the_store(record: dict) -> bool:
     return record.get("kind") == "Pipeline" and (record.get("location") or {}).get("kind") == "store"
 
 
+#: HTML's own characters, and what stands in for each in someone else's text
+_LOOK_ALIKES = str.maketrans({"<": "‹", ">": "›", "&": "＆", '"': "”", "'": "’", "`": "‘"})
+
+
 def _as_text(value: object) -> str:
     """Text someone else wrote, made safe to set into a page: it shows as written and is never read as markup.
 
     Each run of whitespace or unprintable characters becomes one space, so
-    the text is one line, and each ASCII punctuation character becomes its
-    numeric character reference. CommonMark (and so MyST), Python-Markdown
-    and HTML show a character reference as its character and never read it
-    as syntax: no role, directive, link, list, table cell or HTML element
-    can start in the text, and it cannot leave an HTML attribute either.
+    the text is one line. HTML's own characters (``< > & " '`` and the
+    backtick) are replaced by look-alikes, since a page title, a search
+    index or a theme may decode the text and set it into HTML again; then
+    each other ASCII punctuation character becomes its numeric character
+    reference. CommonMark (and so MyST), Python-Markdown and HTML show a
+    character reference as its character and never read it as syntax: no
+    role, directive, link, list, table cell or HTML element can start in
+    the text, decoded or not, and it cannot leave an HTML attribute either.
     """
     if not isinstance(value, str):
         return ""
-    text = " ".join("".join(c if c.isprintable() else " " for c in value).split())
+    text = " ".join("".join(c if c.isprintable() else " " for c in value).split()).translate(_LOOK_ALIKES)
     return "".join(f"&#{ord(c)};" if c in string.punctuation else c for c in text)
 
 
@@ -172,6 +179,7 @@ def _from_the_store(record: dict) -> dict:
     for key in ("name", "description", "maintainer"):
         if _as_text(record.get(key)):
             shown[key] = _as_text(record[key])
+    shown.setdefault("name", _as_text(record["id"]))
     for key in ("repo_url", "site_url"):
         if web_link(record.get(key)):
             shown[key] = web_link(record[key])
