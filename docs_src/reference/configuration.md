@@ -136,7 +136,7 @@ disabled = true                    # kept but skipped during builds
 path = { unix = "/data/pipelines/news_headlines", windows = "T:/pipelines/news_headlines" }
 ```
 
-Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table) and `disabled` (bool). A plain string value is shorthand for the path. `chartbook catalog add <dir>` writes the scoped key for you, derived from the target's git remote.
+Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table) and `disabled` (bool). A plain string value is shorthand for the path. An entry with no `path`, `"acme/rates" = {}`, is a pipeline whose folder is not on this machine: the catalog shows it from its snapshots in the store, named and described as its newest snapshot's own index says, with a page that links its newest version and the Versions page; it has no working version, and `check`, `run` and the policy pass it by. `chartbook catalog add <dir>` writes the scoped key for you, derived from the target's git remote.
 
 ### Auto-discovery with `members`
 

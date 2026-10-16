@@ -206,7 +206,13 @@ model with where its page is, so that a command-line agent finds its way without
    when any of this changes. `store gc` clears the kept site of every snapshot it removes. Not
    built: the same links inside a version's own site, which is built once and kept, and so
    cannot know which other versions a catalog will show; its pages say the pinned commit and
-   date in words. And a catalog entry by ID alone, which is the next step.
+   date in words. And a catalog entry by ID alone, which is the next step. *Built 2026-10-16:* a
+   `[pipelines]` entry with no `path` names a pipeline whose folder is not on this machine; the
+   catalog's index has a Pipeline record for it with `location: {kind: store}`, named and
+   described from its newest snapshot's own index, and its `snapshots`; its page links its newest
+   version and the Versions page; the manifest keeps it apart from the folder pipelines
+   (`store_pipelines`), so `check`, `run`, the incremental plan and the policy pass it by. That
+   completes step 3.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.

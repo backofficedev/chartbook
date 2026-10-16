@@ -580,3 +580,86 @@ class TestWhatTheSecondLinksReviewFound:
         text = indexdiff.format_diff(indexdiff.diff(before, after))
         assert "trained from another snapshot" in text and "declared differently" not in text
         assert "versions' sites built differently" in text
+
+
+class TestAPipelineFromTheStoreAlone:
+    """A catalog entry with no path: the pipeline's folder is not here, its snapshots are."""
+
+    def _elsewhere(self, tmp_path) -> "snapshot.Snapshot":
+        """A pipeline built and snapshotted somewhere else, then its folder gone from this machine."""
+        import shutil
+
+        from tests.fixtures import create_pipeline_project
+
+        repository = tmp_path.resolve() / "elsewhere"
+        project = create_pipeline_project(repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C")
+        manifest = tomli.loads((project / "chartbook.toml").read_text())
+        manifest["project"]["description"] = "Made on another machine."
+        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        _git(repository, "init", "--quiet", "-b", "main")
+        _commit(repository)
+        taken = snapshot.make(project).snapshot
+        shutil.rmtree(repository)
+        return taken
+
+    def test_it_is_shown_from_its_snapshots(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        taken = self._elsewhere(tmp_path)
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["pipelines"]["pipeline_c"] = {}
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        _build(root, monkeypatch)
+        site = root / "docs"
+        index = json.loads((site / "index.json").read_text())
+        record = next(r for r in index["records"] if r["id"] == "pipeline_c")
+        assert record["location"] == {"kind": "store"}
+        assert record["name"] == "Pipeline C" and record["description"] == "Made on another machine."
+        assert [s["commit"] for s in record["snapshots"]] == [taken.commit]
+        page = site / "cb" / "pipelines" / "pipeline_c_README.html"
+        text = page.read_text()
+        assert "Not on this machine" in text
+        links = _links(page)
+        assert links and all(_resolves(page, h) for h in links)
+        versions_page = (site / "cb" / "versions.html").read_text()
+        assert "not on this machine" in versions_page
+        assert "pipeline_c" in (site / "cb" / "pipelines.html").read_text()
+        assert "pipeline_c" not in (site / "cb" / "diagnostics.html").read_text()
+
+    def test_one_with_no_snapshot_says_so(self, catalog, monkeypatch):
+        root, first, second = catalog
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["pipelines"]["acme/nowhere"] = {}
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        _build(root, monkeypatch)
+        text = (root / "docs" / "cb" / "pipelines" / "acme--nowhere_README.html").read_text()
+        assert "No snapshot of it is in the store yet." in text
+
+    def test_the_catalogs_other_commands_pass_it_by(self, catalog, monkeypatch):
+        root, first, second = catalog
+        monkeypatch.chdir(root)
+        before = CliRunner().invoke(main, ["check", "--skip-outputs"])
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["pipelines"]["acme/nowhere"] = {}
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        from chartbook.manifest import get_pipeline_ids, load_manifest
+
+        loaded = load_manifest(root)
+        assert loaded["store_pipelines"] == ["acme/nowhere"] and "acme/nowhere" not in get_pipeline_ids(loaded)
+        after = CliRunner().invoke(main, ["check", "--skip-outputs"])
+        # The fixture's own missing fields are said as before; the entry adds nothing to check
+        assert after.exit_code == before.exit_code and "acme/nowhere" not in after.output
+        assert after.output.count("required by") == before.output.count("required by")
+
+    def test_with_mkdocs_too(self, catalog, tmp_path, monkeypatch):
+        pytest.importorskip("mkdocs")
+        pytest.importorskip("material")
+        root, first, second = catalog
+        self._elsewhere(tmp_path)
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["pipelines"]["pipeline_c"] = {}
+        manifest["project"]["writer"] = "mkdocs"
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        result = _build(root, monkeypatch)
+        assert "contains a link" not in result.output, result.output
+        page = root / "docs" / "cb" / "pipelines" / "pipeline_c_README.html"
+        assert _links(page) and all(_resolves(page, h) for h in _links(page))

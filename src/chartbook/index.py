@@ -900,6 +900,43 @@ def _add_snapshots(records: list[dict]) -> None:
     _add_trained_from(records, by_pipeline)
 
 
+def _describe_from_the_store(records: list[dict]) -> None:
+    """Give a pipeline shown from the store alone what its newest snapshot's own index says of it.
+
+    Its name, description, maintainer and links, as its owner wrote them at
+    the newest snapshot; nothing of its folder, which is not here.
+    """
+    import json as json_module
+
+    from chartbook import snapshot as snapshots
+    from chartbook.store import StoreError, default_store
+
+    from_store = [r for r in records if r.get("kind") == "Pipeline" and (r.get("location") or {}).get("kind") == "store"]
+    if not from_store:
+        return
+    store = default_store()
+    found, _ = snapshots.readable_snapshots(store)
+    for record in from_store:
+        newest = next(
+            (t for t in sorted(found, key=lambda t: t.made_at, reverse=True) if t.pipeline == record["id"] and t.index),
+            None,
+        )
+        if newest is None:
+            continue
+        try:
+            held = Path(store.get(newest.index["content_hash"])) / "index.json"
+            recorded = json_module.loads(held.read_text(encoding="utf-8"))
+        except (OSError, ValueError, KeyError, StoreError):
+            continue
+        own = next(
+            (r for r in recorded.get("records", []) if isinstance(r, dict) and r.get("kind") == "Pipeline" and r.get("id") == record["id"]),
+            {},
+        )
+        for key in ("name", "description", "maintainer", "repo_url", "site_url"):
+            if isinstance(own.get(key), str) and own[key]:
+                record[key] = own[key]
+
+
 def _add_trained_from(records: list[dict], by_pipeline: dict) -> None:
     """Give each Model record trained on another pipeline's data the snapshot that held it.
 
@@ -1075,8 +1112,20 @@ def build_index(
             known_pipelines=known_pipelines,
         )
     if project["type"] == "catalog":
+        # A pipeline the catalog names with no folder here is shown from the store
+        for pipeline_id in manifest.get("store_pipelines") or []:
+            records.append(
+                {
+                    "kind": "Pipeline",
+                    "version": RECORD_VERSION,
+                    "id": pipeline_id,
+                    "name": pipeline_id,
+                    "location": {"kind": "store"},
+                }
+            )
         # A catalog shows every version of its pipelines; a pipeline's own site does not
         _add_snapshots(records)
+        _describe_from_the_store(records)
 
     moment = generated_at or datetime.now(timezone.utc)
     return {

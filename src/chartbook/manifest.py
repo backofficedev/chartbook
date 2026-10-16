@@ -1451,13 +1451,15 @@ def _load_catalog_manifest(raw_manifest):
     _apply_disabled_list(entries, disabled_ids, source)
 
     manifest["pipelines"] = {}
+    # A pipeline with no folder here: the catalog shows its snapshots in the store
+    manifest["store_pipelines"] = sorted(
+        pipeline_id for pipeline_id, pipeline_entry in entries.items() if pipeline_entry.get("path") is None
+    )
     for pipeline_id in entries:
         pipeline_entry = entries[pipeline_id]
         path_to_pipeline = pipeline_entry.get("path")
         if path_to_pipeline is None:
-            raise ValueError(
-                f"{source}: [pipelines.\"{pipeline_id}\"] has no 'path' key."
-            )
+            continue
         path_to_pipeline = resolve_platform_path(path_to_pipeline)
         pipeline_base_dir = Path(base_dir) / path_to_pipeline
         pipeline_base_dir = pipeline_base_dir.resolve()

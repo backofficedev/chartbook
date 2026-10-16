@@ -167,7 +167,8 @@ class SphinxWriter:
         if self.docs_src_dir is None:
             self.docs_src_dir = Path("_docs_src").resolve()
         for record in self.records.values():
-            if record.get("kind") == "Pipeline" and not (record.get("location") or {}).get("value"):
+            location = record.get("location") or {}
+            if record.get("kind") == "Pipeline" and location.get("kind") != "store" and not location.get("value"):
                 raise ValueError(
                     "SphinxWriter needs the full index, the one the build directory holds, "
                     "not the published one beside the site: it reads the files the index "
@@ -387,6 +388,8 @@ class SphinxWriter:
         README page, with its repository and site named above the text.
         """
         pipeline = self.records[pipeline_id]
+        if (pipeline.get("location") or {}).get("kind") == "store":
+            return self._from_the_store_page(pipeline)
         base_dir = Path(pipeline["location"]["value"])
         readme = self._readme_lines(pipeline, base_dir)
         if self.theme == "catalog":
@@ -456,6 +459,31 @@ class SphinxWriter:
     def _has_versions(self) -> bool:
         return any(r["kind"] == "Pipeline" and r.get("snapshots") for r in self.records.values())
 
+    def _from_the_store_page(self, pipeline: dict) -> str:
+        """The page of a pipeline the catalog shows from the store alone: what it is, and its versions."""
+        from chartbook.versions import site_path
+
+        lines = [f"# `{pipeline['id']}` {pipeline.get('name', '')}", ""]
+        lines.append(
+            "Not on this machine: the catalog shows this pipeline from the store, each snapshot "
+            "as its owner declared it ready."
+        )
+        lines.append("")
+        if pipeline.get("description"):
+            lines += [pipeline["description"], ""]
+        snapshots = pipeline.get("snapshots") or []
+        if snapshots:
+            newest = snapshots[0]
+            made = f"{newest['made_at'][:10]} {newest['made_at'][11:16]} UTC"
+            target = site_path(pipeline["id"], newest["name"])
+            lines.append(
+                f'The newest snapshot: <a href="../../{target}/index.html">`{newest["commit"][:7]}`, made {made}</a>. '
+                f"[Every version](../versions.md)."
+            )
+        else:
+            lines.append("No snapshot of it is in the store yet.")
+        return "\n".join(lines) + "\n"
+
     def _versions(self) -> list:
         """Each pipeline with its working version and its snapshots, for the versions page.
 
@@ -489,6 +517,7 @@ class SphinxWriter:
                     "id": record["id"],
                     "name": record.get("name") or record["id"],
                     "readme": f"pipelines/{_slug(record['id'])}_README.md",
+                    "working": (record.get("location") or {}).get("kind") != "store",
                     "versions": versions,
                 }
             )
