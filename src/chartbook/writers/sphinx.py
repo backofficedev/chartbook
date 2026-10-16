@@ -86,11 +86,8 @@ A version is made by a snapshot. Its name is the start of the model's content ha
 `chartbook path model/{{model_id}}@<version>` gives its path.
 
 | Version | Made | Commit | Labels |{% for name in version_metrics %} `{{name}}` |{% endfor %}
-
 |---------|------|--------|--------|{% for name in version_metrics %}------|{% endfor %}
-
 {% for version in versions %}| `{{version.name}}` | {{version.made}} | `{{version.commit}}` | {{version.labels}} |{% for name in version_metrics %} {{version.metrics.get(name, "")}} |{% endfor %}
-
 {% endfor %}
 {% endif %}
 
@@ -152,6 +149,9 @@ class SphinxWriter:
         one row and no date range, as the generator does.
     :param enable_data_download: Whether pages link to downloads.
     """
+
+    #: Whether the theme's ``_templates`` folder belongs in the site tree: Sphinx reads its HTML templates there.
+    THEME_TEMPLATES_IN_SITE = True
 
     index: dict
     theme: str = "pipeline"
@@ -428,6 +428,14 @@ class SphinxWriter:
     #: folder. `charts.md` and `contributing.md` are static files of the
     #: theme that the build copies; they are not rendered.
     CATALOG_PAGES = ("index.md", "cb/dataframes.md", "cb/models.md", "cb/pipelines.md", "cb/diagnostics.md")
+
+    def own_page_paths(self) -> list:
+        """The site's own pages this writer renders besides the records': a catalog's pages; none for a pipeline site."""
+        return self.catalog_page_paths() if self.theme == "catalog" else []
+
+    def own_page(self, page_path: str) -> str:
+        """One of :meth:`own_page_paths`."""
+        return self.catalog_page(page_path)
 
     def catalog_page_paths(self) -> list:
         """The catalog pages this index has: `cb/models.md` only when some pipeline declares a model."""

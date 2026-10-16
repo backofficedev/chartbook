@@ -150,7 +150,80 @@ in the files the index names.
 - **Golden tests:** one page of each kind, rendered from a fixed index and fixed files, compared
   whole. The index is small enough to keep as a fixture.
 - **MkDocs and Next.js** are later writers reading the same index; they are why the index stays
-  free of renderings. Not scheduled.
+  free of renderings. MkDocs is built (below); Next.js is not scheduled.
+
+## A second writer: MkDocs
+
+*Proposed 2026-10-16.* The maintainer asked for an MkDocs writer, behind an extra: `pip install
+chartbook` keeps installing Sphinx, and `pip install chartbook[mkdocs]` adds MkDocs. The writer
+is the proof that the index is what it claims to be: a second site tool, reading the same index,
+writing pages of its own, with the build unchanged above the writer.
+
+**Which tool a site is built with is a fact about the pipeline's site**, so it is in the manifest:
+`[project] writer = "mkdocs"`, default `"sphinx"`. A catalog's choice applies to the catalog's
+site; a pipeline's to its own. (`chartbook docs` keeps no flag for it: the site is built the same
+way by everyone who builds it.)
+
+**What the writer is.** `chartbook/writers/mkdocs.py`, `MkDocsWriter`, with the Sphinx writer's
+methods and signatures: `page_path(record)`, `page(record)`, `pipeline_page_link`,
+`link_to_dataframe`, `catalog_page_paths()`, `catalog_page(path)`. Its input rule is the same:
+the index and the files it names, nothing else. Its output is a MkDocs project: `mkdocs.yml`
+with the nav written from the index, and a `docs/` folder of Markdown pages in MkDocs'
+dialect (Material admonitions, plain tables, relative `.md` links). The provenance and manifest
+templates are plain Markdown already and are shared; the two templates that use MyST
+(`chart_entry_top.md`, `freshness.md`) and the theme's own pages (`index.md`, `charts.md`, the
+catalog's five) get MkDocs versions in a theme folder of the writer's own.
+
+**What MkDocs does not have.** Sphinx's blog (`ablog`) carries the notes; in MkDocs the notes are
+pages listed on the front page, newest first, with their dates. Notebooks are rendered by
+`mkdocs-jupyter`, which the extra installs. Charts are HTML files, shown as they are now, in an
+iframe on the chart page. The diagnostics page, the catalog's tables and the search are MkDocs'
+own.
+
+**The build.** `sitefiles.write_site()` picks the writer by the manifest and writes the pages;
+`build_docs` runs `mkdocs build` where it runs `sphinx-build`, and copies the site out the same
+way; `index.json` is written beside the site as now, by code that never
+knew which tool rendered it. The incremental build is Sphinx's for now: an MkDocs site is built
+whole.
+
+**Tests.** The golden tests of `tests/test_writer_sphinx.py` have an MkDocs twin: one page of
+each kind from the same fixed index, compared whole. A build test runs `mkdocs build` where
+MkDocs is installed (the test environments install it) and checks the pages are there and the
+index is beside them. The first page compared by eye is the example pipelines' sites, built with
+both writers.
+
+**Not in this step.** Theme options beyond the logo and the favicon the manifest already has; a
+Next.js writer; a plugin seam for writers (two implementations are not three).
+
+*Found on the way, 2026-10-16:* three links the Sphinx writer carries from the generator do not
+resolve, in either site tool: the dataframe page's link to itself in the pipeline theme
+(`../dataframes/<slug>/<name>.md` from `cb/dataframes/<slug>/`), the chart page's link to itself
+(`../../charts/<slug>.<name>.md` from `cb/charts/`) and, in the catalog theme, a dataframe page's
+link to its pipeline (`../pipelines/<slug>_README.md` from `cb/dataframes/<slug>/`), and in the catalog theme a dataframe
+page's link to itself (`<slug>/<name>.md` from `cb/dataframes/<slug>/`); Sphinx renders
+each as an anchor on the same page. MkDocs reports them as warnings. They are the link scheme's to
+fix, for both writers at once, with the golden tests updated; not part of this step.
+
+*Built 2026-10-16:* `chartbook.writers.mkdocs.MkDocsWriter`, a subclass of the Sphinx writer that
+swaps the template search path for a theme folder of its own
+(`chartbook/docs_src_mkdocs/<theme>`) and renders the front pages and lists as links rather than
+toctrees; `[project] writer = "mkdocs"` chooses it, and the build (`build_docs._generate_docs_mkdocs`)
+writes the pages under `pages/`, `mkdocs.yml` beside them with the navigation from the records, and
+runs `mkdocs build`. The site's own pages (`cb/charts.md`, the catalog's) are a question the build
+asks any writer, `own_page_paths()` and `own_page()`; the Sphinx writer answers with the catalog's
+pages, the MkDocs writer with the chart listing too. The incremental build is Sphinx's and says so
+when asked for an MkDocs site. `pip install chartbook[mkdocs]` installs MkDocs, the Material theme
+and `mkdocs-jupyter`; `pip install chartbook` still installs Sphinx and nothing of MkDocs. Two
+things the proposal above says differently from what was built: the notes and the charts are
+listed by name, not newest first; and the tests are not golden twins but checks that every page
+of a pipeline site and a catalog site is free of Sphinx syntax, that the chart listing and the
+navigation name every page, and that MkDocs builds a pipeline site (notes, site pages in the
+order of `index_toc.md`, MkDocs' own search) and a catalog site end to end. A pipeline's own
+site pages are copied as they are, listed on the front page and in the navigation, and one that
+carries a MyST fence is named in a warning, since MkDocs shows it as code. `chartbook catalog
+build` reads the catalog's manifest and builds whole when it names MkDocs; `--watch` is refused
+there. The model page's versions table, which had blank lines between its rows and so rendered
+as paragraphs in both tools, is a table now.
 
 ## As built, slice by slice
 

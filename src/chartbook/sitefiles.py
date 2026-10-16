@@ -133,12 +133,18 @@ def ensure_notebook_titles(index: dict, docs_build_dir: Path, skip: Iterable[str
             file.write("\n")
 
 
-def copy_theme_files(docs_src_dir: Path, docs_build_dir: Path) -> None:
-    """Copy the theme's own files to the root of the Sphinx tree, and its charts listing under ``cb/``.
+def copy_theme_files(docs_src_dir: Path, docs_build_dir: Path, charts: bool = True, templates: bool = True) -> None:
+    """Copy the theme's own files to the root of the site tree, and its charts listing under ``cb/``.
 
     Everything under the theme's ``docs_src`` but what the writer renders and
     the generated folders (:data:`THEME_FILES_NOT_AT_ROOT`); the folder
     structure is kept, and only file contents are copied.
+
+    :param charts: Whether the theme's static ``charts.md`` goes under ``cb/``;
+        not when the writer renders that page itself.
+    :param templates: Whether the theme's ``_templates`` folder is copied;
+        Sphinx reads its HTML templates from there, MkDocs would render them
+        as pages.
     """
     docs_src_dir, docs_build_dir = Path(docs_src_dir), Path(docs_build_dir)
     docs_build_dir.mkdir(parents=True, exist_ok=True)
@@ -148,13 +154,15 @@ def copy_theme_files(docs_src_dir: Path, docs_build_dir: Path) -> None:
         relative = source.relative_to(docs_src_dir)
         if any(part in THEME_FILES_NOT_AT_ROOT for part in relative.parts) or not source.is_file():
             continue
+        if not templates and relative.parts[0] == "_templates":
+            continue
         destination = docs_build_dir / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
-    charts = docs_src_dir / "charts.md"
-    if charts.exists():
+    listing = docs_src_dir / "charts.md"
+    if charts and listing.exists():
         (docs_build_dir / "cb").mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(charts, docs_build_dir / "cb" / "charts.md")
+        shutil.copyfile(listing, docs_build_dir / "cb" / "charts.md")
 
 
 def copy_site_pages(index: dict, docs_build_dir: Path) -> None:
@@ -221,7 +229,8 @@ def write_site(
     from chartbook import hashing
     from chartbook import index as index_module
     from chartbook.manifest import apply_code_change_times, load_manifest
-    from chartbook.writers.sphinx import SphinxWriter, check_front_matter
+    from chartbook.writers import writer_class
+    from chartbook.writers.sphinx import check_front_matter
 
     docs_build_dir = Path(docs_build_dir)
     docs_build_dir.mkdir(parents=True, exist_ok=True)
@@ -237,7 +246,7 @@ def write_site(
         cache.save()
     enable_data_download = bool(manifest["project"].get("enable_data_download", False))
 
-    writer = SphinxWriter(
+    writer = writer_class(manifest["project"].get("writer", "sphinx"))(
         built_index,
         theme=pipeline_theme,
         docs_src_dir=docs_src_dir,
@@ -258,11 +267,6 @@ def write_site(
         page.write_text(writer.page(record), encoding="utf-8")
         if kind == "Chart":
             check_front_matter(page, owner, record["ref"]["name"])
-    if pipeline_theme == "catalog":
-        for page_path in writer.catalog_page_paths():
-            page = docs_build_dir / page_path
-            page.parent.mkdir(parents=True, exist_ok=True)
-            page.write_text(writer.catalog_page(page_path), encoding="utf-8")
 
     copy_files(
         copy_plan(
@@ -275,7 +279,13 @@ def write_site(
         )
     )
     ensure_notebook_titles(built_index, docs_build_dir, skip=not_generated)
-    copy_theme_files(docs_src_dir, docs_build_dir)
+    own_pages = writer.own_page_paths()
+    copy_theme_files(docs_src_dir, docs_build_dir, charts="cb/charts.md" not in own_pages, templates=writer.THEME_TEMPLATES_IN_SITE)
     if pipeline_theme == "pipeline":
         copy_site_pages(built_index, docs_build_dir)
+    # The site's own pages last: the theme's static copy of a page the writer renders would overwrite it
+    for page_path in own_pages:
+        page = docs_build_dir / page_path
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text(writer.own_page(page_path), encoding="utf-8")
     return built_index

@@ -66,15 +66,22 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# `pip install chartbook` installs everything a pipeline on one machine needs.
-# The one user-facing extra is a kind of store that needs a cloud library the
-# base install does not bring (docs_src/design/stores-and-backends.md). The old
+# `pip install chartbook` installs everything a pipeline on one machine needs,
+# Sphinx included. The user-facing extras are a kind of store that needs a cloud
+# library the base install does not bring (docs_src/design/stores-and-backends.md)
+# and a second site tool (docs_src/design/writer.md). The old
 # [all], [data], [plotting] and [sphinx] aliases were removed after their one
 # release of notice; see docs_src/reference/stability.md.
 #
 # The store in an S3 bucket: [store] url = "s3://bucket/prefix"
 s3 = [
     "boto3>=1.28",
+]
+# A site built with MkDocs instead of Sphinx: [project] writer = "mkdocs"
+mkdocs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocs-jupyter>=0.25",
 ]
 # Contributor tooling only (tests + build automation)
 dev = [
@@ -145,6 +152,10 @@ extra-dependencies = [
     # The S3 store, against a mocked bucket
     "boto3>=1.28",
     "moto[s3]>=5",
+    # The MkDocs writer's build test
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocs-jupyter>=0.25",
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]

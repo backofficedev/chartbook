@@ -55,6 +55,7 @@ Every field is optional. Types and defaults:
 | `build` | string (multi-line allowed). The same as `build` in {ref}`[scripts] <scripts>` | `""` |
 | `site_dir` | path | `"./docs_src/site/"` when that directory exists |
 | `enable_data_download` | bool | `false` |
+| `writer` | `"sphinx"` or `"mkdocs"`: the site tool the pages are written for. MkDocs needs `pip install chartbook[mkdocs]`; the build says so when it is missing | `"sphinx"` |
 
 Unknown keys in `[project]` produce a warning naming the closest known key, so typos don't silently become dead metadata.
 

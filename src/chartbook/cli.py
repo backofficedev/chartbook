@@ -1531,9 +1531,25 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
 
             shutil.rmtree(_docs_dir)
 
+    # A site built with MkDocs is built whole: the kept build directory is Sphinx's
+    from chartbook.manifest import load_manifest
+
+    try:
+        incremental = load_manifest(project_dir)["project"].get("writer", "sphinx") != "mkdocs"
+    except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+    if not incremental and watch:
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + "--watch rebuilds with Sphinx; this catalog is built with MkDocs ([project] writer = \"mkdocs\"), "
+            "whole, each time. Run it without --watch.",
+            err=True,
+        )
+        raise SystemExit(1)
     _run_docs_build(
         project_dir,
-        incremental=True,
+        incremental=incremental,
         watch=watch,
         watch_interval=watch_interval,
         output_dir=output_dir,

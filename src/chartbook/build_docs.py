@@ -21,21 +21,22 @@ from chartbook.utils import copy_file, copy_tree, move_tree
 from chartbook.conf_validation import validate_conf_py_values, validate_source_files
 
 
-def get_docs_src_path(pipeline_theme: str = "pipeline"):
+def get_docs_src_path(pipeline_theme: str = "pipeline", writer: str = "sphinx"):
     """Get the path to the docs_src directory included in the package.
 
     :param pipeline_theme: Theme to use for pipeline documentation.
     :type pipeline_theme: str
+    :param writer: The site tool, ``sphinx`` or ``mkdocs``; each has its own theme folders.
+    :type writer: str
     :returns: Path to the docs_src directory.
     :rtype: Path
     """
     package_path = importlib.resources.files("chartbook")
-    if pipeline_theme == "pipeline":
-        return Path(str(package_path)) / "docs_src_pipeline"
-    elif pipeline_theme == "catalog":
-        return Path(str(package_path)) / "docs_src_catalog"
-    else:
+    if pipeline_theme not in ("pipeline", "catalog"):
         raise ValueError(f"Invalid pipeline theme: {pipeline_theme}")
+    if writer == "mkdocs":
+        return Path(str(package_path)) / "docs_src_mkdocs" / pipeline_theme
+    return Path(str(package_path)) / f"docs_src_{pipeline_theme}"
 
 
 def run_build_markdown(
@@ -179,26 +180,7 @@ def _write_sphinx_project(
 
     # policy.mode = "strict" fails the build on any missing required
     # field. The policy is the catalog's, or a lone pipeline's own.
-    policy = manifest.get("policy")
-    if policy and policy["mode"] == "strict":
-        incomplete = [r for r in diagnostic_rows if not r.metadata_complete]
-        if incomplete:
-            import click
-
-            lines = [
-                "The policy is 'strict' and required metadata is missing:"
-            ]
-            for row in incomplete:
-                lines.append(
-                    f"  - {row.object_type} '{row.pipeline_id}:{row.identifier}' "
-                    f"missing: {row.missing_fields}"
-                )
-            lines.append(
-                "Fill in the fields above, relax [policy.required], or set "
-                "policy.mode = 'warn' in the chartbook.toml that sets the policy."
-            )
-            click.echo(click.style("\n".join(lines), fg="red"), err=True)
-            raise SystemExit(1)
+    _check_policy(manifest, diagnostic_rows)
 
     # Run pipeline publish
     run_build_markdown(
@@ -326,6 +308,32 @@ def generate_docs(
                 )
                 raise SystemExit(1)
 
+    writer = manifest["project"].get("writer", "sphinx")
+    if writer == "mkdocs":
+        if incremental:
+            import click
+
+            click.echo(
+                click.style("Error: ", fg="red", bold=True)
+                + "--incremental and --watch build with Sphinx; a site with [project] writer = "
+                "\"mkdocs\" is built whole. Run `chartbook docs` without them.",
+                err=True,
+            )
+            raise SystemExit(1)
+        return _generate_docs_mkdocs(
+            manifest=manifest,
+            output_dir=output_dir,
+            project_dir=project_dir,
+            publish_dir=publish_dir,
+            _docs_dir=_docs_dir,
+            keep_build_dirs=keep_build_dirs,
+            temp_docs_src_dir=temp_docs_src_dir,
+            should_remove_existing=should_remove_existing,
+            size_threshold=size_threshold,
+            strip_mathjax2=strip_mathjax2,
+            skip_pipelines=skip_pipelines,
+        )
+
     if incremental:
         return _generate_docs_incremental(
             manifest=manifest,
@@ -376,29 +384,7 @@ def generate_docs(
         # Copy build files to output
         html_build_dir = _docs_dir / "_build" / "html"
         if html_build_dir.exists():
-            if should_remove_existing and output_dir.exists():
-                # Use atomic replacement: copy to temp, remove old, rename temp
-                import tempfile
-
-                temp_output_dir = Path(tempfile.mkdtemp(prefix="chartbook_output_"))
-                try:
-                    copy_tree(html_build_dir, temp_output_dir)
-                    (temp_output_dir / ".nojekyll").touch()
-
-                    # Remove existing directory and replace with new one
-                    shutil.rmtree(output_dir)
-                    move_tree(temp_output_dir, output_dir)
-                except Exception:
-                    # Clean up temp directory if something went wrong
-                    if temp_output_dir.exists():
-                        shutil.rmtree(temp_output_dir, ignore_errors=True)
-                    raise
-            else:
-                # Standard copy operation for new directories
-                output_dir.mkdir(parents=True, exist_ok=True)
-                copy_tree(html_build_dir, output_dir)
-                (output_dir / ".nojekyll").touch()
-
+            _install_site(html_build_dir, output_dir, should_remove_existing)
             _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
 
     finally:
@@ -407,6 +393,171 @@ def generate_docs(
             shutil.rmtree(temp_docs_src_dir, ignore_errors=True)
         else:
             print(f"Keeping temporary build directory: {_docs_dir.resolve()}")
+
+
+def _install_site(html_build_dir: Path, output_dir: Path, should_remove_existing: bool) -> None:
+    """Put a rendered site in the output directory, whole or not at all when one is replaced."""
+    if should_remove_existing and output_dir.exists():
+        # Use atomic replacement: copy to temp, remove old, rename temp
+        import tempfile
+
+        temp_output_dir = Path(tempfile.mkdtemp(prefix="chartbook_output_"))
+        try:
+            copy_tree(html_build_dir, temp_output_dir)
+            (temp_output_dir / ".nojekyll").touch()
+            shutil.rmtree(output_dir)
+            move_tree(temp_output_dir, output_dir)
+        except Exception:
+            if temp_output_dir.exists():
+                shutil.rmtree(temp_output_dir, ignore_errors=True)
+            raise
+    else:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        copy_tree(html_build_dir, output_dir)
+        (output_dir / ".nojekyll").touch()
+
+
+def _generate_docs_mkdocs(
+    manifest: dict,
+    output_dir: Path,
+    project_dir: Path,
+    publish_dir: Path,
+    _docs_dir: Path,
+    keep_build_dirs: bool,
+    temp_docs_src_dir: Path,
+    should_remove_existing: bool,
+    size_threshold: float,
+    strip_mathjax2: bool,
+    skip_pipelines: set[str],
+) -> None:
+    """Build a site with MkDocs: the writer's pages under ``pages/``, ``mkdocs.yml`` beside them, then ``mkdocs build``.
+
+    The same index, the same copied files and the same checks as the Sphinx
+    build (:func:`_write_sphinx_project`), with the MkDocs writer's pages
+    and its configuration in place of a Sphinx project and ``conf.py``.
+    """
+    import yaml
+
+    from chartbook.manifest import apply_code_change_times
+    from chartbook.writers import mkdocs as mkdocs_writer
+
+    if not mkdocs_writer.is_installed():
+        import click
+
+        click.echo(
+            click.style("Error: ", fg="red", bold=True)
+            + f"this site is built with MkDocs ([project] writer = \"mkdocs\"), which is not installed: "
+            f"pip install {mkdocs_writer.EXTRA}",
+            err=True,
+        )
+        raise SystemExit(1)
+    pipeline_theme = manifest["project"]["type"]
+    if temp_docs_src_dir.exists():
+        shutil.rmtree(temp_docs_src_dir)
+    temp_docs_src_dir.mkdir(exist_ok=True)
+    try:
+        code_times = apply_code_change_times(manifest)
+        pages_dir = _docs_dir / mkdocs_writer.PAGES_DIR
+        pages_dir.mkdir(parents=True, exist_ok=True)
+        cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
+        built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        _retrieve_correct_docs_src_dir(temp_docs_src_dir, manifest, project_dir, pipeline_theme)
+        _check_policy(manifest, generate_metadata_diagnostics(manifest=manifest, docs_build_dir=pages_dir, skip_pipelines=skip_pipelines))
+        run_build_markdown(
+            project_dir=project_dir,
+            pipeline_theme=pipeline_theme,
+            publish_dir=publish_dir,
+            _docs_dir=pages_dir,
+            docs_src_dir=temp_docs_src_dir,
+            size_threshold=size_threshold,
+            skip_pipelines=skip_pipelines,
+            code_times=code_times,
+            hash_cache=cache,
+            built_index=built,
+        )
+        if strip_mathjax2:
+            _strip_mathjax2_from_notebooks(pages_dir)
+        # The theme's second copy of the logo and favicon is for Sphinx's conf.py; Material shares that folder name
+        shutil.rmtree(pages_dir / "assets", ignore_errors=True)
+        _warn_about_sphinx_syntax_in_site_pages(built, pages_dir)
+        try:
+            site_config = validate_conf_py_values(manifest, pipeline_theme)
+        except ValidationError as e:
+            handle_validation_error(e, config_path=project_dir / "chartbook.toml")
+        writer = mkdocs_writer.MkDocsWriter(built, theme=pipeline_theme, docs_src_dir=temp_docs_src_dir)
+        configuration = writer.config(
+            site_name=manifest["project"].get("name", ""),
+            site_url=manifest["project"].get("site_url", ""),
+            copyright=str(getattr(site_config, "copyright", "") or ""),
+        )
+        (_docs_dir / "mkdocs.yml").write_text(yaml.safe_dump(configuration, sort_keys=False, allow_unicode=True), encoding="utf-8")
+        run_mkdocs_build(_docs_dir)
+
+        _install_site(_docs_dir / "_build" / "html", output_dir, should_remove_existing)
+        _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
+    finally:
+        if not keep_build_dirs:
+            shutil.rmtree(_docs_dir, ignore_errors=True)
+            shutil.rmtree(temp_docs_src_dir, ignore_errors=True)
+        else:
+            print(f"Keeping temporary build directory: {_docs_dir.resolve()}")
+
+
+def _warn_about_sphinx_syntax_in_site_pages(built: dict, pages_dir: Path) -> None:
+    """Say which of a pipeline's own site pages carry a MyST fence, which MkDocs shows as code."""
+    import click
+
+    for record in built.get("records", []):
+        if record.get("kind") != "Pipeline":
+            continue
+        for page in record.get("site_pages") or []:
+            path = pages_dir / page
+            if path.is_file() and "```{" in path.read_text(encoding="utf-8", errors="replace"):
+                click.echo(
+                    click.style("warning: ", fg="yellow")
+                    + f"{page} uses Sphinx syntax (a ```{{...}} block), which MkDocs shows as code; "
+                    f"this site is built with MkDocs ([project] writer = \"mkdocs\").",
+                    err=True,
+                )
+
+
+def run_mkdocs_build(_docs_dir: Path) -> str:
+    """Run ``mkdocs build`` over the project in ``_docs_dir``; the site lands in ``_build/html``.
+
+    :raises RuntimeError: If MkDocs fails; its output is in the message.
+    """
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-m", "mkdocs", "build", "-f", str(_docs_dir / "mkdocs.yml")],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"mkdocs build failed:\n{result.stdout}\n{result.stderr}")
+    return result.stdout + result.stderr
+
+
+def _check_policy(manifest: dict, diagnostic_rows) -> None:
+    """``policy.mode = "strict"`` fails the build on any missing required field."""
+    policy = manifest.get("policy")
+    if policy and policy["mode"] == "strict":
+        incomplete = [r for r in diagnostic_rows if not r.metadata_complete]
+        if incomplete:
+            import click
+
+            lines = ["The policy is 'strict' and required metadata is missing:"]
+            for row in incomplete:
+                lines.append(
+                    f"  - {row.object_type} '{row.pipeline_id}:{row.identifier}' missing: {row.missing_fields}"
+                )
+            lines.append(
+                "Fill in the fields above, relax [policy.required], or set "
+                "policy.mode = 'warn' in the chartbook.toml that sets the policy."
+            )
+            click.echo(click.style("\n".join(lines), fg="red"), err=True)
+            raise SystemExit(1)
 
 
 def _write_index(
@@ -679,7 +830,7 @@ def _retrieve_correct_docs_src_dir(
     :param pipeline_theme: Theme to use for pipeline documentation.
     :type pipeline_theme: str
     """
-    docs_src_path = get_docs_src_path(pipeline_theme)
+    docs_src_path = get_docs_src_path(pipeline_theme, manifest["project"].get("writer", "sphinx"))
     for item in docs_src_path.glob("*"):
         dest = temp_docs_src_dir / item.name
 

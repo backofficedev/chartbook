@@ -3,7 +3,24 @@
 A writer reads the index and the files the index names, write-ups, data
 files and chart files, at the paths the index gives, and nothing else: no
 manifest, no folder walk, no git (``docs_src/design/writer.md``). The
-Sphinx writer is the first; it replaces the page generator section by
-section, each page compared whole with the generator's on the example
-sites until the generator can go.
+Sphinx writer came first and replaced the page generator; the MkDocs
+writer is a subclass of it, with a theme folder of its own. ``[project]
+writer`` in a manifest names which one builds a site, and
+:func:`writer_class` finds it.
 """
+
+
+def writer_class(name: str):
+    """The writer class for a site tool named in ``[project] writer``.
+
+    :raises ValueError: If no writer has that name.
+    """
+    if name == "sphinx":
+        from chartbook.writers.sphinx import SphinxWriter
+
+        return SphinxWriter
+    if name == "mkdocs":
+        from chartbook.writers.mkdocs import MkDocsWriter
+
+        return MkDocsWriter
+    raise ValueError(f"No writer is named {name!r}; the writers are: sphinx, mkdocs.")
