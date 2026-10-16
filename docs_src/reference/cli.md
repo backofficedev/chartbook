@@ -418,6 +418,17 @@ Nothing has changed since the snapshot of 2026-10-13 18:22 UTC. No new one was m
 
 An asset that is declared and not built is listed, and the rest is in the snapshot all the same. A pipeline that has built nothing has no snapshot to make.
 
+**The snapshot holds the description of its data.** With the bytes, a snapshot keeps the pipeline's own index at that commit, without any path of your machine, and the files a site needs that are not assets: `chartbook.toml`, `chartbook.lock`, the README, every write-up (`docs_path`), the pipeline's own site pages and its logo and favicon. Only files git tracks are taken, so a `.env` or an ignored draft never reaches the store; only plain paths inside the pipeline's folder, and no file that is a link or under one. Each document named and not kept is listed (`document not kept: …`). So the data dictionary of each version is kept as it stood when the data was made, and a version's site can be built from the store alone, with the repository gone: `chartbook.snapshot.materialize(taken, folder)` lays the version out as a folder, under the pipeline's own ID whatever the folder is called, with each model's recorded scores written back to its `metrics_path`, and `chartbook docs` builds there. A dataframe that is a table or a query is in the store as parquet while its manifest names a database, so in a laid-out version its page says it is not built. A manifest a docs build would refuse still gets its snapshot; the index is then left out and the command says why:
+
+```console
+$ chartbook snapshot
+ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
+  index not recorded: Chart 'curve' has no 'dataframe' key linking it to a dataframe in the [dataframes] section. The bytes and the documents are in the store; `chartbook check` says what a docs build would refuse.
+Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
+```
+
+A snapshot made by an earlier ChartBook carries neither; making one again at the same commit adds them, even when the bytes have not changed.
+
 (run-then-snapshot)=
 **Build and snapshot in one command: `chartbook run --snapshot`.** `chartbook snapshot` by itself takes your word that what is on disk was built by the commit you are on. Change a script, commit, forget to rebuild, and the old data gets the new commit's label. `chartbook run --snapshot` does not have that hole:
 

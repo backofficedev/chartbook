@@ -108,6 +108,8 @@ Decided by the maintainer, 2026-10-12.
 | 5 | {doc}`index-schema` | The index file, record by record | First implementation built |
 | 6 | {doc}`models` | Models as assets | First slice built: declared models |
 | 7 | {doc}`data-access` | Dataframes that live in a database | Built for DuckDB, 2026-10-13: `[sources]`, `table`, `query`, `data.sql()` |
+| 8 | {doc}`stores-and-backends` | The store as a setting of the machine; stores and backends as plugins | Settings layers, the store interface and the S3 store built 2026-10-16 |
+| 9 | {doc}`versioned-catalog` | Index and snapshot settled; a catalog of every version of every pipeline | Step 1, the self-sufficient snapshot, built 2026-10-16 |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
@@ -133,7 +135,7 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Models | `models.py`, `manifest.py` (`validate_models`), `writers/sphinx.py` (`model_page()`) | `[models.x]`, `chartbook.models.path()`, a page and an index record per model. Versions, made by a snapshot and named by the start of the content hash, with labels in `[models.x.aliases]` |
 | Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked |
 | The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link |
-| Snapshots | `snapshot.py`, `chartbook snapshot` | What one commit of a pipeline built, in the store. Made on purpose by its owner, with everything committed. The only thing of a pipeline that another reads |
+| Snapshots | `snapshot.py`, `chartbook snapshot` | What one commit of a pipeline built, in the store. Made on purpose by its owner, with everything committed. The only thing of a pipeline that another reads. Since 2026-10-16 it holds the version's own index and documents, and `materialize()` lays a version out from the store alone ({doc}`versioned-catalog`) |
 | Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: the commit, and a content hash for every asset, of every dependency. A folder is pinned from a snapshot, a repository from a clean copy. `pin` never moves a pin; `update` does. `pin --frozen` and `run --frozen` write nothing and say whether every pin can be had |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
@@ -1981,7 +1983,9 @@ and never makes one. The pair that converges is snapshot and index: a snapshot i
 index at one commit, kept with the bytes; a site's index is its own pipeline at the current build
 plus each dependency's pinned snapshot plus the catalog; a site is a pure function of an index
 and the write-ups at the commit the index names, so a site can later be built for any snapshot
-and lineage can link across sites by commit. That is a direction, not work for now. The index
+and lineage can link across sites by commit. That is a direction, not work for now. *Superseded
+2026-10-16* by {doc}`versioned-catalog`: the two do not converge; a snapshot holds the index of
+its version, and a catalog will be assembled from such indexes. The index
 records facts about the build, including comparisons it made, and no renderings; each asset
 record is to gain its write-up's path and hash; `stale_inputs` stays. A **writer** per site tool
 turns the index into **pages**; the Sphinx writer comes first, after a vocabulary page and an
@@ -2172,6 +2176,7 @@ maintainer.
 | 2026-10-15 | Step 6 complete: the Sphinx writer renders every page from the index and the files it names, the build calls it (`sitefiles.write_site()`), the generator is gone (#58–#63). The documentation site is written in the vocabulary: front page with diagrams of the chain and the four documents, the build page around resolve → write → build, a page for depending on other pipelines (branch `docs-site-6f`). Decided along the way, all *proposed*: a write-up is text, not a template; a skipped pipeline is not part of the site; asset keys must be addresses; `inputs_now`, `site_pages`, Catalog `location` in the index | me |
 | 2026-10-16 | Cross-pipeline dependencies mean two pipelines on one machine; several machines use a shared store or a database adapter, never a transport feature. A table or query in a DuckDB file is pinned as parquet (#65). The store is a setting of the machine or the organization, never of the pipeline: settings layers env → user → system-wide → default, the store as a URL; backends stay per pipeline; plugins behind extras; a warehouse pins by version. Written up in `stores-and-backends.md`; settings layers and the store interface first | Jeremy, me |
 | 2026-10-16 | The S3 store is built behind `chartbook[s3]` (#68): the bucket laid out as a folder store, read through a cache on the machine so readers take paths as before; `data.path()` is the cached copy. A URL-returning `get()` is left open, not built | me |
+| 2026-10-16 | Index and snapshot stay two documents sharing one record format; a snapshot holds the index of its version and the files a writer needs, so any version renders from the store alone. A catalog shows every snapshot in the store of every pipeline plus each pipeline's working version (never "latest"); links follow pins; a version list on each pipeline page. Written up in `versioned-catalog.md`; the self-sufficient snapshot first | Jeremy, me |
 
 ## Open questions, collected
 

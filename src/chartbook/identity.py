@@ -21,6 +21,7 @@ rationale behind this scheme, and "Reserving a future global namespace" in
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -290,15 +291,70 @@ def _sanitize_component(component: str) -> str:
     return sanitized or "pipeline"
 
 
+#: The file :func:`chartbook.snapshot.materialize` writes in a folder it lays a
+#: version out in: which pipeline, which commit, when made, and when its code
+#: last changed. A folder with it is that pipeline at that version, wherever
+#: it is and whatever it is called.
+VERSION_FILE = ".chartbook-version.json"
+
+
+#: More than a version file ever needs; a larger one is not read.
+_VERSION_FILE_MAX_BYTES = 64 * 1024
+
+
+def read_version_file(base_dir: Path | str) -> dict:
+    """What a laid-out version's :data:`VERSION_FILE` says; empty unless the folder is one.
+
+    A folder is a laid-out version when it has the file and is not a
+    repository's own folder: no ``.git`` in it, and the file not tracked by
+    git. A laid-out folder copied to start a new pipeline and committed is
+    that new pipeline, not the old version. A file too large, or not a JSON
+    object, is not read.
+    """
+    import os
+
+    base = Path(base_dir)
+    marker = base / VERSION_FILE
+    try:
+        if not marker.is_file() or marker.is_symlink() or marker.stat().st_size > _VERSION_FILE_MAX_BYTES:
+            return {}
+        if os.path.lexists(base / ".git"):
+            return {}
+        recorded = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError, RecursionError):
+        return {}
+    if not isinstance(recorded, dict) or _tracked_by_git(base, VERSION_FILE):
+        return {}
+    return recorded
+
+
+def _tracked_by_git(base: Path, name: str) -> bool:
+    """Whether git tracks a file in a folder; False where there is no git or no repository."""
+    import os
+
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(base), "ls-files", "--error-unmatch", "--", name],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0", "GIT_LITERAL_PATHSPECS": "1"},
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
+
+
 def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
     """Derive a pipeline's canonical ID.
 
     Precedence:
 
     1. Explicit ``id`` in the ``[project]`` table.
-    2. Scope from the git ``origin`` remote (or ``repo_url``), name from the
+    2. The pipeline a laid-out version's :data:`VERSION_FILE` names.
+    3. Scope from the git ``origin`` remote (or ``repo_url``), name from the
        directory name.
-    3. Bare directory name.
+    4. Bare directory name.
 
     :param project: The raw ``[project]`` table from chartbook.toml.
     :param base_dir: The pipeline's root directory.
@@ -307,6 +363,12 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
     explicit = project.get("id", "")
     if explicit:
         return validate_pipeline_id(explicit)
+    recorded = read_version_file(base_dir).get("pipeline")
+    if isinstance(recorded, str) and recorded:
+        try:
+            return validate_pipeline_id(recorded)
+        except ValueError:
+            pass  # not an ID: the folder's own name, as for any folder
 
     # Resolved, because the name comes from the directory's own name and a
     # relative "." does not have one

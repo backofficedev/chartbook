@@ -89,7 +89,7 @@ from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, declared_files
-from chartbook.store import Store, default_store
+from chartbook.store import Store, StoreError, default_store
 from chartbook.utils import is_glob_pattern
 
 #: The version of a snapshot record's envelope.
@@ -166,6 +166,21 @@ class Snapshot:
             a store a team shares, still knows which versions to keep; and
             so that a pipeline that depends on this one can pin
             ``this:model/x@champion`` without reading its folder.
+        index: The pipeline's own index at this commit, in the published
+            form, as an object in the store: ``{"content_hash": …,
+            "size_bytes": …}``, the object holding one ``index.json``. It
+            is what a docs build of the folder would have written just
+            before the snapshot was made, so the data dictionary of this
+            version is kept with its data. None for a snapshot made before
+            snapshots carried it.
+        documents: The files a writer needs that are not assets, as one
+            object in the store: the manifest, the lockfile, the README,
+            the write-ups, the pipeline's own site pages, its logo and
+            favicon, each under its path in the pipeline's folder, and only
+            those git tracks. ``{"content_hash": …, "size_bytes": …,
+            "files": [...]}``. With the assets, they are enough to lay the
+            version out as a folder and build its site
+            (:func:`materialize`). None for a snapshot made before.
     """
 
     pipeline: str
@@ -177,19 +192,29 @@ class Snapshot:
     built_with: dict = field(default_factory=dict, compare=False)
     inputs: list = field(default_factory=list, compare=False)
     labels: dict = field(default_factory=dict, compare=False)
+    index: Optional[dict] = field(default=None, compare=False)
+    documents: Optional[dict] = field(default=None, compare=False)
 
     @property
     def built_by_run(self) -> bool:
         """Whether ChartBook ran the build in the command that made this."""
         return bool(self.built_with.get("run"))
 
-    def hashes(self) -> set[str]:
-        """The content hash of every asset in it: what the store must keep."""
+    def asset_hashes(self) -> set[str]:
+        """The content hash of every asset it holds: what a lockfile pinning it names."""
         return {
             record["content_hash"]
             for record in self.assets.values()
             if record.get("content_hash")
         }
+
+    def hashes(self) -> set[str]:
+        """Every object it names, its assets, its index and its documents: what the store must keep."""
+        named = self.asset_hashes()
+        for kept in (self.index, self.documents):
+            if kept and kept.get("content_hash"):
+                named.add(kept["content_hash"])
+        return named
 
     def content(self) -> dict[str, Optional[str]]:
         """Each asset's content hash, by its reference; None if not built."""
@@ -218,6 +243,10 @@ class Snapshot:
             document["labels"] = {
                 name: dict(sorted(self.labels[name].items())) for name in sorted(self.labels)
             }
+        if self.index:
+            document["index"] = self.index
+        if self.documents:
+            document["documents"] = self.documents
         document["records"] = [self.assets[name] for name in sorted(self.assets)]
         return document
 
@@ -239,6 +268,12 @@ class SnapshotReport:
             by model: a name a reference cannot carry, or one that reads as
             a version, or one whose value is not a version. ``chartbook
             check`` refuses the same ones.
+        index_skipped: Why the version's index could not be built and is
+            not in the snapshot, in one line; None when it is (or when no
+            new snapshot was made).
+        documents_skipped: The documents the manifest names that were not
+            kept, each with why: not a plain path inside the folder, a
+            link, not a file.
     """
 
     snapshot: Snapshot
@@ -246,6 +281,8 @@ class SnapshotReport:
     not_built: list[tuple[str, str]] = field(default_factory=list)
     new_versions: list[tuple[str, str]] = field(default_factory=list)
     skipped_labels: list[tuple[str, str]] = field(default_factory=list)
+    index_skipped: Optional[str] = None
+    documents_skipped: list[tuple[str, str]] = field(default_factory=list)
 
 
 def asset_record(
@@ -480,6 +517,8 @@ def _git(directory: Path, *arguments: str, stdin: str = "") -> str:
             ["git", "-C", str(directory), *arguments],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="surrogateescape",
             env=environment,
             input=stdin,
         )
@@ -595,6 +634,8 @@ def read(path: Union[str, Path]) -> Snapshot:
             built_with=dict(document.get("built_with") or {}),
             inputs=list(document.get("inputs") or []),
             labels={k: dict(v) for k, v in (document.get("labels") or {}).items()},
+            index=dict(document["index"]) if document.get("index") else None,
+            documents=dict(document["documents"]) if document.get("documents") else None,
         )
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise SnapshotError(f"Cannot read the snapshot {path}: {error}") from None
@@ -1342,11 +1383,19 @@ def make(
         inputs=_inputs(directory),
         labels=labels_of(raw),
     )
+    # The files a writer needs that are not assets, worked out before anything
+    # is compared, so that a pipeline with none is not given a new snapshot on
+    # every run
+    documents, documents_skipped = document_paths(directory, raw)
     before = find(store, code.commit, code.subdirectory)
     if before and before[0].content() == snapshot.content():
-        if before[0].built_by_run or not built_by_run:
-            store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-            return SnapshotReport(before[0], False, not_built, skipped_labels=labels_skipped(raw))
+        if before[0].documents is not None or not documents:
+            if before[0].built_by_run or not built_by_run:
+                store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
+                return SnapshotReport(before[0], False, not_built, skipped_labels=labels_skipped(raw))
+        elif before[0].built_by_run:
+            # Made again for its documents alone: the bytes are still the ones a run built
+            snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
 
     # A model whose bytes no snapshot of this pipeline has had is a new version
     new_versions = []
@@ -1358,17 +1407,471 @@ def make(
         if content_hash not in had:
             new_versions.append((name, version_name(content_hash, had)))
 
+    # The version's own description, and the files a writer needs, with the
+    # bytes. The bytes are what a snapshot is for: an index that cannot be
+    # built (a manifest a docs build would refuse) is said, not fatal. It is
+    # not tried again at this commit unless the bytes change
+    index_skipped = None
+    try:
+        index = _put_index(_version_index(directory), store)
+    except Exception as error:  # noqa: BLE001 - whatever the docs build would have raised
+        said = str(error).strip()
+        index, index_skipped = None, said.splitlines()[0].rstrip(".") if said else type(error).__name__
+    snapshot = dataclasses.replace(snapshot, index=index, documents=_put_documents(directory, documents, store))
     path = _write(snapshot, store)
     store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-    snapshot = Snapshot(
-        snapshot.pipeline,
-        snapshot.commit,
-        snapshot.subdirectory,
-        snapshot.made_at,
-        assets,
-        path,
-        snapshot.built_with,
-        snapshot.inputs,
-        snapshot.labels,
+    snapshot = dataclasses.replace(snapshot, path=path)
+    return SnapshotReport(
+        snapshot,
+        True,
+        not_built,
+        new_versions,
+        labels_skipped(raw),
+        index_skipped=index_skipped,
+        documents_skipped=documents_skipped,
     )
-    return SnapshotReport(snapshot, True, not_built, new_versions, labels_skipped(raw))
+
+
+#: The one file in a snapshot's index object.
+INDEX_FILE = "index.json"
+
+
+def _version_index(directory: Path) -> dict:
+    """The pipeline's own index as a docs build of its folder would write it now, published.
+
+    Published: no path of this machine is in it, so it may sit in a store a
+    team shares. A model's versions in it are those made before this
+    snapshot, since this one is not written yet. Every file is hashed again,
+    as a docs build hashes it; the cost of that is the price of an index
+    that says exactly what a build of this commit would say. The manifest's
+    warnings are passed on, saying where they come from.
+    """
+    import warnings
+
+    from chartbook import index as index_module
+    from chartbook.manifest import apply_code_change_times, load_manifest
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        manifest = load_manifest(directory)
+        apply_code_change_times(manifest)
+        built = index_module.build_index(manifest, cache=hashing.HashCache())
+    for warning in caught:
+        warnings.warn(f"While recording the version's index: {warning.message}", UserWarning, stacklevel=3)
+    return index_module.published(built)
+
+
+def _put_index(published: dict, store: Store) -> dict:
+    """Put an index in the store as an object holding one ``index.json``."""
+    import tempfile
+
+    from chartbook import index as index_module
+
+    with tempfile.TemporaryDirectory(prefix="chartbook-index-") as scratch:
+        path = Path(scratch) / INDEX_FILE
+        index_module.write_index(published, path)
+        stored = store.put(path, links=LINKS)
+    return {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes}
+
+
+def safe_relative(text: object) -> Optional[str]:
+    """A path from a manifest or a record, if it is a plain path inside a folder; else None.
+
+    Judged by its text alone, since it may come from a store a team shares
+    or from a manifest written to mislead: nothing absolute on any system
+    (``/x``, ``\\x``, ``C:x``, ``C:\\x``), no ``..`` anywhere, no part named
+    ``.git``, no ``:`` (a Windows drive, an alternate stream, git's pathspec
+    magic). ``/`` and ``\\`` both separate parts.
+
+    :returns: The path with ``/`` between its parts and no ``.`` part.
+    """
+    from pathlib import PurePosixPath, PureWindowsPath
+
+    if not isinstance(text, str) or not text.strip() or "\0" in text:
+        return None
+    text = text.strip()
+    for pure in (PurePosixPath(text), PureWindowsPath(text)):
+        if pure.drive or pure.root:
+            return None
+    parts = [part for part in re.split(r"[\\/]+", text) if part not in ("", ".")]
+    if not parts:
+        return None
+    for part in parts:
+        if part == ".." or ":" in part or _is_dot_git(part):
+            return None
+    return "/".join(parts)
+
+
+#: Code points HFS+ drops from a name, so that ``.g\u200cit`` is ``.git`` there (git's ``is_hfs_dotgit``).
+_HFS_IGNORED = re.compile("[\u200c-\u200f\u202a-\u202e\u206a-\u206f\ufeff]")
+
+
+def _is_dot_git(part: str) -> bool:
+    """Whether a name is, or a filesystem may take it for, ``.git``.
+
+    As git judges it: case does not count; HFS+ drops certain invisible code
+    points; NTFS drops trailing dots and spaces and has the short name
+    ``git~1``.
+    """
+    name = _HFS_IGNORED.sub("", part).lower().rstrip(". ")
+    return name == ".git" or name.startswith("git~")
+
+
+def plain_name(name: str) -> Optional[str]:
+    """A name exactly as git or a store gave it, if it is already a plain path; else None.
+
+    :func:`safe_relative` puts a path written by a person in order. A name
+    a program gave is not put in order: one that differs from its plain
+    form (a trailing space, a ``\\`` on a system where it is a letter) may
+    name some other file, an ignored one, once put in order.
+    """
+    return name if safe_relative(name) == name else None
+
+
+def _through_a_link(root: Path, relative: str) -> bool:
+    """Whether a path inside *root* is a link, or is under one."""
+    current = root
+    for part in relative.split("/"):
+        current = current / part
+        if current.is_symlink():
+            return True
+    return False
+
+
+#: Why a document is not kept, by the reason's key.
+NOT_A_PLAIN_PATH = "not a plain path inside the pipeline's folder"
+A_LINK = "a link, or under one: only files that are themselves in the folder are kept"
+NOT_A_FILE = "not a file"
+NOT_TRACKED = "not tracked by git"
+
+
+def document_paths(
+    directory: Union[str, Path], raw: Optional[dict] = None
+) -> tuple[list[str], list[tuple[str, str]]]:
+    """The files of a pipeline a writer needs that are not assets, as git tracks them.
+
+    The manifest and the lockfile; the README; every write-up an asset
+    names (``docs_path``); the pipeline's own site pages, every file under
+    its ``site_dir`` (``docs_src/site/`` by default); the logo and the
+    favicon if the manifest names them. Read from the manifest's text, so
+    that a manifest a docs build would refuse still has its documents kept.
+
+    What is taken: only files git tracks, so nothing ignored, a ``.env``
+    above all, can reach the store; only files that are themselves in the
+    folder, so no link and nothing under a link; only plain paths
+    (:func:`safe_relative`), asked of git literally, so that no glob
+    character or pathspec magic reaches past what was named.
+
+    :returns: The paths kept, relative to the pipeline's folder, with ``/``,
+        sorted; and each path not kept, with why.
+    """
+    from chartbook.resolve import ASSET_TABLES
+
+    directory = Path(directory)
+    raw = raw if raw is not None else _read_manifest_file(directory)
+    project = raw.get("project") or {}
+    wanted = {MANIFEST_NAME, "chartbook.lock"}
+    for key, default in (("readme", "README.md"), ("site_dir", "docs_src/site"), ("logo", ""), ("favicon", "")):
+        value = project.get(key) if isinstance(project.get(key), str) and project[key].strip() else default
+        if value:
+            wanted.add(value.strip())
+    for table in ASSET_TABLES:
+        for entry in (raw.get(table) or {}).values():
+            if isinstance(entry, dict) and isinstance(entry.get("docs_path"), str) and entry["docs_path"].strip():
+                wanted.add(entry["docs_path"].strip())
+
+    explicit = {project.get(key, "").strip() for key in ("readme", "site_dir", "logo", "favicon") if isinstance(project.get(key), str)}
+    for table in ASSET_TABLES:
+        for entry in (raw.get(table) or {}).values():
+            if isinstance(entry, dict) and isinstance(entry.get("docs_path"), str):
+                explicit.add(entry["docs_path"].strip())
+
+    skipped: list[tuple[str, str]] = []
+    asked = []
+    for path in sorted(wanted):
+        plain = safe_relative(path)
+        if plain is None:
+            skipped.append((path, NOT_A_PLAIN_PATH))
+        else:
+            asked.append((path, plain))
+    if not asked:
+        return [], skipped
+    listed = _git(directory, "--literal-pathspecs", "ls-files", "-z", "--", *sorted({p for _, p in asked}))
+    names = sorted({name for name in listed.split("\0") if name})
+    root = Path(os.path.realpath(directory))
+    kept = []
+    for name in names:
+        plain = plain_name(name)
+        if plain is None:
+            skipped.append((name, NOT_A_PLAIN_PATH))
+        elif _through_a_link(directory, plain):
+            skipped.append((plain, A_LINK))
+        elif not (directory / plain).is_file():
+            skipped.append((plain, NOT_A_FILE))
+        elif not Path(os.path.realpath(directory / plain)).is_relative_to(root):
+            skipped.append((plain, NOT_A_PLAIN_PATH))
+        else:
+            kept.append(plain)
+    # A path the manifest names, that is there and that git does not track, is said too
+    for path, plain in asked:
+        if path in explicit and os.path.lexists(directory / plain):
+            if not any(name == plain or name.startswith(plain + "/") for name in names):
+                skipped.append((plain, NOT_TRACKED))
+    return kept, skipped
+
+
+def _copy_regular_file(source: Path, target: Path) -> bool:
+    """Copy a file only if it is a regular file, not a link, and the very file that was looked at.
+
+    The file is looked at, then opened without following a final link, and
+    the two must be one file (device and inode): a file swapped for a link,
+    or a folder above it swapped for one, between the two is not copied.
+    """
+    import stat
+
+    try:
+        looked = os.lstat(source)
+        if not stat.S_ISREG(looked.st_mode):
+            return False
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+        descriptor = os.open(source, flags)
+    except OSError:
+        return False
+    with os.fdopen(descriptor, "rb") as reader:
+        opened = os.fstat(reader.fileno())
+        if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (looked.st_dev, looked.st_ino):
+            return False
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with open(target, "xb") as writer:
+            while chunk := reader.read(1024 * 1024):
+                writer.write(chunk)
+    return True
+
+
+def _put_documents(directory: Path, paths: list[str], store: Store) -> Optional[dict]:
+    """Put a pipeline's documents in the store as one object, each under its own path; None if there are none."""
+    import tempfile
+
+    if not paths:
+        return None
+    with tempfile.TemporaryDirectory(prefix="chartbook-documents-") as scratch:
+        staged = Path(scratch)
+        copied = 0
+        for relative in paths:
+            # Checked again, and opened so that what is read is what was checked:
+            # the folder may change while it is read
+            if plain_name(relative) is None or _through_a_link(directory, relative):
+                continue
+            if _copy_regular_file(directory / relative, staged / relative):
+                copied += 1
+        if not copied:
+            return None
+        for file in staged.rglob("*"):
+            if file.is_symlink():  # never written above; checked all the same
+                raise SnapshotError(f"A link appeared among the documents being stored: {file.relative_to(staged)}")
+        stored = store.put(staged, links=LINKS)
+    return {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "files": list(stored.files)}
+
+
+@dataclass
+class Materialized:
+    """What :func:`materialize` laid out.
+
+    Attributes:
+        folder: The folder the version was laid out in.
+        documents: The documents written, by path in the folder.
+        assets: The assets written, by reference.
+        left_out: The assets and documents not written, each with why.
+    """
+
+    folder: Path
+    documents: list[str] = field(default_factory=list)
+    assets: list[str] = field(default_factory=list)
+    left_out: list[tuple[str, str]] = field(default_factory=list)
+
+
+def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] = None) -> Materialized:
+    """Lay a snapshot out as a folder: its documents and its assets at their paths, from the store alone.
+
+    The folder is then the pipeline at that version, as far as a site is
+    concerned: ``chartbook docs`` builds the version's site there with the
+    repository gone. Its code is not in it; the commit names that. Beside
+    the documents and the assets:
+
+    - each model's scores, as the snapshot recorded them, are written to
+      its ``metrics_path``, which a build writes and git does not keep;
+    - a ``site_dir`` the manifest names is made if none of its files were
+      kept, so that a docs build there does not refuse it;
+    - :data:`chartbook.identity.VERSION_FILE` says which pipeline and which
+      version this is, so the folder keeps the pipeline's ID wherever it is
+      and says when its code last changed without asking git.
+
+    A dataframe that is a table or a query is in the store as parquet while
+    the manifest names its database, so it is left out and said. A record
+    is read from a store that may be shared, so every path in it is judged
+    by its text (:func:`safe_relative`), no link in an object is followed,
+    and nothing is written until every object it names is there.
+
+    :param into: A folder that does not exist yet or is empty.
+    :raises SnapshotError: If the snapshot carries no documents (it was made
+        before snapshots did), an object it names is not in the store, or
+        *into* is a file or has something in it.
+    """
+    import shutil
+
+    from chartbook.hashing import glob_root
+    from chartbook.identity import VERSION_FILE
+
+    store = store if store is not None else default_store()
+    if not taken.documents:
+        raise SnapshotError(
+            f"The snapshot of {taken.pipeline} at {taken.commit[:7]} ({taken.made_at}) carries no "
+            f"documents: it was made before snapshots did. Make a new one at that commit."
+        )
+    folder = Path(into)
+    if folder.exists() and not folder.is_dir():
+        raise SnapshotError(f"{folder} is a file; a snapshot is laid out in an empty folder.")
+    if folder.exists() and any(folder.iterdir()):
+        raise SnapshotError(f"{folder} has something in it; a snapshot is laid out in an empty folder.")
+    named = [taken.documents.get("content_hash")]
+    named += [r["content_hash"] for r in taken.assets.values() if r.get("content_hash") and (r.get("location") or {}).get("kind") == "file"]
+    try:
+        missing = [h for h in named if not isinstance(h, str) or not store.has(h)]
+    except ValueError as error:  # a hash that is not one: a record written to mislead
+        raise SnapshotError(f"The snapshot of {taken.pipeline} names an object that is not a hash: {error}") from None
+    if missing:
+        raise SnapshotError(
+            f"The store {store} does not have {len(missing)} object(s) the snapshot of {taken.pipeline} at "
+            f"{taken.commit[:7]} names, {missing[0]} first; `chartbook store verify` says more."
+        )
+    folder.mkdir(parents=True, exist_ok=True)
+    report = Materialized(folder.resolve())
+
+    # The version file first, so that nothing a record names can take its place
+    marker = {"pipeline": taken.pipeline, "commit": taken.commit, "made_at": taken.made_at}
+    if taken.subdirectory:
+        marker["subdirectory"] = taken.subdirectory
+    code_changed_at = _code_changed_at(taken, store)
+    if code_changed_at:
+        marker["code_changed_at"] = code_changed_at
+    (folder / VERSION_FILE).write_text(json.dumps(marker, indent=2) + "\n", encoding="utf-8")
+
+    held = Path(store.get(taken.documents["content_hash"]))
+    for relative in taken.documents.get("files", []):
+        plain = plain_name(relative) if isinstance(relative, str) else None
+        if plain is None or plain.split("/")[0] == VERSION_FILE:
+            report.left_out.append((str(relative), NOT_A_PLAIN_PATH))
+            continue
+        if _through_a_link(held, plain):
+            report.left_out.append((plain, A_LINK))
+            continue
+        if os.path.lexists(folder / plain) or not _copy_regular_file(held / plain, folder / plain):
+            report.left_out.append((plain, NOT_A_FILE))
+            continue
+        report.documents.append(plain)
+
+    for name in sorted(taken.assets):
+        record = taken.assets[name]
+        location = record.get("location") or {}
+        if not record.get("content_hash"):
+            report.left_out.append((record["id"], "not built when the snapshot was made"))
+            continue
+        if location.get("kind") != "file":
+            report.left_out.append(
+                (record["id"], "a table or a query: in the store as parquet, and the manifest names its database")
+            )
+            continue
+        declared = location.get("path", "")
+        plain = safe_relative(declared)
+        if plain is None or plain.split("/")[0] == VERSION_FILE:
+            report.left_out.append((record["id"], f"its path {declared} is not a plain path inside the pipeline's folder"))
+            continue
+        held = Path(store.get(record["content_hash"]))
+        if is_glob_pattern(plain):
+            _copy_tree(held, folder / glob_root(plain))
+        elif record.get("files"):
+            _copy_tree(held, folder / plain)
+        else:
+            # The same bytes may be held under several names: the declared one, else the first
+            files = sorted(p for p in held.iterdir() if p.is_file() and not p.is_symlink())
+            source = held / Path(plain).name
+            if source.is_symlink() or not source.is_file():
+                source = files[0] if files else None
+            if source is None:
+                report.left_out.append((record["id"], "its object holds no file"))
+                continue
+            target = folder / plain
+            if os.path.lexists(target) or not _copy_regular_file(source, target):
+                report.left_out.append((record["id"], "its file could not be written where its path says"))
+                continue
+        report.assets.append(record["id"])
+
+    _write_back(taken, folder, report)
+    # Whatever the filesystem made of the names written, there is no repository here
+    if os.path.lexists(folder / ".git"):
+        planted = folder / ".git"
+        if planted.is_dir() and not planted.is_symlink():
+            shutil.rmtree(planted)
+        else:
+            planted.unlink()
+        raise SnapshotError(
+            f"Laying out the snapshot of {taken.pipeline} at {taken.commit[:7]} made a .git in {folder}, which "
+            f"this filesystem took one of its names for; it was removed, and the folder is not to be used."
+        )
+    return report
+
+
+def _write_back(taken: Snapshot, folder: Path, report: Materialized) -> None:
+    """What a build writes, git does not keep and the snapshot recorded: scores, and an empty site folder."""
+    from chartbook.identity import VERSION_FILE
+
+    try:
+        raw = _read_manifest_file(folder) if (folder / MANIFEST_NAME).is_file() else {}
+    except (OSError, ValueError):
+        return  # the docs build says what is wrong with a manifest
+    for name, entry in (raw.get("models") or {}).items():
+        record = taken.assets.get(f"model/{name}") or {}
+        plain = safe_relative(entry.get("metrics_path")) if isinstance(entry, dict) else None
+        if plain is None or plain.split("/")[0] == VERSION_FILE:
+            continue
+        if not isinstance(record.get("metrics"), dict) or os.path.lexists(folder / plain):
+            continue
+        try:
+            target = folder / plain
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps(record["metrics"], indent=2) + "\n", encoding="utf-8")
+        except OSError:
+            report.left_out.append((f"model/{name}", f"its scores could not be written to {plain}"))
+    site_dir = safe_relative((raw.get("project") or {}).get("site_dir"))
+    if site_dir is not None and site_dir.split("/")[0] != VERSION_FILE:
+        try:
+            (folder / site_dir).mkdir(parents=True, exist_ok=True)
+        except OSError:
+            report.left_out.append((site_dir, "the site folder could not be made"))
+
+
+def _code_changed_at(taken: Snapshot, store: Store) -> Optional[str]:
+    """When the version's code last changed, as its index recorded it; None if it has none."""
+    if not taken.index or not isinstance(taken.index.get("content_hash"), str):
+        return None
+    try:
+        held = Path(store.get(taken.index["content_hash"])) / INDEX_FILE
+        recorded = json.loads(held.read_text(encoding="utf-8"))
+    except (OSError, ValueError, KeyError, RecursionError, StoreError):
+        return None
+    records = recorded.get("records") if isinstance(recorded, dict) else None
+    for record in records if isinstance(records, list) else []:
+        if isinstance(record, dict) and record.get("kind") == "Pipeline" and isinstance(record.get("code_changed_at"), str):
+            return record["code_changed_at"]
+    return None
+
+
+def _copy_tree(source: Path, target: Path) -> None:
+    """Copy an object's files to a folder, writable, under the same relative paths; never through a link."""
+    for file in hashing.directory_files(source):
+        relative = file.relative_to(source).as_posix()
+        if plain_name(relative) is None or _through_a_link(source, relative):
+            continue
+        destination = target / relative
+        if not os.path.lexists(destination):
+            _copy_regular_file(file, destination)

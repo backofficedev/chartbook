@@ -1497,13 +1497,19 @@ CODE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def _git(base_dir: Path, *args: str) -> Union[str, None]:
-    """Run a read-only git command in a directory; None if it fails."""
+    """Run a read-only git command in a directory; None if it fails.
+
+    It takes no lock it does not need (``git status`` would otherwise
+    refresh the index), so that looking never gets in the way of whoever
+    is working in the repository.
+    """
     try:
         result = subprocess.run(
             ["git", "-C", str(base_dir), *args],
             capture_output=True,
             text=True,
             timeout=15,
+            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -1528,6 +1534,20 @@ def find_latest_code_change(base_dir: Union[str, Path]) -> datetime:
     :rtype: datetime
     """
     base_dir = Path(base_dir)
+    # A version laid out from the store says when its code changed; it has no git of its own
+    from chartbook.identity import read_version_file
+
+    version = read_version_file(base_dir)
+    if version:
+        recorded = version.get("code_changed_at")
+        if isinstance(recorded, str):
+            try:
+                moment = datetime.strptime(recorded, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                return datetime.fromtimestamp(moment.timestamp())
+            except (ValueError, OverflowError, OSError):
+                pass
+        # A laid-out version has no git of its own: its files' times, not git's
+        return find_latest_source_modification(base_dir)
     uncommitted = _git(base_dir, "status", "--porcelain", "--", *SOURCE_PATHS)
     if uncommitted is not None and not uncommitted.strip():
         committed = _git(base_dir, "log", "-1", "--format=%ct", "--", *SOURCE_PATHS)
