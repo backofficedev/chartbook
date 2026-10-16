@@ -310,6 +310,26 @@ def _dependency_dir(pipeline_dir: Path, key: str, entry: dict) -> Optional[Path]
     return Path(entry["_resolved_path"])
 
 
+def _pinned_keys(pipeline_dir: Path) -> Optional[set[str]]:
+    """The dependency keys a pipeline's lockfile pins; empty with no lockfile.
+
+    None if there is a lockfile and it cannot be read: a warning says so,
+    and no dependency is then said to be unpinned on its account.
+    """
+    from chartbook import lock
+
+    lock_path = pipeline_dir / lock.LOCK_FILE
+    try:
+        locked = lock.read_lock(pipeline_dir)
+    except lock.LockError as error:
+        detail = str(error).removeprefix(f"Cannot read {lock_path}: ")
+        warnings.warn(f"{lock_path}: not checked. {detail}", UserWarning, stacklevel=3)
+        return None
+    if locked is None:
+        return set()
+    return {listed["id"] for listed in locked.dependencies if listed.get("id")}
+
+
 def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     """Report every declared dependency that cannot be found.
 
@@ -323,6 +343,12 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     In a catalog, a dependency whose key is one of the catalog's own
     pipelines must be that pipeline. One ID that means two directories in
     one build is reported, naming both.
+
+    A ``path`` dependency that is there but has no pin in ``chartbook.lock``
+    draws a warning too: nothing of it can be read until it is pinned, and
+    ``chartbook pin`` (or ``chartbook run``) pins it. That is a warning and
+    not a problem because a fresh clone is in that state on purpose, and
+    ``--frozen`` is the gate that fails on it.
     """
     problems = []
     in_build = get_pipeline_dirs(manifest)
@@ -330,11 +356,14 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     for pipeline_id, pipeline_dir in in_build.items():
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         toml_file = pipeline_dir / "chartbook.toml"
+        pinned = _pinned_keys(pipeline_dir)
         for key, entry in (pipeline_manifest.get("dependencies") or {}).items():
             table = _dependency_table(key)
             location = locate_pipeline(key, dependencies={key: entry})
             if location.kind == "git":
                 checkout = _fetched_checkout(pipeline_dir, key, entry)
+                if checkout is None and pinned is None:
+                    continue  # the lockfile could not be read, and that was said
                 if checkout is None:
                     warnings.warn(
                         f"{toml_file}: [{table}] git: not checked. "
@@ -371,6 +400,15 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
                         f"at one directory, or give this dependency another "
                         f"key (a key in [dependencies] is a local name)",
                     )
+                )
+                continue
+            if pinned is not None and key not in pinned:
+                warnings.warn(
+                    f"{toml_file}: [{table}] path: not pinned. Nothing of {key!r} can be read "
+                    f"until it is; `chartbook pin` pins its newest snapshot, and so does "
+                    f"`chartbook run` (the build).",
+                    UserWarning,
+                    stacklevel=2,
                 )
     return problems
 

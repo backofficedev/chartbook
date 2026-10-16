@@ -37,7 +37,7 @@ trained_on = ["fed_yield_curve:treasury_rates"]
 ```
 
 `chartbook check` then confirms that the other pipeline is there and that it declares that
-dataframe.
+dataframe, and warns while you have not pinned it yet.
 
 ## They declare a build ready
 

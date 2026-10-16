@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — `chartbook check` warns about a dependency that has no pin
+
+A `path` dependency that is there but has no pin in `chartbook.lock` now draws a `warning:` line from `chartbook check`, saying that nothing of it can be read until `chartbook pin` or `chartbook run` (the build) pins it. It is a warning and not a failure because a fresh clone is in that state on purpose; `pin --frozen` and `run --frozen` remain the gates that fail on it. A lockfile this version cannot read is reported once, and no dependency is blamed for it. There is no `check --frozen`: the frozen check already exists under the commands that build.
+
 ### Added — the store can be an S3 bucket
 
 `[store] url = "s3://bucket/prefix"`, with `pip install chartbook[s3]`, and every command and every `data.load()` work as they did: the bucket is laid out exactly as a folder store is, so `aws s3 sync` of a folder store into a bucket is this store. What a pipeline reads is read through a copy on this machine, under `~/.chartbook/cache/` (`[cache] path`, or `CHARTBOOK_CACHE`): the first read of a pinned asset downloads its files, checks that they hash to the object's name, and keeps them; `data.path()` is the path of that copy. Credentials are the AWS SDK's own and never in the URL, which may name another service with `?endpoint=` and a region with `?region=`. A bucket that is read-only for a machine serves `chartbook pin`, `run --frozen` and `data.load()`; what would write raises `chartbook.store.ReadOnlyStoreError`, which `pin` treats as it treats a read-only folder (the pins are in the store, only its note for `gc` is not left), and offline an object read and checked before is served from the cache. The store is found by its URL's scheme through the entry-point group `chartbook.stores`, which `chartbook.stores.s3.S3Store` is registered in, and it passes the same contract tests as the folder store. `pip install chartbook` installs no cloud library.

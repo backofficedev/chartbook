@@ -9,6 +9,7 @@ still does not resolve to a path.
 
 import json
 import re
+import warnings
 from pathlib import Path
 
 import jsonschema
@@ -699,6 +700,40 @@ class TestCheck:
         assert '[dependencies."acme/crsp"] git: not checked' in str(warning.message)
         assert "`chartbook pin` fetches it" in str(warning.message)
 
+    def test_a_dependency_without_a_pin_is_a_warning_not_a_problem(self, two_pipelines):
+
+        downstream, rates = two_pipelines
+        _depend(downstream, acme__rates={"path": "../rates"})
+        manifest = load_manifest(downstream)
+        with pytest.warns(UserWarning, match="not pinned") as caught:
+            assert check_dependencies(manifest, downstream) == []
+        (warning,) = caught
+        assert str(warning.message).startswith(f'{downstream / "chartbook.toml"}: [dependencies."acme/rates"] path: not pinned.')
+        assert "`chartbook pin` pins its newest snapshot, and so does `chartbook run` (the build)" in str(warning.message)
+
+    def test_a_pinned_dependency_is_not_warned_about(self, two_pipelines):
+        from chartbook import lock
+
+        downstream, rates = two_pipelines
+        _depend(downstream, acme__rates={"path": "../rates"})
+        lock.pin(downstream, from_folder=True)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            assert check_dependencies(load_manifest(downstream), downstream) == []
+
+    def test_a_lockfile_that_cannot_be_read_is_said_once(self, two_pipelines):
+        from chartbook import lock
+
+        downstream, rates = two_pipelines
+        _depend(downstream, acme__rates={"path": "../rates"})
+        (downstream / lock.LOCK_FILE).write_text('schema = "chartbook/lock/v9"\n')
+        with pytest.warns(UserWarning) as caught:
+            assert check_dependencies(load_manifest(downstream), downstream) == []
+        (warning,) = caught  # the lockfile, and no dependency blamed for it
+        message = str(warning.message)
+        assert message.startswith(f"{downstream / lock.LOCK_FILE}: not checked. ")
+        assert message.count(str(downstream / lock.LOCK_FILE)) == 1 and "not pinned" not in message
+
     def test_a_token_in_a_git_url_does_not_reach_the_log(self, two_pipelines, monkeypatch):
         downstream, _ = two_pipelines
         _depend(downstream, crsp={"git": "https://user:s3cret@example.org/acme/crsp.git"})
@@ -822,6 +857,18 @@ class TestCheckCommand:
         assert "warning: " in result.output
         assert '[dependencies."acme/crsp"] git: not checked' in result.output
         assert "1 dependencies)" in result.output
+
+    def test_an_unpinned_dependency_is_a_warning(self, two_pipelines, monkeypatch):
+        from chartbook import lock
+
+        downstream, _ = two_pipelines
+        _depend(downstream, acme__rates={"path": "../rates"})
+        result = self._check(downstream, monkeypatch)
+        assert result.exit_code == 0, result.output
+        assert 'warning: ' in result.output and '[dependencies."acme/rates"] path: not pinned.' in result.output
+        lock.pin(downstream, from_folder=True)
+        result = self._check(downstream, monkeypatch)
+        assert result.exit_code == 0 and "not pinned" not in result.output
 
 
 class TestPages:

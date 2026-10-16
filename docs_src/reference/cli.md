@@ -188,7 +188,7 @@ chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/
 - run: chartbook check --skip-outputs
 ```
 
-**Dependencies.** For each `path` in `[dependencies]`, `check` looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever `check` runs. A `git` dependency is looked at where `chartbook pin` has fetched it, at the commit `chartbook.lock` names. `check` never uses the network: if the dependency has not been fetched on this machine, it says so in a `warning:` line and does not fail. A `trained_on` that names a pipeline `[dependencies]` does not declare stops the manifest loading, so `check` fails on it.
+**Dependencies.** For each `path` in `[dependencies]`, `check` looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever `check` runs. A `git` dependency is looked at where `chartbook pin` has fetched it, at the commit `chartbook.lock` names. `check` never uses the network: if the dependency has not been fetched on this machine, it says so in a `warning:` line and does not fail. A `path` dependency that is there but has no pin in `chartbook.lock` draws a `warning:` line too, since nothing of it can be read until `chartbook pin` or `chartbook run` (the build) pins it; a fresh clone is in that state on purpose, and {ref}`--frozen <chartbook-pin>` is the gate that fails on it. A `trained_on` that names a pipeline `[dependencies]` does not declare stops the manifest loading, so `check` fails on it.
 
 ```console
 $ chartbook check
@@ -198,7 +198,7 @@ chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a data
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
-**Warnings, not problems.** Two things are said with `warning:` and do not fail the command: a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
+**Warnings, not problems.** Five things are said with `warning:` and do not fail the command: a `git` dependency that has not been fetched here, a `path` dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
 
 ## chartbook path
 
