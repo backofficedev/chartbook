@@ -4,7 +4,7 @@
 A design document, written 2026-10-16 after cross-pipeline dependencies were made to work on one
 machine ({doc}`overview`, step 4, and PR 65). It plans how ChartBook keeps the same experience for
 the person using it, from a laptop with nothing installed to an organization's own storage and
-warehouses. Status: **the settings layers and the store interface are built (2026-10-16); the first remote store is the next work; the rest is proposed.**
+warehouses. Status: **the settings layers, the store interface and the S3 store are built (2026-10-16); the backend interface and the first warehouse adapter are proposed.**
 The decisions the maintainer has taken are marked *decided*; the rest is *proposed*.
 ```
 
@@ -70,12 +70,14 @@ repository knows either address.
 
 ## Scales to zero: plugins behind extras
 
-*Proposed.* `pip install chartbook` installs no cloud library and no warehouse driver. Each store
+*Proposed; built for stores 2026-10-16.* `pip install chartbook` installs no cloud library and no warehouse driver. Each store
 kind and each backend is a plugin found by an entry point, as plotting backends already are
 ({doc}`../guide/plotting-backends`): the groups `chartbook.stores` and `chartbook.backends`. An
 extra installs one: `pip install chartbook[s3]`, `chartbook[snowflake]`. The local folder store
 and DuckDB are in the package itself and are what you get with no extra. A setting or a manifest
-that names a plugin that is not installed gets one message, naming the extra to install.
+that names a plugin that is not installed gets one message, naming the extra to install. *As
+built:* the S3 store's module ships in the package and is registered in `chartbook.stores`; only
+boto3 is behind the extra, and a store URL that needs it says `pip install chartbook[s3]`.
 
 Credentials stay where they are now: never in a manifest, never in a record, never in a
 snapshot. They come from the environment, the settings files, or whatever the organization's
@@ -102,6 +104,14 @@ and the readers scan it through Polars, which reads `s3://` paths already, so `d
 then answer with a URL. `put()` makes objects by reflink, hard link or copy; those are local
 speed tricks, and an upload replaces them. And the snapshot folder is listed directly; the
 interface's snapshot methods replace that.
+
+*Built otherwise, 2026-10-16:* the S3 store's `get()` hands back a path after all: it downloads
+the object's files once into a cache on this machine (`~/.chartbook/cache/`, laid out as a folder
+store), checks that they hash to the object's name, and returns that folder. So every reader,
+every model loader and `chartbook path` work unchanged, a file is read from the bucket once and
+then from disk, and a corrupt download is refused before anything reads it. `data.path()` is the
+path of the cached copy. A URL-returning `get()` remains possible for a reader that wants to scan
+a bucket directly, and nothing built here is in its way.
 
 The interface was extracted before the second implementation, against the maintainer's
 earlier preference, because every caller already went through one class and the snapshot
@@ -133,7 +143,19 @@ formalized from what DuckDB does today, and the first warehouse adapter shapes t
    URL and finds another kind by its scheme in the entry-point group `chartbook.stores`;
    `tests/test_store_contract.py` is what any kind must pass. In place of a test double, the
    contract test runs against each implementation.
-3. The S3 store behind `chartbook[s3]`; readers accept URLs.
+3. The S3 store behind `chartbook[s3]`; readers accept URLs. *Built 2026-10-16, with readers taking
+   paths through a cache rather than URLs (above):*
+   `chartbook.stores.s3.S3Store`, found by the scheme `s3` in the entry-point group; the bucket
+   is laid out exactly as a folder store, so a folder store synced into a bucket is this store;
+   objects and records are read through a cache on this machine, so the readers take paths as
+   before (see above); credentials are the SDK's own and never in the URL, which may carry
+   `?endpoint=` and `?region=`; a read-only bucket serves `pin`, `run --frozen` and `data.load()`,
+   and a write to it raises `ReadOnlyStoreError`, which `pin` treats as it treats a read-only
+   folder; offline, an object read and checked before is served from the cache; the contract
+   tests run against it in a mocked bucket. A table in a DuckDB file is pinned as parquet into
+   the bucket as into a folder. One thing a bucket cannot do that a folder does: make an object
+   of several files appear whole or not at all; a snapshot interrupted mid-upload leaves a
+   partial object that readers refuse by name, and making the snapshot again completes it.
 4. The backend interface formalized from DuckDB; the first warehouse adapter with version pins.
 
 ## What this does not decide

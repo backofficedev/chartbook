@@ -1,7 +1,7 @@
 """What every kind of store must do: the contract behind `chartbook.store.Store`.
 
-Run against each implementation; the folder store is the only one built,
-and a plugin's store should pass this file unchanged.
+Run against each implementation: the folder store, and the S3 store in a
+mocked bucket. A plugin's store should pass this file unchanged.
 """
 
 import json
@@ -11,13 +11,21 @@ import pytest
 
 from chartbook import store as store_module
 from chartbook.store import FolderStore, Store
+from tests.mocked_s3 import URL, mocked_s3
 
-IMPLEMENTATIONS = {"folder": lambda work: FolderStore(work / "store")}
+IMPLEMENTATIONS = ("folder", "s3")
 
 
-@pytest.fixture(params=sorted(IMPLEMENTATIONS))
-def store(request, tmp_path) -> Store:
-    return IMPLEMENTATIONS[request.param](tmp_path.resolve())
+@pytest.fixture(params=IMPLEMENTATIONS)
+def store(request, tmp_path, monkeypatch) -> Store:
+    work = tmp_path.resolve()
+    if request.param == "folder":
+        yield FolderStore(work / "store")
+        return
+    from chartbook.stores.s3 import S3Store
+
+    with mocked_s3(monkeypatch) as client:
+        yield S3Store(URL, cache=work / "cache", client=client)
 
 
 @pytest.fixture
@@ -100,9 +108,9 @@ class TestSnapshotRecords:
 
 class TestWhereItIs:
     def test_str_says_where(self, store):
-        # A place, for a message: the folder store says its folder, and a
-        # plugin must override the base's fallback to its repr
-        assert str(store) == (str(store.root) if isinstance(store, FolderStore) else str(store))
+        # A place, for a message: the folder store says its folder, the S3
+        # store its URL, and a plugin must override the base's fallback to its repr
+        assert str(store) == (str(store.root) if isinstance(store, FolderStore) else URL)
         assert not str(store).startswith(type(store).__name__ + "(")
 
 
@@ -113,8 +121,19 @@ class TestTheFactory:
         assert isinstance(store_module.store_for_url("file://" + str(tmp_path / "s")), FolderStore)
 
     def test_another_kind_needs_a_plugin(self):
-        with pytest.raises(ValueError, match="is a s3:// store, and nothing provides one.*entry point named 's3'"):
-            store_module.store_for_url("s3://bucket/prefix")
+        with pytest.raises(ValueError, match="is a gs:// store, and nothing provides one.*entry point named 'gs'"):
+            store_module.store_for_url("gs://bucket/prefix")
+
+    def test_the_s3_store_is_found_by_its_entry_point(self, tmp_path, monkeypatch):
+        pytest.importorskip("boto3")
+        from chartbook.stores.s3 import S3Store
+
+        store_module._plugin_store_class.cache_clear()
+        monkeypatch.setenv("CHARTBOOK_CACHE", str(tmp_path / "cache"))
+        with mocked_s3(monkeypatch):
+            found = store_module.store_for_url("s3://chartbook-test/anywhere")
+        assert isinstance(found, S3Store) and str(found) == "s3://chartbook-test/anywhere"
+        assert found.cache == tmp_path / "cache" / "s3" / "chartbook-test" / "anywhere"
 
     def test_a_plugin_is_found_by_its_scheme(self, monkeypatch):
         class Fake:

@@ -79,7 +79,7 @@ from chartbook.manifest import (
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
-from chartbook.store import Store, default_store
+from chartbook.store import ReadOnlyStoreError, Store, StoreError, default_store
 
 #: The lockfile's name, beside ``chartbook.toml``.
 LOCK_FILE = "chartbook.lock"
@@ -491,7 +491,7 @@ def _sync(
             store.add_root(lock_path, hashes)
         else:
             store.remove_root(lock_path)
-    except OSError as error:
+    except (OSError, StoreError) as error:
         if not is_read_only(error):
             raise LockError(
                 f"{lock_path} was written, and the store's note of it for `gc` "
@@ -512,9 +512,17 @@ def label_remedy(missing: Optional[str], key: str) -> str:
     return f"when its owner has made a snapshot that holds that version, `chartbook update {key}`"
 
 
-def is_read_only(error: OSError) -> bool:
-    """Whether an error says the place could not be written for want of permission."""
-    return isinstance(error, PermissionError) or error.errno in (errno.EROFS, errno.EACCES, errno.EPERM)
+def is_read_only(error: Exception) -> bool:
+    """Whether an error says the store could not be written for want of permission.
+
+    A folder store raises an ``OSError`` for that; a remote store a
+    :class:`chartbook.store.ReadOnlyStoreError`.
+    """
+    if isinstance(error, ReadOnlyStoreError):
+        return True
+    return isinstance(error, OSError) and (
+        isinstance(error, PermissionError) or error.errno in (errno.EROFS, errno.EACCES, errno.EPERM)
+    )
 
 
 @dataclass

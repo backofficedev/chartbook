@@ -125,8 +125,11 @@ A build server should change nothing. `chartbook run --frozen` pins nothing, fet
 writes nothing: it builds only if the lockfile is complete and every pin is in the store, and
 fails with a list of what is missing otherwise. `chartbook pin --frozen` is the same check alone.
 A team can point every machine at one store (`[store] url` in the organization's settings file or
-the user's `~/.chartbook/settings.toml`, or `CHARTBOOK_STORE`), which may be read-only for the build server; pinning from a snapshot then
-needs no write to it.
+the user's `~/.chartbook/settings.toml`, or `CHARTBOOK_STORE`): a folder on a shared disk, or an
+S3 bucket, `s3://bucket/prefix`, with `pip install chartbook[s3]`. It may be read-only for the
+build server; pinning from a snapshot and reading pinned data need no write to it. A bucket is read
+through a copy on each machine, so your code opens files as it always did; {doc}`../reference/configuration`
+has the details.
 
 ## What the site and the index say
 
