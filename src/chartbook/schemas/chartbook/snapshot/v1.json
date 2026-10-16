@@ -106,7 +106,7 @@
     },
     "documents": {
       "type": "object",
-      "description": "The files a writer needs that are not assets, as one object in the same store, each under its path in the pipeline's folder: the manifest, the lockfile, the README, every `docs_path`, every file under the pipeline's `site_dir`, its logo and favicon; only files git tracks. With the assets, enough to lay the version out as a folder and build its site from the store alone. Absent in snapshots made before snapshots carried them.",
+      "description": "The files a writer needs that are not assets, as one object in the same store, each under its path in the pipeline's folder: the manifest, the lockfile, the README, every `docs_path`, every file under the pipeline's `site_dir`, its logo and favicon; only files git tracks. Only plain paths inside the folder, none a link or under one. With the assets, enough to lay the version out as a folder and build its site from the store alone. Absent when git tracks none of them, and in snapshots made before snapshots carried them.",
       "required": [
         "content_hash",
         "files"

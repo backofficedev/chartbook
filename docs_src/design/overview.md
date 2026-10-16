@@ -1983,7 +1983,9 @@ and never makes one. The pair that converges is snapshot and index: a snapshot i
 index at one commit, kept with the bytes; a site's index is its own pipeline at the current build
 plus each dependency's pinned snapshot plus the catalog; a site is a pure function of an index
 and the write-ups at the commit the index names, so a site can later be built for any snapshot
-and lineage can link across sites by commit. That is a direction, not work for now. The index
+and lineage can link across sites by commit. That is a direction, not work for now. *Superseded
+2026-10-16* by {doc}`versioned-catalog`: the two do not converge; a snapshot holds the index of
+its version, and a catalog will be assembled from such indexes. The index
 records facts about the build, including comparisons it made, and no renderings; each asset
 record is to gain its write-up's path and hash; `stale_inputs` stays. A **writer** per site tool
 turns the index into **pages**; the Sphinx writer comes first, after a vocabulary page and an

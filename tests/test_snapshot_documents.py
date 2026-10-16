@@ -144,15 +144,16 @@ class TestTheDocuments:
         manifest["dataframes"]["treasury"] = dict(MANIFEST["dataframes"]["treasury"], docs_path="../elsewhere.md")
         (pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest))
         _git(pipeline, "commit", "--quiet", "-am", "A write-up outside")
-        paths = snapshot.document_paths(pipeline)
+        paths, skipped = snapshot.document_paths(pipeline)
         assert "../elsewhere.md" not in paths and all(not p.startswith("..") for p in paths)
+        assert ("../elsewhere.md", snapshot.NOT_A_PLAIN_PATH) in skipped
 
     def test_the_lockfile_is_taken_when_git_tracks_it(self, pipeline):
         (pipeline / ".gitignore").write_text(".env\ndocs_src/site/draft.md\n_data/\n_output/\n_models/\n_docs*/\ndocs/\n")
         (pipeline / "chartbook.lock").write_text('schema = "chartbook/lock/v1"\n')
         _git(pipeline, "add", "-A")
         _git(pipeline, "commit", "--quiet", "-m", "Commit the lockfile")
-        assert "chartbook.lock" in snapshot.document_paths(pipeline)
+        assert "chartbook.lock" in snapshot.document_paths(pipeline)[0]
 
     def test_gc_keeps_them_with_the_snapshot(self, pipeline):
         taken = snapshot.make(pipeline).snapshot
@@ -198,5 +199,185 @@ class TestLayingAVersionOut:
         assets["treasury"] = dict(assets["treasury"], location={"kind": "file", "path": "../../escape.parquet"})
         assets.pop("note/method")
         laid = snapshot.materialize(dataclasses.replace(taken, assets=assets), tmp_path / "v2")
-        assert ("acme/rates:treasury", "its path ../../escape.parquet is outside the pipeline's folder") in laid.left_out
+        assert ("acme/rates:treasury", "its path ../../escape.parquet is not a plain path inside the pipeline's folder") in laid.left_out
         assert not (tmp_path / "escape.parquet").exists()
+
+
+def _set(pipeline: Path, **changes) -> None:
+    """Rewrite the manifest with changes to whole tables, commit."""
+    manifest = {**MANIFEST, **changes}
+    (pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    _git(pipeline, "add", "-A")
+    _git(pipeline, "commit", "--quiet", "-m", "Change")
+
+
+class TestWhatTheReviewFound:
+    """Each a way a manifest written to mislead, or a store record forged, reached past the folder."""
+
+    @pytest.mark.parametrize(
+        "text",
+        ["/etc/passwd", "\\Windows\\x", "C:foo", "C:\\x", "../x", "a/../../x", "docs/../README.md", ".git/config",
+         "docs/.GIT/hooks/x", ".git./x", ":(top)README.md", ":/", "a:b", "", "  ", ".", "./"],
+    )
+    def test_what_is_not_a_plain_path(self, text):
+        assert snapshot.safe_relative(text) is None
+
+    @pytest.mark.parametrize(
+        "text,plain",
+        [("./docs_src/x.md", "docs_src/x.md"), ("docs_src\\x.md", "docs_src/x.md"), ("..hidden/x", "..hidden/x"),
+         ("a/./b", "a/b"), ("report[2024].md", "report[2024].md"), (".gitignore", ".gitignore")],
+    )
+    def test_what_is(self, text, plain):
+        assert snapshot.safe_relative(text) == plain
+
+    def test_pathspec_magic_reaches_nothing_outside(self, pipeline, tmp_path):
+        (pipeline.parent / "victim").mkdir()
+        (pipeline.parent / "victim" / "target.txt").write_text("ORIGINAL")
+        _set(pipeline, project={**MANIFEST["project"], "readme": ":(top)README.md", "logo": ":/"})
+        paths, skipped = snapshot.document_paths(pipeline)
+        assert all(snapshot.safe_relative(p) == p for p in paths)
+        assert (":(top)README.md", snapshot.NOT_A_PLAIN_PATH) in skipped
+        snapshot.make(pipeline)
+        assert (pipeline.parent / "victim" / "target.txt").read_text() == "ORIGINAL"
+
+    def test_a_tracked_link_is_never_followed(self, pipeline, tmp_path):
+        outside = tmp_path / "outside-secret.md"
+        outside.write_text("OUTSIDE BYTES\n")
+        (pipeline / "docs_src" / "report[2024].md").symlink_to(outside)
+        (pipeline / "docs_src" / "site" / "linked.md").symlink_to(outside)
+        (pipeline / "docs_src" / "sub").mkdir()
+        (pipeline / "docs_src" / "sub" / ".leak").symlink_to(outside)
+        dataframes = {**MANIFEST["dataframes"], "treasury": {**MANIFEST["dataframes"]["treasury"], "docs_path": "docs_src/report[2024].md"},
+                      "other": {"path": "./_data/treasury.parquet", "docs_path": "docs_src/*"}}
+        _set(pipeline, dataframes=dataframes)
+        paths, skipped = snapshot.document_paths(pipeline)
+        assert "docs_src/report[2024].md" not in paths and ("docs_src/report[2024].md", snapshot.A_LINK) in skipped
+        assert ("docs_src/site/linked.md", snapshot.A_LINK) in skipped
+        assert "docs_src/site/guide.md" in paths  # one bad link does not lose the rest of the site
+        assert not any(p.startswith("docs_src/sub") for p in paths)
+        snapshot.make(pipeline)
+        for file in Path(str(default_store())).rglob("*"):
+            if file.is_file():
+                assert b"OUTSIDE BYTES" not in file.read_bytes(), file
+
+    def test_the_command_says_what_was_not_kept(self, pipeline, tmp_path, monkeypatch):
+        (pipeline / "docs_src" / "site" / "linked.md").symlink_to(tmp_path)
+        _git(pipeline, "add", "-A")
+        _git(pipeline, "commit", "--quiet", "-m", "A link")
+        monkeypatch.chdir(pipeline)
+        result = CliRunner().invoke(main, ["snapshot"])
+        assert result.exit_code == 0, result.output
+        assert f"  document not kept: docs_src/site/linked.md ({snapshot.A_LINK})" in result.output
+
+    def test_a_forged_record_cannot_plant_git_or_climb_out(self, pipeline, tmp_path):
+        taken = snapshot.make(pipeline).snapshot
+        store = default_store()
+        forged = tmp_path / "forged"
+        (forged / ".git").mkdir(parents=True)
+        (forged / ".git" / "config").write_text("[core]\n\tfsmonitor = touch PWNED\n")
+        (forged / "README.md").write_text("# forged\n")
+        stored = store.put(forged)
+        files = [".git/config", "README.md", "../escape.md", "C:evil.md"]
+        bad = dataclasses.replace(taken, documents={"content_hash": stored.content_hash, "files": files})
+        laid = snapshot.materialize(bad, tmp_path / "laid")
+        assert not (laid.folder / ".git").exists() and (laid.folder / "README.md").is_file()
+        assert {path for path, _ in laid.left_out} >= {".git/config", "../escape.md", "C:evil.md"}
+        assert not (tmp_path / "escape.md").exists()
+
+    def test_a_link_inside_an_object_is_not_followed(self, pipeline, tmp_path):
+        taken = snapshot.make(pipeline).snapshot
+        store = default_store()
+        secret = tmp_path / "secret.txt"
+        secret.write_text("LOCAL SECRET")
+        folder = tmp_path / "obj"
+        (folder / "weights").mkdir(parents=True)
+        (folder / "config.json").write_text("{}")
+        (folder / "weights" / "best.pt").symlink_to(secret)
+        stored = store.put(folder, links=("copy",))
+        # A store a team shares may hold whatever someone put there: a link, as here
+        held = Path(store.get(stored.content_hash))
+        (held / "weights" / "best.pt").unlink() if (held / "weights" / "best.pt").exists() else None
+        (held / "weights").mkdir(exist_ok=True)
+        (held / "weights" / "planted").symlink_to(secret)
+        assets = {**taken.assets, "model/ar1": {**taken.assets["model/ar1"], "content_hash": stored.content_hash}}
+        laid = snapshot.materialize(dataclasses.replace(taken, assets=assets), tmp_path / "laid")
+        assert not (laid.folder / "_models" / "ar1" / "weights" / "planted").exists()
+        assert "LOCAL SECRET" not in "".join(p.read_text(errors="replace") for p in laid.folder.rglob("*") if p.is_file())
+
+    def test_nothing_is_written_when_an_object_is_missing(self, pipeline, tmp_path):
+        taken = snapshot.make(pipeline).snapshot
+        default_store().delete(taken.assets["treasury"]["content_hash"])
+        with pytest.raises(snapshot.SnapshotError, match="does not have 1 object"):
+            snapshot.materialize(taken, tmp_path / "laid")
+        assert not (tmp_path / "laid").exists()
+
+    def test_a_file_is_not_a_folder(self, pipeline, tmp_path):
+        taken = snapshot.make(pipeline).snapshot
+        (tmp_path / "afile").write_text("x")
+        with pytest.raises(snapshot.SnapshotError, match="is a file"):
+            snapshot.materialize(taken, tmp_path / "afile")
+
+    def test_no_documents_does_not_make_a_snapshot_every_run(self, pipeline):
+        _git(pipeline, "rm", "--quiet", "--cached", "-r", ".")
+        (pipeline / ".gitignore").write_text("*\n")
+        _git(pipeline, "add", "-f", ".gitignore")
+        _git(pipeline, "commit", "--quiet", "-m", "Nothing tracked but the ignore file")
+        first = snapshot.make(pipeline)
+        assert first.made and first.snapshot.documents is None
+        assert snapshot.make(pipeline).made is False
+
+    def test_made_again_for_documents_keeps_the_run_note(self, pipeline):
+        first = snapshot.make(pipeline, built_by_run=True).snapshot
+        store = default_store()
+        store.remove_snapshot(first.path)
+        snapshot._write(dataclasses.replace(first, index=None, documents=None, path=None), store)
+        again = snapshot.make(pipeline)  # a plain `chartbook snapshot`
+        assert again.made and again.snapshot.built_by_run
+
+    def test_looking_takes_no_git_lock(self, pipeline):
+        import os
+
+        index_file = pipeline / ".git" / "index"
+        before = index_file.stat().st_mtime_ns
+        os.utime(pipeline / "chartbook.toml")  # a stat change git status would refresh the index for
+        snapshot.make(pipeline)
+        assert index_file.stat().st_mtime_ns == before
+
+
+class TestTheLaidOutVersion:
+    def test_it_keeps_its_pipelines_id_whatever_the_folder_is_called(self, pipeline, tmp_path):
+        manifest = dict(MANIFEST, project={"name": "Rates"})  # no id: it comes from the folder and git
+        (pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        _git(pipeline, "commit", "--quiet", "-am", "No explicit id")
+        taken = snapshot.make(pipeline).snapshot
+        assert taken.pipeline == "rates"
+        laid = snapshot.materialize(taken, tmp_path / "v-something-else")
+        from chartbook.manifest import load_manifest
+
+        assert load_manifest(laid.folder)["project"]["id"] == "rates"
+
+    def test_scores_are_written_back_and_the_code_time_is_the_versions(self, pipeline, tmp_path, monkeypatch):
+        models = {"ar1": {**MANIFEST["models"]["ar1"], "metrics_path": "./_output/ar1_metrics.json"}}
+        (pipeline / "_output" / "ar1_metrics.json").write_text('{"rmse": 0.5}')  # a build writes it; git ignores it
+        _set(pipeline, models=models)
+        taken = snapshot.make(pipeline).snapshot
+        assert taken.assets["model/ar1"]["metrics"] == {"rmse": 0.5}
+        laid = snapshot.materialize(taken, tmp_path / "v1")
+        assert json.loads((laid.folder / "_output" / "ar1_metrics.json").read_text()) == {"rmse": 0.5}
+        marker = json.loads((laid.folder / ".chartbook-version.json").read_text())
+        assert marker["pipeline"] == "acme/rates" and marker["commit"] == taken.commit and marker["code_changed_at"]
+        from chartbook.manifest import find_latest_code_change
+
+        assert find_latest_code_change(laid.folder).strftime("%Y") == marker["code_changed_at"][:4]
+        monkeypatch.chdir(laid.folder)
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        assert result.exit_code == 0, result.output
+
+    def test_a_named_site_dir_with_nothing_kept_is_made(self, pipeline, tmp_path, monkeypatch):
+        (pipeline / "pages").mkdir()
+        (pipeline / "pages" / "linked.md").symlink_to(tmp_path)
+        _set(pipeline, project={**MANIFEST["project"], "site_dir": "./pages"})
+        laid = snapshot.materialize(snapshot.make(pipeline).snapshot, tmp_path / "v1")
+        assert (laid.folder / "pages").is_dir()
+        monkeypatch.chdir(laid.folder)
+        assert CliRunner().invoke(main, ["docs", "./docs", "-f"]).exit_code == 0

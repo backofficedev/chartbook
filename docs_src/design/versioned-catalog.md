@@ -104,7 +104,32 @@ model with where its page is, so that a command-line agent finds its way without
    and a site built from that folder, which is the test. *Built 2026-10-16:* `Snapshot.index`
    and `Snapshot.documents` in the record, written by `chartbook snapshot`, kept alive by `store
    gc` like the assets; `chartbook.snapshot.materialize()` lays a snapshot out as a folder, and a
-   test builds a site from one with the repository gone.
+   test builds a site from one with the repository gone. As built, after a review and a live run
+   on the examples:
+   - **What is taken, and how.** Documents are named by the manifest's text, so a manifest a
+     docs build refuses still keeps them; the index is best-effort for the same reason, and the
+     command says in one line why it was left out (it is not tried again at that commit unless
+     the bytes change). Only files git tracks are taken, asked of git with literal pathspecs; a
+     path must be plain (`safe_relative`: nothing absolute on any system, no `..`, no part named
+     `.git`, no `:`), and no file that is a link or under one is taken; each one not kept is
+     said. The review found that without these, glob characters, git's pathspec magic and tracked
+     links each reached files outside the folder.
+   - **A record is untrusted.** A store may be shared, so `materialize` judges every path in a
+     record by the same rule, follows no link inside an object, writes no `.git`, and writes
+     nothing until every object the record names is there.
+   - **A laid-out version keeps its identity.** `materialize` writes `.chartbook-version.json`
+     (`chartbook.identity.VERSION_FILE`): the pipeline, the commit, when it was made and when its
+     code last changed, from its index. A pipeline whose ID came from its folder's name and its
+     git remote keeps that ID in a folder of any name, and its code time is not asked of a git it
+     does not have. The live run found both missing.
+   - **What a build writes and git does not keep** is written back where the snapshot recorded
+     it: a model's scores to its `metrics_path`; a `site_dir` the manifest names is made if none
+     of its files were kept. A table or query dataframe is in the store as parquet while the
+     manifest names its database, so its page in a laid-out version says it is not built; the
+     catalog's renderer (step 2) will read the parquet instead.
+   - **Cost.** Making the index hashes every file again, as a docs build would; for large data
+     that doubles the hashing a snapshot does. Accepted for an index that says exactly what a
+     build of that commit would say.
 2. **The catalog renders snapshots.** Working copies as today, plus the newest snapshot of each
    pipeline, each version at its own path. This proves rendering from the store.
 3. **All versions.** Every snapshot, links following pins, the version list, snapshot pages kept

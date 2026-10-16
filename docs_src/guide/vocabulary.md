@@ -70,9 +70,10 @@ from the other.
 
 A snapshot *holds* the index of its version: the pipeline's own index at that commit, with the
 write-ups and the other files a writer needs, so that the description of the data is preserved
-with the data and a site can be built for any version from the store alone. A catalog's index
-is assembled from such version indexes plus the comparisons only a site can make. The reasoning
-and the plan are in {doc}`../design/versioned-catalog`.
+with the data and a site can be built for any version from the store alone. The plan is for a
+catalog to show every version of every pipeline this way, its index assembled from such version
+indexes plus the comparisons only a site can make; that part is not built yet. The reasoning and
+the plan are in {doc}`../design/versioned-catalog`.
 
 ## The rest of the words
 

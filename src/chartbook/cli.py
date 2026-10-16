@@ -1964,7 +1964,10 @@ def snapshot(project_dir):
 
     Every asset the pipeline declares and has built is copied into the
     store, labelled with the commit the pipeline is at. That is a snapshot,
-    and it is what other pipelines pin: they never read this folder.
+    and it is what other pipelines pin: they never read this folder. With
+    the bytes go the pipeline's own index at that commit and the files a
+    site needs (the manifest, the README, the write-ups, the site pages),
+    only those git tracks, so a version's site can be built from the store.
 
     Everything in the pipeline's folder must be committed first. The label
     says "this is what that commit built", and with uncommitted changes it
@@ -2100,6 +2103,8 @@ def _echo_snapshot(report):
             f"  index not recorded: {report.index_skipped}. The bytes and the documents are in the "
             f"store; `chartbook check` says what a docs build would refuse."
         )
+    for path, why in report.documents_skipped:
+        click.echo(f"  document not kept: {path} ({why})")
     for model, label in report.skipped_labels:
         click.echo(
             f"  label not recorded: {model} {label!r}. A label is letters, digits, '.', "

@@ -21,6 +21,7 @@ rationale behind this scheme, and "Reserving a future global namespace" in
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -290,15 +291,32 @@ def _sanitize_component(component: str) -> str:
     return sanitized or "pipeline"
 
 
+#: The file :func:`chartbook.snapshot.materialize` writes in a folder it lays a
+#: version out in: which pipeline, which commit, when made, and when its code
+#: last changed. A folder with it is that pipeline at that version, wherever
+#: it is and whatever it is called.
+VERSION_FILE = ".chartbook-version.json"
+
+
+def read_version_file(base_dir: Path | str) -> dict:
+    """What a laid-out version's :data:`VERSION_FILE` says; empty if the folder has none or it cannot be read."""
+    try:
+        recorded = json.loads((Path(base_dir) / VERSION_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return recorded if isinstance(recorded, dict) else {}
+
+
 def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
     """Derive a pipeline's canonical ID.
 
     Precedence:
 
     1. Explicit ``id`` in the ``[project]`` table.
-    2. Scope from the git ``origin`` remote (or ``repo_url``), name from the
+    2. The pipeline a laid-out version's :data:`VERSION_FILE` names.
+    3. Scope from the git ``origin`` remote (or ``repo_url``), name from the
        directory name.
-    3. Bare directory name.
+    4. Bare directory name.
 
     :param project: The raw ``[project]`` table from chartbook.toml.
     :param base_dir: The pipeline's root directory.
@@ -307,6 +325,12 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
     explicit = project.get("id", "")
     if explicit:
         return validate_pipeline_id(explicit)
+    recorded = read_version_file(base_dir).get("pipeline")
+    if isinstance(recorded, str) and recorded:
+        try:
+            return validate_pipeline_id(recorded)
+        except ValueError:
+            pass  # not an ID: the folder's own name, as for any folder
 
     # Resolved, because the name comes from the directory's own name and a
     # relative "." does not have one
