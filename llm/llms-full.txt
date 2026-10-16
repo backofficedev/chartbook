@@ -366,6 +366,7 @@ doit
 """
 site_dir = "./docs_src/site/"      # Default when that directory exists
 enable_data_download = false       # Default
+writer = "sphinx"                  # Default; "mkdocs" builds the site with MkDocs (pip install chartbook[mkdocs])
 ```
 
 `build` is a single string with shell-script semantics — a multi-line value is one script, so state (e.g. `conda activate`) carries across lines. It is the same thing as `build` in `[scripts]`, which is where it and any other named command belong; `chartbook run` executes it, so it must be the command that builds the pipeline, not a note.
