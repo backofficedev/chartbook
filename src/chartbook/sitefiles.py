@@ -33,6 +33,7 @@ THEME_FILES_NOT_AT_ROOT = (
     "models.md",
     "diagnostics.md",
     "charts.md",
+    "versions.md",
     "site",
 )
 

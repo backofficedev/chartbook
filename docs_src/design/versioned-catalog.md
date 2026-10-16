@@ -143,9 +143,27 @@ model with where its page is, so that a command-line agent finds its way without
      when too large, and a laid-out version never has git asked about its code time). A named
      file git does not track is now said too.
 2. **The catalog renders snapshots.** Working copies as today, plus the newest snapshot of each
-   pipeline, each version at its own path. This proves rendering from the store.
+   pipeline, each version at its own path. This proves rendering from the store. *Built
+   2026-10-16, with every snapshot rather than the newest:* a version's site is built once on a
+   machine and kept, so all of them cost what one did. Each Pipeline record of the index lists
+   its `snapshots` in the store, newest first. A catalog build lays each one out from the store
+   (`materialize`), builds it as the pipeline's own site in a process of its own, with the site
+   tool its manifest names, keeps it under `versions/` in the machine's cache, keyed by the
+   ChartBook version, and copies it into the catalog's site at
+   `versions/<pipeline>/<commit>-<made_at>/`. A version that cannot be built gets a page that says
+   why, and a `warning:` line, so a link to it never leads nowhere. A laid-out folder's Pipeline
+   record says `from_snapshot`, and its front page says which snapshot it is. Built otherwise
+   than item 4 of the section above: the version list is one catalog page, `cb/versions.md`, every
+   pipeline with its working version and its snapshots, the commit, the date, whether `chartbook
+   run` built it and which pipeline of the catalog pins it; not a list on each pipeline page,
+   because the catalog's own pages are written on every build and a pipeline's page is not when
+   an incremental build reuses it. Search is scoped by construction: each version is its own site,
+   so the catalog's search finds the working versions only.
 3. **All versions.** Every snapshot, links following pins, the version list, snapshot pages kept
-   across builds, search scoped.
+   across builds, search scoped. *What remains after step 2:* links following pins, so that a
+   page of `C` links to `A` at the version `C` pinned, inside a version's site as in the catalog;
+   a catalog entry by pipeline ID alone, for a pipeline whose folder is not on this machine; and
+   clearing the kept sites of snapshots `store gc` removed.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.

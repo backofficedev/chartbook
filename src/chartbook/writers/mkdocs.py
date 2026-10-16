@@ -31,7 +31,7 @@ from typing import Optional
 
 import jinja2
 
-from chartbook.writers.sphinx import SphinxWriter, _local_name, _slug, yaml_escape
+from chartbook.writers.sphinx import SphinxWriter, _laid_out_version, _local_name, _slug, yaml_escape
 
 #: The install extra that brings MkDocs, the Material theme and the notebook plugin.
 EXTRA = "chartbook[mkdocs]"
@@ -47,7 +47,7 @@ class MkDocsWriter(SphinxWriter):
     #: MkDocs would render the templates as pages: they stay out of the site tree.
     THEME_TEMPLATES_IN_SITE = False
     #: The pages the writer renders besides the records': the catalog's own, and the chart listing.
-    CATALOG_PAGES = ("index.md", "cb/charts.md", "cb/dataframes.md", "cb/models.md", "cb/pipelines.md", "cb/diagnostics.md")
+    CATALOG_PAGES = ("index.md", "cb/charts.md", "cb/dataframes.md", "cb/models.md", "cb/pipelines.md", "cb/diagnostics.md", "cb/versions.md")
 
     def _environment(self, base_dir: Path) -> jinja2.Environment:
         """The Sphinx writer's search path, with this writer's theme folder first."""
@@ -118,6 +118,7 @@ class MkDocsWriter(SphinxWriter):
                 model_file_list=self._pages("Model"),
                 readme_text="",
                 today=date.today().isoformat(),
+                has_versions=self._has_versions(),
             )
         if page_path == "cb/dataframes.md":
             return environment.get_template("dataframes.md").render(dataframe_pages=self._pages("Dataframe", from_root=False))
@@ -161,6 +162,7 @@ class MkDocsWriter(SphinxWriter):
             dataframes=self._pages("Dataframe"),
             models=self._pages("Model"),
             freshness=[fact for fact in [_freshness_of(pipeline)] if fact],
+            version=_laid_out_version(pipeline),
         )
 
     def _site_pages(self, pipeline: dict) -> list:
@@ -247,6 +249,8 @@ class MkDocsWriter(SphinxWriter):
             nav.append(
                 {"Pipelines": [{"All pipelines": "cb/pipelines.md"}, *[{r.get("name") or r["id"]: self.pipeline_page_path(r)} for r in pipelines]]}
             )
+            if self._has_versions():
+                nav.append({"Versions": "cb/versions.md"})
             nav.append({"Diagnostics": "cb/diagnostics.md"})
             nav.append({"Contributing": "contributing.md"})
         configuration = {

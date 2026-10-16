@@ -846,7 +846,47 @@ def pipeline_records(
     changed = code_changed_at(pipeline_manifest)
     if changed:
         record["code_changed_at"] = changed
+    from chartbook.identity import read_version_file
+
+    laid_out = read_version_file(base_dir)
+    if isinstance(laid_out.get("commit"), str) and isinstance(laid_out.get("made_at"), str):
+        # A version laid out from the store: which snapshot this folder is
+        record["from_snapshot"] = {"commit": laid_out["commit"], "made_at": laid_out["made_at"]}
     return [record, *assets]
+
+
+def _add_snapshots(records: list[dict]) -> None:
+    """Give each Pipeline record the snapshots of it that are in the store, newest first.
+
+    Read from the store of the machine that builds the index, as a model's
+    versions are; a catalog renders each as its own site
+    (:mod:`chartbook.versions`). A store that cannot be read is said, and
+    the records have no ``snapshots``.
+    """
+    pipelines = [record for record in records if record.get("kind") == "Pipeline"]
+    if not pipelines:
+        return
+    from chartbook import snapshot as snapshots
+    from chartbook.store import StoreError, default_store
+    from chartbook.versions import version_name
+
+    try:
+        found = snapshots.all_snapshots(default_store())
+    except (StoreError, snapshots.SnapshotError, ValueError, OSError) as error:
+        warnings.warn(f"The snapshots in the store are not in the index: {error}", stacklevel=3)
+        return
+    by_pipeline: dict[str, list] = {}
+    for taken in found:
+        by_pipeline.setdefault(taken.pipeline, []).append(taken)
+    for record in pipelines:
+        listed = []
+        for taken in sorted(by_pipeline.get(record["id"], []), key=lambda t: t.made_at, reverse=True):
+            entry = {"commit": taken.commit, "made_at": taken.made_at, "name": version_name(taken.commit, taken.made_at)}
+            if taken.built_by_run:
+                entry["built_by_run"] = True
+            listed.append(entry)
+        if listed:
+            record["snapshots"] = listed
 
 
 def _site_pages(project: dict, base_dir: Path) -> Optional[tuple[dict, list[str]]]:
@@ -964,6 +1004,7 @@ def build_index(
             cache,
             known_pipelines=known_pipelines,
         )
+    _add_snapshots(records)
 
     moment = generated_at or datetime.now(timezone.utc)
     return {

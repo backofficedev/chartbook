@@ -385,6 +385,7 @@ def generate_docs(
         # Copy build files to output
         html_build_dir = _docs_dir / "_build" / "html"
         if html_build_dir.exists():
+            _add_versions(manifest, built, html_build_dir)
             _install_site(html_build_dir, output_dir, should_remove_existing)
             _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
 
@@ -394,6 +395,21 @@ def generate_docs(
             shutil.rmtree(temp_docs_src_dir, ignore_errors=True)
         else:
             print(f"Keeping temporary build directory: {_docs_dir.resolve()}")
+
+
+def _add_versions(manifest: dict, built: dict, html_build_dir: Path) -> None:
+    """In a catalog, put each snapshot's own site into the rendered site, under ``versions/``."""
+    if manifest["project"]["type"] != "catalog":
+        return
+    import click
+
+    from chartbook import versions
+
+    versions.add_to_site(
+        built,
+        html_build_dir,
+        echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
+    )
 
 
 def _install_site(html_build_dir: Path, output_dir: Path, should_remove_existing: bool) -> None:
@@ -493,6 +509,7 @@ def _generate_docs_mkdocs(
         )
         (_docs_dir / "mkdocs.yml").write_text(yaml.safe_dump(configuration, sort_keys=False, allow_unicode=True), encoding="utf-8")
         run_mkdocs_build(_docs_dir)
+        _add_versions(manifest, built, _docs_dir / "_build" / "html")
 
         _install_site(_docs_dir / "_build" / "html", output_dir, should_remove_existing)
         _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
@@ -801,6 +818,7 @@ def _generate_docs_incremental(
 
         output_written = 0
         if html_build_dir.exists():
+            _add_versions(manifest, built, html_build_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
             output = incremental.sync_tree(
                 html_build_dir,
