@@ -1444,6 +1444,7 @@ def make(
     made_at: Optional[str] = None,
     built_by_run: bool = False,
     ignoring: tuple = (),
+    deep: bool = False,
 ) -> SnapshotReport:
     """Make a snapshot of a pipeline: what it has built, at the commit it is on.
 
@@ -1463,6 +1464,9 @@ def make(
         making this snapshot (``chartbook run --snapshot``).
     :param ignoring: File names that may be uncommitted; see
         :func:`uncommitted`.
+    :param deep: Also refuse if any snapshot upstream has a gap in its own
+        lineage (:func:`chartbook.lineage.walk`), not only this pipeline's
+        pins.
     :returns: The snapshot, and whether it is new.
     :raises SnapshotError: If the folder holds no pipeline, is not in git,
         has anything uncommitted, or has built nothing.
@@ -1473,6 +1477,17 @@ def make(
 
     store = store if store is not None else default_store()
     require_lineage(directory, pipeline, store)
+    if deep:
+        from chartbook.lineage import walk
+
+        upstream = [(node, gap) for node, gap in walk(directory, store).gaps() if node.kind != "working"]
+        if upstream:
+            shown = "\n".join(f"  {node.label}: {gap}" for node, gap in upstream[:10])
+            more = f"\n  and {len(upstream) - 10} more" if len(upstream) > 10 else ""
+            raise SnapshotError(
+                f"{pipeline} cannot have a snapshot with --deep: a snapshot upstream has a gap in its "
+                f"own lineage.\n{shown}{more}\n`chartbook lineage` shows the whole graph."
+            )
     raw = _read_manifest_file(directory)
     assets: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []

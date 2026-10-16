@@ -18,6 +18,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook snapshot` | Declare this pipeline's build ready for the pipelines that depend on it |
 | `chartbook pin` | Freeze what this pipeline depends on, in `chartbook.lock` |
 | `chartbook update` | Move pins forward to each dependency's newest snapshot |
+| `chartbook lineage` | Show and check every snapshot upstream of this pipeline |
 | `chartbook run [SCRIPT]` | Run a named script in this pipeline; `build` by default, after pinning what it depends on |
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
@@ -378,7 +379,7 @@ The manifest is the only source of the list. Nothing about how the project is bu
 ## chartbook snapshot
 
 ```console
-chartbook snapshot [--project-dir PATH]
+chartbook snapshot [--project-dir PATH] [--deep]
 ```
 
 Declare this pipeline's build ready for the pipelines that depend on it. Every asset the pipeline declares and has built is copied into the store, labelled with the commit the pipeline is at; a dataframe that is a table or a query in a DuckDB file is written out as a parquet file there, so that it can be pinned and read like any other. That is a **snapshot**.
@@ -392,7 +393,7 @@ Snapshot made. A pipeline that depends on this one gets it with `chartbook updat
 
 **A snapshot carries its lineage.** It records what the pipeline was pinned to, each dependency's commit and a hash over everything pinned from it, so it is made only when those pins account for every dependency: the check `chartbook pin --frozen` makes (every dependency in the lockfile, pinned from where the manifest says, its bytes in the store); no dependency pinned from its working folder; and for each dependency pinned from a snapshot, that snapshot in the store, holding each asset pinned from it at its hash, and each label pinned naming a version some snapshot of it holds, so a lockfile changed by hand is caught (a `git` dependency, pinned from its clone, is checked only to have its bytes in the store). Nothing that cannot have been read stops it: an asset the other pipeline had not built when it was pinned, or a dependency of which nothing is pinned (it declares nothing, or has no snapshot yet). Otherwise nothing is made, and each gap is listed with what to run. `chartbook run --snapshot` makes the same check after it pins and before it builds, so a gap is found before an hour of building.
 
-Two things it does not see. A snapshot pinned from that was made before this check, or by an older ChartBook, may have gaps of its own: the check is of this pipeline's pins. And a read that does not go through the lockfile (a load through a catalog, a model version named by its hash) is not in them.
+Two things it does not see. A snapshot pinned from that was made before this check, or by an older ChartBook, may have gaps of its own: the check is of this pipeline's pins. `--deep` also walks every snapshot upstream ({ref}`chartbook lineage <chartbook-lineage>`) and refuses if any has a gap. And a read that does not go through the lockfile (a load through a catalog, a model version named by its hash) is not in them.
 
 
 ```console
@@ -625,6 +626,38 @@ Wrote chartbook.lock.
 Keeping it would leave the lockfile naming one commit beside data built from another, which nobody else could get back. `chartbook run` then builds the new commit and pins what it builds.
 
 (chartbook-run)=
+(chartbook-lineage)=
+## chartbook lineage
+
+```console
+chartbook lineage [--project-dir PATH] [--check] [--rehash] [--json]
+```
+
+Show where this pipeline's data comes from, and check it, all the way up. It starts from the lockfile: each snapshot the pipeline is pinned to, then the snapshots those were pinned to, as each recorded them when it was made, and so on. Every step of the way is a hash, and each is checked:
+
+- the snapshot named is in the store, and can be read;
+- what was pinned from it is what it holds: each asset at its hash, for this pipeline's lockfile; for a snapshot upstream, the hash it recorded over everything it pinned, made again from the snapshot it names;
+- each snapshot's recorded pins cover every dependency its own manifest, kept with it in the store, declares;
+- each asset of each snapshot is in the store.
+
+```console
+$ chartbook lineage
+acme/forecast (this folder)
+├── fred: acme/fred 49780a2, made 2026-10-16 23:51:46 UTC
+└── rates: acme/rates 49780a2, made 2026-10-16 23:51:46 UTC
+       gap: its manifest declares the dependency 'fred', and the snapshot records no pin of it: it was made before snapshots checked their pins, or from a lockfile that did not list it
+2 snapshot(s) upstream; 1 gap(s).
+```
+
+A snapshot met twice is walked once and marked "shown above". A `git` dependency is pinned from its clone, not from a snapshot, so the walk stops there. Nothing is written.
+
+| Option | Effect |
+|--------|--------|
+| `--project-dir PATH` | The pipeline (default: the current directory) |
+| `--check` | Exit `1` if there is any gap: for CI |
+| `--rehash` | Also hash every asset of every snapshot again, which reads all of their bytes |
+| `--json` | Print the graph as JSON: each pipeline's `label`, `kind`, `pipeline`, `commit`, `made_at`, `gaps` and `children` |
+
 ## chartbook run
 
 ```console

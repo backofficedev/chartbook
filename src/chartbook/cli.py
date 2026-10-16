@@ -2009,7 +2009,12 @@ def update(dependencies, project_dir, from_folder):
 
 @main.command()
 @click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
-def snapshot(project_dir):
+@click.option(
+    "--deep",
+    is_flag=True,
+    help="Also refuse if any snapshot upstream has a gap in its own lineage (see `chartbook lineage`)",
+)
+def snapshot(project_dir, deep):
     """Declare this pipeline's build ready for the pipelines that depend on it.
 
     Every asset the pipeline declares and has built is copied into the
@@ -2040,12 +2045,90 @@ def snapshot(project_dir):
 
     project_dir = resolve_project_dir(project_dir)
     try:
-        report = snapshots.make(project_dir)
+        report = snapshots.make(project_dir, deep=deep)
     except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
 
     _echo_snapshot(report)
+
+
+def _lineage_line(node) -> str:
+    """How one pipeline of a lineage is shown."""
+    made = f"{node.made_at[:10]} {node.made_at[11:19]} UTC" if node.made_at else ""
+    if node.kind == "working":
+        return f"{node.pipeline} (this folder)"
+    if node.kind == "snapshot":
+        seen = " (shown above)" if node.seen else ""
+        return f"{node.label}: {node.pipeline} {node.commit[:7]}, made {made}{seen}"
+    if node.kind == "git":
+        at = f" at {node.commit[:7]}" if node.commit else ""
+        return f"{node.label}: pinned from its git clone{at}; not walked further"
+    if node.kind == "folder":
+        return f"{node.label}: pinned from its working folder"
+    if node.kind == "nothing":
+        return f"{node.label}: nothing pinned"
+    return f"{node.label}: not found in the store"
+
+
+def _lineage_lines(node, prefix: str = "", last: bool = True, top: bool = True) -> list:
+    """A lineage as a tree, each gap under the pipeline it is at."""
+    lines = [(prefix + ("" if top else ("└── " if last else "├── "))) + _lineage_line(node)]
+    inner = prefix + ("" if top else ("    " if last else "│   "))
+    for gap in node.gaps:
+        lines.append(f"{inner}{'│ ' if node.children else '  '} gap: {gap}")
+    for number, child in enumerate(node.children):
+        lines += _lineage_lines(child, inner, number == len(node.children) - 1, top=False)
+    return lines
+
+
+@main.command("lineage")
+@click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
+@click.option("--check", is_flag=True, help="Exit 1 if there is any gap: for CI")
+@click.option(
+    "--rehash",
+    is_flag=True,
+    help="Also hash every asset of every snapshot again, which reads all of their bytes",
+)
+@click.option("--json", "as_json", is_flag=True, help="Print the lineage as JSON")
+def lineage_command(project_dir, check, rehash, as_json):
+    """Show where this pipeline's data comes from: every snapshot upstream, and any gap.
+
+    Follows the pins up from this pipeline's lockfile: each snapshot it is
+    pinned to, the snapshots those were pinned to, and so on. Each step is
+    checked: the snapshot is in the store, what was pinned is what it
+    holds (by hash), and its recorded pins cover every dependency its own
+    manifest declares. Nothing is written.
+
+    \b
+    Examples:
+        chartbook lineage
+        chartbook lineage --check
+        chartbook lineage --rehash --json
+    """
+    import json
+
+    from chartbook import lineage
+    from chartbook import snapshot as snapshots
+    from chartbook.store import StoreError
+
+    project_dir = resolve_project_dir(project_dir)
+    try:
+        found = lineage.walk(project_dir, rehash=rehash)
+    except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
+        raise SystemExit(2)
+    gaps = found.gaps()
+    if as_json:
+        click.echo(json.dumps(found.to_dict(), indent=2))
+    else:
+        for line in _lineage_lines(found.root):
+            click.echo(line)
+        rehashed = f", {found.rehashed} object(s) hashed again" if rehash else ""
+        said = f"{len(gaps)} gap(s)" if gaps else "no gaps"
+        click.echo(f"{found.snapshots} snapshot(s) upstream{rehashed}; {said}.")
+    if check and gaps:
+        raise SystemExit(1)
 
 
 @main.command("run")

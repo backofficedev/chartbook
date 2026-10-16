@@ -8,7 +8,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 - [Getting Started](docs_src/getting-started.md): `pip install chartbook` — one install, everything included
 - [Vocabulary](docs_src/guide/vocabulary.md): the words, defined once. A manifest asks, a lockfile records what was got, a snapshot records what was made, an index records what a site shows; repository → index → pages → site; a writer per site tool
-- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs`, `chartbook build`, `chartbook run`, `chartbook snapshot`, `chartbook pin`, `chartbook update`, `chartbook browse`, `chartbook check`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook config`
+- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs`, `chartbook build`, `chartbook run`, `chartbook snapshot`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook browse`, `chartbook check`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook config`
 
 ## Guides
 
@@ -52,6 +52,7 @@ chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook run --snapshot     # Build, then declare the build ready for others (a snapshot); checks everything is committed first
 chartbook snapshot           # The second half alone: this pipeline's built assets into the store, labelled with the commit; refuses unless its pins account for every dependency
+chartbook lineage            # Every snapshot upstream, walked through the pins and checked by hash; --check exits 1 on a gap, --rehash re-hashes the bytes, --json; `chartbook snapshot --deep` refuses on an upstream gap
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
 chartbook pin --frozen       # Write nothing; exit 1 unless the lockfile is complete and every pin is in the store (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3])
 chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
