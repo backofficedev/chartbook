@@ -61,7 +61,7 @@ Render the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the curre
 
 It renders the site from what is already built. It does not build the project's data: {ref}`chartbook run <chartbook-run>` does that, and {ref}`chartbook build <chartbook-build>` does both.
 
-Beside the HTML it writes `index.json`: one record for every pipeline, dataframe, column, chart, notebook, note and model the site contains, each with an ID and a content hash. See {doc}`"The index" <../guide/how-the-build-works>`. And `llms.txt`, the site for an assistant: one line per pipeline, dataframe, chart and model with its name, its ID, its description and a link to its page; in a catalog, each pipeline's versions, each linking that version's own `llms.txt`.
+Beside the HTML it writes `index.json`: one record for every pipeline, dataframe, column, chart, notebook, note and model the site contains, each with an ID and a content hash. See {doc}`"The index" <../guide/how-the-build-works>`. And `llms.txt`, the site for an assistant: one line per pipeline, dataframe, chart and model with its name linking its page, its ID and, in quotation marks, its owner's description; in a catalog, each pipeline's ten newest versions under it, each linking that version's own `llms.txt`.
 
 | Option | Default | Effect |
 |--------|---------|--------|

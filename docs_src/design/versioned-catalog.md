@@ -242,7 +242,12 @@ model with where its page is, so that a command-line agent finds its way without
    version's file says which snapshot the site is; a catalog's lists each pipeline's versions,
    each linking that version's own `llms.txt`, or the page that says why its site could not be
    built. Text from a record is one line, with what would start a link escaped, so that the only
-   links in it are the writer's.
+   links in it are the writer's (in CommonMark; a renderer that links bare addresses may link
+   one in a description). After review, the same day: the summary is the file's own words
+   only, and a description is in quotation marks after them, since a description at the start
+   of a line made headings and lists (a version site's summary was its owner's description);
+   a version's file says its names and descriptions are its owner's; a header says how to use
+   an ID; each version is a line of its own, the newest ten, then the versions page.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — an assistant file for every site
 
-Every build writes `llms.txt` beside `index.json`, in the form of [llms.txt](https://llmstxt.org): the site's name, then one line per pipeline, dataframe, chart and model with its name linking its page, its ID and its description, so that an assistant on the command line finds its way around a site without reading its HTML. A version's site says which snapshot it is; a catalog's file lists each pipeline's versions, newest first, each linking that version's own `llms.txt`. The writer writes it from the index, and a build that changes nothing leaves it alone. Step 4 of {doc}`design/versioned-catalog`.
+Every build writes `llms.txt` beside `index.json`, in the form of [llms.txt](https://llmstxt.org): the site's name, then one line per pipeline, dataframe, chart and model with its name linking its page, its ID and, in quotation marks, its owner's description, so that an assistant on the command line finds its way around a site without reading its HTML. It says how to use an ID. A version's site says which snapshot it is and that its names and descriptions are its owner's; a catalog's file lists each pipeline's ten newest versions under it, each linking that version's own `llms.txt`, and the versions page for the rest. What an owner wrote never starts a line, so it can make no heading, list or link of its own. The writer writes it from the index, and an incremental build that changes nothing leaves it alone. Step 4 of {doc}`design/versioned-catalog`.
 
 ### Fixed — what a store holds is read as someone else's
 
