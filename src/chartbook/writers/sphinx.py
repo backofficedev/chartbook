@@ -95,7 +95,7 @@ A version is made by a snapshot. Its name is the start of the model's content ha
 
 {% if trained_on %}
 {% for dataframe in trained_on %}
-- {% if dataframe.link %}[{{dataframe.label}}]({{dataframe.link}}){% else %}`{{dataframe.label}}`{% endif %}{% if dataframe.name %} - {{dataframe.name}}{% endif %}{% if dataframe.note %} ({{dataframe.note}}){% endif %}
+- {% if dataframe.html_link %}<a href="{{dataframe.html_link}}"><code>{{dataframe.label}}</code></a>{% elif dataframe.link %}[{{dataframe.label}}]({{dataframe.link}}){% else %}`{{dataframe.label}}`{% endif %}{% if dataframe.name %} - {{dataframe.name}}{% endif %}{% if dataframe.note %} ({{dataframe.note}}){% endif %}
 
 {% endfor %}
 {% else %}
@@ -257,7 +257,7 @@ class SphinxWriter:
         return template.render(
             dataframe_manifest,
             write_up=self._write_up(record, base_dir, environment),
-            provenance=panel(record_id, self.records, self._reversed),
+            provenance=self._panel(record_id, self.page_path(record)),
             dataframe_manifest=dataframe_manifest,
             link_to_dataframe_docs=self.link_to_dataframe(record),
             dataframe_id=_local_name(record),
@@ -308,7 +308,7 @@ class SphinxWriter:
         return template.render(
             chart_manifest,
             write_up=self._write_up(record, base_dir, environment),
-            provenance=panel(record_id, self.records, self._reversed),
+            provenance=self._panel(record_id, self.page_path(record)),
             chart_manifest=chart_manifest,
             chart_id=_local_name(record),
             dataframe_id=dataframe_id,
@@ -355,7 +355,7 @@ class SphinxWriter:
         return template.render(
             model_manifest,
             write_up=self._write_up(record, base_dir, environment),
-            provenance=panel(record_id, self.records, self._reversed),
+            provenance=self._panel(record_id, self.page_path(record)),
             model_manifest=model_manifest,
             model_id=name,
             model_name=record.get("name", name),
@@ -367,7 +367,7 @@ class SphinxWriter:
             metrics={k: _format_metric(v) for k, v in (record.get("metrics") or {}).items()},
             versions=versions,
             version_metrics=sorted({k for version in kept for k in (version.get("metrics") or {})}),
-            trained_on=self._trained_on(record),
+            trained_on=self._trained_on(record, self.page_path(record)),
             staleness=self._staleness(record),
             model_files=[
                 {"path": file["path"], "size": _format_size(file["size_bytes"])}
@@ -702,16 +702,81 @@ class SphinxWriter:
         shown["path"] = (record.get("location") or {}).get("path", "")
         return shown
 
-    def _trained_on(self, record: dict) -> list:
-        """What the page lists under "Trained On": a link to each input's page in this site, or its name.
+    def _panel(self, record_id: str, from_path: str) -> Optional[dict]:
+        """The provenance panel's facts, with each pinned input of another pipeline linked to its pinned version."""
+        facts = panel(record_id, self.records, self._reversed)
+        for entry in (facts or {}).get("inputs", []):
+            entry["link"] = self._pinned_page(from_path, entry["id"], entry.get("pin")) if entry.get("cross") else ""
+        return facts
 
-        An input with no record is named with a note: its pipeline is in
-        the site but does not declare it, or its pipeline is not in the site.
+    def _pinned_page(self, from_path: str, input_id: str, pin: Optional[dict]) -> str:
+        """The link from a page to an input's page in the snapshot of its pipeline that was pinned; empty if there is none here.
+
+        In a catalog, each snapshot of a pipeline is its own site under
+        ``versions/`` (:mod:`chartbook.versions`). What a pipeline read of
+        another is the snapshot its lockfile pins, not that pipeline's folder
+        as it is now; so a pinned input links to its page in that snapshot's
+        site, when the catalog shows that snapshot.
         """
+        from chartbook.versions import site_path, version_name
+
+        if self.theme != "catalog" or not pin or not pin.get("commit") or not pin.get("snapshot"):
+            return ""
+        owner, _, local = input_id.partition(":")
+        target = self.records.get(owner) or {}
+        shown = any(
+            entry.get("commit") == pin["commit"] and entry.get("made_at") == pin["snapshot"]
+            for entry in target.get("snapshots") or []
+        )
+        if not shown:
+            return ""
+        kind, _, asset = local.rpartition("/")
+        pages = {
+            "": f"cb/dataframes/{_slug(owner)}/{asset}",
+            "dataframe": f"cb/dataframes/{_slug(owner)}/{asset}",
+            "chart": f"cb/charts/{_slug(owner)}.{asset}",
+            "model": f"cb/models/{_slug(owner)}/{asset}",
+        }
+        if kind not in pages or not asset:
+            return ""
+        try:
+            root = site_path(owner, version_name(pin["commit"], pin["snapshot"]))
+        except ValueError:
+            return ""
+        return "../" * from_path.count("/") + f"{root}/{pages[kind]}.html"
+
+    def _trained_on(self, record: dict, from_path: str = "") -> list:
+        """What the page lists under "Trained On": a link to each input's page, or its name.
+
+        An input of another pipeline that the lockfile pins links to its
+        page in the pinned snapshot's site when the catalog shows it, for
+        that is what the model was trained on; otherwise an input in this
+        site links to its page here. An input with no record is named with a
+        note: its pipeline is in the site but does not declare it, or its
+        pipeline is not in the site.
+        """
+        from chartbook.provenance import _dependency_for
+
+        pipeline = self.records.get(record.get("pipeline")) or {}
         entries = []
         for input_id in record.get("inputs", []):
             other = self.records.get(input_id)
-            if other is not None and other.get("kind") == "Dataframe":
+            dependency = _dependency_for(pipeline, input_id)
+            pin = None
+            if dependency:
+                pin = {"commit": (dependency.get("location") or {}).get("commit"), "snapshot": dependency.get("snapshot")}
+            pinned_page = self._pinned_page(from_path, input_id, pin)
+            if pinned_page:
+                entries.append(
+                    {
+                        "label": input_id,
+                        "name": (other or {}).get("name", ""),
+                        "link": "",
+                        "html_link": pinned_page,
+                        "note": f"as pinned, the snapshot at {pin['commit'][:7]}",
+                    }
+                )
+            elif other is not None and other.get("kind") == "Dataframe":
                 entries.append(
                     {
                         "label": input_id,

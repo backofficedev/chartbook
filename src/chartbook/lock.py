@@ -1427,12 +1427,14 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
         recent_seconds=plan.recent_seconds,
         keep_days=plan.keep_days,
     )
+    from chartbook import versions
+
     still_removable = {taken.path for taken, _ in now.snapshots_delete}
-    removed_snapshots = sum(
-        snapshot.remove(store, taken)
-        for taken, _ in plan.snapshots_delete
-        if taken.path in still_removable
-    )
+    removed_snapshots = 0
+    for taken, _ in plan.snapshots_delete:
+        if taken.path in still_removable and snapshot.remove(store, taken):
+            removed_snapshots += 1
+            versions.forget(taken)  # its site, kept for catalogs on this machine
     still_unnamed = {content_hash for content_hash, _ in now.delete}
     removed = sum(
         store.delete(content_hash)

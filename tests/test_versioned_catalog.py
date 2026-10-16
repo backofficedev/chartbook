@@ -335,3 +335,82 @@ class TestAForgedManifest:
         from chartbook.backends import DuckDBBackend
 
         assert DuckDBBackend("duckdb:///:memory:").connect().sql("select 1").fetchone() == (1,)
+
+
+@pytest.fixture
+def trained(tmp_path):
+    """`pipeline_b` has a model trained on `pipeline_a:dataframe_0`, and pins `pipeline_a`'s first
+    snapshot; `pipeline_a` then makes a second, with other data."""
+    repository = tmp_path.resolve() / "repo"
+    root = create_catalog_project(repository / "cat")
+    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n")
+    a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
+    manifest = tomli.loads((b / "chartbook.toml").read_text())
+    manifest["dependencies"] = {"pipeline_a": {"path": "../pipeline_a"}}
+    manifest["models"] = {"m": {"path": "./_models/m.json", "trained_on": ["pipeline_a:dataframe_0"], "docs": "A model."}}
+    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (b / "_models").mkdir()
+    (b / "_models" / "m.json").write_text("{}")
+    _git(repository, "init", "--quiet", "-b", "main")
+    _commit(repository)
+    first = snapshot.make(a).snapshot
+    lock.pin(b)
+    data = next((a / "_data").rglob("*.parquet"))
+    pl.DataFrame({"date": ["2025-01-01"], "value": [9.9]}).write_parquet(data)
+    _commit(repository, "New data")
+    second = snapshot.make(a).snapshot
+    return root, first, second
+
+
+class TestLinksFollowPins:
+    def test_a_model_links_to_the_version_it_was_trained_on(self, trained, monkeypatch):
+        root, first, second = trained
+        _build(root, monkeypatch)
+        site = root / "docs"
+        pinned = f"versions/pipeline_a/{versions.version_name(first.commit, first.made_at)}/cb/dataframes/pipeline_a/dataframe_0.html"
+        page = (site / "cb" / "models" / "pipeline_b" / "m.html").read_text()
+        link = f'href="../../../{pinned}"'
+        assert page.count(link) == 2, page  # under Trained On, and in the provenance panel
+        assert (site / pinned).is_file()  # the link leads somewhere
+        newer = versions.version_name(second.commit, second.made_at)
+        assert newer not in page  # the version it was not trained on is not where it leads
+        assert "as pinned, the snapshot at " + first.commit[:7] in page
+
+    def test_without_the_pinned_version_the_working_version_is_linked(self, trained, monkeypatch):
+        root, first, second = trained
+        snapshot.remove(default_store(), first)
+        _build(root, monkeypatch)
+        page = (root / "docs" / "cb" / "models" / "pipeline_b" / "m.html").read_text()
+        assert "versions/pipeline_a" not in page
+        assert "dataframes/pipeline_a/dataframe_0.html" in page
+
+    def test_with_mkdocs_too(self, trained, monkeypatch):
+        pytest.importorskip("mkdocs")
+        pytest.importorskip("material")
+        root, first, second = trained
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["project"]["writer"] = "mkdocs"
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        result = _build(root, monkeypatch)
+        assert "contains a link" not in result.output, result.output
+        pinned = f"versions/pipeline_a/{versions.version_name(first.commit, first.made_at)}/cb/dataframes/pipeline_a/dataframe_0.html"
+        assert f'href="../../../{pinned}"' in (root / "docs" / "cb" / "models" / "pipeline_b" / "m.html").read_text()
+
+
+class TestGcClearsTheKeptSites:
+    def test_a_removed_snapshot_takes_its_kept_site_with_it(self, catalog, monkeypatch):
+        root, first, second = catalog
+        _build(root, monkeypatch)
+        kept = get_cache_path() / "versions" / "pipeline_a"
+        names = {p.name for p in kept.iterdir()}
+        assert versions.version_name(first.commit, first.made_at) in names
+        store = default_store()
+        # Nothing pins the first any more: pipeline_b's lockfile is forgotten
+        store.remove_root(root / "pipelines" / "pipeline_b" / "chartbook.lock")
+        plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
+        doomed = [taken for taken, _ in plan.snapshots_delete]
+        assert [t.made_at for t in doomed] == [first.made_at]
+        lock.run_gc(plan, store)
+        left = {p.name for p in kept.iterdir()}
+        for taken in doomed:
+            assert versions.version_name(taken.commit, taken.made_at) not in left

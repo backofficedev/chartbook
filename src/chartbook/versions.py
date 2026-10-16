@@ -205,6 +205,24 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
     return Rendered(kept / "site", built=not why, why=why, now=True)
 
 
+def forget(taken) -> bool:
+    """Clear the sites kept on this machine of a snapshot that is gone; True if there were any.
+
+    ``store gc`` calls this for each snapshot it removes, so the cache holds
+    no site of a version no catalog will show again.
+    """
+    from chartbook.config import get_cache_path
+
+    try:
+        folder = get_cache_path() / VERSIONS_DIR / slug(taken.pipeline) / version_name(taken.commit, taken.made_at)
+    except ValueError:
+        return False
+    if not folder.is_dir():
+        return False
+    shutil.rmtree(folder, ignore_errors=True)
+    return True
+
+
 def _clear_abandoned(folder: Path) -> None:
     """Clear staging folders a build left when it was stopped."""
     now = time.time()
