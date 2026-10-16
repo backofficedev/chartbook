@@ -135,6 +135,34 @@ def _error_code(error: BaseException) -> str:
     return match.group(1) if match else ""
 
 
+
+def _plain_parts(relative: str) -> Optional[list[str]]:
+    """The parts of a key's path under a prefix, if it is a plain relative path; else None.
+
+    Plain: parts joined by single ``/``, none empty, ``.`` or ``..``, and no
+    backslash, colon or NUL, which some systems read as a separator, a
+    drive or the end. Anyone who can write to the bucket chooses its keys,
+    and a reader makes a file of each.
+    """
+    if not relative or any(c in relative for c in "\\:\0"):
+        return None
+    parts = relative.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    return parts
+
+
+def _inside(folder: Path, relative: str) -> Path:
+    """The file at a key's plain path under a folder, which must stay inside it.
+
+    :raises StoreError: If the path is not plain, or leads out of the folder.
+    """
+    parts = _plain_parts(relative)
+    target = folder.joinpath(*parts) if parts is not None else None
+    if target is None or not target.resolve().is_relative_to(folder.resolve()):
+        raise StoreError(f"The bucket has a key that is not a plain path inside {folder}: {relative!r}.")
+    return target
+
 class S3Store(Store):
     """A store in an S3 bucket, with a cache of what was read on this machine.
 
@@ -343,12 +371,17 @@ class S3Store(Store):
         return self._key(OBJECTS_DIR, algorithm, digest[:2], digest[2:]) + "/"
 
     def _object_files(self, content_hash: str) -> dict[str, dict]:
-        """The files of an object in the bucket: relative path -> what the SDK says of the key."""
+        """The files of an object in the bucket: relative path -> what the SDK says of the key.
+
+        A key whose path under the object is not a plain relative path (see
+        :func:`_plain_parts`) is no file of the object: ``put`` never writes
+        one, and a reader would write it outside the object's folder.
+        """
         prefix = self._object_prefix(content_hash)
         return {
             entry["Key"][len(prefix):]: entry
             for entry in self._list(prefix)
-            if entry["Key"] != prefix and not entry["Key"].endswith("/")
+            if _plain_parts(entry["Key"][len(prefix):]) is not None
         }
 
     def _verified_note(self, content_hash: str) -> Path:
@@ -392,7 +425,7 @@ class S3Store(Store):
         """
         changed = False
         for relative, entry in sorted(remote.items()):
-            target = into / relative
+            target = _inside(into, relative)
             if again or not target.is_file() or target.stat().st_size != entry["Size"]:
                 self._download(entry["Key"], target)
                 changed = True
@@ -483,12 +516,14 @@ class S3Store(Store):
         )
 
     def delete(self, content_hash: str) -> bool:
-        remote = self._object_files(content_hash)
+        # Every key under the object, its files and any that are not: none is read here
+        prefix = self._object_prefix(content_hash)
+        keys = [entry["Key"] for entry in self._list(prefix) if entry["Key"] != prefix]
         self._forget_verified(content_hash)
         self._cache.delete(content_hash)
-        if not remote:
+        if not keys:
             return False
-        self._delete_keys([entry["Key"] for entry in remote.values()])
+        self._delete_keys(keys)
         return True
 
     def hashes(self) -> Iterator[str]:
@@ -588,16 +623,21 @@ class S3Store(Store):
         return self._key(SNAPSHOTS_DIR, commit, name) + "/"
 
     def _local(self, key: str) -> Path:
-        """The cache file for a key under the prefix."""
+        """The cache file for a key under the prefix.
+
+        :raises StoreError: If the key is not a plain path under the prefix,
+            which no key this store writes is.
+        """
         relative = key[len(self.prefix) + 1:] if self.prefix else key
-        return self._cache.root / Path(*relative.split("/"))
+        return _inside(self._cache.root, relative)
 
     def _records_under(self, prefix: str, depth: int) -> list[Path]:
         """The ``.json`` records under a prefix, *depth* segments below it, in the cache."""
         remote = {}
         for entry in self._list(prefix):
-            rest = entry["Key"][len(prefix):].split("/")
-            if len(rest) == depth and rest[-1].endswith(".json"):
+            rest = _plain_parts(entry["Key"][len(prefix):])
+            # A key that is not a plain path is no record this store wrote
+            if rest is not None and len(rest) == depth and rest[-1].endswith(".json"):
                 remote[entry["Key"]] = entry
         local_folder = self._local(prefix.rstrip("/"))
         wanted = set()

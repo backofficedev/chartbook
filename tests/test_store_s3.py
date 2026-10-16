@@ -402,3 +402,45 @@ class TestTwoPipelinesOnAnS3Store:
         assert {e.status for e in report.events if e.asset} == {"pinned"}
         assert report.unrooted and "refused to write" in report.unrooted
         assert (forecast / lock.LOCK_FILE).is_file()
+
+
+class TestKeysThatLeaveTheCache:
+    """Anyone who can write to the bucket chooses its keys; a reader never makes a file outside its cache."""
+
+    PLANTED = ("../../../../../OUTSIDE.txt", "../../../../../../OUTSIDE2.txt", "a//b.txt", "a\\..\\..\\x.txt", "c:x.txt", "./d.txt")
+
+    def _outside(self, work: Path) -> list:
+        return [p for p in work.rglob("*") if p.name.startswith(("OUTSIDE", "ABS", "evil"))]
+
+    def test_an_objects_keys(self, work, client, a_file):
+        first = S3Store(URL, cache=work / "machine-a", client=client)
+        stored = first.put(a_file)
+        (key,) = [k for k in _keys(client) if k.endswith("rates.parquet")]
+        prefix = key[: -len("rates.parquet")]
+        for planted in (*self.PLANTED, str(work / "ABS.txt")):
+            client.put_object(Bucket=BUCKET, Key=prefix + planted, Body=b"planted")
+        second = S3Store(URL, cache=work / "machine-b", client=client)
+        held = second.get(stored.content_hash)
+        # The object is its own files; nothing else was written anywhere
+        assert sorted(p.name for p in held.iterdir()) == ["rates.parquet"]
+        assert self._outside(work) == [] and not (work.parent / "OUTSIDE2.txt").exists()
+        assert second.verify() == []
+        # Deleting the object takes every key under it, planted ones too
+        assert first.delete(stored.content_hash) is True
+        assert _keys(client, prefix) == []
+
+    def test_a_snapshot_records_keys(self, work, client):
+        first = S3Store(URL, cache=work / "machine-a", client=client)
+        written = first.write_snapshot(COMMIT, "_top", "20261016T000000Z", {"a": 1})
+        (key,) = [k for k in _keys(client) if "/snapshots/" in k or k.startswith("snapshots/")]
+        root = key[: key.index("snapshots/") + len("snapshots/")]
+        for planted in ("../../evil.json", "../x/evil2.json", f"{COMMIT}/_top/../../../evil3.json", "a//b/evil4.json"):
+            client.put_object(Bucket=BUCKET, Key=root + planted, Body=b"{}")
+        second = S3Store(URL, cache=work / "machine-b", client=client)
+        seen = second.all_snapshot_files()
+        assert [p.name for p in seen] == [written.name]
+        assert self._outside(work) == [p for p in self._outside(work) if p.is_relative_to(work / "machine-b" / "snapshots")] == []
+
+    def test_a_key_is_never_made_a_path_out_of_the_cache(self, store):
+        with pytest.raises(StoreError, match="not a plain path"):
+            store._local(store.prefix + "/../x.json" if store.prefix else "../x.json")

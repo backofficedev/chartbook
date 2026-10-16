@@ -281,6 +281,33 @@ def strip_url_credentials(url: str) -> str:
 _WEB_LINK = re.compile(r"[Hh][Tt][Tt][Pp][Ss]?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~:/?#@!$&+,;=%-]*)?", re.ASCII)
 
 
+#: Characters that print as nothing: Hangul fillers, the blank Braille pattern
+_BLANKS = frozenset("\u115f\u1160\u3164\uffa0\u2800")
+
+
+def plain_line(value: object, longest: Optional[int] = None) -> str:
+    """Text someone else wrote, as one line of what can be seen; empty if nothing can.
+
+    Compatibility forms become their plain ones (NFKC: a fullwidth ``＜`` is
+    ``<``, so that it is caught wherever ``<`` is); characters that do not
+    print (controls, format characters, lone surrogates) become spaces; runs
+    of space become one. Text with no character that shows (only spaces,
+    fillers or combining marks) is no text.
+
+    :param longest: Cut to this many characters.
+    """
+    import unicodedata
+
+    if not isinstance(value, str):
+        return ""
+    text = unicodedata.normalize("NFKC", "".join(c if c.isprintable() else " " for c in value))
+    line = " ".join("".join(c if c.isprintable() else " " for c in text).split())
+    if longest is not None:
+        line = line[:longest].rstrip()
+    shows = any(not c.isspace() and c not in _BLANKS and not unicodedata.category(c).startswith("M") for c in line)
+    return line if shows else ""
+
+
 def web_link(value: object) -> str:
     """The value if it is a plain web address (``http`` or ``https``), with no credentials; else an empty string.
 

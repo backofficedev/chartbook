@@ -854,9 +854,10 @@ class TestWhatTheStoreOnlyReviewFound:
         monkeypatch.setattr(snapshot, "STORED_INDEX_LIMIT", 100)
         assert "description" not in self._shown(root, monkeypatch)
 
-    def test_a_name_of_nothing_visible_is_no_name(self, catalog, tmp_path, monkeypatch):
+    @pytest.mark.parametrize("blank", ["\u200b\u200b \u2028", "\u3164", "\u2800\u2800", "\u0301\u0301", "\uffa0 \u115f"])
+    def test_a_name_of_nothing_visible_is_no_name(self, catalog, tmp_path, monkeypatch, blank):
         root, first, second = catalog
-        _elsewhere_with(tmp_path, name="\u200b\u200b \u2028")
+        _elsewhere_with(tmp_path, name=blank)
         record = self._shown(root, monkeypatch)
         assert record["name"] == "pipeline_c"
         page = (root / "docs" / "cb" / "pipelines.html").read_text()
@@ -878,17 +879,30 @@ class TestWhatTheStoreOnlyReviewFound:
 
 
 class TestTheTextAndLinkChecks:
+    @pytest.mark.parametrize(
+        "written, shown",
+        [("Rates\n and  more", "Rates and more"), ("\u3164", ""), ("\u0301", ""), ("ｒａｔｅｓ", "rates"), (None, ""), ("a\ud800b", "a b")],
+    )
+    def test_a_plain_line(self, written, shown):
+        from chartbook.identity import plain_line
+
+        assert plain_line(written) == shown
+
     def test_text_is_one_line_with_no_markup(self):
         from chartbook.writers.sphinx import _as_text
 
         assert _as_text("Rates\n\n  and *more*") == "Rates and &#42;more&#42;"
         assert _as_text("<a>") == "‹a›"
         assert _as_text("{include}`x`") == "&#123;include&#125;‘x‘"
-        assert _as_text("""A & B's "x" """) == "A ＆ B’s ”x”"
-        # Decoded again, nothing of HTML's own is there
+        assert _as_text("""A & B's "x" """) == "A and B’s ”x”"
+        assert _as_text("A&B") == "A and B"
+        # Decoded again, and normalized (NFKC) besides, nothing of HTML's own is there
         import html
+        import unicodedata
 
-        assert not set(html.unescape(_as_text("</title><script>&lt;'\"`"))) & set("<>&'\"`")
+        for planted in ("</title><script>&lt;'\"`", "＜script＞＆lt;＂＇｀", "﹤img﹥﹠", "&amp;lt;"):
+            shown = unicodedata.normalize("NFKC", html.unescape(html.unescape(_as_text(planted))))
+            assert not set(shown) & set("<>&'\"`"), (planted, shown)
         assert _as_text("Zürich ±") == "Zürich ±"
         assert _as_text(None) == "" and _as_text(5) == ""
         assert _as_text("a\x00b‮c") == "a b c"

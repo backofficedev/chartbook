@@ -911,7 +911,7 @@ def _describe_from_the_store(records: list[dict]) -> None:
     read them as markup.
     """
     from chartbook import snapshot as snapshots
-    from chartbook.identity import web_link
+    from chartbook.identity import plain_line, web_link
     from chartbook.store import default_store
 
     from_store = [
@@ -930,10 +930,7 @@ def _describe_from_the_store(records: list[dict]) -> None:
         )
         own = snapshots.stored_pipeline_record(taken, store) if taken is not None else {}
         for key, longest in (("name", 200), ("description", 2000), ("maintainer", 200)):
-            if not isinstance(own.get(key), str):
-                continue
-            # One line of what can be seen: no control or format characters
-            text = " ".join("".join(c if c.isprintable() else " " for c in own[key]).split())[:longest]
+            text = plain_line(own.get(key), longest)
             if text:
                 record[key] = text
         for key in ("repo_url", "site_url"):
