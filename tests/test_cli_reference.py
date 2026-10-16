@@ -1,10 +1,20 @@
-"""The CLI reference page says what the CLI has: every command, every option.
+"""The CLI reference page says what the CLI has: every command, every option, every argument.
 
 `docs_src/reference/cli.md` is written by hand, in prose, because the
 reasons behind a command matter more than its signature. This keeps the
-hand honest: a command or an option added to `chartbook.cli` without a
-word on the page fails here, and so does a page that documents a command
-that is gone.
+hand honest: a command, an option or an argument added to `chartbook.cli`
+without a word on the page fails here, and so does a page that names a
+command that is gone.
+
+The page's shape, as the test reads it: a `## chartbook <name>` heading
+opens the section of a top-level command or group, and runs to the next
+`## ` heading outside a fenced block (a group may also have one such
+heading per subcommand). A subcommand is named in its group's section as
+`chartbook <group> <sub>` or under a `### … <sub>` heading; where it has a
+`###` heading, its options are looked for under that heading alone.
+Options are matched by a spelling the CLI accepts, long or short, as a
+whole word. A section that says it takes the arguments of another command,
+as `build` does of `docs`, is read with that command's section.
 """
 
 import re
@@ -16,21 +26,32 @@ import pytest
 from chartbook.cli import main
 
 PAGE = Path(__file__).parent.parent / "docs_src" / "reference" / "cli.md"
+#: Options every click program has, which the page need not spell out.
+IMPLIED = frozenset({"--help"})
 
 
-def _commands(group, path=()):
-    """Every command a user can run, as its words after ``chartbook``, with its options."""
+def _runnable(group, path=()):
+    """Every command a user can run, as its words after ``chartbook``, with the command.
+
+    A group counts when it can be run on its own or has options of its own.
+    Hidden commands are left to the prose that explains them.
+    """
+    if path and (group.invoke_without_command or any(isinstance(p, click.Option) for p in group.params)):
+        yield path, group
     for name, command in sorted(group.commands.items()):
         if command.hidden:
-            continue  # reserved names, which the page explains in prose where it matters
+            continue
         words = (*path, name)
         if isinstance(command, click.Group):
-            yield from _commands(command, words)
+            yield from _runnable(command, words)
         else:
             yield words, command
 
 
-COMMANDS = list(_commands(main))
+COMMANDS = list(_runnable(main))
+IDS = ["-".join(words) for words, _ in COMMANDS]
+SUBCOMMANDS = [(words, command) for words, command in COMMANDS if len(words) > 1]
+TOPS = sorted({words[0] for words, _ in COMMANDS})
 
 
 @pytest.fixture(scope="module")
@@ -38,45 +59,116 @@ def page() -> str:
     return PAGE.read_text(encoding="utf-8")
 
 
-@pytest.mark.parametrize("words,command", COMMANDS, ids=[" ".join(words) for words, _ in COMMANDS])
-def test_the_command_has_a_section(words, command, page):
-    """A top-level command has a `## chartbook <name>` heading; a subcommand is named under its group's."""
-    top = words[0]
-    assert re.search(rf"^## chartbook {re.escape(top)}\b", page, re.M), f"no `## chartbook {top}` heading on the page"
+def _whole(text: str, word: str) -> bool:
+    """Whether *word* is in *text* as a whole word: not inside another word or option."""
+    return re.search(rf"(?<![\w-]){re.escape(word)}(?![\w-])", text) is not None
+
+
+def _sections(page: str) -> dict:
+    """The page by heading: ``## chartbook <words>`` and ``### <words>`` headings outside fences."""
+    found = {}
+    current = None
+    in_fence = False
+    for line in page.splitlines():
+        if line.startswith("```"):
+            in_fence = not in_fence
+        elif not in_fence and re.match(r"^##+ ", line):
+            current = line.strip()
+            found.setdefault(current, [])
+        if current is not None:
+            found[current].append(line)
+    return {heading: "\n".join(lines) for heading, lines in found.items()}
+
+
+def _section(page: str, top: str, seen=()) -> str:
+    """The text of every ``## chartbook <top>…`` section, with ``###`` subsections, as one.
+
+    A section that says it takes the arguments of another command is read
+    with that command's section; the chain stops where it would repeat.
+    """
+    text = ""
+    sections = _sections(page)
+    headings = list(sections)
+    for position, heading in enumerate(headings):
+        if re.match(rf"^## chartbook {re.escape(top)}( [a-z-]+)*$", heading):
+            text += sections[heading] + "\n"
+            for later in headings[position + 1:]:
+                if later.startswith("## "):
+                    break
+                text += sections[later] + "\n"
+    for other in re.findall(r"takes the (?:same )?arguments (?:of|as) (?:\{ref\})?`chartbook ([a-z-]+)", text):
+        if other not in (top, *seen):
+            text += _section(page, other, (*seen, top))
+    return text
+
+
+def _own_subsection(page: str, words: tuple) -> str:
+    """The ``###`` subsection of a subcommand, if the page gives it one; else its group's section."""
     if len(words) > 1:
-        section = _section(page, top)
-        assert words[-1] in section, f"`chartbook {' '.join(words)}` is not mentioned under `## chartbook {top}`"
+        for heading, text in _sections(page).items():
+            if heading.startswith("### ") and _whole(heading, words[-1]) and (len(words) == 2 or _whole(heading, words[-2])):
+                return text
+    return _section(page, words[0])
 
 
-@pytest.mark.parametrize("words,command", COMMANDS, ids=[" ".join(words) for words, _ in COMMANDS])
-def test_every_option_is_on_the_page(words, command, page):
-    """Each option appears, by its long name or a short one, somewhere under the command's heading."""
+@pytest.mark.parametrize("top", TOPS)
+def test_the_command_has_a_section(top, page):
+    assert re.search(rf"^## chartbook {re.escape(top)}( [a-z-]+)*$", page, re.M), f"no `## chartbook {top}` heading on the page"
+
+
+@pytest.mark.parametrize("words,command", SUBCOMMANDS, ids=["-".join(words) for words, _ in SUBCOMMANDS])
+def test_a_subcommand_is_named_under_its_group(words, command, page):
     section = _section(page, words[0])
+    named = re.search(rf"(?<![\w-])chartbook {' '.join(map(re.escape, words))}(?![\w-])", section)
+    headed = re.search(rf"^### .*(?<![\w-]){re.escape(words[-1])}(?![\w-])", section, re.M)
+    assert named or headed, f"`chartbook {' '.join(words)}` is not named under `## chartbook {words[0]}`"
+
+
+@pytest.mark.parametrize("words,command", COMMANDS, ids=IDS)
+def test_every_option_is_on_the_page(words, command, page):
+    """Each option appears by a spelling the CLI accepts, long or short, as a whole word."""
+    section = _own_subsection(page, words)
     for parameter in command.params:
         if not isinstance(parameter, click.Option) or parameter.hidden:
             continue
-        if parameter.name == "help":
+        for spellings in (parameter.opts, parameter.secondary_opts):
+            if not spellings or set(spellings) <= IMPLIED:
+                continue
+            assert any(_whole(section, opt) for opt in spellings), (
+                f"`chartbook {' '.join(words)}` has {'/'.join(spellings)}, which the page does not mention where it documents the command"
+            )
+
+
+@pytest.mark.parametrize("words,command", COMMANDS, ids=IDS)
+def test_every_argument_is_on_the_page(words, command, page):
+    """Each positional argument appears by its name, or in a console line that shows it in use."""
+    section = _own_subsection(page, words)
+    for parameter in command.params:
+        if not isinstance(parameter, click.Argument):
             continue
-        assert any(opt in section for opt in parameter.opts), (
-            f"`chartbook {' '.join(words)}` has {parameter.opts[0]}, which `## chartbook {words[0]}` does not mention"
+        shown = _whole(section, parameter.human_readable_name) or re.search(
+            rf"^\$? ?chartbook {' '.join(map(re.escape, words))} [^-\s\[]", section, re.M
+        )
+        assert shown, (
+            f"`chartbook {' '.join(words)}` takes {parameter.human_readable_name}, which the page neither names nor shows in use"
         )
 
 
-def test_the_page_documents_no_command_that_is_gone(page):
-    on_page = set(re.findall(r"^## chartbook ([a-z][a-z-]*)", page, re.M))
-    known = {words[0] for words, _ in COMMANDS}
-    assert on_page <= known, f"on the page and not in the CLI: {sorted(on_page - known)}"
+def test_the_programs_own_options_are_on_the_page(page):
+    for parameter in main.params:
+        if isinstance(parameter, click.Option) and not set(parameter.opts) <= IMPLIED:
+            assert any(_whole(page, opt) for opt in parameter.opts), f"`chartbook {parameter.opts[0]}` is not on the page"
 
 
-def _section(page: str, top: str) -> str:
-    """The text of `## chartbook <top>` up to the next `## ` heading.
-
-    A section that says it "takes the arguments of" another command, as
-    `build` does of `docs`, is read with that command's section.
-    """
-    match = re.search(rf"^## chartbook {re.escape(top)}\b.*?(?=^## |\Z)", page, re.M | re.S)
-    text = match.group(0) if match else ""
-    for other in re.findall(r"takes the arguments of \{ref\}`chartbook ([a-z-]+)", text):
-        if other != top:
-            text += _section(page, other)
-    return text
+def test_the_page_names_no_command_that_is_gone(page):
+    """Headings and console lines name only commands the CLI has, hidden ones included."""
+    for heading in _sections(page):
+        match = re.match(r"^## chartbook ([a-z-]+)((?: [a-z-]+)*)$", heading)
+        if match:
+            assert match.group(1) in main.commands, f"{heading!r} names a command the CLI does not have"
+            for sub in match.group(2).split():
+                assert sub in main.commands[match.group(1)].commands, f"{heading!r} names a subcommand the CLI does not have"
+    for group_name, sub in re.findall(r"(?<![\w-])chartbook ([a-z-]+) ([a-z][a-z-]*)(?![\w/.-])", page):
+        group = main.commands.get(group_name)
+        if isinstance(group, click.Group):
+            assert sub in group.commands, f"`chartbook {group_name} {sub}` names a subcommand the CLI does not have"

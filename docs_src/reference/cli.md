@@ -24,6 +24,8 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook config` | Set the default catalog for data loading |
 | `chartbook install skill` | Install the bundled Claude Code skill (user-level by default) |
 
+`chartbook --version` prints the installed version; `chartbook <command> --help` prints a command's options.
+
 ## chartbook init
 
 Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template), via [cruft](https://cruft.github.io/cruft/) — so `cruft update` can pull template improvements later. Prompts for project name and author.
@@ -335,7 +337,10 @@ chartbook catalog browse
 List cataloged objects. Without a subcommand, prints a tree of every pipeline with its dataframes and charts; subcommands print flat lists.
 
 ```console
-chartbook ls [pipelines|dataframes|charts] [--catalog PATH]
+chartbook ls [--catalog PATH]              # the tree
+chartbook ls pipelines [--catalog PATH]    # flat lists
+chartbook ls dataframes [--catalog PATH]
+chartbook ls charts [--catalog PATH]
 ```
 
 ```console
