@@ -668,7 +668,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                     FrozenProblem(
                         key,
                         asset_id,
-                        f"is pinned at {content_hash[:19]}… and the store at {store.root} "
+                        f"is pinned at {content_hash[:19]}… and the store at {store} "
                         f"does not have it. Point CHARTBOOK_STORE at the store that has it; "
                         f"or {remedy}.",
                     )

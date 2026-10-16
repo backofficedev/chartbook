@@ -26,7 +26,7 @@ from chartbook.identity import UnsupportedRegistryError, UnsupportedRevisionErro
 from chartbook.manifest import load_manifest
 from chartbook.refs import KindMismatchError
 from chartbook.resolve import UnsupportedReferenceError, resolve
-from chartbook.store import Store
+from chartbook.store import FolderStore, Store
 from tests.fixtures import create_catalog_project, create_pipeline_project
 
 # These tests pin from a folder as it stands. That is what ``--from-folder``
@@ -59,7 +59,7 @@ def work(tmp_path):
 def store(work, monkeypatch):
     """This test's store. Resolving a reference uses the user's, so point that here."""
     monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "store"))
-    return Store(work / "store")
+    return FolderStore(work / "store")
 
 
 @pytest.fixture

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — the store is an interface, and a kind of store is a plugin
+
+`chartbook.store.Store` is now what a store is: objects by content hash, the lockfiles that keep them, and the snapshot records. `FolderStore` is the implementation that is built, and the one every command uses today; `chartbook.store.store_for_url()` makes a store from a URL and finds another kind by the URL's scheme in the entry-point group `chartbook.stores`, so an object store or a database can be added as a plugin without a change here; `default_store()` reads the settings and calls it. The snapshot module no longer reaches into the store's folder. One thing a user could see changes: a store whose layout this version does not read is now refused when a pinned asset is read, as it is by every other command. `tests/test_store_contract.py` is what any kind of store must pass.
+
 ### Changed — settings are read in layers, and the store is a URL
 
 An organization's settings file, `/etc/chartbook/settings.toml` (Windows: `%ProgramData%\chartbook\settings.toml`, or the file `CHARTBOOK_SYSTEM_SETTINGS` names), is read where the user's `~/.chartbook/settings.toml` is silent, key by key, below the environment variables and above the defaults. The store's setting is `[store] url`: a bare path or `file:///` is a folder, and another scheme names a kind of store a plugin will provide (none is built yet, and the setting says so). `[store] path` is still read as a folder, with a warning to rename it, and a user's `path` still wins over the organization's `url`. A relative folder in a settings file is relative to that file, not to where a command runs. A fault in the organization's file is reported and the file ignored; a fault in the user's names the file.

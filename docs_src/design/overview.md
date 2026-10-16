@@ -308,9 +308,9 @@ that is best decided with 3d.
 pinning sits on, and it is tested alone.
 
 ```python
-from chartbook.store import Store
+from chartbook.store import FolderStore
 
-store = Store("~/.chartbook/store")
+store = FolderStore("~/.chartbook/store")
 stored = store.put("_data/treasury_rates.parquet")   # the file stays where it is
 stored.content_hash                                  # "sha256:7f3a9c…", the object's name
 store.get(stored.content_hash)                       # …/objects/sha256/7f/3a9c…/
@@ -1404,7 +1404,7 @@ Would remove 6 snapshot(s):
 | What | Where |
 |---|---|
 | Which snapshots are kept, and why | `chartbook/snapshot.py`, `plan_removals()` |
-| The folder a snapshot was made from, noted beside the records | `chartbook/snapshot.py`, `_note_origin()`, `origins()` |
+| The folder a snapshot was made from, noted beside the records | `chartbook/store.py`, `FolderStore.note_origin()`; `chartbook/snapshot.py`, `origins()` |
 | Labels read from that folder's manifest | `chartbook/snapshot.py`, `_labels_in()` |
 | Removing a record, then what only it named | `chartbook/lock.py`, `plan_gc()`, `run_gc()`; `chartbook/snapshot.py`, `remove()` |
 | The command | `chartbook/cli.py`, `store gc --keep-days` |

@@ -174,7 +174,7 @@ class TestMaking:
         store = default_store()
         commit = "0" * 40
         names = ["", "_top", "a--b/c", "a/b--c", "a/b/c"]
-        folders = [snapshot._folder(store, commit, name) for name in names]
+        folders = [store.snapshot_folder(commit, snapshot.record_name(name)) for name in names]
         assert len(set(folders)) == len(names)
         assert folders[0].name == "_top" and folders[4].name == "a--b--c"
         assert folders[1].name.startswith("_top~") and folders[2].name.startswith("a--b--c~")

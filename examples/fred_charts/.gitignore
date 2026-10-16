@@ -252,3 +252,6 @@ src/z_scratch_pipeline_template.ipynb
 
 # The Markdown chartbook docs writes before Sphinx runs; a build makes and removes it
 _docs_src/
+
+# The notebook run_notebooks writes from the .py and deletes when it is done
+src/*_ipynb.ipynb

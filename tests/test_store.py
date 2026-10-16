@@ -23,6 +23,7 @@ from chartbook.cli import main
 from chartbook.store import (
     FROZEN_LINKS,
     LINKS,
+    FolderStore,
     MARKER_FILE,
     SCHEMA,
     ObjectNotFoundError,
@@ -78,7 +79,7 @@ def work(tmp_path):
 
 @pytest.fixture
 def store(work):
-    return Store(work / "store")
+    return FolderStore(work / "store")
 
 
 @pytest.fixture
@@ -146,9 +147,9 @@ class TestLayout:
 
     def test_the_root_is_absolute(self, work, monkeypatch):
         monkeypatch.chdir(work)
-        assert Store("relative/store").root == work / "relative" / "store"
+        assert FolderStore("relative/store").root == work / "relative" / "store"
         monkeypatch.setenv("HOME", str(work))
-        assert Store("~/store").root == work / "store"
+        assert FolderStore("~/store").root == work / "store"
 
     def test_looking_makes_nothing(self, store):
         """Only putting something in a store brings it into being."""
@@ -166,7 +167,7 @@ class TestLayout:
     def test_a_store_laid_out_differently_is_refused(self, store, rates):
         store.put(rates)
         (store.root / MARKER_FILE).write_text('{"schema": "chartbook/store/v9"}')
-        newer = Store(store.root)
+        newer = FolderStore(store.root)
         for operation in (
             lambda: newer.put(rates),
             lambda: newer.get(HELLO),
@@ -180,7 +181,7 @@ class TestLayout:
         store.put(rates)
         (store.root / MARKER_FILE).write_text("not json")
         with pytest.raises(StoreError, match="Cannot read"):
-            Store(store.root).put(rates)
+            FolderStore(store.root).put(rates)
 
 
 class TestPut:
@@ -651,7 +652,7 @@ class TestTogether:
         (staging / "rates.parquet").write_bytes(b"hello")
         final.mkdir(parents=True)
         (final / "rates.parquet").write_bytes(b"hello")
-        assert Store._move_into_place(staging, final, single=True) is False
+        assert FolderStore._move_into_place(staging, final, single=True) is False
         assert sorted(p.name for p in final.iterdir()) == ["rates.parquet"]
 
 
@@ -709,7 +710,7 @@ class TestVerifyCommand:
     def here(self, work, monkeypatch):
         """Point ChartBook's store at a scratch directory, and return it."""
         monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "store"))
-        return Store(work / "store")
+        return FolderStore(work / "store")
 
     def _verify(self):
         return CliRunner().invoke(main, ["store", "verify"])

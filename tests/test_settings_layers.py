@@ -71,7 +71,7 @@ class TestTheStoreIsAUrl:
         user, _ = files
         _write(user, {"store": {"url": "s3://bucket/chartbook"}})
         assert config.store_kind(config.get_store_url()) == "s3"
-        with pytest.raises(ValueError, match="is a s3:// store, and ChartBook has no such store built"):
+        with pytest.raises(ValueError, match="is a s3:// store, and this needs a folder"):
             config.get_store_path()
 
     def test_the_old_path_key_is_read_once_with_a_warning(self, files, tmp_path):
