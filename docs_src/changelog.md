@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — a snapshot carries its lineage
 
-`chartbook snapshot` is made only when the pipeline's pins account for every dependency: the check `chartbook pin --frozen` makes (every dependency in the lockfile, pinned from where the manifest says, its bytes in the store), and no `path` dependency pinned from its working folder, which names no commit. An asset the other pipeline had not built when it was pinned does not stop it, and nor does a dependency that declares nothing. Before, a pipeline with no lockfile was snapshotted with its inputs recorded as empty. Each gap is listed with what to run. Decided by the maintainer on 2026-10-16.
+`chartbook snapshot` is made only when the pipeline's pins account for every dependency: the check `chartbook pin --frozen` makes (every dependency in the lockfile, pinned from where the manifest says, its bytes in the store); no `path` dependency pinned from its working folder, which names no commit; and each snapshot pinned from in the store, holding every hash pinned from it, so a lockfile changed by hand is caught. Nothing that cannot have been read stops it: an asset the other pipeline had not built when it was pinned, or a dependency of which nothing is pinned. Before, a pipeline with no lockfile was snapshotted with its inputs recorded as empty. Each gap is listed with what to run. `chartbook run --snapshot` makes the check after it pins and before it builds. Decided by the maintainer on 2026-10-16.
 
 ### Documented — a store in a synced folder
 

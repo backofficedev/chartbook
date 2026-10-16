@@ -1203,57 +1203,100 @@ def _write(snapshot: Snapshot, store: Store) -> Path:
     )
 
 
-def require_lineage(directory: Union[str, Path], pipeline: str, store: Store) -> None:
-    """Refuse a snapshot whose pins do not account for every dependency: a snapshot carries its lineage.
+def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> list[str]:
+    """What stands between a pipeline's pins and its full lineage, one line each with what to run; empty if nothing.
 
     A snapshot records what its pipeline was pinned to (``inputs``: each
     dependency's commit and the hash over its pins), and the assets it holds
-    were made from those bytes. A dependency that is not pinned, pinned from
-    somewhere the manifest no longer names, or pinned to bytes the store
-    does not have, would leave a gap in that record. So the check
-    ``chartbook pin --frozen`` makes comes first (:func:`chartbook.lock.verify`),
-    less an asset the other pipeline had not built when it was pinned, which
-    nothing can have read; and a ``path`` dependency pinned from its working
-    folder (``--from-folder``) is refused too, as it names no commit.
+    were made from those bytes. So first the check ``chartbook pin --frozen``
+    makes (:func:`chartbook.lock.verify`): a lockfile, every dependency in
+    it, pinned from where the manifest says, its bytes in the store. Then,
+    for a ``path`` dependency something was pinned from: that it was pinned
+    from a snapshot, not its working folder (``--from-folder`` names no
+    commit), and that the store has that snapshot and it holds every hash
+    pinned from it, so that a lockfile changed by hand, or brought from
+    another store, is caught.
+
+    Nothing that could not have been read is a gap: an asset the other
+    pipeline had not built when it was pinned, and a dependency of which
+    nothing is pinned (it declares nothing, or has no snapshot yet). Reads
+    that do not go through the lockfile (a load through a catalog, a model
+    version named by its hash) are not seen here.
+
+    :raises LockError: If the lockfile is there and cannot be read.
+    :raises ValueError: If the manifest's ``[dependencies]`` is malformed.
+    """
+    from chartbook.lock import LOCK_FILE, read_lock, verify
+
+    directory = Path(directory)
+    store = store if store is not None else default_store()
+    checked = verify(directory, store)
+    locked = read_lock(directory / LOCK_FILE)
+    gaps = [
+        f"{problem.asset or problem.dependency or LOCK_FILE}: {problem.message}"
+        for problem in checked.problems
+        if problem.kind not in ("not_built", "nothing_pinned")
+    ]
+    if locked is None:
+        return gaps
+    found = None
+    for entry in locked.dependencies:
+        key = entry.get("id")
+        location = entry.get("location") or {}
+        # What was pinned with its bytes, the labels' records apart (a label
+        # names a version that any snapshot of the pipeline may hold)
+        pinned = {
+            asset_id: record["content_hash"]
+            for asset_id, record in locked.assets_of(key).items()
+            if record.get("content_hash") and not (record.get("ref") or {}).get("rev")
+        }
+        if location.get("kind") != "path" or not pinned:
+            continue
+        commit, made_at = location.get("commit"), entry.get("snapshot")
+        if not (commit and made_at):
+            gaps.append(
+                f"{key}: is pinned from its working folder, not from a snapshot, so nothing says "
+                f"which commit its bytes came from. `chartbook update {key}` pins its newest snapshot "
+                f"(its owner makes one with `chartbook snapshot`)."
+            )
+            continue
+        if found is None:
+            found, _ = readable_snapshots(store)
+        held = next((t for t in found if t.commit == commit and t.made_at == made_at), None)
+        if held is None:
+            gaps.append(
+                f"{key}: the lockfile pins its snapshot at {commit[:7]}, made {made_at}, and the store at "
+                f"{store} has no such snapshot, so nothing says what it was made from. "
+                f"`chartbook update {key}` pins one the store has."
+            )
+            continue
+        holds = {record.get("content_hash") for record in held.assets.values() if record.get("content_hash")}
+        for asset_id, content_hash in sorted(pinned.items()):
+            if content_hash not in holds:
+                gaps.append(
+                    f"{asset_id}: is pinned at {content_hash[:19]}…, which its snapshot at {commit[:7]} does "
+                    f"not hold: the lockfile was changed by hand, or came from another store. "
+                    f"`chartbook update {key}` pins it again."
+                )
+    return gaps
+
+
+def require_lineage(directory: Union[str, Path], pipeline: str, store: Optional[Store] = None) -> None:
+    """Refuse a snapshot whose pins do not give its full lineage (:func:`lineage_gaps`).
 
     :raises SnapshotError: Listing each gap and what to run.
     """
-    from chartbook.lock import LOCK_FILE, LockError, read_lock, verify
+    from chartbook.lock import LockError
 
-    directory = Path(directory)
     try:
-        checked = verify(directory, store)
-        locked = read_lock(directory / LOCK_FILE)
+        gaps = lineage_gaps(directory, store)
     except (LockError, ValueError) as error:
         raise SnapshotError(f"{pipeline} cannot have a snapshot: {error}") from None
-    entries = {entry.get("id"): entry for entry in (locked.dependencies if locked is not None else [])}
-
-    def a_gap(problem) -> bool:
-        if problem.kind == "not_built":
-            return False
-        # Nothing pinned of a dependency that was found at a commit: it declares
-        # nothing, so there is nothing it could have read
-        resolved = (entries.get(problem.dependency) or {}).get("location", {}).get("commit")
-        return not (problem.kind == "nothing_pinned" and resolved)
-
-    gaps = [
-        f"{problem.asset or problem.dependency or 'chartbook.lock'}: {problem.message}"
-        for problem in checked.problems
-        if a_gap(problem)
-    ]
-    for entry in entries.values():
-        location = entry.get("location") or {}
-        if location.get("kind") == "path" and not (location.get("commit") and entry.get("snapshot")):
-            gaps.append(
-                f"{entry.get('id')}: is pinned from its working folder, not from a snapshot, so nothing "
-                f"says which commit its bytes came from. `chartbook update {entry.get('id')}` pins its "
-                f"newest snapshot (its owner makes one with `chartbook snapshot`)."
-            )
     if gaps:
         shown = "\n".join(f"  {gap}" for gap in gaps)
         raise SnapshotError(
             f"{pipeline} cannot have a snapshot: its pins do not account for every dependency, and a "
-            f"snapshot carries its lineage.\n{shown}"
+            f"snapshot carries its lineage.\n{shown}\nThen commit chartbook.lock, and snapshot again."
         )
 
 

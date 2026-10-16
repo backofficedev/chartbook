@@ -587,6 +587,21 @@ def run(
                 report.reason = "what it depends on could not be pinned"
                 break
 
+        if building and snapshot and step.source == "asked":
+            # Its snapshot will carry its lineage: found out now, with what
+            # was just pinned, and not after the build
+            try:
+                gaps = snapshots.lineage_gaps(step.directory, store)
+            except (lock.LockError, ValueError) as error:
+                gaps = [str(error)]
+            if gaps:
+                report.failed, report.exit_code = step, 1
+                report.reason = (
+                    "its pins do not account for every dependency, so it could not have a snapshot, "
+                    "and nothing was built:\n" + "\n".join(f"  {gap}" for gap in gaps)
+                ).rstrip(".")
+                break
+
         where = "" if step.directory == here else f"    in {step.directory}"
         echo(f"{step.id}: {script}{where}")
         code = execute(command, step.directory, script)
