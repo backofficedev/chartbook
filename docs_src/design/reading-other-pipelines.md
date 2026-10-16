@@ -274,7 +274,10 @@ Run `chartbook pin`, then snapshot again.
 It is the check `chartbook pin --frozen` already makes, run first. B's snapshot then holds B's
 outputs and its lockfile; A's bytes are in the store already, named by that lockfile.
 
-**Recommended: 6b.**
+**Recommended: 6b.** *Decided by the maintainer 2026-10-16: 6b, a snapshot only with full
+lineage by its pins.* Being built: `chartbook snapshot` runs the `--frozen` check first, and also
+refuses a dependency pinned from a working folder. An upstream asset that was not built when it
+was pinned does not stop it, since B cannot have read it.
 
 ## How strict, where
 
@@ -305,4 +308,4 @@ With the recommended options:
 3. An undeclared pipeline: 3a, **3b** (recommended) or 3c.
 4. No snapshot, a working folder: 4a or **4b** (recommended).
 5. Outside a pipeline: 5a (your suggestion) or 5b (my lean).
-6. What a snapshot requires: **6b** (recommended).
+6. What a snapshot requires: **6b**, *decided 2026-10-16*.
