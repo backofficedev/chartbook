@@ -343,9 +343,8 @@ def folder_of_store_url(url: str) -> Path:
     kind = store_kind(url)
     if kind != "folder":
         raise ValueError(
-            f"The store {url!r} is a {kind}:// store, and ChartBook has no such store built: "
-            f"only a folder. (An object store or a database as the store is planned; see the "
-            f"design page on stores and backends.)"
+            f"The store {url!r} is a {kind}:// store, and this needs a folder: only a folder "
+            f"store is built in; another kind is a plugin, found by `chartbook.store.store_for_url()`."
         )
     try:
         return Path(os.path.abspath(Path(_folder_text(url)).expanduser()))

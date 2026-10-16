@@ -738,7 +738,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             asset_id,
             "not_in_store",
             f"{asset_id!r} is pinned at {content_hash}, and the store at "
-            f"{store.root} does not have it. Run `chartbook pin` in "
+            f"{store} does not have it. Run `chartbook pin` in "
             f"{manifest_dir}: it puts it back if it can, and says what to do "
             f"if it cannot.",
         )
@@ -751,7 +751,7 @@ def _held(store, record: dict) -> Location:
     from chartbook import hashing
     from chartbook.utils import is_glob_pattern
 
-    held = store.object_path(record["content_hash"])
+    held = store.get(record["content_hash"])
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
         from chartbook.snapshot import materialized_name
@@ -845,7 +845,7 @@ def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Locati
             asset.rev,
             "not_in_store",
             f"Version {snapshot.version_name(matches[0], hashes)} of {local} was "
-            f"made{pointing}, and the store at {store.root} no longer has its "
+            f"made{pointing}, and the store at {store} no longer has its "
             f"bytes.",
         )
     return _held(store, records[matches[0]])
@@ -961,7 +961,7 @@ def _resolve_pinned_version(
             asset_id,
             "not_in_store",
             f"Version {pinned.rev} of {without} is named by a snapshot, and its "
-            f"bytes are not in the store at {store.root}.",
+            f"bytes are not in the store at {store}.",
         )
     return _held(store, taken.assets[local])
 

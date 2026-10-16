@@ -78,7 +78,6 @@ import os
 import platform
 import re
 import subprocess
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -96,8 +95,6 @@ from chartbook.utils import is_glob_pattern
 #: The version of a snapshot record's envelope.
 SCHEMA = "chartbook/snapshot/v1"
 
-#: Where snapshot records are, under the store's root.
-SNAPSHOTS_DIR = "snapshots"
 
 #: The folder, under a commit's, for a pipeline at the top of its repository.
 TOP = "_top"
@@ -108,17 +105,11 @@ TOP = "_top"
 #: fill a disk that has no copy-on-write clones.
 KEEP_DAYS = 30
 
-#: Beside a pipeline's records: the folders its snapshots were made from, one
-#: per line. Not a record, so it has no ``.json``. It is how ``store gc`` finds
-#: the manifest whose labels say which versions to keep.
-ORIGINS_FILE = "origins"
-
 #: The kinds of link a snapshot's files are stored with: a copy-on-write
 #: clone, or a copy. Never a hard link or a symlink, which are the
 #: pipeline's own file and change when it is rewritten.
 LINKS = ("reflink", "copy")
 
-_FULL_COMMIT = re.compile(r"^[0-9a-f]{40}$")
 
 
 class SnapshotError(Exception):
@@ -563,21 +554,19 @@ def uncommitted(directory: Union[str, Path], ignoring: tuple = ()) -> list[str]:
     return found
 
 
-def _folder(store: Store, commit: str, subdirectory: str) -> Path:
-    """Where the records of one pipeline at one commit are kept.
+def record_name(subdirectory: str) -> str:
+    """The name a pipeline's records are kept under in a store, from its folder in its repository.
 
-    The pipeline's folder in its repository names it, with ``--`` for
-    ``/``. A folder whose own name holds ``--``, or is ``_top``, would then
-    be mistaken for another; such a one gets a short hash of itself as
-    well, so that two pipelines never share a folder here.
+    The folder names it, with ``--`` for ``/``. A folder whose own name
+    holds ``--``, or is ``_top``, would then be mistaken for another; such
+    a one gets a short hash of itself as well, so that two pipelines never
+    share a name here.
     """
-    if not _FULL_COMMIT.match(commit):
-        raise ValueError(f"{commit!r} is not a full commit hash.")
     clean = subdirectory.strip("/")
     name = clean.replace("/", "--") or TOP
     if clean and ("--" in clean or name == TOP):
         name += "~" + hashlib.sha256(clean.encode("utf-8")).hexdigest()[:8]
-    return store.root / SNAPSHOTS_DIR / commit / name
+    return name
 
 
 def read(path: Union[str, Path]) -> Snapshot:
@@ -619,10 +608,7 @@ def find(store: Store, commit: str, subdirectory: str = "") -> list[Snapshot]:
     :param subdirectory: The pipeline's folder in its repository.
     :raises SnapshotError: If one of them cannot be read.
     """
-    folder = _folder(store, commit, subdirectory)
-    if not folder.is_dir():
-        return []
-    found = [read(file) for file in folder.glob("*.json")]
+    found = [read(file) for file in store.snapshot_files(commit, record_name(subdirectory))]
     return sorted(found, key=lambda s: (s.made_at, _count(s.path)), reverse=True)
 
 
@@ -647,11 +633,7 @@ def newest_for(
     """
     store = store if store is not None else default_store()
     code = code_of(directory)
-    kept = store.root / SNAPSHOTS_DIR
-    try:
-        commits = {name for name in os.listdir(kept) if _FULL_COMMIT.match(name)}
-    except FileNotFoundError:
-        commits = set()
+    commits = store.snapshot_commits()
     if not commits:
         return None, code
     # Newest first, and the commit the folder is on comes first of all
@@ -676,11 +658,7 @@ def history(directory: Union[str, Path], store: Optional[Store] = None) -> list[
     """
     store = store if store is not None else default_store()
     code = code_of(directory)
-    kept = store.root / SNAPSHOTS_DIR
-    try:
-        commits = {name for name in os.listdir(kept) if _FULL_COMMIT.match(name)}
-    except FileNotFoundError:
-        return []
+    commits = store.snapshot_commits()
     if not commits:
         return []
     # A store holds snapshots of many repositories; these are this one's.
@@ -749,10 +727,7 @@ def all_snapshots(store: Store) -> list[Snapshot]:
     :raises SnapshotError: If a record cannot be read. Nothing should be
         removed from a store that cannot say what it is keeping.
     """
-    directory = store.root / SNAPSHOTS_DIR
-    if not directory.is_dir():
-        return []
-    found = [read(file) for file in directory.glob("*/*/*.json")]
+    found = [read(file) for file in store.all_snapshot_files()]
     return sorted(found, key=lambda taken: (taken.made_at, _count(taken.path)))
 
 
@@ -764,29 +739,11 @@ def all_hashes(store: Store) -> set[str]:
     return kept
 
 
-def _note_origin(folder: Path, top: Path) -> None:
-    """Note, beside a pipeline's records, the repository folder they came from."""
-    note = folder / ORIGINS_FILE
-    line = str(top)
-    try:
-        known = note.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
-        known = []
-    if line not in known:
-        with open(note, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
-
-
 def origins(store: Store, taken: Snapshot) -> list[Path]:
     """The repository folders a pipeline's snapshots were made from."""
-    note = _folder(store, taken.commit, taken.subdirectory) / ORIGINS_FILE
-    try:
-        lines = note.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
-        return []
-    # Only an absolute folder is a place to look; anything else in the
-    # file says nothing
-    return [Path(line) for line in lines if line and os.path.isabs(line)]
+    noted = store.origins(taken.commit, record_name(taken.subdirectory))
+    # Only an absolute folder is a place to look; anything else noted says nothing
+    return [Path(line) for line in noted if os.path.isabs(line)]
 
 
 def _first_holding(directory: Path, name: str, content_hash: str, store: Store) -> Optional[dict]:
@@ -1143,24 +1100,9 @@ def remove(store: Store, taken: Snapshot) -> bool:
 
     :returns: True if the record was there.
     """
-    if taken.path is None or not taken.path.is_file():
+    if taken.path is None:
         return False
-    taken.path.unlink()
-    folder = taken.path.parent
-    if not any(folder.glob("*.json")):
-        # The last record of this pipeline at this commit: its note of
-        # origins goes too, and the folders if nothing else is in them. A
-        # record another process is writing this moment is left alone.
-        try:
-            (folder / ORIGINS_FILE).unlink()
-        except OSError:
-            pass
-        for empty in (folder, folder.parent):
-            try:
-                empty.rmdir()
-            except OSError:
-                break
-    return True
+    return store.remove_snapshot(taken.path)
 
 
 def _count(path: Path) -> int:
@@ -1181,24 +1123,10 @@ def _now() -> str:
 
 def _write(snapshot: Snapshot, store: Store) -> Path:
     """Write a snapshot's record, whole or not at all, and return its file."""
-    folder = _folder(store, snapshot.commit, snapshot.subdirectory)
-    folder.mkdir(parents=True, exist_ok=True)
     stamp = snapshot.made_at.replace("-", "").replace(":", "")
-    final = folder / f"{stamp}.json"
-    count = 1
-    while final.exists():
-        count += 1
-        final = folder / f"{stamp}-{count}.json"
-    temporary = folder / f"{uuid.uuid4().hex}.tmp"
-    try:
-        with open(temporary, "w", encoding="utf-8") as f:
-            json.dump(snapshot.to_document(), f, indent=2, ensure_ascii=False)
-            f.write("\n")
-        os.replace(temporary, final)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
-    return final
+    return store.write_snapshot(
+        snapshot.commit, record_name(snapshot.subdirectory), stamp, snapshot.to_document()
+    )
 
 
 def require_committed(
@@ -1417,7 +1345,7 @@ def make(
     before = find(store, code.commit, code.subdirectory)
     if before and before[0].content() == snapshot.content():
         if before[0].built_by_run or not built_by_run:
-            _note_origin(before[0].path.parent, code.top)
+            store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(before[0], False, not_built, skipped_labels=labels_skipped(raw))
 
     # A model whose bytes no snapshot of this pipeline has had is a new version
@@ -1431,7 +1359,7 @@ def make(
             new_versions.append((name, version_name(content_hash, had)))
 
     path = _write(snapshot, store)
-    _note_origin(path.parent, code.top)
+    store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
     snapshot = Snapshot(
         snapshot.pipeline,
         snapshot.commit,

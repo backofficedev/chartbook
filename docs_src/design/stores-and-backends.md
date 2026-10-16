@@ -4,7 +4,7 @@
 A design document, written 2026-10-16 after cross-pipeline dependencies were made to work on one
 machine ({doc}`overview`, step 4, and PR 65). It plans how ChartBook keeps the same experience for
 the person using it, from a laptop with nothing installed to an organization's own storage and
-warehouses. Status: **the settings layers are built (2026-10-16); the store interface is the next work; the rest is proposed.**
+warehouses. Status: **the settings layers and the store interface are built (2026-10-16); the first remote store is the next work; the rest is proposed.**
 The decisions the maintainer has taken are marked *decided*; the rest is *proposed*.
 ```
 
@@ -103,8 +103,10 @@ then answer with a URL. `put()` makes objects by reflink, hard link or copy; tho
 speed tricks, and an upload replaces them. And the snapshot folder is listed directly; the
 interface's snapshot methods replace that.
 
-The interface is extracted when the second implementation is written, not before, so that it is
-shaped by a real one. The first remote store is S3 through one object-store library, behind
+The interface was extracted before the second implementation, against the maintainer's
+earlier preference, because every caller already went through one class and the snapshot
+module's four folder accesses were the only thing left to move; a plugin will reshape it if it
+must. The first remote store is S3 through one object-store library, behind
 `chartbook[s3]`; the headline use is a build server running `chartbook run --frozen` against a
 read-only shared store, which already needs no write to it.
 
@@ -126,7 +128,11 @@ formalized from what DuckDB does today, and the first warehouse adapter shapes t
 1. This page, and the settings layers with `[store] url`. *Built 2026-10-16:* the organization's file is read where the user's is silent, key by key; each layer is put in order before the merge, so a user's `[store] path` (read as `url` with a warning) still wins over the organization's `url`; a fault in the organization's file is a warning and the file is ignored, a fault in the user's names the file; a relative folder is relative to its settings file.
 2. The store interface extracted, the folder store as its implementation, a test double, and the
    snapshot folder access moved behind it. No behaviour changes; the matrix and the live examples
-   prove it.
+   prove it. *Built 2026-10-16:* `chartbook.store.Store` is the interface (objects, roots, snapshot
+   records), `FolderStore` the implementation; `store_for_url()` makes a store from the settings'
+   URL and finds another kind by its scheme in the entry-point group `chartbook.stores`;
+   `tests/test_store_contract.py` is what any kind must pass. In place of a test double, the
+   contract test runs against each implementation.
 3. The S3 store behind `chartbook[s3]`; readers accept URLs.
 4. The backend interface formalized from DuckDB; the first warehouse adapter with version pins.
 

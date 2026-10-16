@@ -23,7 +23,7 @@ from chartbook import config, hashing, index, lock
 from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.lock import LOCK_FILE, SCHEMA, Lock, LockError, PinEvent
-from chartbook.store import Root, Store, StoreError
+from chartbook.store import FolderStore, Root, Store, StoreError
 from tests.fixtures import create_catalog_project
 
 HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
@@ -81,7 +81,7 @@ def work(tmp_path):
 
 @pytest.fixture
 def store(work):
-    return Store(work / "store")
+    return FolderStore(work / "store")
 
 
 @pytest.fixture
@@ -875,7 +875,7 @@ class TestGc:
         _age(store)
         plan = lock.plan_gc(store)
         assert plan.lockfiles == [] and plan.delete == [(HELLO, 5)]
-        assert lock.plan_gc(Store(work / "no_store")).delete == []
+        assert lock.plan_gc(FolderStore(work / "no_store")).delete == []
 
 
 class TestCommands:
@@ -884,7 +884,7 @@ class TestCommands:
         """Run commands in the downstream pipeline, with a scratch store."""
         monkeypatch.setenv(config.STORE_ENV_VAR, str(work / "store"))
         monkeypatch.chdir(downstream)
-        return Store(work / "store")
+        return FolderStore(work / "store")
 
     def _run(self, *args, **kwargs):
         if args and args[0] in ("pin", "update"):

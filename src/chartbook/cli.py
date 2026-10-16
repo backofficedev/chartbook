@@ -1886,7 +1886,7 @@ def _explain_os_error(error):
 
     if isinstance(error, OSError) and lock.is_read_only(error):
         try:
-            root = str(default_store().root)
+            root = str(default_store())
         except Exception:  # pragma: no cover - the store path is unreadable
             root = ""
         if root and str(getattr(error, "filename", "") or "").startswith(root):
@@ -2173,12 +2173,12 @@ def store_verify():
         click.echo(problem.format())
     if problems:
         click.echo(
-            f"\n{len(problems)} of {total} object(s) in {the_store.root} are "
+            f"\n{len(problems)} of {total} object(s) in {the_store} are "
             f"not what their names say.",
             err=True,
         )
         raise SystemExit(1)
-    click.echo(f"{the_store.root}: OK ({total} object(s))")
+    click.echo(f"{the_store}: OK ({total} object(s))")
 
 
 def _format_bytes(size):

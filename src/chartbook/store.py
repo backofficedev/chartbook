@@ -21,19 +21,23 @@ An object is a directory holding the asset's files under their own names.
 That is why a path into the store still ends in ``.parquet``, and why a
 partitioned dataset keeps folders like ``year=2024/``.
 
-Four operations are the whole interface, and are what a second kind of
-store (one a team shares, one that is hosted) would have to provide::
+What a store is, whatever holds it, is :class:`Store`: objects named by
+their content hash, the lockfiles that keep them, and the snapshot
+records. The folder store, :class:`FolderStore`, is the one that is built::
 
-    from chartbook.store import Store
+    from chartbook.store import FolderStore
 
-    store = Store("~/.chartbook/store")
+    store = FolderStore("~/.chartbook/store")
     stored = store.put("_data/treasury_rates.parquet")   # -> its hash
     store.has(stored.content_hash)                       # True
     store.get(stored.content_hash)                       # the object's directory
     store.delete(stored.content_hash)
 
-There is no base class and no registry of stores. One exists, so the seam
-is this class; an interface is extracted when a second is written.
+Another kind, an object store or a database, is a plugin: a class that
+provides the same methods, found by the scheme of the store's URL in the
+entry-point group ``chartbook.stores`` (:func:`store_for_url`). The store
+is a setting of the machine, never of a pipeline; see
+:func:`chartbook.config.get_store_url`.
 
 **The declared file never moves.** ``put`` leaves ``path`` where it is and
 makes the object from it by the cheapest means the disk allows, tried in
@@ -70,6 +74,8 @@ from __future__ import annotations
 import ctypes
 import ctypes.util
 import errno
+import abc
+import functools
 import hashlib
 import json
 import os
@@ -84,7 +90,6 @@ from pathlib import Path
 from typing import Iterable, Iterator, Optional, Union
 
 from chartbook import hashing
-from chartbook.config import get_store_path
 
 #: The ways the store can hold a file, cheapest first. The order is the
 #: design's ("Links, not copies").
@@ -316,7 +321,99 @@ def _remove_tree(directory: Path) -> None:
         shutil.rmtree(directory, onerror=retry_writable)
 
 
-class Store:
+#: Where a folder store keeps snapshot records: ``snapshots/<commit>/<name>/<time>.json``.
+SNAPSHOTS_DIR = "snapshots"
+#: The file beside a pipeline's records that notes the folders they were made from.
+ORIGINS_FILE = "origins"
+_FULL_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+
+
+class Store(abc.ABC):
+    """What a store is, whatever holds it.
+
+    Objects named by their content hash, the lockfiles (roots) that keep
+    them, and the snapshot records, which say what each commit of a
+    pipeline built. A kind of store provides these methods and nothing
+    else is asked of it. :class:`FolderStore` is the one that is built.
+    """
+
+    @abc.abstractmethod
+    def put(self, path: Union[str, Path], links: Iterable[str] = LINKS) -> "StoredObject":
+        """Store what a declared ``path`` names, and return its hash."""
+
+    @abc.abstractmethod
+    def has(self, content_hash: str) -> bool:
+        """Whether the store holds an object with this hash."""
+
+    @abc.abstractmethod
+    def get(self, content_hash: str) -> Path:
+        """Where a reader opens the object with this hash: its files under their own names."""
+
+    @abc.abstractmethod
+    def delete(self, content_hash: str) -> bool:
+        """Remove the object with this hash; True if there was one."""
+
+    @abc.abstractmethod
+    def hashes(self) -> Iterator[str]:
+        """The hash of every object in the store, in order."""
+
+    @abc.abstractmethod
+    def size_of(self, content_hash: str) -> int:
+        """The total size in bytes of an object's files."""
+
+    @abc.abstractmethod
+    def age_of(self, content_hash: str, now: Optional[float] = None) -> float:
+        """How many seconds ago an object was put in the store."""
+
+    @abc.abstractmethod
+    def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list["StoreProblem"]:
+        """Hash objects again, and report each that is not what its name says."""
+
+    @abc.abstractmethod
+    def add_root(self, lockfile: Union[str, Path], hashes: Iterable[str]) -> None:
+        """Note that a lockfile names these objects, so that they are kept."""
+
+    @abc.abstractmethod
+    def remove_root(self, lockfile: Union[str, Path]) -> bool:
+        """Forget a lockfile; True if the store had a note of it."""
+
+    @abc.abstractmethod
+    def roots(self) -> list["Root"]:
+        """Every lockfile the store has a note of."""
+
+    @abc.abstractmethod
+    def snapshot_commits(self) -> set[str]:
+        """Every commit some snapshot in the store was made at."""
+
+    @abc.abstractmethod
+    def snapshot_files(self, commit: str, name: str) -> list[Path]:
+        """The records of one pipeline (by its record name) at one commit, as files to read."""
+
+    @abc.abstractmethod
+    def all_snapshot_files(self) -> list[Path]:
+        """Every snapshot record in the store, as files to read."""
+
+    @abc.abstractmethod
+    def write_snapshot(self, commit: str, name: str, stamp: str, document: dict) -> Path:
+        """Write one record, whole or not at all, and return its file."""
+
+    @abc.abstractmethod
+    def remove_snapshot(self, path: Path) -> bool:
+        """Remove one record; True if it was there."""
+
+    @abc.abstractmethod
+    def note_origin(self, commit: str, name: str, top: str) -> None:
+        """Note, beside a pipeline's records at a commit, the repository folder they came from."""
+
+    @abc.abstractmethod
+    def origins(self, commit: str, name: str) -> list[str]:
+        """The repository folders a pipeline's records at a commit were made from, as noted."""
+
+    def __str__(self) -> str:
+        return repr(self)
+
+
+class FolderStore(Store):
     """A store in a directory on this machine.
 
     :param root: The store's directory. It need not exist: it is made when
@@ -328,7 +425,89 @@ class Store:
         self._layout_checked = False
 
     def __repr__(self) -> str:
-        return f"Store({str(self.root)!r})"
+        return f"FolderStore({str(self.root)!r})"
+
+    def __str__(self) -> str:
+        return str(self.root)
+
+    def snapshot_folder(self, commit: str, name: str) -> Path:
+        """Where the records of one pipeline at one commit are kept."""
+        if not _FULL_COMMIT.match(commit):
+            raise ValueError(f"{commit!r} is not a full commit hash.")
+        return self.root / SNAPSHOTS_DIR / commit / name
+
+    def snapshot_commits(self) -> set[str]:
+        try:
+            return {n for n in os.listdir(self.root / SNAPSHOTS_DIR) if _FULL_COMMIT.match(n)}
+        except FileNotFoundError:
+            return set()
+
+    def snapshot_files(self, commit: str, name: str) -> list[Path]:
+        folder = self.snapshot_folder(commit, name)
+        return sorted(folder.glob("*.json")) if folder.is_dir() else []
+
+    def all_snapshot_files(self) -> list[Path]:
+        directory = self.root / SNAPSHOTS_DIR
+        return sorted(directory.glob("*/*/*.json")) if directory.is_dir() else []
+
+    def write_snapshot(self, commit: str, name: str, stamp: str, document: dict) -> Path:
+        folder = self.snapshot_folder(commit, name)
+        folder.mkdir(parents=True, exist_ok=True)
+        final = folder / f"{stamp}.json"
+        count = 1
+        while final.exists():
+            count += 1
+            final = folder / f"{stamp}-{count}.json"
+        temporary = folder / f"{uuid.uuid4().hex}.tmp"
+        try:
+            with open(temporary, "w", encoding="utf-8") as f:
+                json.dump(document, f, indent=2, ensure_ascii=False)
+                f.write("\n")
+            os.replace(temporary, final)
+        finally:
+            if temporary.exists():
+                temporary.unlink()
+        return final
+
+    def remove_snapshot(self, path: Path) -> bool:
+        path = Path(path)
+        if not path.is_file():
+            return False
+        path.unlink()
+        folder = path.parent
+        if not any(folder.glob("*.json")):
+            # The last record of this pipeline at this commit: its note of
+            # origins goes too, and the folders if nothing else is in them. A
+            # record another process is writing this moment is left alone.
+            try:
+                (folder / ORIGINS_FILE).unlink()
+            except OSError:
+                pass
+            for empty in (folder, folder.parent):
+                try:
+                    empty.rmdir()
+                except OSError:
+                    break
+        return True
+
+    def note_origin(self, commit: str, name: str, top: str) -> None:
+        folder = self.snapshot_folder(commit, name)
+        folder.mkdir(parents=True, exist_ok=True)
+        note = folder / ORIGINS_FILE
+        try:
+            known = note.read_text(encoding="utf-8").splitlines()
+        except FileNotFoundError:
+            known = []
+        if top not in known:
+            with open(note, "a", encoding="utf-8") as f:
+                f.write(top + "\n")
+
+    def origins(self, commit: str, name: str) -> list[str]:
+        note = self.snapshot_folder(commit, name) / ORIGINS_FILE
+        try:
+            return [line for line in note.read_text(encoding="utf-8").splitlines() if line]
+        except FileNotFoundError:
+            return []
 
     def object_path(self, content_hash: str) -> Path:
         """Where the object with a given hash is, or would be.
@@ -339,7 +518,12 @@ class Store:
         return self.root / OBJECTS_DIR / algorithm / digest[:2] / digest[2:]
 
     def has(self, content_hash: str) -> bool:
-        """Whether the store holds an object with this hash."""
+        """Whether the store holds an object with this hash.
+
+        :raises StoreError: If the store has a layout this version does not
+            read, as :meth:`get` does: what it holds cannot be said.
+        """
+        self._check_layout()
         return self.object_path(content_hash).is_dir()
 
     def get(self, content_hash: str) -> Path:
@@ -716,12 +900,67 @@ class Store:
         return f"its content is no longer what its name says (now {actual}){outside}"
 
 
+#: The entry-point group a kind of store is found in, by its URL's scheme.
+STORE_PLUGIN_GROUP = "chartbook.stores"
+
+
+def store_for_url(url: str) -> Store:
+    """The store a URL names: a folder, or a kind a plugin provides.
+
+    A bare path or ``file:///`` is a :class:`FolderStore`. Another scheme is
+    looked up in the entry-point group ``chartbook.stores``: an entry named
+    by the scheme, whose value is a class taking the URL.
+
+    :raises ValueError: If the URL names a kind of store nothing provides;
+        the message names the scheme.
+    """
+    from chartbook.config import folder_of_store_url, store_kind
+
+    kind = store_kind(url)
+    if kind == "folder":
+        return FolderStore(folder_of_store_url(url))
+    plugin = _plugin_store_class(kind)
+    if plugin is None:
+        raise ValueError(
+            f"The store {url!r} is a {kind}:// store, and nothing provides one: only a folder "
+            f"store is built in, and no installed package has a `{STORE_PLUGIN_GROUP}` entry "
+            f"point named {kind!r}. (An object store or a database as the store is planned; "
+            f"see the design page on stores and backends.)"
+        )
+    return plugin(url)
+
+
+@functools.lru_cache(maxsize=None)
+def _plugin_store_class(kind: str):
+    """The class a plugin provides for a kind of store, or None.
+
+    Looked up once per process: the entry points are read from installed
+    packages, which do not change while ChartBook runs. The first entry
+    with the name wins; a package that installs two is its own problem.
+
+    :raises ValueError: If the plugin is there and cannot be loaded, naming it.
+    """
+    from importlib.metadata import entry_points
+
+    for entry in entry_points(group=STORE_PLUGIN_GROUP):
+        if entry.name == kind:
+            try:
+                return entry.load()
+            except Exception as error:  # noqa: BLE001 - whatever the plugin's import raised
+                raise ValueError(
+                    f"The store plugin {entry.value!r} for {kind}:// stores cannot be loaded: {error}"
+                ) from None
+    return None
+
+
 def default_store() -> Store:
     """The store this machine's ChartBook uses.
 
     ``CHARTBOOK_STORE`` if it is set; otherwise ``[store] url`` in the
     user's ``~/.chartbook/settings.toml``, then in the organization's
-    settings file; otherwise ``~/.chartbook/store``. Only a folder store is
-    built; see :func:`chartbook.config.get_store_url`.
+    settings file; otherwise ``~/.chartbook/store``. A folder, or a kind a
+    plugin provides; see :func:`chartbook.config.get_store_url`.
     """
-    return Store(get_store_path())
+    from chartbook.config import get_store_url
+
+    return store_for_url(get_store_url())
