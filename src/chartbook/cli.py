@@ -1506,7 +1506,6 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
     """
     _check_sphinx_installed()
 
-    from chartbook.config import get_default_catalog_path
 
     catalog_path = _default_catalog_path()
     if catalog_path is None or not catalog_path.is_file():
@@ -1555,7 +1554,6 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
 @catalog.command("browse")
 def catalog_browse():
     """Open the global catalog documentation in your default browser."""
-    from chartbook.config import get_default_catalog_path
 
     catalog_path = _default_catalog_path()
     if catalog_path is None:
@@ -1882,8 +1880,14 @@ def pin(project_dir, frozen, from_folder):
 def _explain_os_error(error):
     """An OSError as a sentence: what a read-only store means, else the error."""
     from chartbook import lock
-    from chartbook.store import default_store
+    from chartbook.store import ReadOnlyStoreError, default_store
 
+    if isinstance(error, ReadOnlyStoreError):
+        return (
+            f"{error} This had to write it: a git dependency's first pin, --from-folder, and a "
+            f"snapshot all put files into the store. Do it where the store can be written; or, "
+            f"if the store already has what the lockfile names, use --frozen."
+        )
     if isinstance(error, OSError) and lock.is_read_only(error):
         try:
             root = str(default_store())
@@ -2454,7 +2458,6 @@ def config():
     pipelines without an explicit ``catalog_path`` argument.
     """
     from chartbook.config import (
-        get_default_catalog_path,
         set_default_catalog_path,
     )
 

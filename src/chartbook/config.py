@@ -17,12 +17,15 @@ keeps their own choices for everything else::
     ├── settings.toml        # the user's settings
     ├── sources.toml         # the machine's urls and credentials for [sources]
     ├── store/               # the store, unless settings say otherwise
+    ├── cache/               # what was read from a remote store
     └── git/                 # clones of git dependencies
 
 ``[store] url`` says where the store is: a folder (a bare path or
-``file:///``), or, once a plugin provides it, another kind of store by its
-scheme. ``CHARTBOOK_STORE`` overrides it. ``[git] path`` and
-``CHARTBOOK_GIT_CACHE`` do the same for the git cache; ``[catalog] path``
+``file:///``), an S3 bucket (``s3://bucket/prefix``, with
+``pip install chartbook[s3]``), or another kind of store a plugin provides,
+by its scheme. ``CHARTBOOK_STORE`` overrides it. ``[git] path`` and
+``CHARTBOOK_GIT_CACHE`` do the same for the git cache, ``[cache] path`` and
+``CHARTBOOK_CACHE`` for the cache of a remote store; ``[catalog] path``
 names the default catalog. Which store a machine uses is never a fact
 about a pipeline, so none of this is in a ``chartbook.toml``.
 """
@@ -43,6 +46,8 @@ SYSTEM_SETTINGS_ENV_VAR = "CHARTBOOK_SYSTEM_SETTINGS"
 
 #: The environment variable that says where git dependencies are fetched to.
 GIT_CACHE_ENV_VAR = "CHARTBOOK_GIT_CACHE"
+#: The environment variable that says where a remote store's objects are kept once read.
+CACHE_ENV_VAR = "CHARTBOOK_CACHE"
 
 
 def get_global_config_dir() -> Path:
@@ -177,7 +182,7 @@ def _normalized(settings: dict, origin: Path) -> dict:
     result: dict = {}
     for key, value in settings.items():
         result[key] = dict(value) if isinstance(value, dict) else value
-    for table in ("store", "git", "catalog"):
+    for table in ("store", "git", "cache", "catalog"):
         if table in result and not isinstance(result[table], dict):
             raise ValueError(
                 f"{origin}: [{table}] must be a table, e.g. [{table}] with "
@@ -207,6 +212,12 @@ def _normalized(settings: dict, origin: Path) -> dict:
         if not (isinstance(path, str) and path.strip()):
             raise ValueError(f"{origin}: [git] needs a 'path', e.g. path = \"/a/bigger/disk/chartbook-git\".")
         git["path"] = str(_absolute_if_folder(path.strip(), origin))
+    cache = result.get("cache")
+    if cache is not None:
+        path = cache.get("path")
+        if not (isinstance(path, str) and path.strip()):
+            raise ValueError(f"{origin}: [cache] needs a 'path', e.g. path = \"/a/bigger/disk/chartbook-cache\".")
+        cache["path"] = str(_absolute_if_folder(path.strip(), origin))
     catalog = result.get("catalog")
     if catalog is not None and "path" in catalog and not isinstance(catalog["path"], str):
         raise ValueError(f"{origin}: [catalog] path must be a string.")
@@ -307,9 +318,10 @@ def get_store_url() -> str:
        (:func:`get_system_settings_path`).
     4. ``~/.chartbook/store``.
 
-    A bare path is a folder. ``file://`` is a folder too. Another scheme
-    names another kind of store, which a plugin provides (none is built
-    yet). ``[store] path`` is still read, as a folder, with a warning. A
+    A bare path is a folder. ``file://`` is a folder too. ``s3://`` is a
+    bucket, with ``pip install chartbook[s3]``; another scheme names a kind
+    of store a plugin provides. ``[store] path`` is still read, as a
+    folder, with a warning. A
     relative folder in a settings file is relative to that file's folder.
 
     :raises ValueError: If the user's settings file is faulty; a fault in
@@ -391,6 +403,36 @@ def get_git_cache_path() -> Path:
         return Path(configured["path"])
 
     return get_global_config_dir() / "git"
+
+
+def get_cache_path() -> Path:
+    """Get the directory a remote store's objects and records are kept in once read.
+
+    A store in a bucket is read through a copy on this machine, laid out
+    as a folder store under a folder for that bucket and prefix
+    (:mod:`chartbook.stores.s3`). Resolution order:
+
+    1. The ``CHARTBOOK_CACHE`` environment variable.
+    2. ``cache.path`` from the user's settings, then the organization's
+       (:func:`read_settings`).
+    3. ``~/.chartbook/cache``.
+
+    The directory need not exist yet, and everything in it can be removed:
+    it is read again from the store.
+
+    :returns: The absolute path of the cache.
+    :rtype: Path
+    :raises ValueError: If ``cache.path`` in the settings file is not a path.
+    """
+    from_environment = os.environ.get(CACHE_ENV_VAR, "").strip()
+    if from_environment:
+        return Path(os.path.abspath(Path(from_environment).expanduser()))
+
+    configured = read_settings().get("cache")
+    if configured is not None:
+        return Path(configured["path"])
+
+    return get_global_config_dir() / "cache"
 
 
 def write_global_settings(settings: dict) -> None:

@@ -131,6 +131,19 @@ class ObjectNotFoundError(StoreError, LookupError):
     """Raised when the store holds no object with a given hash."""
 
 
+class ReadOnlyStoreError(StoreError):
+    """Raised when a store refused a write for want of permission.
+
+    A store a team shares is read-only for most machines on purpose, so a
+    caller that can do without the write (the note a pin leaves for ``gc``)
+    catches this and carries on; see :func:`chartbook.lock.is_read_only`.
+    """
+
+
+class StoreUnreachableError(StoreError):
+    """Raised when a remote store cannot be reached at all: no network, no service."""
+
+
 @dataclass(frozen=True)
 class StoredObject:
     """An object in the store.
@@ -334,7 +347,9 @@ class Store(abc.ABC):
     Objects named by their content hash, the lockfiles (roots) that keep
     them, and the snapshot records, which say what each commit of a
     pipeline built. A kind of store provides these methods and nothing
-    else is asked of it. :class:`FolderStore` is the one that is built.
+    else is asked of it. :class:`FolderStore` is the one every install
+    has; :class:`chartbook.stores.s3.S3Store` is a bucket, behind
+    ``pip install chartbook[s3]``.
     """
 
     @abc.abstractmethod
@@ -850,54 +865,58 @@ class FolderStore(Store):
             if not path.is_dir():
                 problems.append(StoreProblem(content_hash, path, "not in the store"))
                 continue
-            message = self._what_is_wrong(content_hash, path)
+            message = what_is_wrong(content_hash, path)
             if message is not None:
                 problems.append(StoreProblem(content_hash, path, message))
         return problems
 
-    @staticmethod
-    def _what_is_wrong(content_hash: str, path: Path) -> Optional[str]:
-        """What is wrong with one object; None if nothing is."""
-        files = sorted(hashing.directory_files(path))
-        if not files:
-            return "the object is empty"
-        for file in files:
-            if file.is_symlink() and not file.exists():
-                return (
-                    f"{file.relative_to(path).as_posix()} is a link to "
-                    f"{os.readlink(file)}, which is no longer there"
-                )
 
-        cache = hashing.HashCache()  # fresh, so every byte is read
-        try:
-            # An asset that is one file is named by the hash of that file.
-            # Its object may hold the same bytes under more than one name.
-            flat = all(file.parent == path for file in files)
-            if flat and all(
-                hashing.hash_file(file, cache).content_hash == content_hash
-                for file in files
-            ):
-                return None
-            # An asset of several files is named by the hash of their listing
-            actual = hashing.hash_files(files, path, cache).content_hash
-        except OSError as error:
-            return f"cannot be read: {error}"
-        if actual == content_hash:
-            return None
-        if len(files) == 1:
-            actual = hashing.hash_file(files[0], cache).content_hash
+def what_is_wrong(content_hash: str, path: Path) -> Optional[str]:
+    """What is wrong with one object, laid out as a folder; None if nothing is.
 
-        outside = ""
-        linked = [f for f in files if f.is_symlink() or f.stat().st_nlink > 1]
-        if linked:
-            name = linked[0].relative_to(path).as_posix()
-            where = (
-                f"a link to {os.readlink(linked[0])}"
-                if linked[0].is_symlink()
-                else "a hard link to a file outside the store"
+    *path* is the object's folder, with its files under their own names,
+    in any store that keeps or caches objects on a disk.
+    """
+    files = sorted(hashing.directory_files(path))
+    if not files:
+        return "the object is empty"
+    for file in files:
+        if file.is_symlink() and not file.exists():
+            return (
+                f"{file.relative_to(path).as_posix()} is a link to "
+                f"{os.readlink(file)}, which is no longer there"
             )
-            outside = f". {name} is {where}, which has been rewritten"
-        return f"its content is no longer what its name says (now {actual}){outside}"
+
+    cache = hashing.HashCache()  # fresh, so every byte is read
+    try:
+        # An asset that is one file is named by the hash of that file.
+        # Its object may hold the same bytes under more than one name.
+        flat = all(file.parent == path for file in files)
+        if flat and all(
+            hashing.hash_file(file, cache).content_hash == content_hash
+            for file in files
+        ):
+            return None
+        # An asset of several files is named by the hash of their listing
+        actual = hashing.hash_files(files, path, cache).content_hash
+    except OSError as error:
+        return f"cannot be read: {error}"
+    if actual == content_hash:
+        return None
+    if len(files) == 1:
+        actual = hashing.hash_file(files[0], cache).content_hash
+
+    outside = ""
+    linked = [f for f in files if f.is_symlink() or f.stat().st_nlink > 1]
+    if linked:
+        name = linked[0].relative_to(path).as_posix()
+        where = (
+            f"a link to {os.readlink(linked[0])}"
+            if linked[0].is_symlink()
+            else "a hard link to a file outside the store"
+        )
+        outside = f". {name} is {where}, which has been rewritten"
+    return f"its content is no longer what its name says (now {actual}){outside}"
 
 
 #: The entry-point group a kind of store is found in, by its URL's scheme.
@@ -924,8 +943,8 @@ def store_for_url(url: str) -> Store:
         raise ValueError(
             f"The store {url!r} is a {kind}:// store, and nothing provides one: only a folder "
             f"store is built in, and no installed package has a `{STORE_PLUGIN_GROUP}` entry "
-            f"point named {kind!r}. (An object store or a database as the store is planned; "
-            f"see the design page on stores and backends.)"
+            f"point named {kind!r}. An S3 bucket, s3://bucket/prefix, is a store ChartBook brings, "
+            f"with `pip install chartbook[s3]`; see the design page on stores and backends for the rest."
         )
     return plugin(url)
 

@@ -26,6 +26,8 @@ chartbook
 ../apidocs/chartbook/chartbook.writers.sphinx
 ../apidocs/chartbook/chartbook.hashing
 ../apidocs/chartbook/chartbook.store
+../apidocs/chartbook/chartbook.stores
+../apidocs/chartbook/chartbook.stores.s3
 ../apidocs/chartbook/chartbook.snapshot
 ../apidocs/chartbook/chartbook.lock
 ../apidocs/chartbook/chartbook.gitcache

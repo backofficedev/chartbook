@@ -66,10 +66,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Contributor tooling only (tests + build automation). There are no user-facing
-# extras: `pip install chartbook` installs everything. The old [all], [data],
-# [plotting] and [sphinx] aliases were removed after their one release of
-# notice; see docs_src/reference/stability.md.
+# `pip install chartbook` installs everything a pipeline on one machine needs.
+# The one user-facing extra is a kind of store that needs a cloud library the
+# base install does not bring (docs_src/design/stores-and-backends.md). The old
+# [all], [data], [plotting] and [sphinx] aliases were removed after their one
+# release of notice; see docs_src/reference/stability.md.
+#
+# The store in an S3 bucket: [store] url = "s3://bucket/prefix"
+s3 = [
+    "boto3>=1.28",
+]
+# Contributor tooling only (tests + build automation)
 dev = [
     "pytest",
     "colorama",
@@ -80,6 +87,10 @@ dev = [
 
 [project.scripts]
 chartbook = "chartbook.cli:main"
+
+# A kind of store, found by the scheme of the store's URL (chartbook.store.store_for_url)
+[project.entry-points."chartbook.stores"]
+s3 = "chartbook.stores.s3:S3Store"
 
 [project.urls]
 Documentation = "https://backofficedev.github.io/chartbook"
@@ -131,6 +142,9 @@ extra-dependencies = [
     "openpyxl",
     "requests",
     "seaborn",
+    # The S3 store, against a mocked bucket
+    "boto3>=1.28",
+    "moto[s3]>=5",
 ]
 
 [[tool.hatch.envs.hatch-test.matrix]]

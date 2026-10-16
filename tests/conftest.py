@@ -24,6 +24,7 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
     scratch = tmp_path_factory.mktemp("chartbook_home")
     monkeypatch.setenv("CHARTBOOK_STORE", str(scratch / "store"))
     monkeypatch.setenv("CHARTBOOK_GIT_CACHE", str(scratch / "git"))
+    monkeypatch.setenv("CHARTBOOK_CACHE", str(scratch / "cache"))
     # The organization's settings file, read where the user's is silent:
     # a real one on this machine must not reach a test
     monkeypatch.setenv("CHARTBOOK_SYSTEM_SETTINGS", str(scratch / "system-settings.toml"))
