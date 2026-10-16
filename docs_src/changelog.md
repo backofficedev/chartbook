@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — links follow pins
 
-On a catalog's pages, an input from another pipeline that a lockfile pins links to its page in the pinned snapshot's own site, in the provenance panel and in a model's "Trained On", so a model's page opens its training data as it was read rather than as the other pipeline's folder is now. Where the catalog does not show that snapshot, the link goes to the working version as before. `chartbook store gc` now also clears the kept site of every snapshot it removes. Step 3 of {doc}`design/versioned-catalog`, in part.
+On a catalog's pages, a model's "Trained On" links its training data from another pipeline to its page in the snapshot that held the bytes the model was trained on (a new index field, `trained_from`), and says when the pin has since moved; failing that, to the snapshot the lockfile pins for it; failing that, to the working version as before. The provenance panel links an input the lockfile pins to its page in the pinned snapshot. A link leads into a version only when the catalog shows it, and to the page that says why when its site could not be built; the catalog builds the versions' sites before its own pages, so it knows. An incremental build regenerates a pipeline's pages when any of this changes. `chartbook store gc` now also clears the kept site of every snapshot it removes. Step 3 of {doc}`design/versioned-catalog`, in part.
 
 ### Added — a catalog shows every snapshot of every pipeline, each its own site
 

@@ -15,7 +15,7 @@ What this is, where it is, what made it and from what, as `index.json` records i
 {% if provenance.inputs %}
 **Made from:**
 {% for input in provenance.inputs %}
-- {% if input.link %}<a href="{{input.link}}"><code>{{input.id}}</code></a>{% else %}`{{input.id}}`{% endif %}: {{input.words}}
+- {% if input.link %}<a href="{{input.link}}">`{{input.id}}`</a>{% else %}`{{input.id}}`{% endif %}: {{input.words}}
 {% endfor %}
 {% endif %}
 {% if provenance.used_by %}

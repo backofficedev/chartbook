@@ -397,6 +397,7 @@ def generate_docs(
         _docs_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
         built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        _render_versions(manifest, built)
         _write_sphinx_project(
             manifest=manifest,
             project_dir=project_dir,
@@ -428,6 +429,20 @@ def generate_docs(
             shutil.rmtree(temp_docs_src_dir, ignore_errors=True)
         else:
             print(f"Keeping temporary build directory: {_docs_dir.resolve()}")
+
+
+def _render_versions(manifest: dict, built: dict) -> None:
+    """In a catalog, build each listed snapshot's site before the pages, so that they know which were built."""
+    if manifest["project"]["type"] != "catalog":
+        return
+    import click
+
+    from chartbook import versions
+
+    versions.render_listed(
+        built,
+        echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
+    )
 
 
 def _add_versions(manifest: dict, built: dict, html_build_dir: Path) -> None:
@@ -511,6 +526,7 @@ def _generate_docs_mkdocs(
         pages_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
         built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        _render_versions(manifest, built)
         _retrieve_correct_docs_src_dir(temp_docs_src_dir, manifest, project_dir, pipeline_theme)
         _check_policy(manifest, generate_metadata_diagnostics(manifest=manifest, docs_build_dir=pages_dir, skip_pipelines=skip_pipelines))
         run_build_markdown(
@@ -756,6 +772,7 @@ def _generate_docs_incremental(
     # depends on what those panels would say as well as on its own files
     cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
     built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+    _render_versions(manifest, built)
     records = {record["id"]: record for record in built["records"]}
     salts = {
         pipeline_id: provenance.digest(pipeline_id, records)

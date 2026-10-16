@@ -374,7 +374,7 @@ class TestLinksFollowPins:
         assert (site / pinned).is_file()  # the link leads somewhere
         newer = versions.version_name(second.commit, second.made_at)
         assert newer not in page  # the version it was not trained on is not where it leads
-        assert "as pinned, the snapshot at " + first.commit[:7] in page
+        assert "as pinned: the snapshot at " + first.commit[:7] in page
 
     def test_without_the_pinned_version_the_working_version_is_linked(self, trained, monkeypatch):
         root, first, second = trained
@@ -414,3 +414,84 @@ class TestGcClearsTheKeptSites:
         left = {p.name for p in kept.iterdir()}
         for taken in doomed:
             assert versions.version_name(taken.commit, taken.made_at) not in left
+        assert versions.version_name(second.commit, second.made_at) in left  # what gc kept, its site too
+
+
+def _links(page: Path) -> list[str]:
+    import re
+
+    return re.findall(r'href="([^"]*versions/[^"]*)"', page.read_text())
+
+
+def _resolves(page: Path, href: str) -> bool:
+    return (page.parent / href).resolve().is_file()
+
+
+class TestWhatTheLinksReviewFound:
+    def test_an_incremental_build_drops_a_link_to_a_snapshot_that_is_gone(self, trained, monkeypatch):
+        root, first, second = trained
+        page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
+        _build(root, monkeypatch, "--incremental")
+        assert _links(page) and all(_resolves(page, h) for h in _links(page))
+        snapshot.remove(default_store(), first)
+        _build(root, monkeypatch, "--incremental")
+        assert all(_resolves(page, h) for h in _links(page)), _links(page)
+        assert versions.version_name(first.commit, first.made_at) not in page.read_text()
+
+    def test_a_version_that_could_not_be_built_is_linked_to_the_page_that_says_why(self, trained, monkeypatch):
+        root, first, second = trained
+        data = next(r for r in first.assets.values() if r.get("content_hash") and r["kind"] == "Dataframe")
+        assert data["content_hash"] not in second.hashes()
+        default_store().delete(data["content_hash"])
+        _build(root, monkeypatch)
+        page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
+        name = versions.version_name(first.commit, first.made_at)
+        links = [h for h in _links(page) if name in h]
+        assert links and all(h.endswith(f"{name}/index.html") and _resolves(page, h) for h in links)
+        assert "could not be" in (page.parent / links[0]).resolve().read_text()
+
+    def test_an_input_the_lockfile_does_not_pin_is_not_linked_as_pinned(self, trained, monkeypatch):
+        root, first, second = trained
+        a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
+        manifest = tomli.loads((a / "chartbook.toml").read_text())
+        manifest["dataframes"]["extra"] = {"path": "./_data/extra.parquet", "docs": "Added later."}
+        (a / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        pl.DataFrame({"x": [1]}).write_parquet(a / "_data" / "extra.parquet")
+        model = tomli.loads((b / "chartbook.toml").read_text())
+        model["models"]["m"]["trained_on"].append("pipeline_a:extra")
+        (b / "chartbook.toml").write_text(tomli_w.dumps(model))
+        _commit(root.parent, "An input that is not pinned")
+        snapshot.make(a)
+        lock.pin(b)  # keeps the first; `extra` is not in it
+        _build(root, monkeypatch)
+        page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
+        assert not any(h.endswith("/extra.html") and "versions/" in h for h in _links(page))
+        assert all(_resolves(page, h) for h in _links(page))
+
+    def test_a_stale_model_links_to_what_it_was_trained_on(self, trained, monkeypatch):
+        root, first, second = trained
+        b = root / "pipelines" / "pipeline_b"
+        snapshot.make(b)  # trained on the first: that is what b pins
+        lock.update(b)  # the pin moves to the second
+        _build(root, monkeypatch)
+        index = json.loads((root / "docs" / "index.json").read_text())
+        model = next(r for r in index["records"] if r["kind"] == "Model")
+        assert model["stale_inputs"] == ["pipeline_a:dataframe_0"]
+        assert model["trained_from"]["pipeline_a:dataframe_0"]["made_at"] == first.made_at
+        page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
+        text = page.read_text()
+        old, new = (versions.version_name(t.commit, t.made_at) for t in (first, second))
+        assert f"as trained: the snapshot at {first.commit[:7]}" in text and f"the pin has since moved to {second.commit[:7]}" in text
+        assert any(old in h for h in _links(page)) and any(new in h for h in _links(page))  # Trained On, and the panel's pin
+        assert all(_resolves(page, h) for h in _links(page))
+
+    def test_mkdocs_links_lead_somewhere_and_gc_keeps_what_it_keeps(self, trained, monkeypatch):
+        pytest.importorskip("mkdocs")
+        pytest.importorskip("material")
+        root, first, second = trained
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["project"]["writer"] = "mkdocs"
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        _build(root, monkeypatch)
+        page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
+        assert _links(page) and all(_resolves(page, h) for h in _links(page))

@@ -220,6 +220,10 @@ def forget(taken) -> bool:
     if not folder.is_dir():
         return False
     shutil.rmtree(folder, ignore_errors=True)
+    try:
+        folder.parent.rmdir()  # the pipeline's folder, if this was its last version
+    except OSError:
+        pass
     return True
 
 
@@ -251,6 +255,38 @@ def _placeholder(folder: Path, taken, why: str) -> None:
         f"and its site could not be built: {html.escape(why)}.</p></body></html>\n",
         encoding="utf-8",
     )
+
+
+def render_listed(index: dict, store=None, echo=print) -> None:
+    """Build (or find kept) the site of every snapshot a catalog's index lists, and say on each entry whether it was built.
+
+    Called before the catalog's pages are written, so that a page links to
+    a version's page only when its site was built, and otherwise to the
+    page that says why (``rendered`` on each ``snapshots`` entry). A
+    version that could not be built is said in one line.
+    """
+    from chartbook import snapshot as snapshots
+    from chartbook.store import default_store
+
+    store = store if store is not None else default_store()
+    found, _ = snapshots.readable_snapshots(store)
+    by_moment = {(t.pipeline, t.commit, t.made_at): t for t in found}
+    for record in index.get("records", []):
+        if record.get("kind") != "Pipeline":
+            continue
+        for entry in record.get("snapshots") or []:
+            taken = by_moment.get((record["id"], entry.get("commit"), entry.get("made_at")))
+            if taken is None:
+                entry["rendered"] = False
+                continue
+            try:
+                rendered = render(taken, store)
+            except ValueError:
+                entry["rendered"] = False
+                continue
+            entry["rendered"] = rendered.built
+            if not rendered.built and rendered.now:
+                echo(f"warning: {record['id']} at {taken.commit[:7]}: {rendered.why}")
 
 
 def add_to_site(index: dict, html_dir: Path, store=None, echo=print) -> list[Rendered]:
@@ -286,7 +322,7 @@ def add_to_site(index: dict, html_dir: Path, store=None, echo=print) -> list[Ren
                 continue
             if taken is None:
                 continue
-            rendered = render(taken, store)
+            rendered = render(taken, store)  # kept by render_listed: this finds it
             target = html_dir / site_path(record["id"], name)
             shutil.rmtree(target, ignore_errors=True)
             shutil.copytree(rendered.folder, target)

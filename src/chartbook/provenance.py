@@ -195,4 +195,17 @@ def digest(pipeline_id: str, records: dict) -> str:
         for record_id, record in sorted(records.items())
         if record.get("pipeline") == pipeline_id and record.get("kind") in ("Dataframe", "Chart", "Model")
     }
-    return hashlib.sha256(json.dumps(said, sort_keys=True, default=str).encode()).hexdigest()
+    # In a catalog a page links an input of another pipeline into a version's
+    # site: which versions are shown and built, and what a model was trained
+    # from, are what those links read
+    owners = sorted({
+        _owner(entry["id"])
+        for facts in said.values() if facts
+        for entry in facts["inputs"] if entry.get("cross")
+    })
+    linked = {
+        "shown": {owner: (records.get(owner) or {}).get("snapshots") for owner in owners},
+        "trained_from": {record_id: records[record_id].get("trained_from") for record_id in said},
+    }
+    text = json.dumps({"said": said, "linked": linked}, sort_keys=True, default=str)
+    return hashlib.sha256(text.encode()).hexdigest()

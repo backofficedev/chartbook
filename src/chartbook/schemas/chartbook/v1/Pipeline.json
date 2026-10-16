@@ -234,6 +234,10 @@
           "built_by_run": {
             "type": "boolean",
             "description": "True when `chartbook run --snapshot` built the bytes in the same command."
+          },
+          "rendered": {
+            "type": "boolean",
+            "description": "Whether the catalog that wrote this index built the snapshot's site; false when it shows the page that says why."
           }
         }
       }

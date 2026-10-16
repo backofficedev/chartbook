@@ -893,6 +893,43 @@ def _add_snapshots(records: list[dict]) -> None:
             listed.append(entry)
         if listed:
             record["snapshots"] = listed
+    _add_trained_from(records, by_pipeline)
+
+
+def _add_trained_from(records: list[dict], by_pipeline: dict) -> None:
+    """Give each Model record trained on another pipeline's data the snapshot that held it.
+
+    ``trained_with`` says the hash of each input when the model was
+    trained; the snapshot of the input's pipeline holding an asset of that
+    name with that hash is what the model was trained on, and a catalog
+    links to it. The one the model's pipeline pins, when it holds those
+    bytes; otherwise the newest that does.
+    """
+    by_id = {record["id"]: record for record in records}
+    for record in records:
+        if record.get("kind") != "Model" or not record.get("trained_with"):
+            continue
+        pipeline = by_id.get(record.get("pipeline")) or {}
+        pins = {
+            (dependency.get("id"), (dependency.get("location") or {}).get("commit"), dependency.get("snapshot"))
+            for dependency in pipeline.get("dependencies") or []
+        }
+        found = {}
+        for input_id, content_hash in sorted(record["trained_with"].items()):
+            owner, _, local = input_id.rpartition(":")
+            if not owner or owner == record.get("pipeline"):
+                continue
+            holding = [
+                taken for taken in by_pipeline.get(owner, [])
+                if (taken.assets.get(local) or {}).get("content_hash") == content_hash
+            ]
+            if not holding:
+                continue
+            pinned = [t for t in holding if (owner, t.commit, t.made_at) in pins]
+            chosen = (pinned or sorted(holding, key=lambda t: t.made_at))[-1]
+            found[input_id] = {"commit": chosen.commit, "made_at": chosen.made_at}
+        if found:
+            record["trained_from"] = found
 
 
 def _site_pages(project: dict, base_dir: Path) -> Optional[tuple[dict, list[str]]]:

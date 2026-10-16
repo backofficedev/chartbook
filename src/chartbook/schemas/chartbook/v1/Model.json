@@ -263,6 +263,25 @@
           "description": "The hash of the write-up's text, so a build says which text it showed. Write-ups are not pinned; the commit holds them."
         }
       }
+    },
+    "trained_from": {
+      "type": "object",
+      "description": "In a catalog's index: for each input of another pipeline the model was trained on, the snapshot of that pipeline that held the bytes of `trained_with` (the one the model's pipeline pins, when it holds them, else the newest that does).",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "commit",
+          "made_at"
+        ],
+        "properties": {
+          "commit": {
+            "type": "string"
+          },
+          "made_at": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "additionalProperties": true
