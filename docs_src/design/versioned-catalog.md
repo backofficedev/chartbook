@@ -130,6 +130,18 @@ model with where its page is, so that a command-line agent finds its way without
    - **Cost.** Making the index hashes every file again, as a docs build would; for large data
      that doubles the hashing a snapshot does. Accepted for an index that says exactly what a
      build of that commit would say.
+   - **A second review** found more, all fixed with tests and every exploit script rerun: a
+     tracked decoy whose name differs from an ignored file's only by a trailing space or a `\`
+     (git's names are now taken exactly, never put in order, and decoded losslessly); `.git`
+     aliases that HFS+ and NTFS make of other names (the rule is now git's own: case, the
+     invisible code points HFS+ drops, trailing dots and spaces, `git~1`), with a last check
+     after layout that removes any `.git` and refuses the folder; a store object folder that is
+     itself a link (the folder store now refuses one); a file swapped for a link between being
+     looked at and being read (a document is opened without following a link and must be the
+     very file looked at); and the version file honoured where it does not belong (it is read
+     only in a folder that is not a repository's own and where git does not track it, never
+     when too large, and a laid-out version never has git asked about its code time). A named
+     file git does not track is now said too.
 2. **The catalog renders snapshots.** Working copies as today, plus the newest snapshot of each
    pipeline, each version at its own path. This proves rendering from the store.
 3. **All versions.** Every snapshot, links following pins, the version list, snapshot pages kept

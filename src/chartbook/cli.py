@@ -2104,7 +2104,8 @@ def _echo_snapshot(report):
             f"store; `chartbook check` says what a docs build would refuse."
         )
     for path, why in report.documents_skipped:
-        click.echo(f"  document not kept: {path} ({why})")
+        shown = path if path.isprintable() else ascii(path)  # a name may carry what a terminal would act on
+        click.echo(f"  document not kept: {shown} ({why})")
     for model, label in report.skipped_labels:
         click.echo(
             f"  label not recorded: {model} {label!r}. A label is letters, digits, '.', "

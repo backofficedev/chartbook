@@ -549,12 +549,21 @@ class FolderStore(Store):
         They are there to be read, not written.
 
         :raises ObjectNotFoundError: If the store has no such object.
+        :raises StoreError: If the object's folder is a link, or leads out of
+            the store's objects: a store a team shares holds what anyone put
+            there, and a reader must not be handed a folder of its own.
         """
         self._check_layout()
         path = self.object_path(content_hash)
         if not path.is_dir():
             raise ObjectNotFoundError(
                 f"The store at {self.root} has no object {content_hash}."
+            )
+        objects = Path(os.path.realpath(self.root / OBJECTS_DIR))
+        if path.is_symlink() or not Path(os.path.realpath(path)).is_relative_to(objects):
+            raise StoreError(
+                f"The object {content_hash} in the store at {self.root} is a link, or leads out of "
+                f"the store; it is not read. `chartbook store verify` checks a store."
             )
         return path
 

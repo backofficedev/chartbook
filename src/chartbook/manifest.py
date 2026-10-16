@@ -1537,13 +1537,17 @@ def find_latest_code_change(base_dir: Union[str, Path]) -> datetime:
     # A version laid out from the store says when its code changed; it has no git of its own
     from chartbook.identity import read_version_file
 
-    recorded = read_version_file(base_dir).get("code_changed_at")
-    if isinstance(recorded, str):
-        try:
-            moment = datetime.strptime(recorded, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-            return datetime.fromtimestamp(moment.timestamp())
-        except ValueError:
-            pass
+    version = read_version_file(base_dir)
+    if version:
+        recorded = version.get("code_changed_at")
+        if isinstance(recorded, str):
+            try:
+                moment = datetime.strptime(recorded, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                return datetime.fromtimestamp(moment.timestamp())
+            except (ValueError, OverflowError, OSError):
+                pass
+        # A laid-out version has no git of its own: its files' times, not git's
+        return find_latest_source_modification(base_dir)
     uncommitted = _git(base_dir, "status", "--porcelain", "--", *SOURCE_PATHS)
     if uncommitted is not None and not uncommitted.strip():
         committed = _git(base_dir, "log", "-1", "--format=%ct", "--", *SOURCE_PATHS)

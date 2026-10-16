@@ -298,13 +298,51 @@ def _sanitize_component(component: str) -> str:
 VERSION_FILE = ".chartbook-version.json"
 
 
+#: More than a version file ever needs; a larger one is not read.
+_VERSION_FILE_MAX_BYTES = 64 * 1024
+
+
 def read_version_file(base_dir: Path | str) -> dict:
-    """What a laid-out version's :data:`VERSION_FILE` says; empty if the folder has none or it cannot be read."""
+    """What a laid-out version's :data:`VERSION_FILE` says; empty unless the folder is one.
+
+    A folder is a laid-out version when it has the file and is not a
+    repository's own folder: no ``.git`` in it, and the file not tracked by
+    git. A laid-out folder copied to start a new pipeline and committed is
+    that new pipeline, not the old version. A file too large, or not a JSON
+    object, is not read.
+    """
+    import os
+
+    base = Path(base_dir)
+    marker = base / VERSION_FILE
     try:
-        recorded = json.loads((Path(base_dir) / VERSION_FILE).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        if not marker.is_file() or marker.is_symlink() or marker.stat().st_size > _VERSION_FILE_MAX_BYTES:
+            return {}
+        if os.path.lexists(base / ".git"):
+            return {}
+        recorded = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError, RecursionError):
         return {}
-    return recorded if isinstance(recorded, dict) else {}
+    if not isinstance(recorded, dict) or _tracked_by_git(base, VERSION_FILE):
+        return {}
+    return recorded
+
+
+def _tracked_by_git(base: Path, name: str) -> bool:
+    """Whether git tracks a file in a folder; False where there is no git or no repository."""
+    import os
+
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(base), "ls-files", "--error-unmatch", "--", name],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0", "GIT_LITERAL_PATHSPECS": "1"},
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
 
 
 def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:

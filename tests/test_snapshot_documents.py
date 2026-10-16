@@ -217,7 +217,8 @@ class TestWhatTheReviewFound:
     @pytest.mark.parametrize(
         "text",
         ["/etc/passwd", "\\Windows\\x", "C:foo", "C:\\x", "../x", "a/../../x", "docs/../README.md", ".git/config",
-         "docs/.GIT/hooks/x", ".git./x", ":(top)README.md", ":/", "a:b", "", "  ", ".", "./"],
+         "docs/.GIT/hooks/x", ".git./x", ":(top)README.md", ":/", "a:b", "", "  ", ".", "./",
+         ".g\u200cit/config", "\ufeff.git/x", ".gi\u206at/x", "GIT~1/config", "git~2/x", ".git::$INDEX_ALLOCATION/x"],
     )
     def test_what_is_not_a_plain_path(self, text):
         assert snapshot.safe_relative(text) is None
@@ -276,33 +277,159 @@ class TestWhatTheReviewFound:
         (forged / ".git").mkdir(parents=True)
         (forged / ".git" / "config").write_text("[core]\n\tfsmonitor = touch PWNED\n")
         (forged / "README.md").write_text("# forged\n")
+        (forged / ".chartbook-version.json").write_text('{"pipeline": "evil/other"}')
         stored = store.put(forged)
-        files = [".git/config", "README.md", "../escape.md", "C:evil.md"]
+        files = [".git/config", "README.md", "../escape.md", "C:evil.md", ".chartbook-version.json", ".g\u200cit/config"]
         bad = dataclasses.replace(taken, documents={"content_hash": stored.content_hash, "files": files})
         laid = snapshot.materialize(bad, tmp_path / "laid")
         assert not (laid.folder / ".git").exists() and (laid.folder / "README.md").is_file()
-        assert {path for path, _ in laid.left_out} >= {".git/config", "../escape.md", "C:evil.md"}
+        assert {path for path, _ in laid.left_out} >= {".git/config", "../escape.md", "C:evil.md", ".chartbook-version.json"}
         assert not (tmp_path / "escape.md").exists()
+        # The version file is ChartBook's, written first, whatever the record says
+        assert json.loads((laid.folder / ".chartbook-version.json").read_text())["pipeline"] == "acme/rates"
 
-    def test_a_link_inside_an_object_is_not_followed(self, pipeline, tmp_path):
+    def test_a_git_folder_a_filesystem_makes_of_a_name_is_removed_and_refused(self, pipeline, tmp_path, monkeypatch):
+        """HFS+ drops invisible code points, so a name that is not `.git` becomes one on disk.
+        Should a filesystem do that with a name the rule misses, the last check finds it."""
+        taken = snapshot.make(pipeline).snapshot
+        store = default_store()
+        forged = tmp_path / "forged"
+        (forged / ".git").mkdir(parents=True)
+        (forged / ".git" / "config").write_text("[core]\n\tfsmonitor = touch PWNED\n")
+        stored = store.put(forged)
+        monkeypatch.setattr(snapshot, "_is_dot_git", lambda part: False)  # as if the rule missed this alias
+        bad = dataclasses.replace(taken, documents={"content_hash": stored.content_hash, "files": [".git/config"]})
+        with pytest.raises(snapshot.SnapshotError, match="made a .git in"):
+            snapshot.materialize(bad, tmp_path / "laid")
+        assert not (tmp_path / "laid" / ".git").exists()
+
+    def test_odd_records_and_manifests_do_not_crash_a_layout(self, pipeline, tmp_path):
+        models = {"ar1": {**MANIFEST["models"]["ar1"], "metrics_path": "chartbook.toml/x"}}
+        _set(pipeline, models=models, project={**MANIFEST["project"], "site_dir": ".chartbook-version.json"})
+        (pipeline / "_output").mkdir(exist_ok=True)
+        taken = snapshot.make(pipeline).snapshot
+        taken = dataclasses.replace(taken, assets={**taken.assets, "model/ar1": {**taken.assets["model/ar1"], "metrics": {"rmse": 1}}})
+        laid = snapshot.materialize(taken, tmp_path / "laid")
+        assert ("model/ar1", "its scores could not be written to chartbook.toml/x") in laid.left_out
+        assert (laid.folder / ".chartbook-version.json").is_file()
+        with pytest.raises(snapshot.SnapshotError, match="not a hash"):
+            snapshot.materialize(dataclasses.replace(taken, documents={"content_hash": "nonsense", "files": []}), tmp_path / "bad")
+
+    def test_a_version_file_is_read_only_where_it_belongs(self, pipeline, tmp_path):
+        from chartbook.identity import VERSION_FILE, derive_pipeline_id, read_version_file
+
+        laid = snapshot.materialize(snapshot.make(pipeline).snapshot, tmp_path / "laid")
+        assert read_version_file(laid.folder)["pipeline"] == "acme/rates"
+        assert derive_pipeline_id({"id": "explicit/wins"}, laid.folder) == "explicit/wins"
+        # Copied into a repository and committed, the folder is a new pipeline, not the old version
+        _git(laid.folder, "init", "--quiet", "-b", "main")
+        assert read_version_file(laid.folder) == {}
+        shutil.rmtree(laid.folder / ".git")
+        (laid.folder / VERSION_FILE).write_text("[" * 200000)
+        assert read_version_file(laid.folder) == {}
+        (laid.folder / VERSION_FILE).write_text(json.dumps({"pipeline": "x", "pad": "y" * 100000}))
+        assert read_version_file(laid.folder) == {}  # too large to be one
+
+    def test_a_link_planted_in_an_object_is_not_followed(self, pipeline, tmp_path):
+        """A store a team shares may hold whatever someone put there: a link in a directory
+        asset's object, in a one-file asset's object, and in the documents' object."""
         taken = snapshot.make(pipeline).snapshot
         store = default_store()
         secret = tmp_path / "secret.txt"
         secret.write_text("LOCAL SECRET")
-        folder = tmp_path / "obj"
-        (folder / "weights").mkdir(parents=True)
-        (folder / "config.json").write_text("{}")
-        (folder / "weights" / "best.pt").symlink_to(secret)
-        stored = store.put(folder, links=("copy",))
-        # A store a team shares may hold whatever someone put there: a link, as here
-        held = Path(store.get(stored.content_hash))
-        (held / "weights" / "best.pt").unlink() if (held / "weights" / "best.pt").exists() else None
-        (held / "weights").mkdir(exist_ok=True)
-        (held / "weights" / "planted").symlink_to(secret)
-        assets = {**taken.assets, "model/ar1": {**taken.assets["model/ar1"], "content_hash": stored.content_hash}}
-        laid = snapshot.materialize(dataclasses.replace(taken, assets=assets), tmp_path / "laid")
+        model = Path(store.get(taken.assets["model/ar1"]["content_hash"]))
+        (model / "weights" / "planted").symlink_to(secret)
+        treasury = Path(store.get(taken.assets["treasury"]["content_hash"]))
+        (treasury / "treasury.parquet").chmod(0o644)
+        (treasury / "treasury.parquet").unlink()
+        (treasury / "treasury.parquet").symlink_to(secret)
+        documents = Path(store.get(taken.documents["content_hash"]))
+        (documents / "README.md").chmod(0o644)
+        (documents / "README.md").unlink()
+        (documents / "README.md").symlink_to(secret)
+        laid = snapshot.materialize(taken, tmp_path / "laid")
         assert not (laid.folder / "_models" / "ar1" / "weights" / "planted").exists()
+        assert not (laid.folder / "README.md").exists() and ("README.md", snapshot.A_LINK) in laid.left_out
+        assert ("acme/rates:treasury", "its object holds no file") in laid.left_out
         assert "LOCAL SECRET" not in "".join(p.read_text(errors="replace") for p in laid.folder.rglob("*") if p.is_file())
+
+    def test_an_object_folder_that_is_a_link_is_refused(self, pipeline, tmp_path):
+        from chartbook.store import StoreError
+
+        taken = snapshot.make(pipeline).snapshot
+        store = default_store()
+        mine = tmp_path / "mine"
+        (mine / "docs_src" / "site").mkdir(parents=True)
+        (mine / "docs_src" / "site" / "private.md").write_text("MY PRIVATE NOTES")
+        held = Path(store.get(taken.documents["content_hash"]))
+        import shutil
+
+        for file in held.rglob("*"):
+            file.chmod(0o755 if file.is_dir() else 0o644)
+        shutil.rmtree(held)
+        held.symlink_to(mine)
+        with pytest.raises(StoreError, match="is a link, or leads out of the store"):
+            store.get(taken.documents["content_hash"])
+        with pytest.raises(StoreError):
+            snapshot.materialize(taken, tmp_path / "laid")
+        assert not any("MY PRIVATE NOTES" in p.read_text(errors="replace") for p in (tmp_path / "laid").rglob("*") if p.is_file())
+
+    def test_a_tracked_name_that_differs_from_its_plain_form_is_not_taken(self, pipeline):
+        """A tracked decoy, `secret.env ` with a trailing space or `private\\key.env`, put in
+        order, names another file, an ignored one; git's names are taken exactly or not at all."""
+        site = pipeline / "docs_src" / "site"
+        (site / "secret.env").write_text("IGNORED SECRET")
+        (site / "secret.env ").write_text("decoy")
+        (site / "private").mkdir()
+        (site / "private" / "key.env").write_text("IGNORED SECRET")
+        (site / "private\\key.env").write_text("decoy")
+        with open(pipeline / ".gitignore", "a") as f:
+            f.write("docs_src/site/secret.env\ndocs_src/site/private/\n")
+        _git(pipeline, "add", "-A")
+        _git(pipeline, "add", "-f", "docs_src/site/secret.env ", "docs_src/site/private\\key.env")
+        _git(pipeline, "commit", "--quiet", "-m", "Decoys")
+        paths, skipped = snapshot.document_paths(pipeline)
+        assert "docs_src/site/secret.env" not in paths and "docs_src/site/private/key.env" not in paths
+        assert ("docs_src/site/secret.env ", snapshot.NOT_A_PLAIN_PATH) in skipped
+        snapshot.make(pipeline)
+        for file in Path(str(default_store())).rglob("*"):
+            if file.is_file():
+                assert b"IGNORED SECRET" not in file.read_bytes(), file
+
+    def test_git_is_asked_literally(self, pipeline):
+        dataframes = {**MANIFEST["dataframes"], "other": {"path": "./_data/treasury.parquet", "docs_path": "docs_src/*"}}
+        _set(pipeline, dataframes=dataframes)
+        paths, _ = snapshot.document_paths(pipeline)
+        assert "docs_src/method.md" not in paths  # a glob would have listed it
+
+    def test_a_copy_reads_the_file_it_looked_at(self, pipeline, tmp_path, monkeypatch):
+        outside = tmp_path / "outside.md"
+        outside.write_text("OUTSIDE SECRET")
+        real_open = snapshot.os.open
+
+        def swap_then_open(path, flags, *args, **kwargs):
+            # Between looking and opening, the file becomes a link to somewhere else
+            if str(path).endswith("docs_src/treasury.md") and not Path(path).is_symlink():
+                Path(path).unlink()
+                Path(path).symlink_to(outside)
+            return real_open(path, flags, *args, **kwargs)
+
+        monkeypatch.setattr(snapshot.os, "open", swap_then_open)
+        taken = snapshot.make(pipeline).snapshot
+        assert (pipeline / "docs_src" / "treasury.md").is_symlink()  # the swap happened
+        assert "docs_src/treasury.md" not in taken.documents["files"]
+        for file in Path(str(default_store())).rglob("*"):
+            if file.is_file():
+                assert b"OUTSIDE SECRET" not in file.read_bytes(), file
+
+    def test_a_named_file_git_does_not_track_is_said(self, pipeline):
+        (pipeline / "docs_src" / "untracked.md").write_text("draft")
+        with open(pipeline / ".gitignore", "a") as f:
+            f.write("docs_src/untracked.md\n")
+        dataframes = {**MANIFEST["dataframes"], "treasury": {**MANIFEST["dataframes"]["treasury"], "docs_path": "./docs_src/untracked.md"}}
+        _set(pipeline, dataframes=dataframes)
+        _, skipped = snapshot.document_paths(pipeline)
+        assert ("docs_src/untracked.md", snapshot.NOT_TRACKED) in skipped
 
     def test_nothing_is_written_when_an_object_is_missing(self, pipeline, tmp_path):
         taken = snapshot.make(pipeline).snapshot
@@ -368,7 +495,10 @@ class TestTheLaidOutVersion:
         assert marker["pipeline"] == "acme/rates" and marker["commit"] == taken.commit and marker["code_changed_at"]
         from chartbook.manifest import find_latest_code_change
 
-        assert find_latest_code_change(laid.folder).strftime("%Y") == marker["code_changed_at"][:4]
+        from datetime import datetime, timezone
+
+        recorded = datetime.strptime(marker["code_changed_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        assert find_latest_code_change(laid.folder) == datetime.fromtimestamp(recorded.timestamp())
         monkeypatch.chdir(laid.folder)
         result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
