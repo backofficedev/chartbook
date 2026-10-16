@@ -184,10 +184,10 @@ def _as_text(value: object) -> str:
 
 
 def _one_line(text: object, longest: int = 200) -> str:
-    """Text as one line, cut at a word to at most ``longest`` characters (with an ellipsis when cut)."""
-    if not isinstance(text, str):
-        return ""
-    line = " ".join("".join(c if c.isprintable() else " " for c in text).split())
+    """Text as one line of what can be seen, cut at a word to at most ``longest`` characters (with an ellipsis when cut)."""
+    from chartbook.identity import plain_line
+
+    line = plain_line(text, longest + 1)
     if len(line) <= longest:
         return line
     cut = line[: longest - 1]
