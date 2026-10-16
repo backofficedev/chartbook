@@ -1653,6 +1653,38 @@ def document_paths(
     return kept, skipped
 
 
+#: The most a snapshot's stored index is read of: more than any pipeline's
+#: index, and less than would trouble the machine reading it
+STORED_INDEX_LIMIT = 64 * 1024 * 1024
+
+
+def _read_regular_file(path: Path, limit: int) -> bytes:
+    """A file's bytes, only if it is a regular file of at most ``limit`` bytes, not read through a link.
+
+    As :func:`_copy_regular_file` copies: looked at, opened without following
+    a final link (and without waiting, should it have become a pipe), and the
+    two must be one file. What a store holds was written by whoever can
+    write to it, so a link out of it, a device or a pipe is not read.
+
+    :raises OSError: If it is not such a file, or is longer.
+    """
+    import stat
+
+    looked = os.lstat(path)
+    if not stat.S_ISREG(looked.st_mode) or looked.st_size > limit:
+        raise OSError(f"{path} is not a regular file of at most {limit} bytes")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
+    descriptor = os.open(path, flags)
+    with os.fdopen(descriptor, "rb") as reader:
+        opened = os.fstat(reader.fileno())
+        if not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino) != (looked.st_dev, looked.st_ino):
+            raise OSError(f"{path} changed while it was opened")
+        read = reader.read(limit + 1)
+    if len(read) > limit:
+        raise OSError(f"{path} is longer than {limit} bytes")
+    return read
+
+
 def _copy_regular_file(source: Path, target: Path) -> bool:
     """Copy a file only if it is a regular file, not a link, and the very file that was looked at.
 
@@ -1666,7 +1698,7 @@ def _copy_regular_file(source: Path, target: Path) -> bool:
         looked = os.lstat(source)
         if not stat.S_ISREG(looked.st_mode):
             return False
-        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
         descriptor = os.open(source, flags)
     except OSError:
         return False
@@ -1883,20 +1915,31 @@ def _write_back(taken: Snapshot, folder: Path, report: Materialized) -> None:
             report.left_out.append((site_dir, "the site folder could not be made"))
 
 
-def _code_changed_at(taken: Snapshot, store: Store) -> Optional[str]:
-    """When the version's code last changed, as its index recorded it; None if it has none."""
-    if not taken.index or not isinstance(taken.index.get("content_hash"), str):
-        return None
+def stored_pipeline_record(taken: Snapshot, store: Store) -> dict:
+    """The snapshot's own Pipeline record, from the index it holds; empty when it has none or it cannot be read.
+
+    The index is whatever its owner put in the store, so nothing is assumed
+    of its shape: anything but a JSON object with a list of records, the
+    pipeline's among them by its ID, reads as no record.
+    """
+    if not isinstance(taken.index, dict) or not isinstance(taken.index.get("content_hash"), str):
+        return {}
     try:
         held = Path(store.get(taken.index["content_hash"])) / INDEX_FILE
-        recorded = json.loads(held.read_text(encoding="utf-8"))
-    except (OSError, ValueError, KeyError, RecursionError, StoreError):
-        return None
+        recorded = json.loads(_read_regular_file(held, STORED_INDEX_LIMIT).decode("utf-8"))
+    except (OSError, ValueError, KeyError, TypeError, RecursionError, StoreError):
+        return {}
     records = recorded.get("records") if isinstance(recorded, dict) else None
     for record in records if isinstance(records, list) else []:
-        if isinstance(record, dict) and record.get("kind") == "Pipeline" and isinstance(record.get("code_changed_at"), str):
-            return record["code_changed_at"]
-    return None
+        if isinstance(record, dict) and record.get("kind") == "Pipeline" and record.get("id") == taken.pipeline:
+            return record
+    return {}
+
+
+def _code_changed_at(taken: Snapshot, store: Store) -> Optional[str]:
+    """When the version's code last changed, as its index recorded it; None if it has none."""
+    changed = stored_pipeline_record(taken, store).get("code_changed_at")
+    return changed if isinstance(changed, str) else None
 
 
 def _copy_tree(source: Path, target: Path) -> None:

@@ -10,6 +10,9 @@
 ## {{ pipeline_manifest.project.name }}
 
 {{pipeline_manifest.project.description}}
+{% if pipeline_manifest.from_the_store %}
+Not on this machine: the catalog shows it from its snapshots in the store.
+{% endif %}
 
   {% include "pipeline_manifest.md" with context %}
 

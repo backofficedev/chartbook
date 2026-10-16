@@ -900,6 +900,47 @@ def _add_snapshots(records: list[dict]) -> None:
     _add_trained_from(records, by_pipeline)
 
 
+def _describe_from_the_store(records: list[dict]) -> None:
+    """Give a pipeline shown from the store alone what its newest snapshot's own index says of it.
+
+    Its name, description and maintainer as plain text, and its repository
+    and site when they are web addresses, as its owner wrote them at the
+    newest snapshot (the one its page links to); nothing of its folder,
+    which is not here. Anyone who can write to the store can write these,
+    so they are only ever text: the writers show them as written and never
+    read them as markup.
+    """
+    from chartbook import snapshot as snapshots
+    from chartbook.identity import web_link
+    from chartbook.store import default_store
+
+    from_store = [
+        r for r in records
+        if r.get("kind") == "Pipeline" and (r.get("location") or {}).get("kind") == "store" and r.get("snapshots")
+    ]
+    if not from_store:
+        return
+    store = default_store()
+    found, _ = snapshots.readable_snapshots(store)
+    for record in from_store:
+        newest = record["snapshots"][0]
+        taken = next(
+            (t for t in found if t.pipeline == record["id"] and t.commit == newest["commit"] and t.made_at == newest["made_at"]),
+            None,
+        )
+        own = snapshots.stored_pipeline_record(taken, store) if taken is not None else {}
+        for key, longest in (("name", 200), ("description", 2000), ("maintainer", 200)):
+            if not isinstance(own.get(key), str):
+                continue
+            # One line of what can be seen: no control or format characters
+            text = " ".join("".join(c if c.isprintable() else " " for c in own[key]).split())[:longest]
+            if text:
+                record[key] = text
+        for key in ("repo_url", "site_url"):
+            if web_link(own.get(key)):
+                record[key] = web_link(own[key])
+
+
 def _add_trained_from(records: list[dict], by_pipeline: dict) -> None:
     """Give each Model record trained on another pipeline's data the snapshot that held it.
 
@@ -1075,8 +1116,20 @@ def build_index(
             known_pipelines=known_pipelines,
         )
     if project["type"] == "catalog":
+        # A pipeline the catalog names with no folder here is shown from the store
+        for pipeline_id in manifest.get("store_pipelines") or []:
+            records.append(
+                {
+                    "kind": "Pipeline",
+                    "version": RECORD_VERSION,
+                    "id": pipeline_id,
+                    "name": pipeline_id,
+                    "location": {"kind": "store"},
+                }
+            )
         # A catalog shows every version of its pipelines; a pipeline's own site does not
         _add_snapshots(records)
+        _describe_from_the_store(records)
 
     moment = generated_at or datetime.now(timezone.utc)
     return {

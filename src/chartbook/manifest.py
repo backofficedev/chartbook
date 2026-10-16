@@ -1346,7 +1346,9 @@ def _discover_member_pipelines(
                     f"  - exclude one path in this catalog:  [pipelines] "
                     f"exclude = [\"{member_dir}\"]"
                 )
-            if member_id in explicit_entries:
+            # An entry with no path names a pipeline shown from the store: the
+            # folder found here is that pipeline, and fills the entry in
+            if member_id in explicit_entries and explicit_entries[member_id].get("path") is not None:
                 raise ValueError(
                     f"{source}: catalog member {member_dir} (from {member_source}) "
                     f"derives the ID {member_id!r}, which is already declared as an "
@@ -1381,6 +1383,45 @@ def _apply_disabled_list(entries: dict, disabled_ids: list, source: str) -> None
                 UserWarning,
                 stacklevel=2,
             )
+
+
+#: What a [pipelines] entry may say: where the pipeline's folder is, and
+#: whether the catalog leaves it out. With no path, the catalog shows the
+#: pipeline from its snapshots in the store.
+PIPELINES_ENTRY_KEYS = ("path", "disabled")
+
+
+def _check_pipelines_entry(pipeline_id: str, entry: object, source: str) -> dict:
+    """A [pipelines] entry as a table of the keys it may have, or an error naming what is wrong.
+
+    A key it may not have is an error, not ignored: an entry with no
+    ``path`` means a pipeline shown from the store, so ``pth = "../rates"``
+    would otherwise quietly become one.
+    """
+    if not isinstance(entry, dict):
+        raise ValueError(
+            f"{source}: [pipelines] \"{pipeline_id}\" is {entry!r}. An entry is the "
+            f"path to the pipeline's folder, a table such as {{ path = \"../rates\" }}, "
+            f"or {{}} for a pipeline the catalog shows from the store."
+        )
+    unknown = sorted(set(entry) - set(PIPELINES_ENTRY_KEYS))
+    if unknown:
+        hints = [difflib.get_close_matches(key, PIPELINES_ENTRY_KEYS, n=1) for key in unknown]
+        hint = "".join(f" Did you mean {match[0]!r} for {key!r}?" for key, match in zip(unknown, hints) if match)
+        raise ValueError(
+            f"{source}: [pipelines] \"{pipeline_id}\" has {', '.join(repr(k) for k in unknown)}, "
+            f"which an entry does not take; it takes {' and '.join(repr(k) for k in PIPELINES_ENTRY_KEYS)}.{hint}"
+        )
+    if "path" in entry and not isinstance(entry["path"], (str, dict)):
+        raise ValueError(
+            f"{source}: [pipelines] \"{pipeline_id}\" path is {entry['path']!r}; it must be a string, "
+            f"or a table of a unix and a windows path."
+        )
+    if "disabled" in entry and not isinstance(entry["disabled"], bool):
+        raise ValueError(
+            f"{source}: [pipelines] \"{pipeline_id}\" disabled is {entry['disabled']!r}; it must be true or false."
+        )
+    return dict(entry)
 
 
 def _load_catalog_manifest(raw_manifest):
@@ -1437,13 +1478,14 @@ def _load_catalog_manifest(raw_manifest):
         validate_pipeline_id(pipeline_id)
         if isinstance(entry, str):
             entry = {"path": entry}
-        entries[pipeline_id] = dict(entry)
+        entries[pipeline_id] = _check_pipelines_entry(pipeline_id, entry, source)
 
-    # Auto-discovered members join the explicit entries
+    # Auto-discovered members join the explicit entries, and fill in one
+    # that names a pipeline with no folder (keeping whether it is disabled)
     if members is not None:
-        entries.update(
-            _discover_member_pipelines(members, exclude, entries, base_dir, source)
-        )
+        found = _discover_member_pipelines(members, exclude, entries, base_dir, source)
+        for member_id, member_entry in found.items():
+            entries[member_id] = {**entries.get(member_id, {}), **member_entry}
 
     # Drop disabled pipelines: per-entry flags first, then the ID list
     for pipeline_id in [k for k, v in entries.items() if v.get("disabled", False)]:
@@ -1451,13 +1493,15 @@ def _load_catalog_manifest(raw_manifest):
     _apply_disabled_list(entries, disabled_ids, source)
 
     manifest["pipelines"] = {}
+    # A pipeline with no folder here: the catalog shows its snapshots in the store
+    manifest["store_pipelines"] = sorted(
+        pipeline_id for pipeline_id, pipeline_entry in entries.items() if pipeline_entry.get("path") is None
+    )
     for pipeline_id in entries:
         pipeline_entry = entries[pipeline_id]
         path_to_pipeline = pipeline_entry.get("path")
         if path_to_pipeline is None:
-            raise ValueError(
-                f"{source}: [pipelines.\"{pipeline_id}\"] has no 'path' key."
-            )
+            continue
         path_to_pipeline = resolve_platform_path(path_to_pipeline)
         pipeline_base_dir = Path(base_dir) / path_to_pipeline
         pipeline_base_dir = pipeline_base_dir.resolve()

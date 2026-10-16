@@ -2,6 +2,7 @@
 (docs_src/design/versioned-catalog.md, step 2)."""
 
 import json
+import re
 from pathlib import Path
 
 import polars as pl
@@ -580,3 +581,409 @@ class TestWhatTheSecondLinksReviewFound:
         text = indexdiff.format_diff(indexdiff.diff(before, after))
         assert "trained from another snapshot" in text and "declared differently" not in text
         assert "versions' sites built differently" in text
+
+
+class TestAPipelineFromTheStoreAlone:
+    """A catalog entry with no path: the pipeline's folder is not here, its snapshots are."""
+
+    def _elsewhere(self, tmp_path) -> "snapshot.Snapshot":
+        """A pipeline built and snapshotted somewhere else, then its folder gone from this machine."""
+        import shutil
+
+        from tests.fixtures import create_pipeline_project
+
+        repository = tmp_path.resolve() / "elsewhere"
+        project = create_pipeline_project(repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C")
+        manifest = tomli.loads((project / "chartbook.toml").read_text())
+        manifest["project"]["description"] = "Made on another machine."
+        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        _git(repository, "init", "--quiet", "-b", "main")
+        _commit(repository)
+        taken = snapshot.make(project).snapshot
+        shutil.rmtree(repository)
+        return taken
+
+    def test_it_is_shown_from_its_snapshots(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        taken = self._elsewhere(tmp_path)
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["pipelines"]["pipeline_c"] = {}
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        _build(root, monkeypatch)
+        site = root / "docs"
+        index = json.loads((site / "index.json").read_text())
+        record = next(r for r in index["records"] if r["id"] == "pipeline_c")
+        assert record["location"] == {"kind": "store"}
+        assert record["name"] == "Pipeline C" and record["description"] == "Made on another machine."
+        assert [s["commit"] for s in record["snapshots"]] == [taken.commit]
+        page = site / "cb" / "pipelines" / "pipeline_c_README.html"
+        text = page.read_text()
+        assert "Not on this machine" in text
+        links = _links(page)
+        assert links and all(_resolves(page, h) for h in links)
+        versions_page = (site / "cb" / "versions.html").read_text()
+        assert "not on this machine" in versions_page
+        assert "pipeline_c" in (site / "cb" / "pipelines.html").read_text()
+        assert "pipeline_c" not in (site / "cb" / "diagnostics.html").read_text()
+
+    def test_one_with_no_snapshot_says_so(self, catalog, monkeypatch):
+        root, first, second = catalog
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["pipelines"]["acme/nowhere"] = {}
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        _build(root, monkeypatch)
+        text = (root / "docs" / "cb" / "pipelines" / "acme--nowhere_README.html").read_text()
+        assert "No snapshot of it is in the store yet." in text
+
+    def test_the_catalogs_other_commands_pass_it_by(self, catalog, monkeypatch):
+        root, first, second = catalog
+        monkeypatch.chdir(root)
+        before = CliRunner().invoke(main, ["check", "--skip-outputs"])
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["pipelines"]["acme/nowhere"] = {}
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        from chartbook.manifest import get_pipeline_ids, load_manifest
+
+        loaded = load_manifest(root)
+        assert loaded["store_pipelines"] == ["acme/nowhere"] and "acme/nowhere" not in get_pipeline_ids(loaded)
+        after = CliRunner().invoke(main, ["check", "--skip-outputs"])
+        # The fixture's own missing fields are said as before; the entry adds nothing to check
+        assert after.exit_code == before.exit_code and "acme/nowhere" not in after.output
+        assert after.output.count("required by") == before.output.count("required by")
+
+    def test_with_mkdocs_too(self, catalog, tmp_path, monkeypatch):
+        pytest.importorskip("mkdocs")
+        pytest.importorskip("material")
+        root, first, second = catalog
+        self._elsewhere(tmp_path)
+        manifest = tomli.loads((root / "chartbook.toml").read_text())
+        manifest["pipelines"]["pipeline_c"] = {}
+        manifest["project"]["writer"] = "mkdocs"
+        (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        result = _build(root, monkeypatch)
+        assert "contains a link" not in result.output, result.output
+        page = root / "docs" / "cb" / "pipelines" / "pipeline_c_README.html"
+        assert _links(page) and all(_resolves(page, h) for h in _links(page))
+
+
+def _elsewhere_with(tmp_path, **project) -> "snapshot.Snapshot":
+    """A pipeline `pipeline_c` snapshotted elsewhere with these `[project]` fields, its folder then gone."""
+    import shutil
+
+    from tests.fixtures import create_pipeline_project
+
+    repository = tmp_path.resolve() / "elsewhere"
+    folder = create_pipeline_project(repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C")
+    manifest = tomli.loads((folder / "chartbook.toml").read_text())
+    manifest["project"].update(project)
+    (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    _git(repository, "init", "--quiet", "-b", "main")
+    _commit(repository)
+    taken = snapshot.make(folder).snapshot
+    shutil.rmtree(repository)
+    return taken
+
+
+def _show_from_the_store(root: Path, pipeline_id: str = "pipeline_c", **settings) -> None:
+    manifest = tomli.loads((root / "chartbook.toml").read_text())
+    manifest["pipelines"][pipeline_id] = {}
+    manifest["project"].update(settings)
+    (root / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+
+
+class _Markup:
+    """The elements and attributes of a page, as a browser would read them."""
+
+    def __init__(self, page: Path):
+        from html.parser import HTMLParser
+
+        self.tags, self.scripts = [], []
+        markup = self
+
+        class Reader(HTMLParser):
+            in_script = False
+
+            def handle_starttag(self, tag, attrs):
+                markup.tags.append((tag, dict(attrs)))
+                self.in_script = tag == "script"
+
+            def handle_endtag(self, tag):
+                self.in_script = False
+
+            def handle_data(self, data):
+                if self.in_script:
+                    markup.scripts.append(data)
+
+        Reader().feed(page.read_text(encoding="utf-8"))
+
+
+class TestWhatTheStoreOnlyReviewFound:
+    """What a pipeline's snapshot says of it reaches the catalog's own pages as text, never as markup."""
+
+    HOSTILE = {
+        "name": "C\n# <img src=x onerror=alert(2)></title><script>alert(7)</script>",
+        "description": (
+            "Hi <script>alert(1)</script>\n"
+            "```{include} SECRET\n```\n"
+            ":::{include} SECRET\n:::\n"
+            "{eval-rst}`x` [click](javascript:alert(3)) | a | b |"
+        ),
+        "maintainer": "<b onmouseover=alert(4)>M</b>",
+        "repo_url": "javascript:alert(5)",
+        "site_url": 'https://example.org/" onmouseover="alert(6)',
+    }
+
+    def _hostile(self, tmp_path) -> tuple[dict, Path]:
+        secret = tmp_path / "secret.txt"
+        secret.write_text("TOP-SECRET-TEXT")
+        fields = {k: v.replace("SECRET", str(secret)) for k, v in self.HOSTILE.items()}
+        return fields, secret
+
+    def _no_markup_from_the_store(self, page: Path) -> None:
+        # Not in the file at all, as markup or as text a title or a theme could decode
+        written = page.read_text(encoding="utf-8")
+        for planted in ("<script>alert", "<img src=x", "</title><script", "<b onmouseover"):
+            assert planted not in written, (page, planted)
+        read = _Markup(page)
+        assert not any("alert(" in script for script in read.scripts), page
+        for tag, attributes in read.tags:
+            assert not (tag == "img" and attributes.get("src") == "x"), (page, tag, attributes)
+            assert "onmouseover" not in attributes and "onerror" not in attributes, (page, tag, attributes)
+            assert not (attributes.get("href") or "").lower().startswith("javascript"), (page, attributes)
+
+    def test_the_catalogs_pages_show_it_as_text(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        fields, secret = self._hostile(tmp_path)
+        _elsewhere_with(tmp_path, **fields)
+        _show_from_the_store(root)
+        _build(root, monkeypatch)
+        site = root / "docs"
+        own = [
+            site / "cb" / "pipelines" / "pipeline_c_README.html",
+            site / "cb" / "pipelines.html",
+            site / "cb" / "versions.html",
+            site / "index.html",
+        ]
+        for page in own:
+            self._no_markup_from_the_store(page)
+        readme = own[0].read_text()
+        # Shown as written, on one line, HTML's own characters by look-alikes
+        assert "Hi ‹script›alert(1)‹/script›" in readme
+        assert "‹b onmouseover=alert(4)›M‹/b›" in readme
+        # Nor in the search index, whose titles Sphinx's search sets into HTML
+        self._no_markup_from_the_store(site / "searchindex.js")
+        # Not a web address: no link at all
+        assert "Repository:" not in readme and "Web page:" not in readme
+        assert not any("TOP-SECRET-TEXT" in page.read_text(errors="ignore") for page in site.rglob("*.html"))
+
+    def test_and_with_mkdocs(self, catalog, tmp_path, monkeypatch):
+        pytest.importorskip("mkdocs")
+        pytest.importorskip("material")
+        root, first, second = catalog
+        fields, secret = self._hostile(tmp_path)
+        _elsewhere_with(tmp_path, **fields)
+        _show_from_the_store(root, writer="mkdocs")
+        _build(root, monkeypatch)
+        site = root / "docs"
+        for page in [site / "cb" / "pipelines" / "pipeline_c_README.html", site / "cb" / "pipelines.html", site / "index.html",
+                     site / "search" / "search_index.json"]:
+            if page.exists():
+                self._no_markup_from_the_store(page)
+        # The page title, which the theme decodes and writes unescaped
+        title = (site / "cb" / "pipelines" / "pipeline_c_README.html").read_text().split("<title>", 1)[1].split("</title>", 1)[0]
+        assert "<" not in title and "‹" in title
+        assert not any("TOP-SECRET-TEXT" in page.read_text(errors="ignore") for page in site.rglob("*.html"))
+
+    def test_a_web_address_is_a_link(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        _elsewhere_with(tmp_path, repo_url="https://github.com/acme/pipeline_c", site_url="https://acme.org/c?a=1&b=2#top")
+        _show_from_the_store(root)
+        _build(root, monkeypatch)
+        read = _Markup(root / "docs" / "cb" / "pipelines" / "pipeline_c_README.html")
+        hrefs = [attributes.get("href") for tag, attributes in read.tags if tag == "a"]
+        assert "https://github.com/acme/pipeline_c" in hrefs and "https://acme.org/c?a=1&b=2#top" in hrefs
+
+    @pytest.mark.parametrize(
+        "content",
+        ['[1, 2]', '{"records": 5}', '{"records": [5, "x", null]}', "[" * 100000 + "]" * 100000,
+         '{"records": [{"kind": "Pipeline", "id": "pipeline_c", "description": 5, "name": ["x"]}]}'],
+        ids=["a-list", "records-a-number", "records-not-tables", "too-deep", "fields-not-text"],
+    )
+    def test_a_stored_index_of_any_shape_is_no_description(self, catalog, tmp_path, monkeypatch, content):
+        import os
+        import stat
+
+        root, first, second = catalog
+        taken = _elsewhere_with(tmp_path)
+        held = Path(default_store().get(taken.index["content_hash"]))
+        os.chmod(held, stat.S_IRWXU)
+        os.chmod(held / "index.json", stat.S_IRUSR | stat.S_IWUSR)
+        (held / "index.json").write_text(content)
+        _show_from_the_store(root)
+        _build(root, monkeypatch)
+        record = next(r for r in json.loads((root / "docs" / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
+        assert record["name"] == "pipeline_c" and "description" not in record
+
+    def _held(self, taken) -> Path:
+        import os
+        import stat
+
+        held = Path(default_store().get(taken.index["content_hash"]))
+        os.chmod(held, stat.S_IRWXU)
+        os.chmod(held / "index.json", stat.S_IRUSR | stat.S_IWUSR)
+        return held
+
+    def _shown(self, root: Path, monkeypatch) -> dict:
+        _show_from_the_store(root)
+        _build(root, monkeypatch)
+        return next(r for r in json.loads((root / "docs" / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
+
+    def test_a_stored_index_is_not_read_through_a_link(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        taken = _elsewhere_with(tmp_path)
+        held = self._held(taken)
+        outside = tmp_path / "outside.json"
+        outside.write_text(json.dumps({"records": [{"kind": "Pipeline", "id": "pipeline_c", "description": "From outside."}]}))
+        (held / "index.json").unlink()
+        (held / "index.json").symlink_to(outside)
+        assert "description" not in self._shown(root, monkeypatch)
+
+    def test_nor_past_a_limit(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        _elsewhere_with(tmp_path, description="Long enough.")
+        monkeypatch.setattr(snapshot, "STORED_INDEX_LIMIT", 100)
+        assert "description" not in self._shown(root, monkeypatch)
+
+    def test_a_name_of_nothing_visible_is_no_name(self, catalog, tmp_path, monkeypatch):
+        root, first, second = catalog
+        _elsewhere_with(tmp_path, name="\u200b\u200b \u2028")
+        record = self._shown(root, monkeypatch)
+        assert record["name"] == "pipeline_c"
+        page = (root / "docs" / "cb" / "pipelines.html").read_text()
+        assert not re.search(r"<h2[^>]*>\s*(<a [^>]*>[^<]*</a>)?\s*</h2>", page)
+
+    def test_the_description_is_the_linked_snapshots(self, catalog, tmp_path, monkeypatch):
+        """The newest snapshot is the one described and the one linked, even when it has no index."""
+        import dataclasses
+
+        root, first, second = catalog
+        taken = _elsewhere_with(tmp_path, description="The older one.")
+        later = dataclasses.replace(taken, made_at="2099-01-01T00:00:00Z", index=None)
+        snapshot._write(later, default_store())
+        _show_from_the_store(root)
+        _build(root, monkeypatch)
+        record = next(r for r in json.loads((root / "docs" / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
+        assert record["snapshots"][0]["made_at"] == "2099-01-01T00:00:00Z"
+        assert "description" not in record
+
+
+class TestTheTextAndLinkChecks:
+    def test_text_is_one_line_with_no_markup(self):
+        from chartbook.writers.sphinx import _as_text
+
+        assert _as_text("Rates\n\n  and *more*") == "Rates and &#42;more&#42;"
+        assert _as_text("<a>") == "‹a›"
+        assert _as_text("{include}`x`") == "&#123;include&#125;‘x‘"
+        assert _as_text("""A & B's "x" """) == "A ＆ B’s ”x”"
+        # Decoded again, nothing of HTML's own is there
+        import html
+
+        assert not set(html.unescape(_as_text("</title><script>&lt;'\"`"))) & set("<>&'\"`")
+        assert _as_text("Zürich ±") == "Zürich ±"
+        assert _as_text(None) == "" and _as_text(5) == ""
+        assert _as_text("a\x00b‮c") == "a b c"
+
+    @pytest.mark.parametrize(
+        "written, shown",
+        [
+            ("https://github.com/acme/rates", "https://github.com/acme/rates"),
+            ("  http://acme.org:8080/a?b=1&c=2#f  ", "http://acme.org:8080/a?b=1&c=2#f"),
+            ("https://user:token@github.com/acme/rates", "https://github.com/acme/rates"),
+            ("javascript:alert(1)", ""),
+            ("JaVaScRiPt://acme.org/%0aalert(1)", ""),
+            ('https://acme.org/" onmouseover="alert(1)', ""),
+            ("https://acme.org/a b", ""),
+            ("https://acme.org/(x)", ""),
+            ("https://acme.org/<script>", ""),
+            ("ftp://acme.org/x", ""),
+            ("httpſ://acme.org/x", ""),
+            ("https://acme.org/\u212a", ""),
+            ("HTTPS://Acme.org/X", "HTTPS://Acme.org/X"),
+            ("https://", ""),
+            ("https://acme.org/" + "a" * 3000, ""),
+            (5, ""),
+            (None, ""),
+        ],
+    )
+    def test_a_link_is_a_plain_web_address(self, written, shown):
+        from chartbook.identity import web_link
+
+        assert web_link(written) == shown
+
+
+class TestACatalogEntryWithNoPath:
+    """`"acme/rates" = {}` names a pipeline shown from the store; nothing else quietly becomes one."""
+
+    def _catalog(self, tmp_path, pipelines: dict) -> Path:
+        root = tmp_path / "cat"
+        root.mkdir()
+        (root / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog", "name": "C", "maintainer": "M"}, "pipelines": pipelines})
+        )
+        return root
+
+    def _pipeline(self, folder: Path) -> Path:
+        folder.mkdir(parents=True)
+        (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"name": "P", "maintainer": "M"}}))
+        return folder
+
+    @pytest.mark.parametrize(
+        "entry, said",
+        [
+            ({"pth": "../rates"}, "Did you mean 'path'"),
+            ({"Path": "../rates"}, "'Path'"),
+            ({"disabled": "yes"}, "true or false"),
+            ({"path": 5}, "must be a string, or a table"),
+            (5, "an entry is the path"),
+        ],
+    )
+    def test_an_entry_says_only_where_and_whether(self, tmp_path, entry, said):
+        from chartbook.manifest import load_manifest
+
+        root = self._catalog(tmp_path, {"acme/rates": entry})
+        with pytest.raises(ValueError) as raised:
+            load_manifest(root)
+        assert said.lower() in str(raised.value).lower()
+
+    def test_a_member_of_its_id_fills_it_in(self, tmp_path):
+        from chartbook.manifest import load_manifest
+
+        root = self._catalog(tmp_path, {"members": ["p/*"], "rates": {}})
+        self._pipeline(root / "p" / "rates")
+        loaded = load_manifest(root)
+        assert "rates" in loaded["pipelines"] and loaded["store_pipelines"] == []
+
+    def test_and_stays_disabled_if_it_was(self, tmp_path):
+        from chartbook.manifest import load_manifest
+
+        root = self._catalog(tmp_path, {"members": ["p/*"], "rates": {"disabled": True}})
+        self._pipeline(root / "p" / "rates")
+        loaded = load_manifest(root)
+        assert "rates" not in loaded["pipelines"] and loaded["store_pipelines"] == []
+
+    def test_ls_lists_it(self, tmp_path):
+        root = self._catalog(tmp_path, {"acme/rates": {}})
+        for arguments in (["ls", "--catalog", str(root)], ["ls", "--catalog", str(root), "pipelines"]):
+            result = CliRunner().invoke(main, arguments)
+            assert result.exit_code == 0, result.output
+            assert "acme/rates: (store only" in result.output
+
+    @pytest.mark.parametrize("reference", ["acme/rates", "rates"])
+    def test_reading_its_data_says_it_has_no_folder_here(self, tmp_path, reference):
+        from chartbook.manifest import load_manifest
+        from chartbook.resolve import locate_in_catalog
+
+        root = self._catalog(tmp_path, {"acme/rates": {}})
+        with pytest.raises(KeyError) as raised:
+            locate_in_catalog(load_manifest(root), reference)
+        assert "no folder on this machine" in str(raised.value)

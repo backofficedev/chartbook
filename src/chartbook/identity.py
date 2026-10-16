@@ -274,6 +274,29 @@ def strip_url_credentials(url: str) -> str:
     return f"{match['scheme']}://{keep}{url[match.end():]}"
 
 
+#: A web address safe to set anywhere in a page: http or https, a host, and
+#: none of the characters that end a link, an attribute or a line in
+#: Markdown or HTML (no space, quote, angle bracket, parenthesis, square
+#: bracket, brace, backtick or backslash).
+_WEB_LINK = re.compile(r"[Hh][Tt][Tt][Pp][Ss]?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~:/?#@!$&+,;=%-]*)?", re.ASCII)
+
+
+def web_link(value: object) -> str:
+    """The value if it is a plain web address (``http`` or ``https``), with no credentials; else an empty string.
+
+    For a link whose text someone else wrote, as a pipeline's snapshot in
+    the store says where its repository and site are: a ``javascript:``
+    link, or one that would break out of the page's markup, is no link.
+
+    :param value: The address as written.
+    :returns: The address, or ``""``.
+    """
+    if not isinstance(value, str) or len(value) > 2048:
+        return ""
+    address = strip_url_credentials(value.strip())
+    return address if _WEB_LINK.fullmatch(address) else ""
+
+
 def clear_git_remote_cache() -> None:
     """Clear the cached git remote lookups (mainly for tests)."""
     _git_remote_cache.clear()

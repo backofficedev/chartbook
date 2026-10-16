@@ -206,7 +206,23 @@ model with where its page is, so that a command-line agent finds its way without
    when any of this changes. `store gc` clears the kept site of every snapshot it removes. Not
    built: the same links inside a version's own site, which is built once and kept, and so
    cannot know which other versions a catalog will show; its pages say the pinned commit and
-   date in words. And a catalog entry by ID alone, which is the next step.
+   date in words. And a catalog entry by ID alone, which is the next step. *Built 2026-10-16:* a
+   `[pipelines]` entry with no `path` names a pipeline whose folder is not on this machine; the
+   catalog's index has a Pipeline record for it with `location: {kind: store}`, named and
+   described from its newest snapshot's own index, and its `snapshots`; its page links its newest
+   version and the Versions page; the manifest keeps it apart from the folder pipelines
+   (`store_pipelines`), so `check`, `run`, the incremental plan and the policy pass it by. That
+   completes step 3. *Built 2026-10-16, after review:* what a snapshot says of its pipeline is
+   someone else's text reaching the catalog's own, trusted build, so the writer shows its name,
+   description and maintainer as plain text (each ASCII punctuation character a character
+   reference) and its links only when they are plain web addresses; the description is the
+   newest snapshot's, the one the page links. A `[pipelines]` entry takes only `path` and
+   `disabled`, and a folder of the entry's ID fills it in. A second review found that a page
+   title (MkDocs) and Sphinx's search results decode character references and set the text
+   into HTML again, so HTML's own characters (`< > & " '`, backtick) are replaced by look-alikes
+   first; the stored index is read only as a regular file, not through a link, and up to a
+   limit. Not changed: a version's own site is its owner's pages, raw HTML included, served
+   with the catalog, as a listed repository's pages are; the guide says so.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.

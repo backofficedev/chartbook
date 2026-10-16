@@ -9,7 +9,7 @@ pipeline's own site, with the write-ups and the data dictionary as they were the
 {% for p in pipelines %}
 ## {{ p.name }}
 
-`{{ p.id }}` · [the working version]({{ p.readme }})
+`{{ p.id }}` · {% if p.working %}[the working version]({{ p.readme }}){% else %}not on this machine: [its page]({{ p.readme }}){% endif %}
 
 {% if p.versions %}
 ```{raw} html

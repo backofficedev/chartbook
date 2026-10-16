@@ -470,3 +470,43 @@ class TestCatalogAddPathValidation:
         )
         assert result.exit_code == 0, result.output
         assert "Warning" not in result.output
+
+
+class TestAddAPipelineShownFromTheStore:
+    """An entry with no path is a pipeline the catalog shows from the store; adding its folder fills it in."""
+
+    def _add(self, catalog_dir, *paths):
+        return CliRunner().invoke(
+            main, ["catalog", "add", *map(str, paths), "--catalog", str(catalog_dir / "chartbook.toml"), "-y"]
+        )
+
+    def test_its_folder_fills_the_entry(self, tmp_path):
+        catalog_dir = _make_minimal_catalog(tmp_path / "catalog", {"my_pipeline": {}})
+        pipeline_dir = _make_minimal_pipeline(tmp_path / "my_pipeline")
+        result = self._add(catalog_dir, pipeline_dir)
+        assert result.exit_code == 0, result.output
+        assert "showed from the store" in result.output
+        pipelines = _read_catalog(catalog_dir)["pipelines"]
+        assert pipelines == {"my_pipeline": {"path": "../my_pipeline"}}
+
+    def test_a_disabled_one_is_enabled(self, tmp_path):
+        catalog_dir = _make_minimal_catalog(tmp_path / "catalog", {"my_pipeline": {"disabled": True}})
+        result = self._add(catalog_dir, _make_minimal_pipeline(tmp_path / "my_pipeline"))
+        assert result.exit_code == 0, result.output
+        assert _read_catalog(catalog_dir)["pipelines"] == {"my_pipeline": {"path": "../my_pipeline"}}
+
+    def test_and_taken_off_the_disabled_list(self, tmp_path):
+        catalog_dir = _make_minimal_catalog(tmp_path / "catalog", {"my_pipeline": {}, "disabled": ["my_pipeline"]})
+        result = self._add(catalog_dir, _make_minimal_pipeline(tmp_path / "my_pipeline"))
+        assert result.exit_code == 0, result.output
+        assert _read_catalog(catalog_dir)["pipelines"] == {"my_pipeline": {"path": "../my_pipeline"}}
+
+    def test_a_second_folder_of_the_same_id_is_another_pipeline(self, tmp_path):
+        catalog_dir = _make_minimal_catalog(tmp_path / "catalog", {"my_pipeline": {}})
+        first = _make_minimal_pipeline(tmp_path / "a" / "my_pipeline")
+        second = _make_minimal_pipeline(tmp_path / "b" / "my_pipeline")
+        result = self._add(catalog_dir, first, second)
+        assert result.exit_code == 0, result.output
+        pipelines = _read_catalog(catalog_dir)["pipelines"]
+        assert pipelines["my_pipeline"] == {"path": "../a/my_pipeline"}
+        assert pipelines["my_pipeline_2"] == {"path": "../b/my_pipeline"}

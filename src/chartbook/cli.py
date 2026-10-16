@@ -816,6 +816,10 @@ def index_diff(before, after, as_json, exit_code):
         raise SystemExit(1)
 
 
+#: How `chartbook ls` shows a pipeline the catalog names with no folder here
+STORE_ONLY = "(store only: not on this machine; the catalog shows its snapshots)"
+
+
 @main.group(invoke_without_command=True)
 @click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
 @click.pass_context
@@ -841,8 +845,11 @@ def ls(ctx, catalog):
         click.echo("")
 
         if manifest["project"]["type"] == "catalog":
-            # Catalog with multiple pipelines
-            for pipeline_id in sorted(manifest["pipelines"].keys()):
+            # Catalog with multiple pipelines, and those it shows from the store
+            for pipeline_id in sorted([*manifest["pipelines"], *(manifest.get("store_pipelines") or [])]):
+                if pipeline_id not in manifest["pipelines"]:
+                    click.echo(f"[pipeline] {pipeline_id}: {STORE_ONLY}")
+                    continue
                 pipeline_manifest = manifest["pipelines"][pipeline_id]
                 pipeline_name = _get_pipeline_name(pipeline_manifest)
                 click.echo(f"[pipeline] {pipeline_id}: {pipeline_name}")
@@ -887,7 +894,10 @@ def ls_pipelines(ctx):
     manifest, _ = _load_catalog_for_cli(catalog)
 
     if manifest["project"]["type"] == "catalog":
-        for pipeline_id in sorted(manifest["pipelines"].keys()):
+        for pipeline_id in sorted([*manifest["pipelines"], *(manifest.get("store_pipelines") or [])]):
+            if pipeline_id not in manifest["pipelines"]:
+                click.echo(f"{pipeline_id}: {STORE_ONLY}")
+                continue
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             pipeline_name = _get_pipeline_name(pipeline_manifest)
             click.echo(f"{pipeline_id}: {pipeline_name}")
@@ -1330,33 +1340,59 @@ def catalog_add(paths, catalog_path, yes):
         except ValueError:
             return _sanitize_pipeline_key(directory.name)
 
+    from chartbook.manifest import RESERVED_PIPELINES_KEYS
+
+    # An entry with no path is a pipeline the catalog shows from the store:
+    # a folder of the same ID is that pipeline, and fills the entry in
+    from_the_store = {
+        key
+        for key, entry in raw_catalog.get("pipelines", {}).items()
+        if key not in RESERVED_PIPELINES_KEYS and isinstance(entry, dict) and entry.get("path") is None
+    }
+    planned = []  # (directory, name, key, whether it fills in an entry from the store)
+    for d, name, project_table in valid_pipelines:
+        key = _derive_catalog_key(d, project_table)
+        fills = key in from_the_store
+        if fills:
+            from_the_store.discard(key)
+        else:
+            key = _ensure_unique_key(key, existing_keys)
+        existing_keys.add(key)
+        planned.append((d, name, key, fills))
+
     # Prompt for confirmation if multiple
-    if len(valid_pipelines) > 1 and not yes:
+    if len(planned) > 1 and not yes:
         click.echo("")
         click.echo("Pipelines to add:")
-        for d, name, project_table in valid_pipelines:
-            key = _derive_catalog_key(d, project_table)
-            key = _ensure_unique_key(key, existing_keys)
-            click.echo(f"  {key}: {name} ({d})")
+        for d, name, key, fills in planned:
+            shown = " (shown from the store until now)" if fills else ""
+            click.echo(f"  {key}: {name} ({d}){shown}")
         click.echo("")
-        if not click.confirm(f"Add {len(valid_pipelines)} pipeline(s)?"):
+        if not click.confirm(f"Add {len(planned)} pipeline(s)?"):
             raise SystemExit(0)
 
     # Add each pipeline
     added = 0
-    for d, name, project_table in valid_pipelines:
-        key = _derive_catalog_key(d, project_table)
-        key = _ensure_unique_key(key, existing_keys)
-        existing_keys.add(key)
-
+    for d, name, key, fills in planned:
         try:
             rel_path = os.path.relpath(d, catalog_dir)
         except ValueError:
             # Cross-drive on Windows
             rel_path = str(d)
 
-        raw_catalog["pipelines"][key] = {"path": rel_path}
-        click.echo(f"  Added '{key}': {name} ({rel_path})")
+        if fills:
+            entry = raw_catalog["pipelines"][key]
+            entry["path"] = rel_path
+            entry.pop("disabled", None)
+            disabled_list = raw_catalog["pipelines"].get("disabled")
+            if isinstance(disabled_list, list) and key in disabled_list:
+                disabled_list.remove(key)
+                if not disabled_list:
+                    raw_catalog["pipelines"].pop("disabled")
+            click.echo(f"  Added '{key}', which the catalog showed from the store: {name} ({rel_path})")
+        else:
+            raw_catalog["pipelines"][key] = {"path": rel_path}
+            click.echo(f"  Added '{key}': {name} ({rel_path})")
         added += 1
 
     # Write back
