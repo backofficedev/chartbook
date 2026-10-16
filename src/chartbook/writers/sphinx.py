@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib.resources
 import os
+import string
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -134,6 +135,49 @@ A version is made by a snapshot. Its name is the start of the model's content ha
 """
 
 
+def _is_from_the_store(record: dict) -> bool:
+    """Whether a record is of a pipeline the catalog shows from the store alone."""
+    return record.get("kind") == "Pipeline" and (record.get("location") or {}).get("kind") == "store"
+
+
+def _as_text(value: object) -> str:
+    """Text someone else wrote, made safe to set into a page: it shows as written and is never read as markup.
+
+    Each run of whitespace or unprintable characters becomes one space, so
+    the text is one line, and each ASCII punctuation character becomes its
+    numeric character reference. CommonMark (and so MyST), Python-Markdown
+    and HTML show a character reference as its character and never read it
+    as syntax: no role, directive, link, list, table cell or HTML element
+    can start in the text, and it cannot leave an HTML attribute either.
+    """
+    if not isinstance(value, str):
+        return ""
+    text = " ".join("".join(c if c.isprintable() else " " for c in value).split())
+    return "".join(f"&#{ord(c)};" if c in string.punctuation else c for c in text)
+
+
+def _from_the_store(record: dict) -> dict:
+    """A pipeline's record from the store, as the writer shows it: what it says of itself as text, and plain web links.
+
+    Anyone who can write to the store wrote these, through the snapshot's
+    own index, and the catalog's site is built as the catalog's own, where a
+    directive could read a file on this machine: so only the fields the
+    pages show are kept, each as :func:`_as_text`, and a link only when it
+    is a plain web address.
+    """
+    from chartbook.identity import web_link
+
+    shown = {key: record[key] for key in ("kind", "version", "id", "snapshots") if key in record}
+    shown["location"] = {"kind": "store"}
+    for key in ("name", "description", "maintainer"):
+        if _as_text(record.get(key)):
+            shown[key] = _as_text(record[key])
+    for key in ("repo_url", "site_url"):
+        if web_link(record.get(key)):
+            shown[key] = web_link(record[key])
+    return shown
+
+
 @dataclass
 class SphinxWriter:
     """Pages for Sphinx, from one index.
@@ -162,7 +206,10 @@ class SphinxWriter:
     _reversed: dict = field(init=False)
 
     def __post_init__(self):
-        self.records = {record["id"]: record for record in self.index.get("records", [])}
+        self.records = {
+            record["id"]: _from_the_store(record) if _is_from_the_store(record) else record
+            for record in self.index.get("records", [])
+        }
         self._reversed = reverse(self.records)
         if self.docs_src_dir is None:
             self.docs_src_dir = Path("_docs_src").resolve()
@@ -463,15 +510,26 @@ class SphinxWriter:
         """The page of a pipeline the catalog shows from the store alone: what it is, and its versions."""
         from chartbook.versions import site_path
 
+        # The record's text is already plain (see _from_the_store): never markup
         lines = [f"# `{pipeline['id']}` {pipeline.get('name', '')}", ""]
         lines.append(
             "Not on this machine: the catalog shows this pipeline from the store, each snapshot "
             "as its owner declared it ready."
         )
         lines.append("")
+        snapshots = pipeline.get("snapshots") or []
+        said = [
+            (label, pipeline[key])
+            for label, key in (("Maintainer", "maintainer"), ("Repository", "repo_url"), ("Web page", "site_url"))
+            if pipeline.get(key)
+        ]
+        if pipeline.get("description") or said:
+            lines += ["As its newest snapshot describes it:", ""]
         if pipeline.get("description"):
             lines += [pipeline["description"], ""]
-        snapshots = pipeline.get("snapshots") or []
+        for label, value in said:
+            shown = f'<a href="{value}">{value}</a>' if label != "Maintainer" else value
+            lines += [f"{label}: {shown}", ""]
         if snapshots:
             newest = snapshots[0]
             made = f"{newest['made_at'][:10]} {newest['made_at'][11:16]} UTC"
@@ -914,7 +972,7 @@ class SphinxWriter:
             for asset_id in pipeline.get("assets", [])
             if self.records.get(asset_id, {}).get("kind") == "Dataframe"
         }
-        shown = {"project": project, "dataframes": dataframes}
+        shown = {"project": project, "dataframes": dataframes, "from_the_store": _is_from_the_store(pipeline)}
         if pipeline.get("code_changed_at"):
             moment = datetime.strptime(pipeline["code_changed_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
             shown["source_last_modified_date"] = moment.astimezone().strftime("%Y-%m-%d %H:%M:%S")

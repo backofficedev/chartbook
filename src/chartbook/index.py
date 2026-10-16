@@ -903,38 +903,38 @@ def _add_snapshots(records: list[dict]) -> None:
 def _describe_from_the_store(records: list[dict]) -> None:
     """Give a pipeline shown from the store alone what its newest snapshot's own index says of it.
 
-    Its name, description, maintainer and links, as its owner wrote them at
-    the newest snapshot; nothing of its folder, which is not here.
+    Its name, description and maintainer as plain text, and its repository
+    and site when they are web addresses, as its owner wrote them at the
+    newest snapshot (the one its page links to); nothing of its folder,
+    which is not here. Anyone who can write to the store can write these,
+    so they are only ever text: the writers show them as written and never
+    read them as markup.
     """
-    import json as json_module
-
     from chartbook import snapshot as snapshots
-    from chartbook.store import StoreError, default_store
+    from chartbook.identity import web_link
+    from chartbook.store import default_store
 
-    from_store = [r for r in records if r.get("kind") == "Pipeline" and (r.get("location") or {}).get("kind") == "store"]
+    from_store = [
+        r for r in records
+        if r.get("kind") == "Pipeline" and (r.get("location") or {}).get("kind") == "store" and r.get("snapshots")
+    ]
     if not from_store:
         return
     store = default_store()
     found, _ = snapshots.readable_snapshots(store)
     for record in from_store:
-        newest = next(
-            (t for t in sorted(found, key=lambda t: t.made_at, reverse=True) if t.pipeline == record["id"] and t.index),
+        newest = record["snapshots"][0]
+        taken = next(
+            (t for t in found if t.pipeline == record["id"] and t.commit == newest["commit"] and t.made_at == newest["made_at"]),
             None,
         )
-        if newest is None:
-            continue
-        try:
-            held = Path(store.get(newest.index["content_hash"])) / "index.json"
-            recorded = json_module.loads(held.read_text(encoding="utf-8"))
-        except (OSError, ValueError, KeyError, StoreError):
-            continue
-        own = next(
-            (r for r in recorded.get("records", []) if isinstance(r, dict) and r.get("kind") == "Pipeline" and r.get("id") == record["id"]),
-            {},
-        )
-        for key in ("name", "description", "maintainer", "repo_url", "site_url"):
-            if isinstance(own.get(key), str) and own[key]:
-                record[key] = own[key]
+        own = snapshots.stored_pipeline_record(taken, store) if taken is not None else {}
+        for key, longest in (("name", 200), ("description", 2000), ("maintainer", 200)):
+            if isinstance(own.get(key), str) and own[key].strip():
+                record[key] = " ".join(own[key].split())[:longest]
+        for key in ("repo_url", "site_url"):
+            if web_link(own.get(key)):
+                record[key] = web_link(own[key])
 
 
 def _add_trained_from(records: list[dict], by_pipeline: dict) -> None:

@@ -1883,20 +1883,31 @@ def _write_back(taken: Snapshot, folder: Path, report: Materialized) -> None:
             report.left_out.append((site_dir, "the site folder could not be made"))
 
 
-def _code_changed_at(taken: Snapshot, store: Store) -> Optional[str]:
-    """When the version's code last changed, as its index recorded it; None if it has none."""
-    if not taken.index or not isinstance(taken.index.get("content_hash"), str):
-        return None
+def stored_pipeline_record(taken: Snapshot, store: Store) -> dict:
+    """The snapshot's own Pipeline record, from the index it holds; empty when it has none or it cannot be read.
+
+    The index is whatever its owner put in the store, so nothing is assumed
+    of its shape: anything but a JSON object with a list of records, the
+    pipeline's among them by its ID, reads as no record.
+    """
+    if not isinstance(taken.index, dict) or not isinstance(taken.index.get("content_hash"), str):
+        return {}
     try:
         held = Path(store.get(taken.index["content_hash"])) / INDEX_FILE
         recorded = json.loads(held.read_text(encoding="utf-8"))
-    except (OSError, ValueError, KeyError, RecursionError, StoreError):
-        return None
+    except (OSError, ValueError, KeyError, TypeError, RecursionError, StoreError):
+        return {}
     records = recorded.get("records") if isinstance(recorded, dict) else None
     for record in records if isinstance(records, list) else []:
-        if isinstance(record, dict) and record.get("kind") == "Pipeline" and isinstance(record.get("code_changed_at"), str):
-            return record["code_changed_at"]
-    return None
+        if isinstance(record, dict) and record.get("kind") == "Pipeline" and record.get("id") == taken.pipeline:
+            return record
+    return {}
+
+
+def _code_changed_at(taken: Snapshot, store: Store) -> Optional[str]:
+    """When the version's code last changed, as its index recorded it; None if it has none."""
+    changed = stored_pipeline_record(taken, store).get("code_changed_at")
+    return changed if isinstance(changed, str) else None
 
 
 def _copy_tree(source: Path, target: Path) -> None:

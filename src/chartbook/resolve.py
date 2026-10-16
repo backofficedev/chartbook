@@ -329,7 +329,22 @@ def locate_in_catalog(catalog_manifest: dict, pipeline: str) -> str:
     """
     pipelines = catalog_manifest.get("pipelines", {})
     catalog = {key: entry["pipeline_base_dir"] for key, entry in pipelines.items()}
-    return locate_pipeline(pipeline, catalog=catalog).id
+    try:
+        return locate_pipeline(pipeline, catalog=catalog).id
+    except KeyError:
+        # A pipeline the catalog names with no folder here: say so, not "no such pipeline"
+        named = [
+            key for key in catalog_manifest.get("store_pipelines") or []
+            if pipeline in (key, key.rsplit("/", 1)[-1])
+        ]
+        if named:
+            raise KeyError(
+                f"The catalog names {named[0]!r}, but it has no folder on this machine: the "
+                f"catalog only shows its snapshots in the store. To read its data here, add its "
+                f"folder to the catalog (chartbook catalog add), or read it from a pipeline that "
+                f"declares it in [dependencies] and pins it."
+            ) from None
+        raise
 
 
 def _same_directory(first: Union[str, Path], second: Union[str, Path]) -> bool:

@@ -212,7 +212,12 @@ model with where its page is, so that a command-line agent finds its way without
    described from its newest snapshot's own index, and its `snapshots`; its page links its newest
    version and the Versions page; the manifest keeps it apart from the folder pipelines
    (`store_pipelines`), so `check`, `run`, the incremental plan and the policy pass it by. That
-   completes step 3.
+   completes step 3. *Built 2026-10-16, after review:* what a snapshot says of its pipeline is
+   someone else's text reaching the catalog's own, trusted build, so the writer shows its name,
+   description and maintainer as plain text (each ASCII punctuation character a character
+   reference) and its links only when they are plain web addresses; the description is the
+   newest snapshot's, the one the page links. A `[pipelines]` entry takes only `path` and
+   `disabled`, and a folder of the entry's ID fills it in.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.

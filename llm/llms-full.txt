@@ -392,7 +392,12 @@ disabled = true                     # Temporarily excluded from builds
 # Platform-specific paths
 [pipelines."acme/monthly"]
 path = { unix = "/data/pipelines/monthly", windows = "T:/pipelines/monthly" }
+
+# No folder on this machine: shown from its snapshots in the store
+[pipelines."acme/rates"]
 ```
+
+An entry takes only `path` and `disabled`; any other key is an error. An entry with no `path` is a pipeline the catalog shows from its snapshots in the store: a page linking its newest version, and every version on the Versions page. Its name, description and maintainer come from its newest snapshot's own index and are shown as plain text, never as Markdown; its repository and site only when they are `http(s)` addresses. `check`, `run` and the policy pass it by, `chartbook ls` lists it as store only, and `data.load` through the catalog says it has no folder here. `chartbook catalog add` of a folder with its ID, or a `members` pattern that finds one, fills the entry in.
 
 ### Catalog Auto-Discovery (members)
 
