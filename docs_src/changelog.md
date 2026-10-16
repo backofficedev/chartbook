@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a snapshot holds the index of its version, and can be laid out as a folder
+
+A snapshot now carries the pipeline's own index at that commit, in the published form, as an object in the store, and the documentation files a writer needs that are not assets: the manifest, the lockfile, the README, every write-up, the pipeline's own site pages, the logo and the favicon. So the description of the data is preserved with the data, and a version's site can be built from the store alone: `chartbook.snapshot.materialize()` lays a snapshot out as a folder, and `chartbook docs` builds a site from it with the repository gone. `store gc` keeps these objects as it keeps the assets'. The reasoning, and the plan for a catalog of every version of every pipeline, is the new design page {doc}`design/versioned-catalog`; the vocabulary page now says how the snapshot and the index relate instead of saying they converge.
+
 ### Fixed — four links on the pages go where they say
 
 A dataframe page's link to itself, a chart page's link to itself in its linked-charts list, and in a catalog a dataframe page's links to itself and to its pipeline, resolved to nothing in either site tool since the generator; Sphinx showed each as an anchor on the same page. So did a chart page's Parquet download link, and the Excel download link everywhere, since no Excel file is ever written: the first is relative to its page now and the second is gone; and in a catalog a pipeline without a `repo_url` showed an empty link. The link scheme is now relative to the page a link is on; both site tools' reports of an unresolved link are printed as `warning:` lines, and the MkDocs build tests, with downloads on and a model in the site, assert there is none.

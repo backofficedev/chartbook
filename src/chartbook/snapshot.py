@@ -166,6 +166,21 @@ class Snapshot:
             a store a team shares, still knows which versions to keep; and
             so that a pipeline that depends on this one can pin
             ``this:model/x@champion`` without reading its folder.
+        index: The pipeline's own index at this commit, in the published
+            form, as an object in the store: ``{"content_hash": …,
+            "size_bytes": …}``, the object holding one ``index.json``. It
+            is what a docs build of the folder would have written just
+            before the snapshot was made, so the data dictionary of this
+            version is kept with its data. None for a snapshot made before
+            snapshots carried it.
+        documents: The files a writer needs that are not assets, as one
+            object in the store: the manifest, the lockfile, the README,
+            the write-ups, the pipeline's own site pages, its logo and
+            favicon, each under its path in the pipeline's folder, and only
+            those git tracks. ``{"content_hash": …, "size_bytes": …,
+            "files": [...]}``. With the assets, they are enough to lay the
+            version out as a folder and build its site
+            (:func:`materialize`). None for a snapshot made before.
     """
 
     pipeline: str
@@ -177,19 +192,29 @@ class Snapshot:
     built_with: dict = field(default_factory=dict, compare=False)
     inputs: list = field(default_factory=list, compare=False)
     labels: dict = field(default_factory=dict, compare=False)
+    index: Optional[dict] = field(default=None, compare=False)
+    documents: Optional[dict] = field(default=None, compare=False)
 
     @property
     def built_by_run(self) -> bool:
         """Whether ChartBook ran the build in the command that made this."""
         return bool(self.built_with.get("run"))
 
-    def hashes(self) -> set[str]:
-        """The content hash of every asset in it: what the store must keep."""
+    def asset_hashes(self) -> set[str]:
+        """The content hash of every asset it holds: what a lockfile pinning it names."""
         return {
             record["content_hash"]
             for record in self.assets.values()
             if record.get("content_hash")
         }
+
+    def hashes(self) -> set[str]:
+        """Every object it names, its assets, its index and its documents: what the store must keep."""
+        named = self.asset_hashes()
+        for kept in (self.index, self.documents):
+            if kept and kept.get("content_hash"):
+                named.add(kept["content_hash"])
+        return named
 
     def content(self) -> dict[str, Optional[str]]:
         """Each asset's content hash, by its reference; None if not built."""
@@ -218,6 +243,10 @@ class Snapshot:
             document["labels"] = {
                 name: dict(sorted(self.labels[name].items())) for name in sorted(self.labels)
             }
+        if self.index:
+            document["index"] = self.index
+        if self.documents:
+            document["documents"] = self.documents
         document["records"] = [self.assets[name] for name in sorted(self.assets)]
         return document
 
@@ -239,6 +268,9 @@ class SnapshotReport:
             by model: a name a reference cannot carry, or one that reads as
             a version, or one whose value is not a version. ``chartbook
             check`` refuses the same ones.
+        index_skipped: Why the version's index could not be built and is
+            not in the snapshot, in one line; None when it is (or when no
+            new snapshot was made).
     """
 
     snapshot: Snapshot
@@ -246,6 +278,7 @@ class SnapshotReport:
     not_built: list[tuple[str, str]] = field(default_factory=list)
     new_versions: list[tuple[str, str]] = field(default_factory=list)
     skipped_labels: list[tuple[str, str]] = field(default_factory=list)
+    index_skipped: Optional[str] = None
 
 
 def asset_record(
@@ -595,6 +628,8 @@ def read(path: Union[str, Path]) -> Snapshot:
             built_with=dict(document.get("built_with") or {}),
             inputs=list(document.get("inputs") or []),
             labels={k: dict(v) for k, v in (document.get("labels") or {}).items()},
+            index=dict(document["index"]) if document.get("index") else None,
+            documents=dict(document["documents"]) if document.get("documents") else None,
         )
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise SnapshotError(f"Cannot read the snapshot {path}: {error}") from None
@@ -1343,7 +1378,8 @@ def make(
         labels=labels_of(raw),
     )
     before = find(store, code.commit, code.subdirectory)
-    if before and before[0].content() == snapshot.content():
+    # One made before snapshots carried their documents is worth making again
+    if before and before[0].content() == snapshot.content() and before[0].documents is not None:
         if before[0].built_by_run or not built_by_run:
             store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
             return SnapshotReport(before[0], False, not_built, skipped_labels=labels_skipped(raw))
@@ -1358,17 +1394,216 @@ def make(
         if content_hash not in had:
             new_versions.append((name, version_name(content_hash, had)))
 
+    # The version's own description, and the files a writer needs, with the
+    # bytes. The bytes are what a snapshot is for: an index that cannot be
+    # built (a manifest a docs build would refuse) is said, not fatal
+    index_skipped = None
+    try:
+        index = _put_index(_version_index(directory), store)
+    except Exception as error:  # noqa: BLE001 - whatever the docs build would have raised
+        said = str(error).strip()
+        index, index_skipped = None, said.splitlines()[0].rstrip(".") if said else type(error).__name__
+    snapshot = dataclasses.replace(snapshot, index=index, documents=_put_documents(directory, raw, store))
     path = _write(snapshot, store)
     store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-    snapshot = Snapshot(
-        snapshot.pipeline,
-        snapshot.commit,
-        snapshot.subdirectory,
-        snapshot.made_at,
-        assets,
-        path,
-        snapshot.built_with,
-        snapshot.inputs,
-        snapshot.labels,
+    snapshot = dataclasses.replace(snapshot, path=path)
+    return SnapshotReport(
+        snapshot, True, not_built, new_versions, labels_skipped(raw), index_skipped=index_skipped
     )
-    return SnapshotReport(snapshot, True, not_built, new_versions, labels_skipped(raw))
+
+
+#: The one file in a snapshot's index object.
+INDEX_FILE = "index.json"
+
+
+def _version_index(directory: Path) -> dict:
+    """The pipeline's own index as a docs build of its folder would write it now, published.
+
+    Published: no path of this machine is in it, so it may sit in a store a
+    team shares. A model's versions in it are those made before this
+    snapshot, since this one is not written yet.
+    """
+    from chartbook import index as index_module
+    from chartbook.manifest import apply_code_change_times, load_manifest
+
+    manifest = load_manifest(directory)
+    apply_code_change_times(manifest)
+    return index_module.published(index_module.build_index(manifest, cache=hashing.HashCache()))
+
+
+def _put_index(published: dict, store: Store) -> dict:
+    """Put an index in the store as an object holding one ``index.json``."""
+    import tempfile
+
+    from chartbook import index as index_module
+
+    with tempfile.TemporaryDirectory(prefix="chartbook-index-") as scratch:
+        path = Path(scratch) / INDEX_FILE
+        index_module.write_index(published, path)
+        stored = store.put(path, links=LINKS)
+    return {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes}
+
+
+def document_paths(directory: Union[str, Path], raw: Optional[dict] = None) -> list[str]:
+    """The files of a pipeline a writer needs that are not assets, as git tracks them.
+
+    The manifest and the lockfile; the README; every write-up an asset
+    names (``docs_path``); the pipeline's own site pages, every file under
+    its ``site_dir`` (``docs_src/site/`` by default); the logo and the
+    favicon if the manifest names them. Read from the manifest's text, so
+    that a manifest a docs build would refuse still has its documents kept.
+    Only files git tracks are taken, so nothing ignored, a ``.env`` above
+    all, can reach the store; and none outside the pipeline's folder.
+
+    :returns: Paths relative to the pipeline's folder, with ``/``, sorted.
+    """
+    from chartbook.resolve import ASSET_TABLES
+
+    directory = Path(directory)
+    raw = raw if raw is not None else _read_manifest_file(directory)
+    project = raw.get("project") or {}
+    wanted = {MANIFEST_NAME, "chartbook.lock"}
+    for key, default in (("readme", "README.md"), ("site_dir", "docs_src/site"), ("logo", ""), ("favicon", "")):
+        value = project.get(key) if isinstance(project.get(key), str) and project[key].strip() else default
+        if value:
+            wanted.add(value.strip())
+    for table in ASSET_TABLES:
+        for entry in (raw.get(table) or {}).values():
+            if isinstance(entry, dict) and isinstance(entry.get("docs_path"), str) and entry["docs_path"].strip():
+                wanted.add(entry["docs_path"].strip())
+    inside = []
+    for path in wanted:
+        if not _within(path) or hashing.escapes(directory / path, directory) is not None:
+            continue
+        inside.append(os.path.normpath(path))
+    if not inside:
+        return []
+    listed = _git(directory, "ls-files", "-z", "--", *sorted(set(inside)))
+    return sorted({Path(name).as_posix() for name in listed.split("\0") if name})
+
+
+def _put_documents(directory: Path, raw: dict, store: Store) -> Optional[dict]:
+    """Put a pipeline's documents in the store as one object, each under its own path."""
+    import shutil
+    import tempfile
+
+    paths = document_paths(directory, raw)
+    if not paths:
+        return None
+    with tempfile.TemporaryDirectory(prefix="chartbook-documents-") as scratch:
+        for relative in paths:
+            source = directory / relative
+            if not source.is_file():
+                continue  # tracked and deleted, which a commit check would have said
+            target = Path(scratch) / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+        stored = store.put(scratch, links=LINKS)
+    return {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "files": list(stored.files)}
+
+
+@dataclass
+class Materialized:
+    """What :func:`materialize` laid out.
+
+    Attributes:
+        folder: The folder the version was laid out in.
+        documents: The documents written, by path in the folder.
+        assets: The assets written, by reference.
+        left_out: The assets not written, each with why.
+    """
+
+    folder: Path
+    documents: list[str] = field(default_factory=list)
+    assets: list[str] = field(default_factory=list)
+    left_out: list[tuple[str, str]] = field(default_factory=list)
+
+
+def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] = None) -> Materialized:
+    """Lay a snapshot out as a folder: its documents and its assets at their paths, from the store alone.
+
+    The folder is then the pipeline at that version, as far as a site is
+    concerned: ``chartbook docs`` builds the version's site there with the
+    repository gone. Its code is not in it; the commit names that. A
+    dataframe that is a table or a query is in the store as parquet, and
+    the folder's manifest names its database, so it is left out and said.
+
+    :param into: A folder that does not exist yet or is empty.
+    :raises SnapshotError: If the snapshot carries no documents (it was made
+        before snapshots did), or *into* has something in it.
+    """
+    import shutil
+
+    from chartbook.hashing import glob_root
+
+    store = store if store is not None else default_store()
+    if not taken.documents:
+        raise SnapshotError(
+            f"The snapshot of {taken.pipeline} at {taken.commit[:7]} ({taken.made_at}) carries no "
+            f"documents: it was made before snapshots did. Make a new one at that commit."
+        )
+    folder = Path(into)
+    if folder.exists() and any(folder.iterdir()):
+        raise SnapshotError(f"{folder} has something in it; a snapshot is laid out in an empty folder.")
+    folder.mkdir(parents=True, exist_ok=True)
+    report = Materialized(folder.resolve())
+
+    held = Path(store.get(taken.documents["content_hash"]))
+    for relative in taken.documents.get("files", []):
+        target = folder / relative
+        if not _within(relative):
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(held / relative, target)
+        report.documents.append(relative)
+
+    for name in sorted(taken.assets):
+        record = taken.assets[name]
+        location = record.get("location") or {}
+        if not record.get("content_hash"):
+            report.left_out.append((record["id"], "not built when the snapshot was made"))
+            continue
+        if location.get("kind") != "file":
+            report.left_out.append(
+                (record["id"], "a table or a query: in the store as parquet, and the manifest names its database")
+            )
+            continue
+        declared = location.get("path", "")
+        if not _within(declared):
+            report.left_out.append((record["id"], f"its path {declared} is outside the pipeline's folder"))
+            continue
+        held = Path(store.get(record["content_hash"]))
+        if is_glob_pattern(declared):
+            _copy_tree(held, folder / glob_root(declared))
+        elif record.get("files"):
+            _copy_tree(held, folder / declared)
+        else:
+            # The same bytes may be held under several names: the declared one, else the first
+            source = held / Path(declared).name
+            if not source.is_file():
+                source = sorted(p for p in held.iterdir() if p.is_file())[0]
+            target = folder / declared
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+        report.assets.append(record["id"])
+    return report
+
+
+def _within(relative: str) -> bool:
+    """Whether a path written in a record stays inside the folder it is joined to, by its text alone.
+
+    A record is read from a store, which may be shared: a path in it that
+    is absolute or climbs out is not followed, whatever is or is not there.
+    """
+    text = os.path.normpath(str(relative))
+    return not os.path.isabs(text) and text != ".." and not text.startswith(".." + os.sep)
+
+
+def _copy_tree(source: Path, target: Path) -> None:
+    """Copy an object's files to a folder, writable, under the same relative paths."""
+    import shutil
+
+    for file in hashing.directory_files(source):
+        destination = target / file.relative_to(source)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(file, destination)

@@ -155,4 +155,5 @@ design/writer
 design/models
 design/data-access
 design/stores-and-backends
+design/versioned-catalog
 ```

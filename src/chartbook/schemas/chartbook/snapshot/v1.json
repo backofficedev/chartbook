@@ -87,6 +87,48 @@
         }
       }
     },
+    "index": {
+      "type": "object",
+      "description": "The pipeline's own index at this commit, in the published form (no path of the machine that made it), as an object in the same store holding one `index.json`: what a docs build of the folder would have written just before the snapshot was made. It keeps the data dictionary of this version with its data. A model's versions in it are those made before this snapshot. Absent when the index could not be built (a manifest a docs build would refuse), and in snapshots made before snapshots carried it.",
+      "required": [
+        "content_hash"
+      ],
+      "properties": {
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "documents": {
+      "type": "object",
+      "description": "The files a writer needs that are not assets, as one object in the same store, each under its path in the pipeline's folder: the manifest, the lockfile, the README, every `docs_path`, every file under the pipeline's `site_dir`, its logo and favicon; only files git tracks. With the assets, enough to lay the version out as a folder and build its site from the store alone. Absent in snapshots made before snapshots carried them.",
+      "required": [
+        "content_hash",
+        "files"
+      ],
+      "properties": {
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+:[0-9a-f]+$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The documents' paths in the pipeline's folder, with `/`, sorted."
+        }
+      }
+    },
     "records": {
       "type": "array",
       "description": "One record per asset the pipeline declares with a `path`, and per dataframe that is a table or a query in a source (written out as `<name>.parquet` into the store when the source is a DuckDB file; its `location` is the source's), sorted by the asset's reference. One with a `content_hash` was built; one without was declared and not built when the snapshot was made.",

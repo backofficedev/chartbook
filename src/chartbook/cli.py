@@ -2095,6 +2095,11 @@ def _echo_snapshot(report):
         click.echo(f"  not built: {asset} ({declared_path})")
     for model, version in report.new_versions:
         click.echo(f"  {model}: new version {version}")
+    if report.index_skipped:
+        click.echo(
+            f"  index not recorded: {report.index_skipped}. The bytes and the documents are in the "
+            f"store; `chartbook check` says what a docs build would refuse."
+        )
     for model, label in report.skipped_labels:
         click.echo(
             f"  label not recorded: {model} {label!r}. A label is letters, digits, '.', "

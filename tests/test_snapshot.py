@@ -76,7 +76,7 @@ def maker(work):
         {
             "project": {"id": "acme/maker"},
             "dataframes": {"rates": {"path": "./_data/rates.parquet", "docs": "d"}},
-            "charts": {"curve": {"path": "./_output/curve.html", "docs": "d"}},
+            "charts": {"curve": {"path": "./_output/curve.html", "dataframe": "rates", "docs": "d"}},
         },
     )
     _build(directory)
@@ -114,12 +114,14 @@ class TestMaking:
         rates = taken.assets["rates"]
         assert rates["id"] == "acme/maker:rates"
         assert (store.get(rates["content_hash"]) / "rates.parquet").read_bytes() == b"rates-1"
-        assert taken.hashes() == {record["content_hash"] for record in taken.assets.values()}
+        assert taken.asset_hashes() == {record["content_hash"] for record in taken.assets.values()}
+        # The store keeps the version's index and documents too
+        assert taken.hashes() == taken.asset_hashes() | {taken.index["content_hash"], taken.documents["content_hash"]}
 
     def test_the_record_is_json_in_the_index_format(self, maker):
         taken = snapshot.make(maker).snapshot
         document = json.loads(taken.path.read_text())
-        assert list(document) == ["schema", "root", "code", "made_at", "built_with", "records"]
+        assert list(document) == ["schema", "root", "code", "made_at", "built_with", "index", "documents", "records"]
         assert document["schema"] == "chartbook/snapshot/v1"
         assert document["code"] == {"commit": taken.commit, "subdirectory": "maker"}
         assert [record["id"] for record in document["records"]] == [
@@ -500,7 +502,7 @@ class TestPinning:
         (listed,) = locked.dependencies
         assert listed["location"] == {"kind": "path", "path": "../maker", "commit": taken.commit}
         assert listed["snapshot"] == taken.made_at
-        assert locked.hashes() == taken.hashes()
+        assert locked.hashes() == taken.asset_hashes()
         jsonschema.validate(
             json.loads((user / lock.LOCK_FILE).read_text()),
             json.loads(lock.schema_path().read_text()),
@@ -513,7 +515,7 @@ class TestPinning:
         (maker / "_output" / "curve.html").unlink()
         report = lock.pin(user)
         assert _statuses(report) == {"rates": "pinned", "chart/curve": "pinned"}
-        assert lock.read_lock(user).hashes() == taken.hashes()
+        assert lock.read_lock(user).hashes() == taken.asset_hashes()
 
     def test_code_reads_the_snapshot(self, user, maker, monkeypatch):
         snapshot.make(maker)
@@ -785,7 +787,7 @@ class TestKeeping:
         taken = snapshot.make(maker).snapshot
         store = default_store()
         plan = lock.plan_gc(store, recent_seconds=0)
-        assert plan.delete == [] and plan.kept == 2 and plan.snapshots == 2
+        assert plan.delete == [] and plan.kept == 4 and plan.snapshots == 4  # two assets, the index, the documents
         assert plan.snapshots_delete == []
         assert [why for _, why in plan.snapshots_kept] == ["it is the newest of its pipeline"]
         assert snapshot.all_hashes(store) == taken.hashes()
@@ -1071,8 +1073,9 @@ class TestClearingOldSnapshots:
         store = default_store()
         plan = lock.plan_gc(store, recent_seconds=0)
         assert [t for t, _ in plan.snapshots_delete] == [first, second]
-        gone = {first.content()["rates"], second.content()["rates"]}
-        assert {h for h, _ in plan.delete} == gone  # the chart is shared with the third
+        gone = (first.hashes() | second.hashes()) - third.hashes()
+        assert {first.content()["rates"], second.content()["rates"]} <= gone
+        assert {h for h, _ in plan.delete} == gone  # the chart, and documents alike, are shared with the third
         lock.run_gc(plan, store)
         assert not first.path.exists() and not second.path.exists() and third.path.exists()
         assert all(not store.has(h) for h in gone)
@@ -1094,12 +1097,13 @@ class TestClearingOldSnapshots:
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 0, result.output
         said = result.output
-        assert "Kept: 1 snapshot(s), naming 2 object(s): 1 because it is the newest of its pipeline" in said
+        assert f"Kept: 1 snapshot(s), naming {len(third.hashes())} object(s): 1 because it is the newest of its pipeline" in said
         assert "Would remove 2 snapshot(s):" in said
         assert f"  acme/maker at {first.commit[:7]}, made 2025-12-01 00:00 UTC: nothing pins it" in said
         # Their objects were stored a moment ago, so this run spares them;
         # the next run, an hour on, removes them
-        assert "Kept: 2 object(s) nothing names, stored in the last hour" in said
+        only_theirs = (first.hashes() | second.hashes()) - third.hashes()
+        assert f"Kept: {len(only_theirs)} object(s) nothing names, stored in the last hour" in said
         assert first.path.exists()  # a dry run
 
         kept = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-days", "100000"])

@@ -42,7 +42,7 @@ disguise.
 |---|---|---|---|---|
 | **manifest** | `chartbook.toml` | What a pipeline *asks*: which assets it declares, where they are, what it depends on, what its scripts are | People | In the repository, committed |
 | **lockfile** | `chartbook.lock` | What was *got*: for each dependency, which snapshot was pinned and the content hash of each of its assets | `chartbook pin`, `chartbook update` (and `chartbook run`, for a first pin) | In the repository, committed. No timestamp on purpose: a `git diff` of it means "a pin moved" |
-| **snapshot** | `<store>/snapshots/<commit>/…/<time>.json` | What was *made*: every asset one pipeline built at one commit, with its hash, declared ready by its owner | `chartbook snapshot`, `chartbook run --snapshot` | In the store, with the bytes. Not in git, since one commit can have several |
+| **snapshot** | `<store>/snapshots/<commit>/…/<time>.json` | What was *made*: every asset one pipeline built at one commit, with its hash, declared ready by its owner; with it, the pipeline's own index at that commit and the files a writer needs | `chartbook snapshot`, `chartbook run --snapshot` | In the store, with the bytes. Not in git, since one commit can have several |
 | **index** | `index.json` beside the site | What a site *shows*: every record of every pipeline the site contains, as built now, with each dependency's pins reported | `chartbook docs`, `chartbook build` | Beside the site, so it travels with it |
 
 Three rules follow, and they settle arguments:
@@ -60,13 +60,19 @@ Three rules follow, and they settle arguments:
    holds the write-ups as they were. The index records each write-up's path and hash, so a build
    can say which text it showed.
 
-## Where this is going
+## How the snapshot and the index relate
 
-A snapshot is one pipeline's index at one commit, kept with its bytes. A site's index is its own
-pipeline at the current build, plus each dependency's pinned snapshot, plus the catalog. The two
-converge: a site is a pure function of an index and the write-ups at the commit the index names,
-so a site can later be built for any snapshot, and lineage can link across sites by commit. That
-is the direction; it is not built.
+They stay two documents, and the record format is the only thing they share. A snapshot is a
+preservation act: the bytes one pipeline built at one commit, copied into the store and declared
+ready. An index is a description of what a site shows, taken from whatever is in the folders
+now, across many pipelines, with comparisons no one pipeline can make. Neither can be derived
+from the other.
+
+A snapshot *holds* the index of its version: the pipeline's own index at that commit, with the
+write-ups and the other files a writer needs, so that the description of the data is preserved
+with the data and a site can be built for any version from the store alone. A catalog's index
+is assembled from such version indexes plus the comparisons only a site can make. The reasoning
+and the plan are in {doc}`../design/versioned-catalog`.
 
 ## The rest of the words
 
