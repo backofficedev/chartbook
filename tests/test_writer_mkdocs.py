@@ -145,6 +145,9 @@ class TestTheBuild:
         pytest.importorskip("mkdocs_jupyter")
         project = pipeline_project_with_notes.resolve()
         _set_writer(project, "mkdocs")
+        manifest = tomli.loads((project / "chartbook.toml").read_text())
+        manifest["project"]["enable_data_download"] = True
+        (project / "chartbook.toml").write_text(tomli_w.dumps(manifest))
         monkeypatch.chdir(project)
         result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
@@ -157,6 +160,18 @@ class TestTheBuild:
         published = json.loads((site / "index.json").read_text())
         assert published["records"] and "value" not in (published["records"][0].get("location") or {})
         assert "cb-freshness" in (site / "index.html").read_text()
+        assert "contains a link" not in result.output, result.output  # every link on every page resolves, downloads included
+        assert (site / "cb" / "download_dataframe").is_dir()
+
+    def test_a_site_with_a_model_has_no_unresolved_link(self, trained, monkeypatch):  # noqa: F811
+        pytest.importorskip("mkdocs")
+        _, forecast = trained
+        _set_writer(forecast, "mkdocs")
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        assert result.exit_code == 0, result.output
+        assert "contains a link" not in result.output, result.output
+        assert (forecast / "docs" / "cb" / "models" / "acme--forecast" / "m.html").is_file()
 
     def test_a_catalog_is_built_with_mkdocs(self, catalog_project, monkeypatch):
         pytest.importorskip("mkdocs")
@@ -171,6 +186,7 @@ class TestTheBuild:
             assert (site / page).is_file(), page
         assert (site / "_static" / "diagnostics" / "chartbook_metadata_diagnostics.csv").is_file()
         assert "Chart 0-0 (pipeline_a)" in (site / "index.html").read_text()
+        assert "contains a link" not in result.output, result.output
 
     def test_a_site_page_with_sphinx_syntax_is_said(self, pipeline_project, monkeypatch):
         pytest.importorskip("mkdocs")

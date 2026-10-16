@@ -3,7 +3,7 @@
 | Pipeline ID                     | [{{pipeline_id}}]({{pipeline_page_link}})              |
 | Maintainer                      | {{pipeline_manifest.project.maintainer}}               |
 | Contributors                    | {{pipeline_manifest.project.contributors | join(', ')}} |
-| Repository                     | [{{pipeline_manifest.project.repo_url}}]({{pipeline_manifest.project.repo_url}})                        |
+| Repository                     | {% if pipeline_manifest.project.repo_url %}[{{pipeline_manifest.project.repo_url}}]({{pipeline_manifest.project.repo_url}}){% endif %}                        |
 | Pipeline Web Page               | <a href="{{pipeline_manifest.project.site_url}}">Pipeline Web Page      |
 {% if show_code_updated %}| Date of Last Code Update        | {{pipeline_manifest.source_last_modified_date}}           |
 {% endif %}| OS Compatibility                | {% if pipeline_manifest.project.os_compatibility is string %}{{pipeline_manifest.project.os_compatibility}}{% else %}{{pipeline_manifest.project.os_compatibility | join(', ')}}{% endif %} |

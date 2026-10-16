@@ -179,13 +179,13 @@ class SphinxWriter:
     def pipeline_page_link(self, record: dict) -> str:
         """The link from an asset's page to its pipeline's page.
 
-        The forms are the generator's, as they are: in the catalog theme a
-        model's page climbs two folders to `pipelines/`, the others one.
+        Relative to the page: in the pipeline theme up to the site's root,
+        in a catalog up to `cb/` and into `pipelines/`.
         """
+        depth = self.page_path(record).count("/")
         if self.theme == "pipeline":
-            return "../" * self.page_path(record).count("/") + "index.md"
-        up = "../../" if record["kind"] == "Model" else "../"
-        return f"{up}pipelines/{_slug(record['pipeline'])}_README.md"
+            return "../" * depth + "index.md"
+        return "../" * (depth - 1) + f"pipelines/{_slug(record['pipeline'])}_README.md"
 
     def page_path(self, record: dict) -> str:
         """Where a record's page is, under the pages folder."""
@@ -215,13 +215,18 @@ class SphinxWriter:
         return f"cb/models/{_slug(record['pipeline'])}/{_local_name(record)}.md"
 
     def link_to_dataframe(self, record: dict, from_kind: str = "Dataframe") -> str:
-        """The link to a dataframe's page from a page of the given kind.
+        """The link to a dataframe's page from a page of the given kind, relative to that page.
 
-        The links are the generator's, as they are: from a dataframe page
-        the catalog theme links by the pipeline's folder alone.
+        A dataframe page is at `cb/dataframes/<pipeline>/<name>.md`, a chart
+        page at `cb/charts/<pipeline>.<name>.md`, a model page at
+        `cb/models/<pipeline>/<name>.md`; the same in both themes.
         """
-        prefix = "../dataframes/" if (self.theme == "pipeline" or from_kind == "Chart") else ""
-        return f"{prefix}{_slug(record['pipeline'])}/{_local_name(record)}.md"
+        target = f"{_slug(record['pipeline'])}/{_local_name(record)}.md"
+        if from_kind == "Dataframe":
+            return f"../{target}"
+        if from_kind == "Model":
+            return f"../../dataframes/{target}"
+        return f"../dataframes/{target}"
 
     # --- the pages ---------------------------------------------------------
 
@@ -661,7 +666,7 @@ class SphinxWriter:
                     {
                         "label": input_id,
                         "name": other.get("name", ""),
-                        "link": f"../../dataframes/{_slug(other['pipeline'])}/{_local_name(other)}.md",
+                        "link": self.link_to_dataframe(other, from_kind="Model"),
                         "note": "",
                     }
                 )
