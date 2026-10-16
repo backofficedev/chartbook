@@ -966,6 +966,49 @@ def _resolve_site_dir(project: dict, base_dir: Path) -> None:
     project["_resolved_site_dir"] = str(site_dir_path.resolve())
 
 
+#: The ``[project]`` keys that name a file or a folder of the pipeline.
+_PROJECT_PATH_KEYS = ("readme", "site_dir", "logo", "favicon")
+
+
+def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
+    """In a build of files from a store, refuse a manifest that names anything outside its folder.
+
+    A version laid out from a store has a manifest anyone who can write the
+    store may have written; a build reads, hashes, copies and shows what it
+    names. So every path it names, in ``[project]`` and in every asset
+    table (``path`` and every ``*_path``), must be a plain path inside the
+    folder (:func:`chartbook.snapshot.safe_relative`) and reach no file
+    outside it through a link.
+
+    :raises ValueError: Naming the first that is not.
+    """
+    from chartbook.hashing import escapes
+    from chartbook.resolve import ASSET_TABLES
+    from chartbook.snapshot import safe_relative
+
+    source = base_dir / "chartbook.toml"
+    named: list[tuple[str, object]] = []
+    project = raw_manifest.get("project") or {}
+    for key in _PROJECT_PATH_KEYS:
+        if key in project:
+            named.append((f"[project] {key}", project[key]))
+    for table in ASSET_TABLES:
+        for name, entry in (raw_manifest.get(table) or {}).items():
+            if not isinstance(entry, dict):
+                continue
+            for key, value in entry.items():
+                if key == "path" or key.endswith("_path"):
+                    named.append((f"[{table}.{name}] {key}", value))
+    for where, value in named:
+        if not isinstance(value, str) or not value.strip():
+            continue
+        if safe_relative(value) is None or escapes(base_dir / value, base_dir) is not None:
+            raise ValueError(
+                f"{source}: {where} = {value!r} is not a plain path inside the pipeline's folder, "
+                f"and a build of files from a store reads nothing outside the folder it was laid out in."
+            )
+
+
 def _load_pipeline_manifest(raw_manifest):
     """Process a raw pipeline manifest into the internal manifest shape.
 
@@ -975,6 +1018,10 @@ def _load_pipeline_manifest(raw_manifest):
     :rtype: dict
     """
     base_dir = raw_manifest["base_dir"]
+    from chartbook.config import untrusted_source
+
+    if untrusted_source():
+        _refuse_paths_outside(raw_manifest, Path(base_dir))
     manifest = raw_manifest.copy()
 
     manifest["project"] = _resolve_project(raw_manifest, base_dir, "pipeline")

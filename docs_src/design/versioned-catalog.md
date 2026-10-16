@@ -180,6 +180,15 @@ model with where its page is, so that a command-line agent finds its way without
    version and a fingerprint of its code, so an edit to ChartBook builds them again; a version
    whose snapshot `store gc` removed is removed from the site, the incremental build's tree
    included; and a staging folder a stopped build left is cleared.
+
+   *After a second review, 2026-10-16.* The restrictions above held against forged snapshots, and
+   the data path did not: a forged manifest could name a DuckDB query that reads any file of the
+   machine, or a dataframe path outside the folder, and the version's pages showed the rows. In a
+   build of files from a store, ChartBook now runs no table and no query at all (DuckDB refuses to
+   open; the snapshot holds those rows as parquet, and the page says so), and the manifest loader
+   refuses any path in `[project]` or an asset table (`path` and every `*_path`) that is not a
+   plain path inside the folder, so that version's build stops and its page says why. Both
+   forgeries were rerun against the fix: neither secret reaches the site.
 3. **All versions.** Every snapshot, links following pins, the version list, snapshot pages kept
    across builds, search scoped. *What remains after step 2:* links following pins, so that a
    page of `C` links to `A` at the version `C` pinned, inside a version's site as in the catalog;

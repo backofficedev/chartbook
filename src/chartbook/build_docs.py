@@ -243,13 +243,17 @@ def _chartbook_keep_inside(app, doctree):
     here = os.path.dirname(os.path.realpath(app.env.doc2path(app.env.docname)))
     named = list(doctree.findall(nodes.image)) + list(doctree.findall(addnodes.download_reference))
     for node in named:
-        target = str(node.get("uri") or node.get("reftarget") or "")
-        if "://" in target or target.startswith("data:") or not target:
-            continue
-        base = root if target.startswith("/") else here
-        full = os.path.realpath(os.path.join(base, target.lstrip("/")))
-        if full != root and not full.startswith(root + os.sep):
-            node.replace_self(nodes.literal(text=f"[{target}: outside the site, not included]"))
+        targets = [str(node.get("uri") or node.get("reftarget") or "")]
+        targets += [str(t) for t in (node.get("candidates") or {}).values()]
+        for target in targets:
+            if "://" in target or target.startswith("data:") or not target:
+                continue
+            # Sphinx reads a target that starts with / from the site's root
+            base = root if target.startswith("/") else here
+            full = os.path.realpath(os.path.join(base, target.lstrip("/")))
+            if full != root and not full.startswith(root + os.sep):
+                node.replace_self(nodes.literal(text=f"[{target}: outside the site, not included]"))
+                break
 
 
 def setup(app):

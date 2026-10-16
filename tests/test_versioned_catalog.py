@@ -276,3 +276,62 @@ class TestWhoseFilesTheseAre:
         pages = "".join(p.read_text(errors="replace") for p in rendered.folder.rglob("*") if p.is_file())
         assert "OUTSIDE SECRET TEXT" not in pages
         assert not any(p.name == "secret.md" for p in rendered.folder.rglob("*"))
+
+
+def _forged_version(taken, store, manifest_text: str, tmp_path: Path):
+    """A snapshot like *taken*, made at another moment, whose manifest says what someone wrote into the store."""
+    import dataclasses
+
+    held = Path(store.get(taken.documents["content_hash"]))
+    forged = tmp_path / "forged-documents"
+    for file in held.rglob("*"):
+        if file.is_file():
+            target = forged / file.relative_to(held)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(file.read_bytes())
+    (forged / "chartbook.toml").write_text(manifest_text)
+    stored = store.put(forged)
+    documents = {"content_hash": stored.content_hash, "size_bytes": stored.size_bytes, "files": list(stored.files)}
+    version = dataclasses.replace(taken, documents=documents, made_at="2030-01-01T00:00:00.000001Z", path=None)
+    version = dataclasses.replace(version, path=snapshot._write(version, store))
+    return version
+
+
+class TestAForgedManifest:
+    """Anyone who can write the store can write a version's manifest: it reads nothing of this machine."""
+
+    def test_a_query_reads_no_file_of_this_machine(self, catalog, tmp_path):
+        root, first, second = catalog
+        secret = tmp_path / "secret.csv"
+        secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n")
+        store = default_store()
+        manifest = tomli.loads((root / "pipelines" / "pipeline_a" / "chartbook.toml").read_text())
+        manifest["sources"] = {"mem": {"backend": "duckdb", "url": "duckdb:///:memory:"}}
+        manifest["dataframes"]["leak"] = {"source": "mem", "query": f"select * from read_csv_auto('{secret}')", "docs": "d"}
+        version = _forged_version(second, store, tomli_w.dumps(manifest), tmp_path)
+        rendered = versions.render(version, store)
+        assert rendered.built, rendered.why
+        pages = "".join(p.read_text(errors="replace") for p in rendered.folder.rglob("*") if p.is_file())
+        assert "HUNTER2_LEAKED_SECRET" not in pages
+        assert "not read in a build of files from a store" in pages
+
+    @pytest.mark.parametrize("where", ["absolute", "climbing"])
+    def test_a_path_outside_the_folder_stops_the_versions_build(self, catalog, tmp_path, where):
+        root, first, second = catalog
+        private = tmp_path / "private.parquet"
+        pl.DataFrame({"ssn": ["111-22-3333"]}).write_parquet(private)
+        store = default_store()
+        manifest = tomli.loads((root / "pipelines" / "pipeline_a" / "chartbook.toml").read_text())
+        path = str(private) if where == "absolute" else "../" * 30 + str(private).lstrip("/")
+        manifest["dataframes"]["leak"] = {"path": path, "docs": "d"}
+        version = _forged_version(second, store, tomli_w.dumps(manifest), tmp_path)
+        rendered = versions.render(version, store)
+        assert not rendered.built and "is not a plain path inside the pipeline's folder" in rendered.why
+        pages = "".join(p.read_text(errors="replace") for p in rendered.folder.rglob("*") if p.is_file())
+        assert "111-22-3333" not in pages
+
+    def test_the_working_version_still_reads_its_own_sources(self, catalog):
+        """The rule is for files from a store; a folder of the user's reads what it names."""
+        from chartbook.backends import DuckDBBackend
+
+        assert DuckDBBackend("duckdb:///:memory:").connect().sql("select 1").fetchone() == (1,)
