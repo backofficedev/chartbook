@@ -96,6 +96,14 @@ class Change:
                 said.append(f"{gone} version(s) gone")
             if not new and not gone:
                 said.append("versions changed")
+        if "snapshots" in self.fields:
+            before, after = ({(s.get("commit"), s.get("made_at")) for s in (v or []) if isinstance(s, dict)} for v in self.fields["snapshots"])
+            if after - before:
+                said.append(f"{len(after - before)} new snapshot(s)")
+            if before - after:
+                said.append(f"{len(before - after)} snapshot(s) gone")
+        if "from_snapshot" in self.fields:
+            said.append("laid out from another snapshot" if all(self.fields["from_snapshot"]) else "laid out from a snapshot, or no longer")
         if "aliases" in self.fields:
             said.append("labels moved")
         if "stale_inputs" in self.fields:
@@ -116,7 +124,7 @@ class Change:
             if name in self.fields:
                 said.append(words)
         handled = set(DATA_FIELDS) | set(COMPUTED_WORDS) | {
-            "dependencies", "versions", "aliases", "stale_inputs", "metrics", "date_range",
+            "dependencies", "versions", "snapshots", "from_snapshot", "aliases", "stale_inputs", "metrics", "date_range",
             "inputs_now",  # said by stale_inputs when it matters; the inputs' own records say the rest
         }
         rest = sorted(name for name in self.fields if name not in handled)

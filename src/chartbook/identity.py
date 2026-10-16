@@ -98,10 +98,10 @@ def validate_pipeline_id(pipeline_id: str) -> str:
             f"supported; use {unqualified!r} instead."
         )
     parts = pipeline_id.split("/")
-    if len(parts) > 2 or not all(ID_COMPONENT_PATTERN.match(p) for p in parts):
+    if len(parts) > 2 or not all(ID_COMPONENT_PATTERN.match(p) and p not in (".", "..") for p in parts):
         raise ValueError(
             f"Invalid pipeline id {pipeline_id!r}. Expected 'name' or 'scope/name' "
-            f"where each component matches [A-Za-z0-9._-]+."
+            f"where each component matches [A-Za-z0-9._-]+ and is not '.' or '..'."
         )
     return pipeline_id
 

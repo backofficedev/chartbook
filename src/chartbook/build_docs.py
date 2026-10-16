@@ -209,23 +209,56 @@ def _write_sphinx_project(
         # Handle with user-friendly CLI output
         handle_validation_error(e, config_path=project_dir / "chartbook.toml")
 
-    # Render conf.py from Jinja2 template
-    conf_template_path = sources_dir / "conf.py.j2"
-    conf_output_path = sources_dir / "conf.py"
+    # Render conf.py from the package's own template, never from the build
+    # tree, where a site page could stand in for it and Sphinx runs conf.py
+    from chartbook.config import untrusted_source
 
+    conf_output_path = sources_dir / "conf.py"
     env = Environment(
-        loader=FileSystemLoader(sources_dir),
+        loader=FileSystemLoader(get_docs_src_path(pipeline_theme)),
         undefined=StrictUndefined,
     )
-
-    template = env.get_template("conf.py.j2")
-    conf_content = template.render(site_config=site_config)
-
+    conf_content = env.get_template("conf.py.j2").render(site_config=site_config)
+    if untrusted_source():
+        conf_content += _UNTRUSTED_CONF
+        # No page takes in a file (include, literalinclude, csv-table)
+        (sources_dir / "docutils.conf").write_text("[general]\nfile_insertion_enabled: false\n", encoding="utf-8")
     with open(conf_output_path, "w") as f:
         f.write(conf_content)
+    (sources_dir / "conf.py.j2").unlink(missing_ok=True)
 
-    # Remove template file after rendering
-    conf_template_path.unlink()
+
+#: Added to conf.py for a build of files from a store: a picture or a download
+#: that names a file outside the site is not copied into it.
+_UNTRUSTED_CONF = """
+
+# A build of files laid out from a store (chartbook.config.untrusted_source):
+# a picture or a download that names a file outside the site is dropped
+def _chartbook_keep_inside(app, doctree):
+    import os
+    from docutils import nodes
+    from sphinx import addnodes
+
+    root = os.path.realpath(app.srcdir)
+    here = os.path.dirname(os.path.realpath(app.env.doc2path(app.env.docname)))
+    named = list(doctree.findall(nodes.image)) + list(doctree.findall(addnodes.download_reference))
+    for node in named:
+        targets = [str(node.get("uri") or node.get("reftarget") or "")]
+        targets += [str(t) for t in (node.get("candidates") or {}).values()]
+        for target in targets:
+            if "://" in target or target.startswith("data:") or not target:
+                continue
+            # Sphinx reads a target that starts with / from the site's root
+            base = root if target.startswith("/") else here
+            full = os.path.realpath(os.path.join(base, target.lstrip("/")))
+            if full != root and not full.startswith(root + os.sep):
+                node.replace_self(nodes.literal(text=f"[{target}: outside the site, not included]"))
+                break
+
+
+def setup(app):
+    app.connect("doctree-read", _chartbook_keep_inside, priority=100)
+"""
 
 
 def generate_docs(
@@ -385,6 +418,7 @@ def generate_docs(
         # Copy build files to output
         html_build_dir = _docs_dir / "_build" / "html"
         if html_build_dir.exists():
+            _add_versions(manifest, built, html_build_dir)
             _install_site(html_build_dir, output_dir, should_remove_existing)
             _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
 
@@ -394,6 +428,21 @@ def generate_docs(
             shutil.rmtree(temp_docs_src_dir, ignore_errors=True)
         else:
             print(f"Keeping temporary build directory: {_docs_dir.resolve()}")
+
+
+def _add_versions(manifest: dict, built: dict, html_build_dir: Path) -> None:
+    """In a catalog, put each snapshot's own site into the rendered site, under ``versions/``."""
+    if manifest["project"]["type"] != "catalog":
+        return
+    import click
+
+    from chartbook import versions
+
+    versions.add_to_site(
+        built,
+        html_build_dir,
+        echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
+    )
 
 
 def _install_site(html_build_dir: Path, output_dir: Path, should_remove_existing: bool) -> None:
@@ -493,6 +542,7 @@ def _generate_docs_mkdocs(
         )
         (_docs_dir / "mkdocs.yml").write_text(yaml.safe_dump(configuration, sort_keys=False, allow_unicode=True), encoding="utf-8")
         run_mkdocs_build(_docs_dir)
+        _add_versions(manifest, built, _docs_dir / "_build" / "html")
 
         _install_site(_docs_dir / "_build" / "html", output_dir, should_remove_existing)
         _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
@@ -801,6 +851,7 @@ def _generate_docs_incremental(
 
         output_written = 0
         if html_build_dir.exists():
+            _add_versions(manifest, built, html_build_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
             output = incremental.sync_tree(
                 html_build_dir,

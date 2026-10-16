@@ -273,10 +273,21 @@ class DuckDBBackend:
     def connect(self):
         """The raw ``duckdb`` connection.
 
-        :raises BackendError: If the file is not there, or cannot be opened.
+        :raises BackendError: If the file is not there, or cannot be opened;
+            or if this is a build of files from a store, whose manifest
+            anyone who can write the store may have written: such a build
+            runs no table and no query (a query can read any file of the
+            machine), and says so on the page.
         """
         import duckdb
 
+        from chartbook.config import untrusted_source
+
+        if untrusted_source():
+            raise BackendError(
+                "A table or a query is not read in a build of files from a store; the snapshot "
+                "holds its rows as parquet."
+            )
         if self._connection is not None:
             return self._connection
         path = duckdb_path(self.url, Path.cwd())

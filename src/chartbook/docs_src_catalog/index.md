@@ -47,6 +47,14 @@ Browse the pipelines that power the generated dataframes and charts.
 Information about contributing to this catalog project.
 :::
 
+{% if has_versions %}
+:::{grid-item-card}  🕰️ [Versions](cb/versions.md)
+:link: cb/versions
+:link-type: doc
+Every snapshot of every pipeline in the store, each its own site as it was when its owner declared it ready, and which pipeline pins it.
+:::
+
+{% endif %}
 :::{grid-item-card}  🩺 [Diagnostics](cb/diagnostics.md)
 :link: cb/diagnostics
 :link-type: doc
@@ -63,6 +71,7 @@ cb/charts.md
 cb/dataframes.md
 {% if model_file_list %}cb/models.md
 {% endif %}cb/pipelines.md
-cb/diagnostics.md
+{% if has_versions %}cb/versions.md
+{% endif %}cb/diagnostics.md
 contributing.md
 ```

@@ -17,6 +17,7 @@ import warnings
 from pathlib import Path
 from typing import Iterable, Optional
 
+from chartbook.config import untrusted_source
 from chartbook.utils import is_glob_pattern
 
 #: Files of the theme that are not copied to the root of the Sphinx tree:
@@ -33,6 +34,7 @@ THEME_FILES_NOT_AT_ROOT = (
     "models.md",
     "diagnostics.md",
     "charts.md",
+    "versions.md",
     "site",
 )
 
@@ -165,6 +167,20 @@ def copy_theme_files(docs_src_dir: Path, docs_build_dir: Path, charts: bool = Tr
         shutil.copyfile(listing, docs_build_dir / "cb" / "charts.md")
 
 
+#: What a site page of a build of files from a store may be: pages and pictures.
+UNTRUSTED_SITE_FILES = frozenset({".md", ".png", ".jpg", ".jpeg", ".gif", ".webp"})
+
+
+def _a_site_page(relative: Path) -> bool:
+    """Whether a file of a site folder may be copied into the site: not the build's own configuration or templates."""
+    parts = relative.parts
+    if parts and parts[0] in ("_templates", "_build"):
+        return False
+    if len(parts) == 1 and (relative.name.startswith("conf.py") or relative.name in ("docutils.conf", "mkdocs.yml")):
+        return False
+    return True
+
+
 def copy_site_pages(index: dict, docs_build_dir: Path) -> None:
     """Copy a pipeline's own site pages (its `site_dir`) to the root of the Sphinx tree.
 
@@ -187,6 +203,15 @@ def copy_site_pages(index: dict, docs_build_dir: Path) -> None:
             relative = source.relative_to(folder)
             if relative.parent == Path(".") and relative.name == "index_toc.md":
                 continue
+            if not _a_site_page(relative):
+                warnings.warn(
+                    f"Ignoring '{source}': a site page may not be {relative.as_posix()}, which the build "
+                    f"writes or reads as its own configuration or templates.",
+                    stacklevel=2,
+                )
+                continue
+            if untrusted_source() and source.suffix.lower() not in UNTRUSTED_SITE_FILES:
+                continue  # from a store: pages and pictures, nothing a tool might run
             if relative.parent == Path(".") and relative.name == "index.md":
                 warnings.warn(
                     f"Ignoring '{source}': a root index.md in site_dir would replace the "

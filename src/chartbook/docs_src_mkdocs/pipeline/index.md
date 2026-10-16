@@ -3,6 +3,9 @@
 {% include "freshness.md" %}
 
 Last updated: {{ today }}
+{% if version %}
+**A snapshot of this pipeline:** commit `{{ version.short }}`, made {{ version.made }}. Its owner declared it ready; the write-ups, the data dictionary and the data are as they were then.
+{% endif %}
 
 {% if site_pages %}
 ## Site Pages

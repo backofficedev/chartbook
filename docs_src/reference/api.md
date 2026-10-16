@@ -30,6 +30,7 @@ chartbook
 ../apidocs/chartbook/chartbook.stores
 ../apidocs/chartbook/chartbook.stores.s3
 ../apidocs/chartbook/chartbook.snapshot
+../apidocs/chartbook/chartbook.versions
 ../apidocs/chartbook/chartbook.lock
 ../apidocs/chartbook/chartbook.gitcache
 ../apidocs/chartbook/chartbook.run

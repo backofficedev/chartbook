@@ -143,9 +143,57 @@ model with where its page is, so that a command-line agent finds its way without
      when too large, and a laid-out version never has git asked about its code time). A named
      file git does not track is now said too.
 2. **The catalog renders snapshots.** Working copies as today, plus the newest snapshot of each
-   pipeline, each version at its own path. This proves rendering from the store.
+   pipeline, each version at its own path. This proves rendering from the store. *Built
+   2026-10-16, with every snapshot rather than the newest:* a version's site is built once on a
+   machine and kept, so all of them cost what one did. Each Pipeline record of the index lists
+   its `snapshots` in the store, newest first. A catalog build lays each one out from the store
+   (`materialize`), builds it as the pipeline's own site in a process of its own, with the site
+   tool its manifest names, keeps it under `versions/` in the machine's cache, keyed by the
+   ChartBook version, and copies it into the catalog's site at
+   `versions/<pipeline>/<commit>-<made_at>/`. A version that cannot be built gets a page that says
+   why, and a `warning:` line, so a link to it never leads nowhere. A laid-out folder's Pipeline
+   record says `from_snapshot`, and its front page says which snapshot it is. Built otherwise
+   than item 4 of the section above: the version list is one catalog page, `cb/versions.md`, every
+   pipeline with its working version and its snapshots, the commit, the date, whether `chartbook
+   run` built it and which pipeline of the catalog pins it; not a list on each pipeline page,
+   because the catalog's own pages are written on every build and a pipeline's page is not when
+   an incremental build reuses it. Search is scoped by construction: each version is its own site,
+   so the catalog's search finds the working versions only.
+
+   *After the review, 2026-10-16.* Building versions automatically means running a docs build on
+   files anyone who can write the store may have written, so a version's build runs as a build of
+   files that are not the user's own (`chartbook.config.untrusted_source`): every template, a
+   project's own included, renders in Jinja's sandbox, and a version takes no template from its
+   folder at all; its site folder gives only pages and pictures; no page takes in a file
+   (`file_insertion_enabled` off) and no picture or download that names a file outside the site is
+   copied; notebooks are never run, as in any build; and each version's build has a time limit.
+   Two holes the review found are closed for every build, not only versions': `conf.py` is
+   rendered from the package's own template, never from the build tree where a site page named
+   `conf.py.j2` could stand in for it, and a site page may not be `conf.py*`, `_templates/` or the
+   tool's configuration. A snapshot record is checked when read (a full commit hash, a time as a
+   snapshot writes one, a pipeline ID, a plain subdirectory), and `.` and `..` are no longer
+   pipeline ID parts, so that no value in a record becomes a path outside the site or the cache;
+   the review showed a forged `made_at` could otherwise delete and write folders anywhere. One
+   record that cannot be read no longer hides every version; only a catalog's index lists
+   snapshots, so a pipeline's published index carries no store history; the store is read twice
+   per catalog build rather than once per pipeline; the kept sites are keyed by ChartBook's
+   version and a fingerprint of its code, so an edit to ChartBook builds them again; a version
+   whose snapshot `store gc` removed is removed from the site, the incremental build's tree
+   included; and a staging folder a stopped build left is cleared.
+
+   *After a second review, 2026-10-16.* The restrictions above held against forged snapshots, and
+   the data path did not: a forged manifest could name a DuckDB query that reads any file of the
+   machine, or a dataframe path outside the folder, and the version's pages showed the rows. In a
+   build of files from a store, ChartBook now runs no table and no query at all (DuckDB refuses to
+   open; the snapshot holds those rows as parquet, and the page says so), and the manifest loader
+   refuses any path in `[project]` or an asset table (`path` and every `*_path`) that is not a
+   plain path inside the folder, so that version's build stops and its page says why. Both
+   forgeries were rerun against the fix: neither secret reaches the site.
 3. **All versions.** Every snapshot, links following pins, the version list, snapshot pages kept
-   across builds, search scoped.
+   across builds, search scoped. *What remains after step 2:* links following pins, so that a
+   page of `C` links to `A` at the version `C` pinned, inside a version's site as in the catalog;
+   a catalog entry by pipeline ID alone, for a pipeline whose folder is not on this machine; and
+   clearing the kept sites, in the cache, of snapshots `store gc` removed.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.
