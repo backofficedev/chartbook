@@ -551,6 +551,24 @@ repository. That is what makes recorded lineage *checkable* rather than merely t
 `impure` names steps that cannot be reproduced from their inputs. Verifiability reaches back to the
 last impure boundary, and a digest of what arrived is recorded there.
 
+### Added for the versioned catalog
+
+*Added 2026-10-16* ({doc}`versioned-catalog`). In a **catalog's** index only, read from the store
+of the machine that built it, as a model's versions are:
+
+- A **Pipeline** record's `snapshots`: every snapshot of it in the store, newest first, each with
+  `commit`, `made_at`, `name` (the version's folder under `versions/`), `built_by_run`, and
+  `rendered`, whether the catalog built that snapshot's site or shows the page that says why.
+- A **Model** record's `trained_from`: for each input of another pipeline it was trained on, keyed
+  as `inputs` is, the snapshot of that pipeline it was trained on: the one the model's pipeline
+  was pinned to when the model's bytes were first snapshotted, else the newest holding the
+  trained bytes made no later than that.
+
+In any index: a **Pipeline** record's `from_snapshot` (`commit`, `made_at`) when its folder is a
+version laid out from the store; and on a pipeline's `dependencies` entry, `key`, the name the
+pipeline knows the other by in `[dependencies]`, when it is not the other's ID in the build (the
+name its lockfile, its snapshots and `trained_with` use).
+
 ## Where the lockfile fits
 
 `chartbook.lock` is the subset of the index that a project commits: its own `Build` records and its

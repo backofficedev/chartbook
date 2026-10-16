@@ -639,7 +639,7 @@ class SphinxWriter:
         """
         skip = {"kind", "version", "id", "ref", "pipeline", "location", "content_hash", "size_bytes", "row_count",
                 "columns", "definition_hash", "date_range", "docs", "inputs", "files", "pinned_inputs",
-                "trained_with", "inputs_now", "stale_inputs", "metrics", "versions"}
+                "trained_with", "trained_from", "inputs_now", "stale_inputs", "metrics", "versions"}
         spec = {key: value for key, value in record.items() if key not in skip}
         location = record.get("location") or {}
         if location.get("kind") == "file":
@@ -696,7 +696,7 @@ class SphinxWriter:
     def _model_manifest(self, record: dict) -> dict:
         """The model as the templates read it: its declared fields and its path."""
         skip = {"kind", "version", "id", "ref", "pipeline", "location", "content_hash", "size_bytes",
-                "files", "inputs", "pinned_inputs", "trained_with", "inputs_now", "stale_inputs", "metrics",
+                "files", "inputs", "pinned_inputs", "trained_with", "trained_from", "inputs_now", "stale_inputs", "metrics",
                 "versions", "docs"}
         shown = {key: value for key, value in record.items() if key not in skip}
         shown["path"] = (record.get("location") or {}).get("path", "")

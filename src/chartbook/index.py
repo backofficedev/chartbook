@@ -589,6 +589,10 @@ def _dependency_records(
             "via": via,
             "location": where,
         }
+        if record["id"] != key:
+            # The name the pipeline knows it by, which its lockfile and
+            # snapshots use, when it is not its ID in this build
+            record["key"] = key
         if in_lock.get(key, {}).get("snapshot"):
             record["snapshot"] = in_lock[key]["snapshot"]
         if pinned.get(key):
@@ -899,35 +903,56 @@ def _add_snapshots(records: list[dict]) -> None:
 def _add_trained_from(records: list[dict], by_pipeline: dict) -> None:
     """Give each Model record trained on another pipeline's data the snapshot that held it.
 
-    ``trained_with`` says the hash of each input when the model was
-    trained; the snapshot of the input's pipeline holding an asset of that
-    name with that hash is what the model was trained on, and a catalog
-    links to it. The one the model's pipeline pins, when it holds those
-    bytes; otherwise the newest that does.
+    ``trained_with`` says the hash of each input when the model was trained,
+    keyed by the name the model's pipeline knows the other one by. What it
+    was trained on is the snapshot of that pipeline the model's own
+    pipeline was pinned to then, as recorded by the first snapshot of the
+    model's pipeline that held the model's bytes; failing that, the newest
+    snapshot holding those bytes made no later than that one. ``trained_from``
+    is keyed as ``inputs`` are, by the input's ID in this build.
     """
     by_id = {record["id"]: record for record in records}
     for record in records:
         if record.get("kind") != "Model" or not record.get("trained_with"):
             continue
-        pipeline = by_id.get(record.get("pipeline")) or {}
-        pins = {
-            (dependency.get("id"), (dependency.get("location") or {}).get("commit"), dependency.get("snapshot"))
+        pipeline_id = record.get("pipeline")
+        pipeline = by_id.get(pipeline_id) or {}
+        by_key = {
+            dependency.get("key") or dependency.get("id"): dependency
             for dependency in pipeline.get("dependencies") or []
+            if dependency.get("id")
+        }
+        local_model = record["id"].rpartition(":")[2]
+        held = min(
+            (
+                t for t in by_pipeline.get(pipeline_id, [])
+                if record.get("content_hash") and (t.assets.get(local_model) or {}).get("content_hash") == record["content_hash"]
+            ),
+            key=lambda t: t.made_at,
+            default=None,
+        )
+        pins_then = {
+            entry.get("id"): ((entry.get("location") or {}).get("commit"), entry.get("snapshot"))
+            for entry in (held.inputs if held is not None else [])
+            if isinstance(entry, dict)
         }
         found = {}
-        for input_id, content_hash in sorted(record["trained_with"].items()):
-            owner, _, local = input_id.rpartition(":")
-            if not owner or owner == record.get("pipeline"):
+        for input_key, content_hash in sorted(record["trained_with"].items()):
+            key, _, local = input_key.rpartition(":")
+            dependency = by_key.get(key)
+            if dependency is None:
                 continue
+            owner = dependency["id"]
             holding = [
                 taken for taken in by_pipeline.get(owner, [])
                 if (taken.assets.get(local) or {}).get("content_hash") == content_hash
             ]
-            if not holding:
-                continue
-            pinned = [t for t in holding if (owner, t.commit, t.made_at) in pins]
-            chosen = (pinned or sorted(holding, key=lambda t: t.made_at))[-1]
-            found[input_id] = {"commit": chosen.commit, "made_at": chosen.made_at}
+            chosen = next((t for t in holding if (t.commit, t.made_at) == pins_then.get(key)), None)
+            if chosen is None:
+                earlier = [t for t in holding if held is not None and t.made_at <= held.made_at]
+                chosen = max(earlier, key=lambda t: t.made_at, default=None)
+            if chosen is not None:
+                found[f"{owner}:{local}"] = {"commit": chosen.commit, "made_at": chosen.made_at}
         if found:
             record["trained_from"] = found
 

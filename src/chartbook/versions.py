@@ -257,13 +257,19 @@ def _placeholder(folder: Path, taken, why: str) -> None:
     )
 
 
-def render_listed(index: dict, store=None, echo=print) -> None:
+def render_listed(index: dict, store=None, echo=print) -> dict:
     """Build (or find kept) the site of every snapshot a catalog's index lists, and say on each entry whether it was built.
 
     Called before the catalog's pages are written, so that a page links to
     a version's page only when its site was built, and otherwise to the
     page that says why (``rendered`` on each ``snapshots`` entry). A
+    snapshot that has left the store since the index was made (a ``gc``
+    elsewhere) is dropped from its record, so that nothing links to it. A
     version that could not be built is said in one line.
+
+    :returns: Each version built or found, by ``(pipeline, commit,
+        made_at)``: the snapshot and its :class:`Rendered`, for
+        :func:`add_to_site` to copy.
     """
     from chartbook import snapshot as snapshots
     from chartbook.store import default_store
@@ -271,25 +277,33 @@ def render_listed(index: dict, store=None, echo=print) -> None:
     store = store if store is not None else default_store()
     found, _ = snapshots.readable_snapshots(store)
     by_moment = {(t.pipeline, t.commit, t.made_at): t for t in found}
+    done: dict = {}
     for record in index.get("records", []):
-        if record.get("kind") != "Pipeline":
+        if record.get("kind") != "Pipeline" or not record.get("snapshots"):
             continue
-        for entry in record.get("snapshots") or []:
-            taken = by_moment.get((record["id"], entry.get("commit"), entry.get("made_at")))
+        kept = []
+        for entry in record["snapshots"]:
+            moment = (record["id"], entry.get("commit"), entry.get("made_at"))
+            taken = by_moment.get(moment)
             if taken is None:
-                entry["rendered"] = False
-                continue
+                continue  # gone from the store: nothing will link to it
             try:
                 rendered = render(taken, store)
             except ValueError:
-                entry["rendered"] = False
                 continue
             entry["rendered"] = rendered.built
+            kept.append(entry)
+            done[moment] = (taken, rendered)
             if not rendered.built and rendered.now:
                 echo(f"warning: {record['id']} at {taken.commit[:7]}: {rendered.why}")
+        if kept:
+            record["snapshots"] = kept
+        else:
+            record.pop("snapshots", None)
+    return done
 
 
-def add_to_site(index: dict, html_dir: Path, store=None, echo=print) -> list[Rendered]:
+def add_to_site(index: dict, html_dir: Path, store=None, echo=print, rendered_by_moment: dict | None = None) -> list[Rendered]:
     """Put the site of every snapshot a catalog's index lists into its rendered site.
 
     Each is built once on this machine and kept (:func:`render`), and copied
@@ -303,8 +317,10 @@ def add_to_site(index: dict, html_dir: Path, store=None, echo=print) -> list[Ren
     from chartbook.store import default_store
 
     store = store if store is not None else default_store()
-    found, _ = snapshots.readable_snapshots(store)
-    by_moment = {(t.pipeline, t.commit, t.made_at): t for t in found}
+    if rendered_by_moment is None:
+        found, _ = snapshots.readable_snapshots(store)
+        rendered_by_moment = {(t.pipeline, t.commit, t.made_at): (t, None) for t in found}
+    by_moment = {moment: taken for moment, (taken, _) in rendered_by_moment.items()}
     wanted: dict[str, set[str]] = {}
     done = []
     for record in index.get("records", []):
@@ -322,7 +338,9 @@ def add_to_site(index: dict, html_dir: Path, store=None, echo=print) -> list[Ren
                 continue
             if taken is None:
                 continue
-            rendered = render(taken, store)  # kept by render_listed: this finds it
+            rendered = rendered_by_moment[(record["id"], entry.get("commit"), entry.get("made_at"))][1]
+            if rendered is None or not rendered.folder.is_dir():
+                rendered = render(taken, store)  # not built yet, or cleared since: build it now
             target = html_dir / site_path(record["id"], name)
             shutil.rmtree(target, ignore_errors=True)
             shutil.copytree(rendered.folder, target)

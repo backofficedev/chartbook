@@ -485,7 +485,7 @@ class TestWhatTheLinksReviewFound:
         assert any(old in h for h in _links(page)) and any(new in h for h in _links(page))  # Trained On, and the panel's pin
         assert all(_resolves(page, h) for h in _links(page))
 
-    def test_mkdocs_links_lead_somewhere_and_gc_keeps_what_it_keeps(self, trained, monkeypatch):
+    def test_mkdocs_links_lead_somewhere(self, trained, monkeypatch):
         pytest.importorskip("mkdocs")
         pytest.importorskip("material")
         root, first, second = trained
@@ -495,3 +495,88 @@ class TestWhatTheLinksReviewFound:
         _build(root, monkeypatch)
         page = root / "docs" / "cb" / "models" / "pipeline_b" / "m.html"
         assert _links(page) and all(_resolves(page, h) for h in _links(page))
+
+
+
+def _trained_catalog(tmp_path, key: str = "pipeline_a"):
+    """A catalog where pipeline_b's model is trained on pipeline_a:dataframe_0, known by *key*; nothing snapshotted yet."""
+    repository = tmp_path.resolve() / "repo"
+    root = create_catalog_project(repository / "cat")
+    (repository / ".gitignore").write_text("docs/\n_docs*/\nchartbook.lock\n")
+    a, b = root / "pipelines" / "pipeline_a", root / "pipelines" / "pipeline_b"
+    manifest = tomli.loads((b / "chartbook.toml").read_text())
+    manifest["dependencies"] = {key: {"path": "../pipeline_a"}}
+    manifest["models"] = {"m": {"path": "./_models/m.json", "trained_on": [f"{key}:dataframe_0"], "docs": "A model."}}
+    (b / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (b / "_models").mkdir()
+    (b / "_models" / "m.json").write_text("{}")
+    _git(repository, "init", "--quiet", "-b", "main")
+    _commit(repository)
+    return repository, root, a, b
+
+
+def _new_data(repository: Path, a: Path, value: float) -> None:
+    data = next((a / "_data").rglob("*.parquet"))
+    pl.DataFrame({"date": ["2025-01-01"], "value": [value]}).write_parquet(data)
+    _commit(repository, f"Data {value}")
+
+
+class TestWhatTheSecondLinksReviewFound:
+    def test_a_dependency_known_by_another_name_still_links_to_what_it_was_trained_on(self, tmp_path, monkeypatch):
+        repository, root, a, b = _trained_catalog(tmp_path, key="upstream")
+        first = snapshot.make(a).snapshot
+        lock.pin(b)
+        snapshot.make(b)  # trained on the first
+        _new_data(repository, a, 9.9)
+        second = snapshot.make(a).snapshot
+        lock.update(b)
+        _build(root, monkeypatch)
+        index = json.loads((root / "docs" / "index.json").read_text())
+        model = next(r for r in index["records"] if r["kind"] == "Model")
+        assert model["trained_from"] == {"pipeline_a:dataframe_0": {"commit": first.commit, "made_at": first.made_at}}
+        pipeline_b = next(r for r in index["records"] if r["id"] == "pipeline_b")
+        assert pipeline_b["dependencies"][0]["key"] == "upstream"
+        text = (root / "docs" / "cb" / "models" / "pipeline_b" / "m.html").read_text()
+        assert f"as trained: the snapshot at {first.commit[:7]}" in text and f"moved to {second.commit[:7]}" in text
+
+    def test_a_later_snapshot_of_the_same_bytes_is_not_what_it_was_trained_on(self, tmp_path, monkeypatch):
+        repository, root, a, b = _trained_catalog(tmp_path)
+        first = snapshot.make(a).snapshot
+        lock.pin(b)
+        snapshot.make(b)  # trained on the first
+        (a / "README.md").write_text("# A\n\nA new README, the same data.\n")
+        _commit(repository, "README only")
+        same_bytes = snapshot.make(a).snapshot
+        assert same_bytes.made_at > first.made_at
+        _new_data(repository, a, 7.7)
+        snapshot.make(a)
+        lock.update(b)
+        _build(root, monkeypatch)
+        index = json.loads((root / "docs" / "index.json").read_text())
+        model = next(r for r in index["records"] if r["kind"] == "Model")
+        assert model["trained_from"]["pipeline_a:dataframe_0"]["made_at"] == first.made_at
+
+    def test_a_snapshot_that_leaves_the_store_mid_build_is_not_linked(self, trained, monkeypatch):
+        root, first, second = trained
+        _build(root, monkeypatch)
+        index = json.loads((root / "docs" / "index.json").read_text())
+        snapshot.remove(default_store(), first)  # as a gc elsewhere might, after the index was made
+        done = versions.render_listed(index)
+        pipeline_a = next(r for r in index["records"] if r["id"] == "pipeline_a")
+        assert [e["made_at"] for e in pipeline_a["snapshots"]] == [second.made_at]
+        assert ("pipeline_a", first.commit, first.made_at) not in done
+
+    def test_the_diff_words_the_computed_fields(self):
+        from chartbook import indexdiff
+
+        base = {"schema": "chartbook/index/v1", "root": "c", "records": []}
+        model = {"kind": "Model", "version": "chartbook/v1", "id": "b:model/m", "pipeline": "b"}
+        pipeline = {"kind": "Pipeline", "version": "chartbook/v1", "id": "a", "snapshots": [{"commit": "a" * 40, "made_at": "2026-01-01T00:00:00Z", "rendered": True}]}
+        before = {**base, "records": [{**model, "trained_from": {"a:d": {"commit": "a" * 40}}}, pipeline]}
+        after = {**base, "records": [
+            {**model, "trained_from": {"a:d": {"commit": "b" * 40}}},
+            {**pipeline, "snapshots": [{**pipeline["snapshots"][0], "rendered": False}]},
+        ]}
+        text = indexdiff.format_diff(indexdiff.diff(before, after))
+        assert "trained from another snapshot" in text and "declared differently" not in text
+        assert "versions' sites built differently" in text
