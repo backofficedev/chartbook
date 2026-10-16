@@ -1213,9 +1213,12 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
     it, pinned from where the manifest says, its bytes in the store. Then,
     for a ``path`` dependency something was pinned from: that it was pinned
     from a snapshot, not its working folder (``--from-folder`` names no
-    commit), and that the store has that snapshot and it holds every hash
-    pinned from it, so that a lockfile changed by hand, or brought from
-    another store, is caught.
+    commit), that the store has that snapshot and it holds each asset
+    pinned from it under its name at its hash, and that each label pinned
+    names a version some snapshot of the pipeline holds; so that a lockfile
+    changed by hand, or brought from another store, is caught. (A ``git``
+    dependency is pinned from its clone, not a snapshot, and its hashes are
+    checked only to be in the store.)
 
     Nothing that could not have been read is a gap: an asset the other
     pipeline had not built when it was pinned, and a dependency of which
@@ -1239,18 +1242,14 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
     ]
     if locked is None:
         return gaps
-    found = None
+    found = unreadable = None
     for entry in locked.dependencies:
         key = entry.get("id")
         location = entry.get("location") or {}
-        # What was pinned with its bytes, the labels' records apart (a label
-        # names a version that any snapshot of the pipeline may hold)
-        pinned = {
-            asset_id: record["content_hash"]
-            for asset_id, record in locked.assets_of(key).items()
-            if record.get("content_hash") and not (record.get("ref") or {}).get("rev")
+        hashed = {
+            asset_id: record for asset_id, record in locked.assets_of(key).items() if record.get("content_hash")
         }
-        if location.get("kind") != "path" or not pinned:
+        if location.get("kind") != "path" or not hashed:
             continue
         commit, made_at = location.get("commit"), entry.get("snapshot")
         if not (commit and made_at):
@@ -1261,22 +1260,46 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
             )
             continue
         if found is None:
-            found, _ = readable_snapshots(store)
-        held = next((t for t in found if t.commit == commit and t.made_at == made_at), None)
-        if held is None:
+            found, unreadable = readable_snapshots(store)
+        plain = {a: r for a, r in hashed.items() if not (r.get("ref") or {}).get("rev")}
+        labels = {a: r for a, r in hashed.items() if (r.get("ref") or {}).get("rev")}
+        # The snapshot the lockfile names: at that moment, and holding each
+        # asset pinned from it under its own name at its own hash
+        at_moment = [t for t in found if t.same_moment(commit, made_at)]
+        held = [t for t in at_moment if all(t.content().get(local_name(r)) == r["content_hash"] for r in plain.values())]
+        if not at_moment:
+            why = next((reason for path, reason in unreadable if commit in str(path)), None)
+            said = f": a record at that commit cannot be read ({why})" if why else ""
             gaps.append(
                 f"{key}: the lockfile pins its snapshot at {commit[:7]}, made {made_at}, and the store at "
-                f"{store} has no such snapshot, so nothing says what it was made from. "
+                f"{store} has no such snapshot{said}, so nothing says what it was made from. "
                 f"`chartbook update {key}` pins one the store has."
             )
             continue
-        holds = {record.get("content_hash") for record in held.assets.values() if record.get("content_hash")}
-        for asset_id, content_hash in sorted(pinned.items()):
-            if content_hash not in holds:
+        if not held:
+            before = len(gaps)
+            for asset_id, record in sorted(plain.items()):
+                if not any(t.content().get(local_name(record)) == record["content_hash"] for t in at_moment):
+                    gaps.append(
+                        f"{asset_id}: is pinned at {record['content_hash'][:19]}…, which its snapshot at "
+                        f"{commit[:7]} does not hold as {local_name(record)}: the lockfile was changed by hand, "
+                        f"or came from another store. `chartbook update {key}` pins it again."
+                    )
+            if len(gaps) == before:
                 gaps.append(
-                    f"{asset_id}: is pinned at {content_hash[:19]}…, which its snapshot at {commit[:7]} does "
-                    f"not hold: the lockfile was changed by hand, or came from another store. "
-                    f"`chartbook update {key}` pins it again."
+                    f"{key}: what is pinned from it is not all from one snapshot at {commit[:7]}: the lockfile "
+                    f"was changed by hand. `chartbook update {key}` pins it again."
+                )
+            continue
+        # A label names a version: some snapshot of that pipeline must hold it
+        pipelines = {t.pipeline for t in held}
+        for asset_id, record in sorted(labels.items()):
+            name = local_name(record)
+            if not any(t.pipeline in pipelines and t.content().get(name) == record["content_hash"] for t in found):
+                gaps.append(
+                    f"{asset_id}: is pinned at {record['content_hash'][:19]}…, a version of {name} that no "
+                    f"snapshot of it in the store holds: the lockfile was changed by hand, or came from "
+                    f"another store. `chartbook update {key}` pins it again."
                 )
     return gaps
 

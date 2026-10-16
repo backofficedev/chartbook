@@ -598,7 +598,7 @@ def run(
                 report.failed, report.exit_code = step, 1
                 report.reason = (
                     "its pins do not account for every dependency, so it could not have a snapshot, "
-                    "and nothing was built:\n" + "\n".join(f"  {gap}" for gap in gaps)
+                    "and it was not built:\n" + "\n".join(f"  {gap}" for gap in gaps)
                 ).rstrip(".")
                 break
 
