@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a test keeps the CLI reference in step with the CLI
+
+`docs_src/reference/cli.md` is written by hand, in prose, because the reasons behind a command matter more than its signature. `tests/test_cli_reference.py` now keeps the hand honest: every command a user can run, a group that runs on its own included, has its `## chartbook <name>` section; a subcommand is named under its group's as `chartbook <group> <sub>` or by a `###` heading, and where it has a heading of its own its options are looked for there; every option, the program's own `--version` among them, is mentioned as a whole word by a spelling the CLI accepts, long or short (a section that says it takes the arguments of another command, as `build` does of `docs`, is read with that one); every positional argument is named or shown in use; and no heading or `chartbook <group> <sub>` line names a command the CLI does not have. This is what "regenerate the CLI reference from the CLI" came to: the page stays prose, and the CLI is its source of truth for what exists.
+
 ### Changed — `chartbook check` warns about a dependency that has no pin
 
 A `path` dependency that is there but has no pin in `chartbook.lock` now draws a `warning:` line from `chartbook check`, saying that nothing of it can be read until `chartbook pin` or `chartbook run` (the build) pins it. It is a warning and not a failure because a fresh clone is in that state on purpose; `pin --frozen` and `run --frozen` remain the gates that fail on it. A lockfile this version cannot read is reported once, and no dependency is blamed for it. There is no `check --frozen`: the frozen check already exists under the commands that build.
