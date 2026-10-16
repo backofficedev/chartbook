@@ -390,6 +390,14 @@ ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
 Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
 ```
 
+**A snapshot carries its lineage.** It records what the pipeline was pinned to, each dependency's commit and a hash over everything pinned from it, so it is made only when those pins account for every dependency: the check `chartbook pin --frozen` makes (every dependency in the lockfile, pinned from where the manifest says, its bytes in the store), and no dependency pinned from its working folder. An asset the other pipeline had not built when it was pinned does not stop it, since nothing can have read it. Otherwise nothing is made, and each gap is listed with what to run:
+
+```console
+$ chartbook snapshot
+Error: acme/forecast cannot have a snapshot: its pins do not account for every dependency, and a snapshot carries its lineage.
+  rates: is in [dependencies] and not in the lockfile. Run `chartbook pin`.
+```
+
 Or both in one command, which is the better habit: `chartbook run --snapshot`. See {ref}`below <run-then-snapshot>`.
 
 **Why.** People, and agents, work on different pipelines at the same time. Someone is always half-way through a change. So a pipeline that depends on this one never reads this folder. It reads the last snapshot you made, and your folder can be in any state in between.

@@ -1203,6 +1203,60 @@ def _write(snapshot: Snapshot, store: Store) -> Path:
     )
 
 
+def require_lineage(directory: Union[str, Path], pipeline: str, store: Store) -> None:
+    """Refuse a snapshot whose pins do not account for every dependency: a snapshot carries its lineage.
+
+    A snapshot records what its pipeline was pinned to (``inputs``: each
+    dependency's commit and the hash over its pins), and the assets it holds
+    were made from those bytes. A dependency that is not pinned, pinned from
+    somewhere the manifest no longer names, or pinned to bytes the store
+    does not have, would leave a gap in that record. So the check
+    ``chartbook pin --frozen`` makes comes first (:func:`chartbook.lock.verify`),
+    less an asset the other pipeline had not built when it was pinned, which
+    nothing can have read; and a ``path`` dependency pinned from its working
+    folder (``--from-folder``) is refused too, as it names no commit.
+
+    :raises SnapshotError: Listing each gap and what to run.
+    """
+    from chartbook.lock import LOCK_FILE, LockError, read_lock, verify
+
+    directory = Path(directory)
+    try:
+        checked = verify(directory, store)
+        locked = read_lock(directory / LOCK_FILE)
+    except (LockError, ValueError) as error:
+        raise SnapshotError(f"{pipeline} cannot have a snapshot: {error}") from None
+    entries = {entry.get("id"): entry for entry in (locked.dependencies if locked is not None else [])}
+
+    def a_gap(problem) -> bool:
+        if problem.kind == "not_built":
+            return False
+        # Nothing pinned of a dependency that was found at a commit: it declares
+        # nothing, so there is nothing it could have read
+        resolved = (entries.get(problem.dependency) or {}).get("location", {}).get("commit")
+        return not (problem.kind == "nothing_pinned" and resolved)
+
+    gaps = [
+        f"{problem.asset or problem.dependency or 'chartbook.lock'}: {problem.message}"
+        for problem in checked.problems
+        if a_gap(problem)
+    ]
+    for entry in entries.values():
+        location = entry.get("location") or {}
+        if location.get("kind") == "path" and not (location.get("commit") and entry.get("snapshot")):
+            gaps.append(
+                f"{entry.get('id')}: is pinned from its working folder, not from a snapshot, so nothing "
+                f"says which commit its bytes came from. `chartbook update {entry.get('id')}` pins its "
+                f"newest snapshot (its owner makes one with `chartbook snapshot`)."
+            )
+    if gaps:
+        shown = "\n".join(f"  {gap}" for gap in gaps)
+        raise SnapshotError(
+            f"{pipeline} cannot have a snapshot: its pins do not account for every dependency, and a "
+            f"snapshot carries its lineage.\n{shown}"
+        )
+
+
 def require_committed(
     directory: Union[str, Path], pipeline: str, ignoring: tuple = ()
 ) -> Code:
@@ -1352,6 +1406,7 @@ def make(
     code = require_committed(directory, pipeline, ignoring)
 
     store = store if store is not None else default_store()
+    require_lineage(directory, pipeline, store)
     raw = _read_manifest_file(directory)
     assets: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []

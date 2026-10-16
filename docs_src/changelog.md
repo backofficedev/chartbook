@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — a snapshot carries its lineage
+
+`chartbook snapshot` is made only when the pipeline's pins account for every dependency: the check `chartbook pin --frozen` makes (every dependency in the lockfile, pinned from where the manifest says, its bytes in the store), and no `path` dependency pinned from its working folder, which names no commit. An asset the other pipeline had not built when it was pinned does not stop it, and nor does a dependency that declares nothing. Before, a pipeline with no lockfile was snapshotted with its inputs recorded as empty. Each gap is listed with what to run. Decided by the maintainer on 2026-10-16.
+
 ### Documented — a store in a synced folder
 
 The configuration reference says how to keep the store in a folder that a sync service such as Google Drive keeps in step between your machines: a pipeline cloned on another machine reads what its lockfile pins from it, with the pipeline it depends on neither there nor built, and a catalog there shows every snapshot. It says what still needs the other pipeline's folder (choosing a snapshot), and four things to know (keep the files on disk, sync lag and `store verify`, `gc` from one machine, who can write). A test covers reading with the other pipeline's folder gone, for a folder store and an S3 store.
