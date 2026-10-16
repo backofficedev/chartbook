@@ -19,6 +19,7 @@ from chartbook.manifest import (
     load_manifest,
 )
 from chartbook.utils import copy_file, copy_tree, move_tree
+from chartbook.writers import ASSISTANT_FILE
 from chartbook.conf_validation import validate_conf_py_values, validate_source_files
 
 
@@ -681,6 +682,27 @@ def _write_index(
     index.write_index(
         index.published(built), output_dir / index.INDEX_FILE, only_if_changed=True
     )
+    _write_assistant_file(manifest, built, output_dir)
+
+
+def _write_assistant_file(manifest: dict, built: dict, output_dir: Path) -> None:
+    """Write the site's assistant file beside its index: what is in the site and where, for a command-line agent.
+
+    Written by the site's own writer, from the index (see
+    :meth:`chartbook.writers.sphinx.SphinxWriter.assistant_file`); left
+    alone when its text has not changed, as the index is.
+    """
+    from chartbook.writers import writer_class
+
+    writer = writer_class(manifest["project"].get("writer", "sphinx"))(built, theme=manifest["project"]["type"])
+    target = output_dir / writer.ASSISTANT_FILE
+    text = writer.assistant_file()
+    try:
+        if target.read_text(encoding="utf-8") == text:
+            return
+    except OSError:
+        pass
+    target.write_text(text, encoding="utf-8")
 
 
 @dataclass
@@ -881,7 +903,7 @@ def _generate_docs_incremental(
             output = incremental.sync_tree(
                 html_build_dir,
                 output_dir,
-                preserve=[Path(".nojekyll"), Path(index.INDEX_FILE)],
+                preserve=[Path(".nojekyll"), Path(index.INDEX_FILE), Path(ASSISTANT_FILE)],
                 same=incremental.same_size_and_not_newer,
             )
             (output_dir / ".nojekyll").touch()

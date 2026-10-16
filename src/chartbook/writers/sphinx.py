@@ -26,6 +26,7 @@ import yaml
 from chartbook.errors import ChartBookError
 from chartbook.provenance import panel, reverse
 from chartbook.utils import get_dataframe_glimpse, is_glob_pattern
+from chartbook.writers import ASSISTANT_FILE
 
 #: The sections of a dataframe page, as the generator orders them.
 _DATAFRAME_PAGE = (
@@ -180,6 +181,29 @@ def _as_text(value: object) -> str:
 
     text = " ".join("".join(_without_html(c) for c in plain_line(value)).split())
     return "".join(f"&#{ord(c)};" if c in string.punctuation else c for c in text)
+
+
+def _one_line(text: object, longest: int = 200) -> str:
+    """Text as one line, cut at a word to at most ``longest`` characters (with an ellipsis when cut)."""
+    if not isinstance(text, str):
+        return ""
+    line = " ".join("".join(c if c.isprintable() else " " for c in text).split())
+    if len(line) <= longest:
+        return line
+    cut = line[: longest - 1]
+    if line[longest - 1] != " ":
+        cut = cut.rsplit(" ", 1)[0]
+    return cut.rstrip(" .,;:") + "…"
+
+
+def _link_text(text: str) -> str:
+    """Text set into the assistant file, with a backslash before what would start a link, an autolink or code."""
+    return "".join("\\" + c if c in "\\[]<>`" else c for c in text)
+
+
+def _local_or_id(record: dict) -> str:
+    """A record's local name, or its ID when it has none (a pipeline)."""
+    return (record.get("ref") or {}).get("name") or record["id"]
 
 
 def _from_the_store(record: dict) -> dict:
@@ -504,6 +528,91 @@ class SphinxWriter:
             freshness=[fact for fact in [_freshness("Code updated", pipeline.get("code_changed_at"))] if fact],
             version=_laid_out_version(pipeline),
         )
+
+    # --- the assistant file --------------------------------------------------
+
+    #: The assistant file's name, at the site's root beside `index.json`
+    ASSISTANT_FILE = ASSISTANT_FILE
+
+    #: The kinds the assistant file lists, under these headings, in this order
+    ASSISTANT_SECTIONS = (("Pipeline", "Pipelines"), ("Dataframe", "Dataframes"), ("Chart", "Charts"), ("Model", "Models"))
+
+    def assistant_file(self) -> str:
+        """The site as an assistant reads it: one line per pipeline, dataframe, chart and model, with where its page is.
+
+        In the llms.txt form: the site's name as the title, what it is as the
+        summary, then a list per kind, each line ``- [name](page): `ID`.
+        Description.``, every link relative to the site's root, where the file
+        is. In a catalog, each pipeline's line lists its versions, each
+        linking the version site's own assistant file. The records in full
+        are in ``index.json`` beside it.
+
+        The text is the index's, one line each: a name, a description, a
+        pipeline the catalog shows from the store saying so. It is text an
+        assistant reads, not a page: nothing in it is a link but the links
+        this method makes.
+        """
+        raw = {record["id"]: record for record in self.index.get("records", []) if isinstance(record, dict) and "id" in record}
+        shown = {kind: sorted((r for r in self.records.values() if r["kind"] == kind), key=lambda r: r["id"]) for kind, _ in self.ASSISTANT_SECTIONS}
+        catalog = next((r for r in self.records.values() if r["kind"] == "Catalog"), None)
+        if self.theme == "catalog":
+            title = _one_line((raw.get(catalog["id"]) if catalog else {}).get("name") or "") or "ChartBook catalog"
+            count = len(shown["Pipeline"])
+            summary = f"A ChartBook catalog of {count} pipeline{'s' if count != 1 else ''}" + (
+                ", with every snapshot of each in the store as a site of its own under versions/." if self._has_versions() else "."
+            )
+            about = []
+        else:
+            own = shown["Pipeline"][0] if shown["Pipeline"] else {}
+            title = _one_line(raw.get(own.get("id"), {}).get("name") or own.get("id") or "") or "ChartBook pipeline"
+            summary = _one_line(raw.get(own.get("id"), {}).get("description") or "", 500) or "A ChartBook pipeline."
+            version = _laid_out_version(own) if own else None
+            about = [f"This site is the snapshot of `{own['id']}` at commit `{version['short']}`, made {version['made']}.", ""] if version else []
+        lines = [f"# {_link_text(title)}", "", f"> {_link_text(summary)}", ""]
+        lines += [
+            *about,
+            "Each line links a page of this site, relative to this file: its name, its ID, what it says of itself. "
+            "Every record, with its fields, inputs and content hashes, is in [index.json](index.json).",
+            "",
+        ]
+        for kind, heading in self.ASSISTANT_SECTIONS:
+            if not shown[kind]:
+                continue
+            lines += [f"## {heading}", ""]
+            for record in shown[kind]:
+                lines.append(self._assistant_line(record, raw.get(record["id"], {})))
+            lines.append("")
+        return "\n".join(lines).rstrip("\n") + "\n"
+
+    def _assistant_line(self, record: dict, raw: dict) -> str:
+        """One record's line in the assistant file."""
+        from chartbook.versions import site_path
+
+        page = self.page_path(record)
+        page = page[: -len(".md")] + ".html" if page.endswith(".md") else page
+        name = _one_line(raw.get("name") or "") or _local_or_id(record)
+        said = [f"`{record['id']}`"]
+        if _is_from_the_store(record):
+            said[0] += ", not on this machine: the catalog shows it from its snapshots in the store"
+        description = _one_line(raw.get("description") or "", 300)
+        if description and description[-1] not in ".!?…":
+            description += "."
+        line = f"- [{_link_text(name)}]({page}): " + ". ".join(said) + "." + (f" {_link_text(description)}" if description else "")
+        versions = []
+        listed = (record.get("snapshots") or []) if self.theme == "catalog" else []
+        for entry in listed:
+            try:
+                root = site_path(record["id"], entry["name"])
+            except (KeyError, ValueError):
+                continue
+            made = f"{entry['made_at'][:10]} {entry['made_at'][11:16]} UTC"
+            if entry.get("rendered", True):
+                versions.append(f"[`{entry['commit'][:7]}`, {made}]({root}/{self.ASSISTANT_FILE})")
+            else:
+                versions.append(f"`{entry['commit'][:7]}`, {made}, whose site could not be built ([why]({root}/index.html))")
+        if versions:
+            line += " Versions, newest first: " + "; ".join(versions) + "."
+        return line
 
     # --- the catalog's own pages ---------------------------------------------
 

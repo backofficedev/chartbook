@@ -33,7 +33,10 @@ chartbook docs -f --incremental  # Keep _docs/ and redo only what changed since 
 chartbook docs -f --watch  # Incremental build, then rebuild on every file change (Ctrl-C to stop)
 chartbook browse            # Open project docs in default browser
 # every build also writes docs/index.json: one record per pipeline, dataframe, column,
-# chart, notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash
+# chart, notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash,
+# and docs/llms.txt: one line per pipeline, dataframe, chart and model with its ID and a
+# link to its page (a catalog's also links every version's own llms.txt). To find your way
+# around a built site or catalog, read its llms.txt first
 chartbook check             # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe

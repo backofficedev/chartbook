@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — an assistant file for every site
+
+Every build writes `llms.txt` beside `index.json`, in the form of [llms.txt](https://llmstxt.org): the site's name, then one line per pipeline, dataframe, chart and model with its name linking its page, its ID and its description, so that an assistant on the command line finds its way around a site without reading its HTML. A version's site says which snapshot it is; a catalog's file lists each pipeline's versions, newest first, each linking that version's own `llms.txt`. The writer writes it from the index, and a build that changes nothing leaves it alone. Step 4 of {doc}`design/versioned-catalog`.
+
 ### Fixed — what a store holds is read as someone else's
 
 - **The S3 store never writes outside its cache.** It made a file on the reading machine for every key under an object's prefix and every record key under `snapshots/`, wherever the key's path led: a key with `..` or a leading `/` wrote outside the cache, so anyone who could write to the bucket could write files on every machine that read from it. A key that is not a plain path inside its folder (on Windows, also one with a backslash or a colon) is now not a file of the object, or not a record, and is never downloaded; every path is checked to be inside the cache before it is written. `store gc` sizes, ages and deletes an object by every key under it, so an object of stray keys alone is removed rather than stopping it.
