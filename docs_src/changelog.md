@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — settings are read in layers, and the store is a URL
+
+An organization's settings file, `/etc/chartbook/settings.toml` (Windows: `%ProgramData%\chartbook\settings.toml`, or the file `CHARTBOOK_SYSTEM_SETTINGS` names), is read where the user's `~/.chartbook/settings.toml` is silent, key by key, below the environment variables and above the defaults. The store's setting is `[store] url`: a bare path or `file:///` is a folder, and another scheme names a kind of store a plugin will provide (none is built yet, and the setting says so). `[store] path` is still read as a folder, with a warning to rename it, and a user's `path` still wins over the organization's `url`. A relative folder in a settings file is relative to that file, not to where a command runs. A fault in the organization's file is reported and the file ignored; a fault in the user's names the file.
+
+### Design — stores and backends
+
+A design page, {doc}`design/stores-and-backends`, for keeping the same experience from a laptop to an organization's own storage: the store is a setting of the machine, never of the pipeline, read in layers (the environment, the user's settings, a system-wide settings file, the default) and given as a URL; which engine a pipeline reads from stays in its manifest, located by the machine; stores and backends become plugins behind extras, so `pip install chartbook` installs no cloud library; a warehouse pins a table by version where it can. The settings layers are built with it (above); the store interface is the next work.
+
 ### Added — a table or query is pinned, and read across pipelines
 
 `chartbook snapshot` writes a dataframe that is a table or a query in a DuckDB file out as a parquet file into the store, under the dataframe's name. Its record keeps the source's location and carries the parquet's hash, so `chartbook pin` pins it, `data.load("rates:curve")` and `data.path()` read the pinned copy by name, a model trained on it records its hash and goes out of date when the table moves. A query's rows are written sorted on every column, so the same rows give the same bytes whatever order the engine found them in. A table the machine cannot write out (one in `:memory:`, one the engine cannot read, one with a column Polars cannot import) is recorded as not built, and the snapshot says why; A folder has no table to take, so `update --from-folder` keeps such pins from the snapshot, and a fresh `pin --from-folder` lists them as not built and says that a snapshot writes them out. The file is read on one thread, so that a floating-point aggregate gives the same bytes run after run; a query the author ordered keeps that order in the pinned copy, and only an unordered one is sorted. A reference to a table that was pinned before it was written out says what to do.

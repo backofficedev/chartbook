@@ -623,8 +623,10 @@ The same file says where the store is, if it is not at `~/.chartbook/store/`:
 
 ```toml
 [store]
-path = "/a/bigger/disk/chartbook-store"
+url = "/a/bigger/disk/chartbook-store"
 ```
+
+The store is a setting of the machine or the organization, never of a pipeline, so it is read in layers, each only where the one above it is silent, key by key: the `CHARTBOOK_STORE` environment variable; the user's `~/.chartbook/settings.toml`; the organization's settings file, `/etc/chartbook/settings.toml` on Unix and macOS, `%ProgramData%\chartbook\settings.toml` on Windows, or the file `CHARTBOOK_SYSTEM_SETTINGS` names; then the default. An organization sets the store once for every machine, and a user keeps their own choices for everything else. The value is a URL: a bare path or `file://` is a folder; another scheme names another kind of store, which a plugin will provide (none is built yet, and the setting says so). `[store] path` is still read as a folder, with a warning.
 
 The store is a folder of files kept under the hash of their content. It is where `chartbook pin` keeps its copies of other pipelines' data, and it is shared by all your projects. The `CHARTBOOK_STORE` environment variable overrides the setting, for one shell or one CI job. `chartbook store verify` checks a store and `chartbook store gc` clears out what no project needs ({doc}`cli`).
 

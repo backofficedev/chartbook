@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 import click
@@ -30,6 +31,23 @@ def _check_sphinx_installed():
 @click.version_option(version=__version__)
 def main():
     """chartbook CLI tool for generating documentation websites."""
+    # A warning from the settings or a manifest is one line for a person,
+    # not Python's file, line and source line
+    warnings.showwarning = _show_warning
+
+
+def _show_warning(message, category, filename, lineno, file=None, line=None):
+    click.echo(f"Warning: {message}", err=True)
+
+
+def _default_catalog_path():
+    """The default catalog from the settings, or a clean error if the settings are faulty."""
+    from chartbook.config import get_default_catalog_path
+
+    try:
+        return get_default_catalog_path()
+    except ValueError as error:
+        raise click.ClickException(str(error)) from None
 
 
 def _site_options(command):
@@ -734,6 +752,8 @@ def _load_catalog_for_cli(catalog_path=None):
         resolved = _resolve_catalog_path(catalog_path)
     except CatalogNotConfiguredError:
         resolved = _prompt_catalog_init()
+    except ValueError as error:  # the settings file that names the default catalog is faulty
+        raise click.ClickException(str(error)) from None
 
     try:
         manifest = load_manifest(base_dir=resolved.parent)
@@ -1488,7 +1508,7 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
 
     from chartbook.config import get_default_catalog_path
 
-    catalog_path = get_default_catalog_path()
+    catalog_path = _default_catalog_path()
     if catalog_path is None or not catalog_path.is_file():
         click.echo("Error: No global catalog found.", err=True)
         click.echo("", err=True)
@@ -1537,7 +1557,7 @@ def catalog_browse():
     """Open the global catalog documentation in your default browser."""
     from chartbook.config import get_default_catalog_path
 
-    catalog_path = get_default_catalog_path()
+    catalog_path = _default_catalog_path()
     if catalog_path is None:
         click.echo("Error: No global catalog found.", err=True)
         click.echo("", err=True)
@@ -2118,8 +2138,10 @@ def store():
     """Look after the store: the local folder of pinned files.
 
     The store keeps files under the hash of what is in them. It is at
-    ~/.chartbook/store unless CHARTBOOK_STORE, or [store] path in
-    ~/.chartbook/settings.toml, says otherwise.
+    ~/.chartbook/store unless CHARTBOOK_STORE, or [store] url in
+    ~/.chartbook/settings.toml or in the organization's settings file
+    (/etc/chartbook/settings.toml, or what CHARTBOOK_SYSTEM_SETTINGS names), says
+    otherwise.
     """
 
 
@@ -2436,7 +2458,7 @@ def config():
         set_default_catalog_path,
     )
 
-    current = get_default_catalog_path()
+    current = _default_catalog_path()
     if current is not None:
         click.echo(f"Current catalog path: {current}")
         click.echo("")
@@ -2456,7 +2478,7 @@ def config():
         click.echo(f"Error: {exc}", err=True)
         raise SystemExit(1)
 
-    resolved = get_default_catalog_path()
+    resolved = _default_catalog_path()
     click.echo(f"Catalog path set to: {resolved}")
     click.echo("")
     click.echo("You can now load data with:")

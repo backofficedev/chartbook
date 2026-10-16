@@ -717,9 +717,11 @@ class Store:
 
 
 def default_store() -> Store:
-    """The store this user's ChartBook uses.
+    """The store this machine's ChartBook uses.
 
-    ``CHARTBOOK_STORE`` if it is set; otherwise ``[store] path`` in
-    ``~/.chartbook/settings.toml``; otherwise ``~/.chartbook/store``.
+    ``CHARTBOOK_STORE`` if it is set; otherwise ``[store] url`` in the
+    user's ``~/.chartbook/settings.toml``, then in the organization's
+    settings file; otherwise ``~/.chartbook/store``. Only a folder store is
+    built; see :func:`chartbook.config.get_store_url`.
     """
     return Store(get_store_path())
