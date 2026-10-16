@@ -16,5 +16,5 @@ A real stability promise will come with 1.0.
 
 | What | Removed in | Use instead |
 |---|---|---|
-| The `[all]`, `[data]`, `[plotting]` and `[sphinx]` install extras | 0.2.0 | `pip install chartbook`, which installs everything a pipeline on one machine needs (`chartbook[s3]`, added later, is a kind of store, not a part of the package held back) |
+| The `[all]`, `[data]`, `[plotting]` and `[sphinx]` install extras | 0.2.0 | `pip install chartbook`, which installs everything a pipeline on one machine needs (`chartbook[s3]` and `chartbook[mkdocs]`, added later, are a kind of store and a second site tool, not parts of the package held back) |
 | The v1 `chartbook.toml` format (`[config]` / `[site]` / `[pipeline]`) | 0.1.0 | Format v2; `python scripts/migrate_toml_v2.py <project>` rewrites a v1 file |

@@ -104,7 +104,7 @@ words, what changed between two builds: data changed, pins moved, a model out of
 
 ## 2. Write: the writer
 
-The Sphinx writer (`chartbook.writers.sphinx`) takes the full index and writes one Markdown page
+A writer is chosen by `[project] writer` in `chartbook.toml`: `"sphinx"` by default, or `"mkdocs"` with `pip install chartbook[mkdocs]`; both read the same index and write the same pages, each in its tool's dialect, and the site's navigation comes from the index either way. The Sphinx writer (`chartbook.writers.sphinx`) takes the full index and writes one Markdown page
 per record that has one, plus the catalog's own pages:
 
 | Record | Page |

@@ -66,7 +66,11 @@ PROJECT_DEFAULTS = {
     "build": "",
     "site_dir": "",
     "enable_data_download": False,
+    "writer": "sphinx",
 }
+
+#: The site tools a manifest may name in ``[project] writer``; each is a module of :mod:`chartbook.writers`.
+WRITERS = ("sphinx", "mkdocs")
 
 #: Entity sections that mark a manifest as pipeline-shaped.
 ENTITY_SECTIONS = ("charts", "dataframes", "notebooks", "notes", "models")
@@ -903,6 +907,11 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
     project = dict(PROJECT_DEFAULTS)
     project.update({k: v for k, v in project_raw.items() if k in PROJECT_DEFAULTS})
     project["type"] = project_type
+    if project["writer"] not in WRITERS:
+        raise ValueError(
+            f"{source}: [project] writer = {project['writer']!r} names a site tool ChartBook does not write "
+            f"for; the writers are: {', '.join(WRITERS)}."
+        )
 
     if not project["name"]:
         project["name"] = Path(base_dir).name
@@ -951,8 +960,8 @@ def _resolve_site_dir(project: dict, base_dir: Path) -> None:
 
     if (site_dir_path / "cb").exists():
         raise ValueError(
-            f"site_dir contains a 'cb/' subdirectory which conflicts with "
-            f"the reserved chartbook namespace. Please rename or remove it."
+            "site_dir contains a 'cb/' subdirectory which conflicts with "
+            "the reserved chartbook namespace. Please rename or remove it."
         )
     project["_resolved_site_dir"] = str(site_dir_path.resolve())
 

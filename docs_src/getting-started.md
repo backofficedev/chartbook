@@ -8,7 +8,7 @@ ChartBook needs Python 3.10 or newer.
 pip install chartbook
 ```
 
-One install, everything included: the site-building CLI, the plotting module, data loading, and the `chartbook init` scaffolder. (The one extra, `chartbook[s3]`, is for a team whose store is an S3 bucket.) For an isolated CLI install, `pipx install chartbook` works the same way. (Contributors: `pip install -e ".[dev]"` adds the test toolchain — see {doc}`contributing`.)
+One install, everything included: the site-building CLI, the plotting module, data loading, and the `chartbook init` scaffolder. (Two extras: `chartbook[s3]` for a team whose store is an S3 bucket, and `chartbook[mkdocs]` to build the site with MkDocs instead of Sphinx.) For an isolated CLI install, `pipx install chartbook` works the same way. (Contributors: `pip install -e ".[dev]"` adds the test toolchain — see {doc}`contributing`.)
 
 ## Scaffold a project
 

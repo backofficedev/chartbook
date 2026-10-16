@@ -1,0 +1,12 @@
+/* ChartBook's pages under the Material theme: a wider article, and the freshness line */
+.md-grid {
+  max-width: 90rem;
+}
+.cb-freshness {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.8rem;
+  margin-top: -0.6rem;
+}
+.cb-freshness time {
+  border-bottom: 1px dotted var(--md-default-fg-color--lighter);
+}
