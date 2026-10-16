@@ -82,6 +82,8 @@ What is in it:
 - **What each asset was made from** (`inputs`): a chart's dataframe, a model's training data.
   For another pipeline's data, **what it is pinned to** (`pinned_inputs`), and for a model,
   whether what it was trained on has since moved (`trained_with`, `inputs_now`, `stale_inputs`).
+  In a catalog, also which snapshot of the other pipeline it was trained on (`trained_from`), and
+  for each pipeline, its snapshots in the store (`snapshots`).
 - **The write-up's path and hash** (`docs`), so a build says which text it showed.
 - For the pipeline, **when its code last changed** according to git (`code_changed_at`), and the
   pages it supplies for its own site (`site_pages`).

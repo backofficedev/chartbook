@@ -20,8 +20,9 @@ Two things the diff cannot tell apart from a change, and says so in the
 docs: a chart file that a renderer writes differently each time (Plotly
 embeds a fresh id unless given ``div_id``; ChartBook's own plotting helpers
 give one; an executed notebook's HTML carries ids and times from its run),
-and a model's ``versions``, ``trained_with`` and ``stale_inputs``,
-which are read from the store of the machine that built the index.
+and a model's ``versions``, ``trained_with``, ``trained_from`` and
+``stale_inputs`` and a catalog's ``snapshots``, which are read from the
+store of the machine that built the index.
 """
 
 from __future__ import annotations
@@ -46,6 +47,7 @@ COMPUTED_WORDS = {
     "assets": "assets changed",
     "pinned_inputs": "pins moved",
     "trained_with": "trained on other data",
+    "trained_from": "trained from another snapshot",
     "inputs": "inputs changed",
     "location": "moved",
     "series": "series changed",
@@ -102,6 +104,8 @@ class Change:
                 said.append(f"{len(after - before)} new snapshot(s)")
             if before - after:
                 said.append(f"{len(before - after)} snapshot(s) gone")
+            if before == after:
+                said.append("versions' sites built differently")
         if "from_snapshot" in self.fields:
             said.append("laid out from another snapshot" if all(self.fields["from_snapshot"]) else "laid out from a snapshot, or no longer")
         if "aliases" in self.fields:

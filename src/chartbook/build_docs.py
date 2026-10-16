@@ -5,6 +5,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
@@ -151,8 +152,12 @@ def _write_sphinx_project(
     code_times: dict[str, str] | None = None,
     hash_cache=None,
     built_index: dict | None = None,
+    render_versions: bool = False,
 ):
     """Write the complete Sphinx project for a site into a directory.
+
+    With *render_versions*, a catalog's versions are built after the policy
+    check and before the pages, and what was built is returned.
 
     This is the first of the build's two stages: theme files, generated
     Markdown pages, copied charts and notebooks, the diagnostics CSV and a
@@ -182,6 +187,7 @@ def _write_sphinx_project(
     # policy.mode = "strict" fails the build on any missing required
     # field. The policy is the catalog's, or a lone pipeline's own.
     _check_policy(manifest, diagnostic_rows)
+    rendered = _render_versions(manifest, built_index) if render_versions and built_index is not None else None
 
     # Run pipeline publish
     run_build_markdown(
@@ -226,6 +232,7 @@ def _write_sphinx_project(
     with open(conf_output_path, "w") as f:
         f.write(conf_content)
     (sources_dir / "conf.py.j2").unlink(missing_ok=True)
+    return rendered
 
 
 #: Added to conf.py for a build of files from a store: a picture or a download
@@ -397,7 +404,7 @@ def generate_docs(
         _docs_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
         built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
-        _write_sphinx_project(
+        rendered = _write_sphinx_project(
             manifest=manifest,
             project_dir=project_dir,
             pipeline_theme=pipeline_theme,
@@ -410,6 +417,7 @@ def generate_docs(
             code_times=code_times,
             hash_cache=cache,
             built_index=built,
+            render_versions=True,
         )
 
         # Run sphinx build
@@ -418,7 +426,7 @@ def generate_docs(
         # Copy build files to output
         html_build_dir = _docs_dir / "_build" / "html"
         if html_build_dir.exists():
-            _add_versions(manifest, built, html_build_dir)
+            _add_versions(manifest, built, html_build_dir, rendered)
             _install_site(html_build_dir, output_dir, should_remove_existing)
             _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
 
@@ -430,7 +438,21 @@ def generate_docs(
             print(f"Keeping temporary build directory: {_docs_dir.resolve()}")
 
 
-def _add_versions(manifest: dict, built: dict, html_build_dir: Path) -> None:
+def _render_versions(manifest: dict, built: dict) -> Optional[dict]:
+    """In a catalog, build each listed snapshot's site before the pages, so that they know which were built."""
+    if manifest["project"]["type"] != "catalog":
+        return None
+    import click
+
+    from chartbook import versions
+
+    return versions.render_listed(
+        built,
+        echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
+    )
+
+
+def _add_versions(manifest: dict, built: dict, html_build_dir: Path, rendered: Optional[dict] = None) -> None:
     """In a catalog, put each snapshot's own site into the rendered site, under ``versions/``."""
     if manifest["project"]["type"] != "catalog":
         return
@@ -442,6 +464,7 @@ def _add_versions(manifest: dict, built: dict, html_build_dir: Path) -> None:
         built,
         html_build_dir,
         echo=lambda line: click.echo(click.style("warning: ", fg="yellow") + line.removeprefix("warning: "), err=True),
+        rendered_by_moment=rendered,
     )
 
 
@@ -513,6 +536,7 @@ def _generate_docs_mkdocs(
         built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
         _retrieve_correct_docs_src_dir(temp_docs_src_dir, manifest, project_dir, pipeline_theme)
         _check_policy(manifest, generate_metadata_diagnostics(manifest=manifest, docs_build_dir=pages_dir, skip_pipelines=skip_pipelines))
+        rendered = _render_versions(manifest, built)
         run_build_markdown(
             project_dir=project_dir,
             pipeline_theme=pipeline_theme,
@@ -542,7 +566,7 @@ def _generate_docs_mkdocs(
         )
         (_docs_dir / "mkdocs.yml").write_text(yaml.safe_dump(configuration, sort_keys=False, allow_unicode=True), encoding="utf-8")
         run_mkdocs_build(_docs_dir)
-        _add_versions(manifest, built, _docs_dir / "_build" / "html")
+        _add_versions(manifest, built, _docs_dir / "_build" / "html", rendered)
 
         _install_site(_docs_dir / "_build" / "html", output_dir, should_remove_existing)
         _write_index(manifest, _docs_dir, output_dir, skip_pipelines, built=built, cache=cache)
@@ -756,6 +780,7 @@ def _generate_docs_incremental(
     # depends on what those panels would say as well as on its own files
     cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
     built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+    rendered = _render_versions(manifest, built)
     records = {record["id"]: record for record in built["records"]}
     salts = {
         pipeline_id: provenance.digest(pipeline_id, records)
@@ -851,7 +876,7 @@ def _generate_docs_incremental(
 
         output_written = 0
         if html_build_dir.exists():
-            _add_versions(manifest, built, html_build_dir)
+            _add_versions(manifest, built, html_build_dir, rendered)
             output_dir.mkdir(parents=True, exist_ok=True)
             output = incremental.sync_tree(
                 html_build_dir,

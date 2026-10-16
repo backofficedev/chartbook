@@ -193,7 +193,20 @@ model with where its page is, so that a command-line agent finds its way without
    across builds, search scoped. *What remains after step 2:* links following pins, so that a
    page of `C` links to `A` at the version `C` pinned, inside a version's site as in the catalog;
    a catalog entry by pipeline ID alone, for a pipeline whose folder is not on this machine; and
-   clearing the kept sites, in the cache, of snapshots `store gc` removed.
+   clearing the kept sites, in the cache, of snapshots `store gc` removed. *Built 2026-10-16, in
+   part, after a review:* the only input of another pipeline a page has is a model's training
+   data. In a catalog, a model's "Trained On" links each such input to its page in the snapshot
+   that held the bytes it was trained on (the index records it as `trained_from`, from
+   `trained_with` and the store), and says when the pin has since moved; failing that, to the
+   snapshot the lockfile pins for that input; failing that, to the working version, as before.
+   The provenance panel links an input the lockfile pins to its page in the pinned snapshot; it
+   linked nothing before. A link leads into a version only when the catalog shows that snapshot,
+   and to the page that says why when its site could not be built, so the catalog builds the
+   versions' sites before its own pages. An incremental build regenerates a pipeline's pages
+   when any of this changes. `store gc` clears the kept site of every snapshot it removes. Not
+   built: the same links inside a version's own site, which is built once and kept, and so
+   cannot know which other versions a catalog will show; its pages say the pinned commit and
+   date in words. And a catalog entry by ID alone, which is the next step.
 4. **An assistant file** for generated sites, written from the index.
 5. **A development build**, later if wanted: a folder with gaps rendered with its assets marked
    not built and its notebooks unexecuted.
