@@ -1375,9 +1375,10 @@ def plan_gc(
     """Work out what a store can let go of. Nothing is removed.
 
     First the snapshots: one is kept if a lockfile pins it, if it is the
-    newest of its pipeline, if a label points at a model version in it, or
-    if it was made in the last *keep_days* days
-    (:func:`chartbook.snapshot.plan_removals`). Then the objects: one is
+    newest of its pipeline, if a label points at a model version in it, if
+    it was made in the last *keep_days* days, or if a snapshot kept for any
+    of these was made from it (or from a label pointing into it), as far up
+    as that goes (:func:`chartbook.snapshot.plan_removals`). Then the objects: one is
     kept if a lockfile the store knows of names it, or a kept snapshot
     does. The store knows of every lockfile that was pinned or updated into
     it. A lockfile is read as it is now; one that cannot be found (a

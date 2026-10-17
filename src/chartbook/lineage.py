@@ -247,7 +247,7 @@ class _Walker:
         at = self._at(node.commit, node.made_at)
         matching = []
         for taken in at:
-            made, labels = self._pinned_hash(taken, key)
+            made, labels = self._pinned_hash(taken, key, expected)
             if made == expected:
                 matching.append((taken, labels))
         if not matching:
@@ -255,10 +255,12 @@ class _Walker:
             if not at:
                 node.gaps.append(self._missing(node.commit, node.made_at))
             else:
+                unlisted = getattr(self, "listing_error", "")
+                said = f"; the store's objects could not be listed ({unlisted})" if unlisted else ""
                 node.gaps.append(
                     f"the hash recorded over what was pinned from its snapshot at {node.commit[:7]} is "
                     f"{expected[:19]}…, and that snapshot gives another: what was pinned is not what it "
-                    f"holds (or a version one of its labels names is no longer in the store)"
+                    f"holds (or a version one of its labels names is no longer in the store){said}"
                 )
             return node
         taken, labels = matching[0]
@@ -316,28 +318,42 @@ class _Walker:
         dependencies = raw.get("dependencies")
         return (set(dependencies) if isinstance(dependencies, dict) else set()), ""
 
-    def _pinned_hash(self, taken, key: str) -> tuple[Optional[str], frozenset]:
-        """The hash over everything a pin of this snapshot under this key would hold, as ``chartbook pin`` makes it; and the label versions in it."""
+    def _pinned_hash(self, taken, key: str, expected: Optional[str] = None) -> tuple[Optional[str], frozenset]:
+        """The hash over everything a pin of this snapshot under this key would hold, as ``chartbook pin`` makes it; and the label versions in it.
+
+        When a label's version is named by more than one object (anyone who
+        can write to the store can add one), each reading is tried, and the
+        one that gives *expected* is taken.
+        """
+        import itertools
+
         records = {}
         for name in sorted(taken.assets):
             record = snapshot.renamed(taken.assets[name], key)
             records[record["id"]] = record
         labelled = self._label_records(taken, key)
-        records.update(labelled)
-        versions = frozenset(record["content_hash"] for record in labelled.values())
-        return lock.pinned_hash(records.values()), versions
+        choices = [[(label_id, record) for record in options] for label_id, options in sorted(labelled.items())]
+        made = None
+        for picked in itertools.islice(itertools.product(*choices), 64):
+            trial = {**records, **dict(picked)}
+            made = lock.pinned_hash(trial.values())
+            if expected is None or made == expected:
+                return made, frozenset(record["content_hash"] for _, record in picked)
+        if not choices:
+            return lock.pinned_hash(records.values()), frozenset()
+        return made, frozenset()
 
     def _label_records(self, taken, key: str) -> dict:
-        """The records a pin makes of the snapshot's labels, as :func:`chartbook.snapshot.label_records` makes them.
+        """The records a pin may have made of the snapshot's labels, by ID, each with the readings possible.
 
-        Each label names the start of a version's hash. The version is looked
-        for among the snapshots this walk read (never the store's records
-        again, so one that cannot be read does not stop it); failing that,
-        among the store's objects, since a lockfile that pinned the label
-        keeps the version's bytes after ``store gc`` has let the snapshot
-        that made it go. One version, with its bytes in the store, or none.
+        As :func:`chartbook.snapshot.label_records` makes them. Each label
+        names the start of a version's hash. The version is looked for among
+        the snapshots this walk read (never the store's records again, so
+        one that cannot be read does not stop it); failing that, among the
+        store's objects. Only versions whose bytes are in the store count,
+        as at pin time; a label with none is left out, as a pin leaves it.
         """
-        records = {}
+        records: dict[str, list] = {}
         labels = taken.labels if isinstance(taken.labels, dict) else {}
         for name, named in sorted(labels.items()):
             if not isinstance(named, dict) or name not in taken.assets:
@@ -356,26 +372,29 @@ class _Walker:
                 named_hashes = {h for h in versions if h.split(":", 1)[-1].startswith(start)}
                 if not named_hashes:
                     named_hashes = {h for h in self._objects() if h.split(":", 1)[-1].startswith(start)}
-                if len(named_hashes) != 1:
-                    continue
-                (content_hash,) = named_hashes
-                try:
-                    if not self.store.has(content_hash):
+                options = []
+                for content_hash in sorted(named_hashes):
+                    try:
+                        if not self.store.has(content_hash):
+                            continue
+                    except (StoreError, OSError, ValueError):
                         continue
-                except (StoreError, OSError, ValueError):
-                    continue
-                record = {k: v for k, v in snapshot.renamed(taken.assets[name], key).items() if k != "trained_on"}
-                ref = dataclasses.replace(AssetRef.from_dict(record["ref"]), rev=label)
-                records[str(ref)] = {**record, "id": str(ref), "ref": ref.to_dict(), "label": label, "content_hash": content_hash}
+                    record = {k: v for k, v in snapshot.renamed(taken.assets[name], key).items() if k != "trained_on"}
+                    ref = dataclasses.replace(AssetRef.from_dict(record["ref"]), rev=label)
+                    options.append({**record, "id": str(ref), "ref": ref.to_dict(), "label": label, "content_hash": content_hash})
+                if options:
+                    records[options[0]["id"]] = options
         return records
 
     def _objects(self) -> set:
         """Every object's hash in the store, listed once a walk needs it."""
         if not hasattr(self, "_listed"):
+            self.listing_error = ""
             try:
                 self._listed = set(self.store.hashes())
-            except (StoreError, OSError, ValueError):
+            except (StoreError, OSError, ValueError) as error:
                 self._listed = set()
+                self.listing_error = str(error)
         return self._listed
 
     def check_objects(self, lineage: Lineage, rehash: bool) -> None:

@@ -1181,17 +1181,33 @@ def _keep_lineage(plan: SnapshotPlan, groups: dict) -> None:
 
     A snapshot records the snapshots it was made from (``inputs``), and
     ``chartbook lineage`` walks to them and checks them by hash. So each of
-    those is kept too, and what it was made from, and so on. (The versions a
-    kept snapshot's labels name need no snapshot kept for them: a lockfile
-    that pinned a label keeps its bytes, and the walk finds them by their
-    hash. Only the newest snapshot's labels keep a version's snapshot, as
-    before, so taking a label away still releases it.)
+    those is kept too, and what it was made from, and so on. What a kept
+    snapshot was made from includes the versions the labels of each of its
+    inputs named, since a pin of a snapshot pins its labels: the snapshots
+    holding those versions are kept as well. A label on a snapshot no kept
+    snapshot was made from keeps nothing beyond the newest snapshot's, as
+    before, so taking a label away still releases its version.
     """
     removable = {id(taken): (taken, why) for taken, why in plan.remove}
     by_moment: dict[tuple[str, str], list] = {}
     for group in groups.values():
         for taken in group:
             by_moment.setdefault((taken.commit, taken.made_at), []).append(taken)
+    def holding_labelled(upstream) -> list:
+        """The snapshots of its pipeline holding the versions a snapshot's labels name."""
+        found = []
+        labels = upstream.labels if isinstance(upstream.labels, dict) else {}
+        for name, named in labels.items():
+            for start in (named.values() if isinstance(named, dict) else []):
+                start = str(start).split(":", 1)[-1]
+                if len(start) < 12:
+                    continue
+                for other in groups.get((upstream.pipeline, upstream.subdirectory), []):
+                    held = (other.assets.get(name) or {}).get("content_hash")
+                    if isinstance(held, str) and held.split(":", 1)[-1].startswith(start):
+                        found.append(other)
+        return found
+
     queue = [taken for taken, _ in plan.keep]
     while queue and removable:
         taken = queue.pop()
@@ -1201,6 +1217,9 @@ def _keep_lineage(plan: SnapshotPlan, groups: dict) -> None:
             if isinstance(location, dict) and isinstance(location.get("commit"), str) and isinstance(entry.get("snapshot"), str):
                 for upstream in by_moment.get((location["commit"], entry["snapshot"]), []):
                     rescued.append((upstream, "a snapshot that is kept was made from it"))
+                    # What was pinned from it held its labels' versions too
+                    for holder in holding_labelled(upstream):
+                        rescued.append((holder, "a snapshot that is kept was made from a label pointing at a version in it"))
         for upstream, why in rescued:
             if id(upstream) in removable:
                 del removable[id(upstream)]

@@ -263,3 +263,34 @@ class TestWhatTheReviewFound:
         monkeypatch.chdir(forecast)
         result = CliRunner().invoke(main, ["lineage", "--check"])
         assert result.exit_code == 1 and "gap:" in result.output, result.output
+
+
+class TestWhatTheThirdReviewFound:
+    def test_gc_keeps_a_label_version_a_kept_snapshot_was_made_from(self, labelled):
+        work, model, serve, top, first = labelled
+        found, _ = snapshot.readable_snapshots(default_store())
+        newest = max((t for t in found if t.pipeline == "acme/model"), key=lambda t: t.made_at)
+        second = newest.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
+        _model_pipeline(model, {"champion": second})
+        _commit(work)
+        _train(model, b"w3")
+        snapshot.make(model)
+        lock.update(serve)                    # serve's lockfile moves on; top still pins serve's old snapshot
+        lock.run_gc(lock.plan_gc(default_store(), recent_seconds=0, keep_days=0), default_store())
+        assert lineage.walk(top).gaps() == []
+
+    def test_a_second_object_with_the_same_start_does_not_make_a_gap(self, labelled):
+        work, model, serve, top, first = labelled
+        store = default_store()
+        (version,) = [h for h in store.hashes() if h.split(":", 1)[1].startswith(first)]
+        # The version's snapshot is let go of by hand, so the walk looks among the objects
+        found, _ = snapshot.readable_snapshots(store)
+        (maker,) = [t for t in found if t.pipeline == "acme/model" and t.assets["model/m"]["content_hash"] == version]
+        os.chmod(maker.path, stat.S_IRUSR | stat.S_IWUSR)
+        maker.path.unlink()
+        twin = Path(store.get(version)).parent / (version.split(":", 1)[1][2:12] + "f" * 52)
+        import shutil
+
+        shutil.copytree(store.get(version), twin)
+        assert len([h for h in store.hashes() if h.split(":", 1)[1].startswith(first)]) == 2
+        assert lineage.walk(top).gaps() == []
