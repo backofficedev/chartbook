@@ -119,7 +119,7 @@ class FileLocation(Location):
             before anything has written to it.
         files: For a directory pinned from another pipeline, its parquet
             files its record lists, under *path*: each named ``.parquet``,
-            and each named otherwise that ends as parquet does (Hive's
+            and each named otherwise that begins or ends as parquet does (Hive's
             ``000000_0``), but none that is plainly not a table (a
             ``README.txt``; :data:`NOT_TABLES`) or named as an engine's
             scan passes over (``.``, ``_``). What a reader reads, and
@@ -867,10 +867,11 @@ def _held(store, record: dict) -> Location:
         # the folder; and, as an engine's scan of a folder does, none under a
         # name starting "." or "_" (Spark's _SUCCESS, Hadoop's .crc files),
         # nor one that is plainly not a table (a README.txt, a schema.json).
-        # A file named otherwise than .parquet is read if it ends as parquet
-        # does (Hive's 000000_0, a .pq), and passed over if not (a schema.avsc,
-        # a plot.png, an Iceberg snap-1.avro), as DuckDB's read of the folder
-        # took only its parquet: no table is left out, and no file breaks the read
+        # A file named otherwise than .parquet is read if it begins or ends as
+        # parquet does (Hive's 000000_0, a .pq), and passed over if not (a
+        # schema.avsc, a plot.png, an Iceberg snap-1.avro), as DuckDB's read of
+        # the folder took only its parquet: no table is left out, not even one
+        # half written, and no file breaks the read
         from chartbook.snapshot import files_read
         from chartbook.store import StoreError, on_disk, plain_parts
 
@@ -885,7 +886,7 @@ def _held(store, record: dict) -> Location:
             if any(part.startswith((".", "_")) for part in parts) or parts[-1].lower().endswith(NOT_TABLES):
                 continue
             file = on_disk(held, parts)
-            if parts[-1].lower().endswith(".parquet") or _ends_as_parquet(file):
+            if parts[-1].lower().endswith(".parquet") or _is_parquet(file):
                 read.append(file)
         return FileLocation(held, tuple(read))
     from chartbook.store import on_disk
@@ -902,13 +903,21 @@ NOT_TABLES = (
 )
 
 
-def _ends_as_parquet(file: Path) -> bool:
-    """Whether a file ends as a parquet file does, with ``PAR1``: four bytes are read.
+def _is_parquet(file: Path) -> bool:
+    """Whether a file begins or ends as a parquet file does, with ``PAR1``: eight bytes are read.
 
-    One that cannot be read is taken as parquet, so that the read says why.
+    A parquet file has the mark at both ends. Either is enough, so that one
+    whose writer has begun and not finished (a copy that sets its size
+    first and fills it in after) is read, and the read says it is broken,
+    rather than its rows going missing; so is one that begins with four zero
+    bytes, which no file that is plainly something else does, as a copy of
+    that kind leaves before its first bytes come. One that cannot be read is
+    taken as parquet, so that the read says why.
     """
     try:
         with open(file, "rb") as f:
+            if f.read(4) in (b"PAR1", b"\0\0\0\0"):
+                return True
             f.seek(0, os.SEEK_END)
             if f.tell() < 4:
                 return False

@@ -1653,7 +1653,7 @@ class TestADirectoryOfMixedNames:
         ("tiny", b"PA"),
     ])
     def test_a_file_that_does_not_end_as_parquet_is_left_out(self, drive, monkeypatch, other, body):
-        """By its last four bytes: DuckDB's read of the folder took only its parquet files, and so does this."""
+        """By its first and last four bytes: DuckDB's read of the folder took only its parquet files, and so does this."""
         import polars as pl
 
         work, machine, rates = drive
@@ -1672,6 +1672,38 @@ class TestADirectoryOfMixedNames:
         assert sorted(data.load("acme/rates:parts").collect()["a"].to_list()) == [1, 2]
         assert sorted(data.load("acme/rates:parts", format="pandas")["a"].to_list()) == [1, 2]
         assert sorted(data.sql("select a from {acme/rates:parts}").collect()["a"].to_list()) == [1, 2]
+
+
+    @pytest.mark.parametrize("second", ["part-1", "p1.pq"])
+    @pytest.mark.parametrize("written", ["first half", "nothing yet"])
+    def test_a_file_half_written_at_its_full_size_fails_the_read(self, drive, monkeypatch, second, written):
+        """A copy that sets a file's size first and fills it in after (robocopy onto a share, a torrent-style
+        sync) leaves a file whose size is right and whose end is not yet there: its rows may not go missing."""
+        import polars as pl
+
+        work, machine, rates = drive
+
+        def writer(parts):
+            pl.DataFrame({"a": [1]}).write_parquet(parts / "p0.parquet")
+            pl.DataFrame({"a": [2, 3]}).write_parquet(parts / second)
+
+        _parts(rates, writer)
+        snapshot.make(rates)
+        forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(forecast).problems == []
+        (half,) = [p for p in (work / "Google Drive" / "chartbook-store").rglob(second) if "objects" in p.parts]
+        whole = half.read_bytes()
+        half.chmod(0o644)
+        kept = len(whole) // 2 if written == "first half" else 0
+        half.write_bytes(whole[:kept] + b"\0" * (len(whole) - kept))
+        monkeypatch.chdir(forecast)
+        for read in (
+            lambda: data.load("acme/rates:parts").collect(),
+            lambda: data.load("acme/rates:parts", format="pandas"),
+            lambda: data.sql("select a from {acme/rates:parts}").collect(),
+        ):
+            with pytest.raises(Exception):
+                read()
 
 
 def _names_as_linux_tells_them(monkeypatch) -> None:
