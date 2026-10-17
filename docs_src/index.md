@@ -146,6 +146,7 @@ reference/stability
 :caption: Project
 
 changelog
+roadmap
 contributing
 design/overview
 design/toml-format-v2

@@ -12,6 +12,8 @@ chartbook==0.2.0
 
 A real stability promise will come with 1.0.
 
+**Some parts are earlier still.** Reading a source in a Databricks SQL warehouse (`backend = "databricks"`) has been tested only against a stand-in for the warehouse, and is likely to change more than the rest. The {doc}`../roadmap` says what is experimental and what is next.
+
 ## Removed so far
 
 | What | Removed in | Use instead |

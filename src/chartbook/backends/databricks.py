@@ -1,4 +1,8 @@
-"""Databricks: a source in a Databricks SQL warehouse.
+"""Databricks: a source in a Databricks SQL warehouse. Experimental.
+
+An early experiment: tested against a stand-in for the warehouse
+(``tests/mocked_databricks.py``), not yet against a real workspace. See
+the roadmap in the documentation.
 
 ::
 

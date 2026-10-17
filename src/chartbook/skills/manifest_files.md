@@ -184,7 +184,7 @@ query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
   then `~/.chartbook/sources.toml`, then the manifest URL. Connections are read-only and
   opened afresh per load; a `:memory:` source is one writable connection for the process.
   A DuckDB url is the file alone: no host, user or `?options`.
-- `backend = "databricks"` (needs `pip install chartbook[databricks]`) is a SQL warehouse:
+- `backend = "databricks"` (EXPERIMENTAL; needs `pip install chartbook[databricks]`) is a SQL warehouse:
   `url = "databricks://<host>?http_path=<path>&catalog=<c>&schema=<s>"`, every part optional.
   The machine signs in with `DATABRICKS_HOST` + `DATABRICKS_TOKEN` (or the machine URL
   `databricks://token:<t>@<host>?http_path=…`, or `?auth=oauth` in the machine URL; never in the
