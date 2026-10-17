@@ -1847,7 +1847,8 @@ def _sync_from_snapshots(
             # Not built when the snapshot was made. A pin from an earlier
             # snapshot does not belong beside this one's commit.
             status = "let_go" if old else "not_built"
-            report.events.append(PinEvent(status, key, asset_id, old=old, detail=declared_path))
+            # What a snapshot never pins says why, in place of where it is
+            report.events.append(PinEvent(status, key, asset_id, old=old, detail=record.get("not_pinned") or declared_path))
         elif old is None:
             report.events.append(PinEvent("pinned", key, asset_id, new=new))
         elif old == new:

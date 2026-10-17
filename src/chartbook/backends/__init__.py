@@ -309,8 +309,8 @@ def refuse_in_an_untrusted_build() -> None:
 
     if untrusted_source():
         raise BackendError(
-            "A table or a query is not read in a build of files from a store; the snapshot "
-            "holds its rows as parquet."
+            "A table or a query is not read in a build of files from a store; such a build shows "
+            "what the snapshot itself holds."
         )
 
 

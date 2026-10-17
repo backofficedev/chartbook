@@ -92,6 +92,8 @@ class Warehouse:
         self.empty_without_schema = False
         #: Statements that fail once, by a pattern of their text, with a message
         self.failures = []
+        #: As a warehouse might: ``describe detail`` with no name
+        self.detail_without_name = False
         #: Each table by its full name: its id, its format, and its versions, (number, when, DuckDB table)
         self.tables = {}
         self.views = set()
@@ -256,6 +258,9 @@ def _plain(name: str, connection) -> str:
 
 def _describe(connection, text: str):
     """What ``describe detail`` and ``describe history`` give, as Arrow; None for any other statement."""
+    if re.fullmatch(r"\s*select\s+current_catalog\(\),\s*current_schema\(\)\s*", text, re.IGNORECASE):
+        arguments = connection.arguments
+        return pa.table({"c": [arguments.get("catalog") or "hive_metastore"], "s": [arguments.get("schema") or "default"]})
     detail = re.fullmatch(rf"\s*describe\s+detail\s+{_NAME}\s*", text, re.IGNORECASE)
     history = re.fullmatch(rf"\s*describe\s+history\s+{_NAME}(\s+limit\s+(\d+))?\s*", text, re.IGNORECASE)
     if detail is None and history is None:
@@ -265,13 +270,14 @@ def _describe(connection, text: str):
     if name in warehouse.views:
         command = "DESCRIBE DETAIL" if detail is not None else "DESCRIBE HISTORY"
         raise ServerOperationError(
-            f"[EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE] '{command}' expects a table but `{name}` is a view."
+            f"[EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE] '{command}' expects a table but `{name}` is a view. "
+            f"SQLSTATE: 42809"
         )
     found = warehouse.tables.get(name)
     if found is None:
-        raise ServerOperationError(f"[TABLE_OR_VIEW_NOT_FOUND] The table or view `{name}` cannot be found.")
+        raise ServerOperationError(f"[TABLE_OR_VIEW_NOT_FOUND] The table or view `{name}` cannot be found. SQLSTATE: 42P01")
     if detail is not None:
-        return pa.table({"format": [found["format"]], "id": [found["id"]], "name": [name]})
+        return pa.table({"format": [found["format"]], "id": [found["id"]], "name": ["" if warehouse.detail_without_name else name]})
     if found["format"] != "delta":
         raise ServerOperationError(f"[DELTA_TABLE_NOT_FOUND] `{name}` is not a Delta table.")
     newest_first = list(reversed(found["versions"]))

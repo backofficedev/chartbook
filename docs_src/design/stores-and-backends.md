@@ -138,8 +138,9 @@ content hash after all: the snapshot puts a small file in the store saying the b
 full name, its id, its Delta version and when that version was written, and the record's
 `content_hash` is that file's; the record also says the same as `table_version`. So the lockfile,
 `pin --frozen`, the lineage check, `store gc` and staleness work on it unchanged, and a table nothing
-has written to makes the same snapshot. A read takes the table and version from the lockfile's
-record, which the store's file must agree with (a folder store does not hash what it serves again),
+has written to makes the same snapshot. A read through a lockfile takes the table and version from
+its record, which the store's file must agree with (a folder store does not hash what it serves again),
+and no other read takes a pin by version at all, since a record read from the store is the store's to say;
 checks that the table is still the one pinned (its id, or, for a table made again with its history,
 the version's time in that history) and runs `VERSION AS OF` that version. Second, only a Delta
 table is pinned, and nothing is copied out of a warehouse: a query cannot be pinned by version

@@ -2291,9 +2291,13 @@ def _echo_snapshot(report):
     summary = f"{built} asset(s) in the store"
     if report.not_built:
         summary += f", {len(report.not_built)} not built"
+    if report.not_pinned:
+        summary += f", {len(report.not_pinned)} never pinned"
     click.echo(f"{taken.pipeline} at {taken.commit[:7]}: {summary}")
     for asset, declared_path in report.not_built:
         click.echo(f"  not built: {asset} ({declared_path})")
+    for asset, why in report.not_pinned:
+        click.echo(f"  not pinned: {asset}: {why}")
     for model, version in report.new_versions:
         click.echo(f"  {model}: new version {version}")
     if report.index_skipped:

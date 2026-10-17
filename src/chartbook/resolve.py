@@ -813,21 +813,36 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"if it cannot.",
         )
 
-    return _held(store, record)
+    return _held(store, record, through_a_lockfile=True)
 
 
-def _held(store, record: dict) -> Location:
-    """Where the store holds an asset, given its record with a content hash."""
+def _held(store, record: dict, through_a_lockfile: bool = False) -> Location:
+    """Where the store holds an asset, given its record with a content hash.
+
+    :param through_a_lockfile: Whether *record* is the pipeline's own
+        lockfile's, which it committed when it pinned. Only then is a table
+        pinned by its version read: a record read from the store, as a read
+        of a pipeline's newest snapshot takes it, is the store's to say,
+        and a pin by version would let whoever can write the store choose
+        which table the reader's credentials read.
+    """
     from chartbook import hashing
     from chartbook.utils import is_glob_pattern
 
+    if record.get("table_version") is not None and record["location"].get("kind") in ("table", "query"):
+        if not through_a_lockfile:
+            raise AssetNotPinnedError(
+                record.get("id", "?"),
+                "not_in_lockfile",
+                f"{record.get('id')!r} is a table pinned by its version in a warehouse, which is read "
+                f"only through a lockfile: declare its pipeline in [dependencies], then `chartbook pin`.",
+            )
+        # Pinned by its version in the warehouse, which keeps the rows
+        return _table_at_version(record, Path(store.get(record["content_hash"])))
     held = store.get(record["content_hash"])
     if record["location"].get("kind") in ("table", "query"):
         from chartbook.snapshot import materialized_name
 
-        if record.get("table_version") is not None:
-            # Pinned by its version in the warehouse, which keeps the rows
-            return _table_at_version(record, Path(held))
         # Written out as parquet when the snapshot was made
         return FileLocation(held / materialized_name(record))
     declared_path = record["location"]["path"]
@@ -860,12 +875,29 @@ def _table_at_version(record: dict, held: Path) -> "TableLocation":
     from chartbook.snapshot import table_version_name
 
     location = record["location"]
-    pinned = record.get("table_version") or {}
+    pinned = record.get("table_version")
+    pinned = pinned if isinstance(pinned, dict) else {}
     backend = location.get("backend")
     try:
-        keeps_versions = backend_class(backend).version_of is not Backend.version_of
-    except (AttributeError, TypeError, ValueError):
-        keeps_versions = False
+        found_class = backend_class(backend) if isinstance(backend, str) else None
+    except ValueError:
+        found_class = None
+    if found_class is None and isinstance(backend, str):
+        from chartbook.backends import EXTRAS
+
+        install = f" ({EXTRAS[backend]})" if backend in EXTRAS else ""
+        raise AssetNotPinnedError(
+            record["id"],
+            "not_built",
+            f"{record['id']!r} is a table in a {backend} warehouse, and nothing here reads one: install "
+            f"its backend{install}.",
+        )
+    # A backend that pins by version checks its pins too, or its pins are not read
+    keeps_versions = (
+        found_class is not None
+        and found_class.version_of is not Backend.version_of
+        and found_class.check_pin is not Backend.check_pin
+    )
     version, table_id = pinned.get("version"), pinned.get("table_id")
     name, written_at = pinned.get("name"), pinned.get("written_at")
     expected = {"backend": backend, "identifier": name, "table_id": table_id, "version": version, "written_at": written_at}
@@ -892,8 +924,9 @@ def _table_at_version(record: dict, held: Path) -> "TableLocation":
             record["id"],
             "not_in_store",
             f"{record['id']!r} is pinned by a table version, and the lockfile's record of it and the "
-            f"store's file for it, {held}, are not both ChartBook's and do not agree. `chartbook update` "
-            f"pins it again, from a snapshot.",
+            f"store's file for it, {held}, are not both ChartBook's and do not agree: one of them was "
+            f"changed after the pin. `chartbook store verify` finds an object of the store that does "
+            f"not hold what its hash says; a lockfile changed by hand is put back from git.",
         )
     return TableLocation(
         location["source"], backend, location["url"], name, version=version, table_id=table_id, written_at=written_at

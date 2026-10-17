@@ -100,7 +100,8 @@ class TestTheSnapshot:
         rates, _ = work
         report = snapshot.make(rates)
         assets = report.snapshot.assets
-        reasons = dict(report.not_built)
+        reasons = dict(report.not_pinned)
+        assert report.not_built == []
         for name in ("recent", "plain", "top"):
             assert "content_hash" not in assets[name] and "table_version" not in assets[name]
         assert "keeps no versions to pin (a view, or a table that is not Delta)" in reasons["acme/rates:recent"]
@@ -138,7 +139,7 @@ class TestTheSnapshot:
         rates, _ = work
         warehouse.fail("VERSION AS OF 0 limit 0", "[UNSUPPORTED_FEATURE] Time travel is not supported on a streaming table.")
         report = snapshot.make(rates)
-        assert "keeps no versions to pin" in dict(report.not_built)["acme/rates:curve"]
+        assert "keeps no versions to pin" in dict(report.not_pinned)["acme/rates:curve"]
 
     def test_an_unchanged_table_is_the_same_snapshot(self, work):
         rates, _ = work
@@ -356,3 +357,169 @@ class TestAPinIsTheLockfilesAndTheStoreMustAgree:
         }
         location = _held(store, record)
         assert isinstance(location, FileLocation) and location.path.name == "t.parquet"
+
+
+class TestWhatTheSecondReviewFound:
+    def test_a_read_through_no_lockfile_does_not_take_a_version_pin_from_the_store(self, work, tmp_path, monkeypatch):
+        """A record read from the store is the store's to say: it could name any table the reader can read."""
+        rates, _ = work
+        snapshot.make(rates)
+        scratch = tmp_path / "scratch"
+        scratch.mkdir()
+        monkeypatch.chdir(scratch)
+        with pytest.raises(AssetNotPinnedError, match="read only through a lockfile: declare its pipeline in \\[dependencies\\]"):
+            data.load("acme/rates:curve")
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "[INSUFFICIENT_PERMISSIONS] Insufficient privileges on schema `workspace`.`unsupported_feeds`. SQLSTATE: 42501",
+            "[DELTA_UNSUPPORTED_SOMETHING_TRANSIENT] not supported right now. SQLSTATE: 40000",
+        ],
+    )
+    def test_an_error_that_only_mentions_unsupported_is_an_error(self, work, warehouse, message):
+        rates, _ = work
+        warehouse.fail("describe history", message)
+        report = snapshot.make(rates)
+        assert "content_hash" not in report.snapshot.assets["curve"]
+        assert "not_pinned" not in report.snapshot.assets["curve"]
+        assert "could not be read" in dict(report.not_built)["acme/rates:curve"]
+
+    def test_a_row_filter_is_a_table_with_no_versions(self, work, warehouse):
+        rates, _ = work
+        warehouse.fail(
+            "VERSION AS OF 0 limit 0",
+            "[FGAC_TIME_TRAVEL_NOT_SUPPORTED.PER_TABLE_RLS_CM] Cannot time travel to the specified version or "
+            "timestamp of this table. SQLSTATE: 0A000",
+        )
+        report = snapshot.make(rates)
+        assert report.snapshot.assets["curve"]["not_pinned"]
+        assert "acme/rates:curve" in dict(report.not_pinned)
+
+    def test_an_error_in_connecting_is_never_no_versions(self, work, monkeypatch):
+        import sys
+
+        def refuse(**arguments):
+            raise mocked_databricks.RequestError("[SSL: UNSUPPORTED_PROTOCOL] unsupported protocol SQLSTATE: 0A000")
+
+        monkeypatch.setattr(sys.modules["databricks.sql"], "connect", refuse)
+        rates, _ = work
+        report = snapshot.make(rates)
+        assert "not_pinned" not in report.snapshot.assets["curve"]
+        assert "could not be read" in dict(report.not_built)["acme/rates:curve"]
+
+    def test_a_pipeline_of_views_alone_is_snapshotted_and_pinned(self, tmp_path, warehouse):
+        work = tmp_path.resolve() / "views"
+        views, reader = work / "views", work / "reader"
+        for directory in (views, reader):
+            directory.mkdir(parents=True)
+            (directory / "README.md").write_text("# A pipeline\n")
+        (views / "chartbook.toml").write_text(
+            tomli_w.dumps(
+                {
+                    "project": {"id": "acme/views"},
+                    "sources": {"warehouse": {"backend": "databricks", "url": URL}},
+                    "dataframes": {"recent": {"source": "warehouse", "table": "workspace.rates.recent", "docs": "A view."}},
+                }
+            )
+        )
+        (reader / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/reader"}, "dependencies": {"views": {"path": "../views"}}}))
+        _git(work, "init", "--quiet", "-b", "main")
+        (work / ".gitignore").write_text("_data/\nchartbook.lock\n")
+        _commit(work)
+        report = snapshot.make(views)
+        assert report.made and report.not_built == [] and [a for a, _ in report.not_pinned] == ["acme/views:recent"]
+        lock.pin(reader)
+        assert lock.verify(reader).problems == []
+
+    def test_the_history_is_read_back_to_the_pinned_version_and_no_further(self, work, warehouse, monkeypatch):
+        rates, forecast = work
+        snapshot.make(rates)
+        lock.pin(forecast)
+        for _ in range(3):
+            warehouse.table(CURVE, SECOND)
+        warehouse.rebuild(CURVE, SECOND)
+        monkeypatch.chdir(forecast)
+        assert data.load("rates:curve").collect().height == 2
+        histories = [q for q in warehouse.queries if q.startswith("describe history")]
+        assert histories and all(" limit " in q for q in histories)
+        assert histories[-1].endswith("limit 5")
+
+    def test_a_table_replaced_after_the_load_is_refused_when_collected(self, work, warehouse, monkeypatch):
+        rates, forecast = work
+        snapshot.make(rates)
+        lock.pin(forecast)
+        monkeypatch.chdir(forecast)
+        frame = data.load("rates:curve")
+        warehouse.replace(CURVE, SECOND)
+        with pytest.raises((pl.exceptions.ComputeError, BackendError), match="is not the table that was pinned"):
+            frame.collect()
+
+    def test_a_table_that_is_gone_says_what_moves_the_pin(self, work, warehouse, monkeypatch):
+        rates, forecast = work
+        snapshot.make(rates)
+        lock.pin(forecast)
+        warehouse.duck.execute(f"drop view {CURVE}")
+        del warehouse.tables[CURVE]
+        monkeypatch.chdir(forecast)
+        with pytest.raises(BackendError, match="(?s)TABLE_OR_VIEW_NOT_FOUND.*pinned at version 0. The pipeline that names the table"):
+            data.load("rates:curve")
+
+    def test_with_no_backend_here_the_message_says_to_install_it(self, work, monkeypatch):
+        from chartbook import backends
+
+        rates, forecast = work
+        snapshot.make(rates)
+        lock.pin(forecast)
+        monkeypatch.chdir(forecast)
+        monkeypatch.setattr(backends, "backend_class", lambda name: None)
+        with pytest.raises(AssetNotPinnedError, match=r"nothing here reads one: install its backend \(pip install chartbook\[databricks\]\)"):
+            data.load("rates:curve")
+
+    def test_a_backend_that_pins_by_version_and_checks_nothing_is_not_read(self, work, monkeypatch):
+        from chartbook import backends
+        from chartbook.backends.databricks import DatabricksBackend
+
+        class Careless(DatabricksBackend):
+            check_pin = backends.Backend.check_pin
+
+        rates, forecast = work
+        snapshot.make(rates)
+        lock.pin(forecast)
+        monkeypatch.chdir(forecast)
+        monkeypatch.setattr(backends, "backend_class", lambda name: Careless)
+        with pytest.raises(AssetNotPinnedError, match="do not agree"):
+            data.load("rates:curve")
+
+    def test_a_name_the_warehouse_does_not_give_in_full_is_put_in_the_sessions_catalog(self, work, warehouse):
+        rates, _ = work
+        config = tomli.loads((rates / "chartbook.toml").read_text())
+        config["sources"]["warehouse"]["url"] = URL + "&catalog=workspace&schema=rates"
+        config["dataframes"]["curve"]["table"] = "curve"
+        (rates / "chartbook.toml").write_text(tomli_w.dumps(config))
+        _commit(rates.parent)
+        warehouse.detail_without_name = True
+        assert snapshot.make(rates).snapshot.assets["curve"]["table_version"]["name"] == CURVE
+
+    def test_pin_says_why_a_view_is_not_pinned(self, work):
+        rates, forecast = work
+        snapshot.make(rates)
+        events = {e.asset: e for e in lock.pin(forecast).events if e.asset}
+        assert "keeps no versions to pin" in events["rates:recent"].detail
+
+    def test_check_warns_of_a_model_trained_on_what_is_never_pinned(self, work):
+        import warnings
+
+        from chartbook.check import check_model_lineage
+        from chartbook.manifest import load_manifest
+
+        rates, forecast = work
+        snapshot.make(rates)
+        config = tomli.loads((forecast / "chartbook.toml").read_text())
+        config["models"] = {"m": {"path": "./_models/m.json", "trained_on": ["rates:recent"], "docs": "A model."}}
+        (forecast / "chartbook.toml").write_text(tomli_w.dumps(config))
+        lock.pin(forecast)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            check_model_lineage(load_manifest(forecast), forecast)
+        assert any("'rates:recent' is in a warehouse and never pinned" in str(w.message) for w in caught)

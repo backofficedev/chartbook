@@ -127,7 +127,10 @@ name is refused, rather than read as the old one.
 
 The pin in the lockfile says which table and which version; the store's file must say the same, and
 a read stops if it does not, so that someone who can write a shared store cannot change what a pin
-reads.
+reads. For the same reason a table pinned by its version is read only through a lockfile: a notebook
+outside any pipeline, or a pipeline that has not declared the one that names the table, is told to
+declare it and `chartbook pin`, rather than read whatever a record in the store names. And each
+read checks again, when the frame is collected, that the table is still the one pinned.
 
 **A version lasts as long as the table keeps it.** Delta keeps old versions for 7 days by default,
 and `VACUUM`, which Databricks may run on its own, removes what is older. A read of a version the
@@ -145,15 +148,16 @@ alter table workspace.rates.curve set tblproperties (
 Keeping more versions keeps more files, which the warehouse's storage charges for.
 
 **Nothing else is pinned, and nothing is copied out.** A query, a view, a table that is not Delta, a
-materialized view or a streaming table has no version a pin can name, and its rows stay in the
-warehouse, under its own grants. The snapshot records it as not pinned and says why;
+materialized view, a streaming table or a table with a row filter or a column mask has no version a
+pin can name, as the warehouse's error says by its class, and its rows stay in the warehouse, under
+its own grants. The snapshot records it as not pinned and says why;
 `chartbook pin --frozen` passes over it, and a read of it from another pipeline says why it cannot.
 To pin such a result, make it a Delta table.
 
 The machine that makes the snapshot needs the warehouse settings above; without them, or if the
-warehouse fails, the snapshot records the table as not pinned and says why. The machine that reads a
-pin needs them too, for the same workspace: a pinned table is read from the warehouse, not from the
-store.
+warehouse fails, the snapshot records the table as not built, says why, and `chartbook pin --frozen`
+downstream says so too, since a snapshot made again may pin it. The machine that reads a pin needs
+them too, for the same workspace: a pinned table is read from the warehouse, not from the store.
 
 ## Try it with Databricks Free Edition
 
@@ -203,7 +207,8 @@ and needs no card. It has one small SQL warehouse and a daily usage quota.
    pipeline still reads the version it pinned until you snapshot the first again and run
    `chartbook update`. Then `create or replace table workspace.default.curve as ...` in the SQL
    Editor, and read the pin again: it should still read, since the table kept its history. If it
-   says the table "is not the table that was pinned", please tell us; that is the one thing the
-   tests here cannot show.
+   says the table "is not the table that was pinned", please tell us. The tests here use a stand-in
+   for the warehouse, so this, and what the warehouse says of a materialized view, a streaming table
+   or a table with a row filter, are what a real workspace shows first.
 
 The first query after the warehouse has been idle can take a minute, while it starts.

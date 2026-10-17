@@ -304,6 +304,9 @@ class SnapshotReport:
         documents_skipped: The documents the manifest names that were not
             kept, each with why: not a plain path inside the folder, a
             link, not a file.
+        not_pinned: The tables and queries in a warehouse that a snapshot
+            never pins, each with why: a query, a view, a table with no
+            versions. Not among *not_built*: there is nothing to build.
     """
 
     snapshot: Snapshot
@@ -313,6 +316,7 @@ class SnapshotReport:
     skipped_labels: list[tuple[str, str]] = field(default_factory=list)
     index_skipped: Optional[str] = None
     documents_skipped: list[tuple[str, str]] = field(default_factory=list)
+    not_pinned: list[tuple[str, str]] = field(default_factory=list)
 
 
 def asset_record(
@@ -1934,9 +1938,12 @@ def make(
     # A dataframe that is a table or a query in a DuckDB file has no file of
     # its own: it is written out as parquet into the store, so that a pin
     # copies it like any file and another pipeline reads it by name
+    not_pinned = []
     for local, record, reason in materialize_in_source(directory, pipeline, raw, store):
         assets[str(local)] = record
-        if reason is not None:
+        if record.get("not_pinned"):
+            not_pinned.append((record["id"], record["not_pinned"]))
+        elif reason is not None:
             not_built.append((record["id"], reason))
 
     # What each model was trained on: the hashes staleness is later judged
@@ -1958,7 +1965,8 @@ def make(
             f"{pipeline} declares nothing with a path, so there is nothing to "
             f"take a snapshot of."
         )
-    if len(not_built) == len(assets):
+    if not_built and len(not_built) + len(not_pinned) == len(assets):
+        # Nothing built: what is never pinned is no reason for a snapshot, and no bar to one
         raise SnapshotError(
             f"{pipeline} has built nothing it declares, so there is nothing to "
             f"take a snapshot of. Build it first: `chartbook run`."
@@ -2002,7 +2010,7 @@ def make(
         if (same.documents is not None or not documents) and same.tags == snapshot.tags:
             if same.built_by_run or not built_by_run:
                 store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-                return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
+                return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw), not_pinned=not_pinned)
         elif same.built_by_run:
             # Made again for its documents alone: the bytes are still the ones a run built
             snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
@@ -2039,6 +2047,7 @@ def make(
         labels_skipped(raw),
         index_skipped=index_skipped,
         documents_skipped=documents_skipped,
+        not_pinned=not_pinned,
     )
 
 
