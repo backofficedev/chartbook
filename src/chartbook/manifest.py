@@ -698,12 +698,19 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
                         f"repository holds."
                     )
         if by_id and "rev" in entry:
-            raise ValueError(
-                f"{where} has a 'rev' and no 'git'. Working out the repository from "
-                f"the pipeline's ID is not supported yet, so a 'rev' needs a 'git' "
-                f"beside it. To take a snapshot at a commit from the store, write "
-                f"commit = \"{entry['rev']}\" if it is the start of one."
-            )
+            # A branch or tag of its repository: pin asks the repository what it
+            # means, and takes the newest snapshot at or before that commit
+            from chartbook.gitcache import check_rev
+
+            try:
+                check_rev(entry["rev"])
+            except ValueError as error:
+                raise ValueError(f"{where}: {error}") from None
+            if "commit" in entry:
+                raise ValueError(
+                    f"{where} has both 'rev' and 'commit'. A commit is one place in its "
+                    f"history and a rev names one: give one of them."
+                )
         if by_id:
             try:
                 validate_pipeline_id(entry.get("id", key))

@@ -70,7 +70,7 @@ from typing import Callable, Iterable, Optional, Union
 
 from chartbook import hashing, snapshot
 from chartbook.gitcache import GIT_LOCATION_VARIABLES as _GIT_LOCATION_VARIABLES
-from chartbook.gitcache import GitCache, GitError, default_git_cache, local_url
+from chartbook.gitcache import GitCache, GitError, check_git_url, default_git_cache, local_url
 from chartbook.identity import derive_pipeline_id, repository_key, strip_url_credentials
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR
 from chartbook.manifest import (
@@ -387,6 +387,125 @@ def store_has_for(
     return any(at_it(t) for t in every)
 
 
+def choose_for_rev(
+    entry: dict,
+    root: str,
+    was: Optional[dict],
+    may_move: bool,
+    snapshots: Callable[[], list],
+    host: str,
+    git_cache: GitCache,
+    project_dir: Path,
+    *,
+    pinned: bool,
+) -> tuple:
+    """For a dependency named by its ID with a ``rev``: what to pin it from.
+
+    ``"acme/rates" = { rev = "main" }`` takes the newest snapshot at or
+    before the commit ``main`` is in its repository, which only the
+    repository can say: the one the entry names with ``repository``, or
+    ``<default_host>/<id>``. Its history is walked back from that commit to
+    the nearest one the store has a snapshot of, from that repository (by
+    its first commit); with none, it is pinned from the clone at that
+    commit, and ``chartbook run`` builds it, as a ``git`` dependency is. A
+    plain pin keeps what is pinned. Pin and run's plan both ask this.
+
+    :returns: ``("entry", entry)`` to pin it by the entry given (a store
+        entry to keep, or a ``git`` one); ``("snapshot", (snapshot,
+        identity))`` to pin it from that snapshot; or ``("none", why)``.
+    """
+    from chartbook.config import clone_url_for
+
+    pipeline, rev = entry["_store"], entry["rev"]
+    location = (was or {}).get("location", {})
+    same = location.get("pipeline") == pipeline
+    named = entry.get("repository") if entry.get("_repository") else None
+    url = named or clone_url_for(pipeline, host)
+    converted = (
+        {"git": url, "_from_id": pipeline, "rev": rev,
+         "_from": "the repository its entry names" if named else "[resolve] default_host"}
+        if url else None
+    )
+    if converted and entry.get("_repository"):
+        converted["_repository"] = entry["_repository"]
+    recorded_commit = same and bool(location.get("commit"))
+    if not may_move and pinned and same and location.get("kind") == "store":
+        return "entry", entry  # a plain pin keeps a snapshot it pinned (a snapshot always holds bytes)
+    if not may_move and (pinned or recorded_commit) and same and location.get("kind") == "git" and converted:
+        return "entry", converted  # and a commit of its repository, built or not
+    if pipeline == root:
+        return "none", f"{pipeline} is this pipeline itself: a pipeline cannot depend on itself"
+    if converted is None:
+        return "none", (
+            f"rev = {rev!r} asks its repository which commit that is, and none is known here: set "
+            f"[resolve] default_host, or name it with repository = \"...\""
+        )
+    try:
+        check_git_url(url)
+        checkout = git_cache.get(local_url(url, project_dir), rev)
+    except (GitError, ValueError, OSError) as error:
+        return "none", f"could not ask {strip_url_credentials(url)} what {rev!r} is: {error}"
+    named_id = _project_id_in(Path(checkout.path))
+    if named_id and named_id != pipeline:
+        said = named_id if named_id.startswith(("a [project]", "an id ")) else f"the ID {named_id}"
+        return "none", f"{strip_url_credentials(url)}'s chartbook.toml gives {said}, not {pipeline}"
+    first = _first_commit_of(git_cache, local_url(url, project_dir), checkout.commit)
+    recorded = location.get("first_commit") if same and not entry.get("_repository") else None
+    if first and recorded and first != recorded:
+        return "none", (
+            f"{strip_url_credentials(url)}'s history begins at {first[:7]}, not at {recorded[:7]} as the one "
+            f"it was pinned from: another repository, or its history rewritten. Name it with repository = "
+            f"\"...\", or remove it from chartbook.lock and update"
+        )
+    # Its snapshots, from this repository, by commit
+    every = [t for t in snapshots() if t.pipeline == pipeline and not snapshot.made_in_the_future(t)]
+    if named:
+        mine = [t for t in every if repository_key(t.repository) == repository_key(entry["_repository"])]
+    elif first or repository_key(url):
+        # Its repository's snapshots: by its first commit, or by its address
+        # (a snapshot made in a shallow clone records only that); the walk
+        # back along its history keeps to commits of this repository
+        groups, unnamed = snapshot.repository_groups(every)
+        keys = {("first", first)} if first else set()
+        if repository_key(url):
+            keys.add(("address", repository_key(url)))
+        mine = [
+            taken for group in groups
+            if keys & set().union(*(snapshot.identity_keys(t) for t in group))
+            for taken in group
+        ] + (unnamed if len(groups) <= 1 else [])
+    else:
+        mine = []  # which snapshots are this repository's cannot be told
+    by_commit: dict = {}
+    for taken in mine:
+        by_commit.setdefault(taken.commit, []).append(taken)
+    if by_commit:
+        for commit in _history(git_cache, local_url(url, project_dir), checkout.commit):
+            if commit in by_commit:
+                newest = max(by_commit[commit], key=lambda t: t.made_at)
+                return "snapshot", (newest, {"repository": newest.repository, "first_commit": first or newest.first_commit})
+    return "entry", converted
+
+
+def _history(git_cache: GitCache, url: str, commit: str, limit: int = 200000) -> list:
+    """The commits of a repository back from *commit*, newest first, from its clone in the git cache."""
+    import subprocess
+
+    from chartbook.gitcache import _FULL_COMMIT
+
+    if not _FULL_COMMIT.match(commit or ""):
+        return []
+    environment = {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARIABLES}
+    try:
+        result = subprocess.run(
+            ["git", f"--git-dir={git_cache.repo_path(url)}", "rev-list", f"--max-count={limit}", commit],
+            capture_output=True, text=True, timeout=120, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
+        )
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return []
+    return result.stdout.split() if result.returncode == 0 else []
+
+
 def clone_instead(
     entry: dict,
     root: str,
@@ -577,6 +696,8 @@ def _dependency_entry(key: str, entry: dict) -> dict:
         location = {"kind": "store", "pipeline": entry["_store"]}
         if entry.get("commit"):
             location["at"] = entry["commit"]
+        if entry.get("rev"):
+            location["rev"] = entry["rev"]
         if entry.get("_repository"):
             location["repository"] = entry["_repository"]
         return {"id": key, "via": "store", "location": location}
@@ -761,6 +882,8 @@ def _sync_now(
         had_assets = {k: v for k, v in had.items() if k not in had_labels}
         was = locked.get(key)
         kept_as_it_is = False
+        chosen = None  # the snapshot a `rev` walked back to
+        rev_failure = None
         if entry.get("_store"):
             if host is None:
                 from chartbook.config import get_default_host
@@ -771,9 +894,30 @@ def _sync_now(
             from_repository = (
                 has_bytes and was_location.get("kind") == "git" and was_location.get("pipeline") == entry["_store"]
             )
-            if clone_missing:
+            if entry.get("rev") and entry["_store"] in set(built_here):
+                rev_failure = (
+                    f"rev = {entry['rev']!r} is not followed for {entry['_store']}, which this run builds "
+                    f"itself from its folder: build this pipeline outside the catalog's run (`chartbook run` "
+                    f"in its folder), which pins and builds what the rev names, or leave out its rev"
+                )
+            elif entry.get("rev"):
+                if not clone_missing:
+                    rev_failure = f"rev = {entry['rev']!r} is resolved by `chartbook pin`, which asks its repository"
+                else:
+                    if git_cache is None:
+                        git_cache = default_git_cache()
+                    kind, value = choose_for_rev(
+                        entry, root, was, may_move, snapshots_in_store, host, git_cache, project_dir, pinned=has_bytes
+                    )
+                    if kind == "entry":
+                        entry = value
+                    elif kind == "snapshot":
+                        chosen = value
+                    else:
+                        rev_failure = value
+            elif clone_missing:
                 entry = clone_instead(entry, root, was, may_move, snapshots_in_store, host, built_here, pinned=has_bytes)
-            if from_repository and "git" not in entry and (
+            if from_repository and "git" not in entry and chosen is None and rev_failure is None and (
                 not may_move
                 or (not host and not store_has_for(entry, snapshots_in_store, was_location.get("first_commit"), True))
             ):
@@ -785,7 +929,23 @@ def _sync_now(
         listed = _dependency_entry(key, entry)
         commit_moved = False
 
-        if kept_as_it_is:
+        if rev_failure is not None:
+            # What `rev` means could not be asked, or what it means is not to be taken
+            pinned_now = any(record.get("content_hash") for record in had.values())
+            was_location = (was or {}).get("location", {})
+            recorded = was_location.get("pipeline") == entry.get("_store") and (
+                was_location.get("commit") or was_location.get("first_commit")
+            )
+            if was is not None and (pinned_now or recorded):
+                records = dict(had)
+                listed = {**was, "location": dict(was.get("location", {}))}
+                for asset_id, record in sorted(had.items()):
+                    _report_kept(record, key, store, report)
+            else:
+                records = {}
+            if may_move or not pinned_now:
+                report.events.append(PinEvent("no_snapshot", key, detail=rev_failure))
+        elif kept_as_it_is:
             records = dict(had)
             if _declared_elsewhere(was, listed):
                 report.events.append(PinEvent("relocated", key, detail=_describe(listed["location"])))
@@ -940,9 +1100,11 @@ def _sync_now(
             first_commit = None if named else (pinned_from.get("first_commit") or None)
             records, listed = _sync_from_snapshots(
                 key, None, was, listed, had, may_move, store, report,
-                newest_of=lambda entry=entry, repository=repository, first_commit=first_commit, named=named: _newest_in_store(
-                    entry["_store"], entry.get("commit"), store, repository,
-                    found=snapshots_in_store(), first_commit=first_commit, named=named,
+                newest_of=(lambda chosen=chosen: (chosen[0], "", chosen[1])) if chosen is not None else (
+                    lambda entry=entry, repository=repository, first_commit=first_commit, named=named: _newest_in_store(
+                        entry["_store"], entry.get("commit"), store, repository,
+                        found=snapshots_in_store(), first_commit=first_commit, named=named,
+                    )
                 ),
                 found=snapshots_in_store,
             )
@@ -1255,6 +1417,7 @@ def _describe(location: dict) -> str:
     """Where a dependency is, in a few words, for a message."""
     if location.get("kind") == "store":
         at = f" at {location['at']}" if location.get("at") else ""
+        at += f" at {location['rev']}" if location.get("rev") else ""
         made_in = f", made in {location['repository']}" if location.get("repository") else ""
         return f"{location.get('pipeline')}{at}, from the store{made_in}"
     if location.get("kind") == "git":

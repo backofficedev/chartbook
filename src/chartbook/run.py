@@ -364,13 +364,19 @@ def plan(
                 locked = None
             listed = {entry.get("id"): entry for entry in (locked.dependencies if locked else [])}
             own = derive_pipeline_id(raw.get("project") if isinstance(raw.get("project"), dict) else {}, directory)
-            dependencies = {
-                key: lock.clone_instead(
-                    entry, own, listed.get(key), False, in_store, host[0], asked_by_id(),
-                    pinned=bool(locked) and any(r.get("content_hash") for r in locked.assets_of(key).values()),
-                )
-                for key, entry in dependencies.items()
-            }
+            def as_pin_will(key: str, entry: dict) -> dict:
+                pinned = bool(locked) and any(r.get("content_hash") for r in locked.assets_of(key).values())
+                if entry.get("_store") and entry.get("rev") and entry["_store"] not in asked_by_id():
+                    # What `rev` means is asked of its repository, as pin asks it
+                    if caches[0] is None:
+                        caches[0] = default_git_cache()
+                    kind, value = lock.choose_for_rev(
+                        entry, own, listed.get(key), False, in_store, host[0], caches[0], directory, pinned=pinned
+                    )
+                    return value if kind == "entry" else entry
+                return lock.clone_instead(entry, own, listed.get(key), False, in_store, host[0], asked_by_id(), pinned=pinned)
+
+            dependencies = {key: as_pin_will(key, entry) for key, entry in dependencies.items()}
 
         built = source == "git" and is_built(directory)
         if not built or force:

@@ -1841,7 +1841,8 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
             entry, _own_id(manifest_dir) or "", None, True, lambda: found, get_default_host(), pinned=False
         )
         if "git" in converted:
-            at = f" at {converted['rev']}" if converted.get("rev") else ""
+            rev = entry.get("rev") or converted.get("rev")
+            at = f" at {rev}" if rev else ""
             clone = (
                 f" `chartbook pin` gets it from its repository{at}, {strip_url_credentials(converted['git'])} "
                 f"({converted['_from']}); a read never fetches."
@@ -1872,6 +1873,8 @@ def _as_a_pin_would_take(asset: AssetRef, entry: dict, store, found: list):
     """The asset as the snapshot a pin of this dependency would take holds it, that snapshot, and why there is none."""
     from chartbook import lock, snapshot
 
+    if entry.get("rev"):
+        return None, None, f"rev = {entry['rev']!r} is resolved by `chartbook pin`, which asks its repository"
     try:
         if entry.get("_store"):
             newest, why, _ = lock._newest_in_store(

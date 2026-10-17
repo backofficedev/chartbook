@@ -5,8 +5,8 @@ A design document, written 2026-10-16 for the maintainer to choose between optio
 shows what a data scientist would write and see under each option, and which one is recommended.
 Status: **decided by the maintainer on 2026-10-16: 1a, 2c, 3b, 4b, 5b (silent), 6b.** Built by
 2026-10-17: 6b (#81), 1a's dependency by ID from the store, with `commit` (#84), and 2c, 3b, 4b
-and 5b (#85), and `[resolve] default_host` with building from git when there is no snapshot. Not yet:
-`rev` on a dependency named by its ID.
+and 5b (#85), `[resolve] default_host` with building from git when there is no snapshot (#87), and
+`rev` on a dependency named by its ID (#88). All of the order of work below is built.
 ```
 
 ## The story this serves
@@ -314,8 +314,10 @@ of a working folder warns.
 1. `chartbook snapshot` refuses unpinned dependencies (6b). Small, and right in every option.
    *Built, #81 (2026-10-16).*
 2. A dependency by ID, pinned from the store (1a without `default_host`, which is 1c), with
-   `commit` and `rev`, and `chartbook add`. *Built, #84 (2026-10-17), with `commit`; `rev` moves to
-   step 4, since it asks the repository.*
+   `commit` and `rev`, and `chartbook add`. *Built, #84 (2026-10-17), with `commit`; `rev` moved to
+   step 4, since it asks the repository, and is built in #88: the newest snapshot of that
+   repository at or before the commit the rev names, found by walking its history back; with none,
+   the repository at that commit, as from the default host.*
 3. The interactive rules (2c, 3b, 4b, 5b) and the batch variable. *Built, #85 (2026-10-17). As
    built, a reference by the pipeline's own ID is refused unless a dependency is known to be that
    pipeline, and the batch variable is set for `build` only.*

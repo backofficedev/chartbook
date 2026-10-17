@@ -167,12 +167,10 @@ class TestDeclaring:
         with pytest.raises(ValueError, match=re.escape(message)):
             validate_dependencies(table, tmp_path)
 
-    def test_a_rev_alone_says_the_repository_cannot_be_worked_out(self, tmp_path):
-        with pytest.raises(ValueError) as e:
-            validate_dependencies({"acme/rates": {"rev": "a1b2c3d"}}, tmp_path)
-        assert "has a 'rev' and no 'git'" in str(e.value)
-        assert "a 'rev' needs a 'git' beside it" in str(e.value)
-        assert 'commit = "a1b2c3d"' in str(e.value)
+    def test_a_rev_alone_names_a_revision_of_the_pipelines_repository(self, tmp_path):
+        """Pin asks the repository (named, or on the default host) what it is: tests/test_id_rev.py."""
+        entry = validate_dependencies({"acme/rates": {"rev": "a1b2c3d"}}, tmp_path)["acme/rates"]
+        assert entry["_store"] == "acme/rates" and entry["rev"] == "a1b2c3d"
 
     def test_an_unknown_key_suggests_the_one_meant(self, tmp_path):
         with pytest.raises(ValueError) as e:
