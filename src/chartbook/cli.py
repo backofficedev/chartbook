@@ -1756,6 +1756,7 @@ def _echo_pin_report(report):
             "kept": "already pinned",
             "stale": "changed upstream since it was pinned",
             "not_built": "not built",
+            "never_pinned": "never pinned",
             "outside": "outside the repository",
             "let_go": "let go",
             "dropped": "no longer declared",
@@ -1787,6 +1788,8 @@ def _echo_pin_report(report):
                 click.echo(f"  {event.asset}\n    {event.old} -> {event.new}")
             elif event.status == "not_built":
                 click.echo(f"  not built: {event.asset} ({event.detail})")
+            elif event.status == "never_pinned":
+                click.echo(f"  never pinned: {event.asset}: {event.detail}")
             elif event.status == "stale":
                 click.echo(f"  changed upstream: {event.asset}")
             elif event.status == "let_go":

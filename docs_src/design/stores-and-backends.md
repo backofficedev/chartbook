@@ -140,7 +140,7 @@ full name, its id, its Delta version and when that version was written, and the 
 `pin --frozen`, the lineage check, `store gc` and staleness work on it unchanged, and a table nothing
 has written to makes the same snapshot. A read through a lockfile takes the table and version from
 its record, which the store's file must agree with (a folder store does not hash what it serves again),
-and no other read takes a pin by version at all, since a record read from the store is the store's to say;
+and no other read takes a pin by version, since a record read from the store with no lockfile is the store's to say;
 checks that the table is still the one pinned (its id, or, for a table made again with its history,
 the version's time in that history) and runs `VERSION AS OF` that version. Second, only a Delta
 table is pinned, and nothing is copied out of a warehouse: a query cannot be pinned by version
@@ -148,9 +148,13 @@ without parsing its SQL to put `VERSION AS OF` on each table in it, which ChartB
 copy would take the rows out from under the warehouse's grants and load them whole, so a query, a
 view and a table with no versions are recorded as not pinned (`not_pinned`, which `pin --frozen`
 passes over). An adversarial review found the first build, which copied them, doing exactly that.
-Third, a version does not last: Delta keeps old versions for 7 days by default, and newer runtimes
-refuse to read one older than that, so a pin by version is only as durable as the table's retention
-settings, which the page on reading a warehouse tells the table's owner how to raise. A read of a
+Third, a version does not last: Delta keeps the files of old versions for 7 days by default, and
+newer runtimes refuse to read a version older than that; whether the period counts from when the
+version was written or from when it was replaced is for a real workspace to show, and if the first,
+a pin of a quiet table breaks at its next commit. So a pin by version is only as durable as the
+table's retention settings, which the page on reading a warehouse tells the table's owner how to
+raise. A shared store's writers can choose which snapshot a first pin or an update takes, as they
+can for any pin; a pin by version is held to the table the pipeline declares, and no further. A read of a
 version the table no longer keeps fails and says what moves the pin: a new snapshot upstream, then
 `chartbook update`. Whether that is durable enough, or whether a pin should copy the rows after all,
 is the maintainer's to weigh; nothing built is in the way of either.

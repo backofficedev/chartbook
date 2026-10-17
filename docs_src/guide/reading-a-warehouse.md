@@ -127,14 +127,26 @@ name is refused, rather than read as the old one.
 
 The pin in the lockfile says which table and which version; the store's file must say the same, and
 a read stops if it does not, so that someone who can write a shared store cannot change what a pin
-reads. For the same reason a table pinned by its version is read only through a lockfile: a notebook
+reads once it is made. A table pinned by its version is read only through a lockfile: a notebook
 outside any pipeline, or a pipeline that has not declared the one that names the table, is told to
-declare it and `chartbook pin`, rather than read whatever a record in the store names. And each
-read checks again, when the frame is collected, that the table is still the one pinned.
+declare it and `chartbook pin`. And each read, `data.sql()`'s frames as well as `data.load()`'s,
+checks again when the frame is collected that the table is still the one pinned.
 
-**A version lasts as long as the table keeps it.** Delta keeps old versions for 7 days by default,
-and `VACUUM`, which Databricks may run on its own, removes what is older. A read of a version the
-table no longer keeps fails. The way on: the pipeline that names the table records the version it
+**What a shared store's writers can do.** A pin takes the table a snapshot names, as it takes the
+bytes a snapshot holds, and anyone who can write the store can put a snapshot in it. ChartBook
+holds such a snapshot to the table its pipeline declares: a pin whose table is not the declared
+one, with the declared parts at the end of its full name, is refused. Within that, a pin of a
+dependency whose snapshots others write reads what they snapshotted, with your credentials, as
+running their pipeline would; share a store with those whose snapshots you would read.
+
+**A version lasts as long as the table keeps it.** Delta keeps the files of old versions for 7 days
+by default, and `VACUUM`, which Databricks may run on its own, removes what is older. Databricks
+documents that newer runtimes refuse to read a version "older than" that period. Whether the 7 days
+count from when the version was written or from when a newer one replaced it is not something the
+tests here can show: if from when it was written, a pin of a table nothing has written to for a week
+breaks at its next commit, and on a Unity Catalog table Databricks' own optimization may make one.
+Your first test of a pin on a real workspace should look at this. A read of a version the table no
+longer keeps fails. The way on: the pipeline that names the table records the version it
 has now in a new snapshot (`chartbook snapshot` there), and `chartbook update` here pins that. To
 keep pins readable for longer, the table's owner raises how long the table keeps its versions:
 
@@ -208,7 +220,9 @@ and needs no card. It has one small SQL warehouse and a daily usage quota.
    `chartbook update`. Then `create or replace table workspace.default.curve as ...` in the SQL
    Editor, and read the pin again: it should still read, since the table kept its history. If it
    says the table "is not the table that was pinned", please tell us. The tests here use a stand-in
-   for the warehouse, so this, and what the warehouse says of a materialized view, a streaming table
-   or a table with a row filter, are what a real workspace shows first.
+   for the warehouse, so a real workspace is the first to show: this; how long a pinned version stays
+   readable once the table changes (above); what the warehouse says of a materialized view, a
+   streaming table or a table with a row filter; whether a user who may only `select` may also
+   `describe` a table and its history; and the time a version was written, as two machines read it.
 
 The first query after the warehouse has been idle can take a minute, while it starts.

@@ -461,6 +461,10 @@ def _kept_from_an_engine(
         backend = open_backend(source["backend"], url, entry["source"])
         version = backend.version_of(TableLocation(entry["source"], source["backend"], url, entry["table"]))
         if version is None:
+            from chartbook.backends import Backend
+
+            if type(backend).version_of is Backend.version_of:
+                return not_pinned(f"its backend, {source['backend']}, pins nothing by version, and nothing is copied out of a warehouse")
             return not_pinned(
                 "it keeps no versions to pin (a view, or a table that is not Delta), and nothing is "
                 "copied out of a warehouse"
@@ -1967,9 +1971,10 @@ def make(
         )
     if not_built and len(not_built) + len(not_pinned) == len(assets):
         # Nothing built: what is never pinned is no reason for a snapshot, and no bar to one
+        said = "; ".join(f"{asset}: {why}" for asset, why in not_built[:3]) + ("; and more" if len(not_built) > 3 else "")
         raise SnapshotError(
             f"{pipeline} has built nothing it declares, so there is nothing to "
-            f"take a snapshot of. Build it first: `chartbook run`."
+            f"take a snapshot of ({said}). Build it first (`chartbook run`), or put right what is said."
         )
 
     snapshot = Snapshot(

@@ -98,16 +98,29 @@ GONE = (
     "delta.deletedFileRetentionDuration and delta.logRetentionDuration."
 )
 
-#: The error classes by which the warehouse says a thing has no versions a pin can name: a view
-#: where a table was expected, time travel a table does not support (a row filter or a column
-#: mask on it, for one), a feature it does not support.
-NO_VERSIONS_CLASSES = frozenset({"EXPECT_TABLE_NOT_VIEW", "FGAC_TIME_TRAVEL_NOT_SUPPORTED", "UNSUPPORTED_FEATURE"})
+#: The error classes by which the warehouse says a thing has no versions a pin can name, and
+#: nothing else: a view where a table was expected, time travel a table does not support (a row
+#: filter or a column mask on it), time travel on a view. A class may be one of these or one of
+#: their subclasses. A version the table no longer keeps is not among them: that is one version.
+NO_VERSIONS_CLASSES = (
+    "EXPECT_TABLE_NOT_VIEW",
+    "FGAC_TIME_TRAVEL_NOT_SUPPORTED",
+    "UNSUPPORTED_FEATURE.TIME_TRAVEL",
+    "DELTA_UNSUPPORTED_TIME_TRAVEL_VIEWS",
+)
 
 #: An error's class, as the warehouse's message begins with it: ``[CLASS.SUBCLASS]``.
-_ERROR_CLASS = re.compile(r"\[([A-Z][A-Z0-9_]*)(?:\.[A-Z0-9_]+)*\]")
+_ERROR_CLASS = re.compile(r"\s*\[([A-Z][A-Z0-9_]*(?:\.[A-Z0-9_]+)*)\]")
 
 #: An error's SQLSTATE, as the warehouse's message ends with it.
-_SQLSTATE = re.compile(r"SQLSTATE:\s*([0-9A-Z]{5})")
+_SQLSTATE = re.compile(r"SQLSTATE:\s*([0-9A-Z]{5})\W*$")
+
+#: How many versions of history a check of a table made again reads back, at most.
+HISTORY_LIMIT = 10_000
+
+#: Tables made again whose history was found to have a pinned version, as written, this process:
+#: (name, the table's id now, version, written_at). One look at a long history is enough.
+_HISTORY_CHECKED: set = set()
 
 #: A workspace's host: letters, digits, dots and hyphens, with a dot in it (a workspace's host
 #: is never one label), and nothing a message could carry besides.
@@ -425,7 +438,7 @@ class DatabricksBackend(Backend):
         note = GONE.format(identifier=location.identifier, version=version)
         try:
             # Checked again when the frame is collected, which may be much later
-            return self.sql(f"select * from {self.ref(location)}", note=note, recheck=location)
+            return self.sql(f"select * from {self.ref(location)}", note=note, recheck=(location,))
         except BackendError as error:
             raise BackendError(f"{error}\n{note}") from None
 
@@ -447,18 +460,31 @@ class DatabricksBackend(Backend):
         name = quote_identifier(location.identifier, "`")
 
         def answer(cursor):
-            if _table_id(cursor) == location.table_id:
+            now = _table_id(cursor)
+            if now == location.table_id:
+                return True
+            seen = (location.identifier, now, location.version, location.written_at)
+            if seen in _HISTORY_CHECKED:
                 return True
             cursor.execute(f"describe history {name} limit 1")
             newest = _first_row(cursor).get("version")
             if not isinstance(newest, int) or isinstance(newest, bool) or newest < location.version:
                 return False
+            if newest - location.version >= HISTORY_LIMIT:
+                raise BackendError(
+                    f"{location.identifier} was made again since it was pinned at version {location.version}, "
+                    f"and {newest - location.version} versions have been written since: too many to look "
+                    f"through for the one pinned. {REPIN}"
+                )
             cursor.execute(f"describe history {name} limit {newest - location.version + 1}")
             columns = [column[0] for column in cursor.description or []]
             for row in reversed(cursor.fetchall()):  # the oldest is last
                 entry = dict(zip(columns, row))
                 if entry.get("version") == location.version:
-                    return bool(location.written_at) and _when(entry.get("timestamp")) == location.written_at
+                    same = bool(location.written_at) and _when(entry.get("timestamp")) == location.written_at
+                    if same:
+                        _HISTORY_CHECKED.add(seen)
+                    return same
             return False
 
         pinned = f"{location.identifier} is pinned at version {location.version}."
@@ -528,11 +554,12 @@ class DatabricksBackend(Backend):
             except Exception:  # noqa: BLE001
                 pass
 
-    def sql(self, query: str, note: str = "", recheck=None):
+    def sql(self, query: str, note: str = "", recheck=()):
         """Run SQL in the warehouse, as a Polars LazyFrame; *note* is added to an error found while collecting.
 
-        *recheck*, a location pinned by a version, is checked again
-        (:meth:`check_pin`) each time the frame is collected.
+        *recheck*, the locations pinned by a version that the query reads,
+        are checked again (:meth:`check_pin`) each time the frame is
+        collected, which may be long after it was made.
 
         The warehouse binds it now (``select * from (…) limit 0``), so a name
         it does not know is refused at once, and its columns are the
@@ -582,8 +609,8 @@ class DatabricksBackend(Backend):
             # filtered asks the warehouse for that many and no more
             text = query if n_rows is None or predicate is not None else f"select * from {subselect(query)} limit {int(n_rows)}"
             left = n_rows
-            if recheck is not None:
-                self.check_pin(recheck)
+            for location in recheck:
+                self.check_pin(location)
             connection = self.connect()
             try:
                 cursor = connection.cursor()
@@ -721,16 +748,20 @@ def _when(value) -> str:
 def _has_no_versions(message: str) -> bool:
     """Whether the warehouse's error says the thing has no versions a pin can name.
 
-    By the error's class (:data:`NO_VERSIONS_CLASSES`) or its SQLSTATE
-    (``0A000`` and ``0AK..``, a feature not supported; ``42809``, the wrong
-    kind of object), never by words in the message, which may name a table
-    or a schema that has them.
+    By the class the message begins with, which must be one of
+    :data:`NO_VERSIONS_CLASSES` or a subclass of one; where the message
+    begins with no class, by the SQLSTATE it ends with, ``0A000`` (not
+    supported) or ``42809`` (the wrong kind of object). Never by words
+    elsewhere in the message, which may name a table or a schema, and
+    never by a class or state that is not supported on one warehouse and
+    is on another.
     """
-    found = _ERROR_CLASS.search(message)
-    if found and found.group(1) in NO_VERSIONS_CLASSES:
-        return True
-    state = _SQLSTATE.search(message)
-    return bool(state) and (state.group(1) in ("0A000", "42809") or state.group(1).startswith("0AK"))
+    found = _ERROR_CLASS.match(message)
+    if found:
+        name = found.group(1)
+        return any(name == known or name.startswith(known + ".") for known in NO_VERSIONS_CLASSES)
+    state = _SQLSTATE.search(message.strip())
+    return bool(state) and state.group(1) in ("0A000", "42809")
 
 
 def _in_full(cursor, identifier: str) -> str:

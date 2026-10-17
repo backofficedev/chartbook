@@ -644,16 +644,20 @@ def sql(
                 f"the source {engine.source!r}, a {engine.name} engine, which reads its own tables only. "
                 f"Load them apart with data.load() and join the frames in Polars."
             )
+    replacements = {}
     for text, location in locations.items():
         if location.kind == "file":
-            replacement = backend_for(location).ref(location)
+            replacements[text] = backend_for(location).ref(location)
         else:
             # A pinned version is checked to be of the table pinned, as a load checks it
             engine.check_pin(location)
-            replacement = engine.ref(location)
-        query = query.replace("{" + text + "}", replacement)
+            replacements[text] = engine.ref(location)
+    # In one pass, so that nothing put in is read again as a reference
+    query = _REFERENCE_IN_SQL.sub(lambda found: replacements.get(found.group(1), found.group(0)), query)
     query = query.replace(_LITERAL_OPEN, "{").replace(_LITERAL_CLOSE, "}")
-    return engine.sql(query)
+    pinned = [location for location in locations.values() if getattr(location, "version", None) is not None]
+    # Checked again when the frame is collected, as a load's is
+    return engine.sql(query, recheck=pinned) if pinned else engine.sql(query)
 
 
 def connect(

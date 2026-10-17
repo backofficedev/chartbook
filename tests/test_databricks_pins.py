@@ -137,7 +137,7 @@ class TestTheSnapshot:
 
     def test_a_table_whose_versions_cannot_be_read_is_not_pinned(self, work, warehouse):
         rates, _ = work
-        warehouse.fail("VERSION AS OF 0 limit 0", "[UNSUPPORTED_FEATURE] Time travel is not supported on a streaming table.")
+        warehouse.fail("VERSION AS OF 0 limit 0", "[UNSUPPORTED_FEATURE.TIME_TRAVEL] Time travel is not supported on a streaming table. SQLSTATE: 0A000")
         report = snapshot.make(rates)
         assert "keeps no versions to pin" in dict(report.not_pinned)["acme/rates:curve"]
 
@@ -173,7 +173,7 @@ class TestAnotherPipelineReadsIt:
         statuses = {e.asset: e.status for e in report.events if e.asset}
         assert statuses == {
             "rates:treasury": "pinned", "rates:curve": "pinned",
-            "rates:recent": "not_built", "rates:plain": "not_built", "rates:top": "not_built",
+            "rates:recent": "never_pinned", "rates:plain": "never_pinned", "rates:top": "never_pinned",
         }
         monkeypatch.chdir(forecast)
         assert data.load("rates:curve").collect().height == 2
@@ -367,7 +367,7 @@ class TestWhatTheSecondReviewFound:
         scratch = tmp_path / "scratch"
         scratch.mkdir()
         monkeypatch.chdir(scratch)
-        with pytest.raises(AssetNotPinnedError, match="read only through a lockfile: declare its pipeline in \\[dependencies\\]"):
+        with pytest.raises(AssetNotPinnedError, match="read only through this pipeline.s own lockfile: declare its pipeline in \\[dependencies\\]"):
             data.load("acme/rates:curve")
 
     @pytest.mark.parametrize(
@@ -523,3 +523,124 @@ class TestWhatTheSecondReviewFound:
             warnings.simplefilter("always")
             check_model_lineage(load_manifest(forecast), forecast)
         assert any("'rates:recent' is in a warehouse and never pinned" in str(w.message) for w in caught)
+
+
+class TestWhatTheThirdReviewFound:
+    def test_a_store_record_naming_another_table_than_declared_is_not_read_on_first_read(self, work, warehouse, monkeypatch):
+        """A record from the store may name any table; the lockfile shows the declared one, and a read must not differ."""
+        from chartbook.store import FolderStore
+
+        rates, forecast = work
+        warehouse.table("workspace.hr.salaries", "select 'alice' as name, 250000 as salary")
+        taken = snapshot.make(rates).snapshot
+        store = snapshot.default_store()
+        salaries = warehouse.tables["workspace.hr.salaries"]
+        forged_dir = rates.parent.parent / "forged"
+        forged_dir.mkdir()
+        forged = {"backend": "databricks", "identifier": "workspace.hr.salaries", "table_id": salaries["id"],
+                  "version": 0, "written_at": salaries["versions"][0][1].isoformat()}
+        (forged_dir / "curve.version.json").write_text(json.dumps(forged, sort_keys=True) + "\n")
+        stored = store.put(forged_dir / "curve.version.json", links=("copy",))
+        record_path = taken.path
+        written = json.loads(record_path.read_text())
+        curve = next(record for record in written["records"] if record["id"].endswith(":curve"))
+        curve["content_hash"] = stored.content_hash
+        curve["table_version"] = {"version": 0, "table_id": salaries["id"], "name": "workspace.hr.salaries", "written_at": forged["written_at"]}
+        record_path.chmod(0o644)
+        record_path.write_text(json.dumps(written))
+        monkeypatch.chdir(forecast)
+        with pytest.raises(AssetNotPinnedError, match="do not agree"):
+            data.load("rates:curve")
+        assert not any("hr`.`salaries" in q for q in warehouse.queries)
+
+    def test_a_frame_of_sql_is_checked_again_when_collected(self, work, warehouse, monkeypatch):
+        rates, forecast = work
+        snapshot.make(rates)
+        lock.pin(forecast)
+        monkeypatch.chdir(forecast)
+        frame = data.sql("select * from {rates:curve}")
+        warehouse.replace(CURVE, SECOND)
+        with pytest.raises((pl.exceptions.ComputeError, BackendError), match="is not the table that was pinned"):
+            frame.collect()
+
+    @pytest.mark.parametrize(
+        "message",
+        [
+            "[UNSUPPORTED_FEATURE.SOMETHING_ELSE] Not here. SQLSTATE: 0A000",
+            "[DELTA_UNSUPPORTED_TIME_TRAVEL_BEYOND_DELETED_FILE_RETENTION_DURATION] Too old. SQLSTATE: 0AKDC",
+            "[UC_COMMAND_NOT_SUPPORTED_IN_SERVERLESS] Not on this warehouse. SQLSTATE: 0AKUC",
+            "Table x.SQLSTATE: 0A000 cannot be found. SQLSTATE: 42P01",
+        ],
+    )
+    def test_only_what_says_the_table_has_no_versions_leaves_it_never_pinned(self, work, warehouse, message):
+        rates, _ = work
+        warehouse.fail("VERSION AS OF 0 limit 0", message)
+        report = snapshot.make(rates)
+        assert "not_pinned" not in report.snapshot.assets["curve"]
+        assert "could not be read" in dict(report.not_built)["acme/rates:curve"]
+
+    def test_a_long_history_since_a_pin_is_refused_and_a_short_one_is_read_once(self, work, warehouse, monkeypatch):
+        from chartbook.backends import databricks
+
+        rates, forecast = work
+        snapshot.make(rates)
+        lock.pin(forecast)
+        for _ in range(3):
+            warehouse.table(CURVE, SECOND)
+        warehouse.rebuild(CURVE, SECOND)
+        monkeypatch.chdir(forecast)
+        monkeypatch.setattr(databricks, "_HISTORY_CHECKED", set())
+        monkeypatch.setattr(databricks, "HISTORY_LIMIT", 3)
+        with pytest.raises(BackendError, match="4 versions have been written since: too many"):
+            data.load("rates:curve")
+        monkeypatch.setattr(databricks, "HISTORY_LIMIT", 10_000)
+        data.load("rates:curve").collect()
+        before = sum(q.startswith("describe history") for q in warehouse.queries)
+        data.load("rates:curve").collect()
+        assert sum(q.startswith("describe history") for q in warehouse.queries) == before
+
+    def test_a_snapshot_with_nothing_built_says_why(self, tmp_path, warehouse, monkeypatch):
+        from chartbook.snapshot import SnapshotError
+
+        work = tmp_path.resolve() / "only"
+        only = work / "only"
+        only.mkdir(parents=True)
+        (only / "README.md").write_text("# A pipeline\n")
+        (only / "chartbook.toml").write_text(
+            tomli_w.dumps(
+                {
+                    "project": {"id": "acme/only"},
+                    "sources": {"warehouse": {"backend": "databricks", "url": URL}},
+                    "dataframes": {"curve": {"source": "warehouse", "table": CURVE, "docs": "A table."}},
+                }
+            )
+        )
+        _git(work, "init", "--quiet", "-b", "main")
+        _commit(work)
+        monkeypatch.delenv("DATABRICKS_TOKEN")
+        with pytest.raises(SnapshotError, match="has built nothing it declares.*has no token"):
+            snapshot.make(only)
+
+    def test_a_backend_that_pins_nothing_by_version_says_so(self, work, monkeypatch):
+        from chartbook import backends
+        from chartbook.backends.databricks import DatabricksBackend
+
+        class Plain(DatabricksBackend):
+            version_of = backends.Backend.version_of
+
+        monkeypatch.setattr(backends, "backend_class", lambda name: Plain if name == "databricks" else None)
+        rates, _ = work
+        report = snapshot.make(rates)
+        assert "its backend, databricks, pins nothing by version" in dict(report.not_pinned)["acme/rates:curve"]
+
+    def test_pin_says_never_pinned_and_why_every_time(self, work):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        rates, forecast = work
+        snapshot.make(rates)
+        for _ in range(2):
+            result = CliRunner().invoke(main, ["pin", "--project-dir", str(forecast)])
+            assert "never pinned: rates:recent: it keeps no versions to pin" in result.output
+            assert "not built: rates:recent" not in result.output

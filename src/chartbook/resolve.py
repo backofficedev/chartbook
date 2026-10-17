@@ -835,7 +835,8 @@ def _held(store, record: dict, through_a_lockfile: bool = False) -> Location:
                 record.get("id", "?"),
                 "not_in_lockfile",
                 f"{record.get('id')!r} is a table pinned by its version in a warehouse, which is read "
-                f"only through a lockfile: declare its pipeline in [dependencies], then `chartbook pin`.",
+                f"only through this pipeline's own lockfile: declare its pipeline in [dependencies] if "
+                f"it is not, and `chartbook pin` where the lockfile can be written.",
             )
         # Pinned by its version in the warehouse, which keeps the rows
         return _table_at_version(record, Path(store.get(record["content_hash"])))
@@ -854,6 +855,18 @@ def _held(store, record: dict, through_a_lockfile: bool = False) -> Location:
     if "files" in record or not (held / name).is_file():
         return FileLocation(held)  # a directory: the object is the directory
     return FileLocation(held / name)
+
+
+def _names_the_same_table(full: str, declared) -> bool:
+    """Whether a table's full name is the one a manifest declared: the same, or ending in the declared parts.
+
+    A lockfile shows the declared name; the name a pin reads must not be
+    another table's.
+    """
+    if not isinstance(declared, str) or not declared:
+        return False
+    full_parts, declared_parts = full.lower().split("."), declared.lower().split(".")
+    return len(declared_parts) <= len(full_parts) and full_parts[-len(declared_parts):] == declared_parts
 
 
 def _table_at_version(record: dict, held: Path) -> "TableLocation":
@@ -915,6 +928,8 @@ def _table_at_version(record: dict, held: Path) -> "TableLocation":
         or not re.fullmatch(r"[0-9A-Za-z-]{1,64}", table_id)
         or not isinstance(name, str)
         or not TABLE_IDENTIFIER.fullmatch(name)
+        or "`" in name
+        or not _names_the_same_table(name, location.get("identifier"))
         or not isinstance(written_at, str)
         or not isinstance(location.get("source"), str)
         or not isinstance(location.get("url"), str)
