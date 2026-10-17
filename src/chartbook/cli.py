@@ -1797,9 +1797,9 @@ def _echo_pin_report(report):
                 click.echo(f"  lost: {event.asset} ({event.old}): {event.detail}")
         if dependency in report.snapshots:
             taken = report.snapshots[dependency]
-            made_in = f" of {taken.repository}" if getattr(taken, "repository", "") else ""
+            made_in = f", which says it was made in {taken.repository}" if getattr(taken, "repository", "") else ""
             click.echo(
-                f"  From its snapshot{made_in} at {taken.commit[:7]}, made {_when(taken.made_at)}."
+                f"  From its snapshot at {taken.commit[:7]}, made {_when(taken.made_at)}{made_in}."
             )
         if dependency in report.from_folder:
             click.echo("  Taken from its folder as it is now, not from a snapshot.")

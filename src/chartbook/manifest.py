@@ -772,9 +772,11 @@ def with_dependency(text: str, key: str, entry: dict) -> str:
 
     def gives_it(candidate: str) -> bool:
         try:
-            return tomli.loads(candidate) == wanted
+            got = tomli.loads(candidate)
         except tomli.TOMLDecodeError:
             return False
+        # As text, so that nan, which equals nothing, compares; keys in any order
+        return json.dumps(got, sort_keys=True, default=str) == json.dumps(wanted, sort_keys=True, default=str)
 
     for header in re.finditer(r"(?m)^[ \t]*\[[ \t]*dependencies[ \t]*\][ \t]*(#[^\r\n]*)?\r?$", text):
         end = header.end()

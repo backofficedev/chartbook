@@ -121,7 +121,7 @@ class TestMaking:
     def test_the_record_is_json_in_the_index_format(self, maker):
         taken = snapshot.make(maker).snapshot
         document = json.loads(taken.path.read_text())
-        assert list(document) == ["schema", "root", "code", "made_at", "built_with", "index", "documents", "records"]
+        assert list(document) == ["schema", "root", "code", "made_at", "built_with", "first_commit", "index", "documents", "records"]
         assert document["schema"] == "chartbook/snapshot/v1"
         assert document["code"] == {"commit": taken.commit, "subdirectory": "maker"}
         assert [record["id"] for record in document["records"]] == [
@@ -839,6 +839,35 @@ class TestClearingOldSnapshots:
         plan = _plan(default_store())
         assert [t for t, _ in plan.remove] == [first, second]
         assert [t for t, _ in plan.keep] == [third]
+
+    def test_a_record_dated_ahead_does_not_take_the_newest_snapshots_labels(self, work, tmp_path):
+        """gc reads the labels of the newest snapshot that is not dated after now."""
+        import dataclasses
+
+        directory = _manifest(work / "forecast", {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json"}}})
+        (directory / "_output").mkdir()
+        (directory / "_output" / "m.json").write_bytes(b"v1")
+        _commit(work)
+        first = snapshot.make(directory, made_at=OLDER).snapshot
+        version = first.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
+        _manifest(directory, {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json", "aliases": {"champion": version}}}})
+        _commit(work)
+        (directory / "_output" / "m.json").write_bytes(b"v2")
+        newest = snapshot.make(directory).snapshot
+        snapshot._write(dataclasses.replace(newest, made_at="2099-01-01T00:00:00.000000Z", labels={}), default_store())
+        for folder in {t.path.parent for t in snapshot.all_snapshots(default_store())}:
+            (folder / "origins").write_text(str(tmp_path / "elsewhere") + "\n")
+        assert (first, "a label points at a version in it") in _plan(default_store(), keep_days=7).keep
+
+    def test_a_clock_behind_does_not_remove_a_new_snapshot(self, maker, tmp_path):
+        """A store shared with a machine whose clock is ahead: what it just made stays."""
+        from datetime import datetime, timedelta, timezone
+
+        taken = snapshot.make(maker).snapshot
+        (taken.path.parent / "origins").write_text(str(tmp_path / "elsewhere") + "\n")
+        behind = datetime.now(timezone.utc) - timedelta(minutes=15)
+        plan = snapshot.plan_removals(default_store(), set(), set(), keep_days=7, now=behind)
+        assert plan.remove == [] and plan.keep == [(taken, "it is dated after now, by less than 7 days")]
 
     def test_labels_travel_with_snapshots(self, work, tmp_path):
         """A label given on one machine is known to gc on another, through

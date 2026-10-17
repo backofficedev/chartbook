@@ -76,7 +76,9 @@ class TestPinnedFromTheStore:
         report = lock.pin(forecast)
         assert {e.status for e in report.events if e.asset} == {"pinned"}
         entry = _pinned(forecast)
-        assert entry["via"] == "store" and entry["location"] == {"kind": "store", "pipeline": "acme/rates", "commit": second.commit}
+        assert entry["via"] == "store" and entry["location"] == {
+            "kind": "store", "pipeline": "acme/rates", "commit": second.commit, "first_commit": second.first_commit,
+        }
         assert entry["snapshot"] == second.made_at
         monkeypatch.chdir(forecast)
         assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.2]
@@ -250,6 +252,7 @@ def _another(work: Path, name: str, value: float, remote=None, made_at=None):
     if remote:
         _git(repository, "remote", "add", "origin", remote)
     (repository / ".gitignore").write_text("_data/\nchartbook.lock\n")
+    (repository / "README.md").write_text(f"{name}\n")  # its own history, from its first commit
     _commit(repository)
     return snapshot.make(folder, made_at=made_at).snapshot
 
@@ -266,7 +269,9 @@ class TestWhatTheReviewFound:
         from chartbook.store import default_store
 
         plan = snapshot.plan_removals(default_store(), set(), set(), keep_days=7)
-        assert (forged.path, "nothing pins it, and it is dated after now, so it is not taken as made") in [(t.path, w) for t, w in plan.remove]
+        assert (forged.path, "nothing pins it, and it is dated more than 7 days after now, so it is not taken as made") in [
+            (t.path, w) for t, w in plan.remove
+        ]
         assert any(t.commit == second.commit and w == "it is the newest of its pipeline" for t, w in plan.keep)
 
     def test_two_repositories_claiming_one_id_are_not_pinned_until_one_is_named(self, tmp_path, monkeypatch):
@@ -340,6 +345,115 @@ class TestWhatTheReviewFound:
         assert any("pinned from" in p.message for p in lock.verify(forecast).problems)
 
 
+class TestWhatTheSecondReviewFound:
+    def test_a_repository_with_no_remote_is_kept_to_by_its_first_commit(self, elsewhere, monkeypatch):
+        work, first, second = elsewhere
+        assert second.repository == "" and second.first_commit and second.first_commit == first.first_commit
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _pinned(forecast)["location"]["first_commit"] == second.first_commit
+        copy = _another(work, "copy", 666.0)  # a copy of the project, newer, with no remote either
+        assert copy.first_commit != second.first_commit
+        report = lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == second.commit
+        assert not [e for e in report.events if e.status == "moved"]
+        monkeypatch.chdir(forecast)
+        assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.2]
+
+    def test_snapshots_naming_no_repository_do_not_block_a_first_pin(self, tmp_path, monkeypatch):
+        import dataclasses
+
+        from chartbook.store import default_store
+
+        work = tmp_path.resolve()
+        older = _another(work, "before", 1.0, made_at="2026-01-01T00:00:00.000000Z")
+        # As a snapshot made before snapshots recorded their repository
+        snapshot._write(dataclasses.replace(older, repository="", first_commit=""), default_store())
+        (older.path).unlink()
+        real = _another(work, "real", 4.0, remote="https://github.com/acme/rates")
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _pinned(forecast)["location"]["commit"] == real.commit
+        monkeypatch.chdir(forecast)
+        assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.0]
+
+    def test_a_failed_update_does_not_record_the_repository_it_was_told(self, tmp_path):
+        work = tmp_path.resolve()
+        _another(work, "real", 4.0, remote="https://github.com/acme/rates")
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        _forecast(forecast, {"acme/rates": {"repository": "https://github.com/wrong/rates"}})
+        lock.update(forecast)
+        assert _pinned(forecast)["location"]["repository"] == "https://github.com/acme/rates"
+        # The line is taken out again, and the owner makes a newer snapshot: update takes it
+        _forecast(forecast, {"acme/rates": {}})
+        _rates(work / "real" / "rates", 5.0)
+        (work / "real" / "rates" / "more.txt").write_text("more\n")
+        _commit(work / "real", "Newer")
+        newer = snapshot.make(work / "real" / "rates").snapshot
+        lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == newer.commit
+
+    def test_two_ways_of_writing_one_address_are_one_repository(self, tmp_path):
+        from chartbook.identity import repository_key
+
+        assert len({
+            repository_key(address) for address in (
+                "git@github.com:Acme/Rates.git", "https://github.com/acme/rates/", "http://GitHub.com:443/acme/rates",
+                "ssh://git@github.com/acme/rates.git", "https://user:token@github.com/acme/rates",
+            )
+        }) == 1
+        assert repository_key("https://gitlab.internal/Acme/Rates") != repository_key("https://gitlab.internal/acme/rates")
+        assert repository_key("/a/path/on/disk") == "" and repository_key(None) == ""
+        work = tmp_path.resolve()
+        _another(work, "real", 4.0, remote="https://github.com/acme/rates")
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        # Its owner changes how the remote is written; a newer snapshot is the same repository
+        _git(work / "real", "remote", "set-url", "origin", "git@github.com:Acme/Rates.git")
+        from chartbook.identity import clear_git_remote_cache
+
+        clear_git_remote_cache()
+        (work / "real" / "rates" / "more.txt").write_text("more\n")
+        _commit(work / "real", "Newer")
+        newer = snapshot.make(work / "real" / "rates").snapshot
+        assert newer.repository == "https://github.com/Acme/Rates"
+        lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == newer.commit
+
+    def test_a_record_dated_ahead_does_not_stop_a_new_snapshot_of_its_commit(self, tmp_path):
+        import dataclasses
+
+        from chartbook.store import default_store
+
+        work = tmp_path.resolve()
+        taken = _another(work, "real", 4.0)
+        snapshot._write(dataclasses.replace(taken, made_at="2099-01-01T00:00:00.000000Z"), default_store())
+        report = snapshot.make(work / "real" / "rates")
+        assert not report.made and report.snapshot.made_at == taken.made_at  # the real one, not the one dated ahead
+        taken.path.unlink()
+        report = snapshot.make(work / "real" / "rates")
+        assert report.made and not report.snapshot.made_at.startswith("2099")
+
+    def test_a_label_is_resolved_among_its_own_repositorys_snapshots(self, tmp_path):
+        import dataclasses
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote="https://github.com/acme/rates")
+        held = real.assets["treasury"]["content_hash"]
+        start = held.split(":", 1)[1][:12]
+        newest = dataclasses.replace(real, labels={"treasury": {"best": start}})
+        # Another repository's record of the ID, holding a version with the same start
+        other = dataclasses.replace(
+            real, repository="https://github.com/someone/rates", made_at="2026-01-01T00:00:00.000000Z",
+            assets={"treasury": {**real.assets["treasury"], "content_hash": held[:-1] + ("0" if held[-1] != "0" else "1")}},
+        )
+        from chartbook.store import default_store
+
+        records, unresolved = snapshot.label_records(newest, "acme/rates", default_store(), found=[other, newest])
+        assert unresolved == [] and list(records) == ["acme/rates:treasury@best"]
+
+
 class TestTheManifestEdit:
     def test_a_header_inside_a_string_is_not_written_into(self):
         from chartbook.manifest import with_dependency
@@ -365,6 +479,12 @@ class TestTheManifestEdit:
         assert CliRunner().invoke(main, ["add", "acme/rates"]).exit_code == 0
         written = (forecast / "chartbook.toml").read_bytes()
         assert b"\r\n" in written and b"\n" not in written.replace(b"\r\n", b"")
+
+    def test_a_manifest_with_nan_in_it_is_still_written_into(self):
+        from chartbook.manifest import with_dependency
+
+        text = '[project]\nid = "acme/forecast"\n\n[tool.x]\nmissing = nan\n\n[dependencies]\n'
+        assert '"acme/rates" = {}' in with_dependency(text, "acme/rates", {})
 
     def test_other_forms_say_what_to_add(self):
         from chartbook.manifest import with_dependency

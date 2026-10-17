@@ -143,6 +143,15 @@
               "at": {
                 "type": "string",
                 "description": "For `kind: store`: the start of the commit its snapshots are narrowed to, as [dependencies] declares it (`commit`)."
+              },
+              "repository": {
+                "type": "string",
+                "description": "For `kind: store`: the web address of the repository its snapshots are taken from, as [dependencies] names it or as the snapshot it was pinned from records it."
+              },
+              "first_commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "description": "For `kind: store`: the first commit of the repository it was pinned from. Later pins and updates keep to that repository."
               }
             }
           },
