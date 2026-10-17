@@ -380,6 +380,14 @@ def plan(
                     if caches[0] is None:
                         caches[0] = default_git_cache()
                     copy, why = _working_copy(directory, key, entry, caches[0])
+                    if copy is not None and entry.get("_from_id"):
+                        # Got from its repository by its ID: it must call itself that, or it is not built
+                        try:
+                            named = (_read_manifest(copy).get("project") or {}).get("id")
+                        except (OSError, ValueError):
+                            named = None
+                        if named and named != entry["_from_id"]:
+                            copy, why = None, f"its repository names itself {named}, not {entry['_from_id']}"
                     if copy is None:
                         order.append(Step(key, None, "git", missing=why))
                     else:
@@ -389,7 +397,7 @@ def plan(
                     # store, and nothing of it is built here, unless it is a
                     # pipeline of this run, which is built before it
                     there = asked_by_id().get(entry["_store"])
-                    if there is not None:
+                    if there is not None and there != directory:
                         visit(there, "asked", key)
                 else:
                     # A folder somebody works in is not built from here. It

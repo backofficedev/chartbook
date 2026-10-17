@@ -266,9 +266,14 @@ class TestWhatTheReviewFound:
         assert lock.verify(forecast).problems
 
     def test_the_named_repository_is_the_one_cloned(self):
-        entry = {"_store": "acme/rates", "_repository": "https://github.com/someone/rates-fork"}
+        entry = {
+            "_store": "acme/rates",
+            "repository": "ssh://git@gitlab.internal:2222/someone/rates-fork.git",
+            "_repository": "https://gitlab.internal/someone/rates-fork",
+        }
         converted = lock.clone_instead(entry, "acme/forecast", None, False, lambda: [], "github.com")
-        assert converted["git"] == "https://github.com/someone/rates-fork" and converted["_from_id"] == "acme/rates"
+        # As written, with its scheme and port: the web form is for telling repositories apart
+        assert converted["git"] == "ssh://git@gitlab.internal:2222/someone/rates-fork.git" and converted["_from_id"] == "acme/rates"
 
     def test_update_by_its_full_id_before_any_snapshot(self, host):
         _upstream(host, 4.0)
@@ -315,3 +320,92 @@ class TestWhatTheReviewFound:
         (dependency,) = record["dependencies"]
         assert dependency["via"] == "rev" and dependency["location"]["kind"] == "git" and dependency["location"]["pipeline"] == "acme/rates"
         jsonschema.validate(record, json.loads((Path(SCHEMAS_DIR) / "v1" / "Pipeline.json").read_text()))
+
+
+
+class TestWhatTheSecondReviewFound:
+    def test_a_failed_first_read_does_not_stop_a_pin_from_getting_it(self, host, monkeypatch):
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        monkeypatch.chdir(forecast)
+        with pytest.raises(AssetNotPinnedError):
+            data.load("acme/rates:treasury")  # writes an entry with nothing pinned
+        report = lock.pin(forecast)
+        assert "acme/rates" in report.git and _entry(forecast)["via"] == "rev"
+        assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.0]
+
+    def test_a_pin_made_before_the_host_was_set_gets_it_once_it_is(self, host):
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        _set_host(host, "")
+        lock.pin(forecast)
+        _set_host(host, str(host / "host"))
+        assert "acme/rates" in lock.pin(forecast).git
+
+    def test_an_update_that_finds_nothing_keeps_a_repository_pin(self, host):
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        _set_host(host, "")
+        lock.update(forecast)
+        assert _entry(forecast)["via"] == "rev" and _entry(forecast)["location"]["kind"] == "git"
+
+    def test_a_commit_asked_for_is_got_from_the_repository_when_the_store_has_another(self, host):
+        repository = _upstream(host, 4.0)
+        first = _git(repository, "rev-parse", "HEAD").strip()
+        pl.DataFrame({"d": ["2024-01-01"], "r": [5.0]}).write_parquet(repository / "_data" / "treasury.parquet")
+        _commit(repository, "Second")
+        snapshot.make(repository)  # a snapshot, at the second commit only
+        forecast = _forecast(host / "forecast", {"acme/rates": {"commit": first[:7]}})
+        lock.pin(forecast)
+        entry = _entry(forecast)
+        assert entry["via"] == "rev" and entry["location"]["commit"] == first
+        lock.update(forecast)
+        assert _entry(forecast)["via"] == "rev"
+
+    def test_the_index_keeps_every_pinned_hash(self, host):
+        from chartbook.index import build_index
+        from chartbook.manifest import load_manifest
+
+        _upstream(host, 4.0)
+        other = host / "host" / "acme" / "yields"
+        (other / "_data").mkdir(parents=True)
+        (other / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/yields"}, "dataframes": {"curve": {"path": "./_data/curve.parquet", "docs": "d"}}}))
+        pl.DataFrame({"d": ["2024-01-01"]}).write_parquet(other / "_data" / "curve.parquet")
+        _git(other, "init", "--quiet", "-b", "main")
+        (other / ".gitignore").write_text("_data/\n")
+        _commit(other)
+        snapshot.make(other)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}, "acme/yields": {}})
+        lock.pin(forecast)
+        built = build_index(load_manifest(forecast))
+        (record,) = [r for r in built["records"] if r.get("kind") == "Pipeline"]
+        assert all(dependency.get("pinned_hash") for dependency in record["dependencies"])
+
+    def test_run_does_not_build_a_clone_that_names_itself_otherwise(self, host):
+        from chartbook import run
+
+        repository = _upstream(host, 4.0)
+        marker = host / "built"
+        (repository / "chartbook.toml").write_text(tomli_w.dumps({
+            "project": {"id": "evil/other"},
+            "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}},
+            "scripts": {"build": f"{sys.executable} -c \"open(r'{marker}', 'w').close()\""},
+        }))
+        _commit(repository, "Another name")
+        forecast = _forecast(host / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
+        report = run.run(forecast, echo=lambda *a, **k: None)
+        assert report.failed is not None and not marker.exists()
+
+    def test_a_pipeline_depending_on_itself_by_id_is_said_plainly_by_run(self, host):
+        from chartbook import run
+
+        forecast = _forecast(host / "forecast", {"acme/forecast": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
+        report = run.run(forecast, echo=lambda *a, **k: None)
+        assert report.failed is not None and "depend on each other" not in (report.reason or "")
+
+    def test_a_root_folder_host_keeps_its_separator(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(config, "get_global_config_dir", lambda: tmp_path / "user")
+        (tmp_path / "user").mkdir()
+        config.get_global_settings_path().write_text('[resolve]\ndefault_host = "/"\n')
+        assert config.get_default_host() == "/"

@@ -243,7 +243,9 @@ def _normalized(settings: dict, origin: Path) -> dict:
                 f"an address its repositories are under, e.g. \"https://gitlab.example.org/group\", "
                 f"or \"\" for none."
             )
-        host = host.strip().rstrip("/\\")
+        host = host.strip()
+        if not re.match(r"^([A-Za-z]:)?[\\/]$", host):
+            host = host.rstrip("/\\")  # but a root folder, / or C:\\, keeps its separator
         if _is_folder(host):
             host = str(_absolute_if_folder(os.path.expanduser(host), origin))  # a folder of repositories
         resolve["default_host"] = host

@@ -565,11 +565,11 @@ def _dependency_records(
         location = locate_pipeline(key, dependencies={key: entry})
         if location.kind == "store" and in_lock.get(key, {}).get("location", {}).get("kind") == "git":
             # Named by its ID, and pinned from its repository: as the lockfile says
-            pinned = in_lock[key]["location"]
+            from_repository = in_lock[key]["location"]
             where = {"kind": "git", "pipeline": location.pipeline}
             for name in ("rev", "commit"):
-                if pinned.get(name):
-                    where[name] = pinned[name]
+                if from_repository.get(name):
+                    where[name] = from_repository[name]
             via = "rev"
         elif location.kind == "store":
             where = {"kind": "store", "pipeline": location.pipeline}

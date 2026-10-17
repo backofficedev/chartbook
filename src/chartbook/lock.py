@@ -385,14 +385,26 @@ def clone_instead(
         return entry
     location = (was or {}).get("location", {})
     pinned_from_repository = location.get("kind") == "git" and location.get("pipeline") == pipeline
-    if not may_move and location.get("kind") == "store":
+    if not may_move and location.get("kind") == "store" and location.get("commit"):
+        return entry  # pinned from a snapshot: a pin keeps it there
+    at = entry.get("commit")
+    if (may_move or not pinned_from_repository) and any(
+        taken.pipeline == pipeline and (not at or taken.commit.startswith(at)) for taken in snapshots()
+    ):
         return entry
-    if (may_move or not pinned_from_repository) and any(taken.pipeline == pipeline for taken in snapshots()):
-        return entry
-    url = entry.get("_repository") or clone_url_for(pipeline, host)
+    # The repository the entry names, as it was written (an ssh address,
+    # a port), or the pipeline's on the default host
+    named = entry.get("repository") if entry.get("_repository") else None
+    url = named or clone_url_for(pipeline, host)
     if url is None:
         return entry
-    converted = {"git": url, "_from_id": pipeline}
+    try:
+        from chartbook.gitcache import check_git_url
+
+        check_git_url(url)
+    except ValueError:
+        return entry
+    converted = {"git": url, "_from_id": pipeline, "_from": "the repository its entry names" if named else "[resolve] default_host"}
     if entry.get("commit"):
         converted["rev"] = entry["commit"]
     if entry.get("_repository"):
@@ -623,17 +635,14 @@ def _sync_now(
 
                 host = get_default_host()
             was_location = (was or {}).get("location", {})
-            if (
-                not may_move
-                and was_location.get("kind") == "git"
-                and was_location.get("pipeline") == entry["_store"]
-                and not (clone_missing and host)
-            ):
-                # Pinned from its repository, and that repository cannot be
-                # asked here (no default host, or a read): the pin stays as it is
-                kept_as_it_is = True
-            elif clone_missing:
+            from_repository = was_location.get("kind") == "git" and was_location.get("pipeline") == entry["_store"]
+            if clone_missing:
                 entry = clone_instead(entry, root, was, may_move, snapshots_in_store, host, built_here)
+            if from_repository and not may_move and "git" not in entry:
+                # Pinned from its repository, and that repository is not to be
+                # asked here (no default host, a read, or a pipeline this run
+                # builds itself): the pin stays as it is, until an update
+                kept_as_it_is = True
         listed = _dependency_entry(key, entry)
         commit_moved = False
 
@@ -653,7 +662,10 @@ def _sync_now(
                     report.events.append(
                         PinEvent(
                             "lost", key, asset_id, old=content_hash,
-                            detail="it was pinned from its repository, and no [resolve] default_host is set here to get it again",
+                            detail=(
+                                "it was pinned from its repository, which is not asked here"
+                                + ("" if host else ": no [resolve] default_host is set")
+                            ),
                         )
                     )
         elif "git" in entry:
@@ -664,7 +676,10 @@ def _sync_now(
             )
             report.git.add(key)
             if entry.get("_from_id"):
-                why = f"the store has no snapshot of {entry['_from_id']}, so it is got from its repository, {strip_url_credentials(entry['git'])} ([resolve] default_host)"
+                why = (
+                    f"the store has no snapshot of {entry['_from_id']}, so it is got from its repository, "
+                    f"{strip_url_credentials(entry['git'])} ({entry.get('_from', '[resolve] default_host')})"
+                )
                 if failure:
                     failure = f"{why}: {failure}"
                 elif directory is not None:
@@ -679,7 +694,8 @@ def _sync_now(
             commit_now = listed.get("location", {}).get("commit")
             commit_moved = bool(commit_was and commit_now and commit_was != commit_now)
             pinned = any(record.get("content_hash") for record in had.values())
-            if failure and (may_move or not pinned):
+            lost = any(record.get("content_hash") and not store.has(record["content_hash"]) for record in had.values())
+            if failure and (may_move or not pinned or lost):
                 # With pins in the store and nothing asked to move, a
                 # repository that cannot be reached is no trouble: that is
                 # what the pins are for
@@ -1326,6 +1342,9 @@ def _sync_from_snapshots(
 
     def as_it_was() -> dict:
         """The listing, still naming the snapshot the pins came from, and the repository it came from."""
+        if (was or {}).get("location", {}).get("kind") == "git":
+            # Pinned from its repository: it says so still, not a store pin at its commit
+            return {**was, "location": dict(was["location"])}
         kept = dict(listed)
         if locked_commit:
             kept["location"] = {**listed["location"], "commit": locked_commit}
