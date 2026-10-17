@@ -2583,12 +2583,14 @@ def store_info():
         get_global_settings_path,
         get_store_setting,
         get_system_settings_path,
+        shown_store_url,
         store_kind,
     )
 
     try:
         url, origin = get_store_setting()
-        shown = str(folder_of_store_url(url)) if store_kind(url) == "folder" else url
+        # Never a user name or password, which a URL or its endpoint may carry
+        shown = str(folder_of_store_url(url)) if store_kind(url) == "folder" else shown_store_url(url)
         cache = get_cache_path()
     except ValueError as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
@@ -2700,9 +2702,13 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
-    --forget-missing to let those go. A lockfile on another machine, which a
-    store in a shared or synced folder has notes of, is not read from here:
-    what it last pinned is kept, with --forget-missing or without.
+    --forget-missing to let those go. A note only ever adds to what is kept:
+    what a lockfile's note recorded at its last pin is kept even when the
+    lockfile here says otherwise now. A note of a lockfile on another
+    machine, which a store in a shared or synced folder has, is kept with
+    --forget-missing or without, as is a note from before notes named their
+    machine and a sync service's copy of a note; each is listed with its
+    file under roots/, which you remove once no machine needs it.
 
     What would be removed is listed, and nothing is removed until you say
     yes. An object stored in the last hour is never removed: a pin puts
@@ -2743,12 +2749,24 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         else:
             note = "  (not found; its pins are kept)"
         click.echo(f"  {lockfile}{note}")
+    import socket
+
+    this_host = socket.gethostname()
     for root in plan.elsewhere:
-        if not root.machine:
-            machine = "noted before notes named their machine, so perhaps another machine's"
+        if root.copy:
+            whose = "a sync service's copy of a note"
+        elif not root.machine:
+            whose = "noted before notes named their machine, so perhaps another machine's"
+        elif root.host and root.host == this_host:
+            # Not this machine's name now: an earlier one of its own, or another machine of the same host name
+            whose = f"noted by {root.host} under another machine name than this one's now"
         else:
-            machine = f"on another machine, {root.host}" if root.host else "on another machine"
-        click.echo(f"  {root.lockfile}  ({machine}: not read here; its pins are kept)")
+            whose = f"on another machine, {root.host}" if root.host else "on another machine"
+        read = "; the lockfile here at that path is read as well" if root.lockfile in plan.read_here else ""
+        click.echo(
+            f"  {root.lockfile}  ({whose}: what it recorded at its last pin is kept{read}; "
+            f"note {the_store}/roots/{root.note})"
+        )
     if plan.snapshots_kept:
         reasons = {}
         for _, why in plan.snapshots_kept:

@@ -327,9 +327,7 @@ NOT_SYNCED_YET = (
 
 def _incomplete(store: Store, record: dict) -> Optional[str]:
     """Why the store's object of a record with a hash does not hold all of its bytes yet; None if it does, or that cannot be told."""
-    if not record.get("content_hash"):
-        return None
-    return store.incomplete(record["content_hash"], record.get("size_bytes"), snapshot.files_read(record))
+    return snapshot.not_whole(store, record)
 
 
 @dataclass
@@ -2436,10 +2434,13 @@ class GcPlan:
         delete: Objects that nothing names, each with its size in bytes.
         not_read: Lockfiles a store names that are not read here, as they are
             not a local ``chartbook.lock``: what their notes name is kept.
-        elsewhere: The notes of lockfiles on other machines, and those from
-            before notes named their machine, which may be another's: not
-            read here and never forgotten from here; what they name is kept.
-            They are not in *lockfiles*, which are this machine's.
+        elsewhere: The notes of lockfiles on other machines, those from
+            before notes named their machine, which may be another's, and
+            a sync service's copies of notes: never forgotten from here;
+            what they recorded is kept. They are not in *lockfiles*, which
+            are this machine's.
+        read_here: The paths of notes in *elsewhere* at which this machine
+            has a lockfile, read as well: what it pins is kept too.
         forget: Lockfiles that could not be found and are to be forgotten.
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
             with, so that it can be made again the same way when it is
@@ -2456,6 +2457,7 @@ class GcPlan:
     forget: list[Path] = field(default_factory=list)
     not_read: list[Path] = field(default_factory=list)
     elsewhere: list = field(default_factory=list)
+    read_here: list[Path] = field(default_factory=list)
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
@@ -2486,13 +2488,16 @@ def plan_gc(
     (:func:`chartbook.snapshot.plan_removals`). Then the objects: one is
     kept if a lockfile the store knows of names it, or a kept snapshot
     does. The store knows of every lockfile that was pinned or updated into
-    it. A lockfile on this machine is read as it is now; one that cannot
-    be found (a deleted project, a drive that is not plugged in) still
-    keeps what it named when it was last pinned, unless *forget_missing*
-    is set. A lockfile on another machine, which a store in a shared or
-    synced folder has notes of, is not read: what its note names is kept.
-    So is a note from before notes named their machine, which may be
-    another machine's.
+    it, and a note only ever adds to what is kept. What a note recorded at
+    its lockfile's last pin is kept, and a lockfile on this machine is read
+    as it is now as well, which adds what it pins after a pull or a switch
+    of branch; one that cannot be found (a deleted project, a drive that is
+    not plugged in) keeps what it named when it was last pinned, unless
+    *forget_missing* is set. A note of a lockfile on another machine, which
+    a store in a shared or synced folder has, keeps what it recorded and is
+    never forgotten from here; so is a note from before notes named their
+    machine, which may be another machine's, and a sync service's copy of
+    a note. A lockfile here at such a note's path is read as well.
 
     :param store: The store; this user's by default.
     :param forget_missing: If True, a lockfile on this machine that cannot
@@ -2515,19 +2520,38 @@ def plan_gc(
     pinned_snapshots: set[tuple[str, str]] = set()
     hashes_of_missing: set[str] = set()
     hashes_elsewhere: set[str] = set()
+    hashes_noted: set[str] = set()
     from chartbook.store import this_machine
 
+    def read_too(lockfile: Path) -> Optional[Lock]:
+        """Add what a lockfile here pins now to what is kept; the lockfile, or None if there is none."""
+        found = read_lock(lockfile)
+        if found is None:
+            return None
+        keep.update(found.hashes())
+        for entry in found.dependencies:
+            commit = entry.get("location", {}).get("commit")
+            if commit and entry.get("snapshot"):
+                pinned_snapshots.add((commit, entry["snapshot"]))
+        return found
+
+    # A note only ever adds to what is kept: what it recorded at its
+    # lockfile's last pin is kept, and reading the lockfile as it is now
+    # (after a pull, or a switch of branch) adds to that, never replaces it
     here = this_machine(create=False)  # a machine that has written no note has none of its own
     for root in store.roots():
-        if root.machine != here:
+        if root.machine != here or root.copy:
             # Another machine's lockfile, or one noted before notes named
-            # their machine, which may be: the path names a file there, which
-            # one here at the same path is not. It is not read, and never
-            # taken as gone: what its note names is kept, even with
-            # forget_missing, since only that machine can tell
+            # their machine, or a sync service's copy of a note: the path
+            # names a file on a machine that may not be this one. What the
+            # note recorded is kept, and never taken as gone, even with
+            # forget_missing, since only that machine can tell. A lockfile
+            # here at that path is read as well, which can only add
             plan.elsewhere.append(root)
             keep |= set(root.hashes)
             hashes_elsewhere |= set(root.hashes)
+            if _a_local_lockfile(root.lockfile) and read_too(root.lockfile) is not None:
+                plan.read_here.append(root.lockfile)
             continue
         # A root is written by whoever can write to the store, and names a
         # path: only a lockfile on this machine is read, never another file
@@ -2540,14 +2564,13 @@ def plan_gc(
             keep |= set(root.hashes)
             hashes_of_missing |= set(root.hashes)
             continue
-        found = read_lock(root.lockfile)
+        found = read_too(root.lockfile)
         plan.lockfiles.append((root.lockfile, found is not None))
         if found is not None:
-            keep |= found.hashes()
-            for entry in found.dependencies:
-                commit = entry.get("location", {}).get("commit")
-                if commit and entry.get("snapshot"):
-                    pinned_snapshots.add((commit, entry["snapshot"]))
+            # What the note recorded and the lockfile no longer names, a pull
+            # or a switch of branch since its last pin, stays kept
+            keep |= set(root.hashes)
+            hashes_noted |= set(root.hashes) - found.hashes()
         elif forget_missing:
             plan.forget.append(root.lockfile)
         else:
@@ -2557,7 +2580,7 @@ def plan_gc(
     try:
         snapshots = snapshot.plan_removals(
             store, pinned_snapshots, hashes_of_missing, keep_days=keep_days, keep_lineage=keep_lineage,
-            aggressive=aggressive, hashes_elsewhere=hashes_elsewhere,
+            aggressive=aggressive, hashes_elsewhere=hashes_elsewhere, hashes_noted=hashes_noted,
         )
     except snapshot.SnapshotError as error:
         raise LockError(str(error)) from None

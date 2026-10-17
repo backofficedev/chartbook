@@ -124,6 +124,14 @@ class SnapshotError(Exception):
     """Raised when a snapshot cannot be made, or a pipeline has none to find."""
 
 
+class StoreNotReadyError(SnapshotError):
+    """Raised when the store does not have all of a snapshot's objects yet, or not all of their bytes.
+
+    In a store a sync service keeps, the sync may not have finished: trying
+    again later may succeed, so what fails for this is not kept as failed.
+    """
+
+
 def schema_path() -> Path:
     """The JSON Schema file for a snapshot record's envelope."""
     return SCHEMAS_DIR / "snapshot" / "v1.json"
@@ -441,6 +449,20 @@ def files_read(record: dict) -> Optional[dict]:
     if not isinstance(declared, str) or not isinstance(size, int) or is_glob_pattern(declared):
         return None
     return {Path(declared).name: size}
+
+
+def not_whole(store: Store, record: dict) -> Optional[str]:
+    """Why the store's object of a record with a hash is not whole as the record has it; None if it is, or that cannot be told.
+
+    By the names and sizes of the files a reader opens (:func:`files_read`),
+    and, for a directory, that it holds no file its record does not list.
+    Nothing is read (:meth:`chartbook.store.Store.incomplete`).
+    """
+    if not record.get("content_hash"):
+        return None
+    files = files_read(record)
+    every = files is not None and isinstance(record.get("files"), list)
+    return store.incomplete(record["content_hash"], record.get("size_bytes"), files, every)
 
 
 def materialize_in_source(
@@ -1306,6 +1328,7 @@ def plan_removals(
     keep_lineage: bool = False,
     aggressive: bool = False,
     hashes_elsewhere: set[str] = frozenset(),
+    hashes_noted: set[str] = frozenset(),
 ) -> SnapshotPlan:
     """Say which snapshots may be removed. Nothing is removed.
 
@@ -1313,7 +1336,8 @@ def plan_removals(
 
     1. a lockfile pins it (its commit and time are named by a dependency);
     2. a lockfile that cannot be found, or one on another machine, named
-       one of its objects when it was last pinned;
+       one of its objects when it was last pinned; or the note of one that
+       was read recorded one at its last pin;
     3. it is the newest snapshot of its pipeline, or the newest that a
        branch or a tag of the repository it came from can pin from;
     4. a label points at a model version it holds: in the pipeline's
@@ -1343,7 +1367,10 @@ def plan_removals(
         found and are not to be forgotten.
     :param hashes_elsewhere: The objects named by lockfiles on other
         machines, which are not read here, and by notes from before notes
-        named their machine.
+        named their machine, or copies of notes.
+    :param hashes_noted: The objects the notes of lockfiles that were read
+        recorded at their last pin, which the lockfile may no longer name
+        (after a pull, or a switch of branch): a note only adds.
     :raises SnapshotError: If a record cannot be read.
     """
     now = now if now is not None else datetime.now(timezone.utc)
@@ -1380,6 +1407,8 @@ def plan_removals(
                 why = "a lockfile that cannot be found named what it holds"
             elif taken.hashes() & set(hashes_elsewhere):
                 why = "a lockfile not read here, another machine's, named what it holds"
+            elif taken.hashes() & set(hashes_noted):
+                why = "a lockfile's note, from its last pin, names what it holds"
             elif taken is newest:
                 why = "it is the newest of its pipeline"
             elif taken.path in pinnable:
@@ -2327,12 +2356,14 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     the manifest names its database, so it is left out and said. A record
     is read from a store that may be shared, so every path in it is judged
     by its text (:func:`safe_relative`), no link in an object is followed,
-    and nothing is written until every object it names is there.
+    and nothing is written until every object it names is there, whole as
+    its record has it (:func:`not_whole`).
 
     :param into: A folder that does not exist yet or is empty.
+    :raises StoreNotReadyError: If an object it names is not in the store,
+        or not whole: a sync that has not finished, perhaps.
     :raises SnapshotError: If the snapshot carries no documents (it was made
-        before snapshots did), an object it names is not in the store, or
-        *into* is a file or has something in it.
+        before snapshots did), or *into* is a file or has something in it.
     """
     import shutil
 
@@ -2357,10 +2388,24 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     except ValueError as error:  # a hash that is not one: a record written to mislead
         raise SnapshotError(f"The snapshot of {taken.pipeline} names an object that is not a hash: {error}") from None
     if missing:
-        raise SnapshotError(
+        raise (StoreNotReadyError if all(isinstance(h, str) for h in missing) else SnapshotError)(
             f"The store {store} does not have {len(missing)} object(s) the snapshot of {taken.pipeline} at "
-            f"{taken.commit[:7]} names, {missing[0]} first; `chartbook store verify` says more."
+            f"{taken.commit[:7]} names, {missing[0]} first; in a store a sync service keeps, the sync may "
+            f"not have finished. `chartbook store verify` says more."
         )
+    # Each object whole as its record has it: a site built from a file a
+    # sync has half delivered would be wrong, and kept
+    for record in [taken.documents, *taken.assets.values()]:
+        declared = (record.get("location") or {}).get("path")
+        if record is not taken.documents and safe_relative(declared) is None:
+            continue  # not laid out at all, and said so below
+        if record.get("content_hash") in named:
+            unsynced = not_whole(store, record)
+            if unsynced:
+                raise StoreNotReadyError(
+                    f"The snapshot of {taken.pipeline} at {taken.commit[:7]} names {record['content_hash']}, "
+                    f"and {unsynced}."
+                )
     folder.mkdir(parents=True, exist_ok=True)
     report = Materialized(folder.resolve())
 

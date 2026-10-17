@@ -120,10 +120,10 @@ class TestTheSite:
         else:  # the same bytes in both: take the documents instead
             store.delete(first.documents["content_hash"])
         result = _build(root, monkeypatch)
-        assert f"warning: pipeline_a at {first.commit[:7]}: it could not be laid out from the store" in result.output
+        assert f"warning: pipeline_a at {first.commit[:7]}: it is not all in the store yet" in result.output
         name = versions.version_name(first.commit, first.made_at)
         placeholder = (root / "docs" / versions.site_path("pipeline_a", name) / "index.html").read_text()
-        assert "its site could not be built" in placeholder or "could not be laid out" in placeholder
+        assert "not all in the store yet" in placeholder
         # The other version is unharmed
         other = versions.version_name(second.commit, second.made_at)
         assert "A snapshot of this pipeline:" in (root / "docs" / versions.site_path("pipeline_a", other) / "index.html").read_text()

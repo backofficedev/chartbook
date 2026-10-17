@@ -75,10 +75,10 @@ there before all of its bytes are: a record says how many an asset has
 (``size_bytes``), and :meth:`Store.incomplete` compares the sizes on disk
 with it, which costs no read. And a file changed in two places at once is
 kept twice, the second under a name of the service's
-(``20261017T163232.294414Z (1).json``): records, origin notes and notes of
-lockfiles are listed by the names a store gives them
-(:func:`is_record_name`, :func:`is_root_name`), so such a copy is passed
-over.
+(``20261017T163232.294414Z (1).json``): records and origin notes are
+listed by the names a store gives them (:func:`is_record_name`), so such
+a copy is passed over; a copy of a note of a lockfile is read
+(:attr:`Root.copy`), as a note only ever adds to what is kept.
 """
 
 from __future__ import annotations
@@ -97,6 +97,7 @@ import stat
 import sys
 import time
 import uuid
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Iterable, Iterator, Optional, Union
@@ -211,12 +212,21 @@ class Root:
             notes named their machine, which may be any machine's.
         host: That machine's host name when the note was written, for a
             person to read; nothing goes by it.
+        note: The name of the note's file under ``roots/``, so that a
+            person can find it; another name than the store gives a note
+            is a sync service's copy of one (:attr:`copy`).
     """
 
     lockfile: Path
     hashes: tuple[str, ...]
     machine: str = field(default="", compare=False)
     host: str = field(default="", compare=False)
+    note: str = field(default="", compare=False)
+
+    @property
+    def copy(self) -> bool:
+        """Whether this is a sync service's copy of a note, not a note the store wrote."""
+        return bool(self.note) and not is_root_name(self.note)
 
 
 @dataclass(frozen=True)
@@ -414,8 +424,8 @@ def root_document(lockfile: Union[str, Path], hashes: Iterable[str]) -> dict:
     }
 
 
-def read_root(stored: dict) -> Root:
-    """A note of a lockfile, from what a store kept.
+def read_root(stored: dict, note: str = "") -> Root:
+    """A note of a lockfile, from what a store kept in the file named *note*.
 
     :raises ValueError: If it is not a note a store writes, or a hash in it
         is not a content hash. So may ``KeyError`` and ``TypeError``.
@@ -423,54 +433,80 @@ def read_root(stored: dict) -> Root:
     machine, host = stored.get("machine", ""), stored.get("host", "")
     if not isinstance(machine, str) or not isinstance(host, str):
         raise ValueError("its machine and host are not names")
-    root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host)
+    root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host, note)
     for content_hash in root.hashes:
         _split_hash(content_hash)
     return root
 
 
-def unsynced_part(path: Path, size_bytes: int, files: Optional[dict] = None) -> Optional[str]:
-    """What of an object's folder is not the size its record gives, in a few words; None when nothing is.
+def unsynced_part(
+    path: Path, size_bytes: int, files: Optional[dict] = None, every: bool = False
+) -> Optional[tuple[str, bool]]:
+    """What of an object's folder is not as its record gives it, in a few words; None when nothing is.
 
     *files* are the files a reader opens, by their path in the object, each
     with its size, as the record gives them: the one file of an asset that
     is a file, under its own name (the object may hold the same bytes under
     other names too, which are other pins' business), or each file of a
-    directory. Without them, as for a glob, the files the object holds are
-    summed, as they were hashed; so they are when the one file named is not
-    in it, as a reader then reads the object as a folder (a directory pinned
-    before records listed its files). Only sizes are looked at: nothing is
-    read.
+    directory, which are then *every* file of it. Without them, as for a
+    glob, the files the object holds are summed, as they were hashed; so
+    they are when the one file named is not in it and the object holds
+    files of other sizes, as a directory pinned before records listed its
+    files does, which a reader reads as the folder.
+
+    A file that is a link is no sync's doing, and is not judged here:
+    :meth:`Store.verify` and a reader's own checks see to it. Only sizes and
+    names are looked at: nothing is read.
+
+    :returns: What is wrong, and whether a sync that has not finished would
+        explain it (False for a file the record does not list, a sync
+        service's copy most likely, which waiting does not mend).
     """
-    if files and len(files) == 1:
-        ((relative, _),) = files.items()
-        if not path.joinpath(*PurePosixPath(relative).parts).is_file():
+
+    def size_of(file: Path) -> Optional[int]:
+        try:
+            return file.stat().st_size if file.is_file() else None
+        except OSError:
+            return None
+
+    held = hashing.directory_files(path)
+    present = [file for file in held if not file.is_symlink()]
+    if files and len(files) == 1 and not every:
+        ((relative, expected),) = files.items()
+        own = path.joinpath(*PurePosixPath(relative).parts)
+        if not own.is_file() and not own.is_symlink():
+            if present and all(file.parent == path and size_of(file) == expected for file in present):
+                # The same bytes under other names: this one is on its way
+                return f"does not have {relative} yet", True
             files = None
     if files:
+        listed = set()
         for relative, expected in sorted(files.items()):
             parts = PurePosixPath(relative).parts
             if not parts or PurePosixPath(relative).is_absolute() or ".." in parts:
                 continue  # no file of the object: a record that is not one a store wrote
+            listed.add(PurePosixPath(*parts).as_posix())
             file = path.joinpath(*parts)
-            try:
-                size = file.stat().st_size if file.is_file() else None
-            except OSError:
-                size = None  # a link whose file has gone
+            if file.is_symlink():
+                continue
+            size = size_of(file)
             if size is None:
-                return f"does not have {relative} yet"
+                return f"does not have {relative} yet", True
             if size != expected:
-                return f"has {size:,} bytes of {relative} where its record says {expected:,}"
+                return f"has {size:,} bytes of {relative} where its record says {expected:,}", True
+        if every:
+            for file in present:
+                relative = file.relative_to(path).as_posix()
+                if relative not in listed:
+                    return f"holds {relative}, which its record does not list", False
         return None
-    sizes = []
-    for file in hashing.directory_files(path):
-        try:
-            sizes.append(file.stat().st_size)
-        except OSError:
-            sizes.append(0)  # a link whose file has gone
-    if not sizes:
-        return "has none of its files yet"
-    if sum(sizes) != size_bytes:
-        return f"has {sum(sizes):,} bytes where its record says {size_bytes:,}"
+    if len(present) != len(held):
+        return None  # a link among its files: not judged by size
+    if not present:
+        return "has none of its files yet", True
+    total = sum(size_of(file) or 0 for file in present)
+    if total != size_bytes:
+        return f"has {total:,} bytes where its record says {size_bytes:,}", True
     return None
 
 
@@ -518,17 +554,18 @@ class Store(abc.ABC):
         """Hash objects again, and report each that is not what its name says."""
 
     def incomplete(
-        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None
+        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
     ) -> Optional[str]:
-        """Why an object the store has does not hold all of its bytes yet; None if it does, or if that cannot be told cheaply.
+        """Why an object the store has is not whole as its record has it; None if it is, or if that cannot be told cheaply.
 
         A record says how many bytes an asset has (``size_bytes``), and the
         files a reader opens with the size of each (*files*, by their path
-        in the object; see :func:`unsynced_part`); a store in a folder a
-        sync service keeps can have an object before all of them have
-        arrived. Asked of every pin and every read, so it reads nothing;
-        :meth:`verify` reads every byte. A store that cannot tell without
-        reading says None.
+        in the object, *every* one of them for a directory; see
+        :func:`unsynced_part`); a store in a folder a sync service keeps
+        can have an object before all of them have arrived, or with a copy
+        of one of them that the service made. Asked of every pin and every
+        read, so it reads nothing; :meth:`verify` reads every byte. A store
+        that cannot tell without reading says None.
         """
         return None
 
@@ -895,8 +932,8 @@ class FolderStore(Store):
 
         Called whenever a lockfile is written. One note is kept per
         lockfile and machine, and a later call replaces it. A note of the
-        same path from before notes named their machine is removed once
-        this one names everything it did.
+        same path from before notes named their machine is left as it is:
+        it may be another machine's, and only a person can tell.
 
         :param lockfile: The path of a ``chartbook.lock``.
         :param hashes: The content hashes it names.
@@ -921,15 +958,6 @@ class FolderStore(Store):
             except OSError:
                 pass
             raise
-        # A note of the same path from before notes named their machine may
-        # be another machine's: it goes only once this one keeps all it named
-        before = self._root_file(lockfile, machine="")
-        try:
-            with open(before, encoding="utf-8") as f:
-                if set(read_root(json.load(f)).hashes) <= set(hashes):
-                    before.unlink()
-        except (OSError, ValueError, KeyError, TypeError):
-            pass  # none, or one that cannot be read: left as it is
 
     def remove_root(self, lockfile: Union[str, Path]) -> bool:
         """Forget a lockfile on this machine. Its objects are then kept by nothing.
@@ -949,8 +977,11 @@ class FolderStore(Store):
     def roots(self) -> list[Root]:
         """Every lockfile the store has a note of, on every machine, by path.
 
-        A file in ``roots/`` that is not named as the store names a note
-        (a sync service's copy of one) is passed over.
+        A sync service's copy of a note, a ``.json`` file in ``roots/`` under
+        another name than a note's, is read too (:attr:`Root.copy`): it may
+        hold what the note held before the conflict, and a note only ever
+        adds to what is kept. One that cannot be read is passed over, with a
+        warning.
 
         :raises StoreError: If a note cannot be read. Nothing should be
             removed from a store that cannot say what it is keeping.
@@ -961,34 +992,42 @@ class FolderStore(Store):
             return []
         found = []
         for note in sorted(directory.glob("*.json")):
-            if not is_root_name(note.name):
-                continue
             try:
                 with open(note, encoding="utf-8") as f:
-                    found.append(read_root(json.load(f)))
+                    found.append(read_root(json.load(f), note.name))
             except (OSError, ValueError, KeyError, TypeError) as error:
-                raise StoreError(f"Cannot read {note}: {error}") from None
-        return sorted(found, key=lambda root: (str(root.lockfile), root.machine))
+                if is_root_name(note.name):
+                    raise StoreError(f"Cannot read {note}: {error}") from None
+                warnings.warn(f"{note} is not read: it is not a note the store wrote, and not a copy of one ({error}).", stacklevel=2)
+        return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 
     def incomplete(
-        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None
+        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
     ) -> Optional[str]:
-        """Why an object does not hold all of its bytes yet, by the sizes of its files; None if it does.
+        """Why an object is not whole as its record has it, by the names and sizes of its files; None if it is.
 
         A folder that a sync service keeps can have an object's files before
-        their bytes, or some of its files before the rest. The sizes are
-        compared with the record's, which reads nothing.
+        their bytes, or some of its files before the rest, or a copy of one
+        of them the service made. The sizes are compared with the record's,
+        which reads nothing.
         """
         if not isinstance(size_bytes, int) or isinstance(size_bytes, bool):
             return None
         path = self.object_path(content_hash)
-        if not path.is_dir():
-            return None  # not there at all, which `has` says
-        wrong = unsynced_part(path, size_bytes, files)
+        if not path.is_dir() or path.is_symlink():
+            return None  # not there at all, which `has` says; or a link, which `get` refuses
+        wrong = unsynced_part(path, size_bytes, files, every)
         if wrong is None:
             return None
+        what, waiting = wrong
+        if not waiting:
+            return (
+                f"its object in the store at {self.root} {what} (a sync service's copy, most likely), "
+                f"which a reader would read as its own. Remove that file from the object's folder; "
+                f"`chartbook store verify` checks the rest"
+            )
         return (
-            f"its object in the store at {self.root} {wrong}: it is not fully synced yet. Wait for "
+            f"its object in the store at {self.root} {what}: it is not fully synced yet. Wait for "
             f"the sync to finish, and run this again (if it stays so, `chartbook store verify` says more)"
         )
 
@@ -1125,7 +1164,7 @@ def store_for_url(url: str) -> Store:
     :raises ValueError: If the URL names a kind of store nothing provides;
         the message names the scheme.
     """
-    from chartbook.config import folder_of_store_url, store_kind
+    from chartbook.config import folder_of_store_url, shown_store_url, store_kind
 
     kind = store_kind(url)
     if kind == "folder":
@@ -1133,7 +1172,7 @@ def store_for_url(url: str) -> Store:
     plugin = _plugin_store_class(kind)
     if plugin is None:
         raise ValueError(
-            f"The store {url!r} is a {kind}:// store, and nothing provides one: only a folder "
+            f"The store {shown_store_url(url)!r} is a {kind}:// store, and nothing provides one: only a folder "
             f"store is built in, and no installed package has a `{STORE_PLUGIN_GROUP}` entry "
             f"point named {kind!r}. An S3 bucket, s3://bucket/prefix, is a store ChartBook brings, "
             f"with `pip install chartbook[s3]`; see the design page on stores and backends for the rest."

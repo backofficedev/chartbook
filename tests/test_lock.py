@@ -928,12 +928,16 @@ class TestGc:
         assert lock.run_gc(plan, moved) == (0, 4)
         assert list(moved.hashes()) == [] and moved.roots() == []
 
-    def test_a_lockfile_is_read_as_it_is_now(self, moved, downstream):
-        """Checked out at another commit, say, and not pinned again since."""
+    def test_a_lockfile_is_read_as_it_is_now_and_its_note_still_keeps(self, moved, downstream):
+        """Checked out at another commit, say, and not pinned again since: what the lockfile
+        names now is kept, and so is what its note recorded at the last pin. A note only adds."""
         locked = lock.read_lock(downstream)
+        by_year = locked.assets["acme/rates:by_year"]["content_hash"]
         del locked.assets["acme/rates:by_year"]
         lock.write_lock(locked, downstream / LOCK_FILE)
-        assert len(lock.plan_gc(moved).delete) == 2
+        assert by_year not in {h for h, _ in lock.plan_gc(moved).delete}
+        moved.add_root(downstream / LOCK_FILE, locked.hashes())  # the next pin's note
+        assert by_year in {h for h, _ in lock.plan_gc(moved).delete}
 
     def test_a_lockfile_that_cannot_be_read_stops_it(self, moved, downstream):
         (downstream / LOCK_FILE).write_text("not json")

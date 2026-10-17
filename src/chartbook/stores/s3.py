@@ -43,6 +43,7 @@ import re
 import stat
 import time
 import uuid
+import warnings
 from pathlib import Path
 from typing import Iterable, Iterator, Optional, Union
 from urllib.parse import parse_qsl, urlsplit
@@ -94,33 +95,42 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
     """``s3://bucket/prefix?endpoint=…`` into its bucket, prefix and options.
 
     :raises ValueError: If the URL has no bucket, a bucket name S3 would
-        not take, a prefix segment that is ``.`` or ``..`` or empty, or a
-        query key that is not one of :data:`URL_OPTIONS`.
+        not take, a prefix segment that is ``.`` or ``..`` or empty, a
+        query key that is not one of :data:`URL_OPTIONS`, or an endpoint
+        with a user name or password in it. The message never shows those.
     """
+    from chartbook.config import shown_store_url
+
     parts = urlsplit(url.strip())
+    shown = shown_store_url(url)  # what an error says: no user name or password
     if parts.scheme.lower() != "s3" or not parts.netloc:
-        raise ValueError(f"The store {url!r} is not an S3 URL: write s3://bucket/prefix.")
+        raise ValueError(f"The store {shown!r} is not an S3 URL: write s3://bucket/prefix.")
     bucket = parts.netloc
     if "@" in bucket or ":" in bucket:
         raise ValueError(
-            f"The store {url!r} carries more than a bucket name before the first slash. "
+            f"The store {shown!r} carries more than a bucket name before the first slash. "
             f"Credentials never go in the URL (the AWS SDK reads them from the environment "
             f"or ~/.aws); another service is named with ?endpoint=https://…"
         )
     if not _BUCKET.match(bucket) or ".." in bucket:
-        raise ValueError(f"The store {url!r} names a bucket S3 would not: {bucket!r}.")
+        raise ValueError(f"The store {shown!r} names a bucket S3 would not: {bucket!r}.")
     prefix = parts.path.strip("/")
     if prefix and any(segment in ("", ".", "..") for segment in prefix.split("/")):
         raise ValueError(
-            f"The store {url!r} has a prefix with an empty, '.' or '..' segment; "
+            f"The store {shown!r} has a prefix with an empty, '.' or '..' segment; "
             f"write s3://bucket/a/b."
         )
     options = {}
     for key, value in parse_qsl(parts.query, keep_blank_values=True):
         if key not in URL_OPTIONS:
             raise ValueError(
-                f"The store {url!r} has a query key {key!r} this store does not read; "
+                f"The store {shown!r} has a query key {key!r} this store does not read; "
                 f"the keys are: {', '.join(URL_OPTIONS)}."
+            )
+        if key == "endpoint" and "@" in urlsplit(value).netloc:
+            raise ValueError(
+                f"The store {shown!r} has an endpoint with a user name in it. Credentials never go "
+                f"in the URL: the AWS SDK reads them from the environment or ~/.aws."
             )
         options[key] = value
     return bucket, prefix, options
@@ -600,15 +610,6 @@ class S3Store(Store):
         self._check_layout(create=True)
         document = root_document(lockfile, hashes)
         self._write(self._root_key(lockfile), (json.dumps(document, indent=1) + "\n").encode())
-        # A note of the same path from before notes named their machine may
-        # be another machine's: it goes only once this one keeps all it named
-        before = self._root_key(lockfile, machine="")
-        body = self._read(before)
-        try:
-            if body is not None and set(read_root(json.loads(body.decode("utf-8"))).hashes) <= set(hashes):
-                self._delete_keys([before])
-        except (ValueError, KeyError, TypeError):
-            pass  # one that cannot be read: left as it is
 
     def remove_root(self, lockfile: Union[str, Path]) -> bool:
         key = self._root_key(lockfile, this_machine(create=False))
@@ -621,14 +622,22 @@ class S3Store(Store):
         self._check_layout()
         found = []
         for entry in self._list(self._key(ROOTS_DIR) + "/"):
-            if not is_root_name(entry["Key"].rpartition("/")[2]):
+            name = entry["Key"].rpartition("/")[2]
+            if not name.endswith(".json"):
                 continue
             body = self._read(entry["Key"])
             try:
-                found.append(read_root(json.loads(body.decode("utf-8")) if body is not None else {}))
+                found.append(read_root(json.loads(body.decode("utf-8")) if body is not None else {}, name))
             except (ValueError, KeyError, TypeError) as error:
-                raise StoreError(f"Cannot read {self}/{entry['Key']}: {error}") from None
-        return sorted(found, key=lambda root: (str(root.lockfile), root.machine))
+                # A copy of a note, as a folder store a sync service kept brings, is read
+                # too (FolderStore.roots); one that cannot be read is passed over
+                if is_root_name(name):
+                    raise StoreError(f"Cannot read {self}/{entry['Key']}: {error}") from None
+                warnings.warn(
+                    f"{self}/{entry['Key']} is not read: it is not a note the store wrote, and not a copy of one ({error}).",
+                    stacklevel=2,
+                )
+        return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 
     # -- snapshot records ---------------------------------------------------
 

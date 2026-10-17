@@ -806,14 +806,13 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
 def _held(store, record: dict) -> Location:
     """Where the store holds an asset, given its record with a content hash."""
     from chartbook import hashing
+    from chartbook.snapshot import not_whole
     from chartbook.utils import is_glob_pattern
 
     held = store.get(record["content_hash"])
-    # The sizes the record gives, against the files': a store in a synced
-    # folder can have a file before the whole of it. Nothing is read
-    from chartbook.snapshot import files_read
-
-    unsynced = store.incomplete(record["content_hash"], record.get("size_bytes"), files_read(record))
+    # The names and sizes the record gives, against the files': a store in a
+    # synced folder can have a file before the whole of it. Nothing is read
+    unsynced = not_whole(store, record)
     if unsynced:
         raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
     if record["location"].get("kind") in ("table", "query"):

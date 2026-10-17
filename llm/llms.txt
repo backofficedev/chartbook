@@ -62,6 +62,7 @@ chartbook pin --frozen       # Write nothing; exit 1 unless the lockfile is comp
 chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
 chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on
 chartbook run --frozen       # Pin nothing, fetch nothing, write nothing; build only if every pin is in the store
+chartbook store info         # Which store this machine uses, what set it, and the cache folder
 chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
 chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 7; --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets tags, branches and labels keep nothing)
 chartbook config             # Configure default catalog path

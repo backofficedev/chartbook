@@ -458,9 +458,9 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
         locked = None  # said already, by _pinned_keys
     pinned = next((e for e in (locked.dependencies if locked else []) if e.get("id") == key), None)
     try:
-        store = default_store()
-    except (ValueError, StoreError):
-        store = None
+        store, unopened = default_store(), None
+    except (ValueError, StoreError) as error:  # a URL no store is made from
+        store, unopened = None, error
     folder = store if isinstance(store, FolderStore) else None
     advice = lock.name_it_by_its_id(key, pinned, lambda: snapshot.readable_snapshots(folder)[0] if folder else [])
     records = [r for r in locked.assets_of(key).values() if r.get("content_hash")] if pinned else []
@@ -470,10 +470,10 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
             f"can be read on this machine. {advice}",
             False,
         )
+    if unopened is not None:
+        return f"directory not found: {directory}, and the store cannot be opened ({unopened}). {advice}", False
     try:
-        whole = store is not None and (
-            folder is None or all(folder.has(r["content_hash"]) and not lock._incomplete(folder, r) for r in records)
-        )
+        whole = folder is None or all(folder.has(r["content_hash"]) and not lock._incomplete(folder, r) for r in records)
     except (StoreError, OSError, ValueError) as error:  # a store that cannot be read, a half-synced store.json
         return f"directory not found: {directory}, and the store cannot be read ({error}). {advice}", False
     if not whole:
@@ -483,9 +483,9 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
             False,
         )
     return (
-        f"{entry['path']} is not on this machine. It is pinned, with its pins in the store, so this "
-        f"pipeline builds here (`chartbook run --frozen`), and only `chartbook update` needs the "
-        f"folder. {advice}",
+        f"there is no folder at {directory} on this machine (another machine's folder, or one that has "
+        f"moved). It is pinned from there, with its pins in the store, so this pipeline builds here "
+        f"(`chartbook run --frozen`), and only `chartbook update` needs the folder. {advice}",
         True,
     )
 

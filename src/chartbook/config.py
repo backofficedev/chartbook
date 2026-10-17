@@ -31,6 +31,8 @@ names the default catalog. Which store a machine uses is never a fact
 about a pipeline, so none of this is in a ``chartbook.toml``.
 """
 
+import functools
+import json
 import os
 import re
 import warnings
@@ -382,6 +384,25 @@ def get_store_setting() -> tuple[str, str]:
     return str(get_global_config_dir() / "store"), "default"
 
 
+def shown_store_url(url: str) -> str:
+    """A store URL as it may be printed: with no user name or password in it, nor in a URL among its options.
+
+    ``s3://b/p?endpoint=https://user:secret@minio.example.org`` is shown as
+    ``s3://b/p?endpoint=https://minio.example.org``. A folder is as it is.
+    """
+    from urllib.parse import parse_qsl
+
+    def bare(text: str) -> str:
+        return re.sub(r"^([A-Za-z][A-Za-z0-9+.-]*://)[^/?#]*@", r"\1", text)
+
+    if store_kind(url) == "folder":
+        return url
+    head, sep, query = url.partition("?")
+    if not sep:
+        return bare(head)
+    return f"{bare(head)}?" + "&".join(f"{key}={bare(value)}" for key, value in parse_qsl(query, keep_blank_values=True))
+
+
 def store_kind(url: str) -> str:
     """The kind of store a URL names: ``folder`` for a path or ``file://``, else its scheme."""
     text = url.strip()
@@ -436,64 +457,123 @@ def get_machine_id(create: bool = True) -> str:
     A store keeps a note of each lockfile whose pins it keeps, and a path
     names a file on one machine only: one person's two machines can each
     have a lockfile at the same path. So a note names its machine too.
+
     The name is made at random the first time a note is written, and kept
-    in ``~/.chartbook/machine-id``; it says nothing about the machine. A
-    home folder that several computers share (a cluster's) is one machine
-    here, as its lockfiles are the same files. Where the file cannot be
-    written, a name made from the host's is used.
+    in ``~/.chartbook/machine-id`` beside what the operating system calls
+    the machine (:func:`_os_machine_identity`, as a hash). A home folder
+    that comes to another machine (copied by a migration or restored from
+    a backup, in a cloned virtual machine or an image that had pinned,
+    shared by several computers, or kept by a sync service) does not bring
+    its name with it: that machine makes one of its own, kept in the same
+    file. The cost is a note no machine forgets, never a pin. Where nothing
+    can be kept, or there is no home folder, a name made from what the
+    operating system calls the machine is used.
 
     ``CHARTBOOK_MACHINE_ID`` names it instead: for machines that come and
     go with a fresh home folder each time (CI runners, containers), so
-    that each one's notes replace the last one's rather than pile up.
+    that each one's notes replace the last one's rather than pile up. Two
+    machines that last must never be given one name: each would read the
+    other's lockfiles as its own.
 
     :param create: Whether to make the name if there is none yet. Without
-        it, the name made from the host's is given, which only a machine
-        that could not keep a name of its own wrote notes under.
+        it, the name used where nothing can be kept is given, which only a
+        machine that could not keep a name of its own wrote notes under.
     """
-    import socket
+    import hashlib
     import uuid
 
     named = os.environ.get(MACHINE_ENV_VAR, "").strip()
     if named:
         return named
-    path = get_global_config_dir() / MACHINE_FILE
+    identity = hashlib.sha256(_os_machine_identity().encode("utf-8")).hexdigest()[:32]
+    unkept = uuid.uuid5(uuid.NAMESPACE_URL, f"chartbook-machine:{identity}").hex
+    try:
+        path = get_global_config_dir() / MACHINE_FILE
+    except (RuntimeError, KeyError, OSError):
+        return unkept  # no home folder to keep a name in
 
-    def kept() -> Optional[str]:
+    def kept() -> dict:
         try:
-            text = path.read_text(encoding="utf-8").strip()
-        except OSError:
-            return None
-        return text if re.fullmatch(r"[0-9a-f]{32}", text) else None
+            machines = json.loads(path.read_text(encoding="utf-8")).get("machines")
+        except (OSError, ValueError, AttributeError):
+            return {}
+        if not isinstance(machines, dict):
+            return {}
+        return {k: v for k, v in machines.items() if isinstance(v, str) and re.fullmatch(r"[0-9a-f]{32}", v)}
 
-    from_host = uuid.uuid5(uuid.NAMESPACE_DNS, socket.gethostname()).hex
-    found = kept()
+    found = kept().get(identity)
     if found is not None:
         return found
     if not create:
-        return from_host
-    made = uuid.uuid4().hex + "\n"
+        return unkept
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
-        temporary.write_text(made, encoding="utf-8")
         try:
-            # The first of two made at once is the one: a link is not made over a file
-            os.link(temporary, path)
-        except FileExistsError:
-            pass
-        except OSError:
-            # A disk with no links: made only where there is none, so the first still wins
-            try:
-                with open(path, "x", encoding="utf-8") as f:
-                    f.write(made)
-            except FileExistsError:
-                pass
+            if not path.exists():
+                temporary.write_text(json.dumps({"machines": {identity: uuid.uuid4().hex}}) + "\n", encoding="utf-8")
+                try:
+                    # The first of two made at once is the one: a link is not made over a file
+                    os.link(temporary, path)
+                except FileExistsError:
+                    pass
+                except OSError:
+                    # A disk with no links: made only where there is none, so the first still wins
+                    try:
+                        with open(path, "x", encoding="utf-8") as f:
+                            f.write(temporary.read_text(encoding="utf-8"))
+                    except FileExistsError:
+                        pass
+            if identity not in kept():
+                # A home this machine came to with another's name in it: one of its own beside it
+                machines = {**kept(), identity: uuid.uuid4().hex}
+                temporary.write_text(json.dumps({"machines": machines}, indent=1) + "\n", encoding="utf-8")
+                os.replace(temporary, path)
         finally:
             if temporary.exists():
                 temporary.unlink()
     except OSError:
         pass
-    return kept() or from_host
+    return kept().get(identity) or unkept
+
+
+@functools.lru_cache(maxsize=None)
+def _os_machine_identity() -> str:
+    """What the operating system calls this machine, asked once a process.
+
+    The hardware's UUID on macOS (``ioreg``), ``/etc/machine-id`` (or
+    D-Bus's) on Linux, ``MachineGuid`` in the registry on Windows; the
+    host's name where none of these says anything.
+    """
+    import socket
+    import subprocess
+    import sys
+
+    try:
+        if sys.platform == "darwin":
+            found = subprocess.run(
+                ["ioreg", "-rd1", "-c", "IOPlatformExpertDevice"], capture_output=True, text=True, timeout=10
+            ).stdout
+            match = re.search(r'"IOPlatformUUID"\s*=\s*"([^"]+)"', found)
+            if match:
+                return f"darwin:{match.group(1)}"
+        elif os.name == "nt":
+            import winreg
+
+            access = winreg.KEY_READ | getattr(winreg, "KEY_WOW64_64KEY", 0)
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography", 0, access) as key:
+                return f"windows:{winreg.QueryValueEx(key, 'MachineGuid')[0]}"
+        else:
+            for candidate in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
+                try:
+                    text = Path(candidate).read_text(encoding="utf-8").strip()
+                except OSError:
+                    continue
+                if text:
+                    return f"linux:{text}"
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    return f"host:{socket.gethostname()}"
 
 
 def get_default_host() -> str:

@@ -163,6 +163,7 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
     _clear_abandoned(kept.parent)
     staging = kept.parent / f".{kept.name}.{uuid.uuid4().hex}"
     why = ""
+    again = False  # a failure that a later build may not meet: not kept as done
     try:
         with tempfile.TemporaryDirectory(prefix="chartbook-version-") as scratch:
             # Named as the pipeline is, for a manifest whose ID comes from its
@@ -170,6 +171,10 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
             folder = Path(scratch) / slug(taken.pipeline).split("--")[-1]
             try:
                 laid = snapshots.materialize(taken, folder, store)
+            except snapshots.StoreNotReadyError as error:
+                # Not all in the store yet, a sync not finished perhaps: tried again next time
+                why = f"it is not all in the store yet: {_one_line(error)}"
+                again = True
             except Exception as error:  # noqa: BLE001 - a version that cannot be laid out is said, not fatal
                 why = f"it could not be laid out from the store: {_one_line(error)}"
             else:
@@ -191,7 +196,11 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
         if why:
             shutil.rmtree(staging / "site", ignore_errors=True)
             _placeholder(staging / "site", taken, why)
-        (staging / _DONE).write_text(why + "\n", encoding="utf-8")
+        if not again:
+            (staging / _DONE).write_text(why + "\n", encoding="utf-8")
+        if kept.is_dir() and not (kept / _DONE).is_file():
+            # The placeholder of a build that is to be tried again, which this one replaces
+            shutil.rmtree(kept, ignore_errors=True)
         try:
             os.replace(staging, kept)
         except OSError:
