@@ -487,8 +487,16 @@ def _has_commit(git_cache: GitCache, url: str, commit: str, fetch: bool = False)
 
     The cache fetches branches and tags, so a commit on none of them (a
     branch since deleted, a pull request's merge) is asked for by itself.
+    The commit comes from a lockfile, which anyone can edit: only a full
+    commit hash ever reaches git, never something it could read as an
+    option.
     """
     import subprocess
+
+    from chartbook.gitcache import _FULL_COMMIT
+
+    if not isinstance(commit, str) or not _FULL_COMMIT.match(commit):
+        return False
 
     environment = {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARIABLES}
 
@@ -516,6 +524,11 @@ def _has_commit(git_cache: GitCache, url: str, commit: str, fetch: bool = False)
 def _first_commit_of(git_cache: GitCache, url: str, commit: str) -> str:
     """A repository's first commit, back from *commit* by first parents, from its clone in the git cache; empty if not known."""
     import subprocess
+
+    from chartbook.gitcache import _FULL_COMMIT
+
+    if not isinstance(commit, str) or not _FULL_COMMIT.match(commit):
+        return ""  # only a full commit hash reaches git
 
     # The bare clone, named outright: a GIT_DIR in the environment (a git hook
     # sets one) would otherwise be asked instead
@@ -857,7 +870,12 @@ def _sync_now(
                 if may_move or not any(r.get("content_hash") for r in had.values()) or lost:
                     report.events.append(PinEvent("unfetched", key, detail=failure))
                 for asset_id, record in sorted(had.items()):
-                    _report_kept(record, key, store, report)
+                    if record.get("content_hash"):
+                        _report_kept(record, key, store, report)
+                    else:
+                        report.events.append(
+                            PinEvent("not_built", key, asset_id, detail=record.get("missing") or "not built when it was pinned")
+                        )
                 records = dict(had)
                 listed = {**was, "location": dict(was["location"])}
                 listed = {k: v for k, v in listed.items() if k != "pinned_hash"}

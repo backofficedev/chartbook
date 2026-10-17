@@ -470,6 +470,9 @@ def execute(script: str, directory: Path, name: Optional[str] = None, foreign: b
         from chartbook.gitcache import GIT_LOCATION_VARIABLES
 
         environment = {k: v for k, v in environment.items() if k not in GIT_LOCATION_VARIABLES}
+        # Nor the repository the git cache may be inside (a home kept in git):
+        # the copy has no .git of its own, and git looks no further up
+        environment["GIT_CEILING_DIRECTORIES"] = str(Path(directory).resolve().parent)
     if name == BUILD_SCRIPT:
         # A build is a batch run: a read of another pipeline that nothing
         # would record is refused there, not warned about

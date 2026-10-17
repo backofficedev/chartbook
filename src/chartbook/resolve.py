@@ -699,6 +699,18 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     asset_id = str(pinned)
     locked = _read_lock(manifest_dir)
     of_dependency = locked.assets_of(dependency.id) if locked else {}
+    if of_dependency and dependency.kind == "store":
+        listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
+        pinned_as = (listed.get("location") or {}).get("pipeline")
+        if pinned_as and pinned_as != dependency.pipeline:
+            # The entry names another pipeline now; its pin is still the old one's
+            _warn(
+                UserWarning(
+                    f"{dependency.id!r} is pinned as {pinned_as}, and [dependencies] now names "
+                    f"{dependency.pipeline}: reading {pinned_as}'s pinned copy until "
+                    f"`chartbook update {dependency.id}` follows it."
+                )
+            )
     if not of_dependency:
         raise AssetNotPinnedError(
             asset_id,

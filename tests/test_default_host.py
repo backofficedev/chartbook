@@ -738,8 +738,7 @@ class TestWhatTheSeventhReviewFound:
         lock.pin(forecast)
         monkeypatch.setenv("CHARTBOOK_STORE", str(tmp_path / "another-machines-store"))
         report = lock.update(forecast)
-        refused = [e for e in report.events if e.status == "unfetched"]
-        assert not refused or "on any branch or tag or by its hash" in refused[0].detail
+        assert not [e for e in report.events if e.status == "unfetched"] and _entry(forecast)["via"] == "rev"
 
     def test_a_git_dependencys_build_does_not_see_a_hooks_repository(self, host, monkeypatch):
         from chartbook import run
@@ -756,3 +755,55 @@ class TestWhatTheSeventhReviewFound:
         monkeypatch.delenv("GIT_DIR")
         assert report.failed is None, report.reason
         assert marker.read_text() == "none"
+
+
+
+class TestWhatTheEighthReviewFound:
+    def test_a_commit_in_the_lockfile_never_reaches_git_as_an_option(self, host, monkeypatch, tmp_path):
+        import json
+
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        marker = tmp_path / "MARKER"
+        document = {
+            "schema": lock.SCHEMA, "root": "acme/forecast",
+            "records": [{
+                "kind": "Pipeline", "version": lock.RECORD_VERSION, "id": "acme/forecast",
+                "dependencies": [{"id": "acme/rates", "via": "store", "location": {
+                    "kind": "store", "pipeline": "acme/rates", "commit": f"--upload-pack=touch {marker};",
+                }}],
+            }],
+        }
+        (forecast / lock.LOCK_FILE).write_text(json.dumps(document))
+        lock.update(forecast)
+        assert not marker.exists()
+        assert not lock._has_commit(None, "x", "--upload-pack=touch /tmp/x;", fetch=True)
+        assert lock._first_commit_of(None, "x", "--output=/tmp/x") == ""
+
+    def test_git_in_a_dependencys_build_does_not_find_a_repository_around_the_cache(self, host, monkeypatch):
+        from chartbook import run
+
+        around = host / "a-home-kept-in-git"
+        around.mkdir()
+        _git(around, "init", "--quiet", "-b", "main")
+        monkeypatch.setenv("CHARTBOOK_GIT_CACHE", str(around / "git-cache"))
+        marker = host / "toplevel"
+        script = (
+            f"{sys.executable} -c \"import subprocess; r = subprocess.run(['git', 'rev-parse', '--show-toplevel'], "
+            f"capture_output=True, text=True); open(r'{marker}', 'w').write(r.stdout.strip() or 'none')\""
+        )
+        _upstream(host, 4.0, scripts={"build": script})
+        forecast = _forecast(host / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
+        report = run.run(forecast, echo=lambda *a, **k: None)
+        assert report.failed is None, report.reason
+        assert marker.read_text() == "none"
+
+    def test_a_read_of_a_dependency_whose_id_changed_says_whose_pin_it_reads(self, host, monkeypatch):
+        repository = _upstream(host, 4.0)
+        snapshot.make(repository)
+        forecast = _forecast(host / "forecast", {"rates": {"id": "acme/rates"}})
+        lock.pin(forecast)
+        _forecast(forecast, {"rates": {"id": "acme/rates2"}})
+        monkeypatch.chdir(forecast)
+        with pytest.warns(UserWarning, match="is pinned as acme/rates, and \\[dependencies\\] now names acme/rates2"):
+            data.load("rates:treasury")
