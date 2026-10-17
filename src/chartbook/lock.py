@@ -272,7 +272,9 @@ class PinEvent:
             back in a store that had lost it), ``kept`` (already pinned),
             ``stale`` (already pinned, and the other pipeline has something
             else now), ``moved`` (an update changed the pin), ``not_built``
-            (declared, with no file to pin), ``lost`` (pinned, not in the
+            (declared, with no file to pin), ``never_pinned`` (a table or
+            query in a warehouse, which a snapshot never pins; the detail
+            says why), ``lost`` (pinned, not in the
             store, and the other pipeline no longer has those bytes),
             ``dropped`` (no longer declared, so no longer pinned),
             ``outside`` (declared with a path that reaches outside the
@@ -1313,6 +1315,10 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                         "not_built",
                     )
                 )
+            elif not content_hash and assets[asset_id].get("not_pinned"):
+                # A warehouse's query or view: never pinned, by design, and
+                # read by nothing that went through the lockfile
+                continue
             elif not content_hash and assets[asset_id].get("location", {}).get("kind") in ("table", "query"):
                 report.problems.append(
                     FrozenProblem(
@@ -1746,8 +1752,9 @@ def _sync_from_snapshots(
         for record in had.values():
             old = record.get("content_hash")
             if not old:
+                never = record.get("not_pinned")
                 report.events.append(
-                    PinEvent("not_built", key, record["id"], detail=_where(record))
+                    PinEvent("never_pinned" if never else "not_built", key, record["id"], detail=never or _where(record))
                 )
             elif not store.has(old):
                 report.events.append(
@@ -1842,8 +1849,9 @@ def _sync_from_snapshots(
         if new is None:
             # Not built when the snapshot was made. A pin from an earlier
             # snapshot does not belong beside this one's commit.
-            status = "let_go" if old else "not_built"
-            report.events.append(PinEvent(status, key, asset_id, old=old, detail=declared_path))
+            status = "let_go" if old else "never_pinned" if record.get("not_pinned") else "not_built"
+            # What a snapshot never pins says why, in place of where it is
+            report.events.append(PinEvent(status, key, asset_id, old=old, detail=record.get("not_pinned") or declared_path))
         elif old is None:
             report.events.append(PinEvent("pinned", key, asset_id, new=new))
         elif old == new:

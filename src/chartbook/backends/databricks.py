@@ -37,8 +37,19 @@ you, as running their code does.
 query's columns at once, so a name it does not know is refused then, and
 returns a lazy frame that runs the query when it is collected, a batch at a
 time; ``head(n)`` with nothing filtered asks for ``n`` rows. ChartBook runs
-nothing but ``select`` on its own account; the SQL a person runs through
-``data.sql()`` or ``data.connect()`` is between them and the warehouse.
+nothing but ``select`` and ``describe`` on its own account; the SQL a person
+runs through ``data.sql()`` or ``data.connect()`` is between them and the
+warehouse.
+
+**Pinned by version.** A Delta table keeps its history, so a snapshot
+records the table's version (:meth:`DatabricksBackend.version_of`) rather
+than a copy, and a pipeline that pins it reads ``VERSION AS OF`` that
+version, after checking that the table is still the one pinned
+(:meth:`DatabricksBackend.check_pin`). Delta keeps old versions for 7 days
+by default; a version the table no longer keeps cannot be read, and the
+message says what to do. Nothing else in a warehouse is pinned, and
+nothing is copied out of one: its rows stay under the warehouse's own
+grants.
 """
 
 from __future__ import annotations
@@ -50,6 +61,7 @@ from typing import TYPE_CHECKING, Optional
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from chartbook.backends import (
+    TABLE_IDENTIFIER,
     Backend,
     BackendError,
     machine_source_url,
@@ -71,6 +83,44 @@ AUTH = ("token", "oauth")
 
 #: Rows asked of the warehouse at a time when a frame is collected.
 BATCH_ROWS = 100_000
+
+#: What moves a pin to the version a table has now: a new snapshot upstream, then an update.
+REPIN = (
+    "The pipeline that names the table records the version it has now in a new snapshot "
+    "(`chartbook snapshot` there), and `chartbook update` here pins that."
+)
+
+#: What a read of a version the table no longer keeps adds to the warehouse's message.
+GONE = (
+    "{identifier} is pinned at version {version}, and the warehouse could not read it. If the "
+    "table no longer keeps that version (Delta keeps 7 days by default, and VACUUM removes what "
+    "is older): " + REPIN + " Its owner can keep versions longer with the table properties "
+    "delta.deletedFileRetentionDuration and delta.logRetentionDuration."
+)
+
+#: The error classes by which the warehouse says a thing has no versions a pin can name, and
+#: nothing else: a view where a table was expected, time travel a table does not support (a row
+#: filter or a column mask on it), time travel on a view. A class may be one of these or one of
+#: their subclasses. A version the table no longer keeps is not among them: that is one version.
+NO_VERSIONS_CLASSES = (
+    "EXPECT_TABLE_NOT_VIEW",
+    "FGAC_TIME_TRAVEL_NOT_SUPPORTED",
+    "UNSUPPORTED_FEATURE.TIME_TRAVEL",
+    "DELTA_UNSUPPORTED_TIME_TRAVEL_VIEWS",
+)
+
+#: An error's class, as the warehouse's message begins with it: ``[CLASS.SUBCLASS]``.
+_ERROR_CLASS = re.compile(r"\s*\[([A-Z][A-Z0-9_]*(?:\.[A-Z0-9_]+)*)\]")
+
+#: An error's SQLSTATE, as the warehouse's message ends with it.
+_SQLSTATE = re.compile(r"SQLSTATE:\s*([0-9A-Z]{5})\W*$")
+
+#: How many versions of history a check of a table made again reads back, at most.
+HISTORY_LIMIT = 10_000
+
+#: Tables made again whose history was found to have a pinned version, as written, this process:
+#: (name, the table's id now, version, written_at). One look at a long history is enough.
+_HISTORY_CHECKED: set = set()
 
 #: A workspace's host: letters, digits, dots and hyphens, with a dot in it (a workspace's host
 #: is never one label), and nothing a message could carry besides.
@@ -347,6 +397,8 @@ class DatabricksBackend(Backend):
         :raises chartbook.backends.BackendError: For a file, which the warehouse cannot read.
         """
         if location.kind == "table":
+            if getattr(location, "version", None) is not None:
+                return f"{quote_identifier(location.identifier, '`')} VERSION AS OF {int(location.version)}"
             return quote_identifier(location.identifier, "`")
         if location.kind == "query":
             return subselect(location.sql)
@@ -354,8 +406,11 @@ class DatabricksBackend(Backend):
             f"A Databricks warehouse cannot read a file of this machine, {getattr(location, 'path', location)}."
         )
 
-    def _run(self, query: str, answer):
-        """Run *query* on a connection of its own and return ``answer(cursor)``; the engine's errors as BackendError."""
+    def _run(self, query: str, answer, note: str = ""):
+        """Run *query* on a connection of its own and return ``answer(cursor)``; the engine's errors as BackendError.
+
+        *note* is added to an error of the statements, not to one of connecting.
+        """
         connection = self.connect()
         try:
             cursor = connection.cursor()
@@ -367,15 +422,144 @@ class DatabricksBackend(Backend):
         except BackendError:
             raise
         except Exception as error:  # noqa: BLE001 - the warehouse's own message
-            raise BackendError(str(error)) from None
+            raise BackendError(f"{error}\n{note}" if note else str(error)) from None
         finally:
             try:
                 connection.close()
             except Exception:  # noqa: BLE001 - closed already, or the session timed out
                 pass
 
-    def sql(self, query: str):
-        """Run SQL in the warehouse, as a Polars LazyFrame.
+    def scan(self, location: "Location"):
+        """A table or a query, as a Polars LazyFrame; a pinned version after :meth:`check_pin`."""
+        version = getattr(location, "version", None)
+        if version is None:
+            return self.sql(f"select * from {self.ref(location)}")
+        self.check_pin(location)
+        note = GONE.format(identifier=location.identifier, version=version)
+        try:
+            # Checked again when the frame is collected, which may be much later
+            return self.sql(f"select * from {self.ref(location)}", note=note, recheck=(location,))
+        except BackendError as error:
+            raise BackendError(f"{error}\n{note}") from None
+
+    def check_pin(self, location: "Location") -> None:
+        """Refuse a pinned version that is not of the table that was pinned.
+
+        The table's id (``describe detail``) is the one pinned; or, where it
+        is not, the table's history still has the pinned version, written
+        when the pin says. So a table made again with its history kept, as
+        ``create or replace`` makes one, still serves its pins, and a table
+        dropped and made again under the same name does not, whatever
+        versions it has reached since. The history is read back from the
+        newest version to the pinned one and no further.
+
+        :raises chartbook.backends.BackendError: If it is not, or the warehouse cannot say.
+        """
+        if getattr(location, "version", None) is None:
+            return
+        name = quote_identifier(location.identifier, "`")
+
+        def answer(cursor):
+            now = _table_id(cursor)
+            if now == location.table_id:
+                return True
+            seen = (location.identifier, now, location.version, location.written_at)
+            if seen in _HISTORY_CHECKED:
+                return True
+            cursor.execute(f"describe history {name} limit 1")
+            newest = _first_row(cursor).get("version")
+            if not isinstance(newest, int) or isinstance(newest, bool) or newest < location.version:
+                return False
+            if newest - location.version >= HISTORY_LIMIT:
+                raise BackendError(
+                    f"{location.identifier} was made again since it was pinned at version {location.version}, "
+                    f"and {newest - location.version} versions have been written since: too many to look "
+                    f"through for the one pinned. {REPIN}"
+                )
+            cursor.execute(f"describe history {name} limit {newest - location.version + 1}")
+            columns = [column[0] for column in cursor.description or []]
+            for row in reversed(cursor.fetchall()):  # the oldest is last
+                entry = dict(zip(columns, row))
+                if entry.get("version") == location.version:
+                    same = bool(location.written_at) and _when(entry.get("timestamp")) == location.written_at
+                    if same:
+                        _HISTORY_CHECKED.add(seen)
+                    return same
+            return False
+
+        pinned = f"{location.identifier} is pinned at version {location.version}."
+        if not self._run(f"describe detail {name}", answer, note=f"{pinned} {REPIN}"):
+            raise BackendError(
+                f"{location.identifier} is not the table that was pinned at version {location.version}: its id "
+                f"has changed, and its history does not have that version as it was (it was dropped and made "
+                f"again, or its history no longer reaches back that far). {REPIN}"
+            )
+
+    def version_of(self, location: "Location") -> Optional[dict]:
+        """A Delta table's current version: its number, the table's id and full name, when it was written.
+
+        ``describe detail`` gives the format, the id and the full name, so a
+        name declared in one or two parts is pinned in three, whatever
+        catalog the reader's connection starts in (from the session's
+        catalog and schema, where it does not give one); ``describe
+        history`` with ``limit 1`` gives the newest version; and that
+        version is read once, with no rows. None for a view, a table that
+        is not Delta, a materialized view, a streaming table or a table
+        with a row filter, as the warehouse says: by its format, or by an
+        error whose class or SQLSTATE says the feature is not supported
+        (:func:`_has_no_versions`). An error in connecting is never that.
+
+        :raises chartbook.backends.BackendError: For any other failure: the
+            warehouse cannot be reached, the table is not there, or this
+            user may not read its history.
+        """
+        if location.kind != "table":
+            return None
+        name = quote_identifier(location.identifier, "`")
+        connection = self.connect()  # an error here is said as it is, never "no versions"
+        try:
+            cursor = connection.cursor()
+            try:
+                cursor.execute(f"describe detail {name}")
+                detail = _first_row(cursor)
+                if str(detail.get("format") or "").lower() != "delta" or not detail.get("id"):
+                    return None
+                cursor.execute(f"describe history {name} limit 1")
+                history = _first_row(cursor)
+                version = history.get("version")
+                if not isinstance(version, int) or isinstance(version, bool):
+                    return None
+                cursor.execute(f"select * from {name} VERSION AS OF {version} limit 0")
+                cursor.fetchall_arrow()
+                full = str(detail.get("name") or "")
+                if not (TABLE_IDENTIFIER.fullmatch(full) and "`" not in full and full.count(".") == 2):
+                    full = _in_full(cursor, location.identifier)
+                return {
+                    "version": version,
+                    "table_id": str(detail["id"]),
+                    "name": full,
+                    "written_at": _when(history.get("timestamp")),
+                }
+            finally:
+                cursor.close()
+        except BackendError:
+            raise
+        except Exception as error:  # noqa: BLE001 - the warehouse's own message
+            if _has_no_versions(str(error)):
+                return None
+            raise BackendError(str(error)) from None
+        finally:
+            try:
+                connection.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def sql(self, query: str, note: str = "", recheck=()):
+        """Run SQL in the warehouse, as a Polars LazyFrame; *note* is added to an error found while collecting.
+
+        *recheck*, the locations pinned by a version that the query reads,
+        are checked again (:meth:`check_pin`) each time the frame is
+        collected, which may be long after it was made.
 
         The warehouse binds it now (``select * from (…) limit 0``), so a name
         it does not know is refused at once, and its columns are the
@@ -425,6 +609,8 @@ class DatabricksBackend(Backend):
             # filtered asks the warehouse for that many and no more
             text = query if n_rows is None or predicate is not None else f"select * from {subselect(query)} limit {int(n_rows)}"
             left = n_rows
+            for location in recheck:
+                self.check_pin(location)
             connection = self.connect()
             try:
                 cursor = connection.cursor()
@@ -432,12 +618,12 @@ class DatabricksBackend(Backend):
                     try:
                         cursor.execute(text)
                     except Exception as error:  # noqa: BLE001 - the warehouse's own message
-                        raise BackendError(str(error)) from None
+                        raise BackendError(f"{error}\n{note}" if note else str(error)) from None
                     while left is None or left > 0:
                         try:
                             batch = cursor.fetchmany_arrow(batch_size or BATCH_ROWS)
                         except Exception as error:  # noqa: BLE001
-                            raise BackendError(str(error)) from None
+                            raise BackendError(f"{error}\n{note}" if note else str(error)) from None
                         if batch.num_rows == 0:
                             return
                         frame = checked(pl.from_arrow(batch), schema)
@@ -534,3 +720,63 @@ def _polars_type(column):
         f"The query's result is empty, the warehouse sent no columns with it, and the type of "
         f"{name}, {kind or 'not given'}, cannot be read from its name."
     )
+
+
+def _table_id(cursor) -> str:
+    """The ``id`` column of what ``describe detail`` gave."""
+    columns = [column[0] for column in cursor.description or []]
+    row = cursor.fetchone()
+    return str(dict(zip(columns, row or ())).get("id") or "")
+
+
+def _first_row(cursor) -> dict:
+    """The first row of what was run, by column name; empty if there is none."""
+    columns = [column[0] for column in cursor.description or []]
+    row = cursor.fetchone()
+    return dict(zip(columns, row)) if row is not None else {}
+
+
+def _when(value) -> str:
+    """When a version was written, as text: in UTC when the warehouse says the zone, else as it says it."""
+    from datetime import timezone
+
+    if hasattr(value, "astimezone") and getattr(value, "tzinfo", None) is not None:
+        return value.astimezone(timezone.utc).isoformat()
+    return value.isoformat() if hasattr(value, "isoformat") else str(value or "")
+
+
+def _has_no_versions(message: str) -> bool:
+    """Whether the warehouse's error says the thing has no versions a pin can name.
+
+    By the class the message begins with, which must be one of
+    :data:`NO_VERSIONS_CLASSES` or a subclass of one; where the message
+    begins with no class, by the SQLSTATE it ends with, ``0A000`` (not
+    supported) or ``42809`` (the wrong kind of object). Never by words
+    elsewhere in the message, which may name a table or a schema, and
+    never by a class or state that is not supported on one warehouse and
+    is on another.
+    """
+    found = _ERROR_CLASS.match(message)
+    if found:
+        name = found.group(1)
+        return any(name == known or name.startswith(known + ".") for known in NO_VERSIONS_CLASSES)
+    state = _SQLSTATE.search(message.strip())
+    return bool(state) and state.group(1) in ("0A000", "42809")
+
+
+def _in_full(cursor, identifier: str) -> str:
+    """A table's name in three parts: as declared if it has them, else in the session's catalog and schema.
+
+    :raises chartbook.backends.BackendError: If the session does not say them.
+    """
+    from chartbook.backends import TABLE_IDENTIFIER
+
+    parts = identifier.split(".")
+    if len(parts) == 3:
+        return identifier
+    cursor.execute("select current_catalog(), current_schema()")
+    row = cursor.fetchone() or (None, None)
+    full = ".".join([str(part) for part in row if part][: 3 - len(parts)] + parts)
+    if full.count(".") != 2 or not TABLE_IDENTIFIER.fullmatch(full) or "`" in full:
+        raise BackendError(f"The warehouse did not say which catalog and schema {identifier} is in.")
+    return full

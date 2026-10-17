@@ -490,6 +490,17 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     return problems
 
 
+def _locked_record(pipeline_dir, asset_id: str) -> Optional[dict]:
+    """An asset's record in a pipeline's lockfile; None if there is no lockfile, or it has none."""
+    from chartbook import lock
+
+    try:
+        locked = lock.read_lock(Path(pipeline_dir) / lock.LOCK_FILE)
+    except (lock.LockError, OSError, ValueError):
+        return None
+    return locked.assets.get(asset_id) if locked is not None else None
+
+
 def check_model_lineage(manifest: dict, base_dir: Path) -> list[Problem]:
     """Report training data that names a dataframe which is known not to exist.
 
@@ -519,6 +530,16 @@ def check_model_lineage(manifest: dict, base_dir: Path) -> list[Problem]:
                     )
                 except (KeyError, ValueError):
                     continue
+                pinned = _locked_record(pipeline_dir, f"{location.id}:{reference.name}")
+                if pinned is not None and pinned.get("not_pinned"):
+                    warnings.warn(
+                        f"{pipeline_dir / 'chartbook.toml'}: [models.{model_id}] trained_on: "
+                        f"{str(reference)!r} is in a warehouse and never pinned "
+                        f"({pinned['not_pinned']}), so nothing records what the model was trained "
+                        f"on, and a build here cannot read it.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
                 directory = location.path
                 if directory is None and location.found_in == "dependencies":
                     # A git dependency: its checkout, if it has been fetched

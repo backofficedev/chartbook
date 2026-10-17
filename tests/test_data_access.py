@@ -581,7 +581,7 @@ class TestNotPinnedAcrossPipelines:
         )
         lock.pin(downstream, from_folder=True)
         assert isinstance(resolve("rates:rates", start_dirs=[downstream]), FileLocation)
-        with pytest.raises(AssetNotPinnedError, match="is a table in a source of the pipeline 'rates' and has no pinned copy: a pin from a folder takes no table") as e:
+        with pytest.raises(AssetNotPinnedError, match="is a table in a source of the pipeline 'rates' and has no pin: a snapshot keeps one only from a DuckDB file or a warehouse") as e:
             resolve("rates:curve", start_dirs=[downstream])
         assert e.value.reason == "not_built"
         with pytest.raises(AssetNotPinnedError, match="is a query in a source"):

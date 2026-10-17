@@ -14,10 +14,24 @@ http_path, access_token=…, auth_type=…, catalog=…, schema=…,
 user_agent_entry=…)``, ``cursor()``, ``execute(operation)``,
 ``fetchall_arrow()``, ``fetchmany_arrow(size)``, ``fetchone()``,
 ``description`` as seven-item tuples with the type's name second.
+
+A table made with :meth:`Warehouse.table` is a Delta table: each write is a
+new version, kept as a DuckDB table of its own, ``describe detail`` gives
+its format and id, ``describe history … limit 1`` its newest version, and
+``… VERSION AS OF n`` reads version ``n`` until :meth:`Warehouse.vacuum`
+drops it. :meth:`Warehouse.view` and ``delta=False`` make what has no
+versions; :meth:`Warehouse.replace` drops a table and makes it again, with a
+new id and its versions from 0; :meth:`Warehouse.rebuild` makes it again as
+``create or replace`` does, with a new id and its history kept. A name in one
+or two parts is found in the connection's catalog and schema.
+:meth:`Warehouse.fail` makes the next statement that matches fail.
 """
 
+import re
 import sys
 import types
+import uuid
+from datetime import datetime, timedelta, timezone
 
 import duckdb
 import pyarrow as pa
@@ -76,14 +90,62 @@ class Warehouse:
         self.queries = []
         #: As a connector may: an empty result with no columns, its schema not sent
         self.empty_without_schema = False
+        #: Statements that fail once, by a pattern of their text, with a message
+        self.failures = []
+        #: As a warehouse might: ``describe detail`` with no name
+        self.detail_without_name = False
+        #: Each table by its full name: its id, its format, and its versions, (number, when, DuckDB table)
+        self.tables = {}
+        self.views = set()
+        self._clock = datetime(2026, 10, 1, tzinfo=timezone.utc)
 
-    def table(self, identifier: str, sql: str) -> None:
-        """Make a table, ``catalog.schema.name``, from a DuckDB ``select``."""
+    def _schema(self, identifier: str) -> None:
         catalog, schema, _ = identifier.split(".")
         if catalog not in {row[0] for row in self.duck.execute("select database_name from duckdb_databases()").fetchall()}:
             self.duck.execute(f"attach ':memory:' as {catalog}")
         self.duck.execute(f"create schema if not exists {catalog}.{schema}")
-        self.duck.execute(f"create or replace table {identifier} as {sql}")
+
+    def table(self, identifier: str, sql: str, delta: bool = True) -> None:
+        """Make a table, ``catalog.schema.name``, from a DuckDB ``select``; again, a new version of it."""
+        self._schema(identifier)
+        found = self.tables.setdefault(
+            identifier, {"id": str(uuid.uuid4()), "format": "delta" if delta else "parquet", "versions": []}
+        )
+        number = found["versions"][-1][0] + 1 if found["versions"] else 0
+        self._clock += timedelta(hours=1)
+        held = f"{identifier}__v{number}"
+        self.duck.execute(f"create table {held} as {sql}")
+        found["versions"].append((number, self._clock, held))
+        self.duck.execute(f"create or replace view {identifier} as select * from {held}")
+
+    def view(self, identifier: str, sql: str) -> None:
+        """Make a view: it has no versions, and ``describe detail`` refuses it."""
+        self._schema(identifier)
+        self.duck.execute(f"create or replace view {identifier} as {sql}")
+        self.views.add(identifier)
+
+    def rebuild(self, identifier: str, sql: str) -> None:
+        """Make a table again as ``create or replace`` does: a new id, and its history kept."""
+        self.tables[identifier]["id"] = str(uuid.uuid4())
+        self.table(identifier, sql)
+
+    def fail(self, pattern: str, message: str) -> None:
+        """Make the next statement whose text matches *pattern* fail with *message*."""
+        self.failures.append((pattern, message))
+
+    def replace(self, identifier: str, sql: str) -> None:
+        """Drop a table and make it again: a new id, and its versions start again at 0."""
+        for _, _, held in self.tables.pop(identifier)["versions"]:
+            self.duck.execute(f"drop table if exists {held}")
+        self.table(identifier, sql)
+
+    def vacuum(self, identifier: str, keep_from: int) -> None:
+        """Drop the versions of a table older than *keep_from*, as VACUUM after the retention period does."""
+        found = self.tables[identifier]
+        for number, _, held in found["versions"]:
+            if number < keep_from:
+                self.duck.execute(f"drop table if exists {held}")
+        found["versions"] = [v for v in found["versions"] if v[0] >= keep_from]
 
     def open(self):
         """Connections not yet closed."""
@@ -128,10 +190,19 @@ class Cursor:
     def execute(self, operation, parameters=None):
         warehouse = self.connection.warehouse
         warehouse.queries.append(operation)
-        try:
-            self._table = self.connection.duck.execute(operation.replace("`", '"')).fetch_arrow_table()
-        except duckdb.Error as error:
-            raise ServerOperationError(str(error)) from None
+        for failure in list(warehouse.failures):
+            if re.search(failure[0], operation, re.IGNORECASE):
+                warehouse.failures.remove(failure)
+                raise ServerOperationError(failure[1])
+        text = operation.replace("`", '"')
+        special = _describe(self.connection, text)
+        if special is not None:
+            self._table = special
+        else:
+            try:
+                self._table = self.connection.duck.execute(_at_versions(self.connection, text)).fetch_arrow_table()
+            except duckdb.Error as error:
+                raise ServerOperationError(str(error)) from None
         self._at = 0
         self.description = [
             (field.name, _type_name(field.type), None, None, None, None, True) for field in self._table.schema
@@ -150,6 +221,12 @@ class Cursor:
         self._at += batch.num_rows
         return batch
 
+    def fetchall(self):
+        rows = []
+        while (row := self.fetchone()) is not None:
+            rows.append(row)
+        return rows
+
     def fetchone(self):
         if self._at >= self._table.num_rows:
             return None
@@ -165,6 +242,74 @@ class Cursor:
 
     def __exit__(self, *exc):
         self.close()
+
+
+#: A name as the statements have it: one to three parts, each quoted or plain.
+_NAME = r'((?:"[^"]+"|\w+)(?:\.(?:"[^"]+"|\w+)){0,2})'
+
+
+def _plain(name: str, connection) -> str:
+    """A name in full, ``catalog.schema.table``, as the connection's catalog and schema complete it."""
+    parts = name.replace('"', "").split(".")
+    catalog = connection.arguments.get("catalog") or "hive_metastore"
+    schema = connection.arguments.get("schema") or "default"
+    return ".".join([catalog, schema][: 3 - len(parts)] + parts)
+
+
+def _describe(connection, text: str):
+    """What ``describe detail`` and ``describe history`` give, as Arrow; None for any other statement."""
+    if re.fullmatch(r"\s*select\s+current_catalog\(\),\s*current_schema\(\)\s*", text, re.IGNORECASE):
+        arguments = connection.arguments
+        return pa.table({"c": [arguments.get("catalog") or "hive_metastore"], "s": [arguments.get("schema") or "default"]})
+    detail = re.fullmatch(rf"\s*describe\s+detail\s+{_NAME}\s*", text, re.IGNORECASE)
+    history = re.fullmatch(rf"\s*describe\s+history\s+{_NAME}(\s+limit\s+(\d+))?\s*", text, re.IGNORECASE)
+    if detail is None and history is None:
+        return None
+    warehouse = connection.warehouse
+    name = _plain((detail or history).group(1), connection)
+    if name in warehouse.views:
+        command = "DESCRIBE DETAIL" if detail is not None else "DESCRIBE HISTORY"
+        raise ServerOperationError(
+            f"[EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE] '{command}' expects a table but `{name}` is a view. "
+            f"SQLSTATE: 42809"
+        )
+    found = warehouse.tables.get(name)
+    if found is None:
+        raise ServerOperationError(f"[TABLE_OR_VIEW_NOT_FOUND] The table or view `{name}` cannot be found. SQLSTATE: 42P01")
+    if detail is not None:
+        return pa.table({"format": [found["format"]], "id": [found["id"]], "name": ["" if warehouse.detail_without_name else name]})
+    if found["format"] != "delta":
+        raise ServerOperationError(f"[DELTA_TABLE_NOT_FOUND] `{name}` is not a Delta table.")
+    newest_first = list(reversed(found["versions"]))
+    if history.group(3):
+        newest_first = newest_first[: int(history.group(3))]
+    return pa.table(
+        {
+            "version": pa.array([v[0] for v in newest_first], pa.int64()),
+            "timestamp": pa.array([v[1] for v in newest_first], pa.timestamp("us", tz="UTC")),
+            "operation": ["WRITE"] * len(newest_first),
+        }
+    )
+
+
+def _at_versions(connection, text: str) -> str:
+    """``name VERSION AS OF n`` as the DuckDB table that holds version n; an error if it is not kept."""
+    warehouse = connection.warehouse
+
+    def held(match):
+        name, number = _plain(match.group(1), connection), int(match.group(2))
+        found = warehouse.tables.get(name)
+        if found is None or found["format"] != "delta":
+            raise ServerOperationError(f"[DELTA_TABLE_NOT_FOUND] `{name}` is not a Delta table.")
+        for kept, _, table in found["versions"]:
+            if kept == number:
+                return table
+        raise ServerOperationError(
+            f"[DELTA_UNSUPPORTED_TIME_TRAVEL_BEYOND_DELETED_FILE_RETENTION_DURATION] Cannot time travel "
+            f"`{name}` to version {number}: its files were removed."
+        )
+
+    return re.sub(rf"{_NAME}\s+VERSION\s+AS\s+OF\s+(\d+)", held, text, flags=re.IGNORECASE)
 
 
 def install(monkeypatch, warehouse: Warehouse, *others: Warehouse):

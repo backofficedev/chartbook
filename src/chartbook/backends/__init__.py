@@ -77,6 +77,11 @@ BACKEND_PLUGIN_GROUP = "chartbook.backends"
 #: What installs the driver of each backend ChartBook brings, for a message.
 EXTRAS = {"databricks": "pip install chartbook[databricks]"}
 
+#: A table's name as a pin of it may say it: one to three dot-separated
+#: parts, none empty and none with a control character. A manifest's own
+#: ``table`` is not held to it; a pin of one that is not this is refused.
+TABLE_IDENTIFIER = re.compile(r"[^.\x00-\x1f\x7f]+(\.[^.\x00-\x1f\x7f]+){0,2}")
+
 #: Where a machine keeps what a manifest may not: ``[<source>] url = "…"``.
 SOURCES_FILE = "sources.toml"
 
@@ -304,8 +309,8 @@ def refuse_in_an_untrusted_build() -> None:
 
     if untrusted_source():
         raise BackendError(
-            "A table or a query is not read in a build of files from a store; the snapshot "
-            "holds its rows as parquet."
+            "A table or a query is not read in a build of files from a store; such a build shows "
+            "what the snapshot itself holds."
         )
 
 
@@ -378,6 +383,21 @@ class Backend:
     def span(self, location: "Location", column: str) -> tuple:
         """The first and last date in one column, read as timestamps; a value that is not one is left out."""
         raise NotImplementedError
+
+    def check_pin(self, location: "Location") -> None:
+        """Refuse a location pinned by a version that is not of the table that was pinned; nothing to check by default."""
+
+    def version_of(self, location: "Location") -> Optional[dict]:
+        """What a pin of this table can name instead of a copy of it; None if the engine keeps no versions.
+
+        For an engine with time travel, ``{"version": int, "table_id": str,
+        "name": str, "written_at": str}``: the table's current version, the
+        id of the table itself, its full name, and when that version was
+        written. A snapshot then records the version, and a pipeline that
+        pins it reads the table at that version (``TableLocation.version``),
+        after :meth:`check_pin`.
+        """
+        return None
 
 
 class ParquetBackend:

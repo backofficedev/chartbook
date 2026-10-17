@@ -400,7 +400,7 @@ class TestReading:
 
     def test_an_error_only_running_finds_carries_the_warehouses_message(self, pipeline, signed_in, warehouse, monkeypatch):
         frame = data.load("curve", project_dir=pipeline)
-        warehouse.duck.execute("drop table workspace.rates.curve")
+        warehouse.duck.execute("drop view workspace.rates.curve")
         # Polars' ComputeError, or the BackendError itself, by Polars version
         with pytest.raises((pl.exceptions.ComputeError, BackendError)) as error:
             frame.collect()
@@ -533,18 +533,3 @@ class TestDescribing:
         assert glimpse.startswith("A table workspace.rates.curve in source 'warehouse' (databricks): 3 rows, 3 columns.")
         assert "First rows:" in glimpse
         assert warehouse.queries[-1].endswith(") limit 5")
-
-
-class TestSnapshot:
-    def test_a_warehouse_table_is_recorded_and_not_copied(self, pipeline, signed_in, warehouse, tmp_path):
-        from chartbook.resolve import _read_raw_manifest
-        from chartbook.snapshot import materialize_in_source
-        from chartbook.store import FolderStore
-
-        raw = _read_raw_manifest(pipeline / "chartbook.toml")
-        found = {str(local): (record, reason) for local, record, reason in materialize_in_source(pipeline, "acme/rates", raw, FolderStore(tmp_path / "store"))}
-        record, reason = found["curve"]
-        assert "content_hash" not in record
-        assert record["location"]["backend"] == "databricks"
-        assert "is read where it is" in reason
-        assert warehouse.connections == []

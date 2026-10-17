@@ -304,6 +304,9 @@ class SnapshotReport:
         documents_skipped: The documents the manifest names that were not
             kept, each with why: not a plain path inside the folder, a
             link, not a file.
+        not_pinned: The tables and queries in a warehouse that a snapshot
+            never pins, each with why: a query, a view, a table with no
+            versions. Not among *not_built*: there is nothing to build.
     """
 
     snapshot: Snapshot
@@ -313,6 +316,7 @@ class SnapshotReport:
     skipped_labels: list[tuple[str, str]] = field(default_factory=list)
     index_skipped: Optional[str] = None
     documents_skipped: list[tuple[str, str]] = field(default_factory=list)
+    not_pinned: list[tuple[str, str]] = field(default_factory=list)
 
 
 def asset_record(
@@ -412,6 +416,78 @@ def materialized_name(record: dict) -> str:
     return f"{record['ref']['name']}.parquet"
 
 
+def table_version_name(record: dict) -> str:
+    """The file a table pinned by its version is held as, inside its store object: ``<name>.version.json``."""
+    return f"{record['ref']['name']}.version.json"
+
+
+def _kept_from_an_engine(
+    local: AssetRef, ref: AssetRef, pipeline: str, name: str, entry: dict, source: dict, where: str, store: Store
+) -> tuple[AssetRef, dict, Optional[str]]:
+    """A table or query in an engine other than DuckDB, as a snapshot keeps it: by its version, or not at all.
+
+    A table whose engine keeps its versions (a Delta table in Databricks) is
+    kept by its version: a small file naming the backend, the table's full
+    name, its id, the version and when it was written goes into the store,
+    the record's hash is that file's, and the record says the same
+    (``table_version``). Nothing of its rows is copied; a pipeline that pins
+    it reads that version from the engine. The same version makes the same
+    file, so a snapshot of a table nothing has written to is the same
+    snapshot. Anything else, a query, a view, a table with no versions, is
+    recorded without a hash: nothing is copied out of a warehouse, whose
+    rows stay under its own grants.
+
+    :returns: Its local reference, its record, and why it was not kept, or None.
+    """
+    import tempfile
+
+    from chartbook.backends import open_backend
+    from chartbook.resolve import TableLocation
+
+    url = source["_resolved_url"]
+
+    def not_pinned(why: str):
+        # Said in the record too, so that a pin of it, and `pin --frozen`,
+        # know it is never pinned rather than not built yet
+        record = {**source_record(ref, pipeline, entry, source, None), "not_pinned": why}
+        return local, record, f"{where}: {why}"
+
+    if not entry.get("table"):
+        return not_pinned(
+            "a query in a warehouse is not copied out of it, and has no version to pin; declare the "
+            "table it reads, or make its result a table, to pin it"
+        )
+    try:
+        backend = open_backend(source["backend"], url, entry["source"])
+        version = backend.version_of(TableLocation(entry["source"], source["backend"], url, entry["table"]))
+        if version is None:
+            from chartbook.backends import Backend
+
+            if type(backend).version_of is Backend.version_of:
+                return not_pinned(f"its backend, {source['backend']}, pins nothing by version, and nothing is copied out of a warehouse")
+            return not_pinned(
+                "it keeps no versions to pin (a view, or a table that is not Delta), and nothing is "
+                "copied out of a warehouse"
+            )
+        with tempfile.TemporaryDirectory() as scratch:
+            out = Path(scratch) / f"{name}.version.json"
+            pinned = {
+                "backend": source["backend"],
+                "identifier": version["name"],
+                "table_id": version["table_id"],
+                "version": version["version"],
+                "written_at": version["written_at"],
+            }
+            out.write_text(json.dumps(pinned, sort_keys=True) + "\n", encoding="utf-8")
+            # A copy, never a link: the file is about to be deleted with its folder
+            stored = store.put(out, links=("reflink", "copy"))
+    except Exception as error:  # noqa: BLE001 - the engine's own error, whatever it is
+        return local, source_record(ref, pipeline, entry, source, None), f"{where}: could not be read: {error}"
+    record = source_record(ref, pipeline, entry, source, stored)
+    record["table_version"] = dict(version)
+    return local, record, None
+
+
 def materialize_in_source(
     directory: Path, pipeline: str, raw: dict, store: Store
 ) -> list[tuple[AssetRef, dict, Optional[str]]]:
@@ -420,8 +496,11 @@ def materialize_in_source(
     A table in a DuckDB file is what the pipeline made, as much as a parquet
     file is; a snapshot holds files, so the table is written out as one.
     The record's location stays the source's, and its ``content_hash`` is
-    the parquet's. A table in ``:memory:``, one in a warehouse, one the
-    engine cannot read, or one with a column Polars cannot import, is recorded without a hash,
+    the parquet's. A Delta table in a warehouse is recorded by its
+    version instead, and nothing else in a warehouse is kept
+    (:func:`_kept_from_an_engine`). A table
+    in ``:memory:``, one the engine cannot read, or one with a column
+    Polars cannot import, is recorded without a hash,
     with the reason, as an asset that is not built is. The file is read on
     one thread, and a query that has no ORDER BY of its own is written
     sorted on every column, so that the same rows give the same bytes
@@ -467,10 +546,7 @@ def materialize_in_source(
             found.append((local, source_record(ref, pipeline, entry, None, None), f"{where}: no such source"))
             continue
         if source.get("backend") != "duckdb":
-            # A warehouse's table is read where it is, by whoever reads it
-            found.append((local, source_record(ref, pipeline, entry, source, None),
-                          f"{where}: a {source.get('backend')} source is read where it is, and a snapshot "
-                          f"does not pin it yet"))
+            found.append(_kept_from_an_engine(local, ref, pipeline, name, entry, source, where, store))
             continue
         url = source["_resolved_url"]
         if url == MEMORY_URL:
@@ -1866,9 +1942,12 @@ def make(
     # A dataframe that is a table or a query in a DuckDB file has no file of
     # its own: it is written out as parquet into the store, so that a pin
     # copies it like any file and another pipeline reads it by name
+    not_pinned = []
     for local, record, reason in materialize_in_source(directory, pipeline, raw, store):
         assets[str(local)] = record
-        if reason is not None:
+        if record.get("not_pinned"):
+            not_pinned.append((record["id"], record["not_pinned"]))
+        elif reason is not None:
             not_built.append((record["id"], reason))
 
     # What each model was trained on: the hashes staleness is later judged
@@ -1890,10 +1969,12 @@ def make(
             f"{pipeline} declares nothing with a path, so there is nothing to "
             f"take a snapshot of."
         )
-    if len(not_built) == len(assets):
+    if not_built and len(not_built) + len(not_pinned) == len(assets):
+        # Nothing built: what is never pinned is no reason for a snapshot, and no bar to one
+        said = "; ".join(f"{asset}: {why}" for asset, why in not_built[:3]) + ("; and more" if len(not_built) > 3 else "")
         raise SnapshotError(
             f"{pipeline} has built nothing it declares, so there is nothing to "
-            f"take a snapshot of. Build it first: `chartbook run`."
+            f"take a snapshot of ({said}). Build it first (`chartbook run`), or put right what is said."
         )
 
     snapshot = Snapshot(
@@ -1934,7 +2015,7 @@ def make(
         if (same.documents is not None or not documents) and same.tags == snapshot.tags:
             if same.built_by_run or not built_by_run:
                 store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-                return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
+                return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw), not_pinned=not_pinned)
         elif same.built_by_run:
             # Made again for its documents alone: the bytes are still the ones a run built
             snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
@@ -1971,6 +2052,7 @@ def make(
         labels_skipped(raw),
         index_skipped=index_skipped,
         documents_skipped=documents_skipped,
+        not_pinned=not_pinned,
     )
 
 
@@ -2353,7 +2435,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
             continue
         if location.get("kind") != "file":
             report.left_out.append(
-                (record["id"], "a table or a query: in the store as parquet, and the manifest names its database")
+                (record["id"], "a table or a query: the manifest names its database, and the store holds its rows or its version")
             )
             continue
         declared = location.get("path", "")

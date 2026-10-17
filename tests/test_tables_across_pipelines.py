@@ -258,7 +258,7 @@ class TestWhatTheReviewFound:
         snapshot.make(rates)
         lock.pin(forecast)
         monkeypatch.chdir(forecast)
-        with pytest.raises(AssetNotPinnedError, match="has no pinned copy") as caught:
+        with pytest.raises(AssetNotPinnedError, match="has no pin: a snapshot keeps one only from a DuckDB file") as caught:
             data.load("rates:fleeting")
         assert caught.value.reason == "not_built"
 

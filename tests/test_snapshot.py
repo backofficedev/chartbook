@@ -294,7 +294,7 @@ class TestWhatCannotHaveOne:
         (maker / "_output" / "curve.html").unlink()
         with pytest.raises(SnapshotError, match="has built nothing it declares") as e:
             snapshot.make(maker)
-        assert "Build it first: `chartbook run`." in str(e.value)
+        assert "Build it first (`chartbook run`)" in str(e.value)
 
     def test_a_pipeline_that_declares_nothing(self, work):
         directory = _manifest(work / "empty", {"project": {"id": "empty"}})

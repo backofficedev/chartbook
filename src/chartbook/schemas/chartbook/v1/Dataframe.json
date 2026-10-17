@@ -174,6 +174,39 @@
       "type": "integer",
       "minimum": 0
     },
+    "table_version": {
+      "type": "object",
+      "description": "In a snapshot or a lockfile: the version of a table in a warehouse that keeps its versions (a Delta table in Databricks), which the snapshot pinned instead of copying its rows. The content_hash is then the hash of a small file in the store saying the backend, the name, the id, the version and when it was written, which must agree with this.",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The table's version: Delta's version number."
+        },
+        "table_id": {
+          "type": "string",
+          "description": "The id of the table itself, which a read checks, so that a table made again under the same name is not read as the one pinned."
+        },
+        "name": {
+          "type": "string",
+          "description": "The table's full name, as the warehouse gives it, which a read uses."
+        },
+        "written_at": {
+          "type": "string",
+          "description": "When that version was written, as the warehouse says."
+        }
+      },
+      "required": [
+        "version",
+        "table_id",
+        "name",
+        "written_at"
+      ]
+    },
+    "not_pinned": {
+      "type": "string",
+      "description": "In a snapshot or a lockfile: why a table or query in a warehouse is never pinned (a query, a view, a table with no versions), which nothing is copied out of. `chartbook pin --frozen` passes over it; a read of it says this."
+    },
     "row_count": {
       "type": "integer",
       "minimum": 0

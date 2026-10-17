@@ -1756,6 +1756,7 @@ def _echo_pin_report(report):
             "kept": "already pinned",
             "stale": "changed upstream since it was pinned",
             "not_built": "not built",
+            "never_pinned": "never pinned",
             "outside": "outside the repository",
             "let_go": "let go",
             "dropped": "no longer declared",
@@ -1787,6 +1788,8 @@ def _echo_pin_report(report):
                 click.echo(f"  {event.asset}\n    {event.old} -> {event.new}")
             elif event.status == "not_built":
                 click.echo(f"  not built: {event.asset} ({event.detail})")
+            elif event.status == "never_pinned":
+                click.echo(f"  never pinned: {event.asset}: {event.detail}")
             elif event.status == "stale":
                 click.echo(f"  changed upstream: {event.asset}")
             elif event.status == "let_go":
@@ -2291,9 +2294,13 @@ def _echo_snapshot(report):
     summary = f"{built} asset(s) in the store"
     if report.not_built:
         summary += f", {len(report.not_built)} not built"
+    if report.not_pinned:
+        summary += f", {len(report.not_pinned)} never pinned"
     click.echo(f"{taken.pipeline} at {taken.commit[:7]}: {summary}")
     for asset, declared_path in report.not_built:
         click.echo(f"  not built: {asset} ({declared_path})")
+    for asset, why in report.not_pinned:
+        click.echo(f"  not pinned: {asset}: {why}")
     for model, version in report.new_versions:
         click.echo(f"  {model}: new version {version}")
     if report.index_skipped:
