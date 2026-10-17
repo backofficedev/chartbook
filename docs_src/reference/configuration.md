@@ -521,7 +521,7 @@ The **key** is the name this pipeline knows the other one by. It is a pipeline I
 
 | Field | Meaning |
 |-------|---------|
-| (none) | The pipeline is named by its ID alone, the key, and pinned from its snapshots in the store: no folder of it here, no clone. A store a team shares, or a folder synced between your machines, makes this the way to read a colleague's pipeline, or your own from another machine |
+| (none) | The pipeline is named by its ID alone, the key, and pinned from its snapshots in the store: no folder of it here, no clone. A store a team shares, or a folder synced between your machines, makes this the way to read a colleague's pipeline, or your own from another machine. When the store has no snapshot of it at all and a default host is set (`[resolve] default_host`, below), its repository there is cloned, pinned from and built, as a `git` dependency is |
 | `id` | With neither `path` nor `git`: the pipeline's ID, when the key is a shorter name for it |
 | `commit` | With neither `path` nor `git`: the start of a commit (7 to 40 hex digits); the newest snapshot at that commit is pinned, rather than the newest of all |
 | `repository` | With neither `path` nor `git`: the repository its snapshots must have been made in, as a web address (`https://github.com/acme/rates`, or the `git@github.com:acme/rates` form of it), when more than one repository claims the ID. A path on disk is not taken: it is not the same on another machine |
@@ -551,7 +551,7 @@ An entry has `path` or `git`, not both, or neither. Named by its ID alone, "newe
 
 **What it does not do yet.**
 
-- **A `git` dependency has only what its repository commits, until it is built.** `chartbook pin` clones it and pins the declared files that are in git, and only files inside the repository: a path in its manifest that reaches outside is not pinned. `chartbook run` builds it, which runs that repository's code with your environment, so depend on repositories you would run code from. Data the other pipeline builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build, so those assets are listed as not built. `chartbook run` does build it, in a copy of its checkout, and then they can be pinned. Working out a repository from an ID alone (`{ rev = "…" }` with no `git`) is not supported yet: an entry with neither is read from the store only.
+- **A `git` dependency has only what its repository commits, until it is built.** `chartbook pin` clones it and pins the declared files that are in git, and only files inside the repository: a path in its manifest that reaches outside is not pinned. `chartbook run` builds it, which runs that repository's code with your environment, so depend on repositories you would run code from. Data the other pipeline builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build, so those assets are listed as not built. `chartbook run` does build it, in a copy of its checkout, and then they can be pinned. An entry with neither is read from the store, and, when the store has no snapshot of it and a default host is set, from its repository on that host. A `rev` with no `git`, which needs the repository to say what it means, is not supported yet.
 - `data.load(pipeline=…, dataframe=…)`, with two arguments, finds the pipeline in a catalog and reads it by the same rules: its pin, if this table declares it; otherwise its newest snapshot; the catalog's folder only when there is no snapshot, with the warning.
 
 - `chartbook run` pins what has no pin yet, and then builds this pipeline. It never builds in a `path` dependency's folder, and never reads one: that folder is its owner's to build and to declare ready. It builds a `git` dependency once, in a clean copy. See {ref}`chartbook run <chartbook-run>`.
@@ -666,6 +666,15 @@ path = "/a/bigger/disk/chartbook-git"
 ```
 
 Nothing in it is precious. Delete it and the next `chartbook pin` or `chartbook update` that needs a repository fetches it again.
+
+**The default host.** A dependency named by its ID alone, `"acme/rates" = {}`, is read from the store. When the store has no snapshot of it at all, its repository is wanted, and the ID says where it is on a git host the machine or the organization sets:
+
+```toml
+[resolve]
+default_host = "github.com"          # acme/rates is https://github.com/acme/rates
+```
+
+`default_host` is a host name (cloned over `https`), an address the repositories are under (`https://gitlab.example.org/group`, `ssh://…`, `git@gitlab.example.org:`), or a folder of repositories (`/srv/git`, or relative to the settings file). It is read from the user's settings, then the organization's, and never from a pipeline: the host is not part of a pipeline's identity, so a repository that moves changes this one line. With it set, `chartbook pin` clones a dependency named by its ID that the store has no snapshot of, and pins from the clone, and `chartbook run` builds it, as it does a `git` dependency. The lockfile lists it as from its repository (`via: rev`, with the pipeline's ID). A later `pin` keeps it there, and `chartbook update` takes the store's newest snapshot once there is one. A read never clones: `data.load` of such a dependency before it is pinned says to run `chartbook pin`. A pipeline with a bare ID (no scope) has no owner to find it under, and is read from the store only. With no default host, a dependency named by its ID is read from the store only.
 
 ## Best Practices
 

@@ -1787,7 +1787,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
         kind, why = tried[2], tried[3]
     else:
         try:
-            report = lock.pin(manifest_dir, only=[dependency.id])
+            report = lock.pin(manifest_dir, only=[dependency.id], clone_missing=False)  # a read never fetches
         except OSError as failure:
             kind, why = "unwritable", str(failure)
         else:

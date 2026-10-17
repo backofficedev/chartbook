@@ -74,7 +74,7 @@ from chartbook.manifest import (
     validate_dependencies,
 )
 from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME
-from chartbook.store import Store
+from chartbook.store import Store, default_store
 
 
 #: Set for a script while ChartBook runs it: the pipeline's directory, and
@@ -250,6 +250,7 @@ def plan(
     git_cache: Optional[GitCache] = None,
     git: bool = True,
     force: bool = False,
+    store: Optional[Store] = None,
 ) -> list[Step]:
     """Say which pipelines a run is about, in order.
 
@@ -271,6 +272,9 @@ def plan(
         user's by default.
     :param git: Whether ``git`` dependencies are in the order.
     :param force: Whether to go into a git dependency that is built already.
+    :param store: The store, which says which dependencies named by their
+        ID have no snapshot and so are built from the default host; this
+        user's by default.
     :returns: The pipelines, each after what it depends on.
     :raises RunError: If *project_dir* holds no manifest, or two of a
         catalog's pipelines depend on each other.
@@ -295,6 +299,7 @@ def plan(
     done: set[Path] = set()
     visiting: list[Path] = []
     caches = [git_cache]  # made only if some pipeline has a git dependency
+    found_in_store: list = [None]  # read only if some pipeline names a dependency by its ID
 
     def visit(directory: Path, source: str, name: str) -> None:
         directory = directory.resolve()
@@ -324,6 +329,16 @@ def plan(
             scripts = read_scripts(raw)
         except ValueError as error:
             raise ValueError(f"{manifest_path}: {error}") from None
+        if git:
+            # One named by its ID that the store has no snapshot of is built
+            # from its repository on the default host, as a git one is
+
+            def in_store() -> list:
+                if found_in_store[0] is None:
+                    found_in_store[0] = snapshots.readable_snapshots(store if store is not None else default_store())[0]
+                return found_in_store[0]
+
+            dependencies = lock._with_clones(dependencies, derive_pipeline_id(raw.get("project") or {}, directory), in_store)
 
         built = source == "git" and is_built(directory)
         if not built or force:
@@ -506,7 +521,7 @@ def run(
         )
     # Under --frozen a git dependency is neither fetched nor built: what is
     # pinned of it has to be in the store already, and verify() checks that
-    steps = plan(here, git_cache, git=building and not frozen, force=force)
+    steps = plan(here, git_cache, git=building and not frozen, force=force, store=store)
     commits_before: dict[Path, str] = {}
     # A pipeline that is asked for by name must have the script. A catalog
     # is asked for all of its pipelines, and those without it are passed over.

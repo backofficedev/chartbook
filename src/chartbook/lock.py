@@ -351,11 +351,44 @@ class PinReport:
         return [event for event in self.events if event.status in PROBLEM_STATUSES]
 
 
-def _read_pipeline(project_dir: Path) -> tuple[str, dict]:
+def through_git(dependencies: dict, root: str, found: list, host: Optional[str] = None) -> dict:
+    """The dependencies, with each one named by its ID that the store has no snapshot of made a ``git`` one.
+
+    Decision 1a: a pipeline named by its ID is read from its snapshots in
+    the store, and only when there is none at all is its repository wanted,
+    at the default host (``[resolve] default_host``): ``acme/rates`` is
+    ``https://github.com/acme/rates``. Such a dependency is then pinned from
+    a clone, and built by ``chartbook run``, as a ``git`` one is, at the
+    commit its entry names if it names one. With no default host, a bare
+    ID, or the pipeline itself, it is left as it is (decision 1c).
+
+    :param found: The store's readable snapshots.
+    """
+    from chartbook.config import clone_url_for, get_default_host
+
+    host = get_default_host() if host is None else host
+    ids = {taken.pipeline for taken in found}
+    result = {}
+    for key, entry in dependencies.items():
+        pipeline = entry.get("_store")
+        url = clone_url_for(pipeline, host) if pipeline and pipeline != root and pipeline not in ids else None
+        if url is None:
+            result[key] = entry
+            continue
+        converted = {"git": url, "_from_id": pipeline}
+        if entry.get("commit"):
+            converted["rev"] = entry["commit"]
+        result[key] = converted
+    return result
+
+
+def _read_pipeline(project_dir: Path, store: Optional[Store] = None) -> tuple[str, dict]:
     """A pipeline's ID and its ``[dependencies]``, from its manifest alone.
 
     Only what pinning needs is read and checked, so a manifest with
-    something else wrong in it can still be pinned.
+    something else wrong in it can still be pinned. With *store*, a
+    dependency named by its ID that the store has no snapshot of is a
+    ``git`` one, on the default host (:func:`through_git`).
     """
     source = project_dir / MANIFEST_NAME
     try:
@@ -375,7 +408,26 @@ def _read_pipeline(project_dir: Path) -> tuple[str, dict]:
         dependencies = validate_dependencies(raw.get("dependencies") or {}, project_dir)
     except ValueError as error:
         raise type(error)(f"{source}: {error}") from None
-    return derive_pipeline_id(raw.get("project", {}), project_dir), dependencies
+    root = derive_pipeline_id(raw.get("project", {}), project_dir)
+    if store is not None:
+        dependencies = _with_clones(dependencies, root, lambda: snapshot.readable_snapshots(store)[0])
+    return root, dependencies
+
+
+def _with_clones(dependencies: dict, root: str, snapshots) -> dict:
+    """:func:`through_git`, reading the store (*snapshots*, a function) only when a default host is set and an entry is named by its ID."""
+    from chartbook.config import get_default_host
+
+    if not any(entry.get("_store") for entry in dependencies.values()):
+        return dependencies
+    host = get_default_host()
+    if not host:
+        return dependencies
+    try:
+        found = snapshots()
+    except (StoreError, OSError):
+        return dependencies  # a store that cannot be read says nothing about what it lacks
+    return through_git(dependencies, root, found, host)
 
 
 def _dependency_entry(key: str, entry: dict) -> dict:
@@ -391,6 +443,9 @@ def _dependency_entry(key: str, entry: dict) -> dict:
         location = {"kind": "git", "url": strip_url_credentials(entry["git"])}
         if entry.get("rev"):
             location["rev"] = entry["rev"]
+        if entry.get("_from_id"):
+            # Named by its ID, with no snapshot in the store: cloned from the default host
+            location["pipeline"] = entry["_from_id"]
         return {"id": key, "via": "rev", "location": location}
     return {"id": key, "via": "path", "location": {"kind": "path", "path": entry["path"]}}
 
@@ -464,10 +519,11 @@ def _sync(
     git_cache: Optional[GitCache] = None,
     from_folder: bool = False,
     only: Optional[Iterable[str]] = None,
+    clone_missing: bool = True,
 ) -> PinReport:
     """:func:`_sync_now`, one at a time for each lockfile."""
     with _one_at_a_time(Path(project_dir) / LOCK_FILE):
-        return _sync_now(project_dir, store, move, git_cache, from_folder, only)
+        return _sync_now(project_dir, store, move, git_cache, from_folder, only, clone_missing)
 
 
 def _sync_now(
@@ -477,6 +533,7 @@ def _sync_now(
     git_cache: Optional[GitCache] = None,
     from_folder: bool = False,
     only: Optional[Iterable[str]] = None,
+    clone_missing: bool = True,
 ) -> PinReport:
     """Bring a pipeline's lockfile and the store in line with its manifest.
 
@@ -486,6 +543,9 @@ def _sync_now(
     :param only: The keys of the dependencies to look at; the others keep
         what the lockfile had for them, and nothing of them is fetched.
         All of them by default.
+    :param clone_missing: Whether a dependency named by its ID that the
+        store has no snapshot of is cloned from the default host
+        (:func:`through_git`). A read pins with it off: a read never fetches.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
     :param from_folder: Pin a ``path`` dependency from what is in its
@@ -494,6 +554,16 @@ def _sync_now(
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
     root, dependencies = _read_pipeline(project_dir)
+    # The store's snapshots, read once for every dependency named by its ID
+    read = []
+
+    def snapshots_in_store() -> list:
+        if not read:
+            read.append(snapshot.readable_snapshots(store)[0])
+        return read[0]
+
+    if clone_missing:
+        dependencies = _with_clones(dependencies, root, snapshots_in_store)
     lock_path = project_dir / LOCK_FILE
     before = read_lock(lock_path) or Lock(root=root)
 
@@ -526,14 +596,6 @@ def _sync_now(
         report.events.append(PinEvent("removed", key))
 
     locked = {entry["id"]: entry for entry in before.dependencies}
-    # The store's snapshots, read once for every dependency named by its ID
-    read = []
-
-    def snapshots_in_store() -> list:
-        if not read:
-            read.append(snapshot.readable_snapshots(store)[0])
-        return read[0]
-
     for key in sorted(dependencies):
         entry = dependencies[key]
         may_move = key in moving
@@ -550,8 +612,27 @@ def _sync_now(
         listed = _dependency_entry(key, entry)
         was = locked.get(key)
         commit_moved = False
+        was_location = (was or {}).get("location", {})
 
-        if "git" in entry:
+        if (
+            not may_move
+            and any(record.get("content_hash") for record in had.values())
+            and {was_location.get("kind"), listed["location"].get("kind")} == {"store", "git"}
+            and was_location.get("pipeline")
+            and was_location.get("pipeline") == listed["location"].get("pipeline")
+        ):
+            # Named by its ID, and pinned from its repository when the store
+            # had no snapshot of it (or from the store, before its snapshots
+            # were cleared): a pin keeps it where it was pinned from, and
+            # `chartbook update` takes what there is now
+            records = dict(had)
+            listed = {**was, "location": dict(was_location)}
+            for asset_id, record in sorted(had.items()):
+                if record.get("content_hash"):
+                    report.events.append(PinEvent("kept", key, asset_id, old=record["content_hash"], new=record["content_hash"]))
+            if was_location.get("kind") == "git":
+                report.git.add(key)
+        elif "git" in entry:
             if git_cache is None:
                 git_cache = default_git_cache()
             directory, listed, failure = _fetch(
@@ -756,7 +837,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
-    _, dependencies = _read_pipeline(project_dir)
+    _, dependencies = _read_pipeline(project_dir, store)
     lock_path = project_dir / LOCK_FILE
     report = FrozenReport(lockfile=lock_path, dependencies=len(dependencies))
     locked = read_lock(lock_path)
@@ -867,6 +948,15 @@ def _declared_elsewhere(was: dict, now: dict) -> bool:
     The commit a ``git`` dependency resolved to is not part of where the
     manifest says it is, so it is left out of the comparison.
     """
+
+    # A dependency named by its ID is the same dependency whether it was
+    # pinned from the store or, with no snapshot there, from its repository
+    # on the default host
+    kinds = {was.get("location", {}).get("kind"), now.get("location", {}).get("kind")}
+    if kinds == {"store", "git"} and was["location"].get("pipeline") and (
+        was["location"].get("pipeline") == now["location"].get("pipeline")
+    ):
+        return False
 
     # A dependency named by its ID records the repository its snapshot came
     # from; that is where the manifest says it is only when it names one.
@@ -1597,6 +1687,7 @@ def pin(
     git_cache: Optional[GitCache] = None,
     from_folder: bool = False,
     only: Optional[Iterable[str]] = None,
+    clone_missing: bool = True,
 ) -> PinReport:
     """Pin whatever a pipeline depends on that has no pin yet.
 
@@ -1626,6 +1717,9 @@ def pin(
         lockfile then names no commit.
     :param only: The keys of the dependencies to pin; the rest keep what
         the lockfile has, and nothing of them is fetched. All by default.
+    :param clone_missing: Whether a dependency named by its ID that the
+        store has no snapshot of is cloned from the default host, and
+        pinned from the clone (:func:`through_git`).
     :returns: What was done.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
@@ -1634,6 +1728,7 @@ def pin(
     return _sync(
         project_dir, store, move=None, git_cache=git_cache, from_folder=from_folder,
         only=None if only is None else ({only} if isinstance(only, str) else set(only)),
+        clone_missing=clone_missing,
     )
 
 
