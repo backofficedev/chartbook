@@ -90,6 +90,8 @@ def validate_pipeline_id(pipeline_id: str) -> str:
     :raises ValueError: If the ID has more than two components or a
         component contains disallowed characters.
     """
+    if not isinstance(pipeline_id, str):
+        raise ValueError(f"A pipeline id is a name, like 'acme/rates', not {pipeline_id!r:.40}.")
     registry, unqualified = split_registry(pipeline_id)
     if registry is not None:
         raise UnsupportedRegistryError(

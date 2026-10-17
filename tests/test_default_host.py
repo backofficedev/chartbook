@@ -271,7 +271,7 @@ class TestWhatTheReviewFound:
             "repository": "ssh://git@gitlab.internal:2222/someone/rates-fork.git",
             "_repository": "https://gitlab.internal/someone/rates-fork",
         }
-        converted = lock.clone_instead(entry, "acme/forecast", None, False, lambda: [], "github.com")
+        converted = lock.clone_instead(entry, "acme/forecast", None, False, lambda: [], "github.com", pinned=False)
         # As written, with its scheme and port: the web form is for telling repositories apart
         assert converted["git"] == "ssh://git@gitlab.internal:2222/someone/rates-fork.git" and converted["_from_id"] == "acme/rates"
 
@@ -446,7 +446,7 @@ class TestWhatTheThirdReviewFound:
 
         entry = {"_store": "acme/rates", "repository": "https://example.org/acme/rates", "_repository": "https://example.org/acme/rates"}
         others = [SimpleNamespace(pipeline="acme/rates", commit="a" * 40, repository="https://example.org/someone/rates")]
-        converted = lock.clone_instead(entry, "acme/forecast", None, False, lambda: others, "github.com")
+        converted = lock.clone_instead(entry, "acme/forecast", None, False, lambda: others, "github.com", pinned=False)
         assert converted["git"] == "https://example.org/acme/rates"
 
     def test_the_read_names_the_address_pin_would_use(self, host, monkeypatch):
@@ -475,3 +475,43 @@ class TestWhatTheThirdReviewFound:
         except (ValueError, run.RunError):
             return  # said, not a crash
         assert report.failed is not None
+
+
+
+class TestWhatTheFourthReviewFound:
+    def test_an_update_keeps_to_the_repository_it_was_got_from(self, host):
+        from tests.test_dependencies_by_id import _another
+
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _entry(forecast)["location"].get("first_commit")
+        _another(host, "mallory", 666.0, remote="https://example.org/mallory/rates")  # another repository's acme/rates
+        report = lock.update(forecast)
+        assert not [e for e in report.events if e.status == "moved"] and _entry(forecast)["via"] == "rev"
+        _set_host(host, "")  # and with no host, the store branch keeps to it too
+        report = lock.update(forecast)
+        assert not [e for e in report.events if e.status == "moved"] and _entry(forecast)["via"] == "rev"
+
+    def test_a_clone_whose_id_is_no_name_is_refused(self, host):
+        repository = _upstream(host, 4.0)
+        (repository / "chartbook.toml").write_text('[project]\nid = 5\n\n[dataframes.treasury]\npath = "./_data/treasury.parquet"\ndocs = "d"\n')
+        _commit(repository, "A number")
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        (event,) = [e for e in lock.pin(forecast).events if e.status == "unfetched"]
+        assert "an id that is no name" in event.detail
+
+    def test_an_update_with_no_host_and_only_other_snapshots_keeps_the_pin_quietly(self, host):
+        from tests.test_dependencies_by_id import _another
+
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        _another(host, "mallory", 666.0, remote="https://example.org/mallory/rates")
+        _set_host(host, "")
+        report = lock.update(forecast)
+        assert not report.problems and _entry(forecast)["via"] == "rev"
+
+    def test_a_pinned_flag_must_be_given(self):
+        with pytest.raises(TypeError):
+            lock.clone_instead({"_store": "acme/rates"}, "acme/forecast", None, False, lambda: [], "github.com")

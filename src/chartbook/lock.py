@@ -351,6 +351,26 @@ class PinReport:
         return [event for event in self.events if event.status in PROBLEM_STATUSES]
 
 
+def store_has_for(entry: dict, snapshots: Callable[[], list], first_commit: Optional[str] = None) -> bool:
+    """Whether the store has a snapshot a pin of a dependency named by its ID could take, so its repository is not wanted.
+
+    Of the ID, at the entry's ``commit`` if it names one; from the
+    repository the entry names, if it names one; and, for one pinned from
+    its repository before, from that repository (*first_commit*), so that
+    another that gives itself the same ID is no reason not to go back to
+    it. Two repositories' snapshots of the ID with nothing to choose between
+    them are something: pin says which to name, rather than clone.
+    """
+    pipeline, at, named = entry["_store"], entry.get("commit"), entry.get("_repository")
+    of_it = [t for t in snapshots() if t.pipeline == pipeline and (not at or t.commit.startswith(at))]
+    if named:
+        return any(repository_key(t.repository) == repository_key(named) for t in of_it)
+    if first_commit:
+        groups, _ = snapshot.repository_groups(of_it)
+        return any(("first", first_commit) in set().union(*(snapshot.identity_keys(t) for t in group)) for group in groups)
+    return bool(of_it)
+
+
 def clone_instead(
     entry: dict,
     root: str,
@@ -359,7 +379,8 @@ def clone_instead(
     snapshots: Callable[[], list],
     host: str,
     built_here: Iterable[str] = (),
-    pinned: bool = False,
+    *,
+    pinned: bool,
 ) -> dict:
     """The entry to pin a dependency by: for one named by its ID that is to be got from its repository, a ``git`` one.
 
@@ -391,16 +412,11 @@ def clone_instead(
     pinned_from_repository = location.get("kind") == "git" and location.get("pipeline") == pipeline
     if not may_move and location.get("kind") in ("store", "path"):
         return entry  # pinned from the store (or a folder, before): a pin keeps it there
-    at = entry.get("commit")
-    named = entry.get("_repository")
-    if (may_move or not pinned_from_repository) and any(
-        taken.pipeline == pipeline
-        and (not at or taken.commit.startswith(at))
-        # A repository the entry names: its own snapshots, not another's of the same ID
-        and (not named or repository_key(taken.repository) == repository_key(named))
-        for taken in snapshots()
+    if (may_move or not pinned_from_repository) and store_has_for(
+        entry, snapshots, location.get("first_commit") if pinned_from_repository else None
     ):
         return entry
+    named = entry.get("_repository")
     # The repository the entry names, as it was written (an ssh address,
     # a port), or the pipeline's on the default host
     named = entry.get("repository") if named else None
@@ -422,13 +438,39 @@ def clone_instead(
 
 
 def _project_id_in(directory: Path) -> Optional[str]:
-    """The ID a folder's chartbook.toml gives itself in ``[project] id``, if it gives one."""
+    """The ID a folder's chartbook.toml gives itself in ``[project] id``, if it gives one; a description of it if it is no name.
+
+    A ``[project]`` that is not a table, or an ``id`` that is not a
+    non-empty string, is not "no ID": it is something other than the ID
+    a dependency is named by, and is refused as such.
+    """
     try:
         project = _read_manifest_file(Path(directory)).get("project")
     except (OSError, ValueError):
         return None
-    named = project.get("id") if isinstance(project, dict) else None
-    return named if isinstance(named, str) and named else None
+    if project is None:
+        return None
+    if not isinstance(project, dict):
+        return "a [project] that is not a table"
+    if "id" not in project:
+        return None
+    named = project["id"]
+    return named if isinstance(named, str) and named else f"an id that is no name ({named!r:.40})"
+
+
+def _first_commit_of(git_cache: GitCache, url: str, commit: str) -> str:
+    """A repository's first commit, back from *commit* by first parents, from its clone in the git cache; empty if not known."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(git_cache.repo_path(url)), "rev-list", "--max-parents=0", "--first-parent", commit],
+            capture_output=True, text=True, timeout=60, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+        )
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return ""
+    roots = result.stdout.split() if result.returncode == 0 else []
+    return roots[-1] if roots and len(roots[-1]) == 40 else ""
 
 
 def _read_pipeline(project_dir: Path) -> tuple[str, dict]:
@@ -659,10 +701,10 @@ def _sync_now(
                 has_bytes and was_location.get("kind") == "git" and was_location.get("pipeline") == entry["_store"]
             )
             if clone_missing:
-                entry = clone_instead(entry, root, was, may_move, snapshots_in_store, host, built_here, has_bytes)
+                entry = clone_instead(entry, root, was, may_move, snapshots_in_store, host, built_here, pinned=has_bytes)
             if from_repository and "git" not in entry and (
                 not may_move
-                or (not host and not any(taken.pipeline == entry["_store"] for taken in snapshots_in_store()))
+                or (not host and not store_has_for(entry, snapshots_in_store, was_location.get("first_commit")))
             ):
                 # Pinned from its repository, and that repository is not to be
                 # asked here (no default host, a read, or a pipeline this run
@@ -717,6 +759,12 @@ def _sync_now(
                         directory = None
                         # Nothing of a refused clone is recorded: not its commit either
                         listed = was if was is not None else _dependency_entry(key, entry)
+                    elif listed.get("location", {}).get("commit") and not listed["location"].get("first_commit"):
+                        # Which repository it was got from, by its first commit, so
+                        # that an update keeps to it, as a store pin keeps to its own
+                        first = _first_commit_of(git_cache, local_url(entry["git"], project_dir), listed["location"]["commit"])
+                        if first:
+                            listed = {**listed, "location": {**listed["location"], "first_commit": first}}
             commit_was = (was or {}).get("location", {}).get("commit")
             commit_now = listed.get("location", {}).get("commit")
             commit_moved = bool(commit_was and commit_now and commit_was != commit_now)
@@ -758,7 +806,11 @@ def _sync_now(
             # repository the manifest names, or else the one it was first
             # pinned from
             pinned_from = (was or {}).get("location", {})
-            pinned_from = pinned_from if pinned_from.get("kind") == "store" and pinned_from.get("commit") else {}
+            if pinned_from.get("kind") == "git" and pinned_from.get("pipeline") == entry["_store"]:
+                # Pinned from its repository: an update keeps to that repository's snapshots
+                pinned_from = {"first_commit": pinned_from.get("first_commit")} if pinned_from.get("first_commit") else {}
+            elif not (pinned_from.get("kind") == "store" and pinned_from.get("commit")):
+                pinned_from = {}
             named = bool(entry.get("_repository"))
             # The repository the manifest names, by its address alone; or
             # the one it was first pinned from, by address or first commit
