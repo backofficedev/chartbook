@@ -195,7 +195,7 @@ def _normalized(settings: dict, origin: Path) -> dict:
     result: dict = {}
     for key, value in settings.items():
         result[key] = dict(value) if isinstance(value, dict) else value
-    for table in ("store", "git", "cache", "catalog"):
+    for table in ("store", "git", "cache", "catalog", "resolve"):
         if table in result and not isinstance(result[table], dict):
             raise ValueError(
                 f"{origin}: [{table}] must be a table, e.g. [{table}] with "
@@ -234,6 +234,21 @@ def _normalized(settings: dict, origin: Path) -> dict:
     catalog = result.get("catalog")
     if catalog is not None and "path" in catalog and not isinstance(catalog["path"], str):
         raise ValueError(f"{origin}: [catalog] path must be a string.")
+    resolve = result.get("resolve")
+    if resolve is not None and "default_host" in resolve:
+        host = resolve["default_host"]
+        if not isinstance(host, str) or host.strip().startswith("-"):
+            raise ValueError(
+                f"{origin}: [resolve] default_host must be a git host, e.g. default_host = \"github.com\", "
+                f"an address its repositories are under, e.g. \"https://gitlab.example.org/group\", "
+                f"or \"\" for none."
+            )
+        host = host.strip()
+        if not re.match(r"^([A-Za-z]:)?[\\/]$", host):
+            host = host.rstrip("/\\")  # but a root folder, / or C:\\, keeps its separator
+        if _is_folder(host):
+            host = str(_absolute_if_folder(os.path.expanduser(host), origin))  # a folder of repositories
+        resolve["default_host"] = host
     return result
 
 
@@ -389,6 +404,44 @@ def get_store_path() -> Path:
         built, or ``[store]`` is malformed.
     """
     return folder_of_store_url(get_store_url())
+
+
+def get_default_host() -> str:
+    """The git host a pipeline named by its ID alone is cloned from: ``[resolve] default_host``.
+
+    From the user's settings, then the organization's; empty when neither
+    sets it, and then a pipeline with no snapshot in the store cannot be
+    read at all. The host is never part of a pipeline's identity: a
+    repository that moves changes this one line.
+
+    :raises ValueError: If the user's settings file is faulty.
+    """
+    return ((read_settings().get("resolve") or {}).get("default_host") or "").strip()
+
+
+def _is_folder(host: str) -> bool:
+    """Whether a default host is a folder of repositories: an absolute or explicitly relative path, on any system."""
+    return bool(re.match(r"^(/|\\\\|\./|\.\./|\.$|\.\.$|~|[A-Za-z]:[\\/])", host))
+
+
+def clone_url_for(pipeline_id: str, host: Optional[str] = None) -> Optional[str]:
+    """Where a pipeline named by its ID alone is cloned from, by the default host; None if it cannot be said.
+
+    ``acme/rates`` on ``github.com`` is ``https://github.com/acme/rates``.
+    A host given as an address (``https://…``, ``ssh://…``,
+    ``git@host:``, ``file://…``) or as a folder of repositories has the ID
+    put after it. A bare ID (no scope) has no owner to find it under.
+    """
+    host = get_default_host() if host is None else host
+    if not host or "/" not in pipeline_id:
+        return None
+    if _is_folder(host):
+        return os.path.join(host, *pipeline_id.split("/"))
+    if "://" in host or re.match(r"^[^/]+@[^/:]+:", host):
+        separator = "" if host.endswith((":", "/")) else "/"
+        return f"{host}{separator}{pipeline_id}"
+    # A host name, perhaps with a path under it: gitlab.example.org/group
+    return f"https://{host}/{pipeline_id}"
 
 
 def get_git_cache_path() -> Path:

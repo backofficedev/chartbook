@@ -711,7 +711,7 @@ Ran build in 1 pipeline(s).
 What `chartbook run` does for `build`, in order:
 
 1. **Builds a `git` dependency that is not built yet**, in ChartBook's own clean copy of the commit.
-2. **Pins what has no pin yet**, so this pipeline's code can read it: a folder you depend on from its newest {ref}`snapshot <chartbook-snapshot>`, a repository from that clean copy.
+2. **Pins what has no pin yet**, so this pipeline's code can read it: a folder you depend on from its newest {ref}`snapshot <chartbook-snapshot>`, a repository from that clean copy. A dependency named by its ID that the store has no snapshot of is built and pinned from its repository on the default host, as a `git` dependency is ({doc}`configuration`, `[resolve] default_host`).
 3. **Runs this pipeline's `build`**, in its own directory. What the script prints is shown as it runs. If it fails, the command exits with the script's exit code.
 
 `build` runs with `CHARTBOOK_BATCH=1` set; another script runs as interactively as the shell it was run from. In a batch run, `data.load` and the other readers read another pipeline only through its pin: one that is not declared, or that has no snapshot and is read from its working folder, is an error rather than a warning, since nothing would record what was read. CI can set the variable too. See {doc}`../guide/depending-on-pipelines`.

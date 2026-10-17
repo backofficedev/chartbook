@@ -699,6 +699,18 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     asset_id = str(pinned)
     locked = _read_lock(manifest_dir)
     of_dependency = locked.assets_of(dependency.id) if locked else {}
+    if of_dependency and dependency.kind == "store":
+        listed = next((e for e in locked.dependencies if e.get("id") == dependency.id), {})
+        pinned_as = (listed.get("location") or {}).get("pipeline")
+        if pinned_as and pinned_as != dependency.pipeline:
+            # The entry names another pipeline now; its pin is still the old one's
+            _warn(
+                UserWarning(
+                    f"{dependency.id!r} is pinned as {pinned_as}, and [dependencies] now names "
+                    f"{dependency.pipeline}: reading {pinned_as}'s pinned copy until "
+                    f"`chartbook update {dependency.id}` follows it."
+                )
+            )
     if not of_dependency:
         raise AssetNotPinnedError(
             asset_id,
@@ -1787,7 +1799,7 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
         kind, why = tried[2], tried[3]
     else:
         try:
-            report = lock.pin(manifest_dir, only=[dependency.id])
+            report = lock.pin(manifest_dir, only=[dependency.id], clone_missing=False)  # a read never fetches
         except OSError as failure:
             kind, why = "unwritable", str(failure)
         else:
@@ -1818,14 +1830,30 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
     # store has no snapshot of it at all: one that two repositories claim,
     # one dated ahead, or none at the commit asked for, is not a reason to
     # read a folder.
+    clone = ""
+    if dependency.kind == "store":
+        from chartbook.config import get_default_host
+        from chartbook.identity import strip_url_credentials
+
+        # The address pin would clone, if it would: the repository the
+        # entry names, or the default host's
+        converted = lock.clone_instead(
+            entry, _own_id(manifest_dir) or "", None, True, lambda: found, get_default_host(), pinned=False
+        )
+        if "git" in converted:
+            at = f" at {converted['rev']}" if converted.get("rev") else ""
+            clone = (
+                f" `chartbook pin` gets it from its repository{at}, {strip_url_credentials(converted['git'])} "
+                f"({converted['_from']}); a read never fetches."
+            )
     if has_snapshots:
-        raise AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}.")
+        raise AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}.{clone}")
     if dependency.kind == "path" and dependency.path is not None:
         return _read_working(asset, Path(dependency.path), why)
     return working(
         real,
         why,
-        AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}."),
+        AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}.{clone}"),
     )
 
 

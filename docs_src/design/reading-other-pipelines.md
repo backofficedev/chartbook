@@ -5,7 +5,8 @@ A design document, written 2026-10-16 for the maintainer to choose between optio
 shows what a data scientist would write and see under each option, and which one is recommended.
 Status: **decided by the maintainer on 2026-10-16: 1a, 2c, 3b, 4b, 5b (silent), 6b.** Built by
 2026-10-17: 6b (#81), 1a's dependency by ID from the store, with `commit` (#84), and 2c, 3b, 4b
-and 5b (#85). Not yet: `rev` and `[resolve] default_host`, which need the repository.
+and 5b (#85), and `[resolve] default_host` with building from git when there is no snapshot. Not yet:
+`rev` on a dependency named by its ID.
 ```
 
 ## The story this serves
@@ -318,7 +319,13 @@ of a working folder warns.
 3. The interactive rules (2c, 3b, 4b, 5b) and the batch variable. *Built, #85 (2026-10-17). As
    built, a reference by the pipeline's own ID is refused unless a dependency is known to be that
    pipeline, and the batch variable is set for `build` only.*
-4. `[resolve] default_host`, and building from git when there is no snapshot.
+4. `[resolve] default_host`, and building from git when there is no snapshot. *Built (2026-10-17),
+   except `rev`. As built: a dependency named by its ID is cloned only when the store has no
+   snapshot of it at all; the lockfile then lists it as from its repository by its ID, with no
+   address (each machine has its own host setting), and a pin keeps where it was pinned from,
+   the store or its repository, while `update` looks again. `chartbook run` makes the same
+   decision, from the lockfile, and never clones a pipeline it builds itself. A plain
+   `{ git = "..." }` entry is unchanged: cloned first, as before.*
 
 ## For the maintainer to choose
 

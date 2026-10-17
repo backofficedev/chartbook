@@ -74,7 +74,7 @@ from chartbook.manifest import (
     validate_dependencies,
 )
 from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME
-from chartbook.store import Store
+from chartbook.store import Store, default_store
 
 
 #: Set for a script while ChartBook runs it: the pipeline's directory, and
@@ -250,6 +250,7 @@ def plan(
     git_cache: Optional[GitCache] = None,
     git: bool = True,
     force: bool = False,
+    store: Optional[Store] = None,
 ) -> list[Step]:
     """Say which pipelines a run is about, in order.
 
@@ -271,6 +272,9 @@ def plan(
         user's by default.
     :param git: Whether ``git`` dependencies are in the order.
     :param force: Whether to go into a git dependency that is built already.
+    :param store: The store, which says which dependencies named by their
+        ID have no snapshot and so are built from the default host; this
+        user's by default.
     :returns: The pipelines, each after what it depends on.
     :raises RunError: If *project_dir* holds no manifest, or two of a
         catalog's pipelines depend on each other.
@@ -295,6 +299,21 @@ def plan(
     done: set[Path] = set()
     visiting: list[Path] = []
     caches = [git_cache]  # made only if some pipeline has a git dependency
+    found_in_store: list = [None]  # read only if some pipeline names a dependency by its ID
+    host: list = [None]  # the default host, read likewise
+    by_id: list = [None]
+
+    def asked_by_id() -> dict:
+        """The pipelines of this run, by their own ID."""
+        if by_id[0] is None:
+            by_id[0] = {}
+            for there in asked:
+                try:
+                    raw = _read_manifest(there)
+                except (OSError, ValueError):
+                    continue
+                by_id[0][derive_pipeline_id(raw.get("project") or {}, there)] = there
+        return by_id[0]
 
     def visit(directory: Path, source: str, name: str) -> None:
         directory = directory.resolve()
@@ -324,6 +343,34 @@ def plan(
             scripts = read_scripts(raw)
         except ValueError as error:
             raise ValueError(f"{manifest_path}: {error}") from None
+        if git and any(entry.get("_store") for entry in dependencies.values()):
+            # One named by its ID that pin will get from its repository on the
+            # default host (lock.clone_instead, the one decision both make) is
+            # built as a git one is. One that is a pipeline of this run is
+            # built here, before it, and never cloned.
+            if host[0] is None:
+                from chartbook.config import get_default_host
+
+                host[0] = get_default_host()
+
+            def in_store() -> list:
+                if found_in_store[0] is None:
+                    found_in_store[0] = snapshots.readable_snapshots(store if store is not None else default_store())[0]
+                return found_in_store[0]
+
+            try:
+                locked = lock.read_lock(directory)
+            except lock.LockError:
+                locked = None
+            listed = {entry.get("id"): entry for entry in (locked.dependencies if locked else [])}
+            own = derive_pipeline_id(raw.get("project") if isinstance(raw.get("project"), dict) else {}, directory)
+            dependencies = {
+                key: lock.clone_instead(
+                    entry, own, listed.get(key), False, in_store, host[0], asked_by_id(),
+                    pinned=bool(locked) and any(r.get("content_hash") for r in locked.assets_of(key).values()),
+                )
+                for key, entry in dependencies.items()
+            }
 
         built = source == "git" and is_built(directory)
         if not built or force:
@@ -336,14 +383,26 @@ def plan(
                     if caches[0] is None:
                         caches[0] = default_git_cache()
                     copy, why = _working_copy(directory, key, entry, caches[0])
+                    if entry.get("_from_id"):
+                        got_from = f"{strip_url_credentials(entry['git'])} ({entry.get('_from', '[resolve] default_host')})"
+                        if copy is None:
+                            why = f"it is got from its repository, {got_from}, and {why}"
+                        else:
+                            # Got from its repository by its ID: it must call itself that, or it is not built
+                            named = lock._project_id_in(copy)
+                            if named and named != entry["_from_id"]:
+                                copy, why = None, f"its repository, {got_from}, names itself {named}, not {entry['_from_id']}"
                     if copy is None:
                         order.append(Step(key, None, "git", missing=why))
                     else:
                         visit(copy, "git", key)
                 elif entry.get("_store"):
                     # Named by its ID alone: its snapshots are read from the
-                    # store, and nothing of it is built here
-                    continue
+                    # store, and nothing of it is built here, unless it is a
+                    # pipeline of this run, which is built before it
+                    there = asked_by_id().get(entry["_store"])
+                    if there is not None and there != directory:
+                        visit(there, "asked", key)
                 else:
                     # A folder somebody works in is not built from here. It
                     # is in the order only if it was asked for itself, as
@@ -354,7 +413,7 @@ def plan(
             visiting.pop()
 
         done.add(directory)
-        project = raw.get("project") or {}
+        project = raw.get("project") if isinstance(raw.get("project"), dict) else {}
         if source == "git" and not project.get("id"):
             # A working copy's directory is named after a commit, and has no
             # remote to take a scope from. The name it is declared under is
@@ -378,7 +437,7 @@ def plan(
     return order
 
 
-def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
+def execute(script: str, directory: Path, name: Optional[str] = None, foreign: bool = False) -> int:
     """Run one script in a directory, and return its exit code.
 
     The script is handed to a shell whole, so a value of several lines is
@@ -391,6 +450,9 @@ def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
 
     :param name: The script's name in ``[scripts]``. With it, the script
         is told which pipeline and which script it is (:func:`running`).
+    :param foreign: Whether the directory is a git dependency's working
+        copy, the cache's: then git in the script is not told of any other
+        repository the environment names (a git hook's ``GIT_DIR``).
     :returns: The script's exit code. One that a signal stopped gives 128
         plus the signal's number, as a shell reports it.
     """
@@ -402,6 +464,15 @@ def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
         except (AttributeError, OSError, ValueError):
             pass
     environment = dict(os.environ)
+    if foreign:
+        # A git dependency's working copy, which is the cache's: git in its
+        # build must find that copy, never the repository a git hook says
+        from chartbook.gitcache import GIT_LOCATION_VARIABLES
+
+        environment = {k: v for k, v in environment.items() if k not in GIT_LOCATION_VARIABLES}
+        # Nor the repository the git cache may be inside (a home kept in git):
+        # the copy has no .git of its own, and git looks no further up
+        environment["GIT_CEILING_DIRECTORIES"] = str(Path(directory).resolve().parent)
     if name == BUILD_SCRIPT:
         # A build is a batch run: a read of another pipeline that nothing
         # would record is refused there, not warned about
@@ -506,7 +577,7 @@ def run(
         )
     # Under --frozen a git dependency is neither fetched nor built: what is
     # pinned of it has to be in the store already, and verify() checks that
-    steps = plan(here, git_cache, git=building and not frozen, force=force)
+    steps = plan(here, git_cache, git=building and not frozen, force=force, store=store)
     commits_before: dict[Path, str] = {}
     # A pipeline that is asked for by name must have the script. A catalog
     # is asked for all of its pipelines, and those without it are passed over.
@@ -589,7 +660,10 @@ def run(
         elif building and step.has_dependencies:
             # What its code reads from other pipelines has to be pinned
             # before it runs. Nothing that is pinned is moved.
-            pins = lock.pin(step.directory, store, git_cache)
+            pins = lock.pin(
+                step.directory, store, git_cache,
+                built_here={other.id for other in steps if other.source == "asked"},
+            )
             if on_pin is not None:
                 on_pin(step, pins)
             if pins.problems:
@@ -614,7 +688,7 @@ def run(
 
         where = "" if step.directory == here else f"    in {step.directory}"
         echo(f"{step.id}: {script}{where}")
-        code = execute(command, step.directory, script)
+        code = execute(command, step.directory, script, foreign=step.source == "git")
         if code != 0:
             report.failed, report.exit_code = step, code
             report.reason = f"its {script!r} script exited with {code}"

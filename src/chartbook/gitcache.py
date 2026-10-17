@@ -99,6 +99,14 @@ _READ_ONLY = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
 _SCP_LIKE = re.compile(r"^(?:[^@/\s]+@)?([^:/\s]{2,}):(?![/\\])(.+)$")
 
 
+#: What git takes from the environment about which repository it is in. A
+#: git hook sets some of them; none may reach a command on another repository.
+GIT_LOCATION_VARIABLES = frozenset({
+    "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR", "GIT_NAMESPACE", "GIT_PREFIX",
+})
+
+
 def check_git_url(url: str) -> str:
     """Refuse a repository URL that git could read as something else.
 
@@ -293,7 +301,9 @@ class GitCache:
             return text.replace(url, strip_url_credentials(url)) if url else text
 
         environment = {
-            **os.environ,
+            # Not where a git hook's environment says the repository is: this
+            # runs on the cache's own clones, and must never touch the user's
+            **{k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARIABLES},
             # Fail, do not wait for someone to type a password
             "GIT_TERMINAL_PROMPT": "0",
             "GIT_ALLOW_PROTOCOL": ALLOWED_PROTOCOLS,
