@@ -1,10 +1,11 @@
 # Design: reading another pipeline while you work
 
 ```{note}
-A design document, written 2026-10-16 for the maintainer to choose between options. Nothing here
-is built. Each decision shows what a data scientist would write and see under each option, and
-which one is recommended. Status: **decided by the maintainer on 2026-10-16: 1a, 2c, 3b, 4b, 5b
-(silent), 6b.** Decision 6 is built; the rest is being built in the order below.
+A design document, written 2026-10-16 for the maintainer to choose between options. Each decision
+shows what a data scientist would write and see under each option, and which one is recommended.
+Status: **decided by the maintainer on 2026-10-16: 1a, 2c, 3b, 4b, 5b (silent), 6b.** Built by
+2026-10-17: 6b (#81), and 1a's dependency by ID from the store, with `commit` (#84). Being built:
+2c, 3b, 4b and 5b. Not yet: `rev` and `[resolve] default_host`, which need the repository.
 ```
 
 ## The story this serves
@@ -310,9 +311,11 @@ of a working folder warns.
 ## The order of work, if approved
 
 1. `chartbook snapshot` refuses unpinned dependencies (6b). Small, and right in every option.
+   *Built, #81 (2026-10-16).*
 2. A dependency by ID, pinned from the store (1a without `default_host`, which is 1c), with
-   `commit` and `rev`, and `chartbook add`.
-3. The interactive rules (2c, 3b, 4b, 5b) and the batch variable.
+   `commit` and `rev`, and `chartbook add`. *Built, #84 (2026-10-17), with `commit`; `rev` moves to
+   step 4, since it asks the repository.*
+3. The interactive rules (2c, 3b, 4b, 5b) and the batch variable. *Being built (2026-10-17).*
 4. `[resolve] default_host`, and building from git when there is no snapshot.
 
 ## For the maintainer to choose
