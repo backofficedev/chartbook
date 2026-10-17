@@ -207,6 +207,43 @@ def get_git_remote_url(base_dir: Path | str) -> Optional[str]:
     return url
 
 
+# Cache of repository tops, keyed as the remote lookups are
+_git_top_cache: dict[str, Optional[Path]] = {}
+
+
+def is_repository_top(base_dir: Path | str) -> bool:
+    """Whether a directory is the top folder of a git repository: of a clone, a worktree or a submodule.
+
+    :param base_dir: The directory.
+    :returns: False if it is in no repository, or in one's subfolder.
+    """
+    import os
+
+    key = str(Path(base_dir).resolve())
+    if key not in _git_top_cache:
+        top: Optional[Path] = None
+        try:
+            result = subprocess.run(
+                ["git", "-C", key, "rev-parse", "--show-toplevel"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                top = Path(result.stdout.strip()).resolve()
+        except (OSError, subprocess.SubprocessError):
+            top = None
+        _git_top_cache[key] = top
+    top = _git_top_cache[key]
+    if top is None:
+        return False
+    try:
+        # One folder however it is written: a case-insensitive disk may give either spelling
+        return top == Path(key) or os.path.samefile(top, key)
+    except OSError:
+        return False
+
+
 def remote_to_web_url(remote: Optional[str]) -> str:
     """Turn a git remote into the web address of the repository it names.
 
@@ -364,8 +401,9 @@ def web_link(value: object) -> str:
 
 
 def clear_git_remote_cache() -> None:
-    """Clear the cached git remote lookups (mainly for tests)."""
+    """Clear the cached git remote and repository top lookups (mainly for tests)."""
     _git_remote_cache.clear()
+    _git_top_cache.clear()
 
 
 def _sanitize_component(component: str) -> str:
@@ -441,9 +479,16 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
 
     1. Explicit ``id`` in the ``[project]`` table.
     2. The pipeline a laid-out version's :data:`VERSION_FILE` names.
-    3. Scope from the git ``origin`` remote (or ``repo_url``), name from the
-       directory name.
+    3. With a git ``origin`` remote (or ``repo_url``), the scope from it;
+       and the name from it too when the directory is the top of its git
+       repository, else the directory's name. So a clone, a git worktree
+       or a renamed folder of one repository is one pipeline, whatever its
+       folder is called, and each pipeline in a repository's subfolders is
+       named by its subfolder.
     4. Bare directory name.
+
+    A name is lowercase snake_case, from the folder or from the remote:
+    ``first-pipeline`` is ``first_pipeline``.
 
     :param project: The raw ``[project]`` table from chartbook.toml.
     :param base_dir: The pipeline's root directory.
@@ -470,9 +515,14 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
             normalized = normalize_ref_to_id(source_url)
         except ValueError:
             normalized = None
-        if normalized and "/" in normalized:
-            scope = normalized.split("/", 1)[0]
-            return f"{scope}/{name_part}"
+        if normalized:
+            scope, _, repository_name = normalized.rpartition("/")
+            if is_repository_top(base_dir):
+                # The pipeline is the repository: named as the repository is,
+                # not as the folder this copy of it happens to be in
+                name_part = _sanitize_component(repository_name)
+            if scope:
+                return f"{scope}/{name_part}"
 
     return name_part
 

@@ -530,6 +530,97 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     return problems
 
 
+def check_ids(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Warn where a pipeline is named by an ID its folder no longer gives itself.
+
+    A pipeline's ID can change: it gets a git remote, and so a scope; it is
+    given ``[project] id``. Its snapshots are then made under the new ID,
+    while a catalog entry keyed by the old one shows only the old ID's
+    snapshots, and a dependency named by the old one stays at the last of
+    them. Each is a warning, naming the key to write: the old snapshots are
+    still there, and nothing fails.
+
+    A catalog's entry is compared with what its folder calls itself now. A
+    dependency named by its ID is compared where a folder of it is on this
+    machine: the catalog's own, under that ID, or the folders the store
+    says its snapshots were made in.
+    """
+    from chartbook.manifest import dependency_line
+
+    in_build = get_pipeline_dirs(manifest)
+    if manifest["project"]["type"] == "catalog":
+        catalog_toml = Path(base_dir) / "chartbook.toml"
+        for pipeline_id, pipeline_dir in in_build.items():
+            current = _id_at(pipeline_dir)
+            if current and current != pipeline_id:
+                warnings.warn(
+                    f"{catalog_toml}: [{_pipelines_table(pipeline_id)}] the pipeline in {pipeline_dir} calls itself "
+                    f"{current} now, and its new snapshots are made under that ID; under {pipeline_id}, this "
+                    f"catalog shows only those made before. Name the entry {_quoted(current)} to show them.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+    made_in = _snapshot_folders(manifest)
+    for pipeline_id, pipeline_dir in in_build.items():
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        for key, entry in (pipeline_manifest.get("dependencies") or {}).items():
+            named = entry.get("_store")
+            if not named:
+                continue
+            folders = ([in_build[named]] if named in in_build else []) + made_in(named)
+            for folder in dict.fromkeys(folders):
+                current = _id_at(folder)
+                if not current or current == named:
+                    continue
+                kept = {name: entry[name] for name in ("commit", "rev", "repository") if name in entry}
+                line = dependency_line(key, kept if key == current else {"id": current, **kept})
+                warnings.warn(
+                    f"{pipeline_dir / 'chartbook.toml'}: [{_dependency_table(key)}] {named} is the pipeline in "
+                    f"{folder}, which calls itself {current} now: its new snapshots are made under that ID, and "
+                    f"this dependency stays at the last one made as {named}. Write {line} to follow it, then "
+                    f"`chartbook update {key}`.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                break
+    return []
+
+
+def _pipelines_table(key: str) -> str:
+    """A catalog entry's table as TOML writes it: ``pipelines."scope/name"``."""
+    return _dependency_table(key).replace("dependencies", "pipelines", 1)
+
+
+def _snapshot_folders(manifest: dict):
+    """What gives the folders on this machine that a pipeline's snapshots were made in, by its ID; newest first.
+
+    The store is read once, and only if some pipeline names a dependency
+    by its ID. One that cannot be read gives no folder.
+    """
+    from chartbook import snapshot
+    from chartbook.store import StoreError, default_store
+
+    read: list = []
+
+    def folders(pipeline_id: str) -> list:
+        if not read:
+            try:
+                store = default_store()
+                read.append((store, snapshot.readable_snapshots(store)[0]))
+            except (StoreError, OSError, ValueError):
+                read.append((None, []))
+        store, found = read[0]
+        seen = []
+        for taken in sorted((t for t in found if t.pipeline == pipeline_id), key=lambda t: t.made_at, reverse=True):
+            for top in snapshot.origins(store, taken):
+                folder = top / taken.subdirectory if taken.subdirectory else top
+                if folder not in seen and (folder / "chartbook.toml").is_file():
+                    seen.append(folder)
+        return seen
+
+    return folders
+
+
 def check_model_lineage(manifest: dict, base_dir: Path) -> list[Problem]:
     """Report training data that names a dataframe which is known not to exist.
 
@@ -813,6 +904,7 @@ def run_checks(
         ),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
         *check_dependencies(manifest, base_dir),
+        *check_ids(manifest, base_dir),
         *check_model_metrics(manifest, base_dir),
         *check_model_lineage(manifest, base_dir),
         *check_model_labels(manifest, base_dir),

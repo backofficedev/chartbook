@@ -532,3 +532,30 @@ class TestAddAPipelineShownFromTheStore:
         pipelines = _read_catalog(catalog_dir)["pipelines"]
         assert pipelines["my_pipeline"] == {"path": "../a/my_pipeline"}
         assert pipelines["my_pipeline_2"] == {"path": "../b/my_pipeline"}
+
+
+class TestAHomeReachedThroughALink:
+    """Found by a new-user test: with the home folder reached through a link (a Linux cluster's home,
+    a moved macOS home, /var on macOS), the global catalog's path was worked out from the link and
+    read back from the folder it leads to, and named no folder."""
+
+    def test_what_add_writes_is_where_the_pipeline_is(self, tmp_path, monkeypatch):
+        real = tmp_path / "volumes" / "users" / "real-home"
+        real.mkdir(parents=True)
+        link = tmp_path / "link-home"
+        link.symlink_to(real)
+        monkeypatch.setenv("HOME", str(link))
+        assert Path.home() == link and Path.home().resolve() == real
+        pipeline_dir = _make_minimal_pipeline(tmp_path / "first_pipeline")
+        runner = CliRunner()
+        assert runner.invoke(main, ["catalog", "init", "--title", "Mine"]).exit_code == 0
+        assert (link / ".chartbook" / "chartbook.toml").is_file()
+
+        result = runner.invoke(main, ["catalog", "add", str(pipeline_dir)])
+
+        assert result.exit_code == 0, result.output
+        written = _read_catalog(link / ".chartbook")["pipelines"]["first_pipeline"]["path"]
+        assert (real / ".chartbook" / written).resolve() == pipeline_dir.resolve()
+        listed = runner.invoke(main, ["ls"])
+        assert listed.exit_code == 0, listed.output
+        assert "[pipeline] first_pipeline: Test Pipeline" in listed.output

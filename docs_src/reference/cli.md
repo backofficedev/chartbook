@@ -203,6 +203,8 @@ chartbook.toml: OK (1 pipeline(s), 1 dataframes, 1 charts, 0 notebooks)
 
 **Dependencies.** For each `path` in `[dependencies]`, `check` looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever `check` runs. A `git` dependency is looked at where `chartbook pin` has fetched it, at the commit `chartbook.lock` names. `check` never uses the network: if the dependency has not been fetched on this machine, it says so in a `warning:` line and does not fail. A `path` dependency that is there but has no pin in `chartbook.lock` draws a `warning:` line too, since nothing of it can be read until `chartbook pin` or `chartbook run` (the build) pins it; a fresh clone is in that state on purpose, and {ref}`--frozen <chartbook-pin>` is the gate that fails on it. A `trained_on` that names a pipeline `[dependencies]` does not declare stops the manifest loading, so `check` fails on it.
 
+**IDs that changed.** A pipeline's ID can change, when it gets a git remote or a `[project] id` ({ref}`Pipeline Identity <pipeline-identity>`), and its snapshots are then made under the new one. `check` warns, naming what to write, when a catalog's `[pipelines]` key is not what the pipeline in that folder calls itself now (the catalog shows only the snapshots made under the key), and when a dependency named by its ID is a pipeline whose folder is on this machine (the catalog's own, or the folder the store says its snapshots were made in) and that calls itself something else now (the dependency stays at the last snapshot made under the old ID).
+
 ```console
 $ chartbook check
 chartbook.toml: [dependencies."ftsfr/fed_yield_curve"] path: directory not found: /work/fed_yield_curve
@@ -307,7 +309,7 @@ chartbook catalog init [--title TITLE]
 
 ### catalog add
 
-Register pipeline directories. For each path, the scoped key (`scope/name`) is derived from the target's `[project] id` if set, otherwise from its git `origin` remote plus the directory name, falling back to the bare directory name. Paths are stored relative to the catalog; duplicates (by resolved path) are skipped, as are paths already covered by a `pipelines.members` pattern.
+Register pipeline directories. Each is keyed by its pipeline ID ({ref}`the rule <pipeline-identity>`): its `[project] id` if set; otherwise, at the top of a git repository with an `origin` remote, the repository's scope and name from the remote, whatever the folder is called; in a subfolder of one, the remote's scope and the subfolder's name; with no remote, the bare folder name. Paths are stored relative to the catalog, between the two folders with any link in their paths followed; duplicates (by resolved path) are skipped, as are paths already covered by a `pipelines.members` pattern.
 
 ```console
 chartbook catalog add PATHS... [--catalog PATH] [-y]
@@ -361,9 +363,11 @@ $ chartbook ls
 Catalog: /data/my-catalog/chartbook.toml
 
 [pipeline] acme/yield_curve: Yield Curve Analysis
-  [dataframe] acme/yield_curve/repo_public: Repo Public Data
-  [chart] acme/yield_curve/yield_spread: Yield Spread Chart
+  [dataframe] acme/yield_curve:repo_public: Repo Public Data
+  [chart] acme/yield_curve:chart/yield_spread: Yield Spread Chart
 ```
+
+Each asset is written as its reference, `pipeline:name`. A pipeline the catalog shows from the store alone is listed as store only, with the dataframes and charts its newest snapshot lists.
 
 ## chartbook data
 
@@ -639,6 +643,16 @@ Wrote chartbook.lock.
 | A repository at a branch | Newer code, when the branch has moved |
 
 If the other pipeline's owner has rebuilt and made no snapshot, there is nothing to move to, and `update` changes nothing.
+
+**A pipeline whose ID changed.** A dependency named by its ID stays at the last snapshot made under that ID. When the store has newer snapshots of the same repository and folder under another ID (the owner added a remote, so the pipeline has a scope now; see {ref}`Pipeline Identity <pipeline-identity>`), `pin` and `update` say so each time, and name the entry that follows it:
+
+```console
+$ chartbook update
+first_pipeline: 1 already pinned
+  the store has newer snapshots of the same repository and folder under another ID, testorg/first_pipeline (the newest made 2026-10-17 16:54 UTC): the pipeline probably calls itself that now, as one does when it gets a git remote or a [project] id. To follow it, write "first_pipeline" = { id = "testorg/first_pipeline" } under [dependencies], then `chartbook update first_pipeline`.
+```
+
+The `id` keeps the name your code uses, `first_pipeline:rates`.
 
 An asset the newer snapshot no longer declares is dropped from the lockfile. One it declares and did not build is let go: a pin from an older snapshot does not belong beside a newer one's commit. Nothing of this pipeline is rebuilt. The object a pin moved away from stays in the store.
 

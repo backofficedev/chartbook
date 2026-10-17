@@ -171,7 +171,14 @@
       "items": {
         "type": "string"
       },
-      "description": "IDs of the pipeline's assets. Series are listed under their dataframe, not here."
+      "description": "IDs of the pipeline's assets. Series are listed under their dataframe, not here. For a pipeline a catalog shows from the store alone, those its newest snapshot's own index lists."
+    },
+    "asset_names": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "For a pipeline a catalog shows from the store alone: each asset's name, by ID, as its newest snapshot's own index gives it, as one line of plain text. Absent when none has a name."
     },
     "docs": {
       "type": "object",

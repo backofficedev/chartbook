@@ -265,9 +265,23 @@ bare unscoped `name` is also legal for local-only projects.
 **Derivation precedence** (highest first):
 
 1. Explicit `id` in `[project]` (e.g. `id = "ftsfr/crsp_treasury"`).
-2. Derived: scope from the repo's git `origin` remote (or `repo_url`), name
-   from the directory name.
-3. Bare fallback: the directory name, unscoped.
+2. At the top of a git repository with a remote (`repo_url`, or else the
+   git `origin` remote): scope and name from the remote, whatever the folder
+   is called. `github.com/ftsfr/crsp_treasury` cloned into `crsp-copy/`, or
+   checked out in a git worktree, is still `ftsfr/crsp_treasury`.
+3. In a subfolder of such a repository: scope from the remote, name from the
+   subfolder (`yield-curve/` in `github.com/acme/monorepo` is
+   `acme/yield_curve`).
+4. With no remote: the folder's name, unscoped.
+
+A derived name is lowercase, with `_` for `-` and spaces. Adding a remote to
+a pipeline that had none changes its ID (`first_pipeline` becomes
+`testorg/first_pipeline`), and its snapshots are made under the new one;
+`chartbook pin`/`update` say when a dependency named by the old ID has newer
+snapshots under another, and name the entry to write
+(`"first_pipeline" = { id = "testorg/first_pipeline" }`); `chartbook check`
+warns when a catalog key or such a dependency no longer matches what the
+folder calls itself. Set `[project] id` to pin the ID down.
 
 **Resolution** for `data.load(pipeline=...)`, `chartbook ls`, and friends:
 
@@ -320,8 +334,8 @@ path = { unix = "/data/pipelines/finance", windows = "T:/pipelines/finance" }
 Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table for
 platform-specific locations) and `disabled` (bool, default false).
 
-`chartbook catalog add <dir>` reads the target's git remote and writes the
-scoped key automatically, falling back to the bare directory name.
+`chartbook catalog add <dir>` writes the pipeline's ID as the key (see
+[Pipeline Identity](#pipeline-identity)).
 
 ### Catalog Auto-Discovery
 

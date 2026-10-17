@@ -1626,8 +1626,9 @@ def _load_catalog_manifest(raw_manifest):
         if path_to_pipeline is None:
             continue
         path_to_pipeline = resolve_platform_path(path_to_pipeline)
-        pipeline_base_dir = Path(base_dir) / path_to_pipeline
-        pipeline_base_dir = pipeline_base_dir.resolve()
+        # Relative to the catalog's folder with every link in its path
+        # followed, as `chartbook catalog add` wrote it
+        pipeline_base_dir = (Path(base_dir).resolve() / path_to_pipeline).resolve()
         assert validate_manifest_file(pipeline_base_dir)
         sub_manifest = load_manifest(base_dir=pipeline_base_dir)
         if sub_manifest["project"]["type"] != "pipeline":

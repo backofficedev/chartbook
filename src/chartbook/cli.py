@@ -820,6 +820,33 @@ def index_diff(before, after, as_json, exit_code):
 STORE_ONLY = "(store only: not on this machine; the catalog shows its snapshots)"
 
 
+def _from_the_store(manifest, kinds=("Dataframe", "Chart")):
+    """The dataframes and charts of each pipeline a catalog names with no folder here, by pipeline ID.
+
+    As the newest snapshot of each in the store lists them, each as
+    ``(kind, ID, name)``; its name is plain text, as its owner wrote it. A
+    store that cannot be read gives none.
+    """
+    pipeline_ids = manifest.get("store_pipelines") or []
+    if not pipeline_ids:
+        return {}
+    from chartbook import snapshot
+    from chartbook.store import StoreError, default_store
+
+    try:
+        store = default_store()
+        found, _ = snapshot.readable_snapshots(store)
+    except (StoreError, OSError, ValueError):
+        return {pipeline_id: [] for pipeline_id in pipeline_ids}
+    listed = {}
+    for pipeline_id in pipeline_ids:
+        newest = max((t for t in found if t.pipeline == pipeline_id), key=lambda t: t.made_at, default=None)
+        assets = snapshot.stored_assets(newest, store) if newest is not None else []
+        shown = sorted((a for a in assets if a["kind"] in kinds), key=lambda a: (kinds.index(a["kind"]), a["id"]))
+        listed[pipeline_id] = [(a["kind"], a["id"], a["name"] or "Unknown") for a in shown]
+    return listed
+
+
 @main.group(invoke_without_command=True)
 @click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
 @click.pass_context
@@ -846,9 +873,12 @@ def ls(ctx, catalog):
 
         if manifest["project"]["type"] == "catalog":
             # Catalog with multiple pipelines, and those it shows from the store
+            stored = _from_the_store(manifest)
             for pipeline_id in sorted([*manifest["pipelines"], *(manifest.get("store_pipelines") or [])]):
                 if pipeline_id not in manifest["pipelines"]:
                     click.echo(f"[pipeline] {pipeline_id}: {STORE_ONLY}")
+                    for kind, asset_id, name in stored.get(pipeline_id, []):
+                        click.echo(f"  [{kind.lower()}] {asset_id}: {name}")
                     continue
                 pipeline_manifest = manifest["pipelines"][pipeline_id]
                 pipeline_name = _get_pipeline_name(pipeline_manifest)
@@ -860,7 +890,7 @@ def ls(ctx, catalog):
                         df_name = pipeline_manifest["dataframes"][df_id].get(
                             "name", "Unknown"
                         )
-                        click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
+                        click.echo(f"  [dataframe] {pipeline_id}:{df_id}: {df_name}")
 
                 # List charts under this pipeline
                 if "charts" in pipeline_manifest:
@@ -868,7 +898,7 @@ def ls(ctx, catalog):
                         chart_name = pipeline_manifest["charts"][chart_id].get(
                             "name", "Unknown"
                         )
-                        click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
+                        click.echo(f"  [chart] {pipeline_id}:chart/{chart_id}: {chart_name}")
         else:
             # Single pipeline
             pipeline_id = manifest["project"]["id"]
@@ -878,12 +908,12 @@ def ls(ctx, catalog):
             if "dataframes" in manifest:
                 for df_id in sorted(manifest["dataframes"].keys()):
                     df_name = manifest["dataframes"][df_id].get("name", "Unknown")
-                    click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
+                    click.echo(f"  [dataframe] {pipeline_id}:{df_id}: {df_name}")
 
             if "charts" in manifest:
                 for chart_id in sorted(manifest["charts"].keys()):
                     chart_name = manifest["charts"][chart_id].get("name", "Unknown")
-                    click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
+                    click.echo(f"  [chart] {pipeline_id}:chart/{chart_id}: {chart_name}")
 
 
 @ls.command("pipelines")
@@ -915,20 +945,25 @@ def ls_dataframes(ctx):
     manifest, _ = _load_catalog_for_cli(catalog)
 
     if manifest["project"]["type"] == "catalog":
-        for pipeline_id in sorted(manifest["pipelines"].keys()):
+        stored = _from_the_store(manifest, ("Dataframe",))
+        for pipeline_id in sorted([*manifest["pipelines"], *stored]):
+            if pipeline_id not in manifest["pipelines"]:
+                for _, asset_id, name in stored[pipeline_id]:
+                    click.echo(f"{asset_id}: {name}")
+                continue
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "dataframes" in pipeline_manifest:
                 for df_id in sorted(pipeline_manifest["dataframes"].keys()):
                     df_name = pipeline_manifest["dataframes"][df_id].get(
                         "name", "Unknown"
                     )
-                    click.echo(f"{pipeline_id}/{df_id}: {df_name}")
+                    click.echo(f"{pipeline_id}:{df_id}: {df_name}")
     else:
         pipeline_id = manifest["project"]["id"]
         if "dataframes" in manifest:
             for df_id in sorted(manifest["dataframes"].keys()):
                 df_name = manifest["dataframes"][df_id].get("name", "Unknown")
-                click.echo(f"{pipeline_id}/{df_id}: {df_name}")
+                click.echo(f"{pipeline_id}:{df_id}: {df_name}")
 
 
 @ls.command("charts")
@@ -939,20 +974,25 @@ def ls_charts(ctx):
     manifest, _ = _load_catalog_for_cli(catalog)
 
     if manifest["project"]["type"] == "catalog":
-        for pipeline_id in sorted(manifest["pipelines"].keys()):
+        stored = _from_the_store(manifest, ("Chart",))
+        for pipeline_id in sorted([*manifest["pipelines"], *stored]):
+            if pipeline_id not in manifest["pipelines"]:
+                for _, asset_id, name in stored[pipeline_id]:
+                    click.echo(f"{asset_id}: {name}")
+                continue
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "charts" in pipeline_manifest:
                 for chart_id in sorted(pipeline_manifest["charts"].keys()):
                     chart_name = pipeline_manifest["charts"][chart_id].get(
                         "name", "Unknown"
                     )
-                    click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
+                    click.echo(f"{pipeline_id}:chart/{chart_id}: {chart_name}")
     else:
         pipeline_id = manifest["project"]["id"]
         if "charts" in manifest:
             for chart_id in sorted(manifest["charts"].keys()):
                 chart_name = manifest["charts"][chart_id].get("name", "Unknown")
-                click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
+                click.echo(f"{pipeline_id}:chart/{chart_id}: {chart_name}")
 
 
 # =============================================================================
@@ -1217,9 +1257,12 @@ def catalog_add(paths, catalog_path, yes):
     shell_env = detect_shell_environment()
     paths = validate_cli_paths(paths, shell_env, auto_confirm=yes)
 
-    # Resolve catalog
+    # Resolve catalog. Its folder is taken with every link in its path
+    # followed, as each pipeline's is below: a relative path is worked out
+    # between the two as they really are, and read back the same way (a
+    # home folder reached through a link, /var on macOS)
     catalog_toml = _resolve_catalog_toml_path(catalog_path)
-    catalog_dir = catalog_toml.parent
+    catalog_dir = catalog_toml.parent.resolve()
     raw_catalog = _load_raw_catalog(catalog_toml)
 
     # Get existing absolute paths for duplicate detection
@@ -1779,7 +1822,7 @@ def _echo_pin_report(report):
                     f"  [dependencies] now says {event.detail}. It stays pinned "
                     f"where it was: `chartbook update {dependency}` follows it."
                 )
-            elif event.status in ("passed_over", "unchecked"):
+            elif event.status in ("passed_over", "unchecked", "id_changed"):
                 click.echo(f"  {event.detail}.")
 
         for event in assets:
