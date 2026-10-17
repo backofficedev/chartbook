@@ -1342,7 +1342,7 @@ class GcPlan:
         not_read: Lockfiles a store names that are not read here, as they are
             not a local ``chartbook.lock``: what their notes name is kept.
         forget: Lockfiles that could not be found and are to be forgotten.
-        forget_missing, recent_seconds, keep_days: What the plan was made
+        forget_missing, recent_seconds, keep_days, keep_lineage: What the plan was made
             with, so that it can be made again the same way when it is
             carried out.
     """
@@ -1359,6 +1359,7 @@ class GcPlan:
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
+    keep_lineage: bool = False
 
     @property
     def size_bytes(self) -> int:
@@ -1371,14 +1372,16 @@ def plan_gc(
     forget_missing: bool = False,
     recent_seconds: float = RECENT_SECONDS,
     keep_days: float = snapshot.KEEP_DAYS,
+    keep_lineage: bool = False,
 ) -> GcPlan:
     """Work out what a store can let go of. Nothing is removed.
 
     First the snapshots: one is kept if a lockfile pins it, if it is the
-    newest of its pipeline, if a label points at a model version in it, if
-    it was made in the last *keep_days* days, or if a snapshot kept for any
-    of these was made from it (or from a label pointing into it), as far up
-    as that goes (:func:`chartbook.snapshot.plan_removals`). Then the objects: one is
+    newest of its pipeline, if a label points at a model version in it, or
+    if it was made in the last *keep_days* days; and with *keep_lineage*, if
+    a snapshot kept for any of these was made from it (or from a label
+    pointing into it), as far up as that goes
+    (:func:`chartbook.snapshot.plan_removals`). Then the objects: one is
     kept if a lockfile the store knows of names it, or a kept snapshot
     does. The store knows of every lockfile that was pinned or updated into
     it. A lockfile is read as it is now; one that cannot be found (a
@@ -1400,7 +1403,8 @@ def plan_gc(
     """
     store = store if store is not None else default_store()
     plan = GcPlan(
-        forget_missing=forget_missing, recent_seconds=recent_seconds, keep_days=keep_days
+        forget_missing=forget_missing, recent_seconds=recent_seconds, keep_days=keep_days,
+        keep_lineage=keep_lineage,
     )
     keep: set[str] = set()
     pinned_snapshots: set[tuple[str, str]] = set()
@@ -1433,7 +1437,7 @@ def plan_gc(
 
     try:
         snapshots = snapshot.plan_removals(
-            store, pinned_snapshots, hashes_of_missing, keep_days=keep_days
+            store, pinned_snapshots, hashes_of_missing, keep_days=keep_days, keep_lineage=keep_lineage
         )
     except snapshot.SnapshotError as error:
         raise LockError(str(error)) from None
@@ -1468,6 +1472,7 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
         forget_missing=plan.forget_missing,
         recent_seconds=plan.recent_seconds,
         keep_days=plan.keep_days,
+        keep_lineage=plan.keep_lineage,
     )
     from chartbook import versions
 

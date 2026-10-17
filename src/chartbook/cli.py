@@ -2060,7 +2060,8 @@ def _lineage_line(node) -> str:
         return f"{node.pipeline} (this folder)"
     if node.kind == "snapshot":
         seen = " (shown above)" if node.seen else ""
-        return f"{node.label}: {node.pipeline} {node.commit[:7]}, made {made}{seen}"
+        checked = {"pins": "pins checked", "deep": "lineage checked"}.get(node.checked, "made before pins were checked")
+        return f"{node.label}: {node.pipeline} {node.commit[:7]}, made {made}, {checked}{seen}"
     if node.kind == "git":
         at = f" at {node.commit[:7]}" if node.commit else ""
         return f"{node.label}: pinned from its git clone{at}; not walked further"
@@ -2373,7 +2374,12 @@ def _format_bytes(size):
     metavar="DAYS",
     help="Keep a snapshot that nothing pins and that is not the newest of its pipeline for this long (default: 30)",
 )
-def store_gc(dry_run, yes, forget_missing, keep_days):
+@click.option(
+    "--keep-lineage",
+    is_flag=True,
+    help="Also keep every snapshot a kept snapshot was made from, as far up as it goes, so `chartbook lineage` finds them all",
+)
+def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage):
     """Remove from the store what nothing needs any more.
 
     The store is shared by every project of yours. Two things keep what is
@@ -2386,7 +2392,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
     at a model version in it (in that pipeline's chartbook.toml, or as its
     newest snapshot recorded), or if it was made in the last 30 days
     (--keep-days). Otherwise it may be removed, and what only it named
-    goes with it.
+    goes with it. A store keeps what work needs now, and lets old lineage
+    go: with --keep-lineage, every snapshot a kept snapshot was made from
+    is kept too, as far up as it goes, for `chartbook lineage` to check.
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
@@ -2404,6 +2412,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
         chartbook store gc
         chartbook store gc --keep-days 7
         chartbook store gc --yes --forget-missing
+        chartbook store gc --keep-lineage
     """
     from chartbook import lock
     from chartbook import snapshot as snapshots
@@ -2412,7 +2421,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days):
     days = keep_days if keep_days is not None else snapshots.KEEP_DAYS
     try:
         the_store = default_store()
-        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days)
+        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage)
     except (StoreError, lock.LockError, ValueError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         click.echo("Nothing was removed.", err=True)

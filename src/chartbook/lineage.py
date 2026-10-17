@@ -69,6 +69,9 @@ class Node:
         children: The pipelines it was pinned to.
         seen: Whether this snapshot was met before in the walk, and is
             shown there.
+        checked: How the snapshot's lineage was checked when it was made,
+            as its record says: ``pins``, ``deep``, or empty for one made
+            before snapshots checked their pins.
     """
 
     label: str
@@ -79,6 +82,7 @@ class Node:
     gaps: list[str] = field(default_factory=list)
     children: list["Node"] = field(default_factory=list)
     seen: bool = False
+    checked: str = ""
     hashes: set = field(default_factory=set, repr=False)
 
     def to_dict(self) -> dict:
@@ -89,6 +93,8 @@ class Node:
                 shown[key] = getattr(self, key)
         if self.seen:
             shown["seen"] = True
+        if self.kind == "snapshot":
+            shown["checked"] = self.checked or None
         shown["gaps"] = list(self.gaps)
         shown["children"] = [child.to_dict() for child in self.children]
         return shown
@@ -191,7 +197,10 @@ class _Walker:
 
     def _missing(self, commit: str, made_at: str) -> str:
         why = next((reason for path, reason in self.unreadable if commit in str(path)), None)
-        said = f": a record at that commit cannot be read ({why})" if why else ""
+        said = (
+            f": a record at that commit cannot be read ({why})" if why
+            else " (`store gc` lets old lineage go unless it is run with --keep-lineage)"
+        )
         return f"its snapshot at {commit[:7]}, made {made_at}, is not in the store{said}"
 
     def from_lockfile(self, entry: dict, records: dict) -> Node:
@@ -270,6 +279,8 @@ class _Walker:
         """A snapshot found: what it is, whether its inputs are complete, and what it was pinned to."""
         node.kind = "snapshot"
         node.pipeline, node.commit, node.made_at = taken.pipeline, taken.commit, taken.made_at
+        recorded = (taken.built_with or {}).get("lineage") if isinstance(taken.built_with, dict) else None
+        node.checked = recorded if recorded in ("pins", "deep") else ""
         node.hashes = {h for h in taken.content().values() if isinstance(h, str) and h} | set(labels)
         if depth > DEEPEST:
             node.gaps.append(f"the walk stops here, {DEEPEST} snapshots up: the store may have been made to loop")

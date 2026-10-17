@@ -61,6 +61,14 @@
         "platform": {
           "type": "string",
           "description": "The operating system and machine type."
+        },
+        "lineage": {
+          "type": "string",
+          "enum": [
+            "pins",
+            "deep"
+          ],
+          "description": "How the snapshot's lineage was checked when it was made: `pins` when its own pins were found to account for every dependency (every snapshot made since that check exists); `deep` when, with `chartbook snapshot --deep`, every snapshot upstream was walked and checked by hash as well. Missing on a snapshot made before either check. A note for audit; `chartbook lineage` checks again."
         }
       }
     },

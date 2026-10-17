@@ -205,7 +205,7 @@ class TestWhatTheReviewFound:
         snapshot.make(fred)                   # f2
         lock.update(rates)
         snapshot.make(rates)                  # r2, from f2; forecast stays on r1, from f1
-        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0, keep_lineage=True)
         kept = {(t.pipeline, why) for t, why in plan.snapshots_kept}
         assert ("acme/fred", "a snapshot that is kept was made from it") in kept
         lock.run_gc(plan, default_store())
@@ -222,7 +222,7 @@ class TestWhatTheReviewFound:
         _commit(work)
         _train(model, b"w3")
         snapshot.make(model)
-        lock.run_gc(lock.plan_gc(default_store(), recent_seconds=0, keep_days=0), default_store())
+        lock.run_gc(lock.plan_gc(default_store(), recent_seconds=0, keep_days=0, keep_lineage=True), default_store())
         assert lineage.walk(top).gaps() == []
 
     def test_a_record_that_cannot_be_read_elsewhere_does_not_stop_the_walk(self, labelled):
@@ -276,7 +276,7 @@ class TestWhatTheThirdReviewFound:
         _train(model, b"w3")
         snapshot.make(model)
         lock.update(serve)                    # serve's lockfile moves on; top still pins serve's old snapshot
-        lock.run_gc(lock.plan_gc(default_store(), recent_seconds=0, keep_days=0), default_store())
+        lock.run_gc(lock.plan_gc(default_store(), recent_seconds=0, keep_days=0, keep_lineage=True), default_store())
         assert lineage.walk(top).gaps() == []
 
     def test_a_second_object_with_the_same_start_does_not_make_a_gap(self, labelled):
@@ -294,3 +294,46 @@ class TestWhatTheThirdReviewFound:
         shutil.copytree(store.get(version), twin)
         assert len([h for h in store.hashes() if h.split(":", 1)[1].startswith(first)]) == 2
         assert lineage.walk(top).gaps() == []
+
+
+class TestWhatTheMaintainerAsked:
+    """gc favors letting go; a snapshot says how strictly its lineage was checked, for audit."""
+
+    def test_by_default_gc_lets_old_lineage_go_and_the_walk_says_why(self, chain):
+        fred, rates, forecast = chain
+        (fred / "_data" / "series.parquet").unlink()
+        pl.DataFrame({"d": ["2024-02-01"], "series": [2.0]}).write_parquet(fred / "_data" / "series.parquet")
+        snapshot.make(fred)
+        lock.update(rates)
+        snapshot.make(rates)
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        assert any(t.pipeline == "acme/fred" for t, _ in plan.snapshots_delete)
+        lock.run_gc(plan, default_store())
+        (gap,) = lineage.walk(forecast).gaps()
+        assert gap[0].label == "fred" and "--keep-lineage" in gap[1]
+        # A plain snapshot needs only its own pins, which are whole
+        assert snapshot.make(forecast).snapshot
+
+    def test_a_snapshot_records_how_its_lineage_was_checked(self, chain):
+        fred, rates, forecast = chain
+        assert _snapshot_of("acme/rates").built_with["lineage"] == "pins"
+        taken = snapshot.make(forecast, deep=True).snapshot
+        assert taken.built_with["lineage"] == "deep"
+        assert snapshot.read(taken.path).built_with["lineage"] == "deep"
+        (rates_node,) = lineage.walk(forecast).root.children
+        assert rates_node.checked == "pins" and rates_node.to_dict()["checked"] == "pins"
+
+    def test_the_tree_says_it(self, chain, monkeypatch):
+        fred, rates, forecast = chain
+        monkeypatch.chdir(forecast)
+        lines = CliRunner().invoke(main, ["lineage"]).output.splitlines()
+        assert lines[1].endswith(", pins checked")
+        _rewrite(_snapshot_of("acme/rates"), lambda d: d["built_with"].pop("lineage"))
+        lines = CliRunner().invoke(main, ["lineage"]).output.splitlines()
+        assert lines[1].endswith(", made before pins were checked")
+
+    def test_the_command_takes_keep_lineage(self, chain, monkeypatch):
+        fred, rates, forecast = chain
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-lineage"])
+        assert result.exit_code == 0, result.output

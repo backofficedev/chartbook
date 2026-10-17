@@ -393,7 +393,7 @@ Snapshot made. A pipeline that depends on this one gets it with `chartbook updat
 
 **A snapshot carries its lineage.** It records what the pipeline was pinned to, each dependency's commit and a hash over everything pinned from it, so it is made only when those pins account for every dependency: the check `chartbook pin --frozen` makes (every dependency in the lockfile, pinned from where the manifest says, its bytes in the store); no dependency pinned from its working folder; and for each dependency pinned from a snapshot, that snapshot in the store, holding each asset pinned from it at its hash, and each label pinned naming a version some snapshot of it holds, so a lockfile changed by hand is caught (a `git` dependency, pinned from its clone, is checked only to have its bytes in the store). Nothing that cannot have been read stops it: an asset the other pipeline had not built when it was pinned, or a dependency of which nothing is pinned (it declares nothing, or has no snapshot yet). Otherwise nothing is made, and each gap is listed with what to run. `chartbook run --snapshot` makes the same check after it pins and before it builds, so a gap is found before an hour of building.
 
-Two things it does not see. A snapshot pinned from that was made before this check, or by an older ChartBook, may have gaps of its own: the check is of this pipeline's pins. `--deep` also walks every snapshot upstream ({ref}`chartbook lineage <chartbook-lineage>`) and refuses if any has a gap. And a read that does not go through the lockfile (a load through a catalog, a model version named by its hash) is not in them.
+Two things it does not see. A snapshot pinned from that was made before this check, or by an older ChartBook, may have gaps of its own: the check is of this pipeline's pins. `--deep` also walks every snapshot upstream ({ref}`chartbook lineage <chartbook-lineage>`) and refuses if any has a gap; it needs every snapshot upstream in the store, so it is for when you want that audit, not a requirement. The record says which was done (`built_with.lineage`: `pins` or `deep`). And a read that does not go through the lockfile (a load through a catalog, a model version named by its hash) is not in them.
 
 
 ```console
@@ -649,7 +649,7 @@ acme/forecast (this folder)
 2 snapshot(s) upstream; 1 gap(s).
 ```
 
-A snapshot met twice is walked once and marked "shown above". A `git` dependency is pinned from its clone, not from a snapshot, so the walk stops there. What the walk reads was written by whoever can write to the store, so a record that is not what ChartBook writes is a gap where it is met ("a record that cannot be read"), never an error that stops the walk; a snapshot that is there and does not hold what was pinned is shown as such. Model labels are resolved from the snapshots the walk has read, or by their hash among the store's objects; where several objects share a label's start, the one that gives the recorded hash is taken. `--rehash` reads those versions too. `store gc` keeps what a kept snapshot was made from, so it does not open gaps. Nothing is written.
+A snapshot met twice is walked once and marked "shown above". A `git` dependency is pinned from its clone, not from a snapshot, so the walk stops there. What the walk reads was written by whoever can write to the store, so a record that is not what ChartBook writes is a gap where it is met ("a record that cannot be read"), never an error that stops the walk; a snapshot that is there and does not hold what was pinned is shown as such. Model labels are resolved from the snapshots the walk has read, or by their hash among the store's objects; where several objects share a label's start, the one that gives the recorded hash is taken. `--rehash` reads those versions too. By default `store gc` lets old lineage go, keeping what work needs now; a snapshot upstream it removed is shown as not in the store, and `store gc --keep-lineage` keeps a lineage whole. Each snapshot's line says how its own lineage was checked when it was made, as its record says (`built_with.lineage`): "pins checked" for every snapshot made since snapshots check their pins, "lineage checked" for one made with `chartbook snapshot --deep`, "made before pins were checked" otherwise. Nothing is written.
 
 | Option | Effect |
 |--------|--------|
@@ -840,7 +840,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | It is the newest of its pipeline, or the newest a branch or tag can pin from | The last build of `yield_curve` that was declared ready; the last one on its `release` branch |
 | A label points at a model version in it | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as its newest snapshot recorded |
 | It was made in the last 30 days | `--keep-days` changes the number |
-| A snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
+| With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
 
 Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last month of snapshots, the ones somebody pins, and the ones a label names.
 
@@ -866,6 +866,7 @@ Remove them? [y/N]:
 | `--yes`, `-y` | Do not ask |
 | `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found. On a store a team shares, every other machine's lockfile is one |
 | `--keep-days DAYS` | Keep an unpinned snapshot that is not the newest of its pipeline for this long. Default 30 |
+| `--keep-lineage` | Also keep every snapshot a kept snapshot was made from, as far up as it goes, so that `chartbook lineage` finds them all. By default a store keeps what work needs now and lets old lineage go |
 
 Five things it is careful about:
 
