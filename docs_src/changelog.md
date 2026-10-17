@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — a snapshot carries its lineage
+
+`chartbook snapshot` is made only when the pipeline's pins account for every dependency: the check `chartbook pin --frozen` makes (every dependency in the lockfile, pinned from where the manifest says, its bytes in the store); no `path` dependency pinned from its working folder, which names no commit; and each snapshot pinned from in the store, holding each asset pinned from it at its hash (and each pinned label naming a version some snapshot of it holds), so a lockfile changed by hand is caught. Nothing that cannot have been read stops it: an asset the other pipeline had not built when it was pinned, or a dependency of which nothing is pinned. Before, a pipeline with no lockfile was snapshotted with its inputs recorded as empty. Each gap is listed with what to run. `chartbook run --snapshot` makes the check after it pins and before it builds. Decided by the maintainer on 2026-10-16.
+
+### Documented — a store in a synced folder
+
+The configuration reference says how to keep the store in a folder that a sync service such as Google Drive keeps in step between your machines: a pipeline cloned on another machine reads what its lockfile pins from it, with the pipeline it depends on neither there nor built, and a catalog there shows every snapshot. It says what still needs the other pipeline's folder (choosing a snapshot), and four things to know (keep the files on disk, sync lag and `store verify`, `gc` from one machine, who can write). A test covers reading with the other pipeline's folder gone, for a folder store and an S3 store.
+
 ### Added — an assistant file for every site
 
 Every build writes `llms.txt` beside `index.json`, in the form of [llms.txt](https://llmstxt.org): the site's name, then one line per pipeline, dataframe, chart and model with its name linking its page, its ID and, in quotation marks, its owner's description, so that an assistant on the command line finds its way around a site without reading its HTML. It says how to use an ID. A version's site says which snapshot it is and that its names and descriptions are its owner's; a catalog's file lists each pipeline's ten newest versions under it, each linking that version's own `llms.txt`, and the versions page for the rest. What an owner wrote never starts a line, so it can make no heading, list or link of its own. The writer writes it from the index, and an incremental build that changes nothing leaves it alone. Step 4 of {doc}`design/versioned-catalog`.

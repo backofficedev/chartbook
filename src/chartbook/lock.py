@@ -552,11 +552,17 @@ class FrozenProblem:
             the problem is the lockfile itself.
         asset: The asset's ID, or None when it is about the dependency.
         message: What is wrong, and what to run.
+        kind: ``"not_built"`` for an asset pinned without bytes because the
+            other pipeline had not built it (or a label, or a table, that
+            came without them): nothing can have read it. ``"nothing_pinned"``
+            for a dependency with no asset in the lockfile, which may be one
+            that declares none. Empty otherwise.
     """
 
     dependency: str
     asset: Optional[str]
     message: str
+    kind: str = ""
 
 
 @dataclass
@@ -649,7 +655,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
         assets = locked.assets_of(key)
         if not assets:
             report.problems.append(
-                FrozenProblem(key, None, "has nothing pinned. Run `chartbook pin`, and see what it says.")
+                FrozenProblem(key, None, "has nothing pinned. Run `chartbook pin`, and see what it says.", "nothing_pinned")
             )
         for asset_id in sorted(assets):
             content_hash = assets[asset_id].get("content_hash")
@@ -662,6 +668,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                         f"{assets[asset_id].get('missing') or 'the store could not supply the version it names'}. "
                         f"{label_remedy(assets[asset_id].get('missing'), key)[0].upper()}"
                         f"{label_remedy(assets[asset_id].get('missing'), key)[1:]}.",
+                        "not_built",
                     )
                 )
             elif not content_hash and assets[asset_id].get("location", {}).get("kind") in ("table", "query"):
@@ -670,12 +677,14 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                         key, asset_id, "is a table or query in a source and has no pinned copy: a pin from a "
                         "folder takes no table, and a snapshot writes one out only from a DuckDB file. "
                         "`chartbook snapshot` there, then `chartbook update`.",
+                        "not_built",
                     )
                 )
             elif not content_hash:
                 report.problems.append(
                     FrozenProblem(
-                        key, asset_id, "was declared and not built when it was pinned. Build it there, declare it ready, and `chartbook update`."
+                        key, asset_id, "was declared and not built when it was pinned. Build it there, declare it ready, and `chartbook update`.",
+                        "not_built",
                     )
                 )
             elif not store.has(content_hash):

@@ -96,6 +96,8 @@ def chain(work):
     top = _with_data(work / "top", {"build": LOG}, {"middle": {"path": "../middle"}})
     _commit(work)
     snapshot.make(work / "bottom")
+    # A snapshot carries its lineage, so middle pins bottom first
+    lock.pin(work / "middle")
     snapshot.make(work / "middle")
     return top
 
