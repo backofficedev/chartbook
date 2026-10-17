@@ -2372,7 +2372,7 @@ def _format_bytes(size):
     type=click.FloatRange(min=0),
     default=None,
     metavar="DAYS",
-    help="Keep a snapshot that nothing pins and that is not the newest of its pipeline for this long (default: 30)",
+    help="Keep a snapshot that nothing pins and that is not the newest of its pipeline for this long (default: 7)",
 )
 @click.option(
     "--keep-lineage",
@@ -2390,7 +2390,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage):
     A snapshot is kept if a lockfile pins it, if it is the newest of its
     pipeline or the newest a branch or tag can pin from, if a label points
     at a model version in it (in that pipeline's chartbook.toml, or as its
-    newest snapshot recorded), or if it was made in the last 30 days
+    newest snapshot recorded), or if it was made in the last 7 days
     (--keep-days). Otherwise it may be removed, and what only it named
     goes with it. A store keeps what work needs now, and lets old lineage
     go: with --keep-lineage, every snapshot a kept snapshot was made from

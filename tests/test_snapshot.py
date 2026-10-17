@@ -1246,3 +1246,8 @@ class TestCommands:
 
     def test_it_is_in_help(self):
         assert "snapshot " in self._run("--help").output
+
+
+def test_an_unneeded_snapshot_is_kept_a_week():
+    """Decided 2026-10-16: 7 days, not 30, so a store stays small."""
+    assert snapshot.KEEP_DAYS == 7

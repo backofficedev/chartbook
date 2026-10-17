@@ -103,7 +103,7 @@ TOP = "_top"
 #: pipeline and that no label points into is kept, in days. Long enough to
 #: come back from a holiday to; short enough that a nightly build does not
 #: fill a disk that has no copy-on-write clones.
-KEEP_DAYS = 30
+KEEP_DAYS = 7
 
 #: The kinds of link a snapshot's files are stored with: a copy-on-write
 #: clone, or a copy. Never a hard link or a symlink, which are the

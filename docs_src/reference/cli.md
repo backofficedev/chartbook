@@ -476,7 +476,7 @@ With `--force` as well, it is the weekly refresh in one line: `chartbook run --f
 Things to know:
 
 - **`chartbook snapshot` does not run the build.** `chartbook run --snapshot` does.
-- **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). {ref}`chartbook store gc <chartbook-store-gc>` clears old ones: those nothing pins, that are not the newest of their pipeline, that no label points into, and that are over 30 days old.
+- **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). {ref}`chartbook store gc <chartbook-store-gc>` clears old ones: those nothing pins, that are not the newest of their pipeline, that no label points into, and that are over 7 days old.
 - **It is found by commit.** So it is found by a pipeline that depends on this folder, and by one that depends on the same repository by URL, on this machine. It is not shared between machines.
 
 (chartbook-pin)=
@@ -839,7 +839,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | A lockfile pins it | `rate_forecast` is pinned to it |
 | It is the newest of its pipeline, or the newest a branch or tag can pin from | The last build of `yield_curve` that was declared ready; the last one on its `release` branch |
 | A label points at a model version in it | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as its newest snapshot recorded |
-| It was made in the last 30 days | `--keep-days` changes the number |
+| It was made in the last 7 days | `--keep-days` changes the number |
 | With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
 
 Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last month of snapshots, the ones somebody pins, and the ones a label names.
@@ -852,9 +852,9 @@ Kept: 14 object(s), named by 3 lockfile(s)
   /work/crsp_treasury/chartbook.lock
   /work/rate_forecast/chartbook.lock
   /Volumes/usb/old_project/chartbook.lock  (not found; its pins are kept)
-Kept: 4 snapshot(s), naming 9 object(s): 1 because a lockfile pins it, 2 because it is the newest of its pipeline, 1 because it was made in the last 30 days
+Kept: 4 snapshot(s), naming 9 object(s): 1 because a lockfile pins it, 2 because it is the newest of its pipeline, 1 because it was made in the last 7 days
 Would remove 6 snapshot(s):
-  ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: nothing pins it, it is not the newest, and it is older than 30 days
+  ftsfr/fed_yield_curve at 2a9c01d, made 2026-08-02 06:00 UTC: nothing pins it, it is not the newest, and it is older than 7 days
   …
 Would remove 5 object(s), 2.1 GB, that nothing names.
 Remove them? [y/N]:
@@ -865,7 +865,7 @@ Remove them? [y/N]:
 | `--dry-run` | List each snapshot and object that would be removed, with sizes, and remove nothing |
 | `--yes`, `-y` | Do not ask |
 | `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found. On a store a team shares, every other machine's lockfile is one |
-| `--keep-days DAYS` | Keep an unpinned snapshot that is not the newest of its pipeline for this long. Default 30 |
+| `--keep-days DAYS` | Keep an unpinned snapshot that is not the newest of its pipeline for this long. Default 7 |
 | `--keep-lineage` | Also keep every snapshot a kept snapshot was made from, as far up as it goes, so that `chartbook lineage` finds them all. By default a store keeps what work needs now and lets old lineage go |
 
 Five things it is careful about:
