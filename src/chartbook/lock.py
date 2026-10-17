@@ -139,6 +139,16 @@ class Lock:
             if record.get("content_hash")
         }
 
+    def snapshots(self) -> set[tuple[str, str]]:
+        """The snapshots it pins, each ``(commit, made_at)``: what a note of it records for ``store gc``."""
+        return {
+            (entry["location"]["commit"], entry["snapshot"])
+            for entry in self.dependencies
+            if isinstance(entry.get("location"), dict)
+            and isinstance(entry["location"].get("commit"), str)
+            and isinstance(entry.get("snapshot"), str)
+        }
+
     def assets_of(self, dependency: str) -> dict[str, dict]:
         """The records of one dependency's assets, by asset ID."""
         return {
@@ -1146,7 +1156,7 @@ def _sync_now(
     hashes = after.hashes()
     try:
         if hashes:
-            store.add_root(lock_path, hashes)
+            store.add_root(lock_path, hashes, after.snapshots())
         else:
             store.remove_root(lock_path)
     except (OSError, StoreError) as error:
@@ -1207,29 +1217,62 @@ class FrozenProblem:
 
 @dataclass
 class FrozenReport:
-    """What :func:`verify` found: whether every pin can be had, with nothing written.
+    """What :func:`verify` found: whether every pin can be had, with nothing written but a note for ``store gc``.
 
     Attributes:
         lockfile: The lockfile's path.
         dependencies: How many dependencies the manifest declares.
         pins: How many pinned assets are in the store.
         problems: Everything that stands in the way, in order.
+        noted: Whether the store's note of this lockfile on this machine
+            was written now, to name what it pins (:func:`note_this_machine`).
+        unrooted: Why that note could not be written, when it could not.
     """
 
     lockfile: Path
     dependencies: int = 0
     pins: int = 0
     problems: list[FrozenProblem] = field(default_factory=list)
+    noted: bool = False
+    unrooted: str = ""
 
 
-def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -> FrozenReport:
-    """Say whether a pipeline can be built from its lockfile alone. Nothing is written.
+def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool, str]:
+    """Make the store's note of a lockfile on this machine name what it pins, as well as what it named.
+
+    A machine that only reads (``--frozen``, a read through the lockfile)
+    is kept this way: ``store gc`` on another machine keeps what a note
+    records, and would otherwise know nothing of this one's pins. The note
+    gains what the lockfile pins, and loses nothing, and nothing is written
+    when it names all of it already.
+
+    :returns: Whether the note was written now, and why it could not be
+        (a store that is read-only for this user, say); empty if it could.
+    """
+    hashes, snapshots = locked.hashes(), locked.snapshots()
+    if not hashes:
+        return False, ""
+    try:
+        before = store.root_of(lock_path)
+        if before is not None:
+            if hashes <= set(before.hashes) and before.snapshots is not None and snapshots <= set(before.snapshots):
+                return False, ""
+            hashes |= set(before.hashes)
+            snapshots |= set(before.snapshots or ())
+        store.add_root(lock_path, hashes, snapshots)
+    except (OSError, StoreError, ValueError) as error:
+        return False, str(error)
+    return True, ""
+
+
+def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, note: bool = False) -> FrozenReport:
+    """Say whether a pipeline can be built from its lockfile alone.
 
     This is ``--frozen``: what CI runs, and what anyone with a store they
     may only read runs. It opens no repository, fetches nothing, pins
-    nothing and writes nothing, not the lockfile, not the store. It reads
-    the manifest's ``[dependencies]``, the lockfile and the store, and
-    reports a problem for
+    nothing and does not write the lockfile. It reads the manifest's
+    ``[dependencies]``, the lockfile and the store, and reports a problem
+    for
 
     - a lockfile that is not there while the manifest has dependencies;
     - a dependency in the manifest and not in the lockfile, or in the
@@ -1245,6 +1288,11 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
 
     :param project_dir: The pipeline's directory.
     :param store: The store the pins should be in; this user's by default.
+    :param note: Whether to make the store's note of the lockfile on this
+        machine name what it pins (:func:`note_this_machine`), so that
+        ``store gc`` on another machine keeps it: the one thing ``--frozen``
+        writes, and only when the note lacks something. Nothing is written
+        without it.
     :returns: What was found. No problems means the build can go ahead.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         is there and cannot be read.
@@ -1365,6 +1413,8 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
         report.problems.append(
             FrozenProblem(key, None, "is in the lockfile and no longer in [dependencies]. Run `chartbook pin`.")
         )
+    if note:
+        report.noted, report.unrooted = note_this_machine(lock_path, locked, store)
     return report
 
 
@@ -2489,7 +2539,9 @@ def plan_gc(
     kept if a lockfile the store knows of names it, or a kept snapshot
     does. The store knows of every lockfile that was pinned or updated into
     it, and a note only ever adds to what is kept. What a note recorded at
-    its lockfile's last pin is kept, and a lockfile on this machine is read
+    its lockfile's last pin is kept (its objects, and the snapshots it
+    pins; for a note from before notes recorded snapshots, the newest
+    snapshot holding each of its objects), and a lockfile on this machine is read
     as it is now as well, which adds what it pins after a pull or a switch
     of branch; one that cannot be found (a deleted project, a drive that is
     not plugged in) keeps what it named when it was last pinned, unless
@@ -2497,7 +2549,9 @@ def plan_gc(
     a store in a shared or synced folder has, keeps what it recorded and is
     never forgotten from here; so is a note from before notes named their
     machine, which may be another machine's, and a sync service's copy of
-    a note. A lockfile here at such a note's path is read as well.
+    a note. A lockfile here at the path of an old note, or of a copy of
+    this machine's own, is read as well; another machine's path is never
+    opened (it may be a mount of another host).
 
     :param store: The store; this user's by default.
     :param forget_missing: If True, a lockfile on this machine that cannot
@@ -2535,6 +2589,17 @@ def plan_gc(
                 pinned_snapshots.add((commit, entry["snapshot"]))
         return found
 
+    noted: dict[tuple[str, str], str] = {}
+
+    def keep_noted(root, why: str, fallback: set, hashes: Optional[set] = None) -> None:
+        """Keep what a note recorded: its objects, and the snapshots it pins (or, for a note that names none, by its objects)."""
+        keep.update(root.hashes)
+        if root.snapshots is not None:
+            for pair in root.snapshots:
+                noted.setdefault(pair, why)
+        else:
+            fallback.update(root.hashes if hashes is None else hashes)
+
     # A note only ever adds to what is kept: what it recorded at its
     # lockfile's last pin is kept, and reading the lockfile as it is now
     # (after a pull, or a switch of branch) adds to that, never replaces it
@@ -2546,11 +2611,12 @@ def plan_gc(
             # names a file on a machine that may not be this one. What the
             # note recorded is kept, and never taken as gone, even with
             # forget_missing, since only that machine can tell. A lockfile
-            # here at that path is read as well, which can only add
+            # here at the path of an old note, or of a copy of this
+            # machine's own, is read as well, which can only add; another
+            # machine's path is never opened (a mount of another host)
             plan.elsewhere.append(root)
-            keep |= set(root.hashes)
-            hashes_elsewhere |= set(root.hashes)
-            if _a_local_lockfile(root.lockfile) and read_too(root.lockfile) is not None:
+            keep_noted(root, "a lockfile not read here, another machine's, pins it", hashes_elsewhere)
+            if root.machine in ("", here) and _a_local_lockfile(root.lockfile) and read_too(root.lockfile) is not None:
                 plan.read_here.append(root.lockfile)
             continue
         # A root is written by whoever can write to the store, and names a
@@ -2561,26 +2627,23 @@ def plan_gc(
         if not _a_local_lockfile(root.lockfile):
             plan.lockfiles.append((root.lockfile, False))
             plan.not_read.append(root.lockfile)
-            keep |= set(root.hashes)
-            hashes_of_missing |= set(root.hashes)
+            keep_noted(root, "a lockfile that is not read here pins it", hashes_of_missing)
             continue
         found = read_too(root.lockfile)
         plan.lockfiles.append((root.lockfile, found is not None))
         if found is not None:
             # What the note recorded and the lockfile no longer names, a pull
             # or a switch of branch since its last pin, stays kept
-            keep |= set(root.hashes)
-            hashes_noted |= set(root.hashes) - found.hashes()
+            keep_noted(root, "its lockfile's note, from its last pin, pins it", hashes_noted, set(root.hashes) - found.hashes())
         elif forget_missing:
             plan.forget.append(root.lockfile)
         else:
-            keep |= set(root.hashes)
-            hashes_of_missing |= set(root.hashes)
+            keep_noted(root, "a lockfile that cannot be found pins it", hashes_of_missing)
 
     try:
         snapshots = snapshot.plan_removals(
             store, pinned_snapshots, hashes_of_missing, keep_days=keep_days, keep_lineage=keep_lineage,
-            aggressive=aggressive, hashes_elsewhere=hashes_elsewhere, hashes_noted=hashes_noted,
+            aggressive=aggressive, hashes_elsewhere=hashes_elsewhere, hashes_noted=hashes_noted, noted=noted,
         )
     except snapshot.SnapshotError as error:
         raise LockError(str(error)) from None
@@ -2632,6 +2695,7 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
         for content_hash, _ in plan.delete
         if content_hash in still_unnamed
     )
-    for lockfile in plan.forget:
+    # Only what both plans forget: a drive plugged back in before the yes brings its lockfile back
+    for lockfile in set(plan.forget) & set(now.forget):
         store.remove_root(lockfile)
     return removed_snapshots, removed

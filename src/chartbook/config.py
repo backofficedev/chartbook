@@ -388,19 +388,37 @@ def shown_store_url(url: str) -> str:
     """A store URL as it may be printed: with no user name or password in it, nor in a URL among its options.
 
     ``s3://b/p?endpoint=https://user:secret@minio.example.org`` is shown as
-    ``s3://b/p?endpoint=https://minio.example.org``. A folder is as it is.
+    ``s3://b/p?endpoint=https://minio.example.org``. A password may hold a
+    ``/`` or a ``#`` (half of AWS's secret keys have a ``/``), so all up to
+    the last ``@`` before the ``?`` goes, and in an option, all up to its
+    last ``@``. A folder is as it is (its path may hold an ``@``: a Google
+    Drive folder names its account), unless it is written ``//user@host``.
     """
     from urllib.parse import parse_qsl
 
-    def bare(text: str) -> str:
-        return re.sub(r"^([A-Za-z][A-Za-z0-9+.-]*://)[^/?#]*@", r"\1", text)
+    def bare(text: str, scheme_only: bool = False) -> str:
+        if "@" not in text:
+            return text
+        match = re.match(r"^([A-Za-z][A-Za-z0-9+.-]*://|//)", text)
+        if match:
+            return match.group(1) + text[match.end():].rpartition("@")[2]
+        return text if scheme_only else text.rpartition("@")[2]
 
-    if store_kind(url) == "folder":
+    if store_kind(url) == "folder" and not url.strip().startswith("//"):
         return url
     head, sep, query = url.partition("?")
     if not sep:
-        return bare(head)
-    return f"{bare(head)}?" + "&".join(f"{key}={bare(value)}" for key, value in parse_qsl(query, keep_blank_values=True))
+        return bare(head, scheme_only=True)
+    shown = "&".join(f"{key}={bare(value)}" for key, value in parse_qsl(query, keep_blank_values=True))
+    return f"{bare(head, scheme_only=True)}?{shown}"
+
+
+def without_credentials(text: str) -> str:
+    """A message with no user name or password of any URL in it: ``scheme://user:pass@`` becomes ``scheme://``.
+
+    For what an SDK says, which may echo an address it was given.
+    """
+    return re.sub(r"([A-Za-z][A-Za-z0-9+.-]*://)[^\s'\"<>]*@", r"\1", text)
 
 
 def store_kind(url: str) -> str:
@@ -462,12 +480,16 @@ def get_machine_id(create: bool = True) -> str:
     in ``~/.chartbook/machine-id`` beside what the operating system calls
     the machine (:func:`_os_machine_identity`, as a hash). A home folder
     that comes to another machine (copied by a migration or restored from
-    a backup, in a cloned virtual machine or an image that had pinned,
-    shared by several computers, or kept by a sync service) does not bring
-    its name with it: that machine makes one of its own, kept in the same
-    file. The cost is a note no machine forgets, never a pin. Where nothing
-    can be kept, or there is no home folder, a name made from what the
-    operating system calls the machine is used.
+    a backup, shared by several computers, kept by a sync service) does
+    not bring its name with it: that machine makes one of its own, kept in
+    the same file. So does a cloned virtual machine or an image that had
+    pinned, when its operating system made its identity anew; one that did
+    not is told apart only by its host name, when a note shows two hosts
+    under one name (:meth:`chartbook.store.FolderStore.add_root`), and one
+    with the same host name as well is not told apart at all. The cost is
+    a note no machine forgets, never a pin. Where nothing can be kept, or
+    there is no home folder, a name made from what the operating system
+    calls the machine is used.
 
     ``CHARTBOOK_MACHINE_ID`` names it instead: for machines that come and
     go with a fresh home folder each time (CI runners, containers), so
@@ -479,30 +501,20 @@ def get_machine_id(create: bool = True) -> str:
         it, the name used where nothing can be kept is given, which only a
         machine that could not keep a name of its own wrote notes under.
     """
-    import hashlib
     import uuid
 
     named = os.environ.get(MACHINE_ENV_VAR, "").strip()
     if named:
         return named
-    identity = hashlib.sha256(_os_machine_identity().encode("utf-8")).hexdigest()[:32]
-    unkept = uuid.uuid5(uuid.NAMESPACE_URL, f"chartbook-machine:{identity}").hex
-    try:
-        path = get_global_config_dir() / MACHINE_FILE
-    except (RuntimeError, KeyError, OSError):
+    path, identity, unkept = _machine_file()
+    if path is None:
         return unkept  # no home folder to keep a name in
-
-    def kept() -> dict:
-        try:
-            machines = json.loads(path.read_text(encoding="utf-8")).get("machines")
-        except (OSError, ValueError, AttributeError):
-            return {}
-        if not isinstance(machines, dict):
-            return {}
-        return {k: v for k, v in machines.items() if isinstance(v, str) and re.fullmatch(r"[0-9a-f]{32}", v)}
-
-    found = kept().get(identity)
+    # Worked out once a process: the name of a note's file and the name in it are one
+    if (str(path), identity) in _machine_names:
+        return _machine_names[(str(path), identity)]
+    found = _kept_machines(path).get(identity)
     if found is not None:
+        _machine_names[(str(path), identity)] = found
         return found
     if not create:
         return unkept
@@ -524,17 +536,84 @@ def get_machine_id(create: bool = True) -> str:
                             f.write(temporary.read_text(encoding="utf-8"))
                     except FileExistsError:
                         pass
-            if identity not in kept():
+            if identity not in _kept_machines(path):
                 # A home this machine came to with another's name in it: one of its own beside it
-                machines = {**kept(), identity: uuid.uuid4().hex}
-                temporary.write_text(json.dumps({"machines": machines}, indent=1) + "\n", encoding="utf-8")
-                os.replace(temporary, path)
+                _keep_machine(path, identity, uuid.uuid4().hex)
         finally:
             if temporary.exists():
                 temporary.unlink()
     except OSError:
         pass
-    return kept().get(identity) or unkept
+    found = _kept_machines(path).get(identity)
+    if found is None:
+        return unkept
+    _machine_names[(str(path), identity)] = found
+    return found
+
+
+#: The name this machine goes by, by its ``machine-id`` file and its identity, once worked out in this process.
+_machine_names: dict = {}
+
+
+def renew_machine_id() -> str:
+    """Give this machine a new name, when it shares one with another machine, and return it.
+
+    A store finds two machines with one name when a note under the name, at
+    one lockfile's path, was written by another host: a cloned virtual
+    machine whose operating system kept its identity, with a copied home.
+    The cost is that this machine's notes under the old name are kept as
+    another machine's, never that a pin is lost.
+    """
+    import uuid
+
+    path, identity, unkept = _machine_file()
+    made = uuid.uuid4().hex
+    if path is None:
+        return unkept
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        _keep_machine(path, identity, made)
+    except OSError:
+        return get_machine_id()
+    _machine_names[(str(path), identity)] = _kept_machines(path).get(identity) or made
+    return _machine_names[(str(path), identity)]
+
+
+def _machine_file() -> tuple:
+    """The ``machine-id`` file (None with no home folder), this machine's identity in it, and the name used where none can be kept."""
+    import hashlib
+    import uuid
+
+    identity = hashlib.sha256(_os_machine_identity().encode("utf-8")).hexdigest()[:32]
+    unkept = uuid.uuid5(uuid.NAMESPACE_URL, f"chartbook-machine:{identity}").hex
+    try:
+        return get_global_config_dir() / MACHINE_FILE, identity, unkept
+    except (RuntimeError, KeyError, OSError):
+        return None, identity, unkept
+
+
+def _kept_machines(path: Path) -> dict:
+    """The names a ``machine-id`` file keeps, by machine identity; empty if it cannot be read."""
+    try:
+        machines = json.loads(path.read_text(encoding="utf-8")).get("machines")
+    except (OSError, ValueError, AttributeError):
+        return {}
+    if not isinstance(machines, dict):
+        return {}
+    return {k: v for k, v in machines.items() if isinstance(v, str) and re.fullmatch(r"[0-9a-f]{32}", v)}
+
+
+def _keep_machine(path: Path, identity: str, name: str) -> None:
+    """Keep a name for one machine identity in a ``machine-id`` file, whole or not at all."""
+    import uuid
+
+    temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary.write_text(json.dumps({"machines": {**_kept_machines(path), identity: name}}, indent=1) + "\n", encoding="utf-8")
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
 
 
 @functools.lru_cache(maxsize=None)
@@ -543,7 +622,11 @@ def _os_machine_identity() -> str:
 
     The hardware's UUID on macOS (``ioreg``), ``/etc/machine-id`` (or
     D-Bus's) on Linux, ``MachineGuid`` in the registry on Windows; the
-    host's name where none of these says anything.
+    host's name where none of these gives one (``uninitialized``, as a
+    Linux image may have it, is none). A virtual machine cloned without
+    making its identity anew (``/etc/machine-id``, or Windows without
+    sysprep) has the identity of the one it was cloned from: two such
+    are told apart by their host names (:meth:`chartbook.store.FolderStore.add_root`).
     """
     import socket
     import subprocess
@@ -551,29 +634,39 @@ def _os_machine_identity() -> str:
 
     try:
         if sys.platform == "darwin":
+            # By its full path: cron's PATH does not have /usr/sbin
             found = subprocess.run(
-                ["ioreg", "-rd1", "-c", "IOPlatformExpertDevice"], capture_output=True, text=True, timeout=10
+                ["/usr/sbin/ioreg", "-rd1", "-c", "IOPlatformExpertDevice"], capture_output=True, text=True, timeout=10
             ).stdout
-            match = re.search(r'"IOPlatformUUID"\s*=\s*"([^"]+)"', found)
-            if match:
-                return f"darwin:{match.group(1)}"
+            match = re.search(r'"IOPlatformUUID"\s*=\s*"([0-9A-Fa-f-]+)"', found)
+            if match and _an_identity(match.group(1)):
+                return f"darwin:{match.group(1).lower()}"
         elif os.name == "nt":
             import winreg
 
             access = winreg.KEY_READ | getattr(winreg, "KEY_WOW64_64KEY", 0)
             with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography", 0, access) as key:
-                return f"windows:{winreg.QueryValueEx(key, 'MachineGuid')[0]}"
+                guid = str(winreg.QueryValueEx(key, "MachineGuid")[0])
+            if _an_identity(guid):
+                return f"windows:{guid.lower()}"
         else:
             for candidate in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
                 try:
                     text = Path(candidate).read_text(encoding="utf-8").strip()
                 except OSError:
                     continue
-                if text:
+                # Not "uninitialized", as systemd leaves it before a first boot, nor anything else not one
+                if re.fullmatch(r"[0-9a-f]{32}", text) and _an_identity(text):
                     return f"linux:{text}"
     except (OSError, ValueError, subprocess.SubprocessError):
         pass
     return f"host:{socket.gethostname()}"
+
+
+def _an_identity(text: str) -> bool:
+    """Whether what the operating system gave is a machine's identity: hex digits (and dashes), not all zeros."""
+    digits = text.replace("-", "")
+    return len(digits) >= 32 and bool(re.fullmatch(r"[0-9A-Fa-f]+", digits)) and set(digits) != {"0"}
 
 
 def get_default_host() -> str:

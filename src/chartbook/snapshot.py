@@ -1329,15 +1329,18 @@ def plan_removals(
     aggressive: bool = False,
     hashes_elsewhere: set[str] = frozenset(),
     hashes_noted: set[str] = frozenset(),
+    noted: Optional[dict] = None,
 ) -> SnapshotPlan:
     """Say which snapshots may be removed. Nothing is removed.
 
     A snapshot is kept if, in this order:
 
     1. a lockfile pins it (its commit and time are named by a dependency);
-    2. a lockfile that cannot be found, or one on another machine, named
-       one of its objects when it was last pinned; or the note of one that
-       was read recorded one at its last pin;
+    2. a note of a lockfile pins it: one that cannot be found, one on
+       another machine, or one read here whose note, from its last pin,
+       names it (*noted*); or, for a note from before notes named their
+       snapshots, it is the newest snapshot holding one of the objects the
+       note names;
     3. it is the newest snapshot of its pipeline, or the newest that a
        branch or a tag of the repository it came from can pin from;
     4. a label points at a model version it holds: in the pipeline's
@@ -1371,6 +1374,9 @@ def plan_removals(
     :param hashes_noted: The objects the notes of lockfiles that were read
         recorded at their last pin, which the lockfile may no longer name
         (after a pull, or a switch of branch): a note only adds.
+    :param noted: The snapshots notes record, ``(commit, made_at)``, each
+        with why it is kept. The three sets of objects above are for notes
+        that record no snapshots.
     :raises SnapshotError: If a record cannot be read.
     """
     now = now if now is not None else datetime.now(timezone.utc)
@@ -1399,15 +1405,33 @@ def plan_removals(
                 for name, starts in labels.items():
                     of_whole[-1][2].setdefault(name, set()).update(starts)
         planned.extend(of_whole)
+    # A note that names no snapshots (from before notes recorded them) keeps,
+    # of the snapshots holding each object it names, the newest: an object
+    # that never changes would otherwise keep every snapshot there is
+    every = sorted((taken for group, _, _, _ in planned for taken in group), key=lambda t: (t.made_at, _count(t.path)))
+
+    def newest_holding(hashes: set) -> set:
+        holder: dict = {}
+        for taken in every:
+            for content_hash in taken.hashes() & hashes:
+                holder[content_hash] = taken
+        return {id(taken) for taken in holder.values()}
+
+    by_missing = newest_holding(set(hashes_of_missing))
+    by_elsewhere = newest_holding(set(hashes_elsewhere))
+    by_noted = newest_holding(set(hashes_noted))
+    noted = noted or {}
     for group, newest, labels, pinnable in planned:
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
-            elif taken.hashes() & set(hashes_of_missing):
+            elif (taken.commit, taken.made_at) in noted:
+                why = noted[(taken.commit, taken.made_at)]
+            elif id(taken) in by_missing:
                 why = "a lockfile that cannot be found named what it holds"
-            elif taken.hashes() & set(hashes_elsewhere):
+            elif id(taken) in by_elsewhere:
                 why = "a lockfile not read here, another machine's, named what it holds"
-            elif taken.hashes() & set(hashes_noted):
+            elif id(taken) in by_noted:
                 why = "a lockfile's note, from its last pin, names what it holds"
             elif taken is newest:
                 why = "it is the newest of its pipeline"

@@ -117,11 +117,16 @@ class FileLocation(Location):
         path: Absolute path. For partitioned data it contains glob
             characters. The file need not exist: a path can be asked for
             before anything has written to it.
+        files: For a directory pinned from another pipeline, the files its
+            record lists, under *path*: what a reader reads, and nothing
+            else the folder may hold (a Finder ``.DS_Store``, a sync
+            service's copy). Empty otherwise.
     """
 
     kind: ClassVar[str] = "file"
 
     path: Path
+    files: tuple = dataclasses.field(default=(), compare=False)
 
 
 @dataclass(frozen=True)
@@ -800,7 +805,33 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"back if it can, and says what to do if it cannot.",
         )
 
+    _note_the_read(manifest_dir / "chartbook.lock", locked, store)
     return _held(store, record)
+
+
+#: The lockfiles whose note a read has seen to in this process, each as it was then.
+_noted_reads: set = set()
+
+
+def _note_the_read(lock_path: Path, locked, store) -> None:
+    """See that the store's note of a lockfile on this machine names what it pins, once a process.
+
+    A machine that only reads is kept this way: ``store gc`` on another
+    machine keeps what a note records (:func:`chartbook.lock.note_this_machine`).
+    Silent, and skipped when the store cannot be written or the note
+    names it all already, so that a read does not write every time.
+    """
+    from chartbook import lock
+
+    try:
+        seen = lock_path.stat()
+    except OSError:
+        return
+    key = (str(lock_path), seen.st_mtime_ns, seen.st_size, str(store))
+    if key in _noted_reads:
+        return
+    lock.note_this_machine(lock_path, locked, store)
+    _noted_reads.add(key)
 
 
 def _held(store, record: dict) -> Location:
@@ -826,8 +857,14 @@ def _held(store, record: dict) -> Location:
         tail = Path(declared_path).relative_to(hashing.glob_root(declared_path))
         return FileLocation(held / tail)
     name = Path(declared_path).name
-    if "files" in record or not (held / name).is_file():
-        return FileLocation(held)  # a directory: the object is the directory
+    if isinstance(record.get("files"), list):
+        # A directory, read as the files its record lists and nothing else in the folder
+        from chartbook.snapshot import files_read, safe_relative
+
+        listed = [safe_relative(relative) for relative in sorted(files_read(record) or {})]
+        return FileLocation(held, tuple(held.joinpath(*plain.split("/")) for plain in listed if plain))
+    if not (held / name).is_file():
+        return FileLocation(held)  # a directory pinned before records listed its files: the folder
     return FileLocation(held / name)
 
 

@@ -177,8 +177,10 @@ reference data and models that are committed. For data that the other pipeline b
 ## In CI, and on a shared store
 
 A build server should change nothing. `chartbook run --frozen` pins nothing, fetches nothing and
-writes nothing: it builds only if the lockfile is complete and every pin is in the store, and
-fails with a list of what is missing otherwise. `chartbook pin --frozen` is the same check alone.
+writes nothing but, where the store can be written, its note that this machine reads these pins,
+so that `store gc` elsewhere keeps them: it builds only if the lockfile is complete and every pin
+is in the store, and fails with a list of what is missing otherwise. `chartbook pin --frozen` is
+the same check alone.
 A team can point every machine at one store (`[store] url` in the organization's settings file or
 the user's `~/.chartbook/settings.toml`, or `CHARTBOOK_STORE`): a folder on a shared disk, a folder
 a sync service such as Google Drive keeps in step between machines, or an S3 bucket,

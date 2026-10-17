@@ -43,7 +43,6 @@ import re
 import stat
 import time
 import uuid
-import warnings
 from pathlib import Path
 from typing import Iterable, Iterator, Optional, Union
 from urllib.parse import parse_qsl, urlsplit
@@ -70,7 +69,9 @@ from chartbook.store import (
     StoreUnreachableError,
     _FULL_COMMIT,
     _HEX,
+    _another_host,
     _split_hash,
+    _unreadable_note_remedy,
     is_record_name,
     is_root_name,
     read_root,
@@ -106,7 +107,7 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
     if parts.scheme.lower() != "s3" or not parts.netloc:
         raise ValueError(f"The store {shown!r} is not an S3 URL: write s3://bucket/prefix.")
     bucket = parts.netloc
-    if "@" in bucket or ":" in bucket:
+    if "@" in url.partition("?")[0] or "@" in bucket or ":" in bucket:
         raise ValueError(
             f"The store {shown!r} carries more than a bucket name before the first slash. "
             f"Credentials never go in the URL (the AWS SDK reads them from the environment "
@@ -127,7 +128,7 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
                 f"The store {shown!r} has a query key {key!r} this store does not read; "
                 f"the keys are: {', '.join(URL_OPTIONS)}."
             )
-        if key == "endpoint" and "@" in urlsplit(value).netloc:
+        if key == "endpoint" and "@" in value:
             raise ValueError(
                 f"The store {shown!r} has an endpoint with a user name in it. Credentials never go "
                 f"in the URL: the AWS SDK reads them from the environment or ~/.aws."
@@ -257,6 +258,8 @@ class S3Store(Store):
         import boto3.exceptions
         import botocore.exceptions
 
+        from chartbook.config import without_credentials
+
         try:
             yield
         except (botocore.exceptions.ClientError, boto3.exceptions.Boto3Error) as error:
@@ -269,10 +272,11 @@ class S3Store(Store):
                 ) from None
             if code == "NoSuchBucket":
                 raise StoreError(f"The store {self} is in a bucket that does not exist.") from None
-            raise StoreError(f"The store {self} could not {what}: {error}") from None
+            # What the SDK says may echo the endpoint it was given
+            raise StoreError(f"The store {self} could not {what}: {without_credentials(str(error))}") from None
         except botocore.exceptions.BotoCoreError as error:
             raise StoreUnreachableError(
-                f"The store {self} cannot be reached to {what}: {error}"
+                f"The store {self} cannot be reached to {what}: {without_credentials(str(error))}"
             ) from None
 
     def _list(self, prefix: str, delimiter: Optional[str] = None) -> Iterator[dict]:
@@ -603,13 +607,32 @@ class S3Store(Store):
     def _root_key(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> str:
         return self._key(ROOTS_DIR, root_name(lockfile, this_machine() if machine is None else machine))
 
-    def add_root(self, lockfile: Union[str, Path], hashes: Iterable[str]) -> None:
+    def add_root(
+        self, lockfile: Union[str, Path], hashes: Iterable[str], snapshots: Iterable[tuple[str, str]] = ()
+    ) -> None:
         hashes = sorted(set(hashes))
         for content_hash in hashes:
             _split_hash(content_hash)
         self._check_layout(create=True)
-        document = root_document(lockfile, hashes)
-        self._write(self._root_key(lockfile), (json.dumps(document, indent=1) + "\n").encode())
+        machine = this_machine()
+        before = self._read_note(self._root_key(lockfile, machine))
+        if before is not None and _another_host(before):
+            # Two machines with one name: this one takes another (FolderStore.add_root)
+            from chartbook.config import renew_machine_id
+
+            machine = renew_machine_id()
+        document = root_document(lockfile, hashes, snapshots, machine)
+        self._write(self._root_key(lockfile, machine), (json.dumps(document, indent=1) + "\n").encode())
+
+    def _read_note(self, key: str) -> Optional[Root]:
+        body = self._read(key)
+        try:
+            return read_root(json.loads(body.decode("utf-8")), key.rpartition("/")[2]) if body is not None else None
+        except (ValueError, KeyError, TypeError):
+            return None
+
+    def root_of(self, lockfile: Union[str, Path]) -> Optional[Root]:
+        return self._read_note(self._root_key(lockfile, this_machine(create=False)))
 
     def remove_root(self, lockfile: Union[str, Path]) -> bool:
         key = self._root_key(lockfile, this_machine(create=False))
@@ -627,16 +650,12 @@ class S3Store(Store):
                 continue
             body = self._read(entry["Key"])
             try:
+                # A copy of a note, as a folder store a sync service kept brings, is read too
                 found.append(read_root(json.loads(body.decode("utf-8")) if body is not None else {}, name))
             except (ValueError, KeyError, TypeError) as error:
-                # A copy of a note, as a folder store a sync service kept brings, is read
-                # too (FolderStore.roots); one that cannot be read is passed over
-                if is_root_name(name):
-                    raise StoreError(f"Cannot read {self}/{entry['Key']}: {error}") from None
-                warnings.warn(
-                    f"{self}/{entry['Key']} is not read: it is not a note the store wrote, and not a copy of one ({error}).",
-                    stacklevel=2,
-                )
+                raise StoreError(
+                    f"Cannot read {self}/{entry['Key']}: {error}.{_unreadable_note_remedy(name)}"
+                ) from None
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 
     # -- snapshot records ---------------------------------------------------

@@ -213,7 +213,7 @@ class TestTheCache:
         """A folder store synced into a bucket may bring a sync service's copies: `<stamp> (1).json`.
 
         A copy of a record is passed over; a copy of a note is read, as a note
-        only ever adds to what is kept, and one that cannot be read is passed over."""
+        only ever adds to what is kept, and one that cannot be read is an error."""
         stored = store.put(a_file)
         store.add_root(Path("/somewhere/chartbook.lock"), [stored.content_hash])
         written = store.write_snapshot(COMMIT, "_top", "20261016T000000Z", {"a": 1})
@@ -227,8 +227,9 @@ class TestTheCache:
             (str(Path("/somewhere/chartbook.lock")), False), (str(Path("/somewhere/chartbook.lock")), True)
         ]
         client.put_object(Bucket=BUCKET, Key=note.replace(".json", " (2).json"), Body=b'{"lock')
-        with pytest.warns(UserWarning, match="is not read: it is not a note the store wrote"):
-            assert len(store.roots()) == 2
+        with pytest.raises(StoreError, match="if it is a copy nobody needs"):
+            store.roots()  # half a copy: what it keeps cannot be said
+        client.delete_object(Bucket=BUCKET, Key=note.replace(".json", " (2).json"))
         assert store.snapshot_files(COMMIT, "_top") == [written] and store.all_snapshot_files() == [written]
         assert store.remove_snapshot(written) is True
         assert f"stores/one/snapshots/{COMMIT}/_top/origins" not in _keys(client)

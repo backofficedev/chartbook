@@ -2074,10 +2074,18 @@ def _echo_frozen_report(step, report):
     if not report.problems and not report.dependencies:
         click.echo(f"{who}no dependencies to check. Nothing written.")
         return
+    if report.unrooted:
+        # Only the note for gc: the pins are as they were
+        click.echo(
+            f"{who}the store's note that this machine reads these pins could not be written "
+            f"({report.unrooted}): `store gc` on another machine does not know of them.",
+            err=True,
+        )
+    written = "Nothing written but the store's note that this machine reads these pins." if report.noted else "Nothing written."
     if not report.problems:
         click.echo(
             f"{who}{report.pins} pin(s) of {report.dependencies} dependenc"
-            f"{'y' if report.dependencies == 1 else 'ies'}, all in the store. Nothing written."
+            f"{'y' if report.dependencies == 1 else 'ies'}, all in the store. {written}"
         )
         return
     for problem in report.problems:
@@ -2085,7 +2093,7 @@ def _echo_frozen_report(step, report):
         click.echo(f"{who}{where + ': ' if where else ''}{problem.message}", err=True)
     click.echo(
         f"{who}{len(report.problems)} problem(s): the pipeline cannot be built from its "
-        f"lockfile alone. Nothing written.",
+        f"lockfile alone. {written}",
         err=True,
     )
 
@@ -2095,7 +2103,7 @@ def _echo_frozen_report(step, report):
 @click.option(
     "--frozen",
     is_flag=True,
-    help="Write nothing: say whether the lockfile is complete and every pin is in the store",
+    help="Write nothing but the store's note for gc: say whether the lockfile is complete and every pin is in the store",
 )
 def pin(project_dir, frozen):
     """Freeze what this pipeline depends on.
@@ -2116,10 +2124,12 @@ def pin(project_dir, frozen):
     A dependency that is a git repository is fetched, and pinned from a
     clean copy of the commit.
 
-    --frozen pins nothing and writes nothing: not the lockfile, not the
-    store. It says whether the pipeline can be built from its lockfile
-    alone, every dependency pinned and every pin in the store, and exits
-    1 if not. For CI, and for a store you may only read.
+    --frozen pins nothing and writes nothing but, where the store can be
+    written, its note that this machine reads these pins, so that `store
+    gc` on another machine keeps them: not the lockfile, no object. It says
+    whether the pipeline can be built from its lockfile alone, every
+    dependency pinned and every pin in the store, and exits 1 if not. For
+    CI, and for a store you may only read.
 
     \b
     Examples:
@@ -2166,7 +2176,7 @@ def _run_frozen(project_dir):
     from chartbook.store import StoreError
 
     try:
-        report = lock.verify(resolve_project_dir(project_dir))
+        report = lock.verify(resolve_project_dir(project_dir), note=True)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
@@ -2403,7 +2413,7 @@ def lineage_command(project_dir, check, rehash, as_json):
 @click.option(
     "--frozen",
     is_flag=True,
-    help="Pin nothing and write nothing before the build; refuse unless every pin is in the store",
+    help="Pin nothing and write nothing before the build but the store's note for gc; refuse unless every pin is in the store",
 )
 def run_command(script, project_dir, force, make_snapshot, frozen):
     """Run a script in this pipeline: `build`, unless another is named.
@@ -2443,8 +2453,9 @@ def run_command(script, project_dir, force, make_snapshot, frozen):
         chartbook run --snapshot
         chartbook run --frozen
 
-    --frozen pins nothing and writes nothing before the build: not the
-    lockfile, not the store, and no git dependency is fetched or built.
+    --frozen pins nothing and writes nothing before the build but, where
+    the store can be written, its note that this machine reads these pins:
+    not the lockfile, no object, and no git dependency is fetched or built.
     The build runs only if the lockfile is complete and every pin is in
     the store (`chartbook pin --frozen` says the same without building).
     For CI, and for a store you may only read.
@@ -2645,6 +2656,11 @@ def store_verify():
     click.echo(f"{the_store}: OK ({total} object(s))")
 
 
+def _printable(text) -> str:
+    """Text a store holds, as it may be printed: a control character (a line break, an escape) is a ``?``."""
+    return "".join("?" if ord(c) < 32 or 127 <= ord(c) < 160 else c for c in str(text))
+
+
 def _format_bytes(size):
     """A size for a person: ``18.2 KB``, ``4.1 GB``."""
     size = float(size)
@@ -2748,24 +2764,26 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             note = "  (not found; forgotten)"
         else:
             note = "  (not found; its pins are kept)"
-        click.echo(f"  {lockfile}{note}")
-    import socket
+        click.echo(f"  {_printable(lockfile)}{note}")
+    from chartbook.store import this_host
 
-    this_host = socket.gethostname()
+    here = this_host()
     for root in plan.elsewhere:
+        # A note is written by whoever can write to the store: what it says is printed, never obeyed
+        host = _printable(root.host)
         if root.copy:
             whose = "a sync service's copy of a note"
         elif not root.machine:
             whose = "noted before notes named their machine, so perhaps another machine's"
-        elif root.host and root.host == this_host:
+        elif root.host and root.host == here:
             # Not this machine's name now: an earlier one of its own, or another machine of the same host name
-            whose = f"noted by {root.host} under another machine name than this one's now"
+            whose = f"noted by {host} under another machine name than this one's now"
         else:
-            whose = f"on another machine, {root.host}" if root.host else "on another machine"
+            whose = f"on another machine, {host}" if root.host else "on another machine"
         read = "; the lockfile here at that path is read as well" if root.lockfile in plan.read_here else ""
         click.echo(
-            f"  {root.lockfile}  ({whose}: what it recorded at its last pin is kept{read}; "
-            f"note {the_store}/roots/{root.note})"
+            f"  {_printable(root.lockfile)}  ({whose}: what it recorded at its last pin is kept{read}; "
+            f"note {the_store}/roots/{_printable(root.note)})"
         )
     if plan.snapshots_kept:
         reasons = {}

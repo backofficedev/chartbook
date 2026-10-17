@@ -650,10 +650,12 @@ def run(
             )
 
         if building and frozen:
-            # Nothing is written. Either every pin can be had, or nothing
-            # runs. Checked whether or not the manifest has dependencies
-            # now: a lockfile may still list one it dropped.
-            checked = lock.verify(step.directory, store)
+            # Nothing is written but the store's note that this machine
+            # reads these pins, so that gc elsewhere keeps them. Either
+            # every pin can be had, or nothing runs. Checked whether or not
+            # the manifest has dependencies now: a lockfile may still list
+            # one it dropped.
+            checked = lock.verify(step.directory, store, note=True)
             if on_verify is not None:
                 on_verify(step, checked)
             if checked.problems:
