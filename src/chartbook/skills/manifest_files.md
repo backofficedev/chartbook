@@ -192,7 +192,8 @@ query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
   the machine names: a manifest host that differs stops the read. Rows come when the lazy frame
   is collected. A query in a warehouse cannot name a file of the pipeline. A snapshot keeps a
   Delta table by its version (another pipeline reads `VERSION AS OF` it; Delta keeps 7 days by
-  default, then `chartbook update`), and writes a query or view out as parquet.
+  default, then a new snapshot upstream and `chartbook update`). A query or view in a warehouse is
+  never pinned and never copied out.
 - ChartBook never parses or rewrites SQL. The index records `location` kind
   `table`/`query` with a `definition_hash` instead of a `content_hash`.
 - A catalog cannot have `[sources]`.

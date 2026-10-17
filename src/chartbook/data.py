@@ -563,7 +563,10 @@ def ref(
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     asset = _assets.parse(reference, kind="dataframe")
     location = resolve(asset, start_dirs=start_dirs)
-    return backend_for(location).ref(location)
+    backend = backend_for(location)
+    if location.kind != "file":
+        backend.check_pin(location)
+    return backend.ref(location)
 
 
 def sql(
@@ -642,7 +645,12 @@ def sql(
                 f"Load them apart with data.load() and join the frames in Polars."
             )
     for text, location in locations.items():
-        replacement = backend_for(location).ref(location) if location.kind == "file" else engine.ref(location)
+        if location.kind == "file":
+            replacement = backend_for(location).ref(location)
+        else:
+            # A pinned version is checked to be of the table pinned, as a load checks it
+            engine.check_pin(location)
+            replacement = engine.ref(location)
         query = query.replace("{" + text + "}", replacement)
     query = query.replace(_LITERAL_OPEN, "{").replace(_LITERAL_CLOSE, "}")
     return engine.sql(query)

@@ -44,9 +44,12 @@ warehouse.
 **Pinned by version.** A Delta table keeps its history, so a snapshot
 records the table's version (:meth:`DatabricksBackend.version_of`) rather
 than a copy, and a pipeline that pins it reads ``VERSION AS OF`` that
-version, after checking that the table is still the one pinned (its id).
-Delta keeps old versions for 7 days by default; a version the table no
-longer keeps cannot be read, and the message says so.
+version, after checking that the table is still the one pinned
+(:meth:`DatabricksBackend.check_pin`). Delta keeps old versions for 7 days
+by default; a version the table no longer keeps cannot be read, and the
+message says what to do. Nothing else in a warehouse is pinned, and
+nothing is copied out of one: its rows stay under the warehouse's own
+grants.
 """
 
 from __future__ import annotations
@@ -58,6 +61,7 @@ from typing import TYPE_CHECKING, Optional
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from chartbook.backends import (
+    TABLE_IDENTIFIER,
     Backend,
     BackendError,
     machine_source_url,
@@ -80,12 +84,24 @@ AUTH = ("token", "oauth")
 #: Rows asked of the warehouse at a time when a frame is collected.
 BATCH_ROWS = 100_000
 
+#: What moves a pin to the version a table has now: a new snapshot upstream, then an update.
+REPIN = (
+    "The pipeline that names the table records the version it has now in a new snapshot "
+    "(`chartbook snapshot` there), and `chartbook update` here pins that."
+)
+
 #: What a read of a version the table no longer keeps adds to the warehouse's message.
 GONE = (
     "{identifier} is pinned at version {version}, and the warehouse could not read it. If the "
     "table no longer keeps that version (Delta keeps 7 days by default, and VACUUM removes what "
-    "is older), `chartbook update` pins the version it has now; its owner can keep more with "
-    "the table properties delta.deletedFileRetentionDuration and delta.logRetentionDuration."
+    "is older): " + REPIN + " Its owner can keep versions longer with the table properties "
+    "delta.deletedFileRetentionDuration and delta.logRetentionDuration."
+)
+
+#: What the warehouse says of something whose versions cannot be pinned: a view, a table that
+#: is not Delta, a materialized view or a streaming table. Any other error is not this.
+_NO_VERSIONS = re.compile(
+    r"not supported|unsupported|only supported|not a delta table|expect_table_not_view|is a view", re.IGNORECASE
 )
 
 #: A workspace's host: letters, digits, dots and hyphens, with a dot in it (a workspace's host
@@ -393,70 +409,97 @@ class DatabricksBackend(Backend):
                 pass
 
     def scan(self, location: "Location"):
-        """A table or a query, as a Polars LazyFrame; a pinned version after checking it is the table pinned."""
+        """A table or a query, as a Polars LazyFrame; a pinned version after :meth:`check_pin`."""
         version = getattr(location, "version", None)
         if version is None:
             return self.sql(f"select * from {self.ref(location)}")
-        table_id = self._run(f"describe detail {quote_identifier(location.identifier, '`')}", _table_id)
-        if table_id != location.table_id:
-            raise BackendError(
-                f"{location.identifier} is not the table that was pinned: its id was {location.table_id}, "
-                f"and is {table_id or 'not given'} now, so it was dropped and made again. `chartbook update` "
-                f"pins the version it has now."
-            )
+        self.check_pin(location)
+        note = GONE.format(identifier=location.identifier, version=version)
         try:
-            return self.sql(f"select * from {self.ref(location)}")
+            return self.sql(f"select * from {self.ref(location)}", note=note)
         except BackendError as error:
-            raise BackendError(f"{error}\n{GONE.format(identifier=location.identifier, version=version)}") from None
+            raise BackendError(f"{error}\n{note}") from None
+
+    def check_pin(self, location: "Location") -> None:
+        """Refuse a pinned version that is not of the table that was pinned.
+
+        The table's id (``describe detail``) is the one pinned; or, where it
+        is not, the table's history still has the pinned version, written
+        when the pin says. So a table made again with its history kept, as
+        ``create or replace`` makes one, still serves its pins, and a table
+        dropped and made again under the same name does not, whatever
+        versions it has reached since.
+
+        :raises chartbook.backends.BackendError: If it is not, or the warehouse cannot say.
+        """
+        if getattr(location, "version", None) is None:
+            return
+        name = quote_identifier(location.identifier, "`")
+
+        def answer(cursor):
+            if _table_id(cursor) == location.table_id:
+                return True
+            cursor.execute(f"describe history {name}")
+            columns = [column[0] for column in cursor.description or []]
+            for row in cursor.fetchall():
+                entry = dict(zip(columns, row))
+                if entry.get("version") == location.version:
+                    return bool(location.written_at) and _when(entry.get("timestamp")) == location.written_at
+            return False
+
+        if not self._run(f"describe detail {name}", answer):
+            raise BackendError(
+                f"{location.identifier} is not the table that was pinned at version {location.version}: it was "
+                f"dropped and made again, and its history no longer has that version as it was. {REPIN}"
+            )
 
     def version_of(self, location: "Location") -> Optional[dict]:
-        """A Delta table's current version, its id and when that version was written; None for anything else.
+        """A Delta table's current version: its number, the table's id and full name, when it was written.
 
-        ``describe detail`` gives the format and the id (a view, or a table
-        that is not Delta, has no versions to pin); ``describe history``
-        with ``limit 1`` gives the newest version; and that version is read
-        once, with no rows, so that a table whose versions cannot be read
-        (a materialized view, a streaming table) is not pinned by one.
+        ``describe detail`` gives the format, the id and the full name, so a
+        name declared in one or two parts is pinned in three, whatever
+        catalog the reader's connection starts in; ``describe history`` with
+        ``limit 1`` gives the newest version; and that version is read
+        once, with no rows. None for a view, a table that is not Delta, a
+        materialized view or a streaming table, as the warehouse says (by
+        its format, or by refusing one of those as unsupported).
 
-        :raises chartbook.backends.BackendError: If the warehouse cannot be reached, or the table is not there.
+        :raises chartbook.backends.BackendError: For any other failure: the
+            warehouse cannot be reached, the table is not there, or this
+            user may not read its history.
         """
         if location.kind != "table":
             return None
         name = quote_identifier(location.identifier, "`")
 
         def answer(cursor):
-            columns = [column[0] for column in cursor.description or []]
-            row = cursor.fetchone()
-            detail = dict(zip(columns, row)) if row is not None else {}
+            detail = _first_row(cursor)
             if str(detail.get("format") or "").lower() != "delta" or not detail.get("id"):
                 return None
             cursor.execute(f"describe history {name} limit 1")
-            columns = [column[0] for column in cursor.description or []]
-            row = cursor.fetchone()
-            history = dict(zip(columns, row)) if row is not None else {}
-            if not isinstance(history.get("version"), int) or isinstance(history.get("version"), bool):
+            history = _first_row(cursor)
+            version = history.get("version")
+            if not isinstance(version, int) or isinstance(version, bool):
                 return None
-            try:
-                cursor.execute(f"select * from {name} VERSION AS OF {history['version']} limit 0")
-                cursor.fetchall_arrow()
-            except Exception:  # noqa: BLE001 - its versions cannot be read: copied instead
-                return None
-            written = history.get("timestamp")
+            cursor.execute(f"select * from {name} VERSION AS OF {version} limit 0")
+            cursor.fetchall_arrow()
+            full = str(detail.get("name") or "")
             return {
-                "version": history["version"],
+                "version": version,
                 "table_id": str(detail["id"]),
-                "written_at": written.isoformat() if hasattr(written, "isoformat") else str(written or ""),
+                "name": full if TABLE_IDENTIFIER.fullmatch(full) and "`" not in full else location.identifier,
+                "written_at": _when(history.get("timestamp")),
             }
 
         try:
             return self._run(f"describe detail {name}", answer)
         except BackendError as error:
-            if _is_a_view(str(error)):
+            if _NO_VERSIONS.search(str(error)):
                 return None
             raise
 
-    def sql(self, query: str):
-        """Run SQL in the warehouse, as a Polars LazyFrame.
+    def sql(self, query: str, note: str = ""):
+        """Run SQL in the warehouse, as a Polars LazyFrame; *note* is added to an error found while collecting.
 
         The warehouse binds it now (``select * from (…) limit 0``), so a name
         it does not know is refused at once, and its columns are the
@@ -513,12 +556,12 @@ class DatabricksBackend(Backend):
                     try:
                         cursor.execute(text)
                     except Exception as error:  # noqa: BLE001 - the warehouse's own message
-                        raise BackendError(str(error)) from None
+                        raise BackendError(f"{error}\n{note}" if note else str(error)) from None
                     while left is None or left > 0:
                         try:
                             batch = cursor.fetchmany_arrow(batch_size or BATCH_ROWS)
                         except Exception as error:  # noqa: BLE001
-                            raise BackendError(str(error)) from None
+                            raise BackendError(f"{error}\n{note}" if note else str(error)) from None
                         if batch.num_rows == 0:
                             return
                         frame = checked(pl.from_arrow(batch), schema)
@@ -624,7 +667,17 @@ def _table_id(cursor) -> str:
     return str(dict(zip(columns, row or ())).get("id") or "")
 
 
-def _is_a_view(message: str) -> bool:
-    """Whether the warehouse refused ``describe detail`` because the name is a view: it has no versions to pin."""
-    text = message.lower()
-    return "view" in text and ("describe detail" in text or "expect_table_not_view" in text or "is a view" in text)
+def _first_row(cursor) -> dict:
+    """The first row of what was run, by column name; empty if there is none."""
+    columns = [column[0] for column in cursor.description or []]
+    row = cursor.fetchone()
+    return dict(zip(columns, row)) if row is not None else {}
+
+
+def _when(value) -> str:
+    """When a version was written, as text: in UTC when the warehouse says the zone, else as it says it."""
+    from datetime import timezone
+
+    if hasattr(value, "astimezone") and getattr(value, "tzinfo", None) is not None:
+        return value.astimezone(timezone.utc).isoformat()
+    return value.isoformat() if hasattr(value, "isoformat") else str(value or "")

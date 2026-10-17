@@ -1313,6 +1313,10 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                         "not_built",
                     )
                 )
+            elif not content_hash and assets[asset_id].get("not_pinned"):
+                # A warehouse's query or view: never pinned, by design, and
+                # read by nothing that went through the lockfile
+                continue
             elif not content_hash and assets[asset_id].get("location", {}).get("kind") in ("table", "query"):
                 report.problems.append(
                     FrozenProblem(

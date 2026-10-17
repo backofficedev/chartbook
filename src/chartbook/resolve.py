@@ -138,6 +138,9 @@ class TableLocation(Location):
         table_id: The id of the table that version is of, which a read
             checks, so that a table dropped and made again under the same
             name is not read as the one pinned.
+        written_at: When that version was written, which a read checks
+            where the id has changed: a table made again with its history
+            kept still has the version, written then.
     """
 
     kind: ClassVar[str] = "table"
@@ -148,6 +151,7 @@ class TableLocation(Location):
     identifier: str
     version: Optional[int] = None
     table_id: Optional[str] = None
+    written_at: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -771,6 +775,13 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             f"{record.get('missing') or 'the store could not supply the version the label names'}. "
             f"{remedy[0].upper()}{remedy[1:]}, in {manifest_dir}.",
         )
+    if not content_hash and record.get("not_pinned"):
+        raise AssetNotPinnedError(
+            asset_id,
+            "not_built",
+            f"{asset_id!r} is a {record['location'].get('kind')} in a warehouse, and a snapshot does not "
+            f"pin it: {record['not_pinned']}.",
+        )
     if not content_hash and record["location"].get("kind") in ("table", "query"):
         raise AssetNotPinnedError(
             asset_id,
@@ -812,11 +823,11 @@ def _held(store, record: dict) -> Location:
 
     held = store.get(record["content_hash"])
     if record["location"].get("kind") in ("table", "query"):
-        from chartbook.snapshot import materialized_name, table_version_name
+        from chartbook.snapshot import materialized_name
 
-        if (Path(held) / table_version_name(record)).is_file():
+        if record.get("table_version") is not None:
             # Pinned by its version in the warehouse, which keeps the rows
-            return _table_at_version(record, Path(held) / table_version_name(record))
+            return _table_at_version(record, Path(held))
         # Written out as parquet when the snapshot was made
         return FileLocation(held / materialized_name(record))
     declared_path = record["location"]["path"]
@@ -831,45 +842,62 @@ def _held(store, record: dict) -> Location:
 
 
 def _table_at_version(record: dict, held: Path) -> "TableLocation":
-    """A table pinned by its version, from the small file the store holds for the pin.
+    """A table pinned by its version: the lockfile's record says which, and the store's file must agree.
 
-    The file is what the pin's hash is of, so it, not the record, says which
-    table and which version; a store may be shared, so it is checked before
-    anything of it reaches a query.
+    The record is what this pipeline committed when it pinned; the store
+    may be shared, and a file in it may have changed since, as a folder
+    store does not hash what it serves again. So the table, the version and
+    the id are the record's, the record must be of a table in a backend
+    that keeps versions, and the file the pin's hash is of must say exactly
+    the same, or nothing of either reaches a query.
 
-    :raises AssetNotPinnedError: If the file is not one ChartBook wrote.
+    :raises AssetNotPinnedError: If the record or the file is not one
+        ChartBook wrote, or they differ.
     """
     import json
 
-    from chartbook.backends import TABLE_IDENTIFIER
+    from chartbook.backends import TABLE_IDENTIFIER, Backend, backend_class
+    from chartbook.snapshot import table_version_name
 
     location = record["location"]
+    pinned = record.get("table_version") or {}
+    backend = location.get("backend")
     try:
-        pinned = json.loads(held.read_text(encoding="utf-8"))
-        version, table_id, identifier = pinned["version"], pinned["table_id"], pinned["identifier"]
-        backend = pinned["backend"]
-    except (OSError, ValueError, KeyError, TypeError):
-        pinned = None
+        keeps_versions = backend_class(backend).version_of is not Backend.version_of
+    except (AttributeError, TypeError, ValueError):
+        keeps_versions = False
+    version, table_id = pinned.get("version"), pinned.get("table_id")
+    name, written_at = pinned.get("name"), pinned.get("written_at")
+    expected = {"backend": backend, "identifier": name, "table_id": table_id, "version": version, "written_at": written_at}
+    try:
+        found = json.loads((held / table_version_name(record)).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        found = None
     if (
-        pinned is None
+        location.get("kind") != "table"
+        or not keeps_versions
         or not isinstance(version, int)
         or isinstance(version, bool)
         or version < 0
         or not isinstance(table_id, str)
         or not re.fullmatch(r"[0-9A-Za-z-]{1,64}", table_id)
-        or not isinstance(identifier, str)
-        or not TABLE_IDENTIFIER.fullmatch(identifier)
-        or backend != location.get("backend")
+        or not isinstance(name, str)
+        or not TABLE_IDENTIFIER.fullmatch(name)
+        or not isinstance(written_at, str)
         or not isinstance(location.get("source"), str)
         or not isinstance(location.get("url"), str)
+        or found != expected
     ):
         raise AssetNotPinnedError(
             record["id"],
             "not_in_store",
-            f"{record['id']!r} is pinned by a table version, and the store's file for it, {held}, "
-            f"is not one ChartBook wrote. `chartbook update` pins it again.",
+            f"{record['id']!r} is pinned by a table version, and the lockfile's record of it and the "
+            f"store's file for it, {held}, are not both ChartBook's and do not agree. `chartbook update` "
+            f"pins it again, from a snapshot.",
         )
-    return TableLocation(location["source"], backend, location["url"], identifier, version=version, table_id=table_id)
+    return TableLocation(
+        location["source"], backend, location["url"], name, version=version, table_id=table_id, written_at=written_at
+    )
 
 
 def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Location:

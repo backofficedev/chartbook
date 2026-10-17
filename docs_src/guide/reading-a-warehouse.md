@@ -2,7 +2,8 @@
 
 A dataframe can be a table, or a query, in a Databricks SQL warehouse. The pipeline names the
 table; the warehouse keeps it. ChartBook reads it where it is, documents it on the site like any
-other dataframe, and copies nothing.
+other dataframe, and copies nothing out of the warehouse; another pipeline pins a Delta table by its
+version.
 
 ## Install the driver
 
@@ -90,7 +91,7 @@ filtered asks for `n` rows only. `data.sql()` runs in the warehouse, in its dial
 reads its own tables and no file of yours, so a query that also names a file of the pipeline is
 refused, and you join the two frames in Polars instead.
 
-ChartBook itself runs nothing but `select` there. The SQL you run with `data.sql()` or
+ChartBook itself runs nothing but `select` and `describe` there. The SQL you run with `data.sql()` or
 `data.connect()` is yours, with your token's rights.
 
 ## On the site
@@ -104,25 +105,35 @@ still built.
 ## Another pipeline reads the version that was pinned
 
 When another pipeline depends on this one, `chartbook snapshot` here keeps each Delta table by its
-**version**, not by a copy: it asks the warehouse for the table's newest version and its id, and
-the store keeps a small file that names them. The other pipeline pins that snapshot as it pins any
-other (`chartbook pin`), and reads the table at that version:
+**version**, not by a copy: it asks the warehouse for the table's full name, its id and its newest
+version, and the store keeps a small file that says them. The other pipeline pins that snapshot as
+it pins any other (`chartbook pin`), and reads the table at that version:
 
 ```python
 data.load("rates:curve")        # select * from `workspace`.`rates`.`curve` VERSION AS OF 42
 data.ref("rates:curve")         # `workspace`.`rates`.`curve` VERSION AS OF 42
+data.sql("select count(*) from {rates:curve}")
 ```
 
 So the table can go on changing in the warehouse, and the pipeline that pinned it reads what it
-pinned until `chartbook update` moves it to the version the newest snapshot names. No row is copied
-out of the warehouse, and a table that has not changed makes the same snapshot again. Each read
-first checks that the table's id is the one pinned, so a table dropped and made again under the
-same name is refused rather than read as the old one.
+pinned until `chartbook update` moves it to the version a newer snapshot names. No row is copied out
+of the warehouse. A table nothing has written to since makes the same snapshot again; any commit to
+it, `OPTIMIZE` included, is a new version, and so a new snapshot.
+
+Each of those reads first checks that the table is still the one pinned: its id is the one the pin
+recorded, or, for a table made again with `create or replace`, which keeps its history, the version
+is still in that history, written when the pin says. A table dropped and made again under the same
+name is refused, rather than read as the old one.
+
+The pin in the lockfile says which table and which version; the store's file must say the same, and
+a read stops if it does not, so that someone who can write a shared store cannot change what a pin
+reads.
 
 **A version lasts as long as the table keeps it.** Delta keeps old versions for 7 days by default,
 and `VACUUM`, which Databricks may run on its own, removes what is older. A read of a version the
-table no longer keeps fails, and the message says that `chartbook update` pins the version it has
-now. To keep pins readable for longer, the table's owner raises how long the table keeps them:
+table no longer keeps fails. The way on: the pipeline that names the table records the version it
+has now in a new snapshot (`chartbook snapshot` there), and `chartbook update` here pins that. To
+keep pins readable for longer, the table's owner raises how long the table keeps its versions:
 
 ```sql
 alter table workspace.rates.curve set tblproperties (
@@ -133,14 +144,16 @@ alter table workspace.rates.curve set tblproperties (
 
 Keeping more versions keeps more files, which the warehouse's storage charges for.
 
-**What has no versions is copied.** A query, a view, or a table that is not Delta has no version to
-pin, so the snapshot writes its rows out as parquet into the store, as it does a DuckDB table, sorted
-on every column (a query with its own `ORDER BY` keeps its order) so that the same rows give the same
-bytes. To pin a large result by version instead, make it a table.
+**Nothing else is pinned, and nothing is copied out.** A query, a view, a table that is not Delta, a
+materialized view or a streaming table has no version a pin can name, and its rows stay in the
+warehouse, under its own grants. The snapshot records it as not pinned and says why;
+`chartbook pin --frozen` passes over it, and a read of it from another pipeline says why it cannot.
+To pin such a result, make it a Delta table.
 
-The machine that makes the snapshot needs the warehouse settings above; without them, the snapshot
-records the table as not built and says why. The machine that reads a pin needs them too, for the
-same workspace: a pinned table is read from the warehouse, not from the store.
+The machine that makes the snapshot needs the warehouse settings above; without them, or if the
+warehouse fails, the snapshot records the table as not pinned and says why. The machine that reads a
+pin needs them too, for the same workspace: a pinned table is read from the warehouse, not from the
+store.
 
 ## Try it with Databricks Free Edition
 
@@ -188,6 +201,9 @@ and needs no card. It has one small SQL warehouse and a daily usage quota.
    with `[dependencies] rates = { path = "../<the first one>" }`. In the second one, `chartbook pin`,
    then `data.load("rates:curve")`. Insert a row into the table in the SQL Editor: the second
    pipeline still reads the version it pinned until you snapshot the first again and run
-   `chartbook update`.
+   `chartbook update`. Then `create or replace table workspace.default.curve as ...` in the SQL
+   Editor, and read the pin again: it should still read, since the table kept its history. If it
+   says the table "is not the table that was pinned", please tell us; that is the one thing the
+   tests here cannot show.
 
 The first query after the warehouse has been idle can take a minute, while it starts.

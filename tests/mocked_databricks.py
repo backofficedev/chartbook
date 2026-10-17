@@ -21,7 +21,10 @@ its format and id, ``describe history … limit 1`` its newest version, and
 ``… VERSION AS OF n`` reads version ``n`` until :meth:`Warehouse.vacuum`
 drops it. :meth:`Warehouse.view` and ``delta=False`` make what has no
 versions; :meth:`Warehouse.replace` drops a table and makes it again, with a
-new id. Names in those statements are written in full, ``catalog.schema.table``.
+new id and its versions from 0; :meth:`Warehouse.rebuild` makes it again as
+``create or replace`` does, with a new id and its history kept. A name in one
+or two parts is found in the connection's catalog and schema.
+:meth:`Warehouse.fail` makes the next statement that matches fail.
 """
 
 import re
@@ -87,6 +90,8 @@ class Warehouse:
         self.queries = []
         #: As a connector may: an empty result with no columns, its schema not sent
         self.empty_without_schema = False
+        #: Statements that fail once, by a pattern of their text, with a message
+        self.failures = []
         #: Each table by its full name: its id, its format, and its versions, (number, when, DuckDB table)
         self.tables = {}
         self.views = set()
@@ -116,6 +121,15 @@ class Warehouse:
         self._schema(identifier)
         self.duck.execute(f"create or replace view {identifier} as {sql}")
         self.views.add(identifier)
+
+    def rebuild(self, identifier: str, sql: str) -> None:
+        """Make a table again as ``create or replace`` does: a new id, and its history kept."""
+        self.tables[identifier]["id"] = str(uuid.uuid4())
+        self.table(identifier, sql)
+
+    def fail(self, pattern: str, message: str) -> None:
+        """Make the next statement whose text matches *pattern* fail with *message*."""
+        self.failures.append((pattern, message))
 
     def replace(self, identifier: str, sql: str) -> None:
         """Drop a table and make it again: a new id, and its versions start again at 0."""
@@ -174,13 +188,17 @@ class Cursor:
     def execute(self, operation, parameters=None):
         warehouse = self.connection.warehouse
         warehouse.queries.append(operation)
+        for failure in list(warehouse.failures):
+            if re.search(failure[0], operation, re.IGNORECASE):
+                warehouse.failures.remove(failure)
+                raise ServerOperationError(failure[1])
         text = operation.replace("`", '"')
-        special = _describe(warehouse, text)
+        special = _describe(self.connection, text)
         if special is not None:
             self._table = special
         else:
             try:
-                self._table = self.connection.duck.execute(_at_versions(warehouse, text)).fetch_arrow_table()
+                self._table = self.connection.duck.execute(_at_versions(self.connection, text)).fetch_arrow_table()
             except duckdb.Error as error:
                 raise ServerOperationError(str(error)) from None
         self._at = 0
@@ -201,6 +219,12 @@ class Cursor:
         self._at += batch.num_rows
         return batch
 
+    def fetchall(self):
+        rows = []
+        while (row := self.fetchone()) is not None:
+            rows.append(row)
+        return rows
+
     def fetchone(self):
         if self._at >= self._table.num_rows:
             return None
@@ -218,24 +242,30 @@ class Cursor:
         self.close()
 
 
-#: A full name as the statements have it: three parts, each quoted or plain.
-_NAME = r'((?:"[^"]+"|\w+)\.(?:"[^"]+"|\w+)\.(?:"[^"]+"|\w+))'
+#: A name as the statements have it: one to three parts, each quoted or plain.
+_NAME = r'((?:"[^"]+"|\w+)(?:\.(?:"[^"]+"|\w+)){0,2})'
 
 
-def _plain(name: str) -> str:
-    return name.replace('"', "")
+def _plain(name: str, connection) -> str:
+    """A name in full, ``catalog.schema.table``, as the connection's catalog and schema complete it."""
+    parts = name.replace('"', "").split(".")
+    catalog = connection.arguments.get("catalog") or "hive_metastore"
+    schema = connection.arguments.get("schema") or "default"
+    return ".".join([catalog, schema][: 3 - len(parts)] + parts)
 
 
-def _describe(warehouse, text: str):
+def _describe(connection, text: str):
     """What ``describe detail`` and ``describe history`` give, as Arrow; None for any other statement."""
     detail = re.fullmatch(rf"\s*describe\s+detail\s+{_NAME}\s*", text, re.IGNORECASE)
     history = re.fullmatch(rf"\s*describe\s+history\s+{_NAME}(\s+limit\s+(\d+))?\s*", text, re.IGNORECASE)
     if detail is None and history is None:
         return None
-    name = _plain((detail or history).group(1))
+    warehouse = connection.warehouse
+    name = _plain((detail or history).group(1), connection)
     if name in warehouse.views:
+        command = "DESCRIBE DETAIL" if detail is not None else "DESCRIBE HISTORY"
         raise ServerOperationError(
-            f"[EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE] 'DESCRIBE DETAIL' expects a table but `{name}` is a view."
+            f"[EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE] '{command}' expects a table but `{name}` is a view."
         )
     found = warehouse.tables.get(name)
     if found is None:
@@ -256,11 +286,12 @@ def _describe(warehouse, text: str):
     )
 
 
-def _at_versions(warehouse, text: str) -> str:
+def _at_versions(connection, text: str) -> str:
     """``name VERSION AS OF n`` as the DuckDB table that holds version n; an error if it is not kept."""
+    warehouse = connection.warehouse
 
     def held(match):
-        name, number = _plain(match.group(1)), int(match.group(2))
+        name, number = _plain(match.group(1), connection), int(match.group(2))
         found = warehouse.tables.get(name)
         if found is None or found["format"] != "delta":
             raise ServerOperationError(f"[DELTA_TABLE_NOT_FOUND] `{name}` is not a Delta table.")

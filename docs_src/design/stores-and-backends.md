@@ -134,20 +134,25 @@ describe it, say whether it can pin by version, and run a pinned query. The inte
 formalized from what DuckDB does today, and the first warehouse adapter shapes the rest.
 
 *Built 2026-10-17 for Databricks, with three differences from the above.* First, the pin keeps a
-content hash after all: the snapshot puts a small file in the store naming the backend, the table,
-the table's id and its Delta version, and the record's `content_hash` is that file's; the record
-also says `table_version` (`version`, `table_id`, `written_at`). So the lockfile, `pin --frozen`,
-the lineage check, `store gc` and staleness work on it unchanged, and an unchanged table makes the
-same snapshot. A read finds the file and runs `VERSION AS OF` that version, after checking that the
-table's id is still the one pinned. Second, only a table is pinned by its version: a query cannot
-be without parsing its SQL to put `VERSION AS OF` on each table in it, which ChartBook never does,
-so a query, a view and a table that is not Delta are written out as parquet, as a DuckDB one is.
+content hash after all: the snapshot puts a small file in the store saying the backend, the table's
+full name, its id, its Delta version and when that version was written, and the record's
+`content_hash` is that file's; the record also says the same as `table_version`. So the lockfile,
+`pin --frozen`, the lineage check, `store gc` and staleness work on it unchanged, and a table nothing
+has written to makes the same snapshot. A read takes the table and version from the lockfile's
+record, which the store's file must agree with (a folder store does not hash what it serves again),
+checks that the table is still the one pinned (its id, or, for a table made again with its history,
+the version's time in that history) and runs `VERSION AS OF` that version. Second, only a Delta
+table is pinned, and nothing is copied out of a warehouse: a query cannot be pinned by version
+without parsing its SQL to put `VERSION AS OF` on each table in it, which ChartBook never does, and a
+copy would take the rows out from under the warehouse's grants and load them whole, so a query, a
+view and a table with no versions are recorded as not pinned (`not_pinned`, which `pin --frozen`
+passes over). An adversarial review found the first build, which copied them, doing exactly that.
 Third, a version does not last: Delta keeps old versions for 7 days by default, and newer runtimes
 refuse to read one older than that, so a pin by version is only as durable as the table's retention
 settings, which the page on reading a warehouse tells the table's owner how to raise. A read of a
-version the table no longer keeps fails and says to `chartbook update`. Whether that is durable
-enough, or whether a pin should copy the rows after all, is the maintainer's to weigh; nothing
-built is in the way of either.
+version the table no longer keeps fails and says what moves the pin: a new snapshot upstream, then
+`chartbook update`. Whether that is durable enough, or whether a pin should copy the rows after all,
+is the maintainer's to weigh; nothing built is in the way of either.
 
 ## The order of work
 

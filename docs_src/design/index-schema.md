@@ -609,8 +609,9 @@ missing from it: one record for each asset of each dependency, with its `content
   the index's JSON Schema for its kind as it is. One with a `content_hash` is a pin; one
   without was declared by the other pipeline and not built when this was pinned. *Added
   2026-10-17:* a table in a warehouse that keeps its versions is pinned by one, and its record
-  carries `table_version` (`version`, `table_id`, `written_at`) beside a `content_hash` that is
-  the hash of the small file in the store naming them.
+  carries `table_version` (`version`, `table_id`, `name`, `written_at`) beside a `content_hash`
+  that is the hash of the small file in the store saying the same; a table or query in a
+  warehouse that is never pinned carries `not_pinned`, the reason, and no `content_hash`.
 - **The `Pipeline` record** is this pipeline's, cut down to `id` and `dependencies`. That is
   below what the index's schema requires of a `Pipeline` (`name`, `location`, `assets`), on
   purpose: those would change the lockfile whenever the manifest changed. The lockfile's own
