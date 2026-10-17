@@ -96,6 +96,7 @@ import shutil
 import stat
 import sys
 import time
+import unicodedata
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
@@ -529,6 +530,31 @@ def plain_parts(relative: str) -> Optional[list[str]]:
     return parts
 
 
+def on_disk(folder: Path, parts: list[str]) -> Path:
+    """The file at these parts of a path under a folder, as the disk names it.
+
+    A name with a letter outside ASCII may be written in either of
+    Unicode's forms (``é`` as one character, or as ``e`` and an accent),
+    and a sync between macOS and Linux may hand a file over in the other:
+    where the name as written is not there, a name equal to it under NFC
+    is taken. An ASCII name is the same in both, and nothing is looked at.
+    """
+    exact = folder.joinpath(*parts)
+    if all(part.isascii() for part in parts) or exact.exists() or exact.is_symlink():
+        return exact
+    here = folder
+    for part in parts:
+        wanted = here / part
+        if not (wanted.exists() or wanted.is_symlink()):
+            name = unicodedata.normalize("NFC", part)
+            try:
+                wanted = next((entry for entry in here.iterdir() if unicodedata.normalize("NFC", entry.name) == name), wanted)
+            except OSError:
+                pass
+        here = wanted
+    return here
+
+
 #: The objects found whole as a record has them, in this process: an object does not change.
 _found_whole: set = set()
 
@@ -602,8 +628,8 @@ def unsynced_part(
                     f"the record is not one a store wrote",
                     False,
                 )
-            listed.add("/".join(parts))
-            file = path.joinpath(*parts)
+            listed.add(unicodedata.normalize("NFC", "/".join(parts)))
+            file = on_disk(path, parts)
             if file.is_symlink():
                 continue
             size = size_of(file)
@@ -614,7 +640,12 @@ def unsynced_part(
         if every:
             for file in present:
                 relative = file.relative_to(path).as_posix()
-                if relative not in listed:
+                # Compared as Unicode's one form: a sync between macOS and Linux may
+                # write a listed name in the other. And a name starting "." no
+                # reader reads (a Finder .DS_Store, a Syncthing .syncthing.*.tmp)
+                if any(part.startswith(".") for part in relative.split("/")):
+                    continue
+                if unicodedata.normalize("NFC", relative) not in listed:
                     return (
                         f"holds {relative}, which its record does not list (a sync service's copy, most "
                         f"likely, which a reader of the folder would read as its own: remove that file "
@@ -1067,7 +1098,9 @@ class FolderStore(Store):
         Called whenever a lockfile is written. One note is kept per
         lockfile and machine, and a later call replaces it. A note of the
         same path from before notes named their machine is left as it is:
-        it may be another machine's, and only a person can tell.
+        it may be another machine's, and only a person can tell. In this
+        user's own store (:meth:`is_users_own`) it can only be this
+        machine's, and this note takes its place.
 
         Machines are told apart by name only
         (:func:`chartbook.config.get_machine_id`): two that share one (a
@@ -1099,6 +1132,32 @@ class FolderStore(Store):
             except OSError:
                 pass
             raise
+        if self.is_users_own():
+            self._remove_old_note(lockfile)
+
+    def is_users_own(self) -> bool:
+        """Whether this is this user's own store: a folder under ``~/.chartbook``, as the default store is.
+
+        There, a note from before notes named their machine can only be this
+        machine's: ``~/.chartbook`` is never to be shared or synced.
+        """
+        from chartbook.config import get_global_config_dir
+
+        try:
+            home = Path(os.path.realpath(get_global_config_dir()))
+        except (RuntimeError, KeyError, OSError):
+            return False  # no home folder
+        return Path(os.path.realpath(self.root)).is_relative_to(home)
+
+    def _remove_old_note(self, lockfile: Union[str, Path]) -> bool:
+        """Remove the note of a lockfile from before notes named their machine; True if there was one."""
+        try:
+            (self.root / ROOTS_DIR / root_name(lockfile)).unlink()
+        except FileNotFoundError:
+            return False
+        except OSError:
+            return False  # left for `store gc`, which removes it once this machine has a note of the lockfile
+        return True
 
     def root_of(self, lockfile: Union[str, Path]) -> Optional[Root]:
         """This machine's note of a lockfile, if the store has one it can read."""
@@ -1108,12 +1167,15 @@ class FolderStore(Store):
         """Forget a lockfile on this machine. Its objects are then kept by nothing.
 
         :param machine: ``""`` for the note from before notes named their
-            machine; this machine's by default.
+            machine; this machine's by default, and, in this user's own
+            store, where it can only be this machine's, the note from
+            before as well.
         :returns: True if the store had a note of it.
         """
+        old = machine is None and self.is_users_own() and self._remove_old_note(lockfile)
         note = self._root_file(lockfile, this_machine(create=False) if machine is None else machine)
         if not note.is_file():
-            return False
+            return old
         note.unlink()
         return True
 
@@ -1190,7 +1252,12 @@ class FolderStore(Store):
 
     def age_of(self, content_hash: str, now: Optional[float] = None) -> float:
         """How many seconds ago an object was put in the store."""
-        stored_at = self.object_path(content_hash).stat().st_mtime
+        # A sync service may give a file the time it had on the machine it
+        # came from; when it came to this one is its status change (its
+        # creation, on Windows), so an object that arrived just now, whose
+        # record may not have, is not taken for an old one
+        held = self.object_path(content_hash).stat()
+        stored_at = max(held.st_mtime, held.st_ctime)
         return (time.time() if now is None else now) - stored_at
 
     def delete(self, content_hash: str) -> bool:

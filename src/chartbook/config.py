@@ -394,20 +394,20 @@ def shown_store_url(url: str) -> str:
     (``%40`` is an ``@``), and no option's value is shown at all, since a
     password in one may hold what would end it. The options are what
     follows a ``?`` that a name and an ``=`` follow. A path with no
-    ``//host`` part is as it is: a folder's path may hold an ``@``, as a
-    Google Drive folder names its account.
+    ``//host`` part (two backslashes on Windows) is as it is: a folder's path
+    may hold an ``@``, as a Google Drive folder names its account.
     """
     from urllib.parse import unquote
 
     def bare(text: str) -> str:
         text = unquote(text)
-        match = re.match(r"^\s*([A-Za-z][A-Za-z0-9+.-]*:)?//", text)
+        match = re.match(_ADDRESS, text)
         if match:
             return match.group(0).strip() + text[match.end():].rpartition("@")[2]
         return text.rpartition("@")[2]
 
     main, *rest = re.split(r"\?(?=[A-Za-z_][A-Za-z0-9_]*=)", url, maxsplit=1)
-    if re.match(r"^\s*([A-Za-z][A-Za-z0-9+.-]*:)?//", main):
+    if re.match(_ADDRESS, main):
         main = bare(main)
     if not rest:
         return main
@@ -420,10 +420,19 @@ def without_credentials(text: str) -> str:
 
     For what an SDK or the system says, which may echo an address or a path
     it was given: an ``OSError`` names its file, and a store at
-    ``//user:pass@host/share`` is one. All up to the last ``@`` of a line
-    that has an address goes, since a password may hold a space or a quote.
+    ``//user:pass@host/share`` is one, as is the path Windows makes of it,
+    which begins with two backslashes (four, in a message that quotes it). All up to the last ``@`` of a line that has an address
+    goes, since a password may hold a space or a quote.
     """
-    return re.sub(r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//)[^\n]*@", r"\1", text)
+    return re.sub(_ADDRESS_IN_TEXT, r"\1", text)
+
+
+#: Where a URL, or a path to another host, begins: ``scheme://``, ``//``, or Windows' two backslashes.
+_ADDRESS = r"^\s*(?:(?:[A-Za-z][A-Za-z0-9+.-]*:)?//|\\\\)"
+
+#: The same in a message, up to the last ``@`` of its line. Two backslashes
+#: (four, quoted) only where a path begins: those after ``C:`` begin none
+_ADDRESS_IN_TEXT = r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//|(?<![^\s'\"(=])\\\\(?:\\\\)?)[^\n]*@"
 
 
 def store_kind(url: str) -> str:

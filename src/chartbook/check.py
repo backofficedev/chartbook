@@ -450,6 +450,7 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
     pin --frozen`` checks.
     """
     from chartbook import lock, snapshot
+    from chartbook.config import without_credentials
     from chartbook.store import FolderStore, StoreError, default_store
 
     try:
@@ -471,11 +472,20 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
             False,
         )
     if unopened is not None:
-        return f"directory not found: {directory}, and the store cannot be opened ({unopened}). {advice}", False
+        return (
+            f"directory not found: {directory}, and the store cannot be opened "
+            f"({without_credentials(str(unopened))}). {advice}",
+            False,
+        )
     try:
         whole = folder is None or all(folder.has(r["content_hash"]) and not lock._incomplete(folder, r) for r in records)
     except (StoreError, OSError, ValueError) as error:  # a store that cannot be read, a half-synced store.json
-        return f"directory not found: {directory}, and the store cannot be read ({error}). {advice}", False
+        # What the system says names the store's path, which may carry a password (//user:pw@host)
+        return (
+            f"directory not found: {directory}, and the store cannot be read "
+            f"({without_credentials(str(error))}). {advice}",
+            False,
+        )
     if not whole:
         return (
             f"directory not found: {directory}, and the store does not have all that the lockfile "

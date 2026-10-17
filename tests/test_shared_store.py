@@ -1430,7 +1430,205 @@ class TestAReadOnOneMachine:
         def looked(*args, **kwargs):
             raise AssertionError("an object found whole was looked at again")
 
+        from chartbook import resolve
+
+        whole_check = store_module.unsynced_part
         monkeypatch.setattr(store_module, "unsynced_part", looked)
-        monkeypatch.setattr(uuid, "getnode", looked)  # nor is the hardware address asked on a read
         for _ in range(3):
             assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.1]
+        # Nor is the hardware address asked by the next process's read, whose
+        # note says what the lockfile pins already. Counted, not raised: a note
+        # is best effort, and what writing one raises is passed over
+        monkeypatch.setattr(store_module, "unsynced_part", whole_check)
+        resolve._noted_reads.clear()
+        _forget_whole()
+        asked = []
+        monkeypatch.setattr(uuid, "getnode", lambda: asked.append(1) or 0x0C0000000001)
+        assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.1]
+        assert asked == []
+
+
+class TestAnOldNoteGivesWay:
+    """In this user's own store, a note from before notes named their machine is this machine's, and gives way to its note."""
+
+    @pytest.fixture
+    def own(self, drive, monkeypatch):
+        work, machine, rates = drive
+        monkeypatch.delenv("CHARTBOOK_STORE")  # the default store, under ~/.chartbook
+        return work, machine, rates
+
+    @staticmethod
+    def _old_note(lockfile: Path, hashes) -> Path:
+        from chartbook.store import root_name
+
+        older = default_store().root / "roots" / root_name(lockfile)
+        older.write_text(json.dumps({"lockfile": str(lockfile), "hashes": sorted(hashes)}))
+        return older
+
+    def test_a_pin_writes_this_machines_note_in_its_place(self, own):
+        from chartbook.config import get_machine_id
+
+        work, machine, rates = own
+        taken = snapshot.make(rates).snapshot
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(project).problems == []
+        default_store().remove_root(project / lock.LOCK_FILE)
+        older = self._old_note(project / lock.LOCK_FILE, taken.asset_hashes())  # as an older ChartBook left it
+        assert lock.pin(project).problems == []
+        assert not older.exists()
+        assert [root.machine for root in default_store().roots()] == [get_machine_id()]
+
+    def test_while_its_lockfile_is_there_it_keeps_only_what_the_lockfile_pins(self, own):
+        work, machine, rates = own
+        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
+        assert lock.pin(project).problems == []
+        _snapshot_again(rates, 4.2)
+        _forecast(project, {"acme/rates": {}})
+        assert lock.update(project).problems == []
+        default_store().remove_root(project / lock.LOCK_FILE)
+        self._old_note(project / lock.LOCK_FILE, old.asset_hashes())  # written at the older pin, before notes named machines
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        assert plan.lockfiles == [(project / lock.LOCK_FILE, True)] and plan.elsewhere == []
+        assert old.made_at in [t.made_at for t, _ in plan.snapshots_delete]
+
+    def test_gc_lists_the_lockfile_once_and_names_the_old_notes_file(self, own):
+        from chartbook.store import root_name
+
+        work, machine, rates = own
+        taken = snapshot.make(rates).snapshot
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(project).problems == []
+        older = self._old_note(project / lock.LOCK_FILE, taken.asset_hashes())  # beside this machine's note
+        result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
+        assert result.exit_code == 0, result.output
+        assert result.output.count(str(project / lock.LOCK_FILE)) == 1, result.output
+        assert f"roots/{root_name(project / lock.LOCK_FILE)}" in result.output
+        lock.run_gc(lock.plan_gc(default_store()), default_store())
+        assert not older.exists() and len(default_store().roots()) == 1
+
+
+class TestARunnerWithNoName:
+    def test_a_pin_or_an_update_leaves_no_note(self, drive, monkeypatch):
+        """Under CI, with no CHARTBOOK_MACHINE_ID: a runner with a fresh home would leave a note under a new name each run."""
+        work, machine, rates = drive
+        snapshot.make(rates)
+        machine("ci")
+        monkeypatch.setenv("CI", "true")
+        project = _forecast(work / "runner" / "forecast", {"acme/rates": {}})
+        assert lock.pin(project).problems == []
+        _snapshot_again(rates, 4.2)
+        assert lock.update(project).problems == []
+        assert default_store().roots() == []
+
+
+class TestADirectoryWithFilesThatAreNotTables:
+    @pytest.mark.parametrize("side", ["README.txt", "schema.json"])
+    def test_only_its_parquet_files_are_read(self, drive, monkeypatch, side):
+        """As DuckDB reads a folder, and as every engine read the folder before records listed its files."""
+        import polars as pl
+
+        work, machine, rates = drive
+
+        def writer(parts):
+            pl.DataFrame({"a": [1, 2]}).write_parquet(parts / "part-0.parquet")
+            (parts / side).write_text("About these parts.\n")
+
+        _parts(rates, writer)
+        taken = snapshot.make(rates).snapshot
+        assert side in [entry["path"] for entry in taken.assets["parts"]["files"]]
+        forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(forecast).problems == []
+        monkeypatch.chdir(forecast)
+        assert data.load("acme/rates:parts").collect().height == 2
+        assert len(data.load("acme/rates:parts", format="pandas")) == 2
+        assert data.sql("select count(*) as n from {acme/rates:parts}").collect()["n"][0] == 2
+
+    def test_parquet_files_with_no_ending_are_read(self, drive, monkeypatch):
+        import polars as pl
+
+        work, machine, rates = drive
+
+        def writer(parts):
+            pl.DataFrame({"a": [1]}).write_parquet(parts / "part-0")
+            pl.DataFrame({"a": [2]}).write_parquet(parts / "part-1")
+
+        _parts(rates, writer)
+        snapshot.make(rates)
+        forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(forecast).problems == []
+        monkeypatch.chdir(forecast)
+        assert sorted(data.load("acme/rates:parts").collect()["a"].to_list()) == [1, 2]
+
+
+class TestWhatIsNotASyncServicesCopy:
+    def test_a_name_in_unicodes_other_form(self, tmp_path):
+        """A sync between macOS and Linux may write a listed name decomposed: the same file, never one to remove."""
+        import unicodedata
+
+        held = tmp_path / "object"
+        (held / unicodedata.normalize("NFD", "city=Zürich")).mkdir(parents=True)
+        (held / unicodedata.normalize("NFD", "city=Zürich") / "part-0.parquet").write_bytes(b"x" * 10)
+        files = {unicodedata.normalize("NFC", "city=Zürich") + "/part-0.parquet": 10}
+        assert unsynced_part(held, 10, files, every=True) is None
+
+    def test_a_dot_file_a_sync_service_writes(self, tmp_path):
+        """Syncthing's temporary file, beside a file on its way: no reader reads a name starting '.'."""
+        held = tmp_path / "object"
+        held.mkdir()
+        (held / "part-0.parquet").write_bytes(b"x" * 10)
+        (held / ".syncthing.part-1.parquet.tmp").write_bytes(b"y" * 5)
+        assert unsynced_part(held, 10, {"part-0.parquet": 10}, every=True) is None
+
+
+class TestTheAgeOfAnObject:
+    def test_one_that_came_just_now_with_an_old_time_is_recent(self, drive, tmp_path):
+        """A sync service may give an object the time it had where it was made; its record may not have come yet."""
+        import time
+
+        store = default_store()
+        made = tmp_path / "made.parquet"
+        made.write_bytes(b"x" * 10)
+        stored = store.put(made)
+        long_ago = time.time() - 30 * 86400
+        os.utime(store.object_path(stored.content_hash), (long_ago, long_ago))
+        plan = lock.plan_gc(store)
+        assert stored.content_hash in plan.recent and plan.delete == []
+
+
+class TestNoPasswordOfAStoreAtAPath:
+    def test_in_store_infos_cache_line(self, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_CACHE", "//alice:s3cr3tpw@fileserver/share/cache")
+        result = CliRunner().invoke(main, ["store", "info"])
+        assert result.exit_code == 0 and "s3cr3tpw" not in result.output and "fileserver/share/cache" in result.output
+
+    def test_in_what_windows_makes_of_the_path(self):
+        assert "s3cr3tpw" not in config.shown_store_url("\\\\alice:s3cr3tpw@fileserver\\share\\store")
+        said = "[WinError 53] The network path was not found: '\\\\\\\\alice:s3cr3tpw@fileserver\\\\share\\\\store'"
+        assert "s3cr3tpw" not in config.without_credentials(said) and "fileserver" in config.without_credentials(said)
+        drive = "[Errno 2] No such file or directory: 'C:\\\\Users\\\\me@example.org\\\\store'"
+        assert config.without_credentials(drive) == drive  # a drive's path is no address
+
+    def test_in_what_check_says_of_a_store_it_cannot_read(self, drive, monkeypatch):
+        from chartbook.check import check_dependencies
+        from chartbook.manifest import load_manifest
+
+        work, machine, rates = drive
+        snapshot.make(rates)
+        forecast = _forecast(work / "a" / "forecast", {"rates": {"path": "../rates"}})
+        assert lock.pin(forecast).problems == []
+        machine("b")
+        clone = work / "b" / "forecast"
+        shutil.copytree(forecast, clone)
+        monkeypatch.setenv("CHARTBOOK_STORE", "//alice:s3cr3tpw@fileserver/share/store")
+
+        def unreadable(self, content_hash):
+            raise PermissionError(13, "Permission denied", str(self.root / "objects"))
+
+        monkeypatch.setattr(FolderStore, "has", unreadable)
+        with warnings.catch_warnings(record=True) as said:
+            warnings.simplefilter("always")
+            problems = check_dependencies(load_manifest(clone), clone)
+        told = [problem.message for problem in problems] + [str(warning.message) for warning in said]
+        assert any("the store cannot be read" in text for text in told), told
+        assert not any("s3cr3tpw" in text for text in told), told

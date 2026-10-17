@@ -72,7 +72,6 @@ from chartbook.store import (
     _split_hash,
     _unreadable_note_remedy,
     is_record_name,
-    is_root_name,
     plain_parts as _plain_parts,
     read_root,
     root_document,

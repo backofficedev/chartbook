@@ -1162,7 +1162,9 @@ def _sync_now(
         report.written = write_lock(after, lock_path)
     hashes = after.hashes()
     try:
-        if hashes:
+        if _no_note_here():
+            pass
+        elif hashes:
             store.add_root(lock_path, hashes, after.snapshots())
         else:
             store.remove_root(lock_path)
@@ -1248,6 +1250,19 @@ class FrozenReport:
     unrooted: str = ""
 
 
+def _no_note_here() -> bool:
+    """Whether this machine writes no note of a lockfile: under CI (the ``CI`` environment variable), with no ``CHARTBOOK_MACHINE_ID``.
+
+    A runner's pins are those of the commit it builds, which its
+    developer's machine noted, and a runner with a fresh home each time
+    would leave a note under a new name each run, which no machine could
+    forget. Runners given one ``CHARTBOOK_MACHINE_ID`` replace their note.
+    """
+    from chartbook.config import MACHINE_ENV_VAR
+
+    return bool(os.environ.get("CI", "").strip()) and not os.environ.get(MACHINE_ENV_VAR, "").strip()
+
+
 def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool, str]:
     """Make the store's note of a lockfile on this machine name what it pins now, as a pin does.
 
@@ -1258,17 +1273,15 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
     replace it, so a reader's note follows its pulls; nothing is written
     when it says that already.
 
-    Under CI (the ``CI`` environment variable), with no
-    ``CHARTBOOK_MACHINE_ID``, nothing is written: a runner's pins are those
-    of the commit it builds, which its developer's machine pinned, and a
-    runner with a fresh home each time would leave a note each run.
+    Under CI with no ``CHARTBOOK_MACHINE_ID``, nothing is written
+    (:func:`_no_note_here`), as by a pin.
 
     :returns: Whether the note was written now, and why it could not be
         (a store that is read-only for this user, say); empty if it could.
     """
-    from chartbook.config import MACHINE_ENV_VAR, without_credentials
+    from chartbook.config import without_credentials
 
-    if os.environ.get("CI", "").strip() and not os.environ.get(MACHINE_ENV_VAR, "").strip():
+    if _no_note_here():
         return False, ""
     hashes, snapshots = locked.hashes(), locked.snapshots()
     if not hashes:
@@ -2514,10 +2527,11 @@ class GcPlan:
             are this machine's.
         read_here: The paths of notes in *elsewhere* at which this machine
             has a lockfile, read as well: what it pins is kept too.
-        forget_old: Lockfiles to be forgotten whose notes are from before
-            notes named their machine, in this user's own store, where they
-            can only be this machine's. With *forget*, what is shown as
-            forgotten.
+        forget_old: Lockfiles whose notes from before notes named their
+            machine are to be removed, in this user's own store, where they
+            can only be this machine's: one this machine has a note of now
+            as well, which takes its place, and, with *forget_missing*, one
+            that cannot be found.
         forget: Lockfiles that could not be found and are to be forgotten.
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
             with, so that it can be made again the same way when it is
@@ -2579,7 +2593,11 @@ def plan_gc(
     machine, which may be another machine's, and a sync service's copy of
     a note. A lockfile here at the path of an old note, or of a copy of
     this machine's own, is read as well; another machine's path is never
-    opened (it may be a mount of another host).
+    opened (it may be a mount of another host). In this user's own store,
+    under ``~/.chartbook``, an old note can only be this machine's: its
+    lockfile is read alone, as before notes named their machine, and the
+    note is removed once this machine has a note of the lockfile, or, with
+    *forget_missing*, once the lockfile is gone.
 
     :param store: The store; this user's by default.
     :param forget_missing: If True, a lockfile on this machine that cannot
@@ -2636,8 +2654,16 @@ def plan_gc(
     # named their machine can only be this machine's; elsewhere it may be any
     # machine's, and is kept with care
     own_store = _users_own_store(store)
-    for root in store.roots():
+    roots = store.roots()
+    # The paths this machine has a note of: an old note of this user's own
+    # store at one of them is superseded by it (a pin or a read writes this
+    # machine's note in its place), and is removed
+    noted_here = {root.lockfile for root in roots if root.machine == here and not root.copy}
+    for root in roots:
         old_and_mine = own_store and root.machine == "" and not root.copy
+        if old_and_mine and root.lockfile in noted_here:
+            plan.forget_old.append(root.lockfile)
+            continue
         if (root.machine != here or root.copy) and not old_and_mine:
             # Another machine's lockfile, or one noted before notes named
             # their machine, or a sync service's copy of a note: the path
@@ -2670,8 +2696,11 @@ def plan_gc(
         plan.lockfiles.append((root.lockfile, found is not None))
         if found is not None:
             # What the note recorded and the lockfile no longer names, a pull
-            # or a switch of branch since its last pin, stays kept
-            keep_noted(root, "its lockfile's note, from its last pin, pins it", hashes_noted, set(root.hashes) - found.hashes())
+            # or a switch of branch since its last pin, stays kept; a note
+            # from before notes named their machine goes by the lockfile
+            # alone, as it did then, until a pin or a read takes its place
+            if not old_and_mine:
+                keep_noted(root, "its lockfile's note, from its last pin, pins it", hashes_noted, set(root.hashes) - found.hashes())
         elif forget_missing:
             (plan.forget_old if old_and_mine else plan.forget).append(root.lockfile)
         else:
@@ -2701,21 +2730,10 @@ def plan_gc(
 
 
 def _users_own_store(store: Store) -> bool:
-    """Whether a store is this user's own: a folder under ``~/.chartbook``, as the default store is.
-
-    There, a note from before notes named their machine can only be this
-    machine's: ``~/.chartbook`` is never to be shared or synced.
-    """
-    from chartbook.config import get_global_config_dir
+    """Whether a store is this user's own: a folder under ``~/.chartbook`` (:meth:`chartbook.store.FolderStore.is_users_own`)."""
     from chartbook.store import FolderStore
 
-    if not isinstance(store, FolderStore):
-        return False
-    try:
-        home = Path(os.path.realpath(get_global_config_dir()))
-    except (RuntimeError, KeyError, OSError):
-        return False  # no home folder
-    return Path(os.path.realpath(store.root)).is_relative_to(home)
+    return isinstance(store, FolderStore) and store.is_users_own()
 
 
 def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:

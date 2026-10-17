@@ -117,10 +117,11 @@ class FileLocation(Location):
         path: Absolute path. For partitioned data it contains glob
             characters. The file need not exist: a path can be asked for
             before anything has written to it.
-        files: For a directory pinned from another pipeline, the files its
-            record lists, under *path*: what a reader reads, and nothing
+        files: For a directory pinned from another pipeline, the parquet
+            files its record lists (every file it lists, where none ends in
+            ``.parquet``), under *path*: what a reader reads, and nothing
             else the folder may hold (a Finder ``.DS_Store``, a sync
-            service's copy). Empty otherwise.
+            service's copy, a ``README.txt``). Empty otherwise.
     """
 
     kind: ClassVar[str] = "file"
@@ -861,9 +862,12 @@ def _held(store, record: dict) -> Location:
     if isinstance(record.get("files"), list):
         # A directory, read as the files its record lists and nothing else in
         # the folder; and, as an engine's scan of a folder does, none under a
-        # name starting "." or "_" (Spark's _SUCCESS, Hadoop's .crc files)
+        # name starting "." or "_" (Spark's _SUCCESS, Hadoop's .crc files),
+        # and only its parquet files, as DuckDB reads a folder (a README.txt
+        # or a schema.json beside them is no table). A folder of parquet
+        # files with no such ending is read whole, as Polars and pandas read it
         from chartbook.snapshot import files_read
-        from chartbook.store import StoreError, plain_parts
+        from chartbook.store import StoreError, on_disk, plain_parts
 
         read = []
         for relative in sorted(files_read(record) or {}):
@@ -874,8 +878,9 @@ def _held(store, record: dict) -> Location:
                     f"in its object. The record is not one a store wrote, and is not read."
                 )
             if not any(part.startswith((".", "_")) for part in parts):
-                read.append(held.joinpath(*parts))
-        return FileLocation(held, tuple(read))
+                read.append(on_disk(held, parts))
+        parquet = [file for file in read if file.name.lower().endswith(".parquet")]
+        return FileLocation(held, tuple(parquet or read))
     if not (held / name).is_file():
         return FileLocation(held)  # a directory pinned before records listed its files: the folder
     return FileLocation(held / name)
