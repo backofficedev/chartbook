@@ -1538,14 +1538,13 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
     were made from those bytes. So first the check ``chartbook pin --frozen``
     makes (:func:`chartbook.lock.verify`): a lockfile, every dependency in
     it, pinned from where the manifest says, its bytes in the store. Then,
-    for a ``path`` dependency something was pinned from: that it was pinned
-    from a snapshot, not its working folder (``--from-folder`` names no
-    commit), that the store has that snapshot and it holds each asset
-    pinned from it under its name at its hash, and that each label pinned
-    names a version some snapshot of the pipeline holds; so that a lockfile
-    changed by hand, or brought from another store, is caught. (A ``git``
-    dependency is pinned from its clone, not a snapshot, and its hashes are
-    checked only to be in the store.)
+    for a ``path`` dependency something was pinned from: that its pin names
+    a snapshot, by its commit and time, that the store has that snapshot
+    and it holds each asset pinned from it under its name at its hash, and
+    that each label pinned names a version some snapshot of the pipeline
+    holds; so that a lockfile changed by hand, or brought from another
+    store, is caught. (A ``git`` dependency is pinned from its clone, not a
+    snapshot, and its hashes are checked only to be in the store.)
 
     Nothing that could not have been read is a gap: an asset the other
     pipeline had not built when it was pinned, and a dependency of which
@@ -1581,8 +1580,8 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
         commit, made_at = location.get("commit"), entry.get("snapshot")
         if not (commit and made_at):
             gaps.append(
-                f"{key}: is pinned from its working folder, not from a snapshot, so nothing says "
-                f"which commit its bytes came from. `chartbook update {key}` pins its newest snapshot "
+                f"{key}: its pin names no snapshot, so nothing says which commit its bytes "
+                f"came from. `chartbook update {key}` pins its newest snapshot "
                 f"(its owner makes one with `chartbook snapshot`)."
             )
             continue
@@ -1930,13 +1929,17 @@ def make(
     if same is not None:
         # The same bytes; made again only to say more than the one before:
         # its documents, that a run built them, or the commit's tags, since
-        # a commit is often tagged after it is built
-        if (same.documents is not None or not documents) and same.tags == snapshot.tags:
-            if same.built_by_run or not built_by_run:
-                store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-                return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
-        elif same.built_by_run:
-            # Made again for its documents alone: the bytes are still the ones a run built
+        # a commit is often tagged after it is built. Or because the store
+        # has lost its index or its documents (its assets were put back
+        # above): an index is made again with the time it is made, so it is
+        # not the same object, and the new snapshot holds both
+        says_as_much = (same.documents is not None or not documents) and same.tags == snapshot.tags
+        lost = [part["content_hash"] for part in (same.index, same.documents) if part and not store.has(part["content_hash"])]
+        if says_as_much and (same.built_by_run or not built_by_run) and not lost:
+            store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
+            return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
+        if same.built_by_run:
+            # Made again for what the one before lacks: the bytes are still the ones a run built
             snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
 
     # A model whose bytes no snapshot of this pipeline has had is a new version

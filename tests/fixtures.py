@@ -5,6 +5,7 @@ This module provides utilities to create complete pipeline and catalog
 projects for integration testing.
 """
 
+import subprocess
 from pathlib import Path
 
 import polars as pl
@@ -463,3 +464,96 @@ def create_invalid_toml_project(base_dir: Path, error_type: str) -> Path:
         tomli_w.dump(config, f)
 
     return base_dir
+
+
+def _git(directory: Path, *arguments: str) -> str:
+    result = subprocess.run(
+        ["git", "-c", "user.name=Test", "-c", "user.email=test@example.org", *arguments],
+        cwd=directory,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def commit_pipeline(folder: Path) -> None:
+    """Commit a pipeline's folder, as its owner does before a snapshot.
+
+    The folder is a repository of its own, made here unless it has one
+    already, so that nothing is committed into a repository the test did
+    not make. In a new one only the manifest is committed: everything else
+    in the folder stands for what a build writes, and git ignores it. Only
+    the folder's own changes are committed, if there are any.
+    """
+    folder = Path(folder).resolve()
+    if not (folder / ".git").exists():
+        (folder / ".gitignore").write_text("/*\n!/chartbook.toml\n!/.gitignore\n")
+        _git(folder, "init", "--quiet", "-b", "main")
+    _git(folder, "add", "-A", "--", ".")
+    if _git(folder, "status", "--porcelain", "--", "."):
+        _git(folder, "commit", "--quiet", "-m", "Work", "--", ".")
+
+
+def snapshot_dependencies(project_dir: Path, store=None, made_at: str = None) -> list:
+    """Make a snapshot of each ``path`` dependency of a pipeline, as its folder stands.
+
+    What each one's owner does before another pipeline can pin it: commit
+    (:func:`commit_pipeline`), and ``chartbook snapshot``. Made again after
+    the folder's data changed, at the same commit, it is a new snapshot. A
+    folder with no pipeline in it is passed over: there is nothing to make
+    one of, and pinning says so. So is a *project_dir* with no manifest.
+
+    :param store: The store to make them in; this user's by default.
+    :param made_at: The time to record, for a test; now by default.
+    :returns: What :func:`chartbook.snapshot.make` reported for each.
+    """
+    import tomli
+
+    from chartbook import snapshot
+
+    project_dir = Path(project_dir)
+    if not (project_dir / "chartbook.toml").is_file():
+        return []
+    raw = tomli.loads((project_dir / "chartbook.toml").read_text())
+    made = []
+    for entry in (raw.get("dependencies") or {}).values():
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            continue
+        folder = (project_dir / entry["path"]).resolve()
+        if not (folder / "chartbook.toml").is_file():
+            continue
+        commit_pipeline(folder)
+        made.append(snapshot.make(folder, store=store, made_at=made_at))
+    return made
+
+
+def pin_from_snapshots(project_dir: Path, store=None, *arguments, **options):
+    """:func:`chartbook.lock.pin`, once each ``path`` dependency has a snapshot of it as it stands."""
+    from chartbook import lock
+
+    snapshot_dependencies(project_dir, store)
+    return lock.pin(project_dir, store, *arguments, **options)
+
+
+def update_from_snapshots(project_dir: Path, dependencies=(), store=None, **options):
+    """:func:`chartbook.lock.update`, once each ``path`` dependency has a snapshot of it as it stands."""
+    from chartbook import lock
+
+    snapshot_dependencies(project_dir, store)
+    return lock.update(project_dir, dependencies, store, **options)
+
+
+def name_no_snapshot(project_dir: Path, dependency: str) -> None:
+    """Take the commit and time of its snapshot out of a dependency's pin in a lockfile.
+
+    As in a lockfile changed by hand, or one written by ``--from-folder``
+    before that was removed: a pin that names no snapshot.
+    """
+    from chartbook import lock
+
+    path = Path(project_dir) / lock.LOCK_FILE
+    locked = lock.read_lock(path)
+    (entry,) = [entry for entry in locked.dependencies if entry["id"] == dependency]
+    del entry["location"]["commit"], entry["snapshot"]
+    lock.write_lock(locked, path)

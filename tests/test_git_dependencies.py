@@ -22,6 +22,7 @@ import tomli_w
 from click.testing import CliRunner
 
 from chartbook import config, data, index, lock
+from chartbook import store as store_module
 from chartbook.check import run_checks
 from chartbook.cli import main
 from chartbook.gitcache import (
@@ -37,6 +38,7 @@ from chartbook.gitcache import (
 from chartbook.lock import LOCK_FILE
 from chartbook.manifest import load_manifest, validate_dependencies
 from chartbook.store import default_store
+from tests.fixtures import pin_from_snapshots
 
 HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
@@ -555,6 +557,47 @@ class TestPinning:
         assert [p.status for p in report.problems] == ["unfetched"]
         assert (downstream / LOCK_FILE).read_bytes() == before
 
+    def test_bytes_the_store_has_lost_are_put_back_from_the_checkout(self, downstream, cache):
+        """A clean clone: the lockfile came with it, the store did not."""
+        lock.pin(downstream, git_cache=cache)
+        before = (downstream / LOCK_FILE).read_bytes()
+        assert default_store().delete(HELLO)
+
+        report = lock.pin(downstream, git_cache=cache)
+        assert _statuses(report) == {"committed": "restored", "ignored": "not_built"}
+        assert report.problems == [] and default_store().has(HELLO)
+        assert (downstream / LOCK_FILE).read_bytes() == before
+
+    def test_a_repository_that_holds_no_pipeline_cannot_be_pinned(self, downstream, upstream, cache):
+        (upstream / "chartbook.toml").unlink()
+        _commit(upstream, "No pipeline here")
+        report = lock.pin(downstream, git_cache=cache)
+        (problem,) = report.problems
+        assert problem.status == "unreachable" and problem.dependency == "acme/upstream"
+        assert "no pipeline can be read at" in problem.detail
+
+    def test_a_pin_is_a_clone_or_a_copy_and_never_a_link(self, downstream, upstream, cache, work, monkeypatch):
+        """Decided: a pin must not change when a file it came from is rewritten.
+
+        Not the checkout's file, and not one the store held already as a
+        link to the repository's own file.
+        """
+
+        def refuse(*args, **kwargs):
+            raise OSError(95, "not supported here")
+
+        monkeypatch.setattr(store_module, "_reflink", refuse)  # a disk with no clones
+        working = upstream / "data" / "committed.parquet"
+        default_store().put(working, links=("hardlink",))  # stored more cheaply by something else
+        assert (default_store().get(HELLO) / "committed.parquet").samefile(working)
+
+        lock.pin(downstream, git_cache=cache)
+        held = default_store().get(HELLO) / "committed.parquet"
+        (checkout,) = (work / "cache" / "checkouts").rglob("committed.parquet")
+        assert not held.is_symlink() and os.stat(held).st_nlink == 1
+        assert not held.samefile(checkout) and not held.samefile(working)
+        assert held.read_bytes() == b"hello" and default_store().verify() == []
+
     def test_beside_a_path_dependency(self, downstream, upstream, cache, work):
         _write_manifest(work / "local", {"dataframes": {"x": {"path": "./x.parquet", "docs": "d"}}})
         (work / "local" / "x.parquet").write_bytes(b"x")
@@ -567,9 +610,9 @@ class TestPinning:
                 }
             },
         )
-        report = lock.pin(downstream, git_cache=cache, from_folder=True)
+        report = pin_from_snapshots(downstream, git_cache=cache)
         assert report.git == {"acme/upstream"}
-        assert report.from_folder == {"local"}
+        assert set(report.snapshots) == {"local"}
         assert set(lock.read_lock(downstream).assets) == {
             "acme/upstream:committed",
             "acme/upstream:ignored",

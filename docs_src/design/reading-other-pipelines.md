@@ -236,7 +236,7 @@ UserWarning: acme/rates has no snapshot in the store: reading its WORKING versio
 
 **Recommended: 4b,** as you suggested. The hidden `--from-folder` option of `pin` and `update`
 becomes this, and a lockfile never records a working read. *Decided by the maintainer 2026-10-16:
-4b.*
+4b.* *Built 2026-10-17: `--from-folder` is removed.*
 
 ## Decision 5: outside any pipeline
 

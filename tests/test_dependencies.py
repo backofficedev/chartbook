@@ -42,7 +42,7 @@ from chartbook.resolve import (
     locate_in_catalog,
     locate_pipeline,
 )
-from tests.fixtures import create_catalog_project, create_pipeline_project
+from tests.fixtures import create_catalog_project, create_pipeline_project, pin_from_snapshots
 
 
 def _edit_toml(project_dir: Path, edit) -> None:
@@ -715,11 +715,9 @@ class TestCheck:
         assert "`chartbook pin` pins its newest snapshot, and so does `chartbook run` (the build)" in str(warning.message)
 
     def test_a_pinned_dependency_is_not_warned_about(self, two_pipelines):
-        from chartbook import lock
-
         downstream, rates = two_pipelines
         _depend(downstream, acme__rates={"path": "../rates"})
-        lock.pin(downstream, from_folder=True)
+        pin_from_snapshots(downstream)
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             assert check_dependencies(load_manifest(downstream), downstream) == []
@@ -862,14 +860,12 @@ class TestCheckCommand:
         assert "1 dependencies)" in result.output
 
     def test_an_unpinned_dependency_is_a_warning(self, two_pipelines, monkeypatch):
-        from chartbook import lock
-
         downstream, _ = two_pipelines
         _depend(downstream, acme__rates={"path": "../rates"})
         result = self._check(downstream, monkeypatch)
         assert result.exit_code == 0, result.output
         assert 'warning: ' in result.output and '[dependencies."acme/rates"] path: not pinned.' in result.output
-        lock.pin(downstream, from_folder=True)
+        pin_from_snapshots(downstream)
         result = self._check(downstream, monkeypatch)
         assert result.exit_code == 0 and "not pinned" not in result.output
 

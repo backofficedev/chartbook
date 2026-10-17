@@ -13,6 +13,7 @@ from click.testing import CliRunner
 from chartbook import lineage, lock, snapshot
 from chartbook.cli import main
 from chartbook.store import default_store
+from tests.fixtures import name_no_snapshot
 from tests.test_model_versions import _commit, _git
 
 
@@ -151,6 +152,26 @@ class TestTheCommand:
         assert checked.exit_code == 1 and "gap: its manifest declares the dependency 'fred'" in checked.output
         shown = json.loads(CliRunner().invoke(main, ["lineage", "--json"]).output)
         assert shown["gaps"] == 1 and shown["root"]["children"][0]["gaps"]
+
+    def test_a_pin_that_names_no_snapshot(self, chain, monkeypatch):
+        """In this pipeline's lockfile, or in a snapshot's record of its inputs: one changed by hand."""
+        fred, rates, forecast = chain
+        name_no_snapshot(forecast, "rates")
+        monkeypatch.chdir(forecast)
+        shown = json.loads(CliRunner().invoke(main, ["lineage", "--json"]).output)
+        (node,) = shown["root"]["children"]
+        assert (node["label"], node["kind"]) == ("rates", "no_snapshot")
+        assert "└── rates: its pin names no snapshot" in CliRunner().invoke(main, ["lineage"]).output
+
+        lock.update(forecast)  # which names its snapshot again
+        _rewrite(
+            _snapshot_of("acme/rates"),
+            lambda d: [d["inputs"][0]["location"].pop("commit"), d["inputs"][0].pop("snapshot")],
+        )
+        shown = json.loads(CliRunner().invoke(main, ["lineage", "--json"]).output)
+        (upstream,) = shown["root"]["children"][0]["children"]
+        assert (upstream["label"], upstream["kind"]) == ("fred", "no_snapshot")
+        assert upstream["gaps"] == ["its pin named no snapshot, so nothing says which commit its bytes came from"]
 
     def test_rehash_says_how_many(self, chain, monkeypatch):
         fred, rates, forecast = chain

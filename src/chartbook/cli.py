@@ -1803,8 +1803,6 @@ def _echo_pin_report(report):
             click.echo(
                 f"  From its snapshot at {taken.commit[:7]}, made {_when(taken.made_at)}{made_in}."
             )
-        if dependency in report.from_folder:
-            click.echo("  Taken from its folder as it is now, not from a snapshot.")
         if dependency in report.git and counts.get("let_go"):
             click.echo(
                 "  What was let go was built at the commit pinned before, and is "
@@ -1836,7 +1834,7 @@ def _when(made_at):
     return f"{made_at[:10]} {made_at[11:16]} UTC"
 
 
-def _run_pin(project_dir, dependencies=None, from_folder=False):
+def _run_pin(project_dir, dependencies=None):
     """Run a pin, or an update when *dependencies* is given; exit 1 on a problem."""
     from chartbook import lock
     from chartbook.store import StoreError
@@ -1844,9 +1842,9 @@ def _run_pin(project_dir, dependencies=None, from_folder=False):
     project_dir = resolve_project_dir(project_dir)
     try:
         if dependencies is None:
-            report = lock.pin(project_dir, from_folder=from_folder)
+            report = lock.pin(project_dir)
         else:
-            report = lock.update(project_dir, dependencies, from_folder=from_folder)
+            report = lock.update(project_dir, dependencies)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
@@ -1861,16 +1859,6 @@ def _run_pin(project_dir, dependencies=None, from_folder=False):
             f"\n{len(report.problems)} thing(s) could not be pinned.", err=True
         )
         raise SystemExit(1)
-
-
-#: Off by default and left out of --help on purpose: the ordinary way is a
-#: snapshot. It is for someone working on both pipelines at once.
-_from_folder = click.option(
-    "--from-folder",
-    is_flag=True,
-    hidden=True,
-    help="Take a path dependency from what is in its folder now, not from a snapshot",
-)
 
 
 def _echo_frozen_report(step, report):
@@ -1902,8 +1890,7 @@ def _echo_frozen_report(step, report):
     is_flag=True,
     help="Write nothing: say whether the lockfile is complete and every pin is in the store",
 )
-@_from_folder
-def pin(project_dir, frozen, from_folder):
+def pin(project_dir, frozen):
     """Freeze what this pipeline depends on.
 
     Each pipeline in [dependencies] is pinned to a snapshot of it: what its
@@ -1933,17 +1920,10 @@ def pin(project_dir, frozen, from_folder):
         chartbook pin --project-dir ../rate_forecast
         chartbook pin --frozen
     """
-    if frozen and from_folder:
-        click.echo(
-            click.style("Error: ", fg="red", bold=True)
-            + "--frozen writes nothing, and --from-folder pins. One or the other.",
-            err=True,
-        )
-        raise SystemExit(1)
     if frozen:
         _run_frozen(project_dir)
         return
-    _run_pin(project_dir, from_folder=from_folder)
+    _run_pin(project_dir)
 
 
 def _explain_os_error(error):
@@ -1953,8 +1933,8 @@ def _explain_os_error(error):
 
     if isinstance(error, ReadOnlyStoreError):
         return (
-            f"{error} This had to write it: a git dependency's first pin, --from-folder, and a "
-            f"snapshot all put files into the store. Do it where the store can be written; or, "
+            f"{error} This had to write it: a git dependency's first pin and a "
+            f"snapshot both put files into the store. Do it where the store can be written; or, "
             f"if the store already has what the lockfile names, use --frozen."
         )
     if isinstance(error, OSError) and lock.is_read_only(error):
@@ -1965,8 +1945,8 @@ def _explain_os_error(error):
         if root and str(getattr(error, "filename", "") or "").startswith(root):
             return (
                 f"The store at {root} is read-only for you, and this had to write "
-                f"it: a git dependency's first pin, --from-folder, and a snapshot "
-                f"all put files into the store. Do it where the store can be "
+                f"it: a git dependency's first pin and a snapshot "
+                f"both put files into the store. Do it where the store can be "
                 f"written; or, if the store already has what the lockfile names, "
                 f"use --frozen. ({error})"
             )
@@ -1991,8 +1971,7 @@ def _run_frozen(project_dir):
 @main.command()
 @click.argument("dependencies", nargs=-1)
 @click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
-@_from_folder
-def update(dependencies, project_dir, from_folder):
+def update(dependencies, project_dir):
     """Move pins forward to the newest snapshot of each dependency.
 
     With no argument, every dependency is updated. Name some to update only
@@ -2007,7 +1986,7 @@ def update(dependencies, project_dir, from_folder):
         chartbook update
         chartbook update fed_yield_curve
     """
-    _run_pin(project_dir, dependencies=list(dependencies), from_folder=from_folder)
+    _run_pin(project_dir, dependencies=list(dependencies))
 
 
 @main.command("add")
@@ -2125,8 +2104,8 @@ def _lineage_line(node) -> str:
     if node.kind == "git":
         at = f" at {node.commit[:7]}" if node.commit else ""
         return f"{node.label}: pinned from its git clone{at}; not walked further"
-    if node.kind == "folder":
-        return f"{node.label}: pinned from its working folder"
+    if node.kind == "no_snapshot":
+        return f"{node.label}: its pin names no snapshot"
     if node.kind == "nothing":
         return f"{node.label}: nothing pinned"
     if node.kind == "mismatch":
@@ -2497,7 +2476,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
 
-    click.echo(f"Kept: {plan.kept} object(s), named by {len(plan.lockfiles)} lockfile(s)")
+    # A kept snapshot keeps objects too, which no lockfile may name
+    named_by = f"{len(plan.lockfiles)} lockfile(s)" + (" or a kept snapshot" if plan.snapshots_kept else "")
+    click.echo(f"Kept: {plan.kept} object(s), named by {named_by}")
     for lockfile, found in plan.lockfiles:
         if found:
             note = ""

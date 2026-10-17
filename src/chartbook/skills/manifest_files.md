@@ -223,8 +223,11 @@ table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git
   committed. With no snapshot it fails and says so. It never moves an existing
   pin; `chartbook update [dep...]` does, to the newest snapshot. A rebuild with
   no new snapshot is not seen at all.
-- `--from-folder` on `pin` and `update` takes what is in the folder this minute.
-  It is hidden and off by default: only for working on both pipelines at once.
+- To see a change in a pipeline you are changing too: commit it, run
+  `chartbook snapshot` there, then `chartbook update` here. A lockfile never
+  records a read of a working folder. In a notebook, `data.load()` reads a
+  dependency with no snapshot yet from its folder, with a `WorkingVersionWarning`,
+  and pins nothing.
 - Code then reads the pinned copy by reference: `data.load("fed_yield_curve:treasury_rates")`,
   `data.path(...)`, `assets.path("fed_yield_curve:chart/x")`, `models.path(...)`,
   or `chartbook path fed_yield_curve:treasury_rates` from a shell. It never

@@ -1053,9 +1053,8 @@ Wrote chartbook.lock.
 | The newest snapshot at or before the commit a folder is on | `chartbook/snapshot.py`, `newest_for()` |
 | One shape for an asset's record, in a snapshot and in a lockfile | `chartbook/snapshot.py`, `asset_record()` |
 | Pinning a `path` dependency from a snapshot | `chartbook/lock.py`, `_sync_from_snapshots()` |
-| Pinning from the folder, when asked | `chartbook/lock.py`, `pin(from_folder=True)` |
 | A snapshot is never cleared | `chartbook/lock.py`, `plan_gc()` |
-| The commands | `chartbook/cli.py`: `snapshot`, and `--from-folder` on `pin` and `update` |
+| The commands | `chartbook/cli.py`: `snapshot` |
 | The record's schema | `schemas/chartbook/snapshot/v1.json` |
 | The snapshot's commit and time, on a dependency in the index | `chartbook/index.py`, `schemas/chartbook/v1/Pipeline.json` |
 | The tests | `tests/test_snapshot.py`; the examples, in `tests/test_integration.py` |
@@ -1110,7 +1109,8 @@ before, from ChartBook's clean copy of the commit, and does not look for a snaps
     pins it yet. A record that cannot be read stops the clearing.
 15. **The buried option is `--from-folder`**, on `pin` and `update`, hidden from `--help`.
     It does what both did before 4b. The lockfile then names no commit, and a plain `update`
-    afterwards moves back to a snapshot.
+    afterwards moves back to a snapshot. *Removed 2026-10-17, by decision 4 of
+    {doc}`reading-other-pipelines`: a lockfile never records a read of a working folder.*
 16. **Looking at a repository takes no lock** (`GIT_OPTIONAL_LOCKS=0`), so finding a
     snapshot never gets in the way of whoever is working in that folder.
 17. **`builds/` in the store stays a name that is kept free.** Records go in `snapshots/`.

@@ -60,8 +60,9 @@ class Node:
             clone.
         made_at: When the snapshot was made.
         kind: ``working`` (the folder the walk starts from), ``snapshot``,
-            ``git`` (pinned from a clone; not walked further), ``folder``
-            (pinned from a working folder), ``nothing`` (nothing pinned),
+            ``git`` (pinned from a clone; not walked further), ``no_snapshot``
+            (a pin that names no snapshot, as one in a lockfile changed by
+            hand does), ``nothing`` (nothing pinned),
             ``missing`` (no such snapshot in the store), ``mismatch`` (the
             snapshot is there and does not hold what was pinned) or
             ``unreadable`` (a record that is not one ChartBook wrote).
@@ -221,7 +222,7 @@ class _Walker:
             node.kind = "nothing"
             return node
         if not (node.commit and node.made_at):
-            node.kind = "folder"
+            node.kind = "no_snapshot"
             return node
         plain = [record for record in hashed.values() if not (record.get("ref") or {}).get("rev")]
         labels = {record["content_hash"] for record in hashed.values() if (record.get("ref") or {}).get("rev")}
@@ -249,10 +250,9 @@ class _Walker:
         if not isinstance(expected, str):
             raise TypeError(f"its pinned_hash is {type(expected).__name__}, not text")
         if not (node.commit and node.made_at):
-            node.kind = "folder"
+            node.kind = "no_snapshot"
             node.gaps.append(
-                "was pinned from its working folder, not from a snapshot, so nothing says which commit "
-                "its bytes came from"
+                "its pin named no snapshot, so nothing says which commit its bytes came from"
             )
             return node
         at = self._at(node.commit, node.made_at)
