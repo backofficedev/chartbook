@@ -1,5 +1,6 @@
 """Tests for ``chartbook create-data-glimpses``: summaries come from the manifest."""
 
+import os
 from pathlib import Path
 
 import polars as pl
@@ -205,8 +206,23 @@ class TestCommand:
         taken.write_text("mine\n")
         result = _run(pipeline_project, "-o", taken)
         assert result.exit_code == 1
-        assert f"Error: {taken} is a file. Give a directory to write data_glimpses.md in" in result.output
+        assert f"Error: {taken} is there and is not a directory. Give a directory to write data_glimpses.md in" in (
+            " ".join(result.output.split())
+        )
         assert taken.read_text() == "mine\n"
+
+    @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="a named pipe needs os.mkfifo")
+    def test_an_output_dir_that_is_a_broken_link_or_a_pipe_is_said_plainly(self, pipeline_project, tmp_path):
+        """Found by a reviewer: these got a FileExistsError from mkdir."""
+        broken = tmp_path / "gone"
+        broken.symlink_to(tmp_path / "nowhere")
+        pipe = tmp_path / "pipe"
+        os.mkfifo(pipe)
+        for taken in (broken, pipe):
+            result = _run(pipeline_project, "-o", taken)
+            assert result.exit_code == 1, taken
+            assert f"Error: {taken} is there and is not a directory." in result.output
+            assert "Traceback" not in result.output and "FileExistsError" not in result.output
 
     def test_help_shows_no_docstring_markup(self):
         result = CliRunner().invoke(main, ["create-data-glimpses", "--help"])

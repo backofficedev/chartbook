@@ -86,6 +86,23 @@ def test_a_category_and_an_enum_are_drawn_as_text(kind):
         chartbook.plotting.dual(df, x=x, left_y="rate", right_y="spread")
 
 
+def test_a_pandas_category_x_column_is_drawn():
+    """Found by a reviewer: every chart asked the x column for its least and greatest,
+    which an unordered pandas category has not. Only the recession shading needs them."""
+    from chartbook.plotting._overlays import _x_range
+
+    df = pd.DataFrame({"c": pd.Categorical(["a", "b", "c"]), "rate": ROWS["rate"], "spread": ROWS["spread"]})
+    result = chartbook.plotting.line(df, x="c", y="rate")
+    assert list(result.figure.data[0].x) == ["a", "b", "c"]
+    assert result.mpl_figure is not None
+    chartbook.plotting.bar(df, x="c", y="rate")
+    chartbook.plotting.scatter(df, x="c", y="rate")
+    chartbook.plotting.area(df, x="c", y=["rate", "spread"])
+    chartbook.plotting.dual(df, x="c", left_y="rate", right_y="spread")
+    assert _x_range(df["c"]) == (None, None)
+    assert _x_range(df["c"].cat.as_ordered()) == ("a", "c")
+
+
 def test_a_decimal_column_is_drawn_as_a_float():
     """Found by a reviewer: pandas kept a Decimal as an object, and an area chart
     failed adding it to a float."""

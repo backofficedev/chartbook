@@ -539,6 +539,8 @@ def west_of_utc():
     import os
     import time
 
+    if not hasattr(time, "tzset"):
+        pytest.skip("the time zone of a running process can be changed only where time.tzset exists")
     before = os.environ.get("TZ")
     os.environ["TZ"] = "FAKE+18"
     time.tzset()
@@ -603,6 +605,46 @@ class TestWhatANewUserFound:
         assert page in (site / "cb" / "charts.html").read_text()
         assert page in (site / "index.html").read_text()
         assert page not in (site / "cb" / "charts" / "index" / "drafts.html").read_text()
+
+    def test_a_chart_dated_in_the_future_is_listed(self, pipeline_project, monkeypatch):
+        """Found by a reviewer: a chart file dated after the next local midnight (a skewed
+        clock, copied times, a commit dated ahead) was a draft to ABlog, out of the listings."""
+        import os
+        import time
+
+        chart = pipeline_project / "_output" / "charts" / "chart_0_0.html"
+        ahead = time.time() + 2 * 86400
+        os.utime(chart, (ahead, ahead))
+        _built(pipeline_project, monkeypatch)
+        site = pipeline_project / "docs"
+        page = "test_pipeline.chart_0_0.html"
+        assert page in (site / "cb" / "charts.html").read_text()
+        assert page not in (site / "cb" / "charts" / "index" / "drafts.html").read_text()
+
+    def test_only_the_documented_templates_are_taken_from_a_root(self, first_pipeline, catalog_project, monkeypatch):
+        """Found by a reviewer: a root CHARTS.md (any case, on macOS) replaced the MkDocs
+        chart listing, and a catalog's root models.md its models page."""
+        from pathlib import Path as P
+
+        from chartbook.writers.mkdocs import MkDocsWriter
+        from chartbook.writers.sphinx import OVERRIDABLE_TEMPLATES
+
+        (first_pipeline / "charts.md").write_text("OUR OWN CHART NOTES\\n")
+        index = _built(first_pipeline, monkeypatch)
+        mkdocs = MkDocsWriter(index, theme="pipeline", docs_src_dir=first_pipeline / "no-overrides")
+        assert "OUR OWN CHART NOTES" not in mkdocs.own_page("cb/charts.md")
+        catalog = catalog_project.resolve()
+        for name in ("models.md", "pipelines.md", "versions.md", "dataframes.md", "diagnostics.md"):
+            (catalog / name).write_text("OUR OWN CATALOG NOTES\\n")
+        index = _built(catalog, monkeypatch)
+        writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog / "_docs_src")
+        for page_path in ("cb/models.md", "cb/pipelines.md", "cb/versions.md", "cb/dataframes.md", "cb/diagnostics.md"):
+            assert "OUR OWN CATALOG NOTES" not in writer.catalog_page(page_path), page_path
+        # What may be overridden still is, and the build guide's table names each one
+        (catalog / "pipeline_manifest.md").write_text("OUR OWN PIPELINE TABLE\\n")
+        assert "OUR OWN PIPELINE TABLE" in writer.catalog_page("cb/pipelines.md")
+        guide = (P(__file__).parent.parent / "docs_src" / "guide" / "how-the-build-works.md").read_text()
+        assert all(f"`{name}`" in guide for name in OVERRIDABLE_TEMPLATES)
 
     def test_a_chart_with_a_category_still_has_one(self, pipeline_project, monkeypatch):
         _built(pipeline_project, monkeypatch)
@@ -669,21 +711,30 @@ class TestWhatANewUserFound:
         assert lines[4].endswith("<str> '<f64>', 'y'")
 
     def test_a_glimpse_rounds_only_the_noise(self):
-        """Found by a reviewer: six digits made a date written as 20240115.0 read
-        20240100.0, and an ID 1318605.0 read 1318610.0."""
+        """Found by reviewers: six digits made a date written as 20240115.0 read
+        20240100.0; fifteen still changed 16-digit whole numbers and showed the
+        largest float as inf. Only the noise of a binary fraction is rounded away."""
+        import sys
+
         from chartbook.utils import glimpse_text
 
-        sample = pl.DataFrame({"v": [3.8499999999999996, 0.1 + 0.2, 20240115.0, 1318605.0, 7e22, 1e-300]})
-        assert glimpse_text(sample).splitlines()[2] == "$ v <f64> 3.85, 0.3, 20240115.0, 1318605.0, 7e+22, 1e-300"
+        values = [3.8499999999999996, 0.1 + 0.2, 0.7 * 3, 1.1 * 1.1, 1 / 3]
+        shown = "3.85, 0.3, 2.1, 1.21, 0.3333333333333333"
+        assert glimpse_text(pl.DataFrame({"v": values})).splitlines()[2] == f"$ v <f64> {shown}"
+        values = [20240115.0, 1318605.0, 7e22, 1e-300, 1234567890123456.0, float(2**53), 1e15 + 1, sys.float_info.max]
+        shown = "20240115.0, 1318605.0, 7e+22, 1e-300, 1234567890123456.0, 9007199254740992.0, 1000000000000001.0, 1.7976931348623157e+308"
+        assert glimpse_text(pl.DataFrame({"v": values})).splitlines()[2] == f"$ v <f64> {shown}"
 
     def test_a_glimpse_with_a_line_break_in_a_column_name(self):
-        """Found by a reviewer: the f32 label was put back by line number, which a name
-        with a line break in it moves; the labels are then left as polars gives them."""
+        """Found by reviewers: the f32 label was put back by line number, which a name
+        with a line break in it moves; then every f32 column was labelled f64. With
+        such a name, f32 columns are not widened, and keep their own label."""
         from chartbook.utils import glimpse_text
 
         sample = pl.DataFrame({"two\nlines": pl.Series([1.1], dtype=pl.Float32), "after": pl.Series([2.5], dtype=pl.Float32)})
         lines = glimpse_text(sample).splitlines()
-        assert "$ two" in lines and "1.1" in lines[3] and "2.5" in lines[4]
+        assert "$ two" in lines and "<f32>" in lines[3] and lines[4].startswith("$ after") and "<f32> 2.5" in lines[4]
+        assert "<f64>" not in "\n".join(lines)
 
     def test_the_dataframe_path_is_the_pipelines_own(self, first_pipeline, monkeypatch):
         _built(first_pipeline, monkeypatch)
@@ -691,22 +742,54 @@ class TestWhatANewUserFound:
         assert "| Dataframe Path                 | `./_data/rates.parquet`" in page
         assert str(first_pipeline / "_data" / "rates.parquet") not in page
 
-    def test_a_path_or_a_name_cannot_break_the_page(self, first_pipeline, monkeypatch):
-        """Found by a reviewer: the path was set in backticks unchecked, so a `|` or a
-        backtick broke the table; and a value set in as code kept control and
+    def test_a_name_set_in_as_code_cannot_break_the_page(self):
+        """Found by a reviewer: a value set in as code kept control and
         direction-changing characters, at any length."""
         from chartbook.writers.sphinx import _code
 
         assert _code("../rates") == "`../rates`"
-        assert _code("a‮b\x07c") == "`a b c`"
+        assert _code("a\u202eb\x07c") == "`a b c`"
         assert len(_code("x" * 500)) == 202 and _code("x" * 500).endswith("…`")
         assert "|" not in _code("a|b") and "`" not in _code("a`b")
+
+    def test_a_path_is_set_in_exactly_and_cannot_break_the_table(self, first_pipeline, monkeypatch):
+        """Found by reviewers: the path was set in backticks unchecked, so a `|` or a
+        backtick broke the table; then it was cut at 200 characters, a Windows path
+        lost its code, `&` became "and" and runs of spaces closed up. It is code, exactly
+        as written, with only control and direction-changing characters taken out."""
+        from markdown_it import MarkdownIt
+
+        written = "C:\\data\\R&D  x|y`z\u202e/" + "d" * 250 + ".parquet"
         index = _built(first_pipeline, monkeypatch)
         (record,) = [r for r in index["records"] if r["id"] == "first_pipeline:rates"]
-        record["location"]["path"] = "./_data/a|b`c.parquet"
+        record["location"]["path"] = written
         page = SphinxWriter(index, theme="pipeline", docs_src_dir=first_pipeline / "_docs_src").dataframe_page(record["id"])
-        (row,) = [line for line in page.splitlines() if line.startswith("| Dataframe Path")]
-        assert row.count("|") == 3 and "`" not in row
+        table = page[page.index("| Dataframe Name") :].split("\n\n", 1)[0]
+        html = MarkdownIt("commonmark").enable("table").render(table)
+        (cell,) = [line for line in html.splitlines() if "<code>" in line]
+        expected = written.replace("\u202e", "").replace("&", "&amp;")
+        assert cell == f"<td><code>{expected}</code></td>"
+        assert html.count("<td>") == 2 * table.count("\n| ")  # every row is two cells
+
+    def test_a_table_and_its_source_are_set_in_exactly(self):
+        from markdown_it import MarkdownIt
+
+        from chartbook.writers.sphinx import _literal
+
+        for written in ("main.rates", "`odd` name", "a|b", "x  y", " lead", "R&D\\x"):
+            row = f"| A | B |\n|---|---|\n| Table | {_literal(written)} |\n"
+            html = MarkdownIt("commonmark").enable("table").render(row)
+            expected = written.replace("&", "&amp;")
+            assert f"<td><code>{expected}</code></td>" in html, (written, html)
+
+    def test_in_mkdocs_a_pipe_in_a_path_is_not_escaped(self):
+        """Python-Markdown reads a pipe in code as text, and would show a backslash before it."""
+        markdown = pytest.importorskip("markdown")
+        from chartbook.writers.mkdocs import MkDocsWriter  # noqa: F401 - the writer that passes escape_pipes=False
+        from chartbook.writers.sphinx import _literal
+
+        row = f"| A | B |\n|---|---|\n| Path | {_literal('a|b', escape_pipes=False)} |\n"
+        assert "<td><code>a|b</code></td>" in markdown.markdown(row, extensions=["tables"])
 
     def test_a_linked_chart_is_named_by_its_address(self, first_pipeline, monkeypatch):
         _built(first_pipeline, monkeypatch)

@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import shutil
@@ -165,10 +166,8 @@ def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
 #: How many rows a dataframe's glimpse shows, from the top of the file
 GLIMPSE_ROWS = 5
 
-#: How many significant digits a float in a glimpse is shown to: as many as
-#: a float holds for certain, so that whole numbers (a date written as
-#: 20240115.0, an ID) and the smallest and largest values show as they are,
-#: and only the noise of binary fractions (3.8499999999999996) is cut
+#: How many significant digits a float in a glimpse may be rounded to: as
+#: many as a float holds for certain. See :func:`_for_display` for when it is
 GLIMPSE_DIGITS = 15
 
 
@@ -213,13 +212,15 @@ def get_dataframe_glimpse(filepath):
 def glimpse_text(sample: pl.DataFrame) -> str:
     """Polars' glimpse of a few rows, as text, with floats rounded for a reader.
 
-    A float is shown to :data:`GLIMPSE_DIGITS` significant digits, so
-    ``3.8499999999999996`` reads ``3.85``; the rounding is Python's own
-    formatting, which is exact at any magnitude. A ``f32`` column is widened
-    to show its digits as written (``1.1``, not ``1.100000023841858``), and
-    is still labelled ``<f32>``.
+    A float that is the noise of a binary fraction is shown as the number it
+    stands for (``3.8499999999999996`` reads ``3.85``; :func:`_for_display`),
+    and every other value as it is. A ``f32`` column is widened to show its
+    digits as written (``1.1``, not ``1.100000023841858``), and is still
+    labelled ``<f32>``; not when a column's name has a line break in it,
+    since the label is put back by the line the column is on.
     """
-    narrow = {name for name, dtype in sample.schema.items() if dtype == pl.Float32}
+    broken = any("\n" in name or "\r" in name for name in sample.columns)
+    narrow = set() if broken else {name for name, dtype in sample.schema.items() if dtype == pl.Float32}
     shown = sample.with_columns(pl.col(sorted(narrow)).cast(pl.String).cast(pl.Float64))
     shown = shown.with_columns(
         [
@@ -233,10 +234,9 @@ def glimpse_text(sample: pl.DataFrame) -> str:
         shown.glimpse()
     # "Rows: …" and "Columns: …", then one line per column in order. A name
     # is shown left-aligned and cut at 50 characters, so the type's label
-    # comes after it. A name with a line break in it breaks that count; the
-    # labels are then left as they are
+    # comes after it
     lines = output.getvalue().split("\n")
-    if any("\n" in name or "\r" in name for name in sample.columns) or len(lines) < sample.width + 2:
+    if len(lines) < sample.width + 2:
         return "\n".join(lines)
     for position, name in enumerate(sample.columns):
         if name in narrow:
@@ -248,8 +248,21 @@ def glimpse_text(sample: pl.DataFrame) -> str:
 
 
 def _for_display(value):
-    """A float rounded to :data:`GLIMPSE_DIGITS` significant digits, or None."""
-    return None if value is None else float(f"{value:.{GLIMPSE_DIGITS}g}")
+    """A float as a glimpse shows it: rounded only when what is cut is noise.
+
+    A whole number (a date written as 20240115.0, an ID, ``2**53``) and a
+    value that is not finite are shown as they are. Any other is rounded to
+    :data:`GLIMPSE_DIGITS` significant digits, with Python's formatting,
+    exact at any magnitude, when the result is within two units in the last
+    place of the value: so ``3.8499999999999996`` reads ``3.85`` and
+    ``0.1 + 0.2`` reads ``0.3``, while ``1/3`` keeps all its digits.
+    """
+    if value is None or not math.isfinite(value) or value.is_integer():
+        return value
+    rounded = float(f"{value:.{GLIMPSE_DIGITS}g}")
+    if math.isfinite(rounded) and abs(rounded - value) <= 2 * math.ulp(value):
+        return rounded
+    return value
 
 
 # Regex to match MathJax 2 script tags injected by Plotly's NotebookRenderer.

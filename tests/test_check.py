@@ -459,6 +459,16 @@ class TestCheckCommand:
         assert f"[project] site_dir: required by the policy in {policy}" in result.output
         assert "repo_url" not in result.output
 
+    def test_a_policy_that_is_not_a_table_is_a_clean_error(self, pipeline_project, tmp_path):
+        """Found by a reviewer: `policy = "strict"` gave an AttributeError traceback."""
+        for text, said in (('policy = "strict"\n', "[policy] must be a table"), ('[policy]\nrequired = "x"\n', "policy.required must be a table")):
+            policy = tmp_path / "odd.toml"
+            policy.write_text(text)
+            result = _invoke("--project-dir", pipeline_project, "--policy", policy)
+            assert result.exit_code == 1
+            assert f"Error: {policy}: {said}" in result.output
+            assert "Traceback" not in result.output and "AttributeError" not in result.output
+
     def test_missing_policy_file_is_a_clean_error(self, pipeline_project, tmp_path):
         result = _invoke(
             "--project-dir", pipeline_project, "--policy", tmp_path / "nope.toml"

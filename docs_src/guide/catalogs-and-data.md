@@ -99,7 +99,7 @@ chartbook check --within 90            # widen the license window
 chartbook check --skip-outputs         # in CI, without building the data first
 ```
 
-A pipeline is checked against its own `[policy]` when it has one. When no policy is given anywhere (none in the pipeline, none in the catalog it is checked in, and no `--policy`, or a `--policy` file with no `[policy]` table), the built-in recommended list is advice: each missing field is a `warning:` line and the check does not fail on it. A dataframe or chart with no write-up fails it all the same, since the format requires one. Details: {doc}`../reference/cli`.
+A pipeline is checked against its own `[policy]` when it has one, unless `--policy` is given: then the file's `[policy]` replaces it, as a catalog's replaces its members', and a file with none, such as a catalog that sets no policy, gives no policy. When no policy is given anywhere (none in the pipeline, none in the catalog it is checked in, and no `--policy`, or a `--policy` file with no `[policy]` table), the built-in recommended list is advice: each missing field is a `warning:` line and the check does not fail on it. A dataframe or chart with no write-up fails it all the same, since the format requires one. Details: {doc}`../reference/cli`.
 
 ## Loading data
 

@@ -179,7 +179,7 @@ Without a `[policy]` section, chartbook's default recommended-field lists apply,
 
 A pipeline may have a `[policy]` section of its own. It says what that pipeline holds itself to when it is checked or built by itself. Inside a catalog, the catalog's policy applies and the pipeline's is ignored: whoever gathers the pipelines together decides what they must say.
 
-To enforce a policy in CI — for a catalog or a single pipeline — run {doc}`chartbook check <cli>`, which exits nonzero on any missing required field regardless of `mode`. When no policy is given anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, and no `--policy`, or a `--policy` file with no `[policy]` table), `check` reports the missing recommended fields as `warning:` lines, and they do not make it exit nonzero. An empty write-up (`docs_path` or `docs`) still fails it: the format requires one.
+To enforce a policy in CI — for a catalog or a single pipeline — run {doc}`chartbook check <cli>`, which exits nonzero on any missing required field regardless of `mode`. `check --policy FILE` replaces the pipeline's own `[policy]` with the one in that file, as a catalog's replaces its members'; a file with no `[policy]` table gives no policy. When no policy is given anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, and no `--policy`, or a `--policy` file with no `[policy]` table), `check` reports the missing recommended fields as `warning:` lines, and they do not make it exit nonzero. An empty write-up (`docs_path` or `docs`) still fails it: the format requires one.
 
 ## `[charts]` — Chart Definitions
 

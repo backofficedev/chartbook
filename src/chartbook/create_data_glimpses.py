@@ -440,7 +440,7 @@ def main(
         current directory.
     :type project_dir: str or Path, optional
     :raises FileNotFoundError: If the project directory has no chartbook.toml.
-    :raises NotADirectoryError: If ``output_dir`` is a file whose name does not end in ``.md``.
+    :raises NotADirectoryError: If ``output_dir`` is there, is not a directory, and does not end in ``.md``.
     """
     project_dir = Path(project_dir) if project_dir is not None else Path.cwd()
     print(f"Reading declared dataframes from {project_dir / 'chartbook.toml'}...")
@@ -466,10 +466,13 @@ def main(
         output_path = Path.cwd() / "data_glimpses.md"
     else:
         output_path = Path(output_dir)
-        if output_path.is_file() and output_path.suffix.lower() != ".md":
+        # Something already there that is not a directory: a file, a link
+        # to nothing, a pipe
+        taken = output_path.exists() or output_path.is_symlink()
+        if taken and not output_path.is_dir() and output_path.suffix.lower() != ".md":
             raise NotADirectoryError(
-                f"{output_path} is a file. Give a directory to write data_glimpses.md "
-                f"in, or a path ending in .md for the report itself."
+                f"{output_path} is there and is not a directory. Give a directory to "
+                f"write data_glimpses.md in, or a path ending in .md for the report itself."
             )
         if output_path.is_dir() or output_path.suffix.lower() != ".md":
             output_path = output_path / "data_glimpses.md"

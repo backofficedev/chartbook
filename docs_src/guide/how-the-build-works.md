@@ -139,9 +139,12 @@ the writer makes between each record's declared fields and the policy the `Catal
 carries. Nothing is looked up in a manifest or a folder.
 
 The times a page shows are in UTC and say so, whatever the zone of the machine that builds it.
-The one exception is the `date` in a chart page's front matter, which no reader sees: it is the
-build machine's local time, because ABlog compares it with its own next local midnight and keeps
-a chart dated after that as a draft, out of every chart listing.
+The one exception is a chart's date in the chart listings (the "All Posts" page, the archive,
+and the year, category and tag pages ABlog makes): that day is in the build machine's own zone,
+so it can differ by a day from the UTC "Chart updated" on the chart's page. ABlog publishes a
+chart only when it is dated before the machine's next local midnight, and keeps any later one as
+a draft, out of every listing; a chart written in the evening west of UTC is already tomorrow in
+UTC. A chart whose file is dated in the future is listed as of the build.
 
 Beside the pages, the build copies the **files the index names** into the Sphinx tree, again from
 the records:
@@ -170,7 +173,9 @@ Each page is rendered from Jinja2 templates. The writer looks for a template, fi
 So to change a page, put a file with the same name in the **pipeline's root**:
 `chart_entry_bottom.md` there replaces the footer of every chart page of that pipeline. In a
 catalog, each pipeline's own root is what its pages see; the catalog's root is searched only for
-the catalog's own pages. A project's `docs_src/_templates/` is not on the list.
+the catalog's own pages. A project's `docs_src/_templates/` is not on the list. Only the templates
+in the table below are taken from a root: any other file there, a `CHARTS.md` or a `models.md`, is
+the project's own and is never read as a template.
 
 | Template | What it controls |
 |---|---|

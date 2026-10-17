@@ -224,6 +224,28 @@ def _code(value: object) -> str:
     return _as_text(text)
 
 
+def _literal(value: object, escape_pipes: bool = True) -> str:
+    """A value that must stay exactly as written, a path or a table's name, as inline code in a table cell.
+
+    Unlike :func:`_code`, nothing is cut or rewritten, so that it can be
+    copied: spaces, backslashes and ``&`` stay. Only control and
+    direction-changing characters are taken out. A backtick in it gets a
+    longer fence. A pipe would end the table cell: it is written ``\\|``,
+    which markdown-it (MyST) reads back as a pipe in a cell, code or not.
+    Python-Markdown (MkDocs) reads a pipe in code as text and would show the
+    backslash, so the MkDocs writer passes ``escape_pipes=False``.
+    """
+    text = "".join(c for c in str(value) if c == " " or c.isprintable())
+    if not text:
+        return ""
+    if escape_pipes:
+        text = text.replace("|", "\\|")
+    fence = "`" * (max((len(run) for run in re.findall(r"`+", text)), default=0) + 1)
+    # CommonMark takes one space off each end of code that starts and ends with one
+    pad = " " if text[0] in "` " or text[-1] in "` " else ""
+    return f"{fence}{pad}{text}{pad}{fence}"
+
+
 def _link_text(text: str) -> str:
     """Text set into the assistant file, with a backslash before what would start a link, an autolink or code."""
     return "".join("\\" + c if c in "\\[]<>`" else c for c in text)
@@ -419,8 +441,11 @@ class SphinxWriter:
         # machine's local time, with no zone named: ABlog publishes a post
         # dated before its next local midnight, and keeps any later one as a
         # draft, out of every listing. A chart written in the evening west of
-        # UTC is dated tomorrow in UTC
+        # UTC is dated tomorrow in UTC. A time still to come (a skewed clock,
+        # copied times, a commit dated ahead) is taken as now, for the same reason
         chart_updated = _as_utc(location.get("modified_at") or pipeline.get("code_changed_at"))
+        if chart_updated is not None:
+            chart_updated = min(chart_updated, datetime.now(timezone.utc))
         chart_date = chart_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S") if chart_updated is not None else None
         if dataframe is not None:
             dataframe_manifest = self._dataframe_manifest(dataframe, base_dir)
@@ -822,14 +847,9 @@ class SphinxWriter:
             pipelines = {
                 r["id"]: self._pipeline_manifest(r) for r in self.records.values() if r["kind"] == "Pipeline"
             }
-            try:
-                docs_src = Path(self.docs_src_dir).relative_to(base_dir).as_posix()
-            except ValueError:
-                docs_src = Path(self.docs_src_dir).as_posix()
             return environment.get_template("pipelines.md").render(
                 manifest={"pipelines": pipelines},
                 dot_or_dotdot=".",
-                docs_src_dir=docs_src,
                 show_code_updated=True,
             )
         if page_path == "cb/diagnostics.md":
@@ -1264,11 +1284,11 @@ class SphinxWriter:
 
         package = Path(str(importlib.resources.files("chartbook")))
         theme_dir = package / ("docs_src_catalog" if self.theme == "catalog" else "docs_src_pipeline")
-        paths = [] if untrusted_source() else [base_dir]
+        paths = []
         if self.docs_src_dir is not None:
             paths += [Path(self.docs_src_dir), Path(self.docs_src_dir) / "_templates"]
         paths += [package / "templates", theme_dir, theme_dir / "_templates"]
-        return _sandboxed(paths)
+        return _sandboxed(paths, own=None if untrusted_source() else base_dir)
 
     # --- one entry point for the build ---------------------------------------
 
@@ -1286,13 +1306,51 @@ def _slug(pipeline_id: str) -> str:
     return pipeline_id.replace("/", "--")
 
 
-def _sandboxed(paths: list) -> jinja2.Environment:
-    """A Jinja environment in the sandbox, loading templates from these folders in order."""
+#: The templates a project may replace with a file of the same name in its own
+#: root (a catalog's root, for the catalog's own pages), as the template table
+#: of docs_src/guide/how-the-build-works.md lists them. Any other file there
+#: is the project's own, a CHARTS.md or a models.md, and is never a template.
+OVERRIDABLE_TEMPLATES = frozenset(
+    {
+        "freshness.md",
+        "chart_entry_top.md",
+        "chart_entry_bottom.md",
+        "dataframe_manifest.md",
+        "pipeline_manifest.md",
+        "model_manifest.md",
+        "provenance.md",
+        "pipeline_dependencies.md",
+        "index.md",
+    }
+)
+
+
+class _Overrides(jinja2.FileSystemLoader):
+    """A project's own root as a place for templates: only the names in :data:`OVERRIDABLE_TEMPLATES` are taken from it."""
+
+    def get_source(self, environment, template):
+        if template not in OVERRIDABLE_TEMPLATES:
+            raise jinja2.TemplateNotFound(template)
+        return super().get_source(environment, template)
+
+    def list_templates(self):
+        return sorted(name for name in OVERRIDABLE_TEMPLATES if (Path(self.searchpath[0]) / name).is_file())
+
+
+def _sandboxed(paths: list, own: Optional[Path] = None) -> jinja2.Environment:
+    """A Jinja environment in the sandbox, loading templates from these folders in order.
+
+    :param own: The project's own root, searched first for the templates a
+        project may override, and for nothing else.
+    """
     from jinja2.sandbox import SandboxedEnvironment
 
-    environment = SandboxedEnvironment(loader=jinja2.FileSystemLoader([str(p) for p in paths]))
+    loader = jinja2.FileSystemLoader([str(p) for p in paths])
+    if own is not None:
+        loader = jinja2.ChoiceLoader([_Overrides([str(own)]), loader])
+    environment = SandboxedEnvironment(loader=loader)
     environment.filters["yaml_escape"] = yaml_escape
-    environment.filters["code"] = _code
+    environment.filters["literal"] = _literal
     return environment
 
 
