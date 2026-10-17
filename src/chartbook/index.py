@@ -894,6 +894,8 @@ def _add_snapshots(records: list[dict]) -> None:
             entry = {"commit": taken.commit, "made_at": taken.made_at, "name": version_name(taken.commit, taken.made_at)}
             if taken.built_by_run:
                 entry["built_by_run"] = True
+            if taken.tags:
+                entry["tags"] = list(taken.tags)
             listed.append(entry)
         if listed:
             record["snapshots"] = listed

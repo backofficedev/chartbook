@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a git tag names a version; `store gc --aggressive`
+
+A snapshot records the git tags on its commit when it is made, and `chartbook lineage` and a catalog's Versions page show them: a git tag is a version's name, given with `git tag` and taken away with `git tag -d`. `store gc` already kept the newest snapshot a tag can pin from; a name keeps that snapshot only, not its lineage. `store gc --aggressive` lets names keep nothing: no snapshot is kept for a tag or a branch, or for a model label, so only what a lockfile pins, the newest of each pipeline and the last `--keep-days` days stay. Tag names from a store's records are taken only in a tag's shape. Decided by the maintainer on 2026-10-16.
+
+### Changed — `store gc` keeps an unneeded snapshot for 7 days, not 30
+
+A snapshot that nothing pins, that is not the newest of its pipeline (or the newest a branch or tag can pin from), and that no label points into is now removed after 7 days rather than 30, so a store stays small. `--keep-days` still sets it. Decided by the maintainer on 2026-10-16.
+
 ### Added — `chartbook lineage`
 
 `chartbook lineage` walks a pipeline's lineage up from its lockfile, through every snapshot it is pinned to and every snapshot those were pinned to, and checks each step by hash: the snapshot is in the store, what was pinned is what it holds (each asset for the pipeline's own pins; the recorded hash over everything pinned, made again, upstream), each snapshot's recorded pins cover what its own kept manifest declares, and each asset is in the store. It prints the graph as a tree with each gap under its pipeline; `--check` exits 1 on a gap, for CI; `--rehash` hashes every asset again; `--json` prints the graph. `chartbook snapshot --deep` also refuses when a snapshot upstream has a gap. The walk is `chartbook.lineage.walk`; a record in the store that is not what ChartBook writes is a gap where it is met, never an error. `chartbook store gc --keep-lineage` also keeps every snapshot a kept snapshot was made from, and those holding the versions the labels of what it was made from pointed at, as far up as they go; by default a store keeps what work needs now and lets old lineage go, and the walk says so. Each snapshot records how its lineage was checked when it was made (`built_with.lineage`: `pins`, or `deep` with `--deep`), and the tree shows it, for audit.

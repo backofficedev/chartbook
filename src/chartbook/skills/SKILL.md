@@ -58,7 +58,7 @@ chartbook run --frozen      # Pin nothing, fetch nothing, write nothing; build o
 chartbook run <script>      # ...or another named script, e.g. `chartbook run test` (pins nothing)
 chartbook run --force       # Also rebuild git dependencies (each is built once, in a clean copy); refreshes data they pull from outside
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, `[store] url` in settings, or CHARTBOOK_STORE; a folder or s3://bucket/prefix with chartbook[s3]); exit 1 if an object changed
-chartbook store gc          # Remove old snapshots (unpinned, not the newest, unlabelled, >30 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one
+chartbook store gc          # Remove old snapshots (unpinned, not the newest, unlabelled, >7 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets git tags, branches and model labels keep nothing. A git tag names a version (snapshots record their commit's tags)
 chartbook config            # Configure default catalog path (interactive)
 chartbook catalog init      # Create global catalog at ~/.chartbook/chartbook.toml
 chartbook catalog add <path>     # Add pipeline(s) to catalog

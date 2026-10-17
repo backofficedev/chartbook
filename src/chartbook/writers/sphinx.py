@@ -730,6 +730,7 @@ class SphinxWriter:
                     "made": f"{entry['made_at'][:10]} {entry['made_at'][11:16]} UTC",
                     "link": f"../{site_path(record['id'], entry['name'])}/index.html",
                     "built_by_run": bool(entry.get("built_by_run")),
+                    "tags": [tag for tag in entry.get("tags") or [] if isinstance(tag, str)],
                     "pinned_by": sorted(pinned.get((record["id"], entry["commit"], entry["made_at"]), [])),
                 }
                 for entry in record.get("snapshots") or []

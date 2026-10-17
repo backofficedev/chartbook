@@ -2061,7 +2061,8 @@ def _lineage_line(node) -> str:
     if node.kind == "snapshot":
         seen = " (shown above)" if node.seen else ""
         checked = {"pins": "pins checked", "deep": "lineage checked"}.get(node.checked, "made before pins were checked")
-        return f"{node.label}: {node.pipeline} {node.commit[:7]}, made {made}, {checked}{seen}"
+        tagged = f", tagged {', '.join(node.tags)}" if node.tags else ""
+        return f"{node.label}: {node.pipeline} {node.commit[:7]}{tagged}, made {made}, {checked}{seen}"
     if node.kind == "git":
         at = f" at {node.commit[:7]}" if node.commit else ""
         return f"{node.label}: pinned from its git clone{at}; not walked further"
@@ -2372,14 +2373,19 @@ def _format_bytes(size):
     type=click.FloatRange(min=0),
     default=None,
     metavar="DAYS",
-    help="Keep a snapshot that nothing pins and that is not the newest of its pipeline for this long (default: 30)",
+    help="Keep a snapshot that nothing pins and that is not the newest of its pipeline for this long (default: 7)",
 )
 @click.option(
     "--keep-lineage",
     is_flag=True,
     help="Also keep every snapshot a kept snapshot was made from, as far up as it goes, so `chartbook lineage` finds them all",
 )
-def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage):
+@click.option(
+    "--aggressive",
+    is_flag=True,
+    help="Let names keep nothing: no snapshot is kept for a git tag or branch, or for a model label",
+)
+def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     """Remove from the store what nothing needs any more.
 
     The store is shared by every project of yours. Two things keep what is
@@ -2390,11 +2396,14 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage):
     A snapshot is kept if a lockfile pins it, if it is the newest of its
     pipeline or the newest a branch or tag can pin from, if a label points
     at a model version in it (in that pipeline's chartbook.toml, or as its
-    newest snapshot recorded), or if it was made in the last 30 days
+    newest snapshot recorded), or if it was made in the last 7 days
     (--keep-days). Otherwise it may be removed, and what only it named
     goes with it. A store keeps what work needs now, and lets old lineage
     go: with --keep-lineage, every snapshot a kept snapshot was made from
     is kept too, as far up as it goes, for `chartbook lineage` to check.
+    With --aggressive, names keep nothing: a snapshot a git tag or branch
+    names, or one holding a labelled model version, goes once nothing else
+    keeps it.
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
@@ -2413,6 +2422,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage):
         chartbook store gc --keep-days 7
         chartbook store gc --yes --forget-missing
         chartbook store gc --keep-lineage
+        chartbook store gc --aggressive --keep-days 0
     """
     from chartbook import lock
     from chartbook import snapshot as snapshots
@@ -2421,7 +2431,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage):
     days = keep_days if keep_days is not None else snapshots.KEEP_DAYS
     try:
         the_store = default_store()
-        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage)
+        plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage, aggressive=aggressive)
     except (StoreError, lock.LockError, ValueError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         click.echo("Nothing was removed.", err=True)

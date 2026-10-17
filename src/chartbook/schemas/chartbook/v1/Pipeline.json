@@ -238,6 +238,13 @@
           "rendered": {
             "type": "boolean",
             "description": "Whether the catalog that wrote this index built the snapshot's site; false when it shows the page that says why."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The git tags on the snapshot's commit when it was made: its names."
           }
         }
       }

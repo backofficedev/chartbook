@@ -83,6 +83,7 @@ class Node:
     children: list["Node"] = field(default_factory=list)
     seen: bool = False
     checked: str = ""
+    tags: list = field(default_factory=list)
     hashes: set = field(default_factory=set, repr=False)
 
     def to_dict(self) -> dict:
@@ -95,6 +96,7 @@ class Node:
             shown["seen"] = True
         if self.kind == "snapshot":
             shown["checked"] = self.checked or None
+            shown["tags"] = list(self.tags)
         shown["gaps"] = list(self.gaps)
         shown["children"] = [child.to_dict() for child in self.children]
         return shown
@@ -281,6 +283,7 @@ class _Walker:
         node.pipeline, node.commit, node.made_at = taken.pipeline, taken.commit, taken.made_at
         recorded = (taken.built_with or {}).get("lineage") if isinstance(taken.built_with, dict) else None
         node.checked = recorded if recorded in ("pins", "deep") else ""
+        node.tags = list(taken.tags or [])
         node.hashes = {h for h in taken.content().values() if isinstance(h, str) and h} | set(labels)
         if depth > DEEPEST:
             node.gaps.append(f"the walk stops here, {DEEPEST} snapshots up: the store may have been made to loop")
