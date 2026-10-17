@@ -129,10 +129,15 @@ class TableLocation(Location):
 
     Attributes:
         source: The source's name in ``[sources]``.
-        backend: The source's backend, ``duckdb``.
+        backend: The source's backend: ``duckdb``, ``databricks``.
         url: The source's URL, public part only, with a relative DuckDB
             file made absolute.
         identifier: The table, as declared: one to three dot-separated parts.
+        version: The version of the table to read, where a pin names one:
+            a Delta table's version number. None for the table as it is.
+        table_id: The id of the table that version is of, which a read
+            checks, so that a table dropped and made again under the same
+            name is not read as the one pinned.
     """
 
     kind: ClassVar[str] = "table"
@@ -141,6 +146,8 @@ class TableLocation(Location):
     backend: str
     url: str
     identifier: str
+    version: Optional[int] = None
+    table_id: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -769,10 +776,10 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             asset_id,
             "not_built",
             f"{asset_id!r} is a {record['location']['kind']} in a source of the pipeline "
-            f"{dependency.id!r} and has no pinned copy: a pin from a folder takes no table, "
-            f"and a snapshot writes one out only from a DuckDB file (`chartbook snapshot` "
-            f"there says what it could not). `chartbook snapshot` in that pipeline's folder, "
-            f"then `chartbook update` in {manifest_dir}, pins it.",
+            f"{dependency.id!r} and has no pin: a snapshot keeps one only from a DuckDB file "
+            f"or a warehouse it could read (`chartbook snapshot` there says what it could "
+            f"not). `chartbook snapshot` in that pipeline's folder, then `chartbook update` "
+            f"in {manifest_dir}, pins it.",
         )
     if not content_hash:
         raise AssetNotPinnedError(
@@ -805,9 +812,12 @@ def _held(store, record: dict) -> Location:
 
     held = store.get(record["content_hash"])
     if record["location"].get("kind") in ("table", "query"):
-        # Written out as parquet when the snapshot was made
-        from chartbook.snapshot import materialized_name
+        from chartbook.snapshot import materialized_name, table_version_name
 
+        if (Path(held) / table_version_name(record)).is_file():
+            # Pinned by its version in the warehouse, which keeps the rows
+            return _table_at_version(record, Path(held) / table_version_name(record))
+        # Written out as parquet when the snapshot was made
         return FileLocation(held / materialized_name(record))
     declared_path = record["location"]["path"]
     if is_glob_pattern(declared_path):
@@ -818,6 +828,48 @@ def _held(store, record: dict) -> Location:
     if "files" in record or not (held / name).is_file():
         return FileLocation(held)  # a directory: the object is the directory
     return FileLocation(held / name)
+
+
+def _table_at_version(record: dict, held: Path) -> "TableLocation":
+    """A table pinned by its version, from the small file the store holds for the pin.
+
+    The file is what the pin's hash is of, so it, not the record, says which
+    table and which version; a store may be shared, so it is checked before
+    anything of it reaches a query.
+
+    :raises AssetNotPinnedError: If the file is not one ChartBook wrote.
+    """
+    import json
+
+    from chartbook.backends import TABLE_IDENTIFIER
+
+    location = record["location"]
+    try:
+        pinned = json.loads(held.read_text(encoding="utf-8"))
+        version, table_id, identifier = pinned["version"], pinned["table_id"], pinned["identifier"]
+        backend = pinned["backend"]
+    except (OSError, ValueError, KeyError, TypeError):
+        pinned = None
+    if (
+        pinned is None
+        or not isinstance(version, int)
+        or isinstance(version, bool)
+        or version < 0
+        or not isinstance(table_id, str)
+        or not re.fullmatch(r"[0-9A-Za-z-]{1,64}", table_id)
+        or not isinstance(identifier, str)
+        or not TABLE_IDENTIFIER.fullmatch(identifier)
+        or backend != location.get("backend")
+        or not isinstance(location.get("source"), str)
+        or not isinstance(location.get("url"), str)
+    ):
+        raise AssetNotPinnedError(
+            record["id"],
+            "not_in_store",
+            f"{record['id']!r} is pinned by a table version, and the store's file for it, {held}, "
+            f"is not one ChartBook wrote. `chartbook update` pins it again.",
+        )
+    return TableLocation(location["source"], backend, location["url"], identifier, version=version, table_id=table_id)
 
 
 def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Location:

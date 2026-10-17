@@ -4,7 +4,7 @@
 A design document, written 2026-10-16 after cross-pipeline dependencies were made to work on one
 machine ({doc}`overview`, step 4, and PR 65). It plans how ChartBook keeps the same experience for
 the person using it, from a laptop with nothing installed to an organization's own storage and
-warehouses. Status: **the settings layers, the store interface and the S3 store are built (2026-10-16); the backend interface and reading from Databricks, the first warehouse, are built (2026-10-17); pins in a warehouse are proposed.**
+warehouses. Status: **the settings layers, the store interface and the S3 store are built (2026-10-16); the backend interface, reading from Databricks, the first warehouse, and pins of a Delta table by its version are built (2026-10-17).**
 The decisions the maintainer has taken are marked *decided*; the rest is *proposed*.
 ```
 
@@ -133,6 +133,22 @@ copy, as DuckDB does. What a backend must provide, then, is: scan a table or que
 describe it, say whether it can pin by version, and run a pinned query. The interface is
 formalized from what DuckDB does today, and the first warehouse adapter shapes the rest.
 
+*Built 2026-10-17 for Databricks, with three differences from the above.* First, the pin keeps a
+content hash after all: the snapshot puts a small file in the store naming the backend, the table,
+the table's id and its Delta version, and the record's `content_hash` is that file's; the record
+also says `table_version` (`version`, `table_id`, `written_at`). So the lockfile, `pin --frozen`,
+the lineage check, `store gc` and staleness work on it unchanged, and an unchanged table makes the
+same snapshot. A read finds the file and runs `VERSION AS OF` that version, after checking that the
+table's id is still the one pinned. Second, only a table is pinned by its version: a query cannot
+be without parsing its SQL to put `VERSION AS OF` on each table in it, which ChartBook never does,
+so a query, a view and a table that is not Delta are written out as parquet, as a DuckDB one is.
+Third, a version does not last: Delta keeps old versions for 7 days by default, and newer runtimes
+refuse to read one older than that, so a pin by version is only as durable as the table's retention
+settings, which the page on reading a warehouse tells the table's owner how to raise. A read of a
+version the table no longer keeps fails and says to `chartbook update`. Whether that is durable
+enough, or whether a pin should copy the rows after all, is the maintainer's to weigh; nothing
+built is in the way of either.
+
 ## The order of work
 
 1. This page, and the settings layers with `[store] url`. *Built 2026-10-16:* the organization's file is read where the user's is silent, key by key; each layer is put in order before the merge, so a user's `[store] path` (read as `url` with a warning) still wins over the organization's `url`; a fault in the organization's file is a warning and the file is ignored, a fault in the user's names the file; a relative folder is relative to its settings file.
@@ -167,7 +183,7 @@ formalized from what DuckDB does today, and the first warehouse adapter shapes t
    only to the host the machine names (its URL for the source, or `DATABRICKS_HOST`), and a host a
    manifest or a record names is a check against it, never used in its place, since anyone who
    can write a manifest or a shared store could otherwise send this machine's token to their own
-   server. A snapshot records a warehouse table without a copy until the pins are built.
+   server. The pins are built too (see "Pins in a warehouse" above).
 
 ## What this does not decide
 

@@ -101,11 +101,46 @@ warehouse's type names, its row count, its first rows, and the first and last da
 site needs the same settings. Where it cannot reach the warehouse, the page says so and the site is
 still built.
 
-## What it does not do yet
+## Another pipeline reads the version that was pinned
 
-**Another pipeline cannot pin it yet.** `chartbook snapshot` records a warehouse table without a
-copy and says it is not pinned. Pinning a Delta table by its version, so that a pipeline that
-depends on this one reads the table as it was, comes next.
+When another pipeline depends on this one, `chartbook snapshot` here keeps each Delta table by its
+**version**, not by a copy: it asks the warehouse for the table's newest version and its id, and
+the store keeps a small file that names them. The other pipeline pins that snapshot as it pins any
+other (`chartbook pin`), and reads the table at that version:
+
+```python
+data.load("rates:curve")        # select * from `workspace`.`rates`.`curve` VERSION AS OF 42
+data.ref("rates:curve")         # `workspace`.`rates`.`curve` VERSION AS OF 42
+```
+
+So the table can go on changing in the warehouse, and the pipeline that pinned it reads what it
+pinned until `chartbook update` moves it to the version the newest snapshot names. No row is copied
+out of the warehouse, and a table that has not changed makes the same snapshot again. Each read
+first checks that the table's id is the one pinned, so a table dropped and made again under the
+same name is refused rather than read as the old one.
+
+**A version lasts as long as the table keeps it.** Delta keeps old versions for 7 days by default,
+and `VACUUM`, which Databricks may run on its own, removes what is older. A read of a version the
+table no longer keeps fails, and the message says that `chartbook update` pins the version it has
+now. To keep pins readable for longer, the table's owner raises how long the table keeps them:
+
+```sql
+alter table workspace.rates.curve set tblproperties (
+  'delta.deletedFileRetentionDuration' = 'interval 90 days',
+  'delta.logRetentionDuration' = 'interval 90 days'
+);
+```
+
+Keeping more versions keeps more files, which the warehouse's storage charges for.
+
+**What has no versions is copied.** A query, a view, or a table that is not Delta has no version to
+pin, so the snapshot writes its rows out as parquet into the store, as it does a DuckDB table, sorted
+on every column (a query with its own `ORDER BY` keeps its order) so that the same rows give the same
+bytes. To pin a large result by version instead, make it a table.
+
+The machine that makes the snapshot needs the warehouse settings above; without them, the snapshot
+records the table as not built and says why. The machine that reads a pin needs them too, for the
+same workspace: a pinned table is read from the warehouse, not from the store.
 
 ## Try it with Databricks Free Edition
 
@@ -148,5 +183,11 @@ and needs no card. It has one small SQL warehouse and a daily usage quota.
    $ python -c 'from chartbook import data; print(data.load("curve").collect())'
    $ chartbook docs
    ```
+
+7. To try a pin, commit the pipeline, run `chartbook snapshot` in it, and make a second pipeline
+   with `[dependencies] rates = { path = "../<the first one>" }`. In the second one, `chartbook pin`,
+   then `data.load("rates:curve")`. Insert a row into the table in the SQL Editor: the second
+   pipeline still reads the version it pinned until you snapshot the first again and run
+   `chartbook update`.
 
 The first query after the warehouse has been idle can take a minute, while it starts.

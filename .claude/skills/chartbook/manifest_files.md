@@ -190,8 +190,9 @@ query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
   `databricks://token:<t>@<host>?http_path=…`, or `?auth=oauth` in the machine URL; never in the
   manifest, which names no user or token either). A token goes only to the host
   the machine names: a manifest host that differs stops the read. Rows come when the lazy frame
-  is collected. A query in a warehouse cannot name a file of the pipeline. Another pipeline
-  cannot pin a warehouse table yet.
+  is collected. A query in a warehouse cannot name a file of the pipeline. A snapshot keeps a
+  Delta table by its version (another pipeline reads `VERSION AS OF` it; Delta keeps 7 days by
+  default, then `chartbook update`), and writes a query or view out as parquet.
 - ChartBook never parses or rewrites SQL. The index records `location` kind
   `table`/`query` with a `definition_hash` instead of a `content_hash`.
 - A catalog cannot have `[sources]`.

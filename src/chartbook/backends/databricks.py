@@ -37,8 +37,16 @@ you, as running their code does.
 query's columns at once, so a name it does not know is refused then, and
 returns a lazy frame that runs the query when it is collected, a batch at a
 time; ``head(n)`` with nothing filtered asks for ``n`` rows. ChartBook runs
-nothing but ``select`` on its own account; the SQL a person runs through
-``data.sql()`` or ``data.connect()`` is between them and the warehouse.
+nothing but ``select`` and ``describe`` on its own account; the SQL a person
+runs through ``data.sql()`` or ``data.connect()`` is between them and the
+warehouse.
+
+**Pinned by version.** A Delta table keeps its history, so a snapshot
+records the table's version (:meth:`DatabricksBackend.version_of`) rather
+than a copy, and a pipeline that pins it reads ``VERSION AS OF`` that
+version, after checking that the table is still the one pinned (its id).
+Delta keeps old versions for 7 days by default; a version the table no
+longer keeps cannot be read, and the message says so.
 """
 
 from __future__ import annotations
@@ -71,6 +79,14 @@ AUTH = ("token", "oauth")
 
 #: Rows asked of the warehouse at a time when a frame is collected.
 BATCH_ROWS = 100_000
+
+#: What a read of a version the table no longer keeps adds to the warehouse's message.
+GONE = (
+    "{identifier} is pinned at version {version}, and the warehouse could not read it. If the "
+    "table no longer keeps that version (Delta keeps 7 days by default, and VACUUM removes what "
+    "is older), `chartbook update` pins the version it has now; its owner can keep more with "
+    "the table properties delta.deletedFileRetentionDuration and delta.logRetentionDuration."
+)
 
 #: A workspace's host: letters, digits, dots and hyphens, with a dot in it (a workspace's host
 #: is never one label), and nothing a message could carry besides.
@@ -347,6 +363,8 @@ class DatabricksBackend(Backend):
         :raises chartbook.backends.BackendError: For a file, which the warehouse cannot read.
         """
         if location.kind == "table":
+            if getattr(location, "version", None) is not None:
+                return f"{quote_identifier(location.identifier, '`')} VERSION AS OF {int(location.version)}"
             return quote_identifier(location.identifier, "`")
         if location.kind == "query":
             return subselect(location.sql)
@@ -373,6 +391,69 @@ class DatabricksBackend(Backend):
                 connection.close()
             except Exception:  # noqa: BLE001 - closed already, or the session timed out
                 pass
+
+    def scan(self, location: "Location"):
+        """A table or a query, as a Polars LazyFrame; a pinned version after checking it is the table pinned."""
+        version = getattr(location, "version", None)
+        if version is None:
+            return self.sql(f"select * from {self.ref(location)}")
+        table_id = self._run(f"describe detail {quote_identifier(location.identifier, '`')}", _table_id)
+        if table_id != location.table_id:
+            raise BackendError(
+                f"{location.identifier} is not the table that was pinned: its id was {location.table_id}, "
+                f"and is {table_id or 'not given'} now, so it was dropped and made again. `chartbook update` "
+                f"pins the version it has now."
+            )
+        try:
+            return self.sql(f"select * from {self.ref(location)}")
+        except BackendError as error:
+            raise BackendError(f"{error}\n{GONE.format(identifier=location.identifier, version=version)}") from None
+
+    def version_of(self, location: "Location") -> Optional[dict]:
+        """A Delta table's current version, its id and when that version was written; None for anything else.
+
+        ``describe detail`` gives the format and the id (a view, or a table
+        that is not Delta, has no versions to pin); ``describe history``
+        with ``limit 1`` gives the newest version; and that version is read
+        once, with no rows, so that a table whose versions cannot be read
+        (a materialized view, a streaming table) is not pinned by one.
+
+        :raises chartbook.backends.BackendError: If the warehouse cannot be reached, or the table is not there.
+        """
+        if location.kind != "table":
+            return None
+        name = quote_identifier(location.identifier, "`")
+
+        def answer(cursor):
+            columns = [column[0] for column in cursor.description or []]
+            row = cursor.fetchone()
+            detail = dict(zip(columns, row)) if row is not None else {}
+            if str(detail.get("format") or "").lower() != "delta" or not detail.get("id"):
+                return None
+            cursor.execute(f"describe history {name} limit 1")
+            columns = [column[0] for column in cursor.description or []]
+            row = cursor.fetchone()
+            history = dict(zip(columns, row)) if row is not None else {}
+            if not isinstance(history.get("version"), int) or isinstance(history.get("version"), bool):
+                return None
+            try:
+                cursor.execute(f"select * from {name} VERSION AS OF {history['version']} limit 0")
+                cursor.fetchall_arrow()
+            except Exception:  # noqa: BLE001 - its versions cannot be read: copied instead
+                return None
+            written = history.get("timestamp")
+            return {
+                "version": history["version"],
+                "table_id": str(detail["id"]),
+                "written_at": written.isoformat() if hasattr(written, "isoformat") else str(written or ""),
+            }
+
+        try:
+            return self._run(f"describe detail {name}", answer)
+        except BackendError as error:
+            if _is_a_view(str(error)):
+                return None
+            raise
 
     def sql(self, query: str):
         """Run SQL in the warehouse, as a Polars LazyFrame.
@@ -534,3 +615,16 @@ def _polars_type(column):
         f"The query's result is empty, the warehouse sent no columns with it, and the type of "
         f"{name}, {kind or 'not given'}, cannot be read from its name."
     )
+
+
+def _table_id(cursor) -> str:
+    """The ``id`` column of what ``describe detail`` gave."""
+    columns = [column[0] for column in cursor.description or []]
+    row = cursor.fetchone()
+    return str(dict(zip(columns, row or ())).get("id") or "")
+
+
+def _is_a_view(message: str) -> bool:
+    """Whether the warehouse refused ``describe detail`` because the name is a view: it has no versions to pin."""
+    text = message.lower()
+    return "view" in text and ("describe detail" in text or "expect_table_not_view" in text or "is a view" in text)

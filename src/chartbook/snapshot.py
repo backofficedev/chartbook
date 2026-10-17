@@ -412,6 +412,76 @@ def materialized_name(record: dict) -> str:
     return f"{record['ref']['name']}.parquet"
 
 
+def table_version_name(record: dict) -> str:
+    """The file a table pinned by its version is held as, inside its store object: ``<name>.version.json``."""
+    return f"{record['ref']['name']}.version.json"
+
+
+def _kept_from_an_engine(
+    local: AssetRef, ref: AssetRef, pipeline: str, name: str, entry: dict, source: dict, where: str, store: Store
+) -> tuple[AssetRef, dict, Optional[str]]:
+    """A table or query in an engine other than DuckDB, as a snapshot keeps it.
+
+    A table whose engine keeps its versions (a Delta table in Databricks) is
+    kept by its version: a small file naming the backend, the table, its id
+    and its version goes into the store, the record's hash is that file's,
+    and the record says the version (``table_version``). Nothing of its rows
+    is copied; a pipeline that pins it reads that version from the engine.
+    The same version makes the same file, so a snapshot of an unchanged
+    table is the same snapshot. Anything else, a query, a view, a table
+    with no versions, is written out as parquet, as a DuckDB one is: sorted
+    on every column, unless it is a query with its own ORDER BY, which the
+    DuckDB parser is asked about.
+
+    :returns: Its local reference, its record, and why it was not kept, or None.
+    """
+    import tempfile
+
+    import duckdb
+    import polars as pl
+
+    from chartbook.backends import open_backend, subselect
+    from chartbook.resolve import QueryLocation, TableLocation
+
+    url = source["_resolved_url"]
+    version = None
+    try:
+        backend = open_backend(source["backend"], url, entry["source"])
+        if entry.get("table"):
+            typed = TableLocation(entry["source"], source["backend"], url, entry["table"])
+            version = backend.version_of(typed)
+            rows = QueryLocation(entry["source"], source["backend"], url, f"select * from {backend.ref(typed)} order by all")
+        else:
+            parser = duckdb.connect(":memory:")
+            try:
+                ordered = _has_order_by(parser, entry["query"]) is True
+            finally:
+                parser.close()
+            query = entry["query"] if ordered else f"select * from {subselect(entry['query'])} order by all"
+            rows = QueryLocation(entry["source"], source["backend"], url, query)
+        with tempfile.TemporaryDirectory() as scratch:
+            if version is not None:
+                out = Path(scratch) / f"{name}.version.json"
+                pinned = {
+                    "backend": source["backend"],
+                    "identifier": entry["table"],
+                    "table_id": version["table_id"],
+                    "version": version["version"],
+                }
+                out.write_text(json.dumps(pinned, sort_keys=True) + "\n", encoding="utf-8")
+            else:
+                out = Path(scratch) / f"{name}.parquet"
+                backend.scan(rows).collect().write_parquet(out)
+            # A copy, never a link: the file is about to be deleted with its folder
+            stored = store.put(out, links=("reflink", "copy"))
+    except (Exception, pl.exceptions.PanicException) as error:  # noqa: BLE001 - the engine's own error, whatever it is
+        return local, source_record(ref, pipeline, entry, source, None), f"{where}: could not be read: {error}"
+    record = source_record(ref, pipeline, entry, source, stored)
+    if version is not None:
+        record["table_version"] = dict(version)
+    return local, record, None
+
+
 def materialize_in_source(
     directory: Path, pipeline: str, raw: dict, store: Store
 ) -> list[tuple[AssetRef, dict, Optional[str]]]:
@@ -420,8 +490,10 @@ def materialize_in_source(
     A table in a DuckDB file is what the pipeline made, as much as a parquet
     file is; a snapshot holds files, so the table is written out as one.
     The record's location stays the source's, and its ``content_hash`` is
-    the parquet's. A table in ``:memory:``, one in a warehouse, one the
-    engine cannot read, or one with a column Polars cannot import, is recorded without a hash,
+    the parquet's. A table in a warehouse that keeps its versions is
+    recorded by its version instead (:func:`_kept_from_an_engine`). A table
+    in ``:memory:``, one the engine cannot read, or one with a column
+    Polars cannot import, is recorded without a hash,
     with the reason, as an asset that is not built is. The file is read on
     one thread, and a query that has no ORDER BY of its own is written
     sorted on every column, so that the same rows give the same bytes
@@ -467,10 +539,7 @@ def materialize_in_source(
             found.append((local, source_record(ref, pipeline, entry, None, None), f"{where}: no such source"))
             continue
         if source.get("backend") != "duckdb":
-            # A warehouse's table is read where it is, by whoever reads it
-            found.append((local, source_record(ref, pipeline, entry, source, None),
-                          f"{where}: a {source.get('backend')} source is read where it is, and a snapshot "
-                          f"does not pin it yet"))
+            found.append(_kept_from_an_engine(local, ref, pipeline, name, entry, source, where, store))
             continue
         url = source["_resolved_url"]
         if url == MEMORY_URL:
@@ -2353,7 +2422,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
             continue
         if location.get("kind") != "file":
             report.left_out.append(
-                (record["id"], "a table or a query: in the store as parquet, and the manifest names its database")
+                (record["id"], "a table or a query: the manifest names its database, and the store holds its rows or its version")
             )
             continue
         declared = location.get("path", "")

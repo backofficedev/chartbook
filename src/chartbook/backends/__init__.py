@@ -77,6 +77,10 @@ BACKEND_PLUGIN_GROUP = "chartbook.backends"
 #: What installs the driver of each backend ChartBook brings, for a message.
 EXTRAS = {"databricks": "pip install chartbook[databricks]"}
 
+#: A table's name as a manifest declares it: one to three dot-separated
+#: parts, none empty and none with a control character.
+TABLE_IDENTIFIER = re.compile(r"[^.\x00-\x1f\x7f]+(\.[^.\x00-\x1f\x7f]+){0,2}")
+
 #: Where a machine keeps what a manifest may not: ``[<source>] url = "…"``.
 SOURCES_FILE = "sources.toml"
 
@@ -378,6 +382,18 @@ class Backend:
     def span(self, location: "Location", column: str) -> tuple:
         """The first and last date in one column, read as timestamps; a value that is not one is left out."""
         raise NotImplementedError
+
+    def version_of(self, location: "Location") -> Optional[dict]:
+        """What a pin of this table can name instead of a copy of it; None if the engine keeps no versions.
+
+        For an engine with time travel, ``{"version": int, "table_id": str,
+        "written_at": str}``: the table's current version, the id of the
+        table itself, and when that version was written. A snapshot then
+        records the version, and a pipeline that pins it reads the table at
+        that version (``TableLocation.version``); otherwise a snapshot
+        writes the rows out as parquet.
+        """
+        return None
 
 
 class ParquetBackend:
