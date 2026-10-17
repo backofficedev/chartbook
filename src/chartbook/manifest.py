@@ -455,9 +455,11 @@ def validate_sources(raw_sources, base_dir: Path) -> dict:
         url = "duckdb:///./_data/local.duckdb"
 
     See ``docs_src/design/data-access.md``. Each source gains
-    ``_resolved_url``: the URL the machine opens it with, from
-    :func:`chartbook.backends.source_url`, with a relative DuckDB file made
-    absolute. That URL may carry credentials; it is never written anywhere.
+    ``_resolved_url``: for a DuckDB file, the URL the machine opens it
+    with, from :func:`chartbook.backends.source_url`, with a relative file
+    made absolute; for another engine, the manifest's public URL, from
+    which its backend finds the machine's URL and credentials when it
+    connects, so that no credential is carried around.
 
     :raises ValueError: If the table is malformed, a name is not a legal
         name, a backend is not built, a url carries credentials, or a url
@@ -518,8 +520,8 @@ def validate_sources(raw_sources, base_dir: Path) -> dict:
             except ValueError as error:
                 raise ValueError(f"{where}: {error}") from None
             resolved["_resolved_url"] = MEMORY_URL if path == ":memory:" else "duckdb:///" + path
-        else:  # pragma: no cover - no other backend is built
-            resolved["_resolved_url"] = machine_url
+        else:
+            resolved["_resolved_url"] = entry["url"]
         sources[name] = resolved
     return sources
 

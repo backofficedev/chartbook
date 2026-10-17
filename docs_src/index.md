@@ -123,6 +123,7 @@ guide/vocabulary
 guide/documenting-a-pipeline
 guide/depending-on-pipelines
 guide/catalogs-and-data
+guide/reading-a-warehouse
 guide/plotting
 guide/plotting-backends
 guide/gallery

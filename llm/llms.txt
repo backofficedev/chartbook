@@ -15,6 +15,7 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 - [Documenting a Pipeline](docs_src/guide/documenting-a-pipeline.md): Describe charts, dataframes, notebooks, notes and models in `chartbook.toml`
 - [Depending on Another Pipeline](docs_src/guide/depending-on-pipelines.md): snapshots, pins and the lockfile; `chartbook run --snapshot` (them), `chartbook pin` / `update` (you); never read another pipeline's folder; `--frozen` in CI; model versions and labels
 - [Catalogs and Data Access](docs_src/guide/catalogs-and-data.md): Aggregate pipelines; load any cataloged dataset with `data.load()`; every snapshot of every pipeline is its own site under `versions/`, listed on the catalog's Versions page; a `[pipelines]` entry with no path shows a pipeline from the store alone
+- [Reading From a Databricks Warehouse](docs_src/guide/reading-a-warehouse.md): `[sources.x] backend = "databricks"` after `pip install chartbook[databricks]`; `DATABRICKS_HOST` + `DATABRICKS_TOKEN`; a token goes only to the host the machine names; lazy reads; a Databricks Free Edition walk-through
 - [Plotting](docs_src/guide/plotting.md): One call produces interactive HTML plus static PNG/PDF
 - [Writing a Plotting Backend](docs_src/guide/plotting-backends.md): The `PlottingBackend` contract, the `chartbook_plotting` entry-point group, and a complete example
 - [How the Build Works](docs_src/guide/how-the-build-works.md): resolve (the index) → write (a writer: pages from the index and the files it names; Sphinx by default, MkDocs with `[project] writer = "mkdocs"` and `pip install chartbook[mkdocs]`) → build (the site tool); incremental builds (Sphinx); template overrides in the project root
@@ -46,7 +47,7 @@ chartbook path model/<name>@<version>  # a version of a model: by the start of i
 chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version, as pinned in chartbook.lock (pin reads labels from the snapshot; update moves them)
 chartbook index diff BEFORE AFTER [--json] [--exit-code]  # what changed between two builds, from their index.json: data, pins, versions, labels, staleness
 # A model is out of date when what it was trained on has moved: its page says so, index.json has stale_inputs, `chartbook check` warns; `chartbook run` retrains
-# In Python: data.sql("select * from {df_a} join {df_b} using (date)") runs SQL with dataframes named in braces (DuckDB);
+# In Python: data.sql("select * from {df_a} join {df_b} using (date)") runs SQL with dataframes named in braces (DuckDB, or the warehouse of a databricks source);
 # data.ref("df") is a dataframe's name in SQL; data.connect("source") the raw connection. [sources] in chartbook.toml.
 chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report

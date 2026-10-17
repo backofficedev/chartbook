@@ -68,14 +68,19 @@ dependencies = [
 [project.optional-dependencies]
 # `pip install chartbook` installs everything a pipeline on one machine needs,
 # Sphinx included. The user-facing extras are a kind of store that needs a cloud
-# library the base install does not bring (docs_src/design/stores-and-backends.md)
-# and a second site tool (docs_src/design/writer.md). The old
+# library the base install does not bring, a warehouse's driver
+# (docs_src/design/stores-and-backends.md) and a second site tool
+# (docs_src/design/writer.md). The old
 # [all], [data], [plotting] and [sphinx] aliases were removed after their one
 # release of notice; see docs_src/reference/stability.md.
 #
 # The store in an S3 bucket: [store] url = "s3://bucket/prefix"
 s3 = [
     "boto3>=1.28",
+]
+# A source in a Databricks SQL warehouse: [sources.x] backend = "databricks"
+databricks = [
+    "databricks-sql-connector[pyarrow]>=4.0",
 ]
 # A site built with MkDocs instead of Sphinx: [project] writer = "mkdocs"
 mkdocs = [
@@ -98,6 +103,9 @@ chartbook = "chartbook.cli:main"
 # A kind of store, found by the scheme of the store's URL (chartbook.store.store_for_url)
 [project.entry-points."chartbook.stores"]
 s3 = "chartbook.stores.s3:S3Store"
+
+[project.entry-points."chartbook.backends"]
+databricks = "chartbook.backends.databricks:DatabricksBackend"
 
 [project.urls]
 Documentation = "https://backofficedev.github.io/chartbook"

@@ -1330,7 +1330,7 @@ def _source_glimpse(record: dict, base_dir: Path) -> str:
     a relative file is made absolute against the pipeline's folder, never
     against where the build happens to run.
     """
-    from chartbook.backends import MEMORY_URL, DuckDBBackend, duckdb_path, source_url
+    from chartbook.backends import MEMORY_URL, duckdb_path, open_backend, source_url
     from chartbook.resolve import QueryLocation, TableLocation
 
     location = record["location"]
@@ -1340,8 +1340,11 @@ def _source_glimpse(record: dict, base_dir: Path) -> str:
     if not location.get("url"):
         return f"A {where}."
     try:
-        url = source_url(location["source"], location["url"])
-        if url.startswith("duckdb://"):
+        # A DuckDB file is found through the machine's url, relative to the
+        # pipeline's folder; another engine finds its own from the public one
+        url = location["url"]
+        if location.get("backend") == "duckdb":
+            url = source_url(location["source"], url)
             path = duckdb_path(url, base_dir)
             url = MEMORY_URL if path == ":memory:" else "duckdb:///" + path
     except Exception as error:  # noqa: BLE001 - a page, not a crash
@@ -1351,7 +1354,7 @@ def _source_glimpse(record: dict, base_dir: Path) -> str:
     else:
         typed = QueryLocation(location["source"], location["backend"], url, location["sql"])
     try:
-        backend = DuckDBBackend(url)
+        backend = open_backend(location["backend"], url, location["source"])
         columns, rows = backend.describe(typed)
         sample = backend.scan(typed).head(5).collect()
     except Exception as error:  # noqa: BLE001 - a page, not a crash

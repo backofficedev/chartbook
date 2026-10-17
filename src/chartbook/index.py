@@ -321,7 +321,7 @@ def _describe_in_source(entry: dict, where: str) -> Optional[tuple[list[dict], i
     not built yet (which ``chartbook check`` also reports), the table is
     not there, or the query does not bind.
     """
-    from chartbook.backends import BackendError, DuckDBBackend
+    from chartbook.backends import BackendError, open_backend
     from chartbook.resolve import QueryLocation, TableLocation
 
     source = entry.get("_source") or {}
@@ -333,7 +333,7 @@ def _describe_in_source(entry: dict, where: str) -> Optional[tuple[list[dict], i
     else:
         location = QueryLocation(entry["source"], source["backend"], url, entry["query"])
     try:
-        return DuckDBBackend(url).describe(location)
+        return open_backend(source["backend"], url, entry["source"]).describe(location)
     except (BackendError, OSError) as error:
         warnings.warn(
             f"{where}: the engine could not describe it, so the index has no "
@@ -345,7 +345,7 @@ def _describe_in_source(entry: dict, where: str) -> Optional[tuple[list[dict], i
 
 def _describe_span_in_source(entry: dict, date_col: str) -> Optional[dict]:
     """The first and last date of a table or query, asked of its engine."""
-    from chartbook.backends import BackendError, DuckDBBackend
+    from chartbook.backends import BackendError, open_backend
     from chartbook.resolve import QueryLocation, TableLocation
 
     source = entry.get("_source") or {}
@@ -357,7 +357,7 @@ def _describe_span_in_source(entry: dict, date_col: str) -> Optional[dict]:
     else:
         location = QueryLocation(entry["source"], source["backend"], url, entry["query"])
     try:
-        first, last = DuckDBBackend(url).span(location, date_col)
+        first, last = open_backend(source["backend"], url, entry["source"]).span(location, date_col)
     except (BackendError, OSError, ValueError):
         return None
     return _span_as_text(first, last)

@@ -194,14 +194,16 @@ mine = data.load("my_data")                                   # this pipeline's 
 # documenting a column and is refused by data.load()/data.path(). Load or locate
 # the whole dataframe, then use polars or SQL:
 one = data.load("my_data").select("date", "DGS10")
-# SQL: name dataframes in braces; ChartBook substitutes names and DuckDB runs the rest.
+# SQL: name dataframes in braces; ChartBook substitutes names and the engine runs the rest
+# (DuckDB for files and DuckDB sources; the warehouse for a databricks source).
 # A file is read_parquet('…'), a [sources] table its identifier, a query a sub-select.
 joined = data.sql("select a.date, a.x, b.y from {my_data} a join {other} b using (date)")
 # A literal brace is written twice: data.sql("select {{'a': 1}} s from {my_data}")
 data.ref("my_data")        # the name to paste into SQL you run yourself
-data.connect("local")      # the raw read-only duckdb connection to [sources.local]
+data.connect("local")      # the raw connection to [sources.local]: read-only duckdb, or the Databricks connector's
 # A dataframe may live in a source instead of a file (then it has no path):
 #   [sources.local]            backend = "duckdb"   url = "duckdb:///./_data/x.duckdb"
+#   (or backend = "databricks", url = "databricks://<host>?http_path=...", with DATABRICKS_HOST + DATABRICKS_TOKEN set)
 #   [dataframes.slopes]        source = "local"     query = "select ... from t"   # or table = "t"
 # A model's trained_on = ["fed_yield_curve:treasury_rates"] must name a declared
 # dependency; `chartbook check` verifies the dataframe exists there.

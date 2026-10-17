@@ -420,8 +420,8 @@ def materialize_in_source(
     A table in a DuckDB file is what the pipeline made, as much as a parquet
     file is; a snapshot holds files, so the table is written out as one.
     The record's location stays the source's, and its ``content_hash`` is
-    the parquet's. A table in ``:memory:``, one the engine cannot read, or
-    one with a column Polars cannot import, is recorded without a hash,
+    the parquet's. A table in ``:memory:``, one in a warehouse, one the
+    engine cannot read, or one with a column Polars cannot import, is recorded without a hash,
     with the reason, as an asset that is not built is. The file is read on
     one thread, and a query that has no ORDER BY of its own is written
     sorted on every column, so that the same rows give the same bytes
@@ -466,8 +466,14 @@ def materialize_in_source(
         if source is None:
             found.append((local, source_record(ref, pipeline, entry, None, None), f"{where}: no such source"))
             continue
+        if source.get("backend") != "duckdb":
+            # A warehouse's table is read where it is, by whoever reads it
+            found.append((local, source_record(ref, pipeline, entry, source, None),
+                          f"{where}: a {source.get('backend')} source is read where it is, and a snapshot "
+                          f"does not pin it yet"))
+            continue
         url = source["_resolved_url"]
-        if url == MEMORY_URL:  # the only backend that is built is DuckDB
+        if url == MEMORY_URL:
             found.append((local, source_record(ref, pipeline, entry, source, None),
                           f"{where}: only a table in a DuckDB file is written out as parquet"))
             continue

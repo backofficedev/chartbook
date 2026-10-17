@@ -83,7 +83,7 @@ class TestManifest:
             ({"local": {"backend": "duckdb"}}, "needs 'url'"),
             ({"local": {"url": "duckdb:///x"}}, "needs 'backend'"),
             ({"local": {"backend": "duckdb", "url": "duckdb:///x", "password": "x"}}, "has 'password'"),
-            ({"wh": {"backend": "snowflake", "url": "snowflake://acct/db"}}, "backend 'snowflake' is not built"),
+            ({"wh": {"backend": "snowflake", "url": "snowflake://acct/db"}}, "backend 'snowflake' is not one ChartBook knows"),
             ({"local": {"backend": "duckdb", "url": "postgresql://h/db"}}, "does not begin with duckdb://"),
             ({"local": {"backend": "duckdb", "url": "duckdb://user:pw@h/db"}}, "carries a user name or a password"),
         ],
@@ -158,8 +158,8 @@ class TestManifest:
     @pytest.mark.parametrize(
         "url, message",
         [
-            ("duckdb://host/x.duckdb", "has a host or a user, 'host'"),
-            ("duckdb://user@/x.duckdb", "has a host or a user, 'user@'"),
+            ("duckdb://host/x.duckdb", "has a host or a user, and"),
+            ("duckdb://user@/x.duckdb", "has a host or a user, and"),
             ("duckdb:///x.duckdb?access_mode=read_only", "has connection options after the file"),
             ("duckdb:///:memory:?x=1", "has connection options after the file"),
             ("duckdb:///x.duckdb#frag", "has connection options after the file"),

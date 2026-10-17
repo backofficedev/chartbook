@@ -180,7 +180,7 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
                         capture_output=True,
                         text=True,
                         timeout=timeout,
-                        env={**os.environ, UNTRUSTED_ENV_VAR: "1"},
+                        env={**_without_credentials(os.environ), UNTRUSTED_ENV_VAR: "1"},
                     )
                 except subprocess.TimeoutExpired:
                     why = f"its site took longer than {int(timeout)} seconds to build and was stopped"
@@ -365,3 +365,18 @@ def _prune(root: Path, wanted: dict[str, set[str]]) -> None:
         for version in pipeline.iterdir():
             if version.name not in wanted[pipeline.name]:
                 shutil.rmtree(version, ignore_errors=True) if version.is_dir() else version.unlink()
+
+
+def _without_credentials(environment) -> dict:
+    """The environment of a build of files from a store, with no warehouse's credentials in it.
+
+    Such a build reaches no engine (``refuse_in_an_untrusted_build``); this
+    keeps the credentials out of its reach besides.
+    """
+    from chartbook.backends import SOURCE_ENV_PREFIX
+
+    return {
+        name: value
+        for name, value in environment.items()
+        if not name.startswith("DATABRICKS_") and not name.startswith(SOURCE_ENV_PREFIX)
+    }
