@@ -745,10 +745,8 @@ class TestNotBuiltYet:
         )
         assert "Not built yet" in dataframe
         assert "Error reading file" not in dataframe
-        # No dates to give, rather than "None"
-        for which in ("min", "max"):
-            label = f"Data available up to ({which})"
-            assert "None" not in dataframe[dataframe.index(label) + len(label):][:80]
+        # No dates to give, rather than "None": the row is left out
+        assert not re.search(r"Data available up to \((min|max)\)\s*None", dataframe)
         # A model says so in its provenance panel
         model = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "models" / "test_pipeline" / "forecast.html").read_text())
         assert re.search(r"Content\s+not built", model)
@@ -912,9 +910,8 @@ class TestNotBuiltYet:
         output_dir = pipeline_project / "docs"
         generate_docs(output_dir=output_dir, project_dir=pipeline_project)
         page = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text())
-        for which in ("min", "max"):
-            label = f"Data available up to ({which})"
-            assert "None" not in page[page.index(label) + len(label):][:80]
+        # The row is left out, rather than saying "None"
+        assert not re.search(r"Data available up to \((min|max)\)\s*None", page)
 
     def test_a_glob_that_matches_only_folders_is_missing(self, pipeline_project, monkeypatch, capsys):
         """The index finds no files in it, so neither may the check: it was "not built", exit 0, even with --strict."""
