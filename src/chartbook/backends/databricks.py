@@ -72,8 +72,9 @@ AUTH = ("token", "oauth")
 #: Rows asked of the warehouse at a time when a frame is collected.
 BATCH_ROWS = 100_000
 
-#: A workspace's host: letters, digits, dots and hyphens, and nothing a message could carry besides.
-_HOST = re.compile(r"[a-z0-9]([a-z0-9.-]*[a-z0-9])?")
+#: A workspace's host: letters, digits, dots and hyphens, with a dot in it (a workspace's host
+#: is never one label), and nothing a message could carry besides.
+_HOST = re.compile(r"[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)+")
 
 
 class _SignedIn:
@@ -118,10 +119,11 @@ def host_of(text: str) -> str:
     if not text:
         return ""
     try:
-        name = urlsplit(text if "://" in text else "https://" + text).hostname or ""
+        parts = urlsplit(text if "://" in text else "https://" + text)
+        parts.port  # noqa: B018 - a port that does not parse is not an address
     except ValueError:
         return ""
-    name = name.rstrip(".").lower()
+    name = (parts.hostname or "").rstrip(".").lower()
     return name if _HOST.fullmatch(name) else ""
 
 
@@ -132,7 +134,7 @@ def parse_url(url: str) -> DatabricksURL:
         not a host name, a path after the host, a port, an option that is
         not one of :data:`URL_OPTIONS`, an option given twice, a fragment,
         or an ``auth`` that is not ``token`` or ``oauth``. The message
-        never repeats a token.
+        repeats nothing of the url, which may hold a token anywhere.
     """
     if scheme_of(url) != "databricks":
         raise ValueError("a Databricks url begins with databricks://")
@@ -145,8 +147,8 @@ def parse_url(url: str) -> DatabricksURL:
         raise ValueError("a Databricks url has nothing after #")
     if parts.path not in ("", "/"):
         raise ValueError(
-            f"a Databricks url names the host and nothing after it; the warehouse's HTTP path "
-            f"goes after ?, as databricks://{parts.hostname or '<host>'}?http_path={parts.path}"
+            "a Databricks url names the host and nothing after it; the warehouse's HTTP path "
+            "goes after ?, as databricks://<host>?http_path=/sql/1.0/warehouses/<id>"
         )
     try:
         port = parts.port
@@ -155,17 +157,14 @@ def parse_url(url: str) -> DatabricksURL:
     if port is not None:
         raise ValueError("a Databricks url names the host without a port: the workspace is reached on 443")
     options = parse_qs(parts.query, keep_blank_values=True)
-    unknown = sorted(set(options) - set(URL_OPTIONS))
-    if unknown:
-        raise ValueError(
-            f"a Databricks url takes {', '.join(URL_OPTIONS)} after ?, and not {', '.join(unknown)}"
-        )
+    if set(options) - set(URL_OPTIONS):
+        raise ValueError(f"a Databricks url takes {', '.join(URL_OPTIONS)} after ?, and nothing else")
     twice = sorted(key for key, values in options.items() if len(values) > 1)
     if twice:
         raise ValueError(f"a Databricks url gives {', '.join(twice)} more than once")
     found = {key: values[0].strip() for key, values in options.items()}
     if found.get("auth") and found["auth"] not in AUTH:
-        raise ValueError(f"auth is token or oauth, not {found['auth']!r}")
+        raise ValueError("auth is token or oauth")
     host = (parts.hostname or "").rstrip(".").lower()
     if host and not _HOST.fullmatch(host):
         raise ValueError("a Databricks url's host is a host name: letters, digits, dots and hyphens")
@@ -244,7 +243,9 @@ def connection_for(source: Optional[str], public_url: str) -> Connection:
             f"{public.host}, or change the url the pipeline names."
         )
     token = machine.token if machine else ""
-    if not token and host_of(os.environ.get("DATABRICKS_HOST", "")) in ("", host):
+    named = os.environ.get("DATABRICKS_HOST", "").strip()
+    if not token and (not named or host_of(named) == host):
+        # DATABRICKS_TOKEN is for DATABRICKS_HOST's workspace, or for whichever this machine names
         token = os.environ.get("DATABRICKS_TOKEN", "").strip()
     # How to sign in is the machine's to say, never a manifest's or a record's
     oauth = bool(machine and machine.auth == "oauth")
@@ -285,8 +286,16 @@ class DatabricksBackend(Backend):
     def check_url(url: str) -> None:
         """A manifest's URL: what :func:`parse_url` takes, with no user, no token, and no way of signing in.
 
-        The message never repeats what was before the ``@``.
+        The message never repeats what was before the ``@``, which is
+        looked for before the url is read at all.
         """
+        before_options = url.split("?", 1)[0].split("#", 1)[0]
+        if "@" in before_options or "\\" in before_options:
+            raise ValueError(
+                "the url names a user or a token before the host. A manifest is committed, so its url "
+                "holds the public part only; the machine supplies the token, in DATABRICKS_TOKEN, "
+                "CHARTBOOK_SOURCE_<NAME>_URL or ~/.chartbook/sources.toml."
+            )
         parsed = parse_url(url)
         netloc = urlsplit(url).netloc
         if "@" in netloc or "\\" in netloc:
@@ -328,7 +337,9 @@ class DatabricksBackend(Backend):
             return databricks_sql.connect(**_arguments(connection))
         except Exception as error:  # noqa: BLE001 - the connector's own errors, whatever they are
             said = str(error).replace(connection.token, "<token>") if connection.token else str(error)
-            raise BackendError(f"Cannot connect to the Databricks workspace {connection.host}: {said}") from None
+        # Raised out here, so that the connector's error, which may hold the
+        # token, is not carried along as the context of this one
+        raise BackendError(f"Cannot connect to the Databricks workspace {connection.host}: {said}")
 
     def ref(self, location: "Location") -> str:
         """A table as a quoted identifier, each part between backticks; a query as a sub-select.
@@ -369,10 +380,12 @@ class DatabricksBackend(Backend):
         The warehouse binds it now (``select * from (…) limit 0``), so a name
         it does not know is refused at once, and its columns are the
         frame's schema; should the connector give an empty result no
-        columns, one row is asked for instead. Collecting the frame runs
-        it, and each batch is checked against that schema. An error found
-        while collecting comes as Polars' ``ComputeError``, with the
-        warehouse's message in it.
+        columns, one row is asked for instead, and failing that the schema
+        is read from the type names the warehouse gives. Collecting the
+        frame runs it, and each batch is checked against that schema. An
+        error found while collecting comes as Polars' ``ComputeError``
+        with the warehouse's message in it, or as the
+        :class:`~chartbook.backends.BackendError` itself, by Polars version.
 
         :raises chartbook.backends.BackendError: If the warehouse refuses the query, with its message.
         """
@@ -380,20 +393,32 @@ class DatabricksBackend(Backend):
         from polars.io.plugins import register_io_source
 
         def columns(cursor):
-            return cursor.fetchall_arrow(), [column[0] for column in cursor.description or []]
+            return cursor.fetchall_arrow(), list(cursor.description or [])
 
-        empty, names = self._run(f"select * from {subselect(query)} limit 0", columns)
+        empty, described = self._run(f"select * from {subselect(query)} limit 0", columns)
+        names = [column[0] for column in described]
         if list(empty.column_names) != names:
-            empty, names = self._run(f"select * from {subselect(query)} limit 1", columns)
-            if list(empty.column_names) != names:
+            empty, described = self._run(f"select * from {subselect(query)} limit 1", columns)
+            names = [column[0] for column in described]
+        if list(empty.column_names) == names:
+            try:
+                schema = pl.from_arrow(empty.slice(0, 0)).schema
+            except Exception as error:  # noqa: BLE001 - a type Polars cannot take
+                raise BackendError(f"Polars cannot take the query's columns: {error}") from None
+        else:
+            # The result is empty and the connector sent no columns with it
+            schema = pl.Schema({column[0]: _polars_type(column) for column in described})
+
+        def checked(frame, wanted):
+            """A batch as the schema says it is; else what differs, said, rather than a frame mistyped."""
+            if frame.schema != wanted:
+                got = dict(frame.schema)
+                differ = [name for name in wanted if got.get(name) != wanted[name]] or list(got)
                 raise BackendError(
-                    f"The warehouse gave the query's columns as {', '.join(names) or 'none'} and its rows "
-                    f"with {', '.join(empty.column_names) or 'none'}, so the frame's schema is not known."
+                    f"The warehouse sent {differ[0]} as {got.get(differ[0])}, and gave its type as "
+                    f"{wanted.get(differ[0])} when the query was bound."
                 )
-        try:
-            schema = pl.from_arrow(empty.slice(0, 0)).schema
-        except Exception as error:  # noqa: BLE001 - a type Polars cannot take
-            raise BackendError(f"Polars cannot take the query's columns: {error}") from None
+            return frame
 
         def batches(with_columns, predicate, n_rows, batch_size):
             # Rows are asked for a batch at a time; a head with nothing
@@ -415,7 +440,7 @@ class DatabricksBackend(Backend):
                             raise BackendError(str(error)) from None
                         if batch.num_rows == 0:
                             return
-                        frame = pl.from_arrow(batch)
+                        frame = checked(pl.from_arrow(batch), schema)
                         if predicate is not None:
                             frame = frame.filter(predicate)
                         if with_columns is not None:
@@ -432,7 +457,8 @@ class DatabricksBackend(Backend):
                 except Exception:  # noqa: BLE001
                     pass
 
-        return register_io_source(batches, schema=schema, validate_schema=True)
+        # Each batch is checked in `checked`: validate_schema= came only in Polars 1.25
+        return register_io_source(batches, schema=schema)
 
     def describe(self, location: "Location") -> tuple[list[dict], int]:
         """A dataframe's columns, with the warehouse's type names (``int``, ``string``, ``timestamp``), and its row count."""
@@ -474,3 +500,37 @@ def _arguments(connection: Connection) -> dict:
     if connection.schema:
         arguments["schema"] = connection.schema
     return arguments
+
+
+#: The Polars type of a column of each Databricks type a schema can be read from by name.
+_TYPES = {
+    "tinyint": "Int8", "byte": "Int8", "smallint": "Int16", "short": "Int16", "int": "Int32", "integer": "Int32",
+    "bigint": "Int64", "long": "Int64", "float": "Float32", "double": "Float64", "string": "String",
+    "boolean": "Boolean", "date": "Date", "binary": "Binary", "void": "Null",
+}
+
+
+def _polars_type(column):
+    """The Polars type of a column from what ``cursor.description`` says of it.
+
+    For an empty result the connector sent no columns with. A type that
+    cannot be read from its name (an array, a map, a struct, an interval)
+    is refused, naming the column.
+
+    :raises chartbook.backends.BackendError: For such a type.
+    """
+    import polars as pl
+
+    name, kind = column[0], str(column[1] or "").lower()
+    if kind in _TYPES:
+        return getattr(pl, _TYPES[kind])
+    if kind == "timestamp":
+        return pl.Datetime("us", "UTC")
+    if kind == "timestamp_ntz":
+        return pl.Datetime("us")
+    if kind == "decimal" and isinstance(column[4], int) and isinstance(column[5], int):
+        return pl.Decimal(column[4], column[5])
+    raise BackendError(
+        f"The query's result is empty, the warehouse sent no columns with it, and the type of "
+        f"{name}, {kind or 'not given'}, cannot be read from its name."
+    )

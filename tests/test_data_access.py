@@ -158,8 +158,8 @@ class TestManifest:
     @pytest.mark.parametrize(
         "url, message",
         [
-            ("duckdb://host/x.duckdb", "has a host or a user, 'host'"),
-            ("duckdb://user@/x.duckdb", "has a host or a user, 'user@'"),
+            ("duckdb://host/x.duckdb", "has a host or a user, and"),
+            ("duckdb://user@/x.duckdb", "has a host or a user, and"),
             ("duckdb:///x.duckdb?access_mode=read_only", "has connection options after the file"),
             ("duckdb:///:memory:?x=1", "has connection options after the file"),
             ("duckdb:///x.duckdb#frag", "has connection options after the file"),

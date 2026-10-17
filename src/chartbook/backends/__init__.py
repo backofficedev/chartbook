@@ -103,9 +103,16 @@ def machine_source_url(name: str) -> Optional[str]:
     The environment variable :func:`source_env_var` names, then ``url``
     under ``[<name>]`` in ``~/.chartbook/sources.toml``.
 
+    In a build of files from a store, none: such a build reaches no engine,
+    and has no use for this machine's credentials.
+
     :param name: The source's name in ``[sources]``.
     :raises chartbook.backends.BackendError: If ``sources.toml`` is there and cannot be read.
     """
+    from chartbook.config import untrusted_source
+
+    if untrusted_source():
+        return None
     from_environment = os.environ.get(source_env_var(name))
     if from_environment:
         return from_environment
@@ -176,8 +183,18 @@ def check_backend(name: str, where: str) -> None:
             f"{where}: backend {name!r} is not one ChartBook knows. The backends are: "
             f"{', '.join(backend_names())}. Another engine is a plugin, a package with "
             f"a {BACKEND_PLUGIN_GROUP!r} entry point named for it; a manifest that names "
-            f"one nothing provides is refused, so that nothing guesses."
+            f"one nothing provides is refused, so that nothing guesses.{_reinstall(name)}"
         )
+
+
+def _reinstall(name: str) -> str:
+    """For a backend ChartBook brings and this install does not list: an install made before it did."""
+    if name not in EXTRAS:
+        return ""
+    return (
+        f" ChartBook brings {name}: an install made before it did lacks its entry point, and "
+        f"reinstalling ChartBook ({EXTRAS[name]}) adds it."
+    )
 
 
 def scheme_of(url: str) -> str:
@@ -199,8 +216,9 @@ def check_url(url: str, backend: str, where: str) -> None:
             f"the rest in {SOURCE_ENV_PREFIX}<NAME>_URL or ~/.chartbook/{SOURCES_FILE}."
         )
     if scheme_of(url) != backend:
+        # The url is not repeated: what is written where a scheme should be may be a credential
         raise ValueError(
-            f"{where}: the url {url!r} does not begin with {backend}://, which is "
+            f"{where}: the url does not begin with {backend}://, which is "
             f"what a {backend} source takes."
         )
     try:
@@ -224,13 +242,13 @@ def duckdb_path(url: str, manifest_dir: Union[str, Path]) -> str:
     parts = urlsplit(url)
     if parts.netloc:
         raise ValueError(
-            f"the url {url!r} has a host or a user, {parts.netloc!r}, and a "
+            f"the url has a host or a user, and a "
             f"DuckDB file has neither. Write duckdb:///./file.duckdb, with "
             f"three slashes, for a file beside the manifest."
         )
     if parts.query or parts.fragment:
         raise ValueError(
-            f"the url {url!r} has connection options after the file. ChartBook "
+            f"the url has connection options after the file. ChartBook "
             f"passes none to the engine: a DuckDB file is opened read-only, "
             f"and that is all. Name the file alone."
         )
@@ -300,7 +318,8 @@ class Backend:
     only when asked. Every call that reaches the engine raises
     :class:`BackendError` with the engine's own message when it fails; an
     error found only when a lazy frame is collected comes as Polars'
-    ``ComputeError``, with the engine's message in it.
+    ``ComputeError`` with the engine's message in it, or as the
+    :class:`BackendError` itself, by Polars version.
 
     ``reads_files`` says whether SQL run in it may name a file of this
     machine as :class:`ParquetBackend` writes one, ``read_parquet('…')``:
@@ -537,13 +556,8 @@ def open_backend(name: str, url: str, source: Optional[str] = None) -> Backend:
     except ValueError as error:
         raise BackendError(str(error)) from None
     if found is None:
-        reinstall = (
-            f" ChartBook brings it: an install made before it did lacks its entry point, and "
-            f"reinstalling ChartBook ({EXTRAS[name]}) adds it."
-            if name in EXTRAS else ""
-        )
         raise BackendError(
             f"The source {source!r} is in a {name} engine, and nothing here provides one. "
-            f"The backends are: {', '.join(backend_names())}.{reinstall}"
+            f"The backends are: {', '.join(backend_names())}.{_reinstall(name)}"
         )
     return found(url, source)
