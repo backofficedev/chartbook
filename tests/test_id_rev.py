@@ -108,3 +108,70 @@ class TestPinned:
         _set_host(host, "")
         report = lock.pin(forecast)
         assert not report.problems and _entry(forecast)["via"] == "store"
+
+
+class TestWhatTheReviewFound:
+    def test_a_repository_pin_with_no_bytes_yet_keeps_its_commit(self, host):
+        import shutil
+
+        repository = _upstream(host, 4.0, committed=False)
+        forecast = _forecast(host / "forecast", {"acme/rates": {"rev": "main"}})
+        lock.pin(forecast)
+        before = _entry(forecast)["location"]
+        assert before["commit"] and before.get("first_commit")
+        # Another repository that calls itself acme/rates takes the host's place
+        shutil.rmtree(repository)
+        _upstream(host, 666.0, committed=True)
+        (host / "host" / "acme" / "rates" / "another.txt").write_text("another\n")
+        _commit(host / "host" / "acme" / "rates", "Another history")
+        for _ in range(2):
+            lock.pin(forecast)
+            assert _entry(forecast)["location"]["commit"] == before["commit"]
+        _set_host(host, "")  # and with no repository to ask, a plain pin keeps it too
+        lock.pin(forecast)
+        assert _entry(forecast)["location"]["commit"] == before["commit"]
+
+    def test_a_shallow_clones_snapshot_is_found_through_the_host(self, host, monkeypatch):
+        repository = _upstream(host, 4.0)
+        shallow = host / "ci"
+        _git(host, "clone", "--quiet", "--depth", "1", f"file://{repository}", str(shallow))
+        _git(shallow, "remote", "set-url", "origin", "https://example.org/acme/rates")
+        (shallow / "_data").mkdir(exist_ok=True)
+        pl.DataFrame({"d": ["2024-01-01"], "r": [4.0]}).write_parquet(shallow / "_data" / "treasury.parquet")
+        taken = snapshot.make(shallow).snapshot
+        assert taken.first_commit == "" and taken.repository == "https://example.org/acme/rates"
+        _set_host(host, "https://example.org")
+        real = lock.local_url
+        monkeypatch.setattr(
+            lock, "local_url",
+            lambda url, base: str(repository) if url == "https://example.org/acme/rates" else real(url, base),
+        )
+        forecast = _forecast(host / "forecast", {"acme/rates": {"rev": "main"}})
+        lock.pin(forecast)
+        assert _entry(forecast)["via"] == "store" and _entry(forecast)["location"]["commit"] == taken.commit
+
+    def test_a_rev_for_a_pipeline_the_run_builds_is_said_not_ignored(self, host):
+        repository = _upstream(host, 4.0)
+        snapshot.make(repository)
+        forecast = _forecast(host / "forecast", {"acme/rates": {"rev": "main"}})
+        report = lock.pin(forecast, built_here={"acme/rates"})
+        (event,) = [e for e in report.events if e.status == "no_snapshot"]
+        assert "is not followed" in event.detail
+
+    def test_a_read_where_the_pipeline_cannot_be_written_does_not_take_another_branch(self, host, monkeypatch):
+        import os
+
+        repository = _upstream(host, 4.0)
+        snapshot.make(repository)
+        _git(repository, "checkout", "--quiet", "-b", "side")
+        _newer(repository, 9.0, "side")
+        snapshot.make(repository)  # newer, on another branch
+        _git(repository, "checkout", "--quiet", "main")
+        forecast = _forecast(host / "forecast", {"acme/rates": {"rev": "main"}})
+        os.chmod(forecast, 0o555)
+        monkeypatch.chdir(forecast)
+        try:
+            with pytest.raises(AssetNotPinnedError):
+                data.load("acme/rates:treasury")
+        finally:
+            os.chmod(forecast, 0o755)

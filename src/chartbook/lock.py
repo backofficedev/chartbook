@@ -428,10 +428,11 @@ def choose_for_rev(
     )
     if converted and entry.get("_repository"):
         converted["_repository"] = entry["_repository"]
-    if not may_move and pinned and same and location.get("kind") == "store":
+    recorded_commit = same and bool(location.get("commit"))
+    if not may_move and (pinned or recorded_commit) and same and location.get("kind") == "store":
         return "entry", entry  # a plain pin keeps a snapshot it pinned
-    if not may_move and pinned and same and location.get("kind") == "git" and converted:
-        return "entry", converted  # and a commit of its repository
+    if not may_move and (pinned or recorded_commit) and same and location.get("kind") == "git" and converted:
+        return "entry", converted  # and a commit of its repository, built or not
     if pipeline == root:
         return "none", f"{pipeline} is this pipeline itself: a pipeline cannot depend on itself"
     if converted is None:
@@ -460,10 +461,19 @@ def choose_for_rev(
     every = [t for t in snapshots() if t.pipeline == pipeline and not snapshot.made_in_the_future(t)]
     if named:
         mine = [t for t in every if repository_key(t.repository) == repository_key(entry["_repository"])]
-    elif first:
+    elif first or repository_key(url):
+        # Its repository's snapshots: by its first commit, or by its address
+        # (a snapshot made in a shallow clone records only that); the walk
+        # back along its history keeps to commits of this repository
         groups, unnamed = snapshot.repository_groups(every)
-        group = next((g for g in groups if ("first", first) in set().union(*(snapshot.identity_keys(t) for t in g))), [])
-        mine = group + (unnamed if len(groups) <= 1 else [])
+        keys = {("first", first)} if first else set()
+        if repository_key(url):
+            keys.add(("address", repository_key(url)))
+        mine = [
+            taken for group in groups
+            if keys & set().union(*(snapshot.identity_keys(t) for t in group))
+            for taken in group
+        ] + (unnamed if len(groups) <= 1 else [])
     else:
         mine = []  # which snapshots are this repository's cannot be told
     by_commit: dict = {}
@@ -477,7 +487,7 @@ def choose_for_rev(
     return "entry", converted
 
 
-def _history(git_cache: GitCache, url: str, commit: str, limit: int = 10000) -> list:
+def _history(git_cache: GitCache, url: str, commit: str, limit: int = 200000) -> list:
     """The commits of a repository back from *commit*, newest first, from its clone in the git cache."""
     import subprocess
 
@@ -884,9 +894,14 @@ def _sync_now(
             from_repository = (
                 has_bytes and was_location.get("kind") == "git" and was_location.get("pipeline") == entry["_store"]
             )
-            if entry.get("rev") and entry["_store"] not in set(built_here):
+            if entry.get("rev") and entry["_store"] in set(built_here):
+                rev_failure = (
+                    f"rev = {entry['rev']!r} is not followed for {entry['_store']}, which this run builds "
+                    f"itself from its folder: pin it outside the catalog's run, or leave out its rev"
+                )
+            elif entry.get("rev"):
                 if not clone_missing:
-                    rev_failure = f"rev = {entry['rev']!r} is resolved by `chartbook pin`, which asks its repository; a read never fetches"
+                    rev_failure = f"rev = {entry['rev']!r} is resolved by `chartbook pin`, which asks its repository"
                 else:
                     if git_cache is None:
                         git_cache = default_git_cache()
@@ -916,7 +931,11 @@ def _sync_now(
         if rev_failure is not None:
             # What `rev` means could not be asked, or what it means is not to be taken
             pinned_now = any(record.get("content_hash") for record in had.values())
-            if pinned_now and was is not None:
+            was_location = (was or {}).get("location", {})
+            recorded = was_location.get("pipeline") == entry.get("_store") and (
+                was_location.get("commit") or was_location.get("first_commit")
+            )
+            if was is not None and (pinned_now or recorded):
                 records = dict(had)
                 listed = {**was, "location": dict(was.get("location", {}))}
                 for asset_id, record in sorted(had.items()):
@@ -1397,6 +1416,7 @@ def _describe(location: dict) -> str:
     """Where a dependency is, in a few words, for a message."""
     if location.get("kind") == "store":
         at = f" at {location['at']}" if location.get("at") else ""
+        at += f" at {location['rev']}" if location.get("rev") else ""
         made_in = f", made in {location['repository']}" if location.get("repository") else ""
         return f"{location.get('pipeline')}{at}, from the store{made_in}"
     if location.get("kind") == "git":

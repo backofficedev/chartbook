@@ -575,6 +575,8 @@ def _dependency_records(
             where = {"kind": "store", "pipeline": location.pipeline}
             if entry.get("commit"):
                 where["at"] = entry["commit"]
+            if entry.get("rev"):
+                where["rev"] = entry["rev"]
             commit = in_lock.get(key, {}).get("location", {}).get("commit")
             if commit:
                 # The commit of the snapshot the lockfile pins it at
