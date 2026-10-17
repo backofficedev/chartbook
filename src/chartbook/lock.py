@@ -1016,9 +1016,10 @@ def _newest_in_store(
         or next((t.first_commit for t in accepted if t.first_commit), ""),
     }
     if known and not snapshot.identity_keys(newest):
+        against = "the one [dependencies] names" if named else "the one it was first pinned from"
         identity["unchecked"] = (
             f"taken from a snapshot of {pipeline_id} that names no repository, made by a ChartBook that "
-            f"did not record one, so it could not be checked against the one it was first pinned from"
+            f"did not record one, so it could not be checked against {against}"
         )
     newer = [t for t in mine if not made_there(t) and t.made_at > newest.made_at]
     if newer:

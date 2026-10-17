@@ -1388,12 +1388,13 @@ def _keep_repositories_whole(plan: SnapshotPlan, groups: dict, now: datetime) ->
     - all of them, where removing them would leave the kept snapshots
       looking like two repositories;
     - for each first commit a kept snapshot names with no address (a clone
-      whose remote is a path), the newest that names it with an address,
-      so that a dependency that names the repository's address still takes
-      that snapshot;
-    - all of them, where the only snapshots kept of the one repository there
-      is name no repository (made by a ChartBook from before); or, if none
-      names both, the newest that names the repository at all.
+      whose remote is a path), those that name it with an address, so that
+      a dependency that names any of those addresses still takes that
+      snapshot;
+    - all of them, where a snapshot kept of the one repository there is
+      names no repository (made by a ChartBook from before), since its pin
+      may know only one of the repository's keys; or, if none names both
+      and nothing else of the repository is kept, the newest that names it.
 
     An address or first commit that no kept snapshot needs keeps nothing.
     """
@@ -1418,16 +1419,18 @@ def _keep_repositories_whole(plan: SnapshotPlan, groups: dict, now: datetime) ->
             if len(repository_groups(held)[0]) > 1:
                 for taken in holders.values():
                     keep(taken, "it names its repository's address and first commit together, which joins its snapshots")
-            addressed = {taken.first_commit for taken in held if taken.repository and taken.first_commit}
-            for first in {taken.first_commit for taken in held if not taken.repository and taken.first_commit} - addressed:
-                naming = [taken for (_, commit), taken in holders.items() if commit == first]
-                if naming:
-                    keep(max(naming, key=lambda taken: taken.made_at), "it names the address of a kept snapshot's first commit")
-            if not held and len(named) == 1 and any(taken.path in kept for taken in unnamed):
-                if holders:
-                    for taken in holders.values():
-                        keep(taken, "it is the newest that names its repository")
-                else:
+            # Every address a kept clone's first commit goes with: a
+            # dependency may name any one of them (a fork, a moved repository)
+            for first in {taken.first_commit for taken in held if not taken.repository and taken.first_commit}:
+                for (_, commit), taken in holders.items():
+                    if commit == first:
+                        keep(taken, "it names the address of a kept snapshot's first commit")
+            if len(named) == 1 and any(taken.path in kept for taken in unnamed):
+                # A kept snapshot that names no repository may have been
+                # pinned when only one of its keys was known: keep them all
+                for taken in holders.values():
+                    keep(taken, "it is the newest that names its repository")
+                if not held and not holders:
                     present = [taken for taken in group if not made_in_the_future(taken, now)] or group
                     keep(present[-1], "it is the newest that names its repository")
     if rescued:

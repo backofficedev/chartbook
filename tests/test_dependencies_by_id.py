@@ -877,6 +877,56 @@ class TestWhatTheSixthReviewFound:
         assert "names no repository" in event.detail
 
 
+class TestWhatTheSeventhReviewFound:
+    def _gone(self, work):
+        from chartbook.store import default_store
+
+        store = default_store()
+        for taken in snapshot.all_snapshots(store):
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n")
+        return store
+
+    def test_every_address_of_a_kept_clones_first_commit_stays(self, tmp_path):
+        from datetime import datetime, timezone
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        _record(real, made_at="2026-09-01T00:00:00.000000Z")  # (A, F)
+        _record(real, made_at="2026-09-05T00:00:00.000000Z", repository="https://github.com/forker/rates")  # (B, F)
+        clone = "2026-10-01T00:00:00.000000Z"
+        _record(real, made_at=clone, repository="")  # F only
+        forecast = _forecast(work / "forecast", {"acme/rates": {"repository": A}})
+        lock.pin(forecast)
+        store = self._gone(work)
+        plan = snapshot.plan_removals(store, {(real.commit, clone)}, set(), keep_days=7, now=datetime(2026, 10, 16, tzinfo=timezone.utc))
+        for taken, _ in plan.remove:
+            taken.path.unlink()
+        assert not lock.update(forecast).problems
+
+    def test_a_pin_that_knew_only_a_first_commit_keeps_finding_its_repository(self, tmp_path):
+        from datetime import datetime, timezone
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        _record(real, made_at="2026-08-01T00:00:00.000000Z", repository="")  # F only
+        unnamed = "2026-08-10T00:00:00.000000Z"
+        _record(real, made_at=unnamed, repository="", first_commit="")  # an older ChartBook
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert "repository" not in _pinned(forecast)["location"]
+        _record(real, made_at="2026-09-01T00:00:00.000000Z")  # (A, F)
+        shallow = "2026-10-01T00:00:00.000000Z"
+        _record(real, made_at=shallow, first_commit="")  # CI's shallow clone: A only
+        store = self._gone(work)
+        plan = snapshot.plan_removals(store, {(real.commit, unnamed)}, set(), keep_days=7, now=datetime(2026, 10, 16, tzinfo=timezone.utc))
+        for taken, _ in plan.remove:
+            taken.path.unlink()
+        lock.update(forecast)
+        assert _pinned(forecast)["snapshot"] == shallow
+
+
 def dataclasses_replace_assets(taken, marker: str):
     """A copy of a snapshot holding another version of its model, as if built again."""
     import dataclasses
