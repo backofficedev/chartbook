@@ -18,10 +18,13 @@ from the checkout and asks git for the commit at run time):
   stray copy in the tree. A build from a checkout whose `template/` has
   changes git has not committed records an empty file: no commit. Built from
   an sdist, the sdist's own file is kept.
-- A folder with a `.git` that git cannot read (git not installed, or a
-  folder git does not trust) gets the template as it is on disk and no
-  commit, with a warning; with `CHARTBOOK_BUILD_REQUIRE_GIT=1` in the
-  environment, as a release's build should have, it stops instead.
+- A folder that is neither a checkout git can read nor an sdist (git not
+  installed, a folder git does not trust, a copy without `.git`) gets the
+  template as it is on disk and an empty `built_from.txt` (no commit, and
+  never a stray one), with a warning. With `CHARTBOOK_BUILD_REQUIRE_GIT=1`
+  in the environment, as a release's build has (`doit hatch_build`), that
+  stops the build, and so does a `template/` with uncommitted changes: a
+  release always records its commit.
 
 The version is not touched.
 """
@@ -40,8 +43,8 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 #: The file the package carries the commit in, beside its modules
 BUILT_FROM = "built_from.txt"
 
-#: Set to 1 for a build that must record the commit (a release's): a `.git`
-#: that git cannot read then stops it, where it is otherwise a warning
+#: Set to 1 for a build that must record the commit (a release's): what
+#: would otherwise build with a warning and no commit stops it instead
 REQUIRE_GIT = "CHARTBOOK_BUILD_REQUIRE_GIT"
 
 #: Where the environment can tell git to look; a build looks at its own folder
@@ -110,27 +113,33 @@ class CustomBuildHook(BuildHookInterface):
             return
         root = Path(self.root)
         checkout = is_checkout(root)
-        if (root / ".git").exists() and not checkout:
-            message = (
-                f"{root} has a .git, and git cannot read it, so the package carries template/ as it is on "
-                f"disk, ignored files and all, and no commit for it. Install git; or, if git does not trust "
-                f"the folder, run `git config --global --add safe.directory {root}`; or build from a copy "
-                f"without .git."
-            )
-            if os.environ.get(REQUIRE_GIT, "").strip() == "1":
-                raise RuntimeError(f"{message} ({REQUIRE_GIT}=1 makes this an error.)")
-            self._warn(message)
+        sdist = not checkout and (root / "PKG-INFO").is_file()
+        if not checkout and not sdist:
+            if (root / ".git").exists():
+                message = (
+                    f"{root} has a .git, and git cannot read it, so the package carries template/ as it is "
+                    f"on disk, ignored files and all, and no commit for it. Install git; or, if git does not "
+                    f"trust the folder, run `git config --global --add safe.directory {root}`; or build from "
+                    f"a copy without .git."
+                )
+            else:
+                message = (
+                    f"{root} is neither a git checkout nor an sdist, so the package carries template/ as it "
+                    f"is on disk, ignored files and all, and no commit for it. Build from a git checkout, or "
+                    f"from an sdist."
+                )
+            self._stop_or_warn(message)
 
         inside = "chartbook/template" if self.target_name == "wheel" else "template"
         for name in template_files(root, checkout):
             build_data["force_include"][str(root / "template" / name)] = f"{inside}/{name}"
 
-        if not checkout:
-            # An sdist's own file, if it has one, ships as any file of the package does
+        if sdist:
+            # The sdist's own file ships as any file of the package does
             return
-        commit = commit_of(root)
-        if commit is None:
-            self._warn(
+        commit = commit_of(root) if checkout else None
+        if checkout and commit is None:
+            self._stop_or_warn(
                 "template/ has changes git has not committed, so the package records no commit for it, "
                 "and a project chartbook init makes from it has no .cruft.json."
             )
@@ -145,6 +154,12 @@ class CustomBuildHook(BuildHookInterface):
         folder = getattr(self, "_folder", None)
         if folder is not None:
             shutil.rmtree(folder, ignore_errors=True)
+
+    def _stop_or_warn(self, message):
+        """Stop the build with *message* when it must record the commit; else warn."""
+        if os.environ.get(REQUIRE_GIT, "").strip() == "1":
+            raise RuntimeError(f"{message} ({REQUIRE_GIT}=1 makes this an error.)")
+        self._warn(message)
 
     def _warn(self, message):
         app = getattr(self, "app", None)
