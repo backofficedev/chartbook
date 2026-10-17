@@ -933,6 +933,9 @@ class TestWhatTheSeventhReviewFound:
         monkeypatch.chdir(forecast)
         with pytest.warns(UnrecordedReadWarning):
             assert _value("acme/rates:treasury") == [4.2]
+        # And pin says the lockfile cannot be read, rather than crash
+        with pytest.raises(lock.LockError, match="without an id"):
+            lock.pin(forecast)
 
     def test_the_refusal_keeps_the_version_and_names_a_candidate(self, tmp_path, monkeypatch):
         from chartbook import models
@@ -946,3 +949,22 @@ class TestWhatTheSeventhReviewFound:
         (folder / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { git = "https://example.invalid/acme/model.git" }\n')
         with pytest.raises(ValueError, match="If you mean orig in \\[dependencies\\]"):
             models.path("acme/model:m@champion")
+
+
+class TestWhatTheEighthReviewFound:
+    def test_another_spelling_of_the_own_folder_is_refused_by_pin(self, together, monkeypatch):
+        import os
+
+        work, forecast, taken = together
+        upper = work / "RATES"
+        if not upper.exists() or not os.path.samefile(upper, work / "rates"):
+            # A case-sensitive filesystem: a link spells it differently instead
+            os.symlink(work / "rates", work / "rates-link")
+            other = "../rates-link"
+        else:
+            other = "../RATES"
+        rates = work / "rates" / "chartbook.toml"
+        rates.write_text(rates.read_text() + f'\n[dependencies]\norig = {{ path = "{other}" }}\n')
+        report = lock.pin(work / "rates")
+        (event,) = [e for e in report.events if e.dependency == "orig"]
+        assert event.status == "no_snapshot" and "this pipeline's own folder" in event.detail

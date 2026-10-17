@@ -78,7 +78,7 @@ from chartbook.manifest import (
     validate_dependencies,
 )
 from chartbook.refs import AssetRef
-from chartbook.resolve import MANIFEST_NAME, declared_files, locate_pipeline
+from chartbook.resolve import MANIFEST_NAME, _same_directory, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
 from chartbook.store import ReadOnlyStoreError, Store, StoreError, default_store
 
@@ -204,6 +204,12 @@ def read_lock(path: Union[str, Path]) -> Optional[Lock]:
         for record in document["records"]:
             if record.get("kind") == "Pipeline":
                 lock.dependencies = list(record.get("dependencies", []))
+                for entry in lock.dependencies:
+                    if not isinstance(entry, dict) or not isinstance(entry.get("id"), str) or not entry["id"]:
+                        raise ValueError(
+                            "it lists a dependency without an id that is a name. The file is not one "
+                            "ChartBook wrote: restore it from git, or remove it and run `chartbook pin`"
+                        )
             elif "id" in record:
                 lock.assets[record["id"]] = record
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
@@ -577,11 +583,12 @@ def _sync_now(
                     )
                 )
         elif entry.get("_store") == root or (
-            entry.get("_resolved_path") and "git" not in entry and Path(entry["_resolved_path"]).resolve() == project_dir
+            entry.get("_resolved_path") and _same_directory(entry["_resolved_path"], project_dir)
         ):
             records = {}
+            itself = f"{project_dir}, this pipeline's own folder" if entry.get("_resolved_path") else f"{root}, this pipeline itself"
             report.events.append(
-                PinEvent("no_snapshot", key, detail=f"{key!r} is {root}, this pipeline itself: a pipeline cannot depend on itself")
+                PinEvent("no_snapshot", key, detail=f"{key!r} is {itself}: a pipeline cannot depend on itself")
             )
         elif entry.get("_store"):
             # Named by its ID alone: its snapshots are found in the store by
@@ -768,7 +775,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
     if any(not isinstance(entry.get("id"), str) for entry in locked.dependencies):
         raise LockError(
             f"{lock_path} lists a dependency without an id. The file is not one "
-            f"ChartBook wrote; run `chartbook pin` to write it again."
+            f"ChartBook wrote: restore it from git, or remove it and run `chartbook pin`."
         )
     entries = {entry["id"]: entry for entry in locked.dependencies}
     for key in sorted(dependencies):
