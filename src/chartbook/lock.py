@@ -576,7 +576,9 @@ def _sync_now(
                         detail="a git dependency has no versions, so none of its labels is pinned",
                     )
                 )
-        elif entry.get("_store") == root:
+        elif entry.get("_store") == root or (
+            entry.get("_resolved_path") and "git" not in entry and Path(entry["_resolved_path"]).resolve() == project_dir
+        ):
             records = {}
             report.events.append(
                 PinEvent("no_snapshot", key, detail=f"{key!r} is {root}, this pipeline itself: a pipeline cannot depend on itself")

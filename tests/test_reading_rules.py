@@ -868,3 +868,81 @@ class TestWhatTheSixthReviewFound:
         finally:
             os.chmod(tmp_path, 0o755)
         assert list(tmp_path.iterdir()) == []
+
+
+class TestWhatTheSeventhReviewFound:
+    def test_a_dependency_given_another_id_is_not_read_under_the_old_one(self, together, monkeypatch):
+        import os
+
+        work, forecast, taken = together
+        fork = work / "fork"
+        _rates(fork, 9.0)  # acme/rates
+        manifest = (fork / "chartbook.toml").read_text()
+        (fork / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { path = "../rates" }\n')
+        os.chmod(fork, 0o555)
+        monkeypatch.chdir(fork)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                assert _value("acme/rates:treasury") == [4.0]
+            # The original's folder takes another ID, and a snapshot of it
+            rates = work / "rates" / "chartbook.toml"
+            rates.write_text(rates.read_text().replace('id = "acme/rates"', 'id = "acme/other"'))
+            _rates(work / "rates", 7.0)
+            rates.write_text(rates.read_text().replace('id = "acme/rates"', 'id = "acme/other"'))
+            _commit(work, "Another ID")
+            snapshot.make(work / "rates")
+            with pytest.raises(ValueError, match="names this pipeline"):
+                data.load("acme/rates:treasury")
+        finally:
+            os.chmod(fork, 0o755)
+
+    def test_the_undeclared_read_never_takes_this_pipelines_own_snapshot(self, together, monkeypatch):
+        from chartbook import resolve as resolve_module
+        from chartbook.refs import AssetRef
+
+        work, forecast, taken = together
+        monkeypatch.chdir(work / "rates")
+        own = AssetRef(name="treasury").in_pipeline("acme/rates")
+        with pytest.raises(ValueError, match="names this pipeline"):
+            resolve_module._read_in_a_pipeline(own, work / "rates", resolve_module._in_a_catalog_folder())
+
+    def test_a_pipeline_that_lists_its_own_folder_is_refused_by_pin_and_read(self, together, monkeypatch):
+        work, forecast, taken = together
+        rates = work / "rates" / "chartbook.toml"
+        rates.write_text(rates.read_text() + '\n[dependencies]\n"acme/rates" = { path = "." }\n')
+        report = lock.pin(work / "rates")
+        assert any("cannot depend on itself" in (e.detail or "") for e in report.events)
+        monkeypatch.chdir(work / "rates")
+        with pytest.raises(AssetNotPinnedError, match="cannot depend on itself"):
+            data.load("acme/rates:treasury")
+
+    def test_a_lockfile_entry_whose_id_is_no_string_is_skipped(self, elsewhere, monkeypatch):
+        import json
+
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        path = forecast / lock.LOCK_FILE
+        document = json.loads(path.read_text())
+        (pipeline,) = [r for r in document["records"] if r.get("kind") == "Pipeline"]
+        pipeline["dependencies"].append({"id": ["not", "a", "name"], "location": {"kind": "path"}})
+        path.write_text(json.dumps(document))
+        # acme/rates no longer declared; a folder not on this machine sends the read to the lockfile
+        _forecast(forecast, {"gone": {"path": "../gone"}})
+        monkeypatch.chdir(forecast)
+        with pytest.warns(UnrecordedReadWarning):
+            assert _value("acme/rates:treasury") == [4.2]
+
+    def test_the_refusal_keeps_the_version_and_names_a_candidate(self, tmp_path, monkeypatch):
+        from chartbook import models
+
+        work = tmp_path.resolve()
+        folder, start = _model_pipeline(work)
+        monkeypatch.chdir(folder)
+        with pytest.raises(ValueError, match="'model/m@champion'"):
+            models.path("acme/model:m@champion")
+        manifest = (folder / "chartbook.toml").read_text()
+        (folder / "chartbook.toml").write_text(manifest + '\n[dependencies]\norig = { git = "https://example.invalid/acme/model.git" }\n')
+        with pytest.raises(ValueError, match="If you mean orig in \\[dependencies\\]"):
+            models.path("acme/model:m@champion")
