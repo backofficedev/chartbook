@@ -85,6 +85,7 @@ from typing import Optional, Union
 
 from chartbook import hashing
 from chartbook.identity import (
+    _git_environment,
     derive_pipeline_id,
     get_git_remote_url,
     remote_to_web_url,
@@ -547,7 +548,7 @@ def _git(directory: Path, *arguments: str, stdin: str = "") -> str:
     It takes no lock it does not need, so that looking at a repository
     never gets in the way of whoever is working in it.
     """
-    environment = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
+    environment = {**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"}
     try:
         result = subprocess.run(
             ["git", "-C", str(directory), *arguments],
@@ -1923,7 +1924,9 @@ def make(
     for taken in before:
         if taken.content() != snapshot.content():
             break
-        if identity_keys(snapshot) <= identity_keys(taken):
+        # One made under another ID is not this pipeline's, whose ID has
+        # changed since (a remote added, a folder renamed): it gets its own
+        if taken.pipeline == snapshot.pipeline and identity_keys(snapshot) <= identity_keys(taken):
             same = taken
             break
     if same is not None:
@@ -2428,25 +2431,71 @@ def _write_back(taken: Snapshot, folder: Path, report: Materialized) -> None:
             report.left_out.append((site_dir, "the site folder could not be made"))
 
 
-def stored_pipeline_record(taken: Snapshot, store: Store) -> dict:
-    """The snapshot's own Pipeline record, from the index it holds; empty when it has none or it cannot be read.
+def _stored_records(taken: Snapshot, store: Store) -> list:
+    """The records of the index a snapshot holds; empty when it has none or it cannot be read.
 
     The index is whatever its owner put in the store, so nothing is assumed
-    of its shape: anything but a JSON object with a list of records, the
-    pipeline's among them by its ID, reads as no record.
+    of its shape: anything but a JSON object with a list of records reads
+    as none, and each record is still to be checked by what reads it.
     """
     if not isinstance(taken.index, dict) or not isinstance(taken.index.get("content_hash"), str):
-        return {}
+        return []
     try:
         held = Path(store.get(taken.index["content_hash"])) / INDEX_FILE
         recorded = json.loads(_read_regular_file(held, STORED_INDEX_LIMIT).decode("utf-8"))
     except (OSError, ValueError, KeyError, TypeError, RecursionError, StoreError):
-        return {}
+        return []
     records = recorded.get("records") if isinstance(recorded, dict) else None
-    for record in records if isinstance(records, list) else []:
+    return records if isinstance(records, list) else []
+
+
+def stored_pipeline_record(taken: Snapshot, store: Store) -> dict:
+    """The snapshot's own Pipeline record, from the index it holds; empty when it has none or it cannot be read.
+
+    Anything but a record of the pipeline's own ID is no record.
+    """
+    for record in _stored_records(taken, store):
         if isinstance(record, dict) and record.get("kind") == "Pipeline" and record.get("id") == taken.pipeline:
             return record
     return {}
+
+
+#: How many of a pipeline's assets known from the store alone a page or ``chartbook ls`` lists,
+#: of each pipeline: anyone who can write to the store chose how many there are
+STORED_ASSETS_SHOWN = 100
+
+#: The records of an index that are a pipeline's assets, each with the kind its ID names
+_ASSET_KINDS = {"Dataframe": "dataframe", "Chart": "chart", "Model": "model", "Notebook": "notebook", "Note": "note"}
+
+
+def stored_assets(taken: Snapshot, store: Store) -> list[dict]:
+    """The assets the index a snapshot holds lists, each as ``{"kind", "id", "name"}``, by ID; empty when it has none.
+
+    For a pipeline known from the store alone, whose folder is not here to
+    say what it declares. Only a record whose ID reads as a reference to
+    an asset of the snapshot's own pipeline, of the kind the record says,
+    is listed; its name is one line of plain text
+    (:func:`chartbook.identity.plain_line`), empty when it has none.
+    Anyone who can write to the store wrote these.
+    """
+    from chartbook.identity import plain_line
+    from chartbook.refs import parse_asset_ref
+
+    listed: dict[str, dict] = {}
+    for record in _stored_records(taken, store):
+        if not isinstance(record, dict) or record.get("kind") not in _ASSET_KINDS:
+            continue
+        text = record.get("id")
+        if not isinstance(text, str) or len(text) > 500:
+            continue
+        try:
+            ref = parse_asset_ref(text)
+        except ValueError:
+            continue
+        if ref.pipeline_id != taken.pipeline or ref.registry or ref.kind != _ASSET_KINDS[record["kind"]] or ref.part or ref.rev:
+            continue
+        listed.setdefault(str(ref), {"kind": record["kind"], "id": str(ref), "name": plain_line(record.get("name"), 200)})
+    return [listed[asset_id] for asset_id in sorted(listed)]
 
 
 def _code_changed_at(taken: Snapshot, store: Store) -> Optional[str]:

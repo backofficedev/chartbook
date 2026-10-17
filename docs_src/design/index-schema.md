@@ -559,6 +559,9 @@ of the machine that built it, as a model's versions are:
 - A **Pipeline** record's `snapshots`: every snapshot of it in the store, newest first, each with
   `commit`, `made_at`, `name` (the version's folder under `versions/`), `built_by_run`, and
   `rendered`, whether the catalog built that snapshot's site or shows the page that says why.
+- For a pipeline shown from the store alone (`location.kind: store`), its `assets` are those its
+  newest snapshot's own index lists, and `asset_names` gives each one's name there as plain text.
+  *Added 2026-10-17.*
 - A **Model** record's `trained_from`: for each input of another pipeline it was trained on, keyed
   as `inputs` is, the snapshot of that pipeline it was trained on: the one the model's pipeline
   was pinned to when the model's bytes were first snapshotted, else the newest holding the

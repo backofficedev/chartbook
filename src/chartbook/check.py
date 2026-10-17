@@ -349,10 +349,12 @@ def _repository_top(directory: str) -> Optional[Path]:
     """The top of the git repository a directory is in, a submodule's superproject's if it is one; None if in none."""
     import subprocess
 
+    from chartbook.identity import _git_environment
+
     try:
         found = subprocess.run(
             ["git", "-C", directory, "rev-parse", "--show-superproject-working-tree", "--show-toplevel"],
-            capture_output=True, text=True, check=True, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+            capture_output=True, text=True, check=True, env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.CalledProcessError):
         return None
@@ -377,7 +379,9 @@ def _id_at(directory: Path) -> Optional[str]:
         from chartbook.identity import derive_pipeline_id
 
         raw = tomli.loads((directory / "chartbook.toml").read_text(encoding="utf-8"))
-        return derive_pipeline_id(raw.get("project") or {}, directory)
+        project = raw.get("project") or {}
+        # A [project] that is not a table gives no ID: the manifest is broken there
+        return derive_pipeline_id(project, directory) if isinstance(project, dict) else None
     except (OSError, ValueError):
         return None
 
@@ -528,6 +532,175 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
                     stacklevel=2,
                 )
     return problems
+
+
+def check_ids(manifest: dict, base_dir: Path) -> list[Problem]:
+    """Warn where a pipeline is named by an ID its folder no longer gives itself, or will be named by another repository's.
+
+    A pipeline's ID can change: it gets a git remote, and so a scope; it is
+    given ``[project] id``. Its snapshots are then made under the new ID,
+    while a catalog entry keyed by the old one shows only the old ID's
+    snapshots, and a dependency named by the old one stays at the last of
+    them. Each is a warning, naming the key to write: the old snapshots are
+    still there, and nothing fails.
+
+    A catalog's entry is compared with what its folder calls itself now. A
+    dependency named by its ID (with no ``commit``, which keeps it where it
+    is) is compared with the folders of it on this machine: the catalog's
+    own, under that ID, and the folders a store on this disk notes its
+    newest snapshots were made in, each one only if it is in the
+    repository those snapshots record. If any of them still calls itself
+    by the dependency's ID, nothing is said.
+
+    A pipeline whose ``repo_url`` names another repository than its git
+    remote is named after ``repo_url``'s: a project copied into a new
+    repository with its manifest would claim the original's ID.
+    """
+    from chartbook.identity import get_git_remote_url, repository_key
+    from chartbook.manifest import dependency_line
+
+    in_build = get_pipeline_dirs(manifest)
+    if manifest["project"]["type"] == "catalog":
+        catalog_toml = Path(base_dir) / "chartbook.toml"
+        for pipeline_id, pipeline_dir in in_build.items():
+            current = _id_at(pipeline_dir)
+            if current and current != pipeline_id:
+                warnings.warn(
+                    f"{catalog_toml}: [{_pipelines_table(pipeline_id)}] the pipeline in {pipeline_dir} calls itself "
+                    f"{current} now, and its new snapshots are made under that ID; under {pipeline_id}, this "
+                    f"catalog shows only those made before. Name the entry {_quoted(current)} to show them.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+    made_in = _snapshot_folders()
+    for pipeline_id, pipeline_dir in in_build.items():
+        _check_repo_url(pipeline_dir)
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        for key, entry in (pipeline_manifest.get("dependencies") or {}).items():
+            named = entry.get("_store")
+            if not named or entry.get("commit"):
+                continue
+            folders = ([in_build[named]] if named in in_build else []) + made_in(named)
+            ids = {folder: _id_at(folder) for folder in dict.fromkeys(folders)}
+            if not ids or named in ids.values():
+                continue  # a folder of it still calls itself by this ID
+            folder, current = next(((f, i) for f, i in ids.items() if i), (None, None))
+            if current is None:
+                continue
+            kept = {name: entry[name] for name in ("rev", "repository") if name in entry}
+            if "repository" in kept and repository_key(kept["repository"]) != repository_key(get_git_remote_url(folder)):
+                del kept["repository"]  # its snapshots are not made at that address now
+            line = dependency_line(key, kept if key == current else {"id": current, **kept})
+            warnings.warn(
+                f"{pipeline_dir / 'chartbook.toml'}: [{_dependency_table(key)}] {named} is the pipeline in "
+                f"{folder}, which calls itself {current} now: its new snapshots are made under that ID, and "
+                f"this dependency stays at the last one made as {named}. Write {line} to follow it, then "
+                f"`chartbook update {key}`.",
+                UserWarning,
+                stacklevel=2,
+            )
+    return []
+
+
+def _check_repo_url(pipeline_dir: Path) -> None:
+    """Warn when a pipeline's ``repo_url`` and its git remote name two repositories: its ID is ``repo_url``'s."""
+    from chartbook.identity import derive_pipeline_id, get_git_remote_url, repository_key, remote_to_web_url
+
+    try:
+        project = _read_manifest_file(pipeline_dir).get("project")
+    except (OSError, ValueError):
+        return
+    if not isinstance(project, dict) or project.get("id") or not isinstance(project.get("repo_url"), str):
+        return
+    remote = get_git_remote_url(pipeline_dir)
+    written, actual = repository_key(project["repo_url"]), repository_key(remote)
+    if not written or not actual or written == actual:
+        return
+    try:
+        named, own = derive_pipeline_id(project, pipeline_dir), derive_pipeline_id({}, pipeline_dir)
+    except ValueError:
+        return
+    if named == own:
+        return
+    warnings.warn(
+        f"{pipeline_dir / 'chartbook.toml'}: [project] repo_url: {remote_to_web_url(project['repo_url'])} is "
+        f"not this folder's git remote, {remote_to_web_url(remote)}, and the pipeline is named after repo_url's "
+        f"repository: {named}. If this is a copy of that project in a repository of its own, take repo_url out "
+        f"(or write this repository's) and it is {own}; to keep {named}, write [project] id = \"{named}\".",
+        UserWarning,
+        stacklevel=2,
+    )
+
+
+def _pipelines_table(key: str) -> str:
+    """A catalog entry's table as TOML writes it: ``pipelines."scope/name"``."""
+    return _dependency_table(key).replace("dependencies", "pipelines", 1)
+
+
+#: How many of a pipeline's newest snapshots ``check`` looks at for the folders they were made in
+_SNAPSHOTS_LOOKED_AT = 5
+
+
+def _snapshot_folders():
+    """What gives the folders on this machine that a pipeline's newest snapshots were made in, by its ID; newest first.
+
+    Only a store that is a folder on this disk is read, and only if some
+    pipeline names a dependency by its ID: ``check`` uses no network, so
+    for a store at a URL it gives no folder, and says nothing. Of the
+    snapshots of an ID, the newest few commits are looked at, and a folder
+    noted for one is given only if it is a checkout of the repository the
+    snapshot records: its remote's address, or its first commit where
+    either has no address or where no folder of that commit has the
+    recorded address any more (a clone set to the repository's new
+    address).
+    """
+    from chartbook import snapshot
+    from chartbook.identity import checkout_of, get_git_remote_url, repository_key
+    from chartbook.store import FolderStore, StoreError, default_store
+
+    read: list = []
+
+    def folders(pipeline_id: str) -> list:
+        if not read:
+            try:
+                store = default_store()
+                found = snapshot.readable_snapshots(store)[0] if isinstance(store, FolderStore) else []
+            except (StoreError, OSError, ValueError):
+                store, found = None, []
+            read.append((store, found))
+        store, found = read[0]
+        seen, looked = [], set()
+        for taken in sorted((t for t in found if t.pipeline == pipeline_id), key=lambda t: t.made_at, reverse=True):
+            moment = (taken.commit, taken.subdirectory)
+            if moment in looked:
+                continue
+            looked.add(moment)
+            if len(looked) > _SNAPSHOTS_LOOKED_AT:
+                break
+            try:
+                tops = snapshot.origins(store, taken)
+            except (StoreError, OSError):
+                continue
+            recorded = repository_key(taken.repository)
+            now = {top: repository_key(get_git_remote_url(top)) for top in tops}
+            # A clone whose remote was set to a new address (the repository
+            # moved, or changed owner) is still that repository, when no
+            # folder of the commit has the address the snapshot recorded
+            moved = bool(recorded) and recorded not in now.values()
+            for top, address in now.items():
+                folder = top / taken.subdirectory if taken.subdirectory else top
+                if folder in seen or not (folder / "chartbook.toml").is_file():
+                    continue
+                if recorded and address and not moved:
+                    same = recorded == address
+                else:
+                    checkout = checkout_of(top)
+                    same = bool(taken.first_commit) and checkout is not None and checkout.first_commit == taken.first_commit
+                if same:
+                    seen.append(folder)
+        return seen
+
+    return folders
 
 
 def check_model_lineage(manifest: dict, base_dir: Path) -> list[Problem]:
@@ -813,6 +986,7 @@ def run_checks(
         ),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
         *check_dependencies(manifest, base_dir),
+        *check_ids(manifest, base_dir),
         *check_model_metrics(manifest, base_dir),
         *check_model_lineage(manifest, base_dir),
         *check_model_labels(manifest, base_dir),

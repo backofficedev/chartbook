@@ -460,6 +460,28 @@ def resolve_project_dir(project_dir: Path | None):
     return project_dir
 
 
+def _as_named(path=None) -> Path:
+    """A folder as the user named it, made absolute with its links kept; the current folder as the shell has it by default.
+
+    For reading a catalog whose entries' paths were written from the
+    folder as named through a link (:func:`chartbook.manifest.catalog_entry_dir`).
+    The current folder is the shell's ``$PWD`` when that is it, since the
+    one the system gives has every link followed.
+    """
+    import os
+
+    if path is not None:
+        return Path(os.path.abspath(path))
+    here = Path.cwd()
+    shell = os.environ.get("PWD", "")
+    try:
+        if shell and os.path.isabs(shell) and os.path.samefile(shell, here):
+            return Path(shell)
+    except OSError:
+        pass
+    return here
+
+
 @main.command()
 @click.option("--project-dir", type=click.Path(), help="Path to project directory")
 @click.option(
@@ -526,6 +548,8 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         load_manifest,
     )
 
+    # A catalog is read from its folder as named too, links and all (_as_named)
+    named_dir = _as_named(project_dir)
     project_dir = resolve_project_dir(project_dir)
     manifest_path = project_dir / "chartbook.toml"
     try:
@@ -533,7 +557,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         # report, not in Python's warning format
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            manifest = load_manifest(base_dir=project_dir)
+            manifest = load_manifest(base_dir=named_dir)
         # A catalog's manifest always carries a resolved policy, so whether
         # one was written down is read from the file itself
         policy_given = "policy" in _read_manifest_file(project_dir)
@@ -755,8 +779,13 @@ def _load_catalog_for_cli(catalog_path=None):
     except ValueError as error:  # the settings file that names the default catalog is faulty
         raise click.ClickException(str(error)) from None
 
+    # Read from the folder as it was named, links and all, as well as the
+    # folder itself: an entry's path written from the former still reads
+    named = _as_named(catalog_path) if catalog_path is not None else resolved
+    if named.is_dir():
+        named = named / "chartbook.toml"
     try:
-        manifest = load_manifest(base_dir=resolved.parent)
+        manifest = load_manifest(base_dir=named.parent)
     except (ValueError, FileNotFoundError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         raise SystemExit(1)
@@ -820,6 +849,37 @@ def index_diff(before, after, as_json, exit_code):
 STORE_ONLY = "(store only: not on this machine; the catalog shows its snapshots)"
 
 
+def _from_the_store(manifest, kinds=("Dataframe", "Chart")):
+    """The dataframes and charts of each pipeline a catalog names with no folder here, by pipeline ID.
+
+    As the newest snapshot of each in the store lists them, each as
+    ``(kind, ID, name)``; its name is plain text, as its owner wrote it.
+    At most :data:`chartbook.snapshot.STORED_ASSETS_SHOWN` of each, with how
+    many more there are. A store that cannot be read gives none.
+
+    :returns: By pipeline ID, the assets listed and how many are not.
+    """
+    pipeline_ids = manifest.get("store_pipelines") or []
+    if not pipeline_ids:
+        return {}
+    from chartbook import snapshot
+    from chartbook.store import StoreError, default_store
+
+    try:
+        store = default_store()
+        found, _ = snapshot.readable_snapshots(store)
+    except (StoreError, OSError, ValueError):
+        return {pipeline_id: ([], 0) for pipeline_id in pipeline_ids}
+    listed = {}
+    for pipeline_id in pipeline_ids:
+        newest = max((t for t in found if t.pipeline == pipeline_id), key=lambda t: t.made_at, default=None)
+        assets = snapshot.stored_assets(newest, store) if newest is not None else []
+        shown = sorted((a for a in assets if a["kind"] in kinds), key=lambda a: (kinds.index(a["kind"]), a["id"]))
+        rows = [(a["kind"], a["id"], a["name"] or "Unknown") for a in shown]
+        listed[pipeline_id] = (rows[: snapshot.STORED_ASSETS_SHOWN], max(len(rows) - snapshot.STORED_ASSETS_SHOWN, 0))
+    return listed
+
+
 @main.group(invoke_without_command=True)
 @click.option("--catalog", type=click.Path(), help="Path to catalog chartbook.toml")
 @click.pass_context
@@ -846,9 +906,15 @@ def ls(ctx, catalog):
 
         if manifest["project"]["type"] == "catalog":
             # Catalog with multiple pipelines, and those it shows from the store
+            stored = _from_the_store(manifest)
             for pipeline_id in sorted([*manifest["pipelines"], *(manifest.get("store_pipelines") or [])]):
                 if pipeline_id not in manifest["pipelines"]:
                     click.echo(f"[pipeline] {pipeline_id}: {STORE_ONLY}")
+                    rows, more = stored.get(pipeline_id, ([], 0))
+                    for kind, asset_id, name in rows:
+                        click.echo(f"  [{kind.lower()}] {asset_id}: {name}")
+                    if more:
+                        click.echo(f"  ... and {more} more")
                     continue
                 pipeline_manifest = manifest["pipelines"][pipeline_id]
                 pipeline_name = _get_pipeline_name(pipeline_manifest)
@@ -860,7 +926,7 @@ def ls(ctx, catalog):
                         df_name = pipeline_manifest["dataframes"][df_id].get(
                             "name", "Unknown"
                         )
-                        click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
+                        click.echo(f"  [dataframe] {pipeline_id}:{df_id}: {df_name}")
 
                 # List charts under this pipeline
                 if "charts" in pipeline_manifest:
@@ -868,7 +934,7 @@ def ls(ctx, catalog):
                         chart_name = pipeline_manifest["charts"][chart_id].get(
                             "name", "Unknown"
                         )
-                        click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
+                        click.echo(f"  [chart] {pipeline_id}:chart/{chart_id}: {chart_name}")
         else:
             # Single pipeline
             pipeline_id = manifest["project"]["id"]
@@ -878,12 +944,12 @@ def ls(ctx, catalog):
             if "dataframes" in manifest:
                 for df_id in sorted(manifest["dataframes"].keys()):
                     df_name = manifest["dataframes"][df_id].get("name", "Unknown")
-                    click.echo(f"  [dataframe] {pipeline_id}/{df_id}: {df_name}")
+                    click.echo(f"  [dataframe] {pipeline_id}:{df_id}: {df_name}")
 
             if "charts" in manifest:
                 for chart_id in sorted(manifest["charts"].keys()):
                     chart_name = manifest["charts"][chart_id].get("name", "Unknown")
-                    click.echo(f"  [chart] {pipeline_id}/{chart_id}: {chart_name}")
+                    click.echo(f"  [chart] {pipeline_id}:chart/{chart_id}: {chart_name}")
 
 
 @ls.command("pipelines")
@@ -915,20 +981,28 @@ def ls_dataframes(ctx):
     manifest, _ = _load_catalog_for_cli(catalog)
 
     if manifest["project"]["type"] == "catalog":
-        for pipeline_id in sorted(manifest["pipelines"].keys()):
+        stored = _from_the_store(manifest, ("Dataframe",))
+        for pipeline_id in sorted([*manifest["pipelines"], *stored]):
+            if pipeline_id not in manifest["pipelines"]:
+                rows, more = stored[pipeline_id]
+                for _, asset_id, name in rows:
+                    click.echo(f"{asset_id}: {name}")
+                if more:
+                    click.echo(f"... and {more} more of {pipeline_id}")
+                continue
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "dataframes" in pipeline_manifest:
                 for df_id in sorted(pipeline_manifest["dataframes"].keys()):
                     df_name = pipeline_manifest["dataframes"][df_id].get(
                         "name", "Unknown"
                     )
-                    click.echo(f"{pipeline_id}/{df_id}: {df_name}")
+                    click.echo(f"{pipeline_id}:{df_id}: {df_name}")
     else:
         pipeline_id = manifest["project"]["id"]
         if "dataframes" in manifest:
             for df_id in sorted(manifest["dataframes"].keys()):
                 df_name = manifest["dataframes"][df_id].get("name", "Unknown")
-                click.echo(f"{pipeline_id}/{df_id}: {df_name}")
+                click.echo(f"{pipeline_id}:{df_id}: {df_name}")
 
 
 @ls.command("charts")
@@ -939,20 +1013,28 @@ def ls_charts(ctx):
     manifest, _ = _load_catalog_for_cli(catalog)
 
     if manifest["project"]["type"] == "catalog":
-        for pipeline_id in sorted(manifest["pipelines"].keys()):
+        stored = _from_the_store(manifest, ("Chart",))
+        for pipeline_id in sorted([*manifest["pipelines"], *stored]):
+            if pipeline_id not in manifest["pipelines"]:
+                rows, more = stored[pipeline_id]
+                for _, asset_id, name in rows:
+                    click.echo(f"{asset_id}: {name}")
+                if more:
+                    click.echo(f"... and {more} more of {pipeline_id}")
+                continue
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "charts" in pipeline_manifest:
                 for chart_id in sorted(pipeline_manifest["charts"].keys()):
                     chart_name = pipeline_manifest["charts"][chart_id].get(
                         "name", "Unknown"
                     )
-                    click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
+                    click.echo(f"{pipeline_id}:chart/{chart_id}: {chart_name}")
     else:
         pipeline_id = manifest["project"]["id"]
         if "charts" in manifest:
             for chart_id in sorted(manifest["charts"].keys()):
                 chart_name = manifest["charts"][chart_id].get("name", "Unknown")
-                click.echo(f"{pipeline_id}/{chart_id}: {chart_name}")
+                click.echo(f"{pipeline_id}:chart/{chart_id}: {chart_name}")
 
 
 # =============================================================================
@@ -1024,6 +1106,53 @@ def _load_raw_catalog(catalog_toml_path):
     return data
 
 
+def _reenable(raw_catalog, key, entry=True) -> bool:
+    """Enable a pipeline of the catalog again: its entry's ``disabled`` flag, and the ``disabled`` list.
+
+    :param entry: Whether it has an entry of its own; one ``members`` finds is on the list only.
+    :returns: Whether it was disabled.
+    """
+    listed_entry = raw_catalog["pipelines"].get(key) if entry else None
+    flagged = isinstance(listed_entry, dict) and bool(listed_entry.pop("disabled", False))
+    return _off_the_disabled_list(raw_catalog, key) or flagged
+
+
+def _another_checkout(directory, listed, covered, checkouts):
+    """The pipeline of the catalog that a folder is another checkout of: a worktree of its repository, or a second clone.
+
+    :param listed: The folders the catalog's entries name, each with its key.
+    :param covered: The folders ``members`` patterns match, each with its pattern.
+    :param checkouts: Where each folder is in its repository, as looked up already; filled in.
+    :returns: The other folder, its key in the catalog, and the pattern
+        that found it (None for an entry); or None.
+    """
+    from chartbook.identity import checkout_of, derive_pipeline_id, same_pipeline_checked_out
+    from chartbook.manifest import _read_manifest_file
+
+    def where(folder):
+        if folder not in checkouts:
+            checkouts[folder] = checkout_of(folder)
+        return checkouts[folder]
+
+    mine = where(directory)
+    if mine is None:
+        return None
+    for folder, key in listed.items():
+        if folder != directory and same_pipeline_checked_out(where(folder), mine):
+            return folder, key, None
+    for folder, pattern in covered.items():
+        if folder == directory or not (folder / "chartbook.toml").is_file():
+            continue
+        if same_pipeline_checked_out(where(folder), mine):
+            try:
+                project = _read_manifest_file(folder).get("project")
+                key = derive_pipeline_id(project if isinstance(project, dict) else {}, folder)
+            except (OSError, ValueError):
+                continue
+            return folder, key, pattern
+    return None
+
+
 def _off_the_disabled_list(raw_catalog, key) -> bool:
     """Take a pipeline ID off the catalog's ``[pipelines] disabled`` list, every time it is there.
 
@@ -1049,7 +1178,7 @@ def _get_existing_absolute_paths(raw_catalog, catalog_dir):
     :returns: A dict mapping absolute paths to their catalog keys.
     :rtype: dict
     """
-    from chartbook.manifest import RESERVED_PIPELINES_KEYS, resolve_platform_path
+    from chartbook.manifest import RESERVED_PIPELINES_KEYS, catalog_entry_dir, resolve_platform_path
 
     result = {}
     for key, entry in raw_catalog.get("pipelines", {}).items():
@@ -1064,7 +1193,7 @@ def _get_existing_absolute_paths(raw_catalog, catalog_dir):
             resolved = resolve_platform_path(pipeline_path)
         except (ValueError, TypeError):
             continue
-        abs_path = (catalog_dir / resolved).resolve()
+        abs_path = catalog_entry_dir(catalog_dir, resolved)
         result[abs_path] = key
     return result
 
@@ -1217,15 +1346,19 @@ def catalog_add(paths, catalog_path, yes):
     shell_env = detect_shell_environment()
     paths = validate_cli_paths(paths, shell_env, auto_confirm=yes)
 
-    # Resolve catalog
+    # Resolve catalog. Its folder is taken with every link in its path
+    # followed, as each pipeline's is below: a relative path is worked out
+    # between the two as they really are, and read back the same way (a
+    # home folder reached through a link, /var on macOS)
     catalog_toml = _resolve_catalog_toml_path(catalog_path)
-    catalog_dir = catalog_toml.parent
+    catalog_dir = catalog_toml.parent.resolve()
     raw_catalog = _load_raw_catalog(catalog_toml)
 
     # Get existing absolute paths for duplicate detection
-    existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_dir)
+    existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_toml.parent)
     members_covered = _get_members_covered_paths(raw_catalog, catalog_dir)
     existing_keys = set(raw_catalog.get("pipelines", {}).keys())
+    checkouts = {}  # where each folder looked at is in its repository
     reenabled = 0
 
     # Expand all path arguments (handles globs)
@@ -1319,16 +1452,27 @@ def catalog_add(paths, catalog_path, yes):
         # Check for duplicates — re-enable if disabled
         if d in existing_abs:
             key = existing_abs[d]
-            entry = raw_catalog["pipelines"][key]
-            flagged = isinstance(entry, dict) and entry.pop("disabled", False)
-            listed = _off_the_disabled_list(raw_catalog, key)
-            if flagged or listed:
+            if _reenable(raw_catalog, key):
                 reenabled += 1
                 click.echo(f"  Re-enabled '{key}': {d.name}/")
             else:
                 click.echo(
                     f"  Already in catalog as '{key}': {d.name}/"
                 )
+            continue
+
+        # Another checkout of a pipeline the catalog has (a worktree, a
+        # second clone) is that pipeline, whatever its key there
+        other = _another_checkout(d, existing_abs, members_covered, checkouts)
+        if other is not None:
+            folder, key, pattern = other
+            how = f"found by pipelines.members pattern '{pattern}', " if pattern else ""
+            said = f"({how}another checkout of the same repository, {folder}): {d.name}/"
+            if _reenable(raw_catalog, key, entry=pattern is None):
+                reenabled += 1
+                click.echo(f"  Re-enabled '{key}' {said}")
+            else:
+                click.echo(f"  Already in catalog as '{key}' {said}")
             continue
 
         pipeline_name = pipeline_toml.get("project", {}).get("name", d.name)
@@ -1365,16 +1509,39 @@ def catalog_add(paths, catalog_path, yes):
         for key, entry in raw_catalog.get("pipelines", {}).items()
         if key not in RESERVED_PIPELINES_KEYS and isinstance(entry, dict) and entry.get("path") is None
     }
+    from chartbook.identity import checkout_of, same_pipeline_checked_out
+
+    # The folder each key names, listed already or added now: a second
+    # checkout of one repository is that same pipeline, not another one
+    folder_of = {key: folder for folder, key in existing_abs.items()}
     planned = []  # (directory, name, key, whether it fills in an entry from the store)
     for d, name, project_table in valid_pipelines:
         key = _derive_catalog_key(d, project_table)
         fills = key in from_the_store
         if fills:
             from_the_store.discard(key)
+        elif key in folder_of and same_pipeline_checked_out(checkout_of(folder_of[key]), checkout_of(d)):
+            click.echo(
+                f"  Already in catalog as '{key}' (another checkout of the same repository, "
+                f"{folder_of[key]}): {d.name}/"
+            )
+            continue
         else:
             key = _ensure_unique_key(key, existing_keys)
         existing_keys.add(key)
+        folder_of.setdefault(key, d)
         planned.append((d, name, key, fills))
+
+    if not planned:
+        # Every one was another checkout of a pipeline already listed
+        if reenabled:
+            with open(catalog_toml, "wb") as f:
+                tomli_w.dump(raw_catalog, f)
+            click.echo("")
+            click.echo(f"Re-enabled {reenabled} pipeline(s) in {catalog_toml}")
+        else:
+            click.echo("No new pipelines to add.")
+        return
 
     # Prompt for confirmation if multiple
     if len(planned) > 1 and not yes:
@@ -1779,7 +1946,7 @@ def _echo_pin_report(report):
                     f"  [dependencies] now says {event.detail}. It stays pinned "
                     f"where it was: `chartbook update {dependency}` follows it."
                 )
-            elif event.status in ("passed_over", "unchecked"):
+            elif event.status in ("passed_over", "unchecked", "id_changed"):
                 click.echo(f"  {event.detail}.")
 
         for event in assets:

@@ -256,18 +256,18 @@ $ chartbook ls
 Catalog: /data/my-catalog/chartbook.toml
 
 [pipeline] acme/sales: Sales Analytics
-  [dataframe] acme/sales/transactions: Sales Transactions
-  [chart] acme/sales/monthly_revenue: Monthly Revenue
+  [dataframe] acme/sales:transactions: Sales Transactions
+  [chart] acme/sales:chart/monthly_revenue: Monthly Revenue
 [pipeline] acme/marketing: Marketing Analytics
-  [dataframe] acme/marketing/campaigns: Campaign Data
+  [dataframe] acme/marketing:campaigns: Campaign Data
 
 $ chartbook ls pipelines
 acme/sales: Sales Analytics
 acme/marketing: Marketing Analytics
 
 $ chartbook ls dataframes
-acme/sales/transactions: Sales Transactions
-acme/marketing/campaigns: Campaign Data
+acme/sales:transactions: Sales Transactions
+acme/marketing:campaigns: Campaign Data
 
 $ chartbook ls --catalog /path/to/other/catalog
 ```
@@ -382,7 +382,7 @@ writer = "sphinx"                  # Default; "mkdocs" builds the site with MkDo
 
 ### Pipeline Identity
 
-Canonical pipeline identity is a scoped name `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically: explicit `[project] id` if set, else scope from the git `origin` remote plus the directory name, else the bare directory name. `data.load`, `chartbook ls`, and `chartbook data` accept a bare name (when unambiguous), a scoped name, or a repo URL (normalized). An `@rev` suffix and a registry prefix (`registry.example/scope/name` — three components, the first a host) are reserved: recognized, and refused as not yet supported. `chartbook publish` only stages files into a directory; `chartbook push` is the reserved, unimplemented verb for sending a pipeline to a registry.
+Canonical pipeline identity is a scoped name `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically: explicit `[project] id` if set; else, at the top of a git repository with a remote (`repo_url`, or else the `origin` remote), the scope and the name from the remote, whatever the folder is called (a clone into another folder and a git worktree are one pipeline); in a subfolder of one, the remote's scope and the subfolder's name; with no remote (or a remote that is a path on disk), the bare folder name. A derived scope is lowercase and a derived name lowercase with `_` for `-`, however the remote is written; write references in lowercase too (`Acme/rates` does not find `acme/rates`, and the error suggests it). An SSH host alias (`git@github.com-work:acme/rates.git`) gives the same ID and counts as another repository's address. `repo_url` comes before the remote; `chartbook check` warns when they name two repositories. Adding a remote changes a bare ID to a scoped one, and later snapshots are made under it: `chartbook pin` and `chartbook update` say when a dependency named by the old ID has newer snapshots of the same repository and folder under another, naming the entry to write (`"first_pipeline" = { id = "testorg/first_pipeline" }`), and `chartbook check` warns when a catalog key or such a dependency is not what the folder calls itself now. Two checkouts of one repository (a worktree, a second clone) are one pipeline, which a catalog lists once. `data.load`, `chartbook ls`, and `chartbook data` accept a bare name (when unambiguous), a scoped name, or a repo URL (normalized). An `@rev` suffix and a registry prefix (`registry.example/scope/name` — three components, the first a host) are reserved: recognized, and refused as not yet supported. `chartbook publish` only stages files into a directory; `chartbook push` is the reserved, unimplemented verb for sending a pipeline to a registry.
 
 ### [pipelines] - Pipeline Registry
 
@@ -406,7 +406,7 @@ path = { unix = "/data/pipelines/monthly", windows = "T:/pipelines/monthly" }
 [pipelines."acme/rates"]
 ```
 
-An entry takes only `path` and `disabled`; any other key is an error. An entry with no `path` is a pipeline the catalog shows from its snapshots in the store: a page linking its newest version, and every version on the Versions page. Its name, description and maintainer come from its newest snapshot's own index and are shown as plain text, never as Markdown; its repository and site only when they are `http(s)` addresses. `check`, `run` and the policy pass it by, `chartbook ls` lists it as store only, and `data.load` through the catalog reads its newest snapshot from the store. `chartbook catalog add` of a folder with its ID, or a `members` pattern that finds one, fills the entry in.
+An entry takes only `path` and `disabled`; any other key is an error. An entry with no `path` is a pipeline the catalog shows from its snapshots in the store: a page linking its newest version, and every version on the Versions page. Its name, description and maintainer come from its newest snapshot's own index and are shown as plain text, never as Markdown; its repository and site only when they are `http(s)` addresses. Its assets are those its newest snapshot's index lists: its page lists its dataframes, charts and models, and the catalog's Dataframes page its dataframes, each linked to its page in that snapshot's site. `check`, `run` and the policy pass it by, `chartbook ls` lists it as store only, with its dataframes and charts, and `data.load` through the catalog reads its newest snapshot from the store. `chartbook catalog add` of a folder with its ID, or a `members` pattern that finds one, fills the entry in.
 
 ### Catalog Auto-Discovery (members)
 
@@ -632,7 +632,7 @@ readme = "./README.md"
 
 ### Best Practices
 
-1. **Consistent Naming**: Use lowercase `scope/name` pipeline IDs (usually derived automatically from the git remote and directory name)
+1. **Consistent Naming**: Use lowercase `scope/name` pipeline IDs (usually derived automatically from the git remote, or the folder when there is none)
 2. **Version Control**: Track all files in git
 3. **Data Management**: Store raw data separately from processed data
 4. **Reproducibility**: Set random seeds, document package versions

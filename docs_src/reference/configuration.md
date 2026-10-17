@@ -40,7 +40,7 @@ Every field is optional. Types and defaults:
 | Key | Type | Default |
 |-----|------|---------|
 | `type` | `"pipeline"` or `"catalog"` | inferred (see above) |
-| `id` | `scope/name` or bare `name` | derived: scope from the git remote, name from the directory |
+| `id` | `scope/name` or bare `name` | derived from the git remote and the folder (see [Pipeline Identity](#pipeline-identity)) |
 | `name` | string | directory name |
 | `description` | string | `""` |
 | `maintainer` | string | first entry of `contributors` |
@@ -96,9 +96,28 @@ doit
 
 It is shown on the pipeline's documentation page, and {ref}`chartbook run <chartbook-run>` executes it. `build` in `[project]` means the same and is still read; {ref}`[scripts] <scripts>` is where it and any other named command go.
 
+(pipeline-identity)=
 ## Pipeline Identity
 
-Every pipeline has a canonical ID, ideally scoped: `scope/name` (e.g. `ftsfr/crsp_treasury`). It is derived automatically — scope from the repo's git `origin` remote (or `repo_url`), name from the directory name — or set explicitly with `id` in `[project]`. Anywhere a pipeline reference is accepted (`data.load`, `chartbook data get-path`, `chartbook data get-docs`), three forms work:
+Every pipeline has a canonical ID, ideally scoped: `scope/name` (e.g. `ftsfr/crsp_treasury`). An explicit `id` in `[project]` always wins. Otherwise the ID is derived from the pipeline's repository, by one rule:
+
+- **At the top of a git repository with a remote**, the pipeline is named after the repository: its `repo_url`, or else its git `origin` remote, `https://github.com/ftsfr/crsp_treasury`, gives `ftsfr/crsp_treasury`, whatever the folder it is in is called. A clone from that address into another folder, a git worktree of it and a renamed folder are the same pipeline.
+- **In a subfolder of such a repository**, the scope comes from the remote and the name from the subfolder: `yield-curve/` in `github.com/acme/monorepo` is `acme/yield_curve`.
+- **With no remote**, the folder's name, bare: `first-pipeline/` is `first_pipeline`. A clone of a folder on disk has that folder's path for its remote, which names no repository, so it takes its own folder's name too. A folder outside any git repository that sets `repo_url` takes the scope from `repo_url` and the name from the folder: `scope/folder`.
+
+The remote may be written in any form git takes (`https://`, `ssh://`, `git@host:path`, `host:path`, with any user), and gives one ID however it is written: the scope in lowercase, and the name written as a folder's is, in lowercase with `_` for `-` and spaces (`github.com/Acme/CRSP-Treasury` is `acme/crsp_treasury`). The ID is the last two parts of the address's path, so a GitLab subgroup gives its last group (`gitlab.com/grp/sub/rates` is `sub/rates`), an Azure DevOps address `_git/<repository>` (https) or `<project>/<repository>` (ssh), and a name of nothing but dots gives the folder's; set `id` for any of these. An SSH host alias from `~/.ssh/config` (`git@github.com-work:acme/rates.git`) is another host: the ID is the same, `acme/rates`, but its address is not `github.com`'s, so snapshots made through it are taken for another repository's wherever a dependency keeps to one.
+
+**What a changed ID is not followed through.** `chartbook update` and `chartbook check` say when a dependency's ID has newer snapshots under another ID of the same repository, and name the entry to write. They do not follow it when the repository moved to another address while a folder on this machine is still checked out at the old one, or when a pipeline in a subfolder of a repository moved to another subfolder; give the dependency's new ID by hand then. On the command line, `chartbook check` and `chartbook ls` read a catalog from its folder as you named it, links and all; other commands read it from the folder links lead to.
+
+`repo_url` comes before the remote (one that names no host, such as `"TBD"`, gives way to it), so a fork whose manifest names its upstream's repository keeps the upstream's ID. So does a project copied into a new repository with its manifest, which then claims the original's ID; `chartbook check` warns when `repo_url` and the git remote name two repositories, and says what the ID would be without it.
+
+So adding a remote to a pipeline that had none changes its ID, from `first_pipeline` to `testorg/first_pipeline`, and its next snapshot is made under the new one. Whatever goes by the ID goes with it: a catalog's Versions page and a model's versions list the snapshots of each ID apart, and the pipeline's pages in a site move, since their path holds its ID (`cb/pipelines/testorg--first_pipeline_README.html`). A dependency named by the old ID stays at the last snapshot made under it: `chartbook pin` and `chartbook update` say when the store has newer snapshots of the same repository (by its address, or by its first commit where a snapshot records no address, or a clone of it whose remote was set to a new address, as when the repository moves to another owner) and folder under another ID, and name the entry to write, `"first_pipeline" = { id = "testorg/first_pipeline" }`; `chartbook check` warns when a catalog's key, or a dependency named by its ID, is not what the pipeline's folder calls itself now. Set `id` to keep one ID whatever happens to the folder or the remote.
+
+Two checkouts of one repository, its main worktree and another, or two clones (of one remote's address, or of one first commit where either has no remote), are one pipeline with one ID. A catalog's `members` that find both list it once, from the main worktree (else the one found first) or from the catalog's explicit entry, with a warning naming the other; `chartbook catalog add` of the second says it is already in the catalog, under whatever key, and enables it again if it was disabled.
+
+A scope derived from a remote is in lowercase, and a reference must be too: `Acme/rates`, as a web page shows the owner, does not find `acme/rates`, and the error suggests it.
+
+Anywhere a pipeline reference is accepted (`data.load`, `chartbook data get-path`, `chartbook data get-docs`), three forms work:
 
 ```python
 data.load(pipeline="crsp_treasury", ...)                          # bare, if unambiguous
@@ -136,7 +155,7 @@ disabled = true                    # kept but skipped during builds
 path = { unix = "/data/pipelines/news_headlines", windows = "T:/pipelines/news_headlines" }
 ```
 
-Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table) and `disabled` (bool); any other key is an error. A plain string value is shorthand for the path. An entry with no `path`, `"acme/rates" = {}`, is a pipeline whose folder is not on this machine: the catalog shows it from its snapshots in the store, with a page that links its newest version and the Versions page. Its name, description and maintainer are what its newest snapshot's own index says, shown as plain text (never read as Markdown or HTML, with `< > " '` and the backtick shown as look-alikes and `&` as "and", since anyone who can write to the store wrote them), and its repository and site only when they are `http` or `https` addresses. It has no working version, and `check`, `run` and the policy pass it by; `chartbook ls` lists it as store only, and loading its data through the catalog reads its newest snapshot from the store. A folder of the same ID, added with `chartbook catalog add` or found by `members`, fills the entry in. `chartbook catalog add <dir>` writes the scoped key for you, derived from the target's git remote.
+Entry keys: `path` (string, or a `{ unix = ..., windows = ... }` table) and `disabled` (bool); any other key is an error. A plain string value is shorthand for the path. An entry with no `path`, `"acme/rates" = {}`, is a pipeline whose folder is not on this machine: the catalog shows it from its snapshots in the store, with a page that links its newest version and the Versions page. Its name, description and maintainer are what its newest snapshot's own index says, shown as plain text (never read as Markdown or HTML, with `< > " '` and the backtick shown as look-alikes and `&` as "and", since anyone who can write to the store wrote them), and its repository and site only when they are `http` or `https` addresses. Its assets are those its newest snapshot's own index lists: its page lists its dataframes, charts and models, and the catalog's Dataframes page lists its dataframes after the catalog's own, each linked to its page in that snapshot's site and named as plain text. It has no working version, and `check`, `run` and the policy pass it by; `chartbook ls` lists it as store only, with its dataframes and charts, and loading its data through the catalog reads its newest snapshot from the store. A folder of the same ID, added with `chartbook catalog add` or found by `members`, fills the entry in. `chartbook catalog add <dir>` writes the key for you, the pipeline's ID (see [Pipeline Identity](#pipeline-identity)).
 
 ### Auto-discovery with `members`
 
@@ -155,7 +174,7 @@ disabled = ["ftsfr/sovereign_bonds"]   # switch members off by ID
 exclude = ["../GitRepositories/ftsfr_repos/scratch_*"]   # optional
 ```
 
-Each matched directory containing a pipeline `chartbook.toml` joins under its derived scoped ID. Glob matches skip non-pipeline directories and catalogs silently; a *literal* member path that's broken is a hard error, as are v1-format members and two members deriving the same ID — all errors explain how to fix them. Explicit entries coexist with `members` and win when they point at the same directory (useful to rename a pipeline in your catalog). `members`, `exclude`, and `disabled` are reserved keys and can't be used as bare pipeline IDs.
+Each matched directory containing a pipeline `chartbook.toml` joins under its derived scoped ID. Glob matches skip non-pipeline directories and catalogs silently; a *literal* member path that's broken is a hard error, as are v1-format members and two members deriving the same ID — all errors explain how to fix them. Two members that are checkouts of one repository at the same place in it (a worktree beside its repository, a second clone) are one pipeline, not an error: the catalog lists the main worktree's, else the one found first, or the explicit entry's, and a warning names the other. Explicit entries coexist with `members` and win when they point at the same directory (useful to rename a pipeline in your catalog). `members`, `exclude`, and `disabled` are reserved keys and can't be used as bare pipeline IDs.
 
 This is designed for the **local** catalog — publishing to a shared catalog should stay an explicit act.
 

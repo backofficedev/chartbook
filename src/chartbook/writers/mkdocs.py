@@ -125,7 +125,10 @@ class MkDocsWriter(SphinxWriter):
                 has_versions=self._has_versions(),
             )
         if page_path == "cb/dataframes.md":
-            return environment.get_template("dataframes.md").render(dataframe_pages=self._pages("Dataframe", from_root=False))
+            return environment.get_template("dataframes.md").render(
+                dataframe_pages=self._pages("Dataframe", from_root=False),
+                stored_dataframes=self.from_the_store_assets(("dataframe",), page_path),
+            )
         if page_path == "cb/models.md":
             return environment.get_template("models.md").render(model_pages=self._pages("Model", from_root=False))
         return super().catalog_page(page_path)

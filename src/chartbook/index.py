@@ -926,10 +926,11 @@ def _describe_from_the_store(records: list[dict]) -> None:
 
     Its name, description and maintainer as plain text, and its repository
     and site when they are web addresses, as its owner wrote them at the
-    newest snapshot (the one its page links to); nothing of its folder,
-    which is not here. Anyone who can write to the store can write these,
-    so they are only ever text: the writers show them as written and never
-    read them as markup.
+    newest snapshot (the one its page links to); its ``assets``, as that
+    index lists them, with each one's name as plain text in
+    ``asset_names``; nothing of its folder, which is not here. Anyone who
+    can write to the store can write these, so they are only ever text:
+    the writers show them as written and never read them as markup.
     """
     from chartbook import snapshot as snapshots
     from chartbook.identity import plain_line, web_link
@@ -950,6 +951,11 @@ def _describe_from_the_store(records: list[dict]) -> None:
             None,
         )
         own = snapshots.stored_pipeline_record(taken, store) if taken is not None else {}
+        stored = snapshots.stored_assets(taken, store) if taken is not None else []
+        record["assets"] = [asset["id"] for asset in stored]
+        named = {asset["id"]: asset["name"] for asset in stored if asset["name"]}
+        if named:
+            record["asset_names"] = named
         for key, longest in (("name", 200), ("description", 2000), ("maintainer", 200)):
             text = plain_line(own.get(key), longest)
             if text:
@@ -1143,6 +1149,7 @@ def build_index(
                     "id": pipeline_id,
                     "name": pipeline_id,
                     "location": {"kind": "store"},
+                    "assets": [],
                 }
             )
         # A catalog shows every version of its pipelines; a pipeline's own site does not

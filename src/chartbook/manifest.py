@@ -27,6 +27,7 @@ import tomli
 
 from chartbook.identity import (
     ID_COMPONENT_PATTERN,
+    _git_environment,
     UnsupportedRevisionError,
     derive_pipeline_id,
     get_git_remote_url,
@@ -241,6 +242,45 @@ def resolve_platform_path(path_input: Union[str, dict]) -> Path:
         f"No path defined for the current platform ({platform.system()}). "
         f"Available keys: {list(path_input.keys())}; expected 'unix' and/or 'windows'."
     )
+
+
+def catalog_entry_dir(base_dir: Union[str, Path], path: Path, where: str = "") -> Path:
+    """The folder a catalog's entry names, by its path relative to the catalog's folder.
+
+    The path is joined to the catalog's folder with every link in that
+    folder's own path followed, as ``chartbook catalog add`` works it out.
+    One written from the folder as it is named instead (by hand, or by an
+    older ``catalog add``, with a home folder reached through a link), or
+    read where ``..`` is taken before a link is followed (``realpath`` on
+    Windows, through a junction), is joined as written when the first way
+    finds no chartbook.toml and this one does. That works only where the
+    catalog is reached as it was named when the path was written, so it is
+    said, with the path to write instead.
+
+    :param base_dir: The catalog's folder, as it was named: the commands
+        that read a catalog keep the links in the path they were given.
+    :param path: The entry's path, for this platform (:func:`resolve_platform_path`).
+    :param where: The entry, to say it when its path is read the second
+        way (``chartbook.toml: [pipelines."acme/rates"]``); nothing is
+        said without it.
+    :returns: The folder, resolved.
+    """
+    found = (Path(base_dir).resolve() / path).resolve()
+    if not (found / "chartbook.toml").is_file():
+        as_written = Path(os.path.normpath(Path(base_dir) / path))
+        if (as_written / "chartbook.toml").is_file():
+            if where:
+                instead = Path(os.path.relpath(as_written.resolve(), Path(base_dir).resolve())).as_posix()
+                warnings.warn(
+                    f"{where} path: {Path(path).as_posix()} names the pipeline only from {base_dir}, the "
+                    f"catalog's folder as it is named here, through a link; from the folder itself, "
+                    f"{Path(base_dir).resolve()}, it names none. Write path = \"{instead}\" so that it is "
+                    f"read the same way however the catalog is reached.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            return as_written.resolve()
+    return found
 
 
 def validate_os_compatibility(value: Union[str, list]) -> Union[str, list]:
@@ -1366,12 +1406,19 @@ def _discover_member_pipelines(
 
     :returns: Mapping of derived pipeline ID -> entry dict, with a
         ``_member_source`` describing where each came from (for errors).
+    Two members that are checkouts of one repository at the same place in
+    it (a worktree, a second clone) are one pipeline: the main worktree's
+    is listed, else the one found first, and a warning names the other.
+    One that is a checkout of an explicit entry's repository is left to
+    the entry, with a warning.
+
     :raises ValueError: With fix-it suggestions, on broken explicit paths,
-        v1-format members, or two members deriving the same ID.
+        v1-format members, or two members deriving the same ID that are
+        not one pipeline.
     """
     import glob as glob_module
 
-    from chartbook.identity import derive_pipeline_id
+    from chartbook.identity import checkout_of, derive_pipeline_id, same_pipeline_checked_out
 
     excluded_paths = _expand_exclude_patterns(exclude, base_dir)
     catalog_dir = Path(base_dir).resolve()
@@ -1382,9 +1429,10 @@ def _discover_member_pipelines(
     for key, entry in explicit_entries.items():
         entry_path = entry.get("path")
         if isinstance(entry_path, str):
-            explicit_paths[(catalog_dir / entry_path).resolve()] = key
+            explicit_paths[catalog_entry_dir(base_dir, Path(entry_path))] = key
 
     discovered = {}
+    member_dirs = {}  # the folder of each discovered pipeline, by its ID
     seen_dirs = set()
     for pattern in members:
         is_glob = is_glob_pattern(pattern)
@@ -1458,20 +1506,54 @@ def _discover_member_pipelines(
 
             if member_id in discovered:
                 other = discovered[member_id]
-                raise ValueError(
-                    f"{source}: two catalog members resolve to the same pipeline "
-                    f"ID {member_id!r}:\n"
-                    f"  - {other['path']} (from {other['_member_source']})\n"
-                    f"  - {member_dir} (from {member_source})\n"
-                    f"To fix, do one of:\n"
-                    f"  - give one repo a distinct explicit ID in its own "
-                    f"chartbook.toml:  [project] id = \"myscope/{member_id.rsplit('/', 1)[-1]}\"\n"
-                    f"  - exclude one path in this catalog:  [pipelines] "
-                    f"exclude = [\"{member_dir}\"]"
-                )
+                # Two checkouts of one repository (a worktree, a second
+                # clone) are one pipeline, and the catalog shows it once:
+                # from the main worktree, else the one found first
+                theirs, mine = checkout_of(member_dirs[member_id]), checkout_of(member_dir)
+                if same_pipeline_checked_out(theirs, mine):
+                    shown, passed = member_dirs[member_id], member_dir
+                    if mine.main and not theirs.main:
+                        shown, passed = passed, shown
+                    warnings.warn(
+                        f"{source}: catalog members {shown} and {passed} are checkouts of one "
+                        f"repository, so one pipeline, {member_id!r}: the catalog shows {shown}, and "
+                        f"not {passed}. To show {passed} instead, exclude {shown}:  [pipelines] "
+                        f"exclude = [\"{shown}\"]; to show both, give one its own [project] id.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    if shown != member_dir:
+                        continue
+                else:
+                    raise ValueError(
+                        f"{source}: two catalog members resolve to the same pipeline "
+                        f"ID {member_id!r}:\n"
+                        f"  - {other['path']} (from {other['_member_source']})\n"
+                        f"  - {member_dir} (from {member_source})\n"
+                        f"To fix, do one of:\n"
+                        f"  - give one repo a distinct explicit ID in its own "
+                        f"chartbook.toml:  [project] id = \"myscope/{member_id.rsplit('/', 1)[-1]}\"\n"
+                        f"  - exclude one path in this catalog:  [pipelines] "
+                        f"exclude = [\"{member_dir}\"]"
+                    )
             # An entry with no path names a pipeline shown from the store: the
             # folder found here is that pipeline, and fills the entry in
             if member_id in explicit_entries and explicit_entries[member_id].get("path") is not None:
+                try:
+                    named = catalog_entry_dir(base_dir, resolve_platform_path(explicit_entries[member_id]["path"]))
+                except (ValueError, TypeError):
+                    named = None
+                if named is not None and same_pipeline_checked_out(checkout_of(named), checkout_of(member_dir)):
+                    # Another checkout of the explicit entry's repository: the entry wins
+                    warnings.warn(
+                        f"{source}: catalog member {member_dir} (from {member_source}) is another "
+                        f"checkout of the repository of [pipelines.\"{member_id}\"], at {named}, so the "
+                        f"same pipeline: the catalog shows the entry's. To show both, give one its own "
+                        f"[project] id.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    continue
                 raise ValueError(
                     f"{source}: catalog member {member_dir} (from {member_source}) "
                     f"derives the ID {member_id!r}, which is already declared as an "
@@ -1488,6 +1570,7 @@ def _discover_member_pipelines(
             except ValueError:
                 rel_path = str(member_dir)
             discovered[member_id] = {"path": rel_path, "_member_source": member_source}
+            member_dirs[member_id] = member_dir
 
     return discovered
 
@@ -1625,9 +1708,9 @@ def _load_catalog_manifest(raw_manifest):
         path_to_pipeline = pipeline_entry.get("path")
         if path_to_pipeline is None:
             continue
-        path_to_pipeline = resolve_platform_path(path_to_pipeline)
-        pipeline_base_dir = Path(base_dir) / path_to_pipeline
-        pipeline_base_dir = pipeline_base_dir.resolve()
+        pipeline_base_dir = catalog_entry_dir(
+            base_dir, resolve_platform_path(path_to_pipeline), where=f"{source}: [pipelines.\"{pipeline_id}\"]"
+        )
         assert validate_manifest_file(pipeline_base_dir)
         sub_manifest = load_manifest(base_dir=pipeline_base_dir)
         if sub_manifest["project"]["type"] != "pipeline":
@@ -1723,7 +1806,7 @@ def _git(base_dir: Path, *args: str) -> Union[str, None]:
             capture_output=True,
             text=True,
             timeout=15,
-            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.SubprocessError):
         return None

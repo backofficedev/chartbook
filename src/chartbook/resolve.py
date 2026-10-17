@@ -69,6 +69,7 @@ from chartbook.errors import (
 from chartbook.identity import (
     UnsupportedRegistryError,
     UnsupportedRevisionError,
+    in_another_case,
     match_pipeline_ref,
 )
 from chartbook.refs import DEFAULT_KIND, KIND_TABLES, AssetRef, parse_asset_ref
@@ -205,10 +206,13 @@ class PipelineNotFoundError(KeyError):
             "catalog": "In the catalog",
         }
         known = [name for names in candidates.values() for name in names]
-        close = difflib.get_close_matches(pipeline, known, n=1)
+        other = in_another_case(known, pipeline)
+        close = [other] if other else difflib.get_close_matches(pipeline, known, n=1)
         parts = [f"Pipeline {pipeline!r} not found."]
         if close:
             parts.append(f"Did you mean {close[0]!r}?")
+        if other:
+            parts.append("A scope derived from a remote is in lowercase.")
         parts += [
             f"{labels[step]}: {', '.join(names) or '(none)'}."
             for step, names in candidates.items()

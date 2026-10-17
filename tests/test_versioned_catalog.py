@@ -1,6 +1,7 @@
 """A catalog shows every snapshot of every pipeline, each its own site built from the store alone
 (docs_src/design/versioned-catalog.md, step 2)."""
 
+import html
 import json
 import re
 from pathlib import Path
@@ -664,10 +665,84 @@ class TestAPipelineFromTheStoreAlone:
         assert "contains a link" not in result.output, result.output
         page = root / "docs" / "cb" / "pipelines" / "pipeline_c_README.html"
         assert _links(page) and all(_resolves(page, h) for h in _links(page))
+        # Its dataframes are listed beside the catalog's own, each linked to its page in the newest version
+        listing = root / "docs" / "cb" / "dataframes.html"
+        assert "Dataframe 0" in listing.read_text()
+        assert any("pipeline_c/" in h and h.endswith("dataframe_0.html") and _resolves(listing, h) for h in _links(listing))
+
+    def test_its_assets_are_listed_from_its_newest_snapshot(self, catalog, tmp_path, monkeypatch):
+        """Found by a new-user test: a colleague's pipeline had a page and versions, and none of its
+        dataframes in the catalog's Dataframes list or in `chartbook ls`."""
+        root, first, second = catalog
+        taken = self._elsewhere(tmp_path)
+        _show_from_the_store(root)
+        _build(root, monkeypatch)
+        site = root / "docs"
+        record = next(r for r in json.loads((site / "index.json").read_text())["records"] if r["id"] == "pipeline_c")
+        assert record["assets"] == ["pipeline_c:chart/chart_0_0", "pipeline_c:dataframe_0"]
+        assert record["asset_names"] == {"pipeline_c:chart/chart_0_0": "Chart 0-0", "pipeline_c:dataframe_0": "Dataframe 0"}
+        listing = site / "cb" / "dataframes.html"
+        assert "Dataframe 0" in listing.read_text() and "Not on this machine" in listing.read_text()
+        linked = [h for h in _links(listing) if h.endswith("/cb/dataframes/pipeline_c/dataframe_0.html")]
+        assert linked and all(_resolves(listing, h) for h in linked)
+        readme = site / "cb" / "pipelines" / "pipeline_c_README.html"
+        assert "Chart 0-0" in readme.read_text()
+        assert all(_resolves(readme, h) for h in _links(readme))
+        # And `chartbook ls`, in the tree and the flat lists
+        tree = CliRunner().invoke(main, ["ls", "--catalog", str(root)])
+        assert tree.exit_code == 0, tree.output
+        assert "[pipeline] pipeline_c: (store only" in tree.output
+        assert "  [dataframe] pipeline_c:dataframe_0: Dataframe 0\n  [chart] pipeline_c:chart/chart_0_0: Chart 0-0" in tree.output
+        flat = CliRunner().invoke(main, ["ls", "--catalog", str(root), "dataframes"])
+        assert "pipeline_c:dataframe_0: Dataframe 0" in flat.output
+        assert "pipeline_c:chart/chart_0_0: Chart 0-0" in CliRunner().invoke(main, ["ls", "--catalog", str(root), "charts"]).output
+
+    def test_a_long_list_is_cut(self, catalog, tmp_path, monkeypatch):
+        """Found by a review: anyone who can write to the store chooses how many assets a pipeline
+        known only from it lists, and every one was on the catalog's pages."""
+        import shutil
+
+        from tests.fixtures import create_pipeline_project
+
+        root, first, second = catalog
+        repository = tmp_path.resolve() / "elsewhere"
+        project = create_pipeline_project(
+            repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C", dataframe_count=3
+        )
+        _git(repository, "init", "--quiet", "-b", "main")
+        _commit(repository)
+        snapshot.make(project)
+        shutil.rmtree(repository)
+        _show_from_the_store(root)
+        monkeypatch.setattr(snapshot, "STORED_ASSETS_SHOWN", 2)
+        _build(root, monkeypatch)
+        site = root / "docs" / "cb"
+        listing = (site / "dataframes.html").read_text()
+        assert "and 1 more of" in listing and "Dataframe 2" not in listing
+        readme = site / "pipelines" / "pipeline_c_README.html"
+        assert "and 4 more, in" in readme.read_text()
+        assert all(_resolves(readme, h) for h in _links(readme))
+        tree = CliRunner().invoke(main, ["ls", "--catalog", str(root)]).output
+        assert "  ... and 4 more" in tree
+        assert "... and 1 more of pipeline_c" in CliRunner().invoke(main, ["ls", "--catalog", str(root), "dataframes"]).output
+
+    def test_ls_writes_references_as_everything_else_does(self, catalog):
+        """Found by a new-user test: `first_pipeline/rates` reads as a scoped pipeline ID."""
+        root, first, second = catalog
+        tree = CliRunner().invoke(main, ["ls", "--catalog", str(root)]).output
+        assert "  [dataframe] pipeline_a:dataframe_0: Dataframe 0" in tree
+        assert "  [chart] pipeline_a:chart/chart_0_0: Chart 0-0" in tree
+        assert "pipeline_a/" not in tree
+        assert "pipeline_b:dataframe_0: Dataframe 0" in CliRunner().invoke(main, ["ls", "--catalog", str(root), "dataframes"]).output
+        charts = CliRunner().invoke(main, ["ls", "--catalog", str(root), "charts"]).output
+        assert "pipeline_b:chart/chart_0_0: Chart 0-0" in charts and "pipeline_b/" not in charts
+        single = CliRunner().invoke(main, ["ls", "--catalog", str(root / "pipelines" / "pipeline_a")]).output
+        assert "  [dataframe] pipeline_a:dataframe_0: Dataframe 0" in single
 
 
-def _elsewhere_with(tmp_path, **project) -> "snapshot.Snapshot":
-    """A pipeline `pipeline_c` snapshotted elsewhere with these `[project]` fields, its folder then gone."""
+def _elsewhere_with(tmp_path, asset_name: str = "", **project) -> "snapshot.Snapshot":
+    """A pipeline `pipeline_c` snapshotted elsewhere with these `[project]` fields (and this name for
+    its dataframe and its chart), its folder then gone."""
     import shutil
 
     from tests.fixtures import create_pipeline_project
@@ -676,6 +751,8 @@ def _elsewhere_with(tmp_path, **project) -> "snapshot.Snapshot":
     folder = create_pipeline_project(repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C")
     manifest = tomli.loads((folder / "chartbook.toml").read_text())
     manifest["project"].update(project)
+    if asset_name:
+        manifest["dataframes"]["dataframe_0"]["name"] = manifest["charts"]["chart_0_0"]["name"] = asset_name
     (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
     _git(repository, "init", "--quiet", "-b", "main")
     _commit(repository)
@@ -793,6 +870,24 @@ class TestWhatTheStoreOnlyReviewFound:
         title = (site / "cb" / "pipelines" / "pipeline_c_README.html").read_text().split("<title>", 1)[1].split("</title>", 1)[0]
         assert "<" not in title and "‹" in title
         assert not any("TOP-SECRET-TEXT" in page.read_text(errors="ignore") for page in site.rglob("*.html"))
+
+    @pytest.mark.parametrize("writer", ["sphinx", "mkdocs"])
+    def test_an_assets_name_is_text_too(self, catalog, tmp_path, monkeypatch, writer):
+        if writer == "mkdocs":
+            pytest.importorskip("mkdocs")
+            pytest.importorskip("material")
+        root, first, second = catalog
+        _elsewhere_with(tmp_path, asset_name="D <script>alert(8)</script> [x](javascript:alert(9)) <b onmouseover=alert(4)>\x1b[31m")
+        _show_from_the_store(root, writer=writer)
+        _build(root, monkeypatch)
+        site = root / "docs"
+        for page in (site / "cb" / "dataframes.html", site / "cb" / "pipelines" / "pipeline_c_README.html"):
+            self._no_markup_from_the_store(page)
+            # As a browser shows it: one writer leaves the character references in the page as written
+            assert "D ‹script›alert(8)‹/script›" in html.unescape(page.read_text()), page
+            assert "\x1b" not in page.read_text()
+        listed = CliRunner().invoke(main, ["ls", "--catalog", str(root)]).output
+        assert "[dataframe] pipeline_c:dataframe_0: D <script>alert(8)</script>" in listed and "\x1b" not in listed
 
     def test_a_web_address_is_a_link(self, catalog, tmp_path, monkeypatch):
         root, first, second = catalog

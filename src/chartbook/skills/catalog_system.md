@@ -71,9 +71,9 @@ chartbook catalog add ./my-pipeline --catalog /path/to/catalog/chartbook.toml
 
 **Behavior:**
 - Validates each directory contains a `chartbook.toml` that resolves to a pipeline (an empty file counts — type is inferred)
-- Derives the scoped catalog key (`scope/name`) from an explicit `[project] id` if set, else from the target's git remote plus directory name, falling back to the bare directory name
+- Keys the entry by the pipeline's ID: an explicit `[project] id` if set; else, at the top of a git repository with a remote, the repository's scope and name from the remote (whatever the folder is called); in a subfolder, the remote's scope and the subfolder's name; with no remote, the bare folder name
 - Writes the key quoted in TOML when it contains `/`: `[pipelines."ftsfr/crsp_treasury"]`
-- Stores relative paths from the catalog directory in the entry's `path` key
+- Stores relative paths from the catalog directory in the entry's `path` key, worked out between the two folders with any link in their paths followed
 - Detects duplicates by absolute path comparison
 - Re-adding a disabled pipeline automatically re-enables it
 
@@ -174,8 +174,8 @@ chartbook ls --catalog /path/to/catalog/chartbook.toml
 Catalog: /path/to/catalog/chartbook.toml
 
 [pipeline] acme/sales: Sales Analytics Pipeline
-  [dataframe] acme/sales/sales_data: Sales Transactions
-  [chart] acme/sales/monthly_sales: Monthly Sales Overview
+  [dataframe] acme/sales:sales_data: Sales Transactions
+  [chart] acme/sales:chart/monthly_sales: Monthly Sales Overview
 ```
 
 ### Access Dataframe Metadata

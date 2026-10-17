@@ -532,3 +532,74 @@ class TestAddAPipelineShownFromTheStore:
         pipelines = _read_catalog(catalog_dir)["pipelines"]
         assert pipelines["my_pipeline"] == {"path": "../a/my_pipeline"}
         assert pipelines["my_pipeline_2"] == {"path": "../b/my_pipeline"}
+
+
+class TestAHomeReachedThroughALink:
+    """Found by a new-user test: with the home folder reached through a link (a Linux cluster's home,
+    a moved macOS home, /var on macOS), the global catalog's path was worked out from the link and
+    read back from the folder it leads to, and named no folder."""
+
+    def test_what_add_writes_is_where_the_pipeline_is(self, tmp_path, monkeypatch):
+        real = tmp_path / "volumes" / "users" / "real-home"
+        real.mkdir(parents=True)
+        link = tmp_path / "link-home"
+        link.symlink_to(real)
+        monkeypatch.setenv("HOME", str(link))
+        assert Path.home() == link and Path.home().resolve() == real
+        pipeline_dir = _make_minimal_pipeline(tmp_path / "first_pipeline")
+        runner = CliRunner()
+        assert runner.invoke(main, ["catalog", "init", "--title", "Mine"]).exit_code == 0
+        assert (link / ".chartbook" / "chartbook.toml").is_file()
+
+        result = runner.invoke(main, ["catalog", "add", str(pipeline_dir)])
+
+        assert result.exit_code == 0, result.output
+        written = _read_catalog(link / ".chartbook")["pipelines"]["first_pipeline"]["path"]
+        assert (real / ".chartbook" / written).resolve() == pipeline_dir.resolve()
+        listed = runner.invoke(main, ["ls"])
+        assert listed.exit_code == 0, listed.output
+        assert "[pipeline] first_pipeline: Test Pipeline" in listed.output
+
+    def test_a_path_written_from_the_link_is_still_read(self, tmp_path):
+        """Found by a review: an entry an older `catalog add` wrote from the folder as named (and
+        what `realpath` on Windows makes of `..` under a junction) named no folder once paths were
+        read from the resolved one. When that finds no chartbook.toml, the path is read as written."""
+        import os
+
+        from chartbook.manifest import load_manifest
+
+        real = tmp_path / "volumes" / "users" / "real-home"
+        (real / ".chartbook").mkdir(parents=True)
+        link = tmp_path / "link-home"
+        link.symlink_to(real)
+        pipeline_dir = _make_minimal_pipeline(tmp_path / "first_pipeline")
+        written = os.path.relpath(pipeline_dir, link / ".chartbook")  # from the link, as the old add did
+        _make_minimal_catalog(link / ".chartbook", {"first_pipeline": {"path": written}})
+        loaded = load_manifest(link / ".chartbook")
+        assert Path(loaded["pipelines"]["first_pipeline"]["pipeline_base_dir"]) == pipeline_dir.resolve()
+
+    def test_and_by_the_commands_however_the_catalog_is_named(self, tmp_path, monkeypatch):
+        """Found by a review: `ls --catalog`, and `check` in the catalog's folder or with
+        --project-dir, read the catalog from its folder with the link followed, and did not find the
+        entry; when they do, they say what to write instead."""
+        import os
+
+        real = tmp_path / "volumes" / "users" / "real-home"
+        (real / ".chartbook").mkdir(parents=True)
+        link = tmp_path / "link-home"
+        link.symlink_to(real)
+        pipeline_dir = _make_minimal_pipeline(tmp_path / "first_pipeline")
+        written = os.path.relpath(pipeline_dir, link / ".chartbook")
+        _make_minimal_catalog(link / ".chartbook", {"first_pipeline": {"path": written}})
+        instead = Path(os.path.relpath(pipeline_dir.resolve(), (real / ".chartbook").resolve())).as_posix()
+        runner = CliRunner()
+        listed = runner.invoke(main, ["ls", "--catalog", str(link / ".chartbook")])
+        assert listed.exit_code == 0, listed.output
+        assert "[pipeline] first_pipeline: Test Pipeline" in listed.output
+        checked = runner.invoke(main, ["check", "--project-dir", str(link / ".chartbook"), "--skip-outputs"])
+        assert "No chartbook.toml found" not in checked.output
+        assert f'Write path = "{instead}"' in checked.output
+        monkeypatch.chdir(link / ".chartbook")
+        monkeypatch.setenv("PWD", str(link / ".chartbook"))
+        here = runner.invoke(main, ["check", "--skip-outputs"])
+        assert "No chartbook.toml found" not in here.output and f'Write path = "{instead}"' in here.output

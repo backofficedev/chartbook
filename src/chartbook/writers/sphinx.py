@@ -276,7 +276,27 @@ def _from_the_store(record: dict) -> dict:
     for key in ("repo_url", "site_url"):
         if web_link(record.get(key)):
             shown[key] = web_link(record[key])
+    # Its assets, as its newest snapshot lists them: each an ID of this
+    # pipeline's that reads as one, and its name as text
+    shown["assets"] = [asset_id for asset_id in record.get("assets") or [] if _own_asset(record["id"], asset_id)]
+    names = record.get("asset_names") if isinstance(record.get("asset_names"), dict) else {}
+    shown["asset_names"] = {
+        asset_id: _as_text(names[asset_id]) for asset_id in shown["assets"] if _as_text(names.get(asset_id))
+    }
     return shown
+
+
+def _own_asset(pipeline_id: str, asset_id: object):
+    """An asset ID as a reference, if it reads as one of this pipeline's assets with no part or revision; else None."""
+    from chartbook.refs import parse_asset_ref
+
+    try:
+        ref = parse_asset_ref(asset_id) if isinstance(asset_id, str) else None
+    except ValueError:
+        return None
+    if ref is None or ref.pipeline_id != pipeline_id or ref.registry or ref.part or ref.rev:
+        return None
+    return ref
 
 
 @dataclass
@@ -764,9 +784,59 @@ class SphinxWriter:
                 f'The newest snapshot: <a href="../../{target}/index.html">`{newest["commit"][:7]}`, made {made}</a>. '
                 f"[Every version](../versions.md)."
             )
+            assets = self.from_the_store_assets(("dataframe", "chart", "model"), self.pipeline_page_path(pipeline), pipeline["id"])
+            if assets:
+                lines += ["", "What its newest snapshot holds, each linked to its page there:", ""]
+                lines += [
+                    f'- and {a["more"]} more, in <a href="{a["link"]}">the snapshot\'s site</a>'
+                    if a.get("more")
+                    else f'- <a href="{a["link"]}">{a["title"]}</a> · {a["kind"]} `{a["id"]}`'
+                    for a in assets
+                ]
         else:
             lines.append("No snapshot of it is in the store yet.")
         return "\n".join(lines) + "\n"
+
+    def from_the_store_assets(self, kinds: tuple, from_path: str, pipeline_id: Optional[str] = None) -> list:
+        """The assets of the pipelines shown from the store alone, as each one's newest snapshot lists them.
+
+        Each is linked to its page in that snapshot's site, relative to the
+        page at *from_path*, or to the page there that says why the site
+        could not be built; one of a kind with no page (a notebook, a note)
+        is left out. The title is the asset's name as text
+        (:func:`_as_text`), else its name in its pipeline. At most
+        :data:`chartbook.snapshot.STORED_ASSETS_SHOWN` of each pipeline's are
+        listed, since anyone who can write to the store chose how many there
+        are; then one entry with ``more``, how many are not, linked to the
+        snapshot's site.
+
+        :param kinds: The kinds to list, as a reference names them: ``dataframe``, ``chart``, ``model``.
+        :param pipeline_id: Only this pipeline's; every one's by default.
+        :returns: Each as ``{"kind", "id", "title", "pipeline", "link"}``, by pipeline, then kind, then name.
+        """
+        from chartbook.snapshot import STORED_ASSETS_SHOWN
+        from chartbook.versions import site_path
+
+        listed = []
+        for pipeline in sorted((r for r in self.records.values() if _is_from_the_store(r)), key=lambda r: r["id"]):
+            if pipeline_id is not None and pipeline["id"] != pipeline_id:
+                continue
+            newest = (pipeline.get("snapshots") or [{}])[0]
+            own = []
+            for asset_id in pipeline.get("assets") or []:
+                ref = _own_asset(pipeline["id"], asset_id)
+                if ref is None or ref.kind not in kinds:
+                    continue
+                link = self._version_page(from_path, asset_id, newest.get("commit"), newest.get("made_at"))
+                if link:
+                    title = (pipeline.get("asset_names") or {}).get(asset_id) or _as_text(ref.name)
+                    own.append({"kind": ref.kind, "id": asset_id, "title": title, "pipeline": pipeline["id"], "link": link})
+            own.sort(key=lambda a: (kinds.index(a["kind"]), a["id"]))
+            listed += own[:STORED_ASSETS_SHOWN]
+            if len(own) > STORED_ASSETS_SHOWN:
+                root = "../" * from_path.count("/") + site_path(pipeline["id"], newest["name"])
+                listed.append({"more": len(own) - STORED_ASSETS_SHOWN, "pipeline": pipeline["id"], "link": f"{root}/index.html"})
+        return listed
 
     def _versions(self) -> list:
         """Each pipeline with its working version and its snapshots, for the versions page.
@@ -837,7 +907,8 @@ class SphinxWriter:
             return environment.get_template("versions.md").render(pipelines=self._versions())
         if page_path == "cb/dataframes.md":
             return environment.get_template("dataframes.md").render(
-                dataframe_file_list=[p.removeprefix("cb/") for p in dataframes]
+                dataframe_file_list=[p.removeprefix("cb/") for p in dataframes],
+                stored_dataframes=self.from_the_store_assets(("dataframe",), page_path),
             )
         if page_path == "cb/models.md":
             return environment.get_template("models.md").render(
