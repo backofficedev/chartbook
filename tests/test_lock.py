@@ -10,8 +10,8 @@ pipelines; that is the next part.
 import hashlib
 import json
 import os
+import subprocess
 import time
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import jsonschema
@@ -78,12 +78,6 @@ def _age(store: Store, seconds: float = 2 * lock.RECENT_SECONDS) -> None:
     then = time.time() - seconds
     for content_hash in store.hashes():
         os.utime(store.object_path(content_hash), (then, then))
-
-
-def _days_ago(days: float) -> str:
-    """A snapshot's time, so many days before now."""
-    then = datetime.now(timezone.utc) - timedelta(days=days)
-    return then.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 @pytest.fixture
@@ -251,8 +245,14 @@ class TestFrozen:
         # A pin that names no commit, as one in a lockfile changed by hand
         name_no_snapshot(downstream, "acme/rates")
         (problem,) = lock.verify(downstream, store).problems
-        assert "`chartbook update acme/rates` pins it from a snapshot the store has" in problem.message
-        assert update_from_snapshots(downstream, store=store).problems == [] and store.has(HELLO)
+        assert (
+            "or its owner's `chartbook snapshot` puts it back, then `chartbook update acme/rates` pins it."
+            in problem.message
+        )
+        # ...which is what puts it back
+        snapshot_dependencies(downstream, store)
+        assert store.has(HELLO)
+        assert lock.update(downstream, store=store).problems == []
         assert lock.verify(downstream, store).problems == []
 
     @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a store this user cannot write")
@@ -405,8 +405,10 @@ class TestPin:
     def test_what_was_not_built_is_pinned_by_update_once_a_snapshot_has_it(self, downstream, rates, store):
         """A dependency is pinned to one snapshot, whole: `pin` moves none of it."""
         pin_from_snapshots(downstream, store)
+        assert [e.detail for e in lock.pin(downstream, store).events if e.status == "not_built"] == ["./_models/ar1"]
         _train(rates)  # an asset that was declared and not built
-        assert _statuses(pin_from_snapshots(downstream, store))["model/ar1"] == "not_built"
+        (event,) = [e for e in pin_from_snapshots(downstream, store).events if e.asset == "acme/rates:model/ar1"]
+        assert (event.status, event.detail) == ("not_built", "a newer snapshot has it: `chartbook update` pins it")
         report = update_from_snapshots(downstream, store=store)
         assert _statuses(report) == {
             "treasury": "kept",
@@ -814,121 +816,122 @@ class TestStoreRoots:
             store.roots()
 
 
-def _pin_then_update(downstream: Path, rates: Path, store: Store) -> tuple:
-    """Pin, then update to new data, each from a snapshot made a month ago.
+def _commit_everything(directory: Path) -> None:
+    """Commit everything in a pipeline's folder, its built data too, making it a repository first if need be.
 
-    :returns: The lockfile as it was before the update, the snapshot it
-        pinned, and the one the update moved to.
+    What a ``git`` dependency then pins from: its bytes come from its
+    repository's commit, with no snapshot to keep them as well, so in the
+    tests of ``store gc`` only lockfiles keep objects.
     """
-    (old,) = snapshot_dependencies(downstream, store, made_at=_days_ago(31))
-    lock.pin(downstream, store)
-    before = (downstream / LOCK_FILE).read_bytes()
+
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ["git", "-c", "user.name=Test", "-c", "user.email=test@example.org", *arguments],
+            cwd=directory,
+            capture_output=True,
+            check=True,
+        )
+
+    if not (directory / ".git").exists():
+        git("init", "--quiet", "-b", "main")
+    git("add", "-A", "--", ".")
+    git("commit", "--quiet", "-m", "Work", "--", ".")
+
+
+def _pin_then_update(downstream: Path, rates: Path, pin, update) -> None:
+    """Pin ``rates`` as a ``git`` dependency, then update it to a commit with new data.
+
+    *pin* and *update* run the pin and the update, by the library or the
+    command.
+    """
+    _commit_everything(rates)
+    _depend(downstream, acme__rates={"git": "../rates"})
+    pin()
     _replace(rates / "_data" / "treasury.parquet", b"new numbers")
-    (new,) = snapshot_dependencies(downstream, store, made_at=_days_ago(30))
-    lock.update(downstream, store=store)
-    return before, old.snapshot, new.snapshot
-
-
-def _old_version(old) -> set:
-    """What an update leaves that only the snapshot it moved from names: the old data, and that version's index."""
-    return {HELLO, old.index["content_hash"]}
+    _commit_everything(rates)
+    update()
 
 
 class TestGc:
-    """What no lockfile names, and no snapshot that is kept, can go.
+    """What no lockfile names can go.
 
-    The snapshots here are a month old, so the one pinned before an update
-    is kept by nothing and goes, with what only it named.
+    The dependency is a ``git`` one, so that nothing but a lockfile keeps
+    an object; what a snapshot keeps is tested in tests/test_snapshot.py.
     """
 
     @pytest.fixture
-    def updated(self, downstream, rates, store):
-        return _pin_then_update(downstream, rates, store)
-
-    @pytest.fixture
-    def moved(self, updated, store):
-        """A store with what an update left behind, an hour old."""
+    def moved(self, downstream, rates, store):
+        """A store with one object that an update left behind, an hour old."""
+        _pin_then_update(downstream, rates, lambda: lock.pin(downstream, store), lambda: lock.update(downstream, store=store))
         _age(store)
         return store
 
-    def test_what_no_lockfile_names_can_go(self, moved, updated, downstream):
-        _, old, new = updated
+    def test_what_no_lockfile_names_can_go(self, moved, downstream):
         plan = lock.plan_gc(moved)
         assert plan.lockfiles == [(downstream / LOCK_FILE, True)]
-        # What the lockfile names, and the index and documents of its snapshot
-        assert plan.kept == len(new.hashes()) == 5
-        assert [taken for taken, _ in plan.snapshots_delete] == [old]
-        assert {content_hash for content_hash, _ in plan.delete} == _old_version(old)
-        assert plan.size_bytes == 5 + old.index["size_bytes"]
+        assert plan.kept == 3
+        assert plan.delete == [(HELLO, 5)] and plan.size_bytes == 5
         assert plan.recent == [] and plan.forget == []
         # Planning removes nothing
         assert moved.has(HELLO)
 
-        assert lock.run_gc(plan, moved) == (1, 2)
+        assert lock.run_gc(plan, moved) == (0, 1)
         assert not moved.has(HELLO)
-        assert set(moved.hashes()) == new.hashes() and lock.read_lock(downstream).hashes() <= new.hashes()
+        assert set(moved.hashes()) == lock.read_lock(downstream).hashes()
         assert moved.verify() == []
         assert lock.plan_gc(moved).delete == []
 
-    def test_what_was_stored_in_the_last_hour_is_left_alone(self, updated, store):
+    def test_what_was_stored_in_the_last_hour_is_left_alone(self, downstream, rates, store):
         """A pin stores a file before it writes the lockfile that names it."""
-        _, old, _ = updated
+        _pin_then_update(downstream, rates, lambda: lock.pin(downstream, store), lambda: lock.update(downstream, store=store))
         plan = lock.plan_gc(store)
-        assert plan.delete == [] and set(plan.recent) == _old_version(old)
-        assert {h for h, _ in lock.plan_gc(store, recent_seconds=0).delete} == _old_version(old)
+        assert plan.delete == [] and plan.recent == [HELLO]
+        assert lock.plan_gc(store, recent_seconds=0).delete == [(HELLO, 5)]
 
     def test_storing_an_object_again_makes_it_recent(self, moved, rates):
         _replace(rates / "_data" / "old.parquet", b"hello")
         moved.put(rates / "_data" / "old.parquet")
         assert lock.plan_gc(moved).recent == [HELLO]
 
-    def test_another_projects_pins_are_kept(self, moved, updated, downstream, rates, work):
+    def test_another_projects_pins_are_kept(self, moved, downstream, rates, work):
         """The store is shared. Clearing it out from one project spares the rest."""
-        _, old, new = updated
         other = work / "other"
-        _write_manifest(rates.with_name("old_rates"), {"dataframes": {"t": {"path": "./t.parquet", "docs": "d"}}})
-        (rates.with_name("old_rates") / "t.parquet").write_bytes(b"hello")
-        _depend(other, old={"path": "../old_rates"})
-        (theirs,) = snapshot_dependencies(other, moved)
+        old_rates = rates.with_name("old_rates")
+        _write_manifest(old_rates, {"dataframes": {"t": {"path": "./t.parquet", "docs": "d"}}})
+        (old_rates / "t.parquet").write_bytes(b"hello")
+        _commit_everything(old_rates)
+        _depend(other, old={"git": "../old_rates"})
         lock.pin(other, moved)
         _age(moved)
 
         plan = lock.plan_gc(moved)
         assert [found for _, found in plan.lockfiles] == [True, True]
-        # The old data is the other project's pin: only the old index goes
-        assert plan.delete == [(old.index["content_hash"], old.index["size_bytes"])]
-        assert plan.kept == len(new.hashes() | theirs.snapshot.hashes()) and HELLO in theirs.snapshot.hashes()
+        assert plan.delete == [] and plan.kept == 4
 
     def test_a_lockfile_that_cannot_be_found_still_keeps_its_pins(self, moved, downstream):
         kept_before = lock.read_lock(downstream).hashes()
         os.rename(downstream, downstream.with_name("unplugged"))
         plan = lock.plan_gc(moved)
         assert plan.lockfiles == [(downstream / LOCK_FILE, False)]
-        # Which snapshot it pins cannot be read either: each that holds what
-        # it named is kept, the one before the update too
-        assert plan.snapshots_delete == [] and plan.delete == []
+        assert plan.kept == 3 and plan.delete == [(HELLO, 5)]
         lock.run_gc(plan, moved)
-        assert kept_before <= set(moved.hashes()) and moved.has(HELLO)
+        assert set(moved.hashes()) == kept_before
         assert len(moved.roots()) == 1
 
-    def test_unless_told_to_forget_it(self, moved, updated, downstream):
-        _, old, new = updated
+    def test_unless_told_to_forget_it(self, moved, downstream):
         os.rename(downstream, downstream.with_name("deleted"))
         plan = lock.plan_gc(moved, forget_missing=True)
         assert plan.forget == [downstream / LOCK_FILE]
-        # Nothing is kept for it; what stays is what the newest snapshot holds
-        assert plan.kept == len(new.hashes())
-        assert {h for h, _ in plan.delete} == _old_version(old)
-        assert lock.run_gc(plan, moved) == (1, 2)
-        assert set(moved.hashes()) == new.hashes() and moved.roots() == []
+        assert plan.kept == 0 and len(plan.delete) == 4
+        assert lock.run_gc(plan, moved) == (0, 4)
+        assert list(moved.hashes()) == [] and moved.roots() == []
 
-    def test_a_lockfile_is_read_as_it_is_now(self, moved, updated, downstream):
+    def test_a_lockfile_is_read_as_it_is_now(self, moved, downstream):
         """Checked out at another commit, say, and not pinned again since."""
-        before, old, _ = updated
-        (downstream / LOCK_FILE).write_bytes(before)  # it pins the snapshot before the update
-        plan = lock.plan_gc(moved)
-        assert (old, "a lockfile pins it") in plan.snapshots_kept
-        assert plan.delete == []
+        locked = lock.read_lock(downstream)
+        del locked.assets["acme/rates:by_year"]
+        lock.write_lock(locked, downstream / LOCK_FILE)
+        assert len(lock.plan_gc(moved).delete) == 2
 
     def test_a_lockfile_that_cannot_be_read_stops_it(self, moved, downstream):
         (downstream / LOCK_FILE).write_text("not json")
@@ -1028,102 +1031,66 @@ class TestCommands:
         assert result.exit_code == 0, result.output
         assert (downstream / LOCK_FILE).is_file()
 
-    def _pin_then_update(self, downstream, rates):
-        """Pin, then update to new data, each from a snapshot made a month ago.
-
-        The snapshot pinned before the update is then kept by nothing, and
-        `store gc` lets it go, with the old data and that version's index,
-        which only it named.
-
-        :returns: The snapshot pinned before the update, and the one after.
-        """
-        (old,) = snapshot_dependencies(downstream, made_at=_days_ago(31))
-        self._run("pin")
-        _replace(rates / "_data" / "treasury.parquet", b"new numbers")
-        (new,) = snapshot_dependencies(downstream, made_at=_days_ago(30))
-        self._run("update")
-        return old.snapshot, new.snapshot
-
     @pytest.fixture
     def garbage(self, here, downstream, rates):
-        """A store with what an update left behind, an hour old; the snapshots before and after it."""
-        old, new = self._pin_then_update(downstream, rates)
+        """A store with one object that an update left behind, an hour old."""
+        _pin_then_update(downstream, rates, lambda: self._run("pin"), lambda: self._run("update"))
         _age(here)
-        return here, old, new
+        return here
 
     def test_gc_dry_run_removes_nothing(self, garbage, downstream):
-        from chartbook.cli import _format_bytes
-
-        store, old, _ = garbage
-        left = sorted([(HELLO, 5), (old.index["content_hash"], old.index["size_bytes"])])
         result = self._run("store", "gc", "--dry-run")
         assert result.exit_code == 0, result.output
         assert result.output.splitlines() == [
-            "Kept: 5 object(s), named by 1 lockfile(s)",
+            "Kept: 3 object(s), named by 1 lockfile(s)",
             f"  {downstream / LOCK_FILE}",
-            "Kept: 1 snapshot(s), naming 5 object(s): 1 because a lockfile pins it",
-            "Would remove 1 snapshot(s):",
-            f"  rates at {old.commit[:7]}, made {old.made_at[:10]} {old.made_at[11:16]} UTC: nothing pins it, "
-            f"it is not the newest, and it is older than 7 days",
-            f"Would remove 2 object(s), {_format_bytes(5 + old.index['size_bytes'])}, that nothing names:",
-            *(f"  {content_hash}  {_format_bytes(size)}" for content_hash, size in left),
+            "Would remove 1 object(s), 5 bytes, that nothing names:",
+            f"  {HELLO}  5 bytes",
         ]
-        assert store.has(HELLO)
+        assert garbage.has(HELLO)
 
     def test_gc_asks_first(self, garbage):
-        from chartbook.cli import _format_bytes
-
-        store, old, _ = garbage
-        size = _format_bytes(5 + old.index["size_bytes"])
         result = self._run("store", "gc", input="n\n")
         assert result.exit_code == 0, result.output
-        assert f"Would remove 2 object(s), {size}, that nothing names." in result.output
+        assert "Would remove 1 object(s), 5 bytes, that nothing names." in result.output
         assert "Remove them? [y/N]" in result.output
         assert "Nothing was removed." in result.output
-        assert store.has(HELLO)
+        assert garbage.has(HELLO)
 
         result = self._run("store", "gc", input="y\n")
-        assert f"Removed 1 snapshot(s) and 2 object(s), {size}." in result.output
-        assert not store.has(HELLO)
+        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
+        assert not garbage.has(HELLO)
 
     def test_gc_with_no_answer_removes_nothing(self, garbage):
-        store, _, _ = garbage
         result = self._run("store", "gc", input="")
-        assert store.has(HELLO)
+        assert garbage.has(HELLO)
         assert "Removed" not in result.output
 
     def test_gc_yes(self, garbage):
-        from chartbook.cli import _format_bytes
-
-        store, old, _ = garbage
         result = self._run("store", "gc", "--yes")
         assert result.exit_code == 0, result.output
         assert "Remove them?" not in result.output
-        assert f"Removed 1 snapshot(s) and 2 object(s), {_format_bytes(5 + old.index['size_bytes'])}." in result.output
-        assert not store.has(HELLO)
+        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
+        assert not garbage.has(HELLO)
         assert "Nothing to remove." in self._run("store", "gc").output
 
     def test_gc_says_what_it_spared_for_being_new(self, here, downstream, rates):
-        self._pin_then_update(downstream, rates)
+        _pin_then_update(downstream, rates, lambda: self._run("pin"), lambda: self._run("update"))
         result = self._run("store", "gc", "--yes")
-        # The old data and the old index, which the old snapshot alone named
-        assert "Kept: 2 object(s) nothing names, stored in the last hour" in result.output
-        assert "Removed 1 snapshot(s) and 0 object(s), 0 bytes." in result.output
+        assert "Kept: 1 object(s) nothing names, stored in the last hour" in result.output
+        assert "Nothing to remove." in result.output
         assert here.has(HELLO)
 
     def test_gc_keeps_the_pins_of_a_lockfile_it_cannot_find(self, garbage, downstream):
-        store, _, new = garbage
         os.rename(downstream / LOCK_FILE, downstream / "moved.lock")
         result = self._run("store", "gc", "--yes")
         assert f"  {downstream / LOCK_FILE}  (not found; its pins are kept)" in result.output
-        # ...and with them every snapshot that holds one: nothing goes
-        assert "Nothing to remove." in result.output and store.has(HELLO)
+        assert len(list(garbage.hashes())) == 3
 
         result = self._run("store", "gc", "--yes", "--forget-missing")
         assert f"  {downstream / LOCK_FILE}  (not found; forgotten)" in result.output
-        assert "Removed 1 snapshot(s) and 2 object(s)" in result.output
-        # What stays is what the newest snapshot holds
-        assert set(store.hashes()) == new.hashes() and store.roots() == []
+        assert "Removed 0 snapshot(s) and 3 object(s)" in result.output
+        assert list(garbage.hashes()) == [] and garbage.roots() == []
 
     def test_gc_stops_at_a_lockfile_it_cannot_read(self, garbage, downstream):
         (downstream / LOCK_FILE).write_text("not json")
@@ -1131,7 +1098,7 @@ class TestCommands:
         assert result.exit_code == 1
         assert result.output.startswith("Error: Cannot read")
         assert "Nothing was removed." in result.output
-        assert garbage[0].has(HELLO)
+        assert garbage.has(HELLO)
 
     def test_there_is_no_pinning_from_a_folder(self, here, downstream):
         """Decided 2026-10-16: a lockfile never records a read of another pipeline's working folder."""

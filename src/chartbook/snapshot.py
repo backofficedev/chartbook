@@ -1929,13 +1929,17 @@ def make(
     if same is not None:
         # The same bytes; made again only to say more than the one before:
         # its documents, that a run built them, or the commit's tags, since
-        # a commit is often tagged after it is built
-        if (same.documents is not None or not documents) and same.tags == snapshot.tags:
-            if same.built_by_run or not built_by_run:
-                store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-                return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
-        elif same.built_by_run:
-            # Made again for its documents alone: the bytes are still the ones a run built
+        # a commit is often tagged after it is built. Or because the store
+        # has lost its index or its documents (its assets were put back
+        # above): an index is made again with the time it is made, so it is
+        # not the same object, and the new snapshot holds both
+        says_as_much = (same.documents is not None or not documents) and same.tags == snapshot.tags
+        lost = [part["content_hash"] for part in (same.index, same.documents) if part and not store.has(part["content_hash"])]
+        if says_as_much and (same.built_by_run or not built_by_run) and not lost:
+            store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
+            return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
+        if same.built_by_run:
+            # Made again for what the one before lacks: the bytes are still the ones a run built
             snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
 
     # A model whose bytes no snapshot of this pipeline has had is a new version

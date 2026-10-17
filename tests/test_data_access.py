@@ -594,6 +594,25 @@ class TestNotPinnedAcrossPipelines:
         with pytest.raises(AssetNotPinnedError, match="had no dataframe named 'nope'"):
             resolve("rates:nope", start_dirs=[downstream])
 
+    def test_a_tables_pin_from_a_snapshot_stays_when_the_dependency_becomes_a_repository(self, pipeline, tmp_path):
+        """A repository has no table to take: the pin a snapshot wrote out is kept, not dropped."""
+        from chartbook import lock, snapshot
+        from tests.test_model_versions import _commit
+
+        _commit(pipeline)
+        snapshot.make(pipeline)
+        downstream = _manifest(
+            tmp_path / "down",
+            {"project": {"id": "acme/down"}, "dependencies": {"rates": {"path": "../rates"}}},
+        )
+        lock.pin(downstream)
+        table = lock.read_lock(downstream).assets["rates:curve"]
+        assert table["content_hash"]
+        _manifest(downstream, {"project": {"id": "acme/down"}, "dependencies": {"rates": {"git": str(pipeline)}}})
+        report = lock.update(downstream)
+        assert lock.read_lock(downstream).assets["rates:curve"] == table
+        assert ("rates:curve", "kept") in [(e.asset, e.status) for e in report.events]
+
     def test_a_catalog_reaches_a_table_of_a_pipeline_it_lists(self, pipeline, tmp_path):
         """Found by a reviewer: the catalog path blamed a missing `path`."""
         (tmp_path / "chartbook.toml").write_text(

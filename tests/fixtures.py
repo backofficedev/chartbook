@@ -480,23 +480,19 @@ def _git(directory: Path, *arguments: str) -> str:
 def commit_pipeline(folder: Path) -> None:
     """Commit a pipeline's folder, as its owner does before a snapshot.
 
-    A folder that is not in git is made a repository of its own, in which
-    only the manifest is committed: everything else in it stands for what
-    a build writes, and git ignores it. In a repository already, what in
-    the folder git does not ignore is committed, if anything changed.
+    The folder is a repository of its own, made here unless it has one
+    already, so that nothing is committed into a repository the test did
+    not make. In a new one only the manifest is committed: everything else
+    in the folder stands for what a build writes, and git ignores it. Only
+    the folder's own changes are committed, if there are any.
     """
     folder = Path(folder).resolve()
-    found = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"], cwd=folder, capture_output=True, text=True
-    )
-    if found.returncode != 0:
+    if not (folder / ".git").exists():
         (folder / ".gitignore").write_text("/*\n!/chartbook.toml\n!/.gitignore\n")
         _git(folder, "init", "--quiet", "-b", "main")
-    elif Path(found.stdout.strip()).resolve() in Path(__file__).resolve().parents:
-        raise RuntimeError(f"{folder} is in the repository these tests are in; it is not a test's to commit")
     _git(folder, "add", "-A", "--", ".")
     if _git(folder, "status", "--porcelain", "--", "."):
-        _git(folder, "commit", "--quiet", "-m", "Work")
+        _git(folder, "commit", "--quiet", "-m", "Work", "--", ".")
 
 
 def snapshot_dependencies(project_dir: Path, store=None, made_at: str = None) -> list:

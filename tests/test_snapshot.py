@@ -338,6 +338,23 @@ class TestSeveral:
         assert second.content()["chart/curve"] == first.content()["chart/curve"]
         assert snapshot.find(default_store(), first.commit, "maker") == [second, first]
 
+    def test_made_again_after_the_store_lost_everything_it_is_whole_again(self, maker):
+        """Its index and documents too, not only its assets: a catalog shows the version from them.
+
+        An index says when it was made, so it is not made again byte for
+        byte: a new snapshot of the same bytes holds the new one.
+        """
+        taken = snapshot.make(maker).snapshot
+        store = default_store()
+        assert taken.index and taken.documents
+        for content_hash in list(store.hashes()):
+            store.delete(content_hash)
+        again = snapshot.make(maker)
+        assert again.made and again.snapshot.content() == taken.content()
+        assert store.has(again.snapshot.index["content_hash"]) and store.has(again.snapshot.documents["content_hash"])
+        assert all(store.has(content_hash) for content_hash in again.snapshot.hashes())
+        assert snapshot.make(maker).made is False  # whole now: nothing new to make
+
     def test_two_made_at_one_instant_are_both_kept_in_order(self, maker):
         first = snapshot.make(maker, made_at="2026-10-13T18:22:05.000000Z").snapshot
         _build(maker, rates=b"rates-2")
@@ -1095,6 +1112,8 @@ class TestClearingOldSnapshots:
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
         assert result.exit_code == 0, result.output
         said = result.output
+        # No lockfile names them: the kept snapshot does
+        assert said.startswith(f"Kept: {len(third.hashes())} object(s), named by 0 lockfile(s) or a kept snapshot\n")
         assert f"Kept: 1 snapshot(s), naming {len(third.hashes())} object(s): 1 because it is the newest of its pipeline" in said
         assert "Would remove 2 snapshot(s):" in said
         assert f"  acme/maker at {first.commit[:7]}, made 2025-12-01 00:00 UTC: nothing pins it" in said

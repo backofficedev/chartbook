@@ -266,7 +266,7 @@ Three things have to be true, and each has its own message when it is not:
 |---|---|
 | The pipeline is not in {ref}`[dependencies] <dependencies>` | Shows the line to add, then `chartbook pin` |
 | It is declared and not pinned, or the asset was not built when it was pinned | `chartbook pin` (after building it there) |
-| It is pinned and the store does not have the bytes, as after a clone | `chartbook pin`, which puts them back |
+| It is pinned and the store does not have the bytes, as after a clone | Point `CHARTBOOK_STORE` at the store that has them. Otherwise, for a `git` dependency, `chartbook pin` puts them back; for a `path` dependency, its owner runs `chartbook snapshot` and you run `chartbook update` |
 
 The scope may be left off when only one dependency has that name. The path is for reading; never write to it.
 
@@ -394,7 +394,7 @@ ftsfr/fed_yield_curve at 4f2a91c: 3 asset(s) in the store
 Snapshot made. A pipeline that depends on this one gets it with `chartbook update`.
 ```
 
-**A snapshot carries its lineage.** It records what the pipeline was pinned to, each dependency's commit and a hash over everything pinned from it, so it is made only when those pins account for every dependency: the check `chartbook pin --frozen` makes (every dependency in the lockfile, pinned from where the manifest says, its bytes in the store); no `path` dependency whose pin names no snapshot (as in a lockfile changed by hand); and for each dependency pinned from a snapshot, that snapshot in the store, holding each asset pinned from it at its hash, and each label pinned naming a version some snapshot of it holds, so a lockfile changed by hand is caught (a `git` dependency, pinned from its clone, is checked only to have its bytes in the store). Nothing that cannot have been read stops it: an asset the other pipeline had not built when it was pinned, or a dependency of which nothing is pinned (it declares nothing, or has no snapshot yet). Otherwise nothing is made, and each gap is listed with what to run. `chartbook run --snapshot` makes the same check after it pins and before it builds, so a gap is found before an hour of building.
+**A snapshot carries its lineage.** It records what the pipeline was pinned to, each dependency's commit and a hash over everything pinned from it, so it is made only when those pins account for every dependency: the check `chartbook pin --frozen` makes (every dependency in the lockfile, pinned from where the manifest says, its bytes in the store); no `path` dependency, or one named by its ID, whose pin names no snapshot (as in a lockfile changed by hand); and for each dependency pinned from a snapshot, that snapshot in the store, holding each asset pinned from it at its hash, and each label pinned naming a version some snapshot of it holds, so a lockfile changed by hand is caught (a `git` dependency, pinned from its clone, is checked only to have its bytes in the store). Nothing that cannot have been read stops it: an asset the other pipeline had not built when it was pinned, or a dependency of which nothing is pinned (it declares nothing, or has no snapshot yet). Otherwise nothing is made, and each gap is listed with what to run. `chartbook run --snapshot` makes the same check after it pins and before it builds, so a gap is found before an hour of building.
 
 Two things it does not see. A snapshot pinned from that was made before this check, or by an older ChartBook, may have gaps of its own: the check is of this pipeline's pins. `--deep` also walks every snapshot upstream ({ref}`chartbook lineage <chartbook-lineage>`) and refuses if any has a gap; it needs every snapshot upstream in the store, so it is for when you want that audit, not a requirement. The record says which was done (`built_with.lineage`: `pins` or `deep`). And a read that does not go through the lockfile (a load through a catalog, a model version named by its hash) is not in them.
 
@@ -555,7 +555,7 @@ chartbook.lock is unchanged.
 1 pinned asset(s) have changed upstream. `chartbook update` moves the pins.
 ```
 
-A rebuild that its owner has not made a snapshot of is not mentioned, because it is not seen.
+An asset that the pinned snapshot had not built and the newer one has is still listed as not built, with the reason `a newer snapshot has it`. A rebuild that its owner has not made a snapshot of is not mentioned, because it is not seen.
 
 **A dependency is pinned to one snapshot, whole.** `pin` does not take one asset from a newer snapshot and leave the rest. What a second `pin` does do is pin a dependency that has no pin yet.
 
@@ -675,7 +675,7 @@ A snapshot met twice is walked once and marked "shown above". A `git` dependency
 | `--project-dir PATH` | The pipeline (default: the current directory) |
 | `--check` | Exit `1` if there is any gap: for CI |
 | `--rehash` | Also hash every asset of every snapshot again, which reads all of their bytes |
-| `--json` | Print the graph as JSON: each pipeline's `label`, `kind` (`working`, `snapshot`, `git`, `folder`, `nothing`, `missing`, `mismatch`, `unreadable`), `pipeline`, `commit`, `made_at`, `gaps` and `children` |
+| `--json` | Print the graph as JSON: each pipeline's `label`, `kind` (`working`, `snapshot`, `git`, `no_snapshot`, `nothing`, `missing`, `mismatch`, `unreadable`), `pipeline`, `commit`, `made_at`, `gaps` and `children` |
 
 ## chartbook run
 
@@ -871,7 +871,7 @@ It lists what it would remove and asks before removing anything:
 
 ```console
 $ chartbook store gc
-Kept: 14 object(s), named by 3 lockfile(s)
+Kept: 14 object(s), named by 3 lockfile(s) or a kept snapshot
   /work/crsp_treasury/chartbook.lock
   /work/rate_forecast/chartbook.lock
   /Volumes/usb/old_project/chartbook.lock  (not found; its pins are kept)

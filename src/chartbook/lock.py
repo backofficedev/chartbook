@@ -1317,10 +1317,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                 else:
                     # The pin names no commit (a lockfile changed by hand,
                     # or from before every pin came from a snapshot)
-                    remedy = (
-                        f"`chartbook update {key}` pins it from a snapshot the store has "
-                        f"(its owner makes one with `chartbook snapshot`)"
-                    )
+                    remedy = f"its owner's `chartbook snapshot` puts it back, then `chartbook update {key}` pins it"
                 report.problems.append(
                     FrozenProblem(
                         key,
@@ -1721,9 +1718,10 @@ def _sync_from_snapshots(
         for record in had.values():
             old = record.get("content_hash")
             if not old:
-                report.events.append(
-                    PinEvent("not_built", key, record["id"], detail=_where(record))
-                )
+                # Built since, perhaps: say so, as for a pin that has changed
+                built = theirs.get(snapshot.local_name(record))
+                said = "a newer snapshot has it: `chartbook update` pins it" if built else _where(record)
+                report.events.append(PinEvent("not_built", key, record["id"], detail=said))
             elif not store.has(old):
                 report.events.append(
                     PinEvent(
@@ -1891,8 +1889,8 @@ def _sync_dependency(
     :param may_move: Whether its existing pins may move (an update).
     :param commit_moved: Whether this update moved a ``git`` dependency to
         another commit than the one it was pinned at.
-    :param within: If given, a declared path that reaches a file outside
-        this directory is not pinned, and is a problem.
+    :param within: The checkout: a declared path that reaches a file
+        outside it is not pinned, and is a problem.
     :returns: Its records as they should be, by asset ID.
     """
     try:
@@ -1932,9 +1930,9 @@ def _sync_dependency(
             within,
         )
 
-    # A table or query in a source has no file in the folder to take: a pin
-    # of it comes from a snapshot, and stays as the lockfile has it. One the
-    # lockfile does not have yet is listed without a hash, and said so
+    # A table or query in a source has no file in the checkout to take: a
+    # pin of it comes from a snapshot, and stays as the lockfile has it.
+    # One the lockfile does not have yet is listed without a hash, and said so
     from chartbook.resolve import declared_in_source
     from chartbook.snapshot import source_record
 
@@ -1961,8 +1959,8 @@ def _sync_dependency(
         if not old:
             continue  # it was never pinned; there is nothing to let go of
         if had[asset_id].get("location", {}).get("kind") in ("table", "query"):
-            # A table or query has no file in the folder to take: its pin
-            # is the snapshot's parquet, and stays until a snapshot moves it
+            # A table or query has no file in the checkout to take: its
+            # pin is the snapshot's parquet, and stays until a snapshot moves it
             records[asset_id] = had[asset_id]
             _report_kept(had[asset_id], key, store, report)
         elif may_move:

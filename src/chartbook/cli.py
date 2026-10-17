@@ -2104,7 +2104,7 @@ def _lineage_line(node) -> str:
     if node.kind == "git":
         at = f" at {node.commit[:7]}" if node.commit else ""
         return f"{node.label}: pinned from its git clone{at}; not walked further"
-    if node.kind == "folder":
+    if node.kind == "no_snapshot":
         return f"{node.label}: its pin names no snapshot"
     if node.kind == "nothing":
         return f"{node.label}: nothing pinned"
@@ -2476,7 +2476,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
 
-    click.echo(f"Kept: {plan.kept} object(s), named by {len(plan.lockfiles)} lockfile(s)")
+    # A kept snapshot keeps objects too, which no lockfile may name
+    named_by = f"{len(plan.lockfiles)} lockfile(s)" + (" or a kept snapshot" if plan.snapshots_kept else "")
+    click.echo(f"Kept: {plan.kept} object(s), named by {named_by}")
     for lockfile, found in plan.lockfiles:
         if found:
             note = ""
