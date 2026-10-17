@@ -77,7 +77,9 @@ def commit_of(root) -> Optional[str]:
     `template/` has no changes git has not committed; None otherwise."""
     if not is_checkout(root):
         return None
-    if (git(root, "status", "--porcelain", "--untracked-files=no", "--", "template") or "").strip():
+    changes = git(root, "status", "--porcelain", "--untracked-files=no", "--", "template")
+    if changes is None or changes.strip():
+        # Changed, or git could not say: either way the commit does not say what ships
         return None
     return (git(root, "rev-parse", "HEAD") or "").strip() or None
 
@@ -112,15 +114,17 @@ class CustomBuildHook(BuildHookInterface):
         if version == "editable":
             return
         root = Path(self.root)
-        checkout = is_checkout(root)
-        sdist = not checkout and (root / "PKG-INFO").is_file()
+        # An sdist first: one unpacked into a repository of its own (a distribution's packaging) is
+        # still the sdist, and its own file names the commit, not that repository's HEAD
+        sdist = (root / "PKG-INFO").is_file()
+        checkout = not sdist and is_checkout(root)
         if not checkout and not sdist:
             if (root / ".git").exists():
                 message = (
                     f"{root} has a .git, and git cannot read it, so the package carries template/ as it is "
                     f"on disk, ignored files and all, and no commit for it. Install git; or, if git does not "
                     f"trust the folder, run `git config --global --add safe.directory {root}`; or build from "
-                    f"a copy without .git."
+                    f"an sdist."
                 )
             else:
                 message = (
@@ -136,6 +140,12 @@ class CustomBuildHook(BuildHookInterface):
 
         if sdist:
             # The sdist's own file ships as any file of the package does
+            shipped = root / "src" / "chartbook" / BUILT_FROM
+            if not (shipped.is_file() and shipped.read_text(encoding="utf-8").strip()):
+                self._stop_or_warn(
+                    f"{root} is an sdist that records no commit for its template/, so the package records "
+                    f"none, and a project chartbook init makes from it has no .cruft.json."
+                )
             return
         commit = commit_of(root) if checkout else None
         if checkout and commit is None:
