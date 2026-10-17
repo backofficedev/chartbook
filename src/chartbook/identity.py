@@ -261,45 +261,53 @@ class Checkout:
             parts; empty at the top.
         main: Whether this is the repository's main worktree, not one made
             with ``git worktree add``.
+        address: Its ``origin`` remote, reduced by :func:`repository_key`;
+            empty when it has none or the remote names no host.
     """
 
     common_dir: Path
     first_commit: str
     subfolder: str
     main: bool
+    address: str = ""
 
 
 def checkout_of(folder: Path | str) -> Optional[Checkout]:
     """Where a folder is in git; None if it is in no repository."""
     key = str(Path(folder).resolve())
-    answer = _ask_git(key, "rev-parse", "--show-toplevel", "--git-common-dir", "--git-dir", "--is-shallow-repository")
+    # The prefix is git's own: a path written in another case on a disk that ignores it is still found in the repository
+    answer = _ask_git(
+        key, "rev-parse", "--show-toplevel", "--show-prefix", "--git-common-dir", "--git-dir", "--is-shallow-repository"
+    )
     lines = answer.splitlines() if answer else []
-    if len(lines) != 4:
+    if len(lines) != 5:
         return None
-    top = Path(lines[0]).resolve()
-    common, own = ((Path(key) / line).resolve() for line in lines[1:3])
+    common, own = ((Path(key) / line).resolve() for line in lines[2:4])
     first = ""
-    if lines[3] != "true":
+    if lines[4] != "true":
         roots = (_ask_git(key, "rev-list", "--max-parents=0", "--first-parent", "HEAD") or "").split()
         first = roots[-1] if roots else ""
-    try:
-        subfolder = Path(key).relative_to(top).as_posix()
-    except ValueError:
-        subfolder = ""
-    return Checkout(common, first, "" if subfolder == "." else subfolder, _same_folder(common, own))
+    return Checkout(
+        common, first, lines[1].strip("/"), _same_folder(common, own), repository_key(get_git_remote_url(key))
+    )
 
 
 def same_pipeline_checked_out(first: Optional[Checkout], second: Optional[Checkout]) -> bool:
-    """Whether two folders are one pipeline in two checkouts of one repository.
+    """Whether two folders are one pipeline in two checkouts of one repository, at the same place in it.
 
-    Two worktrees of one repository, or two clones of it (one first commit),
-    at the same place in it.
+    Two worktrees of one repository share its git folder. Two clones are
+    one repository as a pin takes one: by the address of their remotes
+    where both have one, so that two repositories made from one template
+    (one first commit, two addresses) are two; by their first commit where
+    either has none.
     """
     if first is None or second is None or first.subfolder != second.subfolder:
         return False
-    return _same_folder(first.common_dir, second.common_dir) or bool(
-        first.first_commit and first.first_commit == second.first_commit
-    )
+    if _same_folder(first.common_dir, second.common_dir):
+        return True
+    if first.address and second.address:
+        return first.address == second.address
+    return bool(first.first_commit and first.first_commit == second.first_commit)
 
 
 def remote_to_web_url(remote: Optional[str]) -> str:
@@ -497,9 +505,16 @@ def id_from_address(address: str) -> Optional[str]:
 
 
 def _address_parts(address: str) -> Optional[tuple[str, str]]:
-    """The scope and the name the ID rule takes from a repository's address, each empty if it gives none; None for no address."""
+    """The scope and the name the ID rule takes from a repository's address, each empty if it gives none.
+
+    None for what names no host: a path on disk (``/srv/rates``,
+    ``file:///srv/rates``), or a word (``repo_url = "TBD"``).
+    """
+    web = remote_to_web_url(address)
+    if not web:
+        return None
     try:
-        normalized = normalize_ref_to_id(remote_to_web_url(address) or address)
+        normalized = normalize_ref_to_id(web)
     except ValueError:
         return None
     scope, _, name = normalized.rpartition("/")
@@ -597,8 +612,12 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
     base_dir = Path(base_dir).resolve()
     name_part = _sanitize_component(base_dir.name)
 
-    source_url = project.get("repo_url", "") or get_git_remote_url(base_dir)
-    parts = _address_parts(source_url) if isinstance(source_url, str) and source_url else None
+    # A repo_url that names no host ("TBD") gives way to the remote
+    written = project.get("repo_url", "")
+    parts = _address_parts(written) if isinstance(written, str) and written else None
+    if parts is None:
+        remote = get_git_remote_url(base_dir)
+        parts = _address_parts(remote) if remote else None
     if parts is not None:
         scope, repository_name = parts
         if repository_name and is_repository_top(base_dir):
@@ -609,6 +628,24 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
             return validate_pipeline_id(f"{scope}/{name_part}")
 
     return validate_pipeline_id(name_part)
+
+
+#: A reference in git's short form for a remote, ``[user@]host:path``: a host
+#: with a dot in it, or a user, so that neither a name with a colon nor a
+#: registry's port (``localhost:5000/acme/rates``) reads as one
+_SCP_REFERENCE = re.compile(r"^(?:[^@/:\s]+@[^:/\s]+|[^@:/\s]*\.[^@:/\s]+):(?!/)(?![0-9]+(?:/|$)).+$")
+
+
+def in_another_case(keys: Iterable[str], ref: str) -> Optional[str]:
+    """The one ID among *keys* that a reference names but for the case of its letters; None if none, or several.
+
+    A scope derived from a remote is in lowercase, so a reference written as
+    a web page shows its owner (``Acme/rates``) misses it: this is what to
+    suggest.
+    """
+    wanted = ref.strip().casefold()
+    found = sorted({key for key in keys if key.casefold() == wanted and key != ref.strip()})
+    return found[0] if len(found) == 1 else None
 
 
 def match_pipeline_ref(
@@ -643,14 +680,17 @@ def match_pipeline_ref(
     :raises KeyError: If a bare name matches more than one key.
     """
     keys = list(keys)
-    normalized = normalize_ref_to_id(ref)
+    stripped = ref.strip()
+    # A remote in git's short form, with any user or none
+    # (`org-123@github.com:acme/rates.git`), is read as its web address
+    scp = _SCP_REFERENCE.match(stripped)
+    normalized = normalize_ref_to_id(remote_to_web_url(stripped) if scp else ref)
 
     if normalized in keys:
         return normalized
     # A repository's address names the pipeline at its top as the ID rule
     # does: `.../ftsfr/crsp-treasury` is `ftsfr/crsp_treasury`
-    stripped = ref.strip()
-    if "://" in stripped or stripped.startswith("git@"):
+    if scp or "://" in stripped or stripped.startswith("git@"):
         derived = id_from_address(stripped)
         if derived in keys:
             return derived
@@ -684,8 +724,10 @@ def resolve_pipeline_ref(keys: Iterable[str], ref: str) -> str:
     keys = list(keys)
     matched = match_pipeline_ref(keys, ref)
     if matched is None:
+        other = in_another_case(keys, ref)
+        hint = f" Did you mean {other!r}? A scope derived from a remote is in lowercase." if other else ""
         raise KeyError(
-            f"Pipeline {ref!r} not found in catalog. "
+            f"Pipeline {ref!r} not found in catalog.{hint} "
             f"Available pipelines: {sorted(keys)}"
         )
     return matched

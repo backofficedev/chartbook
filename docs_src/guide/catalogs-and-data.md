@@ -54,7 +54,7 @@ The rules:
 
 - Patterns resolve relative to the catalog directory. Each matched directory containing a pipeline `chartbook.toml` joins under its derived scoped ID.
 - Glob matches are forgiving — non-pipeline directories and other catalogs are skipped silently, and a catalog never discovers itself. A *literal* member path that is missing or broken is a hard error: you named it explicitly.
-- Two members deriving the same ID, or a v1-format member, are hard errors with "To fix" suggestions. Two checkouts of one repository (a worktree beside it, a second clone) are one pipeline, listed once, from the main worktree, with a warning naming the other.
+- Two members deriving the same ID, or a v1-format member, are hard errors with "To fix" suggestions. Two checkouts of one repository (a worktree beside it, a second clone) are one pipeline, listed once: from the main worktree, else from the one found first, or from the explicit entry when one names a checkout of it, with a warning naming the other.
 - `disabled` lists IDs to switch off (`chartbook catalog disable` maintains it for member-discovered pipelines); `exclude` removes paths before matching; explicit entries coexist with `members` and win when they point at the same directory — which is also how you rename a pipeline within your catalog.
 
 Auto-discovery is designed for the local catalog, where "everything in this directory is mine" is exactly right. Publishing to a shared catalog should stay an explicit act with explicit entries.

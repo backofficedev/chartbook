@@ -27,6 +27,7 @@ import tomli
 
 from chartbook.identity import (
     ID_COMPONENT_PATTERN,
+    _git_environment,
     UnsupportedRevisionError,
     derive_pipeline_id,
     get_git_remote_url,
@@ -243,7 +244,7 @@ def resolve_platform_path(path_input: Union[str, dict]) -> Path:
     )
 
 
-def catalog_entry_dir(base_dir: Union[str, Path], path: Path) -> Path:
+def catalog_entry_dir(base_dir: Union[str, Path], path: Path, where: str = "") -> Path:
     """The folder a catalog's entry names, by its path relative to the catalog's folder.
 
     The path is joined to the catalog's folder with every link in that
@@ -252,16 +253,32 @@ def catalog_entry_dir(base_dir: Union[str, Path], path: Path) -> Path:
     older ``catalog add``, with a home folder reached through a link), or
     read where ``..`` is taken before a link is followed (``realpath`` on
     Windows, through a junction), is joined as written when the first way
-    finds no chartbook.toml and this one does.
+    finds no chartbook.toml and this one does. That works only where the
+    catalog is reached as it was named when the path was written, so it is
+    said, with the path to write instead.
 
-    :param base_dir: The catalog's folder.
+    :param base_dir: The catalog's folder, as it was named: the commands
+        that read a catalog keep the links in the path they were given.
     :param path: The entry's path, for this platform (:func:`resolve_platform_path`).
+    :param where: The entry, to say it when its path is read the second
+        way (``chartbook.toml: [pipelines."acme/rates"]``); nothing is
+        said without it.
     :returns: The folder, resolved.
     """
     found = (Path(base_dir).resolve() / path).resolve()
     if not (found / "chartbook.toml").is_file():
         as_written = Path(os.path.normpath(Path(base_dir) / path))
         if (as_written / "chartbook.toml").is_file():
+            if where:
+                instead = Path(os.path.relpath(as_written.resolve(), Path(base_dir).resolve())).as_posix()
+                warnings.warn(
+                    f"{where} path: {Path(path).as_posix()} names the pipeline only from {base_dir}, the "
+                    f"catalog's folder as it is named here, through a link; from the folder itself, "
+                    f"{Path(base_dir).resolve()}, it names none. Write path = \"{instead}\" so that it is "
+                    f"read the same way however the catalog is reached.",
+                    UserWarning,
+                    stacklevel=2,
+                )
             return as_written.resolve()
     return found
 
@@ -1499,9 +1516,9 @@ def _discover_member_pipelines(
                         shown, passed = passed, shown
                     warnings.warn(
                         f"{source}: catalog members {shown} and {passed} are checkouts of one "
-                        f"repository, so one pipeline, {member_id!r}: the catalog shows {shown}. To "
-                        f"show the other instead, exclude this one:  [pipelines] exclude = "
-                        f"[\"{shown}\"]; to show both, give one its own [project] id.",
+                        f"repository, so one pipeline, {member_id!r}: the catalog shows {shown}, and "
+                        f"not {passed}. To show {passed} instead, exclude {shown}:  [pipelines] "
+                        f"exclude = [\"{shown}\"]; to show both, give one its own [project] id.",
                         UserWarning,
                         stacklevel=2,
                     )
@@ -1691,7 +1708,9 @@ def _load_catalog_manifest(raw_manifest):
         path_to_pipeline = pipeline_entry.get("path")
         if path_to_pipeline is None:
             continue
-        pipeline_base_dir = catalog_entry_dir(base_dir, resolve_platform_path(path_to_pipeline))
+        pipeline_base_dir = catalog_entry_dir(
+            base_dir, resolve_platform_path(path_to_pipeline), where=f"{source}: [pipelines.\"{pipeline_id}\"]"
+        )
         assert validate_manifest_file(pipeline_base_dir)
         sub_manifest = load_manifest(base_dir=pipeline_base_dir)
         if sub_manifest["project"]["type"] != "pipeline":
@@ -1787,7 +1806,7 @@ def _git(base_dir: Path, *args: str) -> Union[str, None]:
             capture_output=True,
             text=True,
             timeout=15,
-            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.SubprocessError):
         return None

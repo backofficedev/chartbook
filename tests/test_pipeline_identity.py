@@ -349,10 +349,11 @@ class TestTwoCheckoutsOfOneRepository:
     def test_two_repositories_of_one_id_are_still_refused(self, tmp_path):
         from chartbook.manifest import load_manifest
 
-        for name in ("a", "b"):
+        # One ID from two hosts: two repositories
+        for name, host in (("a", "github.com"), ("b", "gitlab.com")):
             (tmp_path / "repos" / name).mkdir(parents=True)
             (tmp_path / "repos" / name / "chartbook.toml").write_text(f"# {name}\n")
-            _repository(tmp_path / "repos" / name, "https://github.com/testorg/first_pipeline")
+            _repository(tmp_path / "repos" / name, f"https://{host}/testorg/first_pipeline")
         catalog = _catalog(tmp_path / "catalog", '[pipelines]\nmembers = ["../repos/*"]\n')
         with pytest.raises(ValueError, match="two catalog members resolve to the same pipeline"):
             load_manifest(catalog)
@@ -503,3 +504,166 @@ class TestWhatCheckSaysOfIds:
         # Not when they agree
         (folder / "chartbook.toml").write_text('[project]\nrepo_url = "https://github.com/Me/rates-copy.git"\n')
         assert "repo_url:" not in _check(folder)
+
+
+class TestWhatTheSecondReviewFound:
+    def test_two_repositories_from_one_template_are_two(self, tmp_path):
+        """Two repositories made from one template share its first commit, and have two addresses."""
+        from chartbook.manifest import load_manifest
+        from tests.fixtures import _git as run
+
+        alpha = tmp_path / "repos" / "alpha"
+        (alpha / "pipeline").mkdir(parents=True)
+        (alpha / "pipeline" / "chartbook.toml").write_text("")
+        _repository(alpha, "https://github.com/acme/alpha")
+        run(tmp_path / "repos", "clone", "--quiet", str(alpha), str(tmp_path / "repos" / "beta"))
+        run(tmp_path / "repos" / "beta", "remote", "set-url", "origin", "https://github.com/acme/beta")
+        catalog = _catalog(tmp_path / "catalog", '[pipelines]\nmembers = ["../repos/*/pipeline"]\n')
+        with pytest.raises(ValueError, match="two catalog members resolve to the same pipeline"):
+            load_manifest(catalog)
+
+    @pytest.fixture
+    def transferred(self, tmp_path):
+        """`acme/rates`, pinned by `second`; then its repository moves to `neworg`, and its clone's remote with it."""
+        from chartbook import lock, snapshot
+        from tests.fixtures import _git as run
+
+        first = _pipeline_with_data(tmp_path / "rates")
+        run(first, "remote", "add", "origin", "https://github.com/acme/rates")
+        clear_git_remote_cache()
+        _pipeline_with_data(first, value=1.5)
+        assert snapshot.make(first).snapshot.pipeline == "acme/rates"
+        second = _depending_on(tmp_path / "second", "acme/rates")
+        assert lock.pin(second).count("pinned") == 1
+        run(first, "remote", "set-url", "origin", "https://github.com/neworg/rates")
+        clear_git_remote_cache()
+        _pipeline_with_data(first, value=3.0)
+        assert snapshot.make(first).snapshot.pipeline == "neworg/rates"
+        return first, second
+
+    def test_a_repository_that_moved_is_said_by_update(self, transferred):
+        """Found by a review: matching by address alone lost a repository moved to another owner."""
+        from chartbook import lock
+
+        first, second = transferred
+        (event,) = [e for e in lock.update(second).events if e.status == "id_changed"]
+        assert '"acme/rates" = { id = "neworg/rates" }' in event.detail
+
+    def test_and_by_check(self, transferred):
+        first, second = transferred
+        output = _check(second)
+        assert "acme/rates is the pipeline in" in output and 'Write "acme/rates" = { id = "neworg/rates" }' in output
+
+    def test_a_git_dir_in_the_environment_reaches_no_git_of_chartbook(self, tmp_path, monkeypatch):
+        """Found by a review: under GIT_DIR the subfolder pipeline's ID was right and its snapshot's
+        subdirectory, its code time and `check`'s repository top were not."""
+        from chartbook import check, manifest, snapshot
+
+        top = tmp_path / "monorepo"
+        (top / "rates").mkdir(parents=True)
+        (top / "rates" / "chartbook.toml").write_text('[dataframes.x]\npath = "x.csv"\n')
+        (top / "rates" / "x.csv").write_text("a\n1\n")
+        _repository(top, "https://github.com/acme/monorepo")
+        monkeypatch.setenv("GIT_DIR", str(top / ".git"))
+        taken = snapshot.make(top / "rates").snapshot
+        assert (taken.pipeline, taken.subdirectory) == ("acme/rates", "rates")
+        assert manifest._git(top / "rates", "rev-parse", "--show-prefix").strip() == "rates/"
+        check._repository_top.cache_clear()
+        assert check._repository_top(str(top / "rates")) == top.resolve()
+
+    def test_a_folder_named_in_another_case_keeps_its_place(self, tmp_path):
+        """Found by a review: on a disk that ignores case, a path written in another case lost its
+        subfolder, and two pipelines of one name in two subfolders were taken for one."""
+        from chartbook.identity import checkout_of, same_pipeline_checked_out
+
+        top = tmp_path / "monorepo"
+        for part in ("a", "b"):
+            (top / part / "rates").mkdir(parents=True)
+            (top / part / "rates" / "chartbook.toml").write_text("")
+        _repository(top, "https://github.com/acme/monorepo")
+        other_case = tmp_path / "MONOREPO" / "a" / "rates"
+        if not other_case.exists():
+            pytest.skip("this disk tells the cases apart")
+        assert checkout_of(other_case).subfolder == "a/rates"
+        assert not same_pipeline_checked_out(checkout_of(other_case), checkout_of(top / "b" / "rates"))
+
+    def test_a_reference_in_another_case_is_told_the_id(self, tmp_path):
+        """Found by a review: with scopes in lowercase, `Neworg/rates` as GitHub writes it found nothing
+        and said nothing more."""
+        from chartbook import lock, snapshot
+        from chartbook.identity import match_pipeline_ref, resolve_pipeline_ref
+        from chartbook.resolve import locate_pipeline
+
+        assert match_pipeline_ref(["acme/rates"], "Acme/rates") is None
+        with pytest.raises(KeyError, match="Did you mean 'acme/rates'"):
+            resolve_pipeline_ref(["acme/rates"], "Acme/rates")
+        with pytest.raises(KeyError, match="Did you mean 'acme/rates'"):
+            locate_pipeline("Acme/rates", catalog={"acme/rates": str(tmp_path)})
+        first = _pipeline_with_data(tmp_path / "rates")
+        _git(first, "remote", "add", "origin", "https://github.com/Neworg/rates")
+        clear_git_remote_cache()
+        assert snapshot.make(first).snapshot.pipeline == "neworg/rates"
+        third = _depending_on(tmp_path / "third", "Neworg/rates")
+        (problem,) = lock.pin(third).problems
+        assert "Did you mean neworg/rates?" in problem.detail
+
+    def test_a_path_or_a_word_is_no_repository(self, tmp_path):
+        """Found by a review: a clone of `/srv/rates` derived `srv/rates`, and `repo_url = "TBD"` gave
+        `tbd` over a real remote."""
+        from chartbook.identity import id_from_address
+
+        assert id_from_address("/srv/rates") is None and id_from_address("file:///srv/rates") is None
+        assert id_from_address("TBD") is None
+        folder = _repository(tmp_path / "rates", "https://github.com/acme/rates")
+        assert derive_pipeline_id({"repo_url": "TBD"}, folder) == "acme/rates"
+        source = _repository(tmp_path / "volumes" / "data" / "rates")
+        _git(tmp_path, "clone", "--quiet", str(source), str(tmp_path / "copy"))
+        clear_git_remote_cache()
+        assert derive_pipeline_id({}, tmp_path / "copy") == "copy"
+
+    def test_a_reference_in_gits_short_form_is_an_address(self):
+        from chartbook.identity import UnsupportedRegistryError, match_pipeline_ref
+
+        for written in ("org-123@github.com:acme/rates.git", "github.com:Acme/rates.git", "git@github.com:acme/rates"):
+            assert match_pipeline_ref(["acme/rates"], written) == "acme/rates", written
+        with pytest.raises(UnsupportedRegistryError):
+            match_pipeline_ref(["acme/rates"], "localhost:5000/acme/rates")
+        with pytest.raises(ValueError):
+            match_pipeline_ref(["acme/rates"], "rates:chart")
+
+    def _add(self, catalog, folder):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main as cli
+
+        result = CliRunner().invoke(cli, ["catalog", "add", str(folder), "--catalog", str(catalog)])
+        assert result.exit_code == 0, result.output
+        return result.output
+
+    def test_catalog_add_knows_a_checkout_members_found(self, two_checkouts):
+        root, main, feature = two_checkouts
+        catalog = _catalog(root / "catalog", '[pipelines]\nmembers = ["../repos/first_pipeline"]\n')
+        output = self._add(catalog, feature)
+        assert "Already in catalog as 'testorg/first_pipeline' (found by pipelines.members pattern" in output
+        assert "another checkout of the same repository" in output
+        assert "first-feature" not in (catalog / "chartbook.toml").read_text()
+
+    def test_and_one_listed_under_another_key(self, two_checkouts):
+        """A key written before the ID changed, `testorg/first_copy`, still names the pipeline."""
+        root, main, feature = two_checkouts
+        catalog = _catalog(root / "catalog", '[pipelines."testorg/first_copy"]\npath = "../repos/first_pipeline"\n')
+        output = self._add(catalog, feature)
+        assert "Already in catalog as 'testorg/first_copy' (another checkout of the same repository" in output
+        assert "first-feature" not in (catalog / "chartbook.toml").read_text()
+
+    def test_and_enables_a_disabled_one(self, two_checkouts):
+        import tomli
+
+        root, main, feature = two_checkouts
+        catalog = _catalog(
+            root / "catalog", '[pipelines."testorg/first_pipeline"]\npath = "../repos/first_pipeline"\ndisabled = true\n'
+        )
+        output = self._add(catalog, feature)
+        assert "Re-enabled 'testorg/first_pipeline' (another checkout of the same repository" in output
+        entry = tomli.loads((catalog / "chartbook.toml").read_text())["pipelines"]["testorg/first_pipeline"]
+        assert entry == {"path": "../repos/first_pipeline"}

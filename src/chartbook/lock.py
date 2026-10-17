@@ -70,7 +70,7 @@ from typing import Callable, Iterable, Optional, Union
 from chartbook import hashing, snapshot
 from chartbook.gitcache import GIT_LOCATION_VARIABLES as _GIT_LOCATION_VARIABLES
 from chartbook.gitcache import GitCache, GitError, check_git_url, default_git_cache, local_url
-from chartbook.identity import derive_pipeline_id, repository_key, strip_url_credentials
+from chartbook.identity import derive_pipeline_id, get_git_remote_url, in_another_case, repository_key, strip_url_credentials
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR
 from chartbook.manifest import (
     _read_manifest_file,
@@ -1590,11 +1590,17 @@ def _newest_in_store(
         others = sorted({_made_in(t) for t in mine})
         claim = f"; snapshots from {', '.join(others)} claim its ID too, and are not taken" if others and there else ""
         # Its repository goes on under another ID, perhaps: said beside why there is nothing here
-        elsewhere = {} if at else _under_another_id(pipeline_id, accepted, known, "", found, named)
+        elsewhere = {} if at else _under_another_id(pipeline_id, accepted, known, "", found, named, store)
         if there:
             return None, (
                 f"the store at {store} has no snapshot of {pipeline_id}{where} made in {there}{claim}{dated}. "
                 f"If it has moved, say where with repository = \"...\" in its [dependencies] entry"
+            ), elsewhere
+        other = None if every else in_another_case({t.pipeline for t in found}, pipeline_id)
+        if other:
+            return None, (
+                f"the store at {store} has no snapshot of {pipeline_id}{where}{dated}. Did you mean {other}? "
+                f"A scope derived from a remote is in lowercase"
             ), elsewhere
         return None, (
             f"the store at {store} has no snapshot of {pipeline_id}{where}{dated}. Its owner makes one "
@@ -1629,11 +1635,13 @@ def _newest_in_store(
             f"[dependencies] entry, then `chartbook update`"
         )
     if not at:
-        identity.update(_under_another_id(pipeline_id, accepted, known, newest.made_at, found, named))
+        identity.update(_under_another_id(pipeline_id, accepted, known, newest.made_at, found, named, store))
     return newest, "", identity
 
 
-def _under_another_id(pipeline_id: str, of_it: list, known: set, after: str, found: list, named: bool = False) -> dict:
+def _under_another_id(
+    pipeline_id: str, of_it: list, known: set, after: str, found: list, named: bool = False, store: Optional[Store] = None
+) -> dict:
     """The newest snapshot of the same pipeline under another ID, made after *after*: ``{"under_another_id": it}``, or nothing.
 
     A pipeline's ID can change under the pipelines that depend on it: it
@@ -1641,7 +1649,8 @@ def _under_another_id(pipeline_id: str, of_it: list, known: set, after: str, fou
     repository's is now; it is given ``[project] id``. Its snapshots then
     go on under the new ID, and a dependency named by the old one stays at
     the last snapshot of that, with nothing newer to move to. The same
-    pipeline is the same repository (:func:`_made_in_one_of`), and the
+    pipeline is the same repository (:func:`_made_in_one_of`), or the
+    same clone of it set to a new address (:func:`_repointed`), and the
     same folder in it.
 
     :param of_it: The snapshots of the ID taken as the dependency's.
@@ -1651,6 +1660,7 @@ def _under_another_id(pipeline_id: str, of_it: list, known: set, after: str, fou
     :param named: Whether the entry names its repository: then only that
         address is the dependency's, and a first commit only that address's
         snapshots record, as :func:`_newest_in_store` takes them.
+    :param store: Where the snapshots are, to ask which folders they were made in.
     """
     addresses = {value for kind, value in known if kind == "address"}
     addresses |= {repository_key(t.repository) for t in of_it if repository_key(t.repository)}
@@ -1661,16 +1671,53 @@ def _under_another_id(pipeline_id: str, of_it: list, known: set, after: str, fou
     folders = {t.subdirectory for t in of_it}
     if not (addresses or firsts) or not folders:
         return {}
+    repointed = _repointed(store, of_it, addresses)
     later = [
         t for t in found
         if t.pipeline != pipeline_id
         and t.subdirectory in folders
         and t.made_at > after
         and not snapshot.made_in_the_future(t)
-        and _made_in_one_of(t, addresses, firsts)
+        and (_made_in_one_of(t, addresses, firsts) or (t.first_commit in firsts and repointed(t)))
     ]
     newest = max(later, key=lambda t: t.made_at, default=None)
     return {"under_another_id": newest} if newest is not None else {}
+
+
+def _repointed(store: Optional[Store], of_it: list, addresses: set):
+    """What says whether a snapshot of another address was made in a clone the dependency's own snapshots were made in, its remote since set to that address.
+
+    That is a repository moved on its host, transferred to another owner or
+    renamed, and its clone's remote changed to match: one repository at a
+    new address. A fork's clone is another folder; and while any folder
+    the dependency's snapshots were made in still has their address, that
+    repository is still there, and the other is not it. Only the folders
+    the store notes are asked, and their remotes on this machine.
+    """
+    tops: dict = {}  # each folder the dependency's snapshots were made in, and its remote's address now
+    looked: list = []
+
+    def known_tops() -> dict:
+        if not looked and store is not None:
+            looked.append(True)
+            for moment in {(t.commit, t.subdirectory): t for t in of_it}.values():
+                try:
+                    tops.update({top: repository_key(get_git_remote_url(top)) for top in snapshot.origins(store, moment)})
+                except (StoreError, OSError):
+                    continue
+        return tops
+
+    def made_there(taken) -> bool:
+        now = known_tops()
+        if not now or any(address in addresses for address in now.values()):
+            return False
+        try:
+            theirs = snapshot.origins(store, taken)
+        except (StoreError, OSError):
+            return False
+        return any(now.get(top) == repository_key(taken.repository) for top in theirs)
+
+    return made_there
 
 
 def _made_in_one_of(taken: "snapshot.Snapshot", addresses: set, firsts: set) -> bool:

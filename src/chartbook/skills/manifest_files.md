@@ -276,8 +276,10 @@ bare unscoped `name` is also legal for local-only projects.
 
 A derived scope is lowercase, and a derived name lowercase with `_` for `-`
 and spaces, however the remote is written (`https://`, `ssh://`,
-`user@host:path`). A clone of a folder on disk (a path remote) takes its own
-folder's name. `repo_url` comes before the remote, and `chartbook check` warns
+`user@host:path`); write references in lowercase too (`acme/rates`, not
+`Acme/rates`). A clone of a folder on disk (a path remote) takes its own
+folder's name. An SSH host alias (`git@github.com-work:acme/rates.git`) gives
+the same ID and counts as another repository's address. `repo_url` comes before the remote, and `chartbook check` warns
 when the two name different repositories. Adding a remote to a pipeline that
 had none changes its ID (`first_pipeline` becomes `testorg/first_pipeline`),
 and its snapshots are made under the new one; `chartbook pin`/`update` say

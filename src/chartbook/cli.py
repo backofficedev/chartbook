@@ -460,6 +460,28 @@ def resolve_project_dir(project_dir: Path | None):
     return project_dir
 
 
+def _as_named(path=None) -> Path:
+    """A folder as the user named it, made absolute with its links kept; the current folder as the shell has it by default.
+
+    For reading a catalog whose entries' paths were written from the
+    folder as named through a link (:func:`chartbook.manifest.catalog_entry_dir`).
+    The current folder is the shell's ``$PWD`` when that is it, since the
+    one the system gives has every link followed.
+    """
+    import os
+
+    if path is not None:
+        return Path(os.path.abspath(path))
+    here = Path.cwd()
+    shell = os.environ.get("PWD", "")
+    try:
+        if shell and os.path.isabs(shell) and os.path.samefile(shell, here):
+            return Path(shell)
+    except OSError:
+        pass
+    return here
+
+
 @main.command()
 @click.option("--project-dir", type=click.Path(), help="Path to project directory")
 @click.option(
@@ -526,6 +548,8 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         load_manifest,
     )
 
+    # A catalog is read from its folder as named too, links and all (_as_named)
+    named_dir = _as_named(project_dir)
     project_dir = resolve_project_dir(project_dir)
     manifest_path = project_dir / "chartbook.toml"
     try:
@@ -533,7 +557,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         # report, not in Python's warning format
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            manifest = load_manifest(base_dir=project_dir)
+            manifest = load_manifest(base_dir=named_dir)
         # A catalog's manifest always carries a resolved policy, so whether
         # one was written down is read from the file itself
         policy_given = "policy" in _read_manifest_file(project_dir)
@@ -755,8 +779,13 @@ def _load_catalog_for_cli(catalog_path=None):
     except ValueError as error:  # the settings file that names the default catalog is faulty
         raise click.ClickException(str(error)) from None
 
+    # Read from the folder as it was named, links and all, as well as the
+    # folder itself: an entry's path written from the former still reads
+    named = _as_named(catalog_path) if catalog_path is not None else resolved
+    if named.is_dir():
+        named = named / "chartbook.toml"
     try:
-        manifest = load_manifest(base_dir=resolved.parent)
+        manifest = load_manifest(base_dir=named.parent)
     except (ValueError, FileNotFoundError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         raise SystemExit(1)
@@ -1077,6 +1106,53 @@ def _load_raw_catalog(catalog_toml_path):
     return data
 
 
+def _reenable(raw_catalog, key, entry=True) -> bool:
+    """Enable a pipeline of the catalog again: its entry's ``disabled`` flag, and the ``disabled`` list.
+
+    :param entry: Whether it has an entry of its own; one ``members`` finds is on the list only.
+    :returns: Whether it was disabled.
+    """
+    listed_entry = raw_catalog["pipelines"].get(key) if entry else None
+    flagged = isinstance(listed_entry, dict) and bool(listed_entry.pop("disabled", False))
+    return _off_the_disabled_list(raw_catalog, key) or flagged
+
+
+def _another_checkout(directory, listed, covered, checkouts):
+    """The pipeline of the catalog that a folder is another checkout of: a worktree of its repository, or a second clone.
+
+    :param listed: The folders the catalog's entries name, each with its key.
+    :param covered: The folders ``members`` patterns match, each with its pattern.
+    :param checkouts: Where each folder is in its repository, as looked up already; filled in.
+    :returns: The other folder, its key in the catalog, and the pattern
+        that found it (None for an entry); or None.
+    """
+    from chartbook.identity import checkout_of, derive_pipeline_id, same_pipeline_checked_out
+    from chartbook.manifest import _read_manifest_file
+
+    def where(folder):
+        if folder not in checkouts:
+            checkouts[folder] = checkout_of(folder)
+        return checkouts[folder]
+
+    mine = where(directory)
+    if mine is None:
+        return None
+    for folder, key in listed.items():
+        if folder != directory and same_pipeline_checked_out(where(folder), mine):
+            return folder, key, None
+    for folder, pattern in covered.items():
+        if folder == directory or not (folder / "chartbook.toml").is_file():
+            continue
+        if same_pipeline_checked_out(where(folder), mine):
+            try:
+                project = _read_manifest_file(folder).get("project")
+                key = derive_pipeline_id(project if isinstance(project, dict) else {}, folder)
+            except (OSError, ValueError):
+                continue
+            return folder, key, pattern
+    return None
+
+
 def _off_the_disabled_list(raw_catalog, key) -> bool:
     """Take a pipeline ID off the catalog's ``[pipelines] disabled`` list, every time it is there.
 
@@ -1282,6 +1358,7 @@ def catalog_add(paths, catalog_path, yes):
     existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_toml.parent)
     members_covered = _get_members_covered_paths(raw_catalog, catalog_dir)
     existing_keys = set(raw_catalog.get("pipelines", {}).keys())
+    checkouts = {}  # where each folder looked at is in its repository
     reenabled = 0
 
     # Expand all path arguments (handles globs)
@@ -1375,16 +1452,27 @@ def catalog_add(paths, catalog_path, yes):
         # Check for duplicates — re-enable if disabled
         if d in existing_abs:
             key = existing_abs[d]
-            entry = raw_catalog["pipelines"][key]
-            flagged = isinstance(entry, dict) and entry.pop("disabled", False)
-            listed = _off_the_disabled_list(raw_catalog, key)
-            if flagged or listed:
+            if _reenable(raw_catalog, key):
                 reenabled += 1
                 click.echo(f"  Re-enabled '{key}': {d.name}/")
             else:
                 click.echo(
                     f"  Already in catalog as '{key}': {d.name}/"
                 )
+            continue
+
+        # Another checkout of a pipeline the catalog has (a worktree, a
+        # second clone) is that pipeline, whatever its key there
+        other = _another_checkout(d, existing_abs, members_covered, checkouts)
+        if other is not None:
+            folder, key, pattern = other
+            how = f"found by pipelines.members pattern '{pattern}', " if pattern else ""
+            said = f"({how}another checkout of the same repository, {folder}): {d.name}/"
+            if _reenable(raw_catalog, key, entry=pattern is None):
+                reenabled += 1
+                click.echo(f"  Re-enabled '{key}' {said}")
+            else:
+                click.echo(f"  Already in catalog as '{key}' {said}")
             continue
 
         pipeline_name = pipeline_toml.get("project", {}).get("name", d.name)

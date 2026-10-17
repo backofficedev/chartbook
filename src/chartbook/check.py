@@ -349,10 +349,12 @@ def _repository_top(directory: str) -> Optional[Path]:
     """The top of the git repository a directory is in, a submodule's superproject's if it is one; None if in none."""
     import subprocess
 
+    from chartbook.identity import _git_environment
+
     try:
         found = subprocess.run(
             ["git", "-C", directory, "rev-parse", "--show-superproject-working-tree", "--show-toplevel"],
-            capture_output=True, text=True, check=True, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+            capture_output=True, text=True, check=True, env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.CalledProcessError):
         return None
@@ -647,7 +649,10 @@ def _snapshot_folders():
     for a store at a URL it gives no folder, and says nothing. Of the
     snapshots of an ID, the newest few commits are looked at, and a folder
     noted for one is given only if it is a checkout of the repository the
-    snapshot records (its remote's address or its first commit).
+    snapshot records: its remote's address, or its first commit where
+    either has no address or where no folder of that commit has the
+    recorded address any more (a clone set to the repository's new
+    address).
     """
     from chartbook import snapshot
     from chartbook.identity import checkout_of, get_git_remote_url, repository_key
@@ -676,15 +681,20 @@ def _snapshot_folders():
                 tops = snapshot.origins(store, taken)
             except (StoreError, OSError):
                 continue
-            for top in tops:
+            recorded = repository_key(taken.repository)
+            now = {top: repository_key(get_git_remote_url(top)) for top in tops}
+            # A clone whose remote was set to a new address (the repository
+            # moved, or changed owner) is still that repository, when no
+            # folder of the commit has the address the snapshot recorded
+            moved = bool(recorded) and recorded not in now.values()
+            for top, address in now.items():
                 folder = top / taken.subdirectory if taken.subdirectory else top
                 if folder in seen or not (folder / "chartbook.toml").is_file():
                     continue
-                address = repository_key(get_git_remote_url(top))
-                checkout = checkout_of(top)
-                if repository_key(taken.repository) and address:
-                    same = repository_key(taken.repository) == address
+                if recorded and address and not moved:
+                    same = recorded == address
                 else:
+                    checkout = checkout_of(top)
                     same = bool(taken.first_commit) and checkout is not None and checkout.first_commit == taken.first_commit
                 if same:
                     seen.append(folder)

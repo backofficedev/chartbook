@@ -85,6 +85,7 @@ from typing import Optional, Union
 
 from chartbook import hashing
 from chartbook.identity import (
+    _git_environment,
     derive_pipeline_id,
     get_git_remote_url,
     remote_to_web_url,
@@ -547,7 +548,7 @@ def _git(directory: Path, *arguments: str, stdin: str = "") -> str:
     It takes no lock it does not need, so that looking at a repository
     never gets in the way of whoever is working in it.
     """
-    environment = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
+    environment = {**_git_environment(), "GIT_OPTIONAL_LOCKS": "0"}
     try:
         result = subprocess.run(
             ["git", "-C", str(directory), *arguments],
@@ -2464,7 +2465,7 @@ def stored_pipeline_record(taken: Snapshot, store: Store) -> dict:
 STORED_ASSETS_SHOWN = 100
 
 #: The records of an index that are a pipeline's assets, each with the kind its ID names
-_ASSET_KINDS ={"Dataframe": "dataframe", "Chart": "chart", "Model": "model", "Notebook": "notebook", "Note": "note"}
+_ASSET_KINDS = {"Dataframe": "dataframe", "Chart": "chart", "Model": "model", "Notebook": "notebook", "Note": "note"}
 
 
 def stored_assets(taken: Snapshot, store: Store) -> list[dict]:
