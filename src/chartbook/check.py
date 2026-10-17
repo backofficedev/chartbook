@@ -13,6 +13,7 @@ The checks are thin wrappers over machinery the build already uses:
 
 from __future__ import annotations
 
+import functools
 import os
 import warnings
 from dataclasses import dataclass
@@ -303,8 +304,52 @@ def _fetched_checkout(pipeline_dir: Path, key: str, entry: dict) -> Optional[Pat
     return None
 
 
+@functools.lru_cache(maxsize=256)
+def _repository_top(directory: str) -> Optional[Path]:
+    """The top of the git repository a directory is in, a submodule's superproject's if it is one; None if in none."""
+    import subprocess
+
+    try:
+        found = subprocess.run(
+            ["git", "-C", directory, "rev-parse", "--show-superproject-working-tree", "--show-toplevel"],
+            capture_output=True, text=True, check=True, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    lines = [line for line in found.stdout.splitlines() if line.strip()]
+    return Path(lines[0]).resolve() if lines else None
+
+
+def _elsewhere(pipeline_dir: Path, other: Path) -> str:
+    """Where a path dependency is, when that makes it work on this machine only: in another git repository than the pipeline's own, or in none; empty otherwise."""
+    mine = _repository_top(str(Path(pipeline_dir).resolve()))
+    if mine is None:
+        return ""
+    theirs = _repository_top(str(Path(other).resolve()))
+    if theirs is None:
+        return "in no git repository"
+    return "" if theirs == mine else "in another git repository"
+
+
+def _id_at(directory: Path) -> Optional[str]:
+    """The ID the pipeline in a directory gives itself, if it can be worked out."""
+    try:
+        from chartbook.identity import derive_pipeline_id
+
+        raw = tomli.loads((directory / "chartbook.toml").read_text(encoding="utf-8"))
+        return derive_pipeline_id(raw.get("project") or {}, directory)
+    except (OSError, ValueError):
+        return None
+
+
+def _quoted(key: str) -> str:
+    return f'"{key}"'
+
+
 def _dependency_dir(pipeline_dir: Path, key: str, entry: dict) -> Optional[Path]:
     """The directory a dependency's files are in; None if they are not here."""
+    if entry.get("_store"):
+        return None  # named by its ID alone: its snapshots are in the store, no folder of it
     if "git" in entry:
         return _fetched_checkout(pipeline_dir, key, entry)
     return Path(entry["_resolved_path"])
@@ -360,6 +405,23 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
         for key, entry in (pipeline_manifest.get("dependencies") or {}).items():
             table = _dependency_table(key)
             location = locate_pipeline(key, dependencies={key: entry})
+            if location.kind == "store":
+                # Named by its ID alone: there is no folder to look at here,
+                # only whether it is pinned
+                if location.pipeline in (pipeline_id, pipeline_manifest["project"].get("id")):
+                    problems.append(
+                        Problem(toml_file, table, "id", f"{location.pipeline} is this pipeline itself; a pipeline cannot depend on itself")
+                    )
+                    continue
+                if pinned is not None and key not in pinned:
+                    warnings.warn(
+                        f"{toml_file}: [{table}] not pinned. Nothing of {key!r} can be read until "
+                        f"it is; `chartbook pin` pins the newest snapshot of {location.pipeline} "
+                        f"in the store, and so does `chartbook run` (the build).",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                continue
             if location.kind == "git":
                 checkout = _fetched_checkout(pipeline_dir, key, entry)
                 if checkout is None and pinned is None:
@@ -402,6 +464,19 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
                     )
                 )
                 continue
+            elsewhere = _elsewhere(pipeline_dir, location.path)
+            if elsewhere:
+                found_id = _id_at(location.path) or key
+                instead = (
+                    f'"{key}" = {{}}' if found_id == key else f'"{key}" = {{ id = "{found_id}" }}'
+                )
+                warnings.warn(
+                    f"{toml_file}: [{table}] path: {entry['path']} is {elsewhere}, so this works on "
+                    f"this machine only. Name it by its ID, {instead}, and it is read from the store "
+                    f"on any machine.",
+                    UserWarning,
+                    stacklevel=2,
+                )
             if pinned is not None and key not in pinned:
                 warnings.warn(
                     f"{toml_file}: [{table}] path: not pinned. Nothing of {key!r} can be read "

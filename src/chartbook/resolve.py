@@ -163,12 +163,14 @@ class PipelineLocation:
         id: The name the pipeline goes by where it was found: its key in
             ``[dependencies]``, or its key in the catalog.
         found_in: ``"dependencies"`` or ``"catalog"``.
-        kind: ``"path"``, a directory on this machine, or ``"git"``, a
-            repository that has to be fetched.
+        kind: ``"path"``, a directory on this machine, ``"git"``, a
+            repository that has to be fetched, or ``"store"``, a pipeline
+            named by its ID alone, whose snapshots are in the store.
         path: The pipeline's directory, when *kind* is ``"path"``. Absolute;
             nothing has checked that it exists.
         url: The repository, when *kind* is ``"git"``.
         rev: The revision of it to fetch, if the manifest names one.
+        pipeline: The pipeline's own ID, when *kind* is ``"store"``.
     """
 
     id: str
@@ -177,6 +179,7 @@ class PipelineLocation:
     path: Optional[Path] = None
     url: Optional[str] = None
     rev: Optional[str] = None
+    pipeline: Optional[str] = None
 
 
 class PipelineNotFoundError(KeyError):
@@ -261,8 +264,15 @@ def locate_pipeline(
 
     # 1. An explicit location in [dependencies]
     key = match_pipeline_ref(dependencies, pipeline, where="[dependencies]")
+    if key is None:
+        # Named by its ID under a shorter key: `rates = { id = "acme/rates" }`
+        named = [k for k, entry in dependencies.items() if isinstance(entry, dict) and entry.get("_store") == pipeline]
+        if len(named) == 1:
+            key = named[0]
     if key is not None:
         entry = dependencies[key]
+        if entry.get("_store"):
+            return PipelineLocation(id=key, found_in="dependencies", kind="store", pipeline=entry["_store"])
         if "git" in entry:
             return PipelineLocation(
                 id=key,
@@ -311,6 +321,9 @@ def known_as(
         for pipeline_id, directory in pipelines.items():
             if _same_directory(location.path, directory):
                 return pipeline_id
+    if location.pipeline is not None and location.pipeline in pipelines:
+        # Named by its ID alone, and that ID is one of the build's pipelines
+        return location.pipeline
     return location.id
 
 

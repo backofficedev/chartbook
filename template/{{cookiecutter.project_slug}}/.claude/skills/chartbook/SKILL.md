@@ -49,6 +49,7 @@ chartbook create-data-glimpses  # Create data summary report
 chartbook run --snapshot    # In a pipeline OTHERS depend on: build, then declare the build ready (a snapshot). Refuses BEFORE building if anything in its folder is uncommitted
 chartbook snapshot          # The second half alone: copies its built assets to the store, labelled with the commit. Takes your word that they were built by that commit. Refuses unless its pins account for every dependency (run `chartbook pin` first)
 chartbook lineage           # Every snapshot upstream of this pipeline, walked through the pins and checked by hash; --check for CI, --rehash to re-hash the bytes. `chartbook snapshot --deep` refuses on an upstream gap
+chartbook add acme/rates    # Declare a dependency by its ID ("acme/rates" = {} under [dependencies]) and pin its newest snapshot from the store: no folder of it, no clone; --as NAME, --commit C
 chartbook pin               # Freeze what [dependencies] have: each one's newest snapshot (never its folder); hashes and commit into chartbook.lock (commit it); clones git dependencies
 chartbook pin --frozen      # Writes NOTHING. Exit 1 unless chartbook.lock is complete and every pin is in the store. For CI and a read-only shared store
 chartbook index diff BEFORE AFTER  # What changed between two builds from their index.json (or site folders): data, pins, versions, labels, staleness. --json, --exit-code
@@ -58,7 +59,7 @@ chartbook run --frozen      # Pin nothing, fetch nothing, write nothing; build o
 chartbook run <script>      # ...or another named script, e.g. `chartbook run test` (pins nothing)
 chartbook run --force       # Also rebuild git dependencies (each is built once, in a clean copy); refreshes data they pull from outside
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, `[store] url` in settings, or CHARTBOOK_STORE; a folder or s3://bucket/prefix with chartbook[s3]); exit 1 if an object changed
-chartbook store gc          # Remove old snapshots (unpinned, not the newest, unlabelled, >7 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets git tags, branches and model labels keep nothing. A git tag names a version (snapshots record their commit's tags)
+chartbook store gc          # Remove old snapshots (unpinned, not the newest of their repository, unlabelled, >7 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets git tags, branches and model labels keep nothing. A git tag names a version (snapshots record their commit's tags)
 chartbook config            # Configure default catalog path (interactive)
 chartbook catalog init      # Create global catalog at ~/.chartbook/chartbook.toml
 chartbook catalog add <path>     # Add pipeline(s) to catalog

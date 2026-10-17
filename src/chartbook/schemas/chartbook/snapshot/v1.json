@@ -180,6 +180,15 @@
         "type": "string"
       },
       "description": "The git tags on the snapshot's commit when it was made: the names of that version. A tag made later is not in it."
+    },
+    "repository": {
+      "type": "string",
+      "description": "The repository the snapshot was made in: the web address of its `origin` remote, with no credentials. A dependency named by its ID alone keeps to the repository it was first pinned from."
+    },
+    "first_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "The first commit of the repository the snapshot was made in, back from its commit by first parents: the same in every full clone, with a remote or none. Absent for a shallow clone. With `repository`, it tells one repository from another that gives itself the same pipeline ID."
     }
   }
 }

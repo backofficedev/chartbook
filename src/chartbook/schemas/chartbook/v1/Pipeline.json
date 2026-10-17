@@ -99,9 +99,10 @@
           "via": {
             "enum": [
               "path",
-              "rev"
+              "rev",
+              "store"
             ],
-            "description": "Whether it comes from a local directory or a fetched revision."
+            "description": "Whether it comes from a local directory, a fetched revision, or the store by its ID alone."
           },
           "location": {
             "type": "object",
@@ -113,7 +114,8 @@
               "kind": {
                 "enum": [
                   "path",
-                  "git"
+                  "git",
+                  "store"
                 ]
               },
               "path": {
@@ -133,6 +135,23 @@
                 "type": "string",
                 "pattern": "^[0-9a-f]{40}$",
                 "description": "The commit the dependency is pinned at. For a repository, what `rev` meant when it was pinned. For a directory, the commit its snapshot was built from. Present once chartbook.lock has pinned it; absent for a directory pinned from its folder as it stood."
+              },
+              "pipeline": {
+                "type": "string",
+                "description": "For a dependency named by its ID alone (`kind: store`): the pipeline's own ID, whose snapshots are looked for in the store."
+              },
+              "at": {
+                "type": "string",
+                "description": "For `kind: store`: the start of the commit its snapshots are narrowed to, as [dependencies] declares it (`commit`)."
+              },
+              "repository": {
+                "type": "string",
+                "description": "For `kind: store`, in chartbook.lock: the web address of the repository its snapshots are taken from, as the snapshot it was pinned from, or another of that repository's, records it."
+              },
+              "first_commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$",
+                "description": "For `kind: store`, in chartbook.lock: the first commit of the repository it was pinned from. Later pins and updates keep to that repository, by this or by its address."
               }
             }
           },

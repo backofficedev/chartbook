@@ -250,6 +250,34 @@ def remote_to_web_url(remote: Optional[str]) -> str:
     return f"{scheme}://{host}/{path}" if path else ""
 
 
+#: Hosts whose repository paths ignore case: ``Acme/Rates`` is ``acme/rates``
+_CASE_BLIND_HOSTS = frozenset({"github.com", "gitlab.com", "bitbucket.org"})
+
+
+def repository_key(address: Optional[str]) -> str:
+    """A repository's address, reduced so that the ways of writing one repository give one key.
+
+    ``git@github.com:Acme/Rates.git``, ``https://github.com/acme/rates/``
+    and ``http://github.com:443/acme/rates`` are one repository: the scheme
+    is taken as ``https``, the host in lower case with no default port, the
+    path with no ``.git`` or final slash, and in lower case for a host that
+    ignores its case.
+
+    :returns: The key, or ``""`` for no address or one with no host.
+    """
+    web = remote_to_web_url(address) if address else ""
+    found = re.match(r"^https?://([^/]+)(/.*)?$", web, re.IGNORECASE)
+    if not found:
+        return ""
+    host = re.sub(r":(80|443)$", "", found.group(1).lower())
+    path = (found.group(2) or "").rstrip("/")
+    if path.lower().endswith(".git"):
+        path = path[: -len(".git")]
+    if host in _CASE_BLIND_HOSTS:
+        path = path.lower()
+    return f"https://{host}{path}"
+
+
 def strip_url_credentials(url: str) -> str:
     """Take any user name and password out of a repository URL.
 
