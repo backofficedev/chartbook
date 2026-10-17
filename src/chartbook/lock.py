@@ -351,24 +351,39 @@ class PinReport:
         return [event for event in self.events if event.status in PROBLEM_STATUSES]
 
 
-def store_has_for(entry: dict, snapshots: Callable[[], list], first_commit: Optional[str] = None) -> bool:
+def store_has_for(
+    entry: dict, snapshots: Callable[[], list], first_commit: Optional[str] = None, from_repository: bool = False
+) -> bool:
     """Whether the store has a snapshot a pin of a dependency named by its ID could take, so its repository is not wanted.
 
     Of the ID, at the entry's ``commit`` if it names one; from the
     repository the entry names, if it names one; and, for one pinned from
     its repository before, from that repository (*first_commit*), so that
     another that gives itself the same ID is no reason not to go back to
-    it. Two repositories' snapshots of the ID with nothing to choose between
-    them are something: pin says which to name, rather than clone.
+    it. One pinned from its repository whose first commit is not known
+    (*from_repository* with no *first_commit*) has nothing in the store
+    known to be its own. Two repositories' snapshots of the ID with nothing
+    to choose between them are something: pin says which to name, rather
+    than clone. A snapshot dated after now is not one a pin takes.
     """
     pipeline, at, named = entry["_store"], entry.get("commit"), entry.get("_repository")
-    of_it = [t for t in snapshots() if t.pipeline == pipeline and (not at or t.commit.startswith(at))]
+    every = [t for t in snapshots() if t.pipeline == pipeline and not snapshot.made_in_the_future(t)]
+
+    def at_it(taken) -> bool:
+        return not at or taken.commit.startswith(at)
+
     if named:
-        return any(repository_key(t.repository) == repository_key(named) for t in of_it)
+        return any(at_it(t) and repository_key(t.repository) == repository_key(named) for t in every)
     if first_commit:
-        groups, _ = snapshot.repository_groups(of_it)
-        return any(("first", first_commit) in set().union(*(snapshot.identity_keys(t) for t in group)) for group in groups)
-    return bool(of_it)
+        # Its repository as all its snapshots tell it, at the commit asked for
+        groups, _ = snapshot.repository_groups(every)
+        return any(
+            ("first", first_commit) in set().union(*(snapshot.identity_keys(t) for t in group)) and any(at_it(t) for t in group)
+            for group in groups
+        )
+    if from_repository:
+        return False
+    return any(at_it(t) for t in every)
 
 
 def clone_instead(
@@ -408,13 +423,17 @@ def clone_instead(
     pipeline = entry.get("_store")
     if not pipeline or not host or pipeline == root or pipeline in set(built_here):
         return entry
-    location = (was or {}).get("location", {}) if pinned else {}
-    pinned_from_repository = location.get("kind") == "git" and location.get("pipeline") == pipeline
-    if not may_move and location.get("kind") in ("store", "path"):
+    location = (was or {}).get("location", {})
+    # Got from its repository before: a commit of it is recorded (a failed
+    # clone records none, and says nothing of which repository it is)
+    from_repository = location.get("kind") == "git" and location.get("pipeline") == pipeline and bool(location.get("commit"))
+    pinned_from_repository = pinned and from_repository
+    if not may_move and pinned and location.get("kind") in ("store", "path"):
         return entry  # pinned from the store (or a folder, before): a pin keeps it there
-    if (may_move or not pinned_from_repository) and store_has_for(
-        entry, snapshots, location.get("first_commit") if pinned_from_repository else None
-    ):
+    # The repository it was pinned from, by its first commit, whether or not
+    # any bytes of it are pinned yet (one not built is still that repository's)
+    own_first = location.get("first_commit") if from_repository or (pinned and location.get("kind") == "store") else None
+    if (may_move or not pinned_from_repository) and store_has_for(entry, snapshots, own_first, from_repository):
         return entry
     named = entry.get("_repository")
     # The repository the entry names, as it was written (an ssh address,
@@ -458,14 +477,24 @@ def _project_id_in(directory: Path) -> Optional[str]:
     return named if isinstance(named, str) and named else f"an id that is no name ({named!r:.40})"
 
 
+#: What git takes from the environment about which repository it is in
+_GIT_LOCATION_VARIABLES = frozenset({
+    "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR", "GIT_NAMESPACE",
+})
+
+
 def _first_commit_of(git_cache: GitCache, url: str, commit: str) -> str:
     """A repository's first commit, back from *commit* by first parents, from its clone in the git cache; empty if not known."""
     import subprocess
 
+    # The bare clone, named outright: a GIT_DIR in the environment (a git hook
+    # sets one) would otherwise be asked instead
+    environment = {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARIABLES}
     try:
         result = subprocess.run(
-            ["git", "-C", str(git_cache.repo_path(url)), "rev-list", "--max-parents=0", "--first-parent", commit],
-            capture_output=True, text=True, timeout=60, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
+            ["git", f"--git-dir={git_cache.repo_path(url)}", "rev-list", "--max-parents=0", "--first-parent", commit],
+            capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.SubprocessError, ValueError):
         return ""
@@ -704,7 +733,7 @@ def _sync_now(
                 entry = clone_instead(entry, root, was, may_move, snapshots_in_store, host, built_here, pinned=has_bytes)
             if from_repository and "git" not in entry and (
                 not may_move
-                or (not host and not store_has_for(entry, snapshots_in_store, was_location.get("first_commit")))
+                or (not host and not store_has_for(entry, snapshots_in_store, was_location.get("first_commit"), True))
             ):
                 # Pinned from its repository, and that repository is not to be
                 # asked here (no default host, a read, or a pipeline this run
@@ -754,17 +783,27 @@ def _sync_now(
                     failure = f"{why}: {failure}"
                 elif directory is not None:
                     named = _project_id_in(Path(directory))
+                    commit = listed.get("location", {}).get("commit")
+                    # Which repository it is, by its first commit: the one it was
+                    # pinned from, in the store or its repository, unless the entry
+                    # names the repository to take
+                    first = _first_commit_of(git_cache, local_url(entry["git"], project_dir), commit) if commit else ""
+                    recorded = None if entry.get("_repository") else (was or {}).get("location", {}).get("first_commit")
                     if named and named != entry["_from_id"]:
-                        failure = f"{why}, and that repository names itself {named}, not {entry['_from_id']}"
+                        said = named if named.startswith(("a [project]", "an id ")) else f"the ID {named}"
+                        failure = f"{why}, and that repository's chartbook.toml gives {said}, not {entry['_from_id']}"
+                    elif first and recorded and first != recorded:
+                        failure = (
+                            f"{why}, and that repository's history begins at {first[:7]}, not at {recorded[:7]} as the "
+                            f"one it was pinned from: another repository, or its history rewritten. To take it, name it "
+                            f"with repository = \"...\" in its [dependencies] entry"
+                        )
+                    elif first:
+                        listed = {**listed, "location": {**listed["location"], "first_commit": first}}
+                    if failure:
                         directory = None
                         # Nothing of a refused clone is recorded: not its commit either
                         listed = was if was is not None else _dependency_entry(key, entry)
-                    elif listed.get("location", {}).get("commit") and not listed["location"].get("first_commit"):
-                        # Which repository it was got from, by its first commit, so
-                        # that an update keeps to it, as a store pin keeps to its own
-                        first = _first_commit_of(git_cache, local_url(entry["git"], project_dir), listed["location"]["commit"])
-                        if first:
-                            listed = {**listed, "location": {**listed["location"], "first_commit": first}}
             commit_was = (was or {}).get("location", {}).get("commit")
             commit_now = listed.get("location", {}).get("commit")
             commit_moved = bool(commit_was and commit_now and commit_was != commit_now)

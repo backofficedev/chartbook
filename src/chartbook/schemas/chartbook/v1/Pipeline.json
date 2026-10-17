@@ -151,7 +151,7 @@
               "first_commit": {
                 "type": "string",
                 "pattern": "^[0-9a-f]{40}$",
-                "description": "For `kind: store`, in chartbook.lock: the first commit of the repository it was pinned from. Later pins and updates keep to that repository, by this or by its address."
+                "description": "In chartbook.lock, for a dependency named by its ID: the first commit of the repository it was pinned from, whether from its snapshot (`kind: store`) or from its repository (`kind: git`). Later pins and updates keep to that repository."
               }
             }
           },

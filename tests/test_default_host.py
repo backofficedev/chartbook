@@ -290,7 +290,7 @@ class TestWhatTheReviewFound:
         forecast = _forecast(host / "forecast", {"acme/rates": {}})
         report = lock.pin(forecast)
         (event,) = [e for e in report.events if e.status == "unfetched"]
-        assert "names itself evil/other" in event.detail
+        assert "gives the ID evil/other, not acme/rates" in event.detail
 
     def test_a_failed_clone_says_why_it_was_tried(self, host):
         forecast = _forecast(host / "forecast", {"acme/nothing": {}})
@@ -445,7 +445,7 @@ class TestWhatTheThirdReviewFound:
         from types import SimpleNamespace
 
         entry = {"_store": "acme/rates", "repository": "https://example.org/acme/rates", "_repository": "https://example.org/acme/rates"}
-        others = [SimpleNamespace(pipeline="acme/rates", commit="a" * 40, repository="https://example.org/someone/rates")]
+        others = [SimpleNamespace(pipeline="acme/rates", commit="a" * 40, repository="https://example.org/someone/rates", made_at="2026-01-01T00:00:00.000000Z")]
         converted = lock.clone_instead(entry, "acme/forecast", None, False, lambda: others, "github.com", pinned=False)
         assert converted["git"] == "https://example.org/acme/rates"
 
@@ -515,3 +515,94 @@ class TestWhatTheFourthReviewFound:
     def test_a_pinned_flag_must_be_given(self):
         with pytest.raises(TypeError):
             lock.clone_instead({"_store": "acme/rates"}, "acme/forecast", None, False, lambda: [], "github.com")
+
+
+def _mallory(host: Path, value: float = 666.0):
+    from tests.test_dependencies_by_id import _another
+
+    return _another(host, "mallory", value, remote="https://example.org/mallory/rates")
+
+
+class TestWhatTheFifthReviewFound:
+    def test_a_git_dir_in_the_environment_does_not_lose_the_first_commit(self, host, monkeypatch):
+        _upstream(host, 4.0)
+        elsewhere = host / "elsewhere-repo"
+        _git(elsewhere if elsewhere.mkdir() is None else elsewhere, "init", "--quiet", "-b", "main")
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        monkeypatch.setenv("GIT_DIR", str(elsewhere / ".git"))  # as a git hook in a linked worktree has
+        lock.pin(forecast)
+        monkeypatch.delenv("GIT_DIR")
+        assert _entry(forecast)["location"].get("first_commit")
+
+    def test_a_repository_pin_whose_first_commit_is_unknown_is_not_moved_to_another(self, host, monkeypatch):
+        import json
+
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        path = forecast / lock.LOCK_FILE
+        document = json.loads(path.read_text())
+        (pipeline,) = [r for r in document["records"] if r.get("kind") == "Pipeline"]
+        del pipeline["dependencies"][0]["location"]["first_commit"]  # as an older pin has it
+        path.write_text(json.dumps(document))
+        _mallory(host)
+        lock.update(forecast)
+        monkeypatch.chdir(forecast)
+        assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.0]
+        _set_host(host, "")
+        lock.update(forecast)
+        assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.0]
+
+    def test_a_repository_pin_not_built_yet_is_got_again_not_stuck(self, host):
+        from chartbook import run
+
+        script = (
+            f"{sys.executable} -c \"import os, polars as pl; os.makedirs('_data', exist_ok=True); "
+            f"pl.DataFrame({{'d': ['2024-01-01'], 'r': [6.0]}}).write_parquet('_data/treasury.parquet')\""
+        )
+        _upstream(host, 6.0, committed=False, scripts={"build": script})
+        forecast = _forecast(host / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
+        lock.pin(forecast)  # not built: nothing of its bytes pinned
+        _mallory(host)
+        report = run.run(forecast, echo=lambda *a, **k: None)
+        assert report.failed is None, report.reason
+        assert _entry(forecast)["via"] == "rev"
+
+    def test_an_update_does_not_take_another_repository_from_the_host(self, host, monkeypatch, tmp_path):
+        _upstream(host, 4.0)
+        _mallory(host)  # the store's only acme/rates is mallory's
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _entry(forecast)["via"] == "store"
+        monkeypatch.setenv("CHARTBOOK_STORE", str(tmp_path / "another-machines-store"))
+        report = lock.update(forecast)
+        (event,) = [e for e in report.events if e.status == "unfetched"]
+        assert "history begins at" in event.detail and 'repository = "..."' in event.detail
+        assert _entry(forecast)["via"] == "store"
+
+    def test_a_rewritten_history_is_said_not_followed(self, host):
+        repository = _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        _git(repository, "checkout", "--quiet", "--orphan", "fresh")
+        _commit(repository, "A history started again")
+        _git(repository, "branch", "--quiet", "-D", "main")
+        _git(repository, "branch", "--quiet", "-m", "main")
+        report = lock.update(forecast)
+        assert any(e.status == "unfetched" and "history rewritten" in e.detail for e in report.events)
+
+    def test_an_own_snapshot_dated_ahead_does_not_block_an_update(self, host):
+        import dataclasses
+
+        from chartbook.store import default_store
+
+        repository = _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        taken = snapshot.make(repository).snapshot
+        taken.path.unlink()
+        snapshot._write(dataclasses.replace(taken, made_at="2099-01-01T00:00:00.000000Z"), default_store())
+        pl.DataFrame({"d": ["2024-01-01"], "r": [5.0]}).write_parquet(repository / "_data" / "treasury.parquet")
+        _commit(repository, "Newer")
+        report = lock.update(forecast)
+        assert not report.problems and _entry(forecast)["via"] == "rev"
