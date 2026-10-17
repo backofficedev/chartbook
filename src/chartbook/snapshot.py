@@ -2459,8 +2459,12 @@ def stored_pipeline_record(taken: Snapshot, store: Store) -> dict:
     return {}
 
 
+#: How many of a pipeline's assets known from the store alone a page or ``chartbook ls`` lists,
+#: of each pipeline: anyone who can write to the store chose how many there are
+STORED_ASSETS_SHOWN = 100
+
 #: The records of an index that are a pipeline's assets, each with the kind its ID names
-_ASSET_KINDS = {"Dataframe": "dataframe", "Chart": "chart", "Model": "model", "Notebook": "notebook", "Note": "note"}
+_ASSET_KINDS ={"Dataframe": "dataframe", "Chart": "chart", "Model": "model", "Notebook": "notebook", "Note": "note"}
 
 
 def stored_assets(taken: Snapshot, store: Store) -> list[dict]:

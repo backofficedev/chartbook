@@ -34,7 +34,7 @@ chartbook catalog build           # build its site into ~/.chartbook/docs/ (only
 chartbook catalog browse          # open that site
 ```
 
-`catalog add` keys each pipeline by its ID ({ref}`the rule <pipeline-identity>`): at the top of a repository with a remote, the repository's name (`ftsfr/crsp_treasury` from `github.com/ftsfr/crsp_treasury`, whatever the folder is called); in a subfolder, the remote's scope and the subfolder's name; with no remote, the folder's name. It stores the path relative to the catalog, between the two folders as they really are, with any link in their paths followed (so a home folder reached through a link works), and skips duplicates. It accepts globs (`chartbook catalog add ../repos/*`) and a `--catalog` option to target a catalog other than the default. `chartbook catalog disable <id>` / `enable <id>` toggle entries without deleting them.
+`catalog add` keys each pipeline by its ID ({ref}`the rule <pipeline-identity>`): at the top of a repository with a remote (its `repo_url`, or else its git `origin` remote), the repository's name (`ftsfr/crsp_treasury` from `github.com/ftsfr/crsp_treasury`, whatever the folder is called); in a subfolder, the remote's scope and the subfolder's name; with no remote, the folder's name. It stores the path relative to the catalog, between the two folders as they really are, with any link in their paths followed (so a home folder reached through a link works), and skips duplicates. It accepts globs (`chartbook catalog add ../repos/*`) and a `--catalog` option to target a catalog other than the default. `chartbook catalog disable <id>` / `enable <id>` toggle entries without deleting them.
 
 ## Auto-discovery with `members`
 
@@ -54,7 +54,7 @@ The rules:
 
 - Patterns resolve relative to the catalog directory. Each matched directory containing a pipeline `chartbook.toml` joins under its derived scoped ID.
 - Glob matches are forgiving — non-pipeline directories and other catalogs are skipped silently, and a catalog never discovers itself. A *literal* member path that is missing or broken is a hard error: you named it explicitly.
-- Two members deriving the same ID, or a v1-format member, are hard errors with "To fix" suggestions.
+- Two members deriving the same ID, or a v1-format member, are hard errors with "To fix" suggestions. Two checkouts of one repository (a worktree beside it, a second clone) are one pipeline, listed once, from the main worktree, with a warning naming the other.
 - `disabled` lists IDs to switch off (`chartbook catalog disable` maintains it for member-discovered pipelines); `exclude` removes paths before matching; explicit entries coexist with `members` and win when they point at the same directory — which is also how you rename a pipeline within your catalog.
 
 Auto-discovery is designed for the local catalog, where "everything in this directory is mine" is exactly right. Publishing to a shared catalog should stay an explicit act with explicit entries.

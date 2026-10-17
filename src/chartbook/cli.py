@@ -824,8 +824,11 @@ def _from_the_store(manifest, kinds=("Dataframe", "Chart")):
     """The dataframes and charts of each pipeline a catalog names with no folder here, by pipeline ID.
 
     As the newest snapshot of each in the store lists them, each as
-    ``(kind, ID, name)``; its name is plain text, as its owner wrote it. A
-    store that cannot be read gives none.
+    ``(kind, ID, name)``; its name is plain text, as its owner wrote it.
+    At most :data:`chartbook.snapshot.STORED_ASSETS_SHOWN` of each, with how
+    many more there are. A store that cannot be read gives none.
+
+    :returns: By pipeline ID, the assets listed and how many are not.
     """
     pipeline_ids = manifest.get("store_pipelines") or []
     if not pipeline_ids:
@@ -837,13 +840,14 @@ def _from_the_store(manifest, kinds=("Dataframe", "Chart")):
         store = default_store()
         found, _ = snapshot.readable_snapshots(store)
     except (StoreError, OSError, ValueError):
-        return {pipeline_id: [] for pipeline_id in pipeline_ids}
+        return {pipeline_id: ([], 0) for pipeline_id in pipeline_ids}
     listed = {}
     for pipeline_id in pipeline_ids:
         newest = max((t for t in found if t.pipeline == pipeline_id), key=lambda t: t.made_at, default=None)
         assets = snapshot.stored_assets(newest, store) if newest is not None else []
         shown = sorted((a for a in assets if a["kind"] in kinds), key=lambda a: (kinds.index(a["kind"]), a["id"]))
-        listed[pipeline_id] = [(a["kind"], a["id"], a["name"] or "Unknown") for a in shown]
+        rows = [(a["kind"], a["id"], a["name"] or "Unknown") for a in shown]
+        listed[pipeline_id] = (rows[: snapshot.STORED_ASSETS_SHOWN], max(len(rows) - snapshot.STORED_ASSETS_SHOWN, 0))
     return listed
 
 
@@ -877,8 +881,11 @@ def ls(ctx, catalog):
             for pipeline_id in sorted([*manifest["pipelines"], *(manifest.get("store_pipelines") or [])]):
                 if pipeline_id not in manifest["pipelines"]:
                     click.echo(f"[pipeline] {pipeline_id}: {STORE_ONLY}")
-                    for kind, asset_id, name in stored.get(pipeline_id, []):
+                    rows, more = stored.get(pipeline_id, ([], 0))
+                    for kind, asset_id, name in rows:
                         click.echo(f"  [{kind.lower()}] {asset_id}: {name}")
+                    if more:
+                        click.echo(f"  ... and {more} more")
                     continue
                 pipeline_manifest = manifest["pipelines"][pipeline_id]
                 pipeline_name = _get_pipeline_name(pipeline_manifest)
@@ -948,8 +955,11 @@ def ls_dataframes(ctx):
         stored = _from_the_store(manifest, ("Dataframe",))
         for pipeline_id in sorted([*manifest["pipelines"], *stored]):
             if pipeline_id not in manifest["pipelines"]:
-                for _, asset_id, name in stored[pipeline_id]:
+                rows, more = stored[pipeline_id]
+                for _, asset_id, name in rows:
                     click.echo(f"{asset_id}: {name}")
+                if more:
+                    click.echo(f"... and {more} more of {pipeline_id}")
                 continue
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "dataframes" in pipeline_manifest:
@@ -977,8 +987,11 @@ def ls_charts(ctx):
         stored = _from_the_store(manifest, ("Chart",))
         for pipeline_id in sorted([*manifest["pipelines"], *stored]):
             if pipeline_id not in manifest["pipelines"]:
-                for _, asset_id, name in stored[pipeline_id]:
+                rows, more = stored[pipeline_id]
+                for _, asset_id, name in rows:
                     click.echo(f"{asset_id}: {name}")
+                if more:
+                    click.echo(f"... and {more} more of {pipeline_id}")
                 continue
             pipeline_manifest = manifest["pipelines"][pipeline_id]
             if "charts" in pipeline_manifest:
@@ -1089,7 +1102,7 @@ def _get_existing_absolute_paths(raw_catalog, catalog_dir):
     :returns: A dict mapping absolute paths to their catalog keys.
     :rtype: dict
     """
-    from chartbook.manifest import RESERVED_PIPELINES_KEYS, resolve_platform_path
+    from chartbook.manifest import RESERVED_PIPELINES_KEYS, catalog_entry_dir, resolve_platform_path
 
     result = {}
     for key, entry in raw_catalog.get("pipelines", {}).items():
@@ -1104,7 +1117,7 @@ def _get_existing_absolute_paths(raw_catalog, catalog_dir):
             resolved = resolve_platform_path(pipeline_path)
         except (ValueError, TypeError):
             continue
-        abs_path = (catalog_dir / resolved).resolve()
+        abs_path = catalog_entry_dir(catalog_dir, resolved)
         result[abs_path] = key
     return result
 
@@ -1266,7 +1279,7 @@ def catalog_add(paths, catalog_path, yes):
     raw_catalog = _load_raw_catalog(catalog_toml)
 
     # Get existing absolute paths for duplicate detection
-    existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_dir)
+    existing_abs = _get_existing_absolute_paths(raw_catalog, catalog_toml.parent)
     members_covered = _get_members_covered_paths(raw_catalog, catalog_dir)
     existing_keys = set(raw_catalog.get("pipelines", {}).keys())
     reenabled = 0
@@ -1408,16 +1421,39 @@ def catalog_add(paths, catalog_path, yes):
         for key, entry in raw_catalog.get("pipelines", {}).items()
         if key not in RESERVED_PIPELINES_KEYS and isinstance(entry, dict) and entry.get("path") is None
     }
+    from chartbook.identity import checkout_of, same_pipeline_checked_out
+
+    # The folder each key names, listed already or added now: a second
+    # checkout of one repository is that same pipeline, not another one
+    folder_of = {key: folder for folder, key in existing_abs.items()}
     planned = []  # (directory, name, key, whether it fills in an entry from the store)
     for d, name, project_table in valid_pipelines:
         key = _derive_catalog_key(d, project_table)
         fills = key in from_the_store
         if fills:
             from_the_store.discard(key)
+        elif key in folder_of and same_pipeline_checked_out(checkout_of(folder_of[key]), checkout_of(d)):
+            click.echo(
+                f"  Already in catalog as '{key}' (another checkout of the same repository, "
+                f"{folder_of[key]}): {d.name}/"
+            )
+            continue
         else:
             key = _ensure_unique_key(key, existing_keys)
         existing_keys.add(key)
+        folder_of.setdefault(key, d)
         planned.append((d, name, key, fills))
+
+    if not planned:
+        # Every one was another checkout of a pipeline already listed
+        if reenabled:
+            with open(catalog_toml, "wb") as f:
+                tomli_w.dump(raw_catalog, f)
+            click.echo("")
+            click.echo(f"Re-enabled {reenabled} pipeline(s) in {catalog_toml}")
+        else:
+            click.echo("No new pipelines to add.")
+        return
 
     # Prompt for confirmation if multiple
     if len(planned) > 1 and not yes:

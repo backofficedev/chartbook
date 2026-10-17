@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -180,6 +181,34 @@ def normalize_ref_to_id(ref: str) -> str:
 _git_remote_cache: dict[str, Optional[str]] = {}
 
 
+def _git_environment() -> dict:
+    """This process's environment without what tells git where a repository is.
+
+    A ``GIT_DIR`` exported by a hook or a shell would otherwise make git
+    answer for that repository, whatever folder it is asked about.
+    """
+    import os
+
+    from chartbook.gitcache import GIT_LOCATION_VARIABLES
+
+    return {k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARIABLES}
+
+
+def _ask_git(directory: str, *arguments: str) -> Optional[str]:
+    """What git prints for a question about a directory, stripped; None if it fails or there is no git."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", directory, *arguments],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            env=_git_environment(),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
 def get_git_remote_url(base_dir: Path | str) -> Optional[str]:
     """Return the git ``origin`` remote URL for a directory, or None.
 
@@ -187,28 +216,23 @@ def get_git_remote_url(base_dir: Path | str) -> Optional[str]:
     :returns: The remote URL string, or None if unavailable.
     """
     key = str(Path(base_dir).resolve())
-    if key in _git_remote_cache:
-        return _git_remote_cache[key]
-
-    url: Optional[str] = None
-    try:
-        result = subprocess.run(
-            ["git", "-C", key, "config", "--get", "remote.origin.url"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            url = result.stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        url = None
-
-    _git_remote_cache[key] = url
-    return url
+    if key not in _git_remote_cache:
+        _git_remote_cache[key] = _ask_git(key, "config", "--get", "remote.origin.url") or None
+    return _git_remote_cache[key]
 
 
 # Cache of repository tops, keyed as the remote lookups are
 _git_top_cache: dict[str, Optional[Path]] = {}
+
+
+def _same_folder(first: Path | str, second: Path | str) -> bool:
+    """Whether two paths are one folder however they are written: a case-insensitive disk may give either spelling."""
+    import os
+
+    try:
+        return Path(first) == Path(second) or os.path.samefile(first, second)
+    except OSError:
+        return False
 
 
 def is_repository_top(base_dir: Path | str) -> bool:
@@ -217,31 +241,65 @@ def is_repository_top(base_dir: Path | str) -> bool:
     :param base_dir: The directory.
     :returns: False if it is in no repository, or in one's subfolder.
     """
-    import os
-
     key = str(Path(base_dir).resolve())
     if key not in _git_top_cache:
-        top: Optional[Path] = None
-        try:
-            result = subprocess.run(
-                ["git", "-C", key, "rev-parse", "--show-toplevel"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                top = Path(result.stdout.strip()).resolve()
-        except (OSError, subprocess.SubprocessError):
-            top = None
-        _git_top_cache[key] = top
+        top = _ask_git(key, "rev-parse", "--show-toplevel")
+        _git_top_cache[key] = Path(top).resolve() if top else None
     top = _git_top_cache[key]
-    if top is None:
-        return False
+    return top is not None and _same_folder(top, key)
+
+
+@dataclass(frozen=True)
+class Checkout:
+    """Where a folder is in git: which repository, and where in it.
+
+    Attributes:
+        common_dir: The repository's own git folder, which its worktrees share.
+        first_commit: Its first commit, back from where it is by first
+            parents: the same in every full clone. Empty in a shallow one.
+        subfolder: The folder within the repository, with ``/`` between its
+            parts; empty at the top.
+        main: Whether this is the repository's main worktree, not one made
+            with ``git worktree add``.
+    """
+
+    common_dir: Path
+    first_commit: str
+    subfolder: str
+    main: bool
+
+
+def checkout_of(folder: Path | str) -> Optional[Checkout]:
+    """Where a folder is in git; None if it is in no repository."""
+    key = str(Path(folder).resolve())
+    answer = _ask_git(key, "rev-parse", "--show-toplevel", "--git-common-dir", "--git-dir", "--is-shallow-repository")
+    lines = answer.splitlines() if answer else []
+    if len(lines) != 4:
+        return None
+    top = Path(lines[0]).resolve()
+    common, own = ((Path(key) / line).resolve() for line in lines[1:3])
+    first = ""
+    if lines[3] != "true":
+        roots = (_ask_git(key, "rev-list", "--max-parents=0", "--first-parent", "HEAD") or "").split()
+        first = roots[-1] if roots else ""
     try:
-        # One folder however it is written: a case-insensitive disk may give either spelling
-        return top == Path(key) or os.path.samefile(top, key)
-    except OSError:
+        subfolder = Path(key).relative_to(top).as_posix()
+    except ValueError:
+        subfolder = ""
+    return Checkout(common, first, "" if subfolder == "." else subfolder, _same_folder(common, own))
+
+
+def same_pipeline_checked_out(first: Optional[Checkout], second: Optional[Checkout]) -> bool:
+    """Whether two folders are one pipeline in two checkouts of one repository.
+
+    Two worktrees of one repository, or two clones of it (one first commit),
+    at the same place in it.
+    """
+    if first is None or second is None or first.subfolder != second.subfolder:
         return False
+    return _same_folder(first.common_dir, second.common_dir) or bool(
+        first.first_commit and first.first_commit == second.first_commit
+    )
 
 
 def remote_to_web_url(remote: Optional[str]) -> str:
@@ -406,16 +464,46 @@ def clear_git_remote_cache() -> None:
     _git_top_cache.clear()
 
 
-def _sanitize_component(component: str) -> str:
+def _sanitize_component(component: str, fallback: str = "pipeline") -> str:
     """Coerce an arbitrary string (e.g. a directory name) into an ID component.
 
     Derived components are normalized to lowercase snake_case; explicitly
-    authored IDs may still use any characters the grammar allows.
+    authored IDs may still use any characters the grammar allows. One with
+    nothing left but dots (``_.._``) names no component, and is *fallback*.
     """
     sanitized = component.strip().lower().replace("-", "_").replace(" ", "_")
     sanitized = re.sub(r"[^a-z0-9_.]", "_", sanitized)
     sanitized = re.sub(r"_+", "_", sanitized).strip("_")
-    return sanitized or "pipeline"
+    return sanitized if sanitized.strip(".") else fallback
+
+
+def id_from_address(address: str) -> Optional[str]:
+    """The ID a pipeline at the top of the repository at an address derives: ``scope/name``, or a bare ``name``.
+
+    The address is a repository's web address or its git remote, in any of
+    the forms git takes (``https://``, ``ssh://``, ``user@host:path``,
+    ``host:path``), with the host, any user, port and ``.git`` left out:
+    ``git@github.com:Acme/CRSP-Treasury.git`` is ``acme/crsp_treasury``. The
+    scope is in lowercase and the name is written as a folder's is
+    (:func:`_sanitize_component`), so that every way of writing one
+    address, on every machine, gives one ID. A remote that is a path on
+    disk names no repository, and gives None; so does a name of nothing but
+    dots (``_.._``), which names no component.
+    """
+    scope, name = _address_parts(address) or ("", "")
+    if not name:
+        return None
+    return f"{scope}/{name}" if scope else name
+
+
+def _address_parts(address: str) -> Optional[tuple[str, str]]:
+    """The scope and the name the ID rule takes from a repository's address, each empty if it gives none; None for no address."""
+    try:
+        normalized = normalize_ref_to_id(remote_to_web_url(address) or address)
+    except ValueError:
+        return None
+    scope, _, name = normalized.rpartition("/")
+    return scope.lower(), _sanitize_component(name, fallback="")
 
 
 #: The file :func:`chartbook.snapshot.materialize` writes in a folder it lays a
@@ -457,15 +545,13 @@ def read_version_file(base_dir: Path | str) -> dict:
 
 def _tracked_by_git(base: Path, name: str) -> bool:
     """Whether git tracks a file in a folder; False where there is no git or no repository."""
-    import os
-
     try:
         result = subprocess.run(
             ["git", "-C", str(base), "ls-files", "--error-unmatch", "--", name],
             capture_output=True,
             text=True,
             timeout=15,
-            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0", "GIT_LITERAL_PATHSPECS": "1"},
+            env={**_git_environment(), "GIT_OPTIONAL_LOCKS": "0", "GIT_LITERAL_PATHSPECS": "1"},
         )
     except (OSError, subprocess.SubprocessError):
         return False
@@ -479,16 +565,18 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
 
     1. Explicit ``id`` in the ``[project]`` table.
     2. The pipeline a laid-out version's :data:`VERSION_FILE` names.
-    3. With a git ``origin`` remote (or ``repo_url``), the scope from it;
-       and the name from it too when the directory is the top of its git
-       repository, else the directory's name. So a clone, a git worktree
-       or a renamed folder of one repository is one pipeline, whatever its
-       folder is called, and each pipeline in a repository's subfolders is
-       named by its subfolder.
+    3. With a repository address, ``repo_url`` or else the git ``origin``
+       remote, the scope from it (:func:`id_from_address`); and the name
+       from it too when the directory is the top of its git repository,
+       else the directory's name. So a clone, a git worktree or a renamed
+       folder of one repository is one pipeline, whatever its folder is
+       called, and each pipeline in a repository's subfolders is named by
+       its subfolder. A ``repo_url`` comes first, so a fork whose
+       manifest names its upstream keeps the upstream's ID.
     4. Bare directory name.
 
     A name is lowercase snake_case, from the folder or from the remote:
-    ``first-pipeline`` is ``first_pipeline``.
+    ``first-pipeline`` is ``first_pipeline``; a scope is in lowercase.
 
     :param project: The raw ``[project]`` table from chartbook.toml.
     :param base_dir: The pipeline's root directory.
@@ -510,21 +598,17 @@ def derive_pipeline_id(project: dict, base_dir: Path | str) -> str:
     name_part = _sanitize_component(base_dir.name)
 
     source_url = project.get("repo_url", "") or get_git_remote_url(base_dir)
-    if source_url:
-        try:
-            normalized = normalize_ref_to_id(source_url)
-        except ValueError:
-            normalized = None
-        if normalized:
-            scope, _, repository_name = normalized.rpartition("/")
-            if is_repository_top(base_dir):
-                # The pipeline is the repository: named as the repository is,
-                # not as the folder this copy of it happens to be in
-                name_part = _sanitize_component(repository_name)
-            if scope:
-                return f"{scope}/{name_part}"
+    parts = _address_parts(source_url) if isinstance(source_url, str) and source_url else None
+    if parts is not None:
+        scope, repository_name = parts
+        if repository_name and is_repository_top(base_dir):
+            # The pipeline is the repository: named as the repository is,
+            # not as the folder this copy of it happens to be in
+            name_part = repository_name
+        if scope:
+            return validate_pipeline_id(f"{scope}/{name_part}")
 
-    return name_part
+    return validate_pipeline_id(name_part)
 
 
 def match_pipeline_ref(
@@ -535,7 +619,10 @@ def match_pipeline_ref(
     Matching order:
 
     1. Exact match on the (possibly scoped) key.
-    2. URL references are normalized to ``scope/name`` and matched exactly.
+    2. URL references are normalized to ``scope/name`` and matched exactly,
+       as written and then as the ID rule derives one from the address
+       (:func:`id_from_address`): ``https://github.com/ftsfr/crsp-treasury``
+       matches ``ftsfr/crsp_treasury``.
     3. A bare name matches any key whose name component equals it — but only
        if exactly one does; multiple matches raise an error listing the
        candidates.
@@ -560,6 +647,13 @@ def match_pipeline_ref(
 
     if normalized in keys:
         return normalized
+    # A repository's address names the pipeline at its top as the ID rule
+    # does: `.../ftsfr/crsp-treasury` is `ftsfr/crsp_treasury`
+    stripped = ref.strip()
+    if "://" in stripped or stripped.startswith("git@"):
+        derived = id_from_address(stripped)
+        if derived in keys:
+            return derived
 
     if "/" not in normalized:
         matches = [k for k in keys if k.rsplit("/", 1)[-1] == normalized]

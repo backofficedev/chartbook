@@ -559,3 +559,21 @@ class TestAHomeReachedThroughALink:
         listed = runner.invoke(main, ["ls"])
         assert listed.exit_code == 0, listed.output
         assert "[pipeline] first_pipeline: Test Pipeline" in listed.output
+
+    def test_a_path_written_from_the_link_is_still_read(self, tmp_path):
+        """Found by a review: an entry an older `catalog add` wrote from the folder as named (and
+        what `realpath` on Windows makes of `..` under a junction) named no folder once paths were
+        read from the resolved one. When that finds no chartbook.toml, the path is read as written."""
+        import os
+
+        from chartbook.manifest import load_manifest
+
+        real = tmp_path / "volumes" / "users" / "real-home"
+        (real / ".chartbook").mkdir(parents=True)
+        link = tmp_path / "link-home"
+        link.symlink_to(real)
+        pipeline_dir = _make_minimal_pipeline(tmp_path / "first_pipeline")
+        written = os.path.relpath(pipeline_dir, link / ".chartbook")  # from the link, as the old add did
+        _make_minimal_catalog(link / ".chartbook", {"first_pipeline": {"path": written}})
+        loaded = load_manifest(link / ".chartbook")
+        assert Path(loaded["pipelines"]["first_pipeline"]["pipeline_base_dir"]) == pipeline_dir.resolve()

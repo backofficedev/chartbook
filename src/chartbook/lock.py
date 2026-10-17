@@ -1590,7 +1590,7 @@ def _newest_in_store(
         others = sorted({_made_in(t) for t in mine})
         claim = f"; snapshots from {', '.join(others)} claim its ID too, and are not taken" if others and there else ""
         # Its repository goes on under another ID, perhaps: said beside why there is nothing here
-        elsewhere = {} if at else _under_another_id(pipeline_id, accepted, known, "", found)
+        elsewhere = {} if at else _under_another_id(pipeline_id, accepted, known, "", found, named)
         if there:
             return None, (
                 f"the store at {store} has no snapshot of {pipeline_id}{where} made in {there}{claim}{dated}. "
@@ -1629,28 +1629,37 @@ def _newest_in_store(
             f"[dependencies] entry, then `chartbook update`"
         )
     if not at:
-        identity.update(_under_another_id(pipeline_id, accepted, known, newest.made_at, found))
+        identity.update(_under_another_id(pipeline_id, accepted, known, newest.made_at, found, named))
     return newest, "", identity
 
 
-def _under_another_id(pipeline_id: str, of_it: list, known: set, after: str, found: list) -> dict:
+def _under_another_id(pipeline_id: str, of_it: list, known: set, after: str, found: list, named: bool = False) -> dict:
     """The newest snapshot of the same pipeline under another ID, made after *after*: ``{"under_another_id": it}``, or nothing.
 
     A pipeline's ID can change under the pipelines that depend on it: it
-    gets a git remote, so a scope; its folder's name was its name, and the
+    gets a remote, so a scope; its folder's name was its name, and the
     repository's is now; it is given ``[project] id``. Its snapshots then
     go on under the new ID, and a dependency named by the old one stays at
     the last snapshot of that, with nothing newer to move to. The same
-    pipeline is the same repository (an address or a first commit in
-    common, as :func:`chartbook.snapshot.repository_groups` has it, with
-    *known*, what the pin recorded of it) and the same folder in it.
+    pipeline is the same repository (:func:`_made_in_one_of`), and the
+    same folder in it.
 
     :param of_it: The snapshots of the ID taken as the dependency's.
+    :param known: What the pin recorded of its repository, or the address
+        its entry names, as :func:`chartbook.snapshot.identity_keys` gives them.
     :param after: Only one made after this time counts; ``""`` for any.
+    :param named: Whether the entry names its repository: then only that
+        address is the dependency's, and a first commit only that address's
+        snapshots record, as :func:`_newest_in_store` takes them.
     """
-    keys = set(known).union(*(snapshot.identity_keys(t) for t in of_it))
+    addresses = {value for kind, value in known if kind == "address"}
+    addresses |= {repository_key(t.repository) for t in of_it if repository_key(t.repository)}
+    if named:
+        firsts = {t.first_commit for t in of_it if t.first_commit and repository_key(t.repository) in addresses}
+    else:
+        firsts = {value for kind, value in known if kind == "first"} | {t.first_commit for t in of_it if t.first_commit}
     folders = {t.subdirectory for t in of_it}
-    if not keys or not folders:
+    if not (addresses or firsts) or not folders:
         return {}
     later = [
         t for t in found
@@ -1658,10 +1667,24 @@ def _under_another_id(pipeline_id: str, of_it: list, known: set, after: str, fou
         and t.subdirectory in folders
         and t.made_at > after
         and not snapshot.made_in_the_future(t)
-        and snapshot.identity_keys(t) & keys
+        and _made_in_one_of(t, addresses, firsts)
     ]
     newest = max(later, key=lambda t: t.made_at, default=None)
     return {"under_another_id": newest} if newest is not None else {}
+
+
+def _made_in_one_of(taken: "snapshot.Snapshot", addresses: set, firsts: set) -> bool:
+    """Whether a snapshot was made in the repository these addresses and first commits name.
+
+    By its address where it and the repository both have one, so that a
+    fork, which shares its original's first commit and has an address of
+    its own, is another repository; by its first commit where either has
+    none (a remote added since, a clone whose remote is a path).
+    """
+    address = repository_key(taken.repository)
+    if address and addresses:
+        return address in addresses
+    return bool(taken.first_commit) and taken.first_commit in firsts
 
 
 def _under_another_id_note(key: str, declared: dict, taken: "snapshot.Snapshot") -> str:
@@ -1669,6 +1692,9 @@ def _under_another_id_note(key: str, declared: dict, taken: "snapshot.Snapshot")
     from chartbook.manifest import dependency_line
 
     kept = {name: declared[name] for name in ("commit", "rev", "repository") if isinstance(declared.get(name), str)}
+    if "repository" in kept and repository_key(kept["repository"]) != repository_key(taken.repository):
+        # Its snapshots under the new ID name another address, or none: an entry naming this one would take none
+        del kept["repository"]
     line = dependency_line(key, kept if key == taken.pipeline else {"id": taken.pipeline, **kept})
     made = f"{taken.made_at[:10]} {taken.made_at[11:16]} UTC"
     return (

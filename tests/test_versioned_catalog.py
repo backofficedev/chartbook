@@ -697,6 +697,35 @@ class TestAPipelineFromTheStoreAlone:
         assert "pipeline_c:dataframe_0: Dataframe 0" in flat.output
         assert "pipeline_c:chart/chart_0_0: Chart 0-0" in CliRunner().invoke(main, ["ls", "--catalog", str(root), "charts"]).output
 
+    def test_a_long_list_is_cut(self, catalog, tmp_path, monkeypatch):
+        """Found by a review: anyone who can write to the store chooses how many assets a pipeline
+        known only from it lists, and every one was on the catalog's pages."""
+        import shutil
+
+        from tests.fixtures import create_pipeline_project
+
+        root, first, second = catalog
+        repository = tmp_path.resolve() / "elsewhere"
+        project = create_pipeline_project(
+            repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C", dataframe_count=3
+        )
+        _git(repository, "init", "--quiet", "-b", "main")
+        _commit(repository)
+        snapshot.make(project)
+        shutil.rmtree(repository)
+        _show_from_the_store(root)
+        monkeypatch.setattr(snapshot, "STORED_ASSETS_SHOWN", 2)
+        _build(root, monkeypatch)
+        site = root / "docs" / "cb"
+        listing = (site / "dataframes.html").read_text()
+        assert "and 1 more of" in listing and "Dataframe 2" not in listing
+        readme = site / "pipelines" / "pipeline_c_README.html"
+        assert "and 4 more, in" in readme.read_text()
+        assert all(_resolves(readme, h) for h in _links(readme))
+        tree = CliRunner().invoke(main, ["ls", "--catalog", str(root)]).output
+        assert "  ... and 4 more" in tree
+        assert "... and 1 more of pipeline_c" in CliRunner().invoke(main, ["ls", "--catalog", str(root), "dataframes"]).output
+
     def test_ls_writes_references_as_everything_else_does(self, catalog):
         """Found by a new-user test: `first_pipeline/rates` reads as a scoped pipeline ID."""
         root, first, second = catalog

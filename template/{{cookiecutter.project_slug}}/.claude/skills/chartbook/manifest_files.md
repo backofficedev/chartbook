@@ -274,14 +274,20 @@ bare unscoped `name` is also legal for local-only projects.
    `acme/yield_curve`).
 4. With no remote: the folder's name, unscoped.
 
-A derived name is lowercase, with `_` for `-` and spaces. Adding a remote to
-a pipeline that had none changes its ID (`first_pipeline` becomes
-`testorg/first_pipeline`), and its snapshots are made under the new one;
-`chartbook pin`/`update` say when a dependency named by the old ID has newer
-snapshots under another, and name the entry to write
+A derived scope is lowercase, and a derived name lowercase with `_` for `-`
+and spaces, however the remote is written (`https://`, `ssh://`,
+`user@host:path`). A clone of a folder on disk (a path remote) takes its own
+folder's name. `repo_url` comes before the remote, and `chartbook check` warns
+when the two name different repositories. Adding a remote to a pipeline that
+had none changes its ID (`first_pipeline` becomes `testorg/first_pipeline`),
+and its snapshots are made under the new one; `chartbook pin`/`update` say
+when a dependency named by the old ID has newer snapshots of the same
+repository under another, and name the entry to write
 (`"first_pipeline" = { id = "testorg/first_pipeline" }`); `chartbook check`
 warns when a catalog key or such a dependency no longer matches what the
-folder calls itself. Set `[project] id` to pin the ID down.
+folder calls itself. Two checkouts of one repository (a worktree, a second
+clone) are one pipeline: a catalog lists it once. Set `[project] id` to pin
+the ID down.
 
 **Resolution** for `data.load(pipeline=...)`, `chartbook ls`, and friends:
 
