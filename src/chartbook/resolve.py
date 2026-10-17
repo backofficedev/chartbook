@@ -811,7 +811,9 @@ def _held(store, record: dict) -> Location:
     held = store.get(record["content_hash"])
     # The sizes the record gives, against the files': a store in a synced
     # folder can have a file before the whole of it. Nothing is read
-    unsynced = store.incomplete(record["content_hash"], record.get("size_bytes"))
+    from chartbook.snapshot import files_read
+
+    unsynced = store.incomplete(record["content_hash"], record.get("size_bytes"), files_read(record))
     if unsynced:
         raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
     if record["location"].get("kind") in ("table", "query"):

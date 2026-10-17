@@ -329,7 +329,7 @@ def _incomplete(store: Store, record: dict) -> Optional[str]:
     """Why the store's object of a record with a hash does not hold all of its bytes yet; None if it does, or that cannot be told."""
     if not record.get("content_hash"):
         return None
-    return store.incomplete(record["content_hash"], record.get("size_bytes"))
+    return store.incomplete(record["content_hash"], record.get("size_bytes"), snapshot.files_read(record))
 
 
 @dataclass
@@ -1984,7 +1984,7 @@ def _sync_from_snapshots(
     # object the snapshot names, nothing moves: the lockfile would otherwise
     # name this snapshot beside bytes from another.
     missing = [
-        snapshot.renamed(newest.assets[name], key)["id"]
+        (snapshot.renamed(newest.assets[name], key)["id"], newest.assets[name]["content_hash"])
         for name in sorted(newest.assets)
         if newest.assets[name].get("content_hash")
         and not store.has(newest.assets[name]["content_hash"])
@@ -1996,30 +1996,42 @@ def _sync_from_snapshots(
         if newest.assets[name].get("content_hash") and store.has(newest.assets[name]["content_hash"]):
             short = _incomplete(store, newest.assets[name])
             if short:
-                unsynced.append((snapshot.renamed(newest.assets[name], key)["id"], short))
+                unsynced.append((snapshot.renamed(newest.assets[name], key)["id"], newest.assets[name]["content_hash"], short))
     if missing or unsynced:
+        # Said once each: what the snapshot names, and what else is pinned
+        said = {content_hash for _, content_hash in missing} | {content_hash for _, content_hash, _ in unsynced}
         for record in pinned:
-            _report_kept(record, key, store, report)
+            if record.get("content_hash") not in said:
+                _report_kept(record, key, store, report)
         had = {**had, **had_labels}
-        for asset_id in missing:
+        # The snapshot pinned already, or one it would move to
+        there = newest.same_moment(locked_commit, locked_made)
+        moved = "" if there else ", so nothing was moved"
+        for asset_id, content_hash in missing:
             report.events.append(
                 PinEvent(
                     "lost",
                     key,
                     asset_id,
+                    old=content_hash if there else None,
                     detail=(
                         f"the snapshot at {newest.commit[:7]} names it, and the store at {store} does "
-                        f"not have it, so nothing was moved. {NOT_SYNCED_YET}. If that machine's store "
-                        f"lacks it too, its owner makes the snapshot again (`chartbook snapshot` in its "
-                        f"folder, at that commit)"
+                        f"not have it{moved}. {NOT_SYNCED_YET}. If that machine's store lacks it too, "
+                        f"its owner makes the snapshot again (`chartbook snapshot` in its folder, at "
+                        f"that commit)"
                     ),
                 )
             )
-        for asset_id, why in unsynced:
+        for asset_id, content_hash, why in unsynced:
             report.events.append(
                 PinEvent(
                     "unsynced", key, asset_id,
-                    detail=f"nothing was moved to the snapshot at {newest.commit[:7]}, which names it: {why}",
+                    old=content_hash if there else None,
+                    new=content_hash if there else None,
+                    detail=(
+                        f"{why}" if there
+                        else f"nothing was moved to the snapshot at {newest.commit[:7]}, which names it: {why}"
+                    ),
                 )
             )
         return dict(had), as_it_was()
@@ -2424,8 +2436,9 @@ class GcPlan:
         delete: Objects that nothing names, each with its size in bytes.
         not_read: Lockfiles a store names that are not read here, as they are
             not a local ``chartbook.lock``: what their notes name is kept.
-        elsewhere: The notes of lockfiles on other machines, which are not
-            read here and never forgotten from here: what they name is kept.
+        elsewhere: The notes of lockfiles on other machines, and those from
+            before notes named their machine, which may be another's: not
+            read here and never forgotten from here; what they name is kept.
             They are not in *lockfiles*, which are this machine's.
         forget: Lockfiles that could not be found and are to be forgotten.
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
@@ -2478,6 +2491,8 @@ def plan_gc(
     keeps what it named when it was last pinned, unless *forget_missing*
     is set. A lockfile on another machine, which a store in a shared or
     synced folder has notes of, is not read: what its note names is kept.
+    So is a note from before notes named their machine, which may be
+    another machine's.
 
     :param store: The store; this user's by default.
     :param forget_missing: If True, a lockfile on this machine that cannot
@@ -2504,8 +2519,9 @@ def plan_gc(
 
     here = this_machine(create=False)  # a machine that has written no note has none of its own
     for root in store.roots():
-        if root.machine and root.machine != here:
-            # Another machine's lockfile: the path names a file there, which
+        if root.machine != here:
+            # Another machine's lockfile, or one noted before notes named
+            # their machine, which may be: the path names a file there, which
             # one here at the same path is not. It is not read, and never
             # taken as gone: what its note names is kept, even with
             # forget_missing, since only that machine can tell

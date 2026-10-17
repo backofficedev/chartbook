@@ -21,7 +21,7 @@ from click.testing import CliRunner
 from chartbook import data, lock, snapshot
 from chartbook.cli import main
 from chartbook.errors import AssetNotPinnedError
-from chartbook.store import FolderStore, default_store, is_record_name, short_of
+from chartbook.store import FolderStore, default_store, is_record_name, unsynced_part
 from tests.test_dependencies_by_id import _commit, _forecast, _rates
 from tests.test_model_versions import _git
 
@@ -36,6 +36,7 @@ def drive(tmp_path, monkeypatch):
     """
     work = tmp_path.resolve()
     monkeypatch.setenv("CHARTBOOK_STORE", str(work / "Google Drive" / "chartbook-store"))
+    monkeypatch.delenv("CHARTBOOK_MACHINE_ID")  # each home its own machine
 
     def machine(letter: str) -> Path:
         home = work / f"home-{letter}"
@@ -136,24 +137,70 @@ class TestAFileThereBeforeAllOfItsBytes:
         assert frozen.exit_code == 1 and "not fully synced yet" in frozen.output
 
 
+    def test_the_name_a_pin_reads_is_the_one_judged(self, half, tmp_path):
+        """Another pipeline stored the same bytes under another name; the sync has the other name whole."""
+        forecast, first, second, held, whole = half
+        held.write_bytes(whole)
+        lock.update(forecast)
+        (tmp_path / "copy.parquet").write_bytes(whole)
+        default_store().put(tmp_path / "copy.parquet")
+        assert (held.parent / "copy.parquet").is_file()
+        held.write_bytes(b"")  # the name this pin reads, made and not filled yet
+        (problem,) = lock.verify(forecast).problems
+        assert "has 0 bytes of treasury.parquet where its record says" in problem.message
+
+    def test_update_at_the_snapshot_it_is_pinned_to_says_it_once(self, half):
+        forecast, first, second, held, whole = half
+        held.write_bytes(whole)
+        lock.update(forecast)
+        held.write_bytes(whole[:10])
+        (problem,) = lock.update(forecast).problems
+        assert problem.status == "unsynced" and "nothing was moved" not in problem.detail
+        result = CliRunner().invoke(main, ["update", "--project-dir", str(forecast)])
+        assert "acme/rates: 1 not fully synced\n" in result.output and "1 thing(s) could not be pinned" in result.output
+
+
 class TestTheSizesOfAnObject:
-    def test_one_file_under_two_names_is_whole_and_one_cut_short_is_not(self, tmp_path):
+    def test_a_file_is_judged_by_its_own_name(self, tmp_path):
+        """One file's bytes may be in its object under two names, as two pipelines named it; a sync may deliver one."""
         (tmp_path / "a.parquet").write_bytes(b"x" * 10)
-        (tmp_path / "b.parquet").write_bytes(b"x" * 10)
-        assert short_of(tmp_path, 10) is None
-        (tmp_path / "b.parquet").write_bytes(b"x" * 4)
-        assert short_of(tmp_path, 10) == 4
+        (tmp_path / "b.parquet").write_bytes(b"")  # a name the sync has made and not filled yet
+        assert unsynced_part(tmp_path, 10, {"a.parquet": 10}) is None
+        assert unsynced_part(tmp_path, 10, {"b.parquet": 10}) == "has 0 bytes of b.parquet where its record says 10"
+        assert unsynced_part(tmp_path, 10, {"c.parquet": 10}) is None  # read as the folder, which has its bytes
+        assert unsynced_part(tmp_path, 20, {"c.parquet": 20}) == "has 10 bytes where its record says 20"
+
+    def test_a_file_whatever_it_is_called(self, tmp_path):
+        (tmp_path / "._x").write_bytes(b"x" * 10)  # a name a directory's hash passes over
+        assert unsynced_part(tmp_path, 10, {"._x": 10}) is None
 
     def test_a_folder_with_a_file_not_there_yet(self, tmp_path):
         (tmp_path / "year=2024").mkdir()
         (tmp_path / "year=2024" / "part-0.parquet").write_bytes(b"x" * 10)
-        assert short_of(tmp_path, 25) == 10
+        listed = {"year=2024/part-0.parquet": 10, "year=2025/part-0.parquet": 15}
+        assert unsynced_part(tmp_path, 25, listed) == "does not have year=2025/part-0.parquet yet"
+        assert unsynced_part(tmp_path, 25) == "has 10 bytes where its record says 25"  # a glob's, summed
         (tmp_path / "year=2025").mkdir()
         (tmp_path / "year=2025" / "part-0.parquet").write_bytes(b"x" * 15)
-        assert short_of(tmp_path, 25) is None
+        assert unsynced_part(tmp_path, 25, listed) is None and unsynced_part(tmp_path, 25) is None
 
     def test_an_empty_folder_is_not_whole(self, tmp_path):
-        assert short_of(tmp_path, 0) == 0
+        assert unsynced_part(tmp_path, 0) == "has none of its files yet"
+
+    def test_what_a_record_says_is_read(self, drive):
+        work, machine, rates = drive
+        (rates / "_data" / "parts").mkdir()
+        (rates / "_data" / "parts" / "a.csv").write_text("1\n")
+        (rates / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {
+                "treasury": {"path": "./_data/treasury.parquet", "docs": "Rates."},
+                "parts": {"path": "./_data/parts", "docs": "Parts."},
+            }})
+        )
+        _commit(rates, "Parts")
+        taken = snapshot.make(rates).snapshot
+        assert snapshot.files_read(taken.assets["treasury"]) == {"treasury.parquet": taken.assets["treasury"]["size_bytes"]}
+        assert snapshot.files_read(taken.assets["parts"]) == {"a.csv": 2}
 
     def test_a_record_with_no_size_is_not_judged(self, tmp_path):
         store = FolderStore(tmp_path / "store")
@@ -162,6 +209,7 @@ class TestTheSizesOfAnObject:
         assert store.incomplete(stored.content_hash, None) is None
         assert store.incomplete(stored.content_hash, 5) is None
         assert "has 5 bytes where its record says 9" in store.incomplete(stored.content_hash, 9)
+        assert "has 5 bytes of x.txt where its record says 9" in store.incomplete(stored.content_hash, 9, {"x.txt": 9})
 
 
 class TestAnObjectNotThereYet:
@@ -247,7 +295,7 @@ class TestOnePersonsTwoMachines:
             assert old.assets["treasury"]["content_hash"] not in {h for h, _ in plan.delete}
             assert [root.lockfile for root in plan.elsewhere] == [project / lock.LOCK_FILE]
             kept = {taken.made_at: why for taken, why in plan.snapshots_kept}
-            assert kept[old.made_at] == "a lockfile on another machine named what it holds"
+            assert kept[old.made_at] == "a lockfile not read here, another machine's, named what it holds"
         assert len(store.roots()) == 2  # one note for each machine
         lock.run_gc(lock.plan_gc(store, forget_missing=True, recent_seconds=0, keep_days=0), store)
 
@@ -268,22 +316,31 @@ class TestOnePersonsTwoMachines:
         assert f"{forecast / lock.LOCK_FILE}  (on another machine, " in result.output
         assert "not read here; its pins are kept)" in result.output
 
-    def test_a_note_from_before_notes_named_their_machine_is_replaced(self, drive):
+    def test_a_note_from_before_notes_named_their_machine(self, drive):
+        """It may be another machine's, at the same path: its pins are kept, even with --forget-missing,
+        until this machine's own note names all of them."""
+        from chartbook.store import root_name
+
         work, machine, rates = drive
-        snapshot.make(rates)
+        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
+        _snapshot_again(rates, 4.2)
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         lock.pin(forecast)
         store = default_store()
         (note,) = (store.root / "roots").glob("*.json")
         stored = json.loads(note.read_text())
         assert stored["machine"] and stored["host"]
-        from chartbook.store import root_name
-
         older = store.root / "roots" / root_name(forecast / lock.LOCK_FILE)
-        note.rename(older)
+        older.write_text(json.dumps({"lockfile": stored["lockfile"], "hashes": sorted(old.asset_hashes())}))
+        (forecast / lock.LOCK_FILE).unlink()  # the project is gone from this machine
+        plan = lock.plan_gc(store, forget_missing=True, recent_seconds=0, keep_days=0)
+        assert [root.machine for root in plan.elsewhere] == [""]
+        assert old.made_at not in [taken.made_at for taken, _ in plan.snapshots_delete] and plan.forget == [forecast / lock.LOCK_FILE]
+        result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
+        assert "(noted before notes named their machine, so perhaps another machine's: not read here" in result.output
+        lock.pin(forecast)
+        assert older.is_file()  # this machine pins something else
         older.write_text(json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}))
-        (root,) = store.roots()
-        assert root.machine == "" and lock.plan_gc(store).lockfiles == [(forecast / lock.LOCK_FILE, True)]
         lock.update(forecast)
         assert [path.name for path in (store.root / "roots").glob("*.json")] == [note.name]
 
@@ -364,6 +421,36 @@ class TestAPathDependencyOnAnotherMachine:
         (problem,) = check_dependencies(load_manifest(cloned), cloned)
         assert "directory not found" in problem.message and "Nothing of it is pinned" in problem.message
         assert '"rates" = { id = "<its ID>" }' in problem.message
+
+    def test_check_fails_when_the_store_lacks_a_pin(self, cloned):
+        from chartbook.check import check_dependencies
+        from chartbook.manifest import load_manifest
+
+        (record,) = [r for r in lock.read_lock(cloned).assets.values() if r.get("content_hash")]
+        held = default_store().get(record["content_hash"]) / "treasury.parquet"
+        os.chmod(held, stat.S_IRUSR | stat.S_IWUSR)
+        held.write_bytes(b"PAR1")  # not synced to this machine yet
+        (problem,) = check_dependencies(load_manifest(cloned), cloned)
+        assert "the store does not have all that the lockfile pins of it" in problem.message
+        default_store().delete(record["content_hash"])
+        (problem,) = check_dependencies(load_manifest(cloned), cloned)
+        assert "the store does not have all that the lockfile pins of it" in problem.message
+
+    def test_check_says_a_store_it_cannot_read(self, cloned):
+        from chartbook.check import check_dependencies
+        from chartbook.manifest import load_manifest
+
+        (default_store().root / "store.json").write_text('{"sch')  # half synced
+        (problem,) = check_dependencies(load_manifest(cloned), cloned)
+        assert "the store cannot be read" in problem.message
+
+    def test_a_path_that_is_a_file_is_not_another_machines_folder(self, cloned):
+        from chartbook.check import check_dependencies
+        from chartbook.manifest import load_manifest
+
+        (cloned.parent / "rates").write_text("not a folder")
+        (problem,) = check_dependencies(load_manifest(cloned), cloned)
+        assert problem.message.startswith("directory not found") and "named by its ID" not in problem.message
 
     def test_update_names_the_entry_by_its_id(self, cloned):
         report = lock.update(cloned)

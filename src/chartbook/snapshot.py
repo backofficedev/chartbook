@@ -413,6 +413,36 @@ def materialized_name(record: dict) -> str:
     return f"{record['ref']['name']}.parquet"
 
 
+def files_read(record: dict) -> Optional[dict]:
+    """The files a reader opens of an asset's object, by their path in it, each with its size, as the record gives them.
+
+    One file for an asset that is a file (under the name of its declared
+    path, or ``<name>.parquet`` for a table or query written out), each
+    file for a directory. None for a glob, whose record lists no files, or
+    a record with no sizes: the object's files are then summed
+    (:meth:`chartbook.store.Store.incomplete`).
+    """
+    size = record.get("size_bytes")
+    location = record.get("location") or {}
+    try:
+        if location.get("kind") in ("table", "query"):
+            return {materialized_name(record): size} if isinstance(size, int) else None
+    except (KeyError, TypeError):
+        return None
+    listed = record.get("files")
+    if isinstance(listed, list):
+        found = {
+            entry["path"]: entry["size_bytes"]
+            for entry in listed
+            if isinstance(entry, dict) and isinstance(entry.get("path"), str) and isinstance(entry.get("size_bytes"), int)
+        }
+        return found or None
+    declared = location.get("path")
+    if not isinstance(declared, str) or not isinstance(size, int) or is_glob_pattern(declared):
+        return None
+    return {Path(declared).name: size}
+
+
 def materialize_in_source(
     directory: Path, pipeline: str, raw: dict, store: Store
 ) -> list[tuple[AssetRef, dict, Optional[str]]]:
@@ -1312,7 +1342,8 @@ def plan_removals(
     :param hashes_of_missing: The objects named by lockfiles that cannot be
         found and are not to be forgotten.
     :param hashes_elsewhere: The objects named by lockfiles on other
-        machines, which are not read here.
+        machines, which are not read here, and by notes from before notes
+        named their machine.
     :raises SnapshotError: If a record cannot be read.
     """
     now = now if now is not None else datetime.now(timezone.utc)
@@ -1348,7 +1379,7 @@ def plan_removals(
             elif taken.hashes() & set(hashes_of_missing):
                 why = "a lockfile that cannot be found named what it holds"
             elif taken.hashes() & set(hashes_elsewhere):
-                why = "a lockfile on another machine named what it holds"
+                why = "a lockfile not read here, another machine's, named what it holds"
             elif taken is newest:
                 why = "it is the newest of its pipeline"
             elif taken.path in pinnable:

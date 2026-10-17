@@ -98,7 +98,7 @@ import sys
 import time
 import uuid
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterable, Iterator, Optional, Union
 
 from chartbook import hashing
@@ -208,7 +208,7 @@ class Root:
             (:func:`chartbook.config.get_machine_id`). A path names a file
             on one machine only, and one person's two machines can each
             have a lockfile at the same path. Empty for a note from before
-            notes named their machine, which is taken as this machine's.
+            notes named their machine, which may be any machine's.
         host: That machine's host name when the note was written, for a
             person to read; nothing goes by it.
     """
@@ -429,26 +429,49 @@ def read_root(stored: dict) -> Root:
     return root
 
 
-def short_of(path: Path, size_bytes: int) -> Optional[int]:
-    """How many bytes an object's folder holds, when that is not what its record gives; None when it is.
+def unsynced_part(path: Path, size_bytes: int, files: Optional[dict] = None) -> Optional[str]:
+    """What of an object's folder is not the size its record gives, in a few words; None when nothing is.
 
-    An asset of several files holds the sum of their sizes. One that is a
-    single file may be in its object under more than one name, each the
-    whole file. Only sizes are looked at: nothing is read.
+    *files* are the files a reader opens, by their path in the object, each
+    with its size, as the record gives them: the one file of an asset that
+    is a file, under its own name (the object may hold the same bytes under
+    other names too, which are other pins' business), or each file of a
+    directory. Without them, as for a glob, the files the object holds are
+    summed, as they were hashed; so they are when the one file named is not
+    in it, as a reader then reads the object as a folder (a directory pinned
+    before records listed its files). Only sizes are looked at: nothing is
+    read.
     """
+    if files and len(files) == 1:
+        ((relative, _),) = files.items()
+        if not path.joinpath(*PurePosixPath(relative).parts).is_file():
+            files = None
+    if files:
+        for relative, expected in sorted(files.items()):
+            parts = PurePosixPath(relative).parts
+            if not parts or PurePosixPath(relative).is_absolute() or ".." in parts:
+                continue  # no file of the object: a record that is not one a store wrote
+            file = path.joinpath(*parts)
+            try:
+                size = file.stat().st_size if file.is_file() else None
+            except OSError:
+                size = None  # a link whose file has gone
+            if size is None:
+                return f"does not have {relative} yet"
+            if size != expected:
+                return f"has {size:,} bytes of {relative} where its record says {expected:,}"
+        return None
     sizes = []
-    flat = True
     for file in hashing.directory_files(path):
         try:
             sizes.append(file.stat().st_size)
         except OSError:
             sizes.append(0)  # a link whose file has gone
-        flat = flat and file.parent == path
-    total = sum(sizes)
-    if sizes and (total == size_bytes or (flat and all(size == size_bytes for size in sizes))):
-        return None
-    # A single file under several names, one of them cut short, is as short as that one
-    return min(sizes) if flat and sizes and total > size_bytes else total
+    if not sizes:
+        return "has none of its files yet"
+    if sum(sizes) != size_bytes:
+        return f"has {sum(sizes):,} bytes where its record says {size_bytes:,}"
+    return None
 
 
 class Store(abc.ABC):
@@ -494,14 +517,18 @@ class Store(abc.ABC):
     def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list["StoreProblem"]:
         """Hash objects again, and report each that is not what its name says."""
 
-    def incomplete(self, content_hash: str, size_bytes: Optional[int]) -> Optional[str]:
+    def incomplete(
+        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None
+    ) -> Optional[str]:
         """Why an object the store has does not hold all of its bytes yet; None if it does, or if that cannot be told cheaply.
 
-        A record says how many bytes an asset has (``size_bytes``), and a
-        store in a folder a sync service keeps can have an object before
-        all of them have arrived. Asked of every pin and every read, so it
-        reads nothing; :meth:`verify` reads every byte. A store that cannot
-        tell without reading says None.
+        A record says how many bytes an asset has (``size_bytes``), and the
+        files a reader opens with the size of each (*files*, by their path
+        in the object; see :func:`unsynced_part`); a store in a folder a
+        sync service keeps can have an object before all of them have
+        arrived. Asked of every pin and every read, so it reads nothing;
+        :meth:`verify` reads every byte. A store that cannot tell without
+        reading says None.
         """
         return None
 
@@ -867,8 +894,9 @@ class FolderStore(Store):
         """Note that a lockfile on this machine names these objects, so that they are kept.
 
         Called whenever a lockfile is written. One note is kept per
-        lockfile and machine, and a later call replaces it, as it does a
-        note of the same lockfile from before notes named their machine.
+        lockfile and machine, and a later call replaces it. A note of the
+        same path from before notes named their machine is removed once
+        this one names everything it did.
 
         :param lockfile: The path of a ``chartbook.lock``.
         :param hashes: The content hashes it names.
@@ -893,22 +921,26 @@ class FolderStore(Store):
             except OSError:
                 pass
             raise
+        # A note of the same path from before notes named their machine may
+        # be another machine's: it goes only once this one keeps all it named
+        before = self._root_file(lockfile, machine="")
         try:
-            self._root_file(lockfile, machine="").unlink()
-        except FileNotFoundError:
-            pass
+            with open(before, encoding="utf-8") as f:
+                if set(read_root(json.load(f)).hashes) <= set(hashes):
+                    before.unlink()
+        except (OSError, ValueError, KeyError, TypeError):
+            pass  # none, or one that cannot be read: left as it is
 
     def remove_root(self, lockfile: Union[str, Path]) -> bool:
         """Forget a lockfile on this machine. Its objects are then kept by nothing.
 
         :returns: True if the store had a note of it.
         """
-        removed = False
-        for note in (self._root_file(lockfile, this_machine(create=False)), self._root_file(lockfile, machine="")):
-            if note.is_file():
-                note.unlink()
-                removed = True
-        return removed
+        note = self._root_file(lockfile, this_machine(create=False))
+        if not note.is_file():
+            return False
+        note.unlink()
+        return True
 
     def _root_file(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> Path:
         """Where the store notes one lockfile of a machine; this machine's by default."""
@@ -938,7 +970,9 @@ class FolderStore(Store):
                 raise StoreError(f"Cannot read {note}: {error}") from None
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine))
 
-    def incomplete(self, content_hash: str, size_bytes: Optional[int]) -> Optional[str]:
+    def incomplete(
+        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None
+    ) -> Optional[str]:
         """Why an object does not hold all of its bytes yet, by the sizes of its files; None if it does.
 
         A folder that a sync service keeps can have an object's files before
@@ -950,13 +984,12 @@ class FolderStore(Store):
         path = self.object_path(content_hash)
         if not path.is_dir():
             return None  # not there at all, which `has` says
-        held = short_of(path, size_bytes)
-        if held is None:
+        wrong = unsynced_part(path, size_bytes, files)
+        if wrong is None:
             return None
         return (
-            f"its object in the store at {self.root} has {held:,} bytes where its record says "
-            f"{size_bytes:,}: it is not fully synced yet. Wait for the sync to finish, and run "
-            f"this again (if it stays so, `chartbook store verify` says more)"
+            f"its object in the store at {self.root} {wrong}: it is not fully synced yet. Wait for "
+            f"the sync to finish, and run this again (if it stays so, `chartbook store verify` says more)"
         )
 
     def size_of(self, content_hash: str) -> int:

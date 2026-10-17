@@ -426,6 +426,8 @@ def get_store_path() -> Path:
 
 #: The file under ``~/.chartbook`` that names this machine to the stores it uses.
 MACHINE_FILE = "machine-id"
+#: The environment variable that names this machine instead, for one that comes and goes.
+MACHINE_ENV_VAR = "CHARTBOOK_MACHINE_ID"
 
 
 def get_machine_id(create: bool = True) -> str:
@@ -440,6 +442,10 @@ def get_machine_id(create: bool = True) -> str:
     here, as its lockfiles are the same files. Where the file cannot be
     written, a name made from the host's is used.
 
+    ``CHARTBOOK_MACHINE_ID`` names it instead: for machines that come and
+    go with a fresh home folder each time (CI runners, containers), so
+    that each one's notes replace the last one's rather than pile up.
+
     :param create: Whether to make the name if there is none yet. Without
         it, the name made from the host's is given, which only a machine
         that could not keep a name of its own wrote notes under.
@@ -447,6 +453,9 @@ def get_machine_id(create: bool = True) -> str:
     import socket
     import uuid
 
+    named = os.environ.get(MACHINE_ENV_VAR, "").strip()
+    if named:
+        return named
     path = get_global_config_dir() / MACHINE_FILE
 
     def kept() -> Optional[str]:
@@ -462,17 +471,23 @@ def get_machine_id(create: bool = True) -> str:
         return found
     if not create:
         return from_host
+    made = uuid.uuid4().hex + "\n"
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
-        temporary.write_text(uuid.uuid4().hex + "\n", encoding="utf-8")
+        temporary.write_text(made, encoding="utf-8")
         try:
             # The first of two made at once is the one: a link is not made over a file
             os.link(temporary, path)
         except FileExistsError:
             pass
         except OSError:
-            os.replace(temporary, path)  # a disk with no links
+            # A disk with no links: made only where there is none, so the first still wins
+            try:
+                with open(path, "x", encoding="utf-8") as f:
+                    f.write(made)
+            except FileExistsError:
+                pass
         finally:
             if temporary.exists():
                 temporary.unlink()

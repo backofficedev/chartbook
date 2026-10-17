@@ -30,6 +30,11 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
     monkeypatch.setenv("CHARTBOOK_SYSTEM_SETTINGS", str(scratch / "system-settings.toml"))
     # A test is interactive unless it says otherwise, even under `chartbook run`
     monkeypatch.delenv("CHARTBOOK_BATCH", raising=False)
+    # The name of the machine in a store's notes, which is otherwise made
+    # once and kept under the home folder: a `chartbook` a test runs in a
+    # subprocess, with the real home, must not make one there. A test of
+    # two machines clears it
+    monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "a-test-machine")
     # Nor does the user's own ~/.chartbook (their catalog and settings) reach
     # a test; a test that moves HOME gets the one under it
     from pathlib import Path

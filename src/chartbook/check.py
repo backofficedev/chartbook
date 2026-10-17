@@ -470,10 +470,13 @@ def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: P
             f"can be read on this machine. {advice}",
             False,
         )
-    if store is None or (
-        folder is not None
-        and not all(folder.has(r["content_hash"]) and not lock._incomplete(folder, r) for r in records)
-    ):
+    try:
+        whole = store is not None and (
+            folder is None or all(folder.has(r["content_hash"]) and not lock._incomplete(folder, r) for r in records)
+        )
+    except (StoreError, OSError, ValueError) as error:  # a store that cannot be read, a half-synced store.json
+        return f"directory not found: {directory}, and the store cannot be read ({error}). {advice}", False
+    if not whole:
         return (
             f"directory not found: {directory}, and the store does not have all that the lockfile "
             f"pins of it (`chartbook pin --frozen` says what). {advice}",
@@ -554,7 +557,7 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
                     problems.append(Problem(toml_file, table, "git", wrong))
                 continue
 
-            if not location.path.is_dir():
+            if not location.path.exists():
                 # Not on this machine: another machine's folder, perhaps, which
                 # is a problem only if nothing of it can be built from here
                 said, builds = _not_on_this_machine(pipeline_dir, key, entry, location.path)

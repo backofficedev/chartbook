@@ -2744,7 +2744,10 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             note = "  (not found; its pins are kept)"
         click.echo(f"  {lockfile}{note}")
     for root in plan.elsewhere:
-        machine = f"on another machine, {root.host}" if root.host else "on another machine"
+        if not root.machine:
+            machine = "noted before notes named their machine, so perhaps another machine's"
+        else:
+            machine = f"on another machine, {root.host}" if root.host else "on another machine"
         click.echo(f"  {root.lockfile}  ({machine}: not read here; its pins are kept)")
     if plan.snapshots_kept:
         reasons = {}

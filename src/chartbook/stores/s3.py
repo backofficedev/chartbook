@@ -600,16 +600,21 @@ class S3Store(Store):
         self._check_layout(create=True)
         document = root_document(lockfile, hashes)
         self._write(self._root_key(lockfile), (json.dumps(document, indent=1) + "\n").encode())
-        before = self._root_key(lockfile, machine="")  # the note from before notes named their machine
-        if self._exists(before):
-            self._delete_keys([before])
+        # A note of the same path from before notes named their machine may
+        # be another machine's: it goes only once this one keeps all it named
+        before = self._root_key(lockfile, machine="")
+        body = self._read(before)
+        try:
+            if body is not None and set(read_root(json.loads(body.decode("utf-8"))).hashes) <= set(hashes):
+                self._delete_keys([before])
+        except (ValueError, KeyError, TypeError):
+            pass  # one that cannot be read: left as it is
 
     def remove_root(self, lockfile: Union[str, Path]) -> bool:
-        mine = self._root_key(lockfile, this_machine(create=False))
-        keys = [key for key in (mine, self._root_key(lockfile, machine="")) if self._exists(key)]
-        if not keys:
+        key = self._root_key(lockfile, this_machine(create=False))
+        if not self._exists(key):
             return False
-        self._delete_keys(keys)
+        self._delete_keys([key])
         return True
 
     def roots(self) -> list[Root]:

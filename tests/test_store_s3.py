@@ -209,6 +209,22 @@ class TestTheCache:
         assert second.snapshot_files(COMMIT, "_top") == [] and not seen.exists()
         assert second.all_snapshot_files() == []
 
+    def test_a_copy_under_another_name_is_passed_over(self, store, client, a_file):
+        """A folder store synced into a bucket may bring a sync service's copies: `<stamp> (1).json`."""
+        stored = store.put(a_file)
+        store.add_root(Path("/somewhere/chartbook.lock"), [stored.content_hash])
+        written = store.write_snapshot(COMMIT, "_top", "20261016T000000Z", {"a": 1})
+        store.note_origin(COMMIT, "_top", "/somewhere")
+        (note,) = [k for k in _keys(client) if "/roots/" in k]
+        body = client.get_object(Bucket=BUCKET, Key=note)["Body"].read()
+        client.put_object(Bucket=BUCKET, Key=note.replace(".json", " (1).json"), Body=body)
+        record = f"stores/one/snapshots/{COMMIT}/_top/20261016T000000Z"
+        client.put_object(Bucket=BUCKET, Key=f"{record} (1).json", Body=b'{"a": 1}')
+        assert [str(root.lockfile) for root in store.roots()] == [str(Path("/somewhere/chartbook.lock"))]
+        assert store.snapshot_files(COMMIT, "_top") == [written] and store.all_snapshot_files() == [written]
+        assert store.remove_snapshot(written) is True
+        assert f"stores/one/snapshots/{COMMIT}/_top/origins" not in _keys(client)
+
     def test_a_path_outside_the_cache_is_not_a_record(self, store, work):
         with pytest.raises(ValueError, match="is not a snapshot record of the store"):
             store.remove_snapshot(work / "elsewhere.json")
@@ -491,7 +507,7 @@ class TestWhatTheFourthReviewFound:
         if named == "notes.txt":
             Path(target).write_text("not a lockfile")
         (note,) = (work / "store" / "roots").glob("*.json")
-        note.write_text(json.dumps({"lockfile": target, "hashes": [stored.content_hash]}))
+        note.write_text(json.dumps({**json.loads(note.read_text()), "lockfile": target, "hashes": [stored.content_hash]}))
         assert [str(root.lockfile) for root in store.roots()] == [str(Path(target))]
         read = []
         original = lock.read_lock
@@ -509,7 +525,7 @@ class TestWhatTheFourthReviewFound:
         stored = store.put(a_file)
         store.add_root(work / "chartbook.lock", [stored.content_hash])
         (note,) = (work / "store" / "roots").glob("*.json")
-        note.write_text(json.dumps({"lockfile": named, "hashes": [stored.content_hash]}))
+        note.write_text(json.dumps({**json.loads(note.read_text()), "lockfile": named, "hashes": [stored.content_hash]}))
         plan = lock.plan_gc(store=store, forget_missing=True, recent_seconds=0)
         assert [str(p) for p in plan.not_read] == [str(Path(named))] and plan.forget == []
         assert stored.content_hash not in [content_hash for content_hash, _ in plan.delete]
