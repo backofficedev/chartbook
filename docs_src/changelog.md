@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a dependency named by its ID alone, pinned from the store; `chartbook add`
+
+A `[dependencies]` entry with neither `path` nor `git`, `"acme/rates" = {}`, names the pipeline by its ID and is pinned from its newest snapshot in the store, found by that ID: no folder of it on this machine, and no clone. With a store a team shares, or a folder synced between machines, a pipeline in development reads another's data with no checkout of it. `{ id = "acme/rates" }` gives it a shorter name in code, and `{ commit = "3f2a9c1" }` takes the newest snapshot at that commit. The lockfile names the snapshot (`via: store`), `chartbook update` moves it, `chartbook pin --frozen`, `chartbook snapshot`'s lineage check and `chartbook lineage` treat it as they treat a folder pinned from a snapshot, `chartbook check` says when it is not pinned, `chartbook run` builds nothing of it, and `index.json` records it (`location.kind: store`). `chartbook add acme/rates [--as NAME] [--commit C]` writes the entry into `chartbook.toml` as text, keeping the file's comments, and pins it. `chartbook check` warns when a `path` dependency is in another git repository, which works on this machine only, and shows the entry that names it by its ID. Decided by the maintainer on 2026-10-16 (decision 1a); the repository worked out from the ID by a default host is still to come.
+
 ### Added — a git tag names a version; `store gc --aggressive`
 
 A snapshot records the git tags on its commit when it is made, and `chartbook lineage` and a catalog's Versions page show them: a git tag is a version's name, given with `git tag` and taken away with `git tag -d`. `store gc` already kept the newest snapshot a tag can pin from; a name keeps that snapshot only, not its lineage. `store gc --aggressive` lets names keep nothing: no snapshot is kept for a tag or a branch, or for a model label, so only what a lockfile pins, the newest of each pipeline and the last `--keep-days` days stay. Tag names from a store's records are taken only in a tag's shape. Decided by the maintainer on 2026-10-16.

@@ -369,6 +369,11 @@ def _read_pipeline(project_dir: Path) -> tuple[str, dict]:
 
 def _dependency_entry(key: str, entry: dict) -> dict:
     """A dependency as the lockfile lists it: no absolute path, no password."""
+    if entry.get("_store"):
+        location = {"kind": "store", "pipeline": entry["_store"]}
+        if entry.get("commit"):
+            location["at"] = entry["commit"]
+        return {"id": key, "via": "store", "location": location}
     if "git" in entry:
         location = {"kind": "git", "url": strip_url_credentials(entry["git"])}
         if entry.get("rev"):
@@ -467,6 +472,13 @@ def _sync(
                         detail="a git dependency has no versions, so none of its labels is pinned",
                     )
                 )
+        elif entry.get("_store"):
+            # Named by its ID alone: its snapshots are found in the store by
+            # that ID, with no folder of it here and no clone
+            records, listed = _sync_from_snapshots(
+                key, None, was, listed, had, may_move, store, report,
+                newest_of=lambda entry=entry: _newest_in_store(entry["_store"], entry.get("commit"), store),
+            )
         elif from_folder:
             # What is in the folder this minute, whatever state it is in.
             # The lockfile then names no commit: nothing says which one
@@ -742,6 +754,9 @@ def _where(record: dict) -> str:
 
 def _describe(location: dict) -> str:
     """Where a dependency is, in a few words, for a message."""
+    if location.get("kind") == "store":
+        at = f" at {location['at']}" if location.get("at") else ""
+        return f"{location.get('pipeline')}{at}, from the store"
     if location.get("kind") == "git":
         rev = f" at {location['rev']}" if location.get("rev") else ""
         return f"{location['url']}{rev}"
@@ -810,17 +825,36 @@ def _fetch(
     return (built or checkout.path), listed, None
 
 
+def _newest_in_store(pipeline_id: str, at: Optional[str], store: Store) -> tuple[Optional["snapshot.Snapshot"], str]:
+    """The newest snapshot of a pipeline in the store, by its ID; None, and why, if it has none.
+
+    "Newest" is the one made last, by its owner's clock, on whatever branch;
+    *at*, the start of a commit, narrows it to the snapshots of that commit.
+    """
+    found, _ = snapshot.readable_snapshots(store)
+    mine = [t for t in found if t.pipeline == pipeline_id and (not at or t.commit.startswith(at))]
+    if mine:
+        return max(mine, key=lambda t: t.made_at), ""
+    where = f" at a commit starting {at}" if at else ""
+    return None, (
+        f"the store at {store} has no snapshot of {pipeline_id}{where}. Its owner makes one "
+        f"with `chartbook snapshot`; on another machine, the store must be the one theirs "
+        f"syncs with or shares ([store] url)"
+    )
+
+
 def _sync_from_snapshots(
     key: str,
-    directory: Path,
+    directory: Optional[Path],
     was: Optional[dict],
     listed: dict,
     had: dict[str, dict],
     may_move: bool,
     store: Store,
     report: PinReport,
+    newest_of=None,
 ) -> tuple[dict[str, dict], dict]:
-    """Work out a ``path`` dependency's records from its snapshots.
+    """Work out a dependency's records from its snapshots: a ``path`` dependency's, or one named by its ID.
 
     The dependency's folder is somebody's working directory, and nothing in
     it is read here but where it is in git. What is pinned is a snapshot:
@@ -834,6 +868,8 @@ def _sync_from_snapshots(
     :param listed: Its entry as the manifest has it now.
     :param had: The records the lockfile has for it now, by asset ID.
     :param may_move: Whether its existing pins may move (an update).
+    :param newest_of: For a dependency named by its ID: what finds its
+        newest snapshot, and why there is none; *directory* is then None.
     :returns: Its records as they should be, by asset ID, and the entry the
         lockfile should list: with the snapshot's commit and time.
     """
@@ -846,10 +882,14 @@ def _sync_from_snapshots(
     locked_commit = (was or {}).get("location", {}).get("commit")
     locked_made = (was or {}).get("snapshot")
     why = ""
-    try:
-        newest, code = snapshot.newest_for(directory, store)
-    except snapshot.SnapshotError as error:
-        newest, code, why = None, None, str(error)
+    code = None
+    if newest_of is not None:
+        newest, why = newest_of()
+    else:
+        try:
+            newest, code = snapshot.newest_for(directory, store)
+        except snapshot.SnapshotError as error:
+            newest, code, why = None, None, str(error)
 
     def as_it_was() -> dict:
         """The listing, still naming the snapshot the pins came from."""

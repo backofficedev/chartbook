@@ -2007,6 +2007,52 @@ def update(dependencies, project_dir, from_folder):
     _run_pin(project_dir, dependencies=list(dependencies), from_folder=from_folder)
 
 
+@main.command("add")
+@click.argument("pipeline")
+@click.option("--as", "key", metavar="NAME", help="The name to know it by in code, PIPELINE by default (`NAME:dataframe`)")
+@click.option("--commit", metavar="COMMIT", help="Take its snapshots at this commit (the start of one), not the newest")
+@click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
+def add_command(pipeline, key, commit, project_dir):
+    """Declare a dependency on another pipeline by its ID, and pin its newest snapshot from the store.
+
+    Writes `"PIPELINE" = {}` under [dependencies] in this pipeline's
+    chartbook.toml, leaving the rest of the file as it is, then runs
+    `chartbook pin`. The pipeline is read from its snapshots in the store
+    alone: no folder of it here, and no clone. `chartbook update` moves the
+    pin to a newer snapshot.
+
+    \b
+    Examples:
+        chartbook add acme/rates
+        chartbook add acme/rates --as rates
+        chartbook add acme/rates --commit 3f2a9c1
+    """
+    from chartbook.identity import validate_pipeline_id
+    from chartbook.manifest import dependency_line, validate_dependencies, with_dependency
+
+    project_dir = resolve_project_dir(project_dir)
+    manifest_file = project_dir / "chartbook.toml"
+    try:
+        validate_pipeline_id(pipeline)
+        key = key or pipeline
+        entry = {}
+        if key != pipeline:
+            entry["id"] = pipeline
+        if commit:
+            entry["commit"] = commit
+        text = manifest_file.read_text(encoding="utf-8")
+        changed = with_dependency(text, key, entry)
+        import tomli
+
+        validate_dependencies(tomli.loads(changed).get("dependencies") or {}, project_dir)
+    except (ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
+        raise SystemExit(1)
+    manifest_file.write_text(changed, encoding="utf-8")
+    click.echo(f"Added to [dependencies] in {manifest_file}: {dependency_line(key, entry)}")
+    _run_pin(project_dir)
+
+
 @main.command()
 @click.option("--project-dir", type=click.Path(), help="Path to the pipeline")
 @click.option(

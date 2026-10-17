@@ -1328,7 +1328,7 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
         hashed = {
             asset_id: record for asset_id, record in locked.assets_of(key).items() if record.get("content_hash")
         }
-        if location.get("kind") != "path" or not hashed:
+        if location.get("kind") not in ("path", "store") or not hashed:
             continue
         commit, made_at = location.get("commit"), entry.get("snapshot")
         if not (commit and made_at):

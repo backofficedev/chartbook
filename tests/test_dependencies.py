@@ -149,7 +149,10 @@ class TestDeclaring:
         [
             ("../rates", "must be a table with one entry per pipeline"),
             ({"rates": "../rates"}, "must be a table that says where the pipeline is"),
-            ({"rates": {}}, "does not say where the pipeline is"),
+            ({"rates": {"id": "a b"}}, "its id 'a b'"),
+            ({"rates": {"commit": "xyz"}}, "is not the start of a commit"),
+            ({"rates": {"path": "../rates", "id": "acme/rates"}}, "'id' beside a 'path'"),
+            ({"rates": {"git": "https://x/y", "commit": "3f2a9c1"}}, "'commit' beside a 'git'"),
             ({"rates": {"path": "../rates", "git": "https://x/y"}}, "both 'path' and 'git'"),
             ({"rates": {"path": "../rates", "rev": "v1"}}, "'rev' beside a 'path'"),
             ({"rates": {"path": ""}}, "'path' must be a non-empty string"),
@@ -167,8 +170,9 @@ class TestDeclaring:
     def test_a_rev_alone_says_the_repository_cannot_be_worked_out(self, tmp_path):
         with pytest.raises(ValueError) as e:
             validate_dependencies({"acme/rates": {"rev": "a1b2c3d"}}, tmp_path)
-        assert "does not say where the pipeline is" in str(e.value)
+        assert "has a 'rev' and no 'git'" in str(e.value)
         assert "a 'rev' needs a 'git' beside it" in str(e.value)
+        assert 'commit = "a1b2c3d"' in str(e.value)
 
     def test_an_unknown_key_suggests_the_one_meant(self, tmp_path):
         with pytest.raises(ValueError) as e:

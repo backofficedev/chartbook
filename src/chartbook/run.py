@@ -340,6 +340,10 @@ def plan(
                         order.append(Step(key, None, "git", missing=why))
                     else:
                         visit(copy, "git", key)
+                elif entry.get("_store"):
+                    # Named by its ID alone: its snapshots are read from the
+                    # store, and nothing of it is built here
+                    continue
                 else:
                     # A folder somebody works in is not built from here. It
                     # is in the order only if it was asked for itself, as

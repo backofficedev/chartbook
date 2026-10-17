@@ -13,6 +13,7 @@ supported; loading one raises an error pointing at the migration script.
 """
 
 import difflib
+import json
 import importlib.resources
 import os
 import re
@@ -571,12 +572,17 @@ def validate_dataframe_location(entry: dict, dataframe_id: str, sources: dict) -
 
 
 #: The keys an entry of ``[dependencies]`` may have.
-DEPENDENCY_KEYS = ("path", "git", "rev")
+DEPENDENCY_KEYS = ("path", "git", "rev", "id", "commit")
 
 _DEPENDENCY_EXAMPLE = (
-    '"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" } or '
+    '"ftsfr/fed_yield_curve" = {} (its snapshots in the store, by its ID), '
+    '{ path = "../fed_yield_curve" } or '
     '{ git = "https://example.org/ftsfr/fed_yield_curve", rev = "a1b2c3d" }'
 )
+
+#: What a dependency named by its ID alone may narrow its snapshots to: the
+#: start of a commit, as git shows it
+_COMMIT_START = re.compile(r"[0-9a-f]{7,40}")
 
 
 def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
@@ -587,8 +593,16 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
     says where to get it::
 
         [dependencies]
+        "ftsfr/rates" = {}
+        yields = { id = "ftsfr/yield_curve", commit = "3f2a9c1" }
         "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
         "ftsfr/crsp_compustat" = { git = "https://example.org/ftsfr/crsp_compustat", rev = "a1b2c3d" }
+
+    An entry with neither ``path`` nor ``git`` names the pipeline by its ID
+    alone (the key, or ``id``), and is pinned from its snapshots in the
+    store, with no folder of it and no clone: the newest, or the newest at
+    the commit ``commit`` starts. Such an entry gains ``_store``, the
+    pipeline's ID.
 
     Identity and location are kept apart on purpose. Code, lineage and the
     index say ``ftsfr/fed_yield_curve``; only this table says where that
@@ -669,17 +683,33 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
                 check_rev(entry.get("rev"))
             except ValueError as error:
                 raise ValueError(f"{where}: {error}") from None
-        if "path" not in entry and "git" not in entry:
-            inferred = (
-                " Working out the repository from the pipeline's ID is not "
-                "supported yet, so a 'rev' needs a 'git' beside it."
-                if "rev" in entry
-                else ""
-            )
+        by_id = "path" not in entry and "git" not in entry
+        if not by_id:
+            for name in ("id", "commit"):
+                if name in entry:
+                    raise ValueError(
+                        f"{where} has '{name}' beside a '{'path' if 'path' in entry else 'git'}'. "
+                        f"'{name}' belongs to a dependency named by its ID alone and pinned from "
+                        f"the store; a path or git dependency is the pipeline its folder or "
+                        f"repository holds."
+                    )
+        if by_id and "rev" in entry:
             raise ValueError(
-                f"{where} does not say where the pipeline is. Give it a "
-                f"'path' or a 'git', e.g. {_DEPENDENCY_EXAMPLE}.{inferred}"
+                f"{where} has a 'rev' and no 'git'. Working out the repository from "
+                f"the pipeline's ID is not supported yet, so a 'rev' needs a 'git' "
+                f"beside it. To take a snapshot at a commit from the store, write "
+                f"commit = \"{entry['rev']}\" if it is the start of one."
             )
+        if by_id:
+            try:
+                validate_pipeline_id(entry.get("id", key))
+            except ValueError as error:
+                raise ValueError(f"{where}: its id {entry.get('id')!r}: {error}") from None
+            if "commit" in entry and not _COMMIT_START.fullmatch(entry["commit"]):
+                raise ValueError(
+                    f"{where}: commit {entry['commit']!r} is not the start of a commit: "
+                    f"7 to 40 of 0-9 and a-f, as `git log` shows it."
+                )
         if "path" in entry and "rev" in entry:
             raise ValueError(
                 f"{where} has a 'rev' beside a 'path'. A revision belongs to "
@@ -690,8 +720,48 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
         entry = dict(entry)
         if "path" in entry:
             entry["_resolved_path"] = (Path(base_dir) / entry["path"]).resolve()
+        if by_id:
+            entry["_store"] = entry.get("id", key)
         validated[key] = entry
     return validated
+
+
+def dependency_line(key: str, entry: dict) -> str:
+    """One ``[dependencies]`` entry as a line of TOML: ``"acme/rates" = { commit = "3f2a9c1" }``."""
+    inner = ", ".join(f"{name} = {json.dumps(value)}" for name, value in entry.items())
+    return f"{json.dumps(key)} = {{ {inner} }}" if inner else f"{json.dumps(key)} = {{}}"
+
+
+def with_dependency(text: str, key: str, entry: dict) -> str:
+    """A manifest's text with one dependency added to ``[dependencies]``, all else as it was.
+
+    The file is edited as text, not written again from what it parses to,
+    so its comments, order and spacing stay. The line goes just under the
+    ``[dependencies]`` header; with no such table, one is added at the end.
+
+    :param text: The ``chartbook.toml`` as it is.
+    :param key: The dependency's key.
+    :param entry: Its table, of strings: ``{}``, ``{"id": ...}``,
+        ``{"commit": ...}``.
+    :raises ValueError: If the key is in it already, or ``[dependencies]``
+        is written in a form a line cannot be added to.
+    """
+    raw = tomli.loads(text)
+    dependencies = raw.get("dependencies")
+    if isinstance(dependencies, dict) and key in dependencies:
+        raise ValueError(f"[dependencies] has {key!r} already.")
+    line = dependency_line(key, entry)
+    header = re.search(r"(?m)^[ \t]*\[[ \t]*dependencies[ \t]*\][ \t]*(#.*)?$", text)
+    if header is not None:
+        end = header.end()
+        return text[:end] + "\n" + line + text[end:]
+    if dependencies is not None and re.search(r"(?m)^[ \t]*dependencies[ \t]*=", text):
+        raise ValueError(
+            "[dependencies] is written inline (dependencies = { ... }); add the entry there yourself: "
+            + line
+        )
+    joined = text if text.endswith("\n") or not text else text + "\n"
+    return joined + ("\n" if joined else "") + "[dependencies]\n" + line + "\n"
 
 
 #: What a label may point at: the start of a model's content hash, at least

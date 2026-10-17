@@ -16,6 +16,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
 | `chartbook snapshot` | Declare this pipeline's build ready for the pipelines that depend on it |
+| `chartbook add PIPELINE` | Declare a dependency by its ID, read from the store, and pin it |
 | `chartbook pin` | Freeze what this pipeline depends on, in `chartbook.lock` |
 | `chartbook update` | Move pins forward to each dependency's newest snapshot |
 | `chartbook lineage` | Show and check every snapshot upstream of this pipeline |
@@ -482,6 +483,29 @@ Things to know:
 - **It is found by commit.** So it is found by a pipeline that depends on this folder, and by one that depends on the same repository by URL, on this machine. It is not shared between machines.
 
 (chartbook-pin)=
+## chartbook add
+
+```console
+chartbook add PIPELINE [--as NAME] [--commit COMMIT] [--project-dir PATH]
+```
+
+Declare that this pipeline reads another, by the other's ID, and pin it. It writes the entry under `[dependencies]` in `chartbook.toml`, leaving the rest of the file as it is (its comments and order), then runs `chartbook pin`. The other pipeline is read from its snapshots in the store alone: no folder of it here, and no clone.
+
+```console
+$ chartbook add acme/rates --as rates
+Added to [dependencies] in /work/forecast/chartbook.toml: "rates" = { id = "acme/rates" }
+rates: 2 pinned
+Wrote chartbook.lock.
+```
+
+| Option | Effect |
+|--------|--------|
+| `--as NAME` | The name to know it by in code, `NAME:treasury`; its ID by default |
+| `--commit COMMIT` | Take the newest snapshot at this commit (its start, 7 or more hex digits) rather than the newest of all |
+| `--project-dir PATH` | The pipeline (default: the current directory) |
+
+A key already in `[dependencies]`, or a `commit` that is not the start of one, writes nothing. `chartbook update` moves the pin to a newer snapshot once its owner makes one.
+
 ## chartbook pin
 
 ```console

@@ -505,23 +505,30 @@ Not yet:
 (dependencies)=
 ## `[dependencies]` — Other Pipelines This One Reads From
 
-A pipeline that uses another pipeline's data says so, and says where that pipeline is:
+A pipeline that uses another pipeline's data says so. Naming it by its ID is enough:
 
 ```toml
 [dependencies]
-"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+"ftsfr/rates" = {}                                            # its snapshots in the store
+yields = { id = "ftsfr/yield_curve", commit = "3f2a9c1" }     # a short name, and one commit's snapshots
+"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }     # a folder on this machine
 "ftsfr/crsp_compustat"  = { git = "https://gitlab.example.org/ftsfr/crsp_compustat", rev = "a1b2c3d" }
 ```
+
+`chartbook add ftsfr/rates` writes the first line for you and pins it ({doc}`cli`).
 
 The **key** is the name this pipeline knows the other one by. It is a pipeline ID, `name` or `scope/name`, and a key with a `/` in it must be quoted. The **value** says where to get it:
 
 | Field | Meaning |
 |-------|---------|
+| (none) | The pipeline is named by its ID alone, the key, and pinned from its snapshots in the store: no folder of it here, no clone. A store a team shares, or a folder synced between your machines, makes this the way to read a colleague's pipeline, or your own from another machine |
+| `id` | With neither `path` nor `git`: the pipeline's ID, when the key is a shorter name for it |
+| `commit` | With neither `path` nor `git`: the start of a commit (7 to 40 hex digits); the newest snapshot at that commit is pinned, rather than the newest of all |
 | `path` | A directory holding the other pipeline's `chartbook.toml`. Relative to this pipeline's root, or absolute |
 | `git` | A git repository holding it. Any host: an `https://` or `ssh://` URL, `git@host:owner/name`, or a path on disk (relative to this pipeline's root) |
 | `rev` | With `git`: the branch, tag or commit to use. Optional; without it, the repository's default branch |
 
-An entry has `path` or `git`, not both.
+An entry has `path` or `git`, not both, or neither. Named by its ID alone, "newest" means the snapshot made last, by its owner's clock, on any branch.
 
 **The name and the place are separate on purpose.** Your code, your lineage and `index.json` say `ftsfr/fed_yield_curve`. Only this table says where that is. When a repository moves, one line changes.
 
@@ -529,18 +536,18 @@ An entry has `path` or `git`, not both.
 
 **What it does today.**
 
-- `chartbook check` reports a `path` that is not there, has no `chartbook.toml`, is a catalog, or is the pipeline's own directory.
+- `chartbook check` reports a `path` that is not there, has no `chartbook.toml`, is a catalog, or is the pipeline's own directory. It warns when a `path` is in another git repository than the pipeline's own, since that works on this machine only, and shows the line that names it by its ID instead. Two pipelines in one repository are the place for a `path`.
 - `chartbook check` reports training data that a dependency does not declare (`trained_on = ["fed_yield_curve:no_such_table"]`).
 - `index.json` lists them, under `dependencies` in the pipeline's record.
 - A model's training data in another pipeline is written by the dependency's name, so `fed_yield_curve:treasury_rates` becomes `ftsfr/fed_yield_curve:treasury_rates`.
 
-- `chartbook pin` freezes what each dependency was declared ready with. A folder (`path`) is pinned from its newest **snapshot**, which its owner makes there with `chartbook snapshot`; the folder itself is never read, so it can be half-way through a change. A repository (`git`) is pinned from a clean copy of a commit. The content hash of every asset, and the commit, are written to `chartbook.lock`, which you commit. `chartbook update` moves the pins forward. See {doc}`cli`.
+- `chartbook pin` freezes what each dependency was declared ready with. A pipeline named by its ID alone is pinned from its newest **snapshot** in the store, found by that ID. A folder (`path`) is pinned from its newest snapshot at or before the commit the folder is on, which its owner makes there with `chartbook snapshot`; the folder itself is never read, so it can be half-way through a change. A repository (`git`) is pinned from a clean copy of a commit. The content hash of every asset, and the commit, are written to `chartbook.lock`, which you commit. `chartbook update` moves the pins forward. See {doc}`cli`.
 - **Your code reads the pinned copy.** `data.path("fed_yield_curve:treasury_rates")`, `data.load(…)`, `assets.path(…)`, `models.path(…)` and `chartbook path …` all resolve a reference to another pipeline's asset through `chartbook.lock` into the store, never to that pipeline's working directory. No catalog is needed.
 - A reference to a pipeline that is not in this table fails, and shows the line to add.
 
 **What it does not do yet.**
 
-- **A `git` dependency has only what its repository commits, until it is built.** `chartbook pin` clones it and pins the declared files that are in git, and only files inside the repository: a path in its manifest that reaches outside is not pinned. `chartbook run` builds it, which runs that repository's code with your environment, so depend on repositories you would run code from. Data the other pipeline builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build, so those assets are listed as not built. `chartbook run` does build it, in a copy of its checkout, and then they can be pinned. Working out a repository from an ID alone (`{ rev = "…" }` with no `git`) is not supported.
+- **A `git` dependency has only what its repository commits, until it is built.** `chartbook pin` clones it and pins the declared files that are in git, and only files inside the repository: a path in its manifest that reaches outside is not pinned. `chartbook run` builds it, which runs that repository's code with your environment, so depend on repositories you would run code from. Data the other pipeline builds and git-ignores is not in a clone, and `pin` does not run another pipeline's build, so those assets are listed as not built. `chartbook run` does build it, in a copy of its checkout, and then they can be pinned. Working out a repository from an ID alone (`{ rev = "…" }` with no `git`) is not supported yet: an entry with neither is read from the store only.
 - `data.load(pipeline=…, dataframe=…)`, with two arguments, still looks in a catalog and reads the other pipeline's own file, as it always has. It does not read this table.
 
 - `chartbook run` pins what has no pin yet, and then builds this pipeline. It never builds in a `path` dependency's folder, and never reads one: that folder is its owner's to build and to declare ready. It builds a `git` dependency once, in a clean copy. See {ref}`chartbook run <chartbook-run>`.
