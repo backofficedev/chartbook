@@ -1822,10 +1822,17 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
         raise AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}.")
     if dependency.kind == "path" and dependency.path is not None:
         return _read_working(asset, Path(dependency.path), why)
+    from chartbook.config import clone_url_for
+
+    url = clone_url_for(real_id) if dependency.kind == "store" else None
+    clone = (
+        f" `chartbook pin` gets it from its repository, {url} ([resolve] default_host); a read never fetches."
+        if url else ""
+    )
     return working(
         real,
         why,
-        AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}."),
+        AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}.{clone}"),
     )
 
 

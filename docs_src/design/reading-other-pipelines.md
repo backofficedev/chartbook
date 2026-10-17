@@ -321,9 +321,11 @@ of a working folder warns.
    pipeline, and the batch variable is set for `build` only.*
 4. `[resolve] default_host`, and building from git when there is no snapshot. *Built (2026-10-17),
    except `rev`. As built: a dependency named by its ID is cloned only when the store has no
-   snapshot of it at all; the lockfile then lists it as from its repository, with its ID, and a
-   later `pin` keeps it there whether or not the store has one now, while `update` takes the
-   store's. A plain `{ git = "..." }` entry is unchanged: cloned first, as before.*
+   snapshot of it at all; the lockfile then lists it as from its repository by its ID, with no
+   address (each machine has its own host setting), and a pin keeps where it was pinned from,
+   the store or its repository, while `update` looks again. `chartbook run` makes the same
+   decision, from the lockfile, and never clones a pipeline it builds itself. A plain
+   `{ git = "..." }` entry is unchanged: cloned first, as before.*
 
 ## For the maintainer to choose
 

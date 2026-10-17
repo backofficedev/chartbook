@@ -237,14 +237,15 @@ def _normalized(settings: dict, origin: Path) -> dict:
     resolve = result.get("resolve")
     if resolve is not None and "default_host" in resolve:
         host = resolve["default_host"]
-        if not isinstance(host, str) or not host.strip() or host.strip().startswith("-"):
+        if not isinstance(host, str) or host.strip().startswith("-"):
             raise ValueError(
                 f"{origin}: [resolve] default_host must be a git host, e.g. default_host = \"github.com\", "
-                f"or the address its repositories are under, e.g. \"https://gitlab.example.org/group\"."
+                f"an address its repositories are under, e.g. \"https://gitlab.example.org/group\", "
+                f"or \"\" for none."
             )
-        host = host.strip().rstrip("/")
-        if "://" not in host and ":" not in host and (host.startswith((".", "~")) or "/" in host):
-            host = str(_absolute_if_folder(host, origin))  # a folder of repositories
+        host = host.strip().rstrip("/\\")
+        if _is_folder(host):
+            host = str(_absolute_if_folder(os.path.expanduser(host), origin))  # a folder of repositories
         resolve["default_host"] = host
     return result
 
@@ -416,6 +417,11 @@ def get_default_host() -> str:
     return ((read_settings().get("resolve") or {}).get("default_host") or "").strip()
 
 
+def _is_folder(host: str) -> bool:
+    """Whether a default host is a folder of repositories: an absolute or explicitly relative path, on any system."""
+    return bool(re.match(r"^(/|\\\\|\./|\.\./|\.$|\.\.$|~|[A-Za-z]:[\\/])", host))
+
+
 def clone_url_for(pipeline_id: str, host: Optional[str] = None) -> Optional[str]:
     """Where a pipeline named by its ID alone is cloned from, by the default host; None if it cannot be said.
 
@@ -427,9 +433,12 @@ def clone_url_for(pipeline_id: str, host: Optional[str] = None) -> Optional[str]
     host = get_default_host() if host is None else host
     if not host or "/" not in pipeline_id:
         return None
-    if "://" in host or host.startswith("/") or re.match(r"^[^/]+@[^/:]+:", host):
+    if _is_folder(host):
+        return os.path.join(host, *pipeline_id.split("/"))
+    if "://" in host or re.match(r"^[^/]+@[^/:]+:", host):
         separator = "" if host.endswith((":", "/")) else "/"
         return f"{host}{separator}{pipeline_id}"
+    # A host name, perhaps with a path under it: gitlab.example.org/group
     return f"https://{host}/{pipeline_id}"
 
 

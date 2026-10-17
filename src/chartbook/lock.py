@@ -66,7 +66,7 @@ import uuid
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Optional, Union
+from typing import Callable, Iterable, Optional, Union
 
 from chartbook import hashing, snapshot
 from chartbook.gitcache import GitCache, GitError, default_git_cache, local_url
@@ -351,44 +351,60 @@ class PinReport:
         return [event for event in self.events if event.status in PROBLEM_STATUSES]
 
 
-def through_git(dependencies: dict, root: str, found: list, host: Optional[str] = None) -> dict:
-    """The dependencies, with each one named by its ID that the store has no snapshot of made a ``git`` one.
+def clone_instead(
+    entry: dict,
+    root: str,
+    was: Optional[dict],
+    may_move: bool,
+    snapshots: Callable[[], list],
+    host: str,
+    built_here: Iterable[str] = (),
+) -> dict:
+    """The entry to pin a dependency by: for one named by its ID that is to be got from its repository, a ``git`` one.
 
     Decision 1a: a pipeline named by its ID is read from its snapshots in
-    the store, and only when there is none at all is its repository wanted,
-    at the default host (``[resolve] default_host``): ``acme/rates`` is
-    ``https://github.com/acme/rates``. Such a dependency is then pinned from
-    a clone, and built by ``chartbook run``, as a ``git`` one is, at the
-    commit its entry names if it names one. With no default host, a bare
-    ID, or the pipeline itself, it is left as it is (decision 1c).
+    the store, and its repository is wanted only when the store has no
+    snapshot of it at all. Then, with a default host set (``[resolve]
+    default_host``), it is cloned from ``<host>/<id>``, or from the
+    repository its entry names, at the commit its entry names if it names
+    one, and pinned and built as a ``git`` dependency is.
 
-    :param found: The store's readable snapshots.
+    A pin keeps where a dependency was pinned from: one pinned from the
+    store stays there, and one pinned from its repository stays there, even
+    when the store has a snapshot of it now. An update, or a first pin,
+    looks again. A bare ID, the pipeline itself, and a pipeline built here
+    (*built_here*, a catalog's own, by ID) are never cloned.
+
+    :param was: Its entry in the lockfile, if it has one.
+    :param snapshots: The store's readable snapshots, read when asked for.
     """
-    from chartbook.config import clone_url_for, get_default_host
+    from chartbook.config import clone_url_for
 
-    host = get_default_host() if host is None else host
-    ids = {taken.pipeline for taken in found}
-    result = {}
-    for key, entry in dependencies.items():
-        pipeline = entry.get("_store")
-        url = clone_url_for(pipeline, host) if pipeline and pipeline != root and pipeline not in ids else None
-        if url is None:
-            result[key] = entry
-            continue
-        converted = {"git": url, "_from_id": pipeline}
-        if entry.get("commit"):
-            converted["rev"] = entry["commit"]
-        result[key] = converted
-    return result
+    pipeline = entry.get("_store")
+    if not pipeline or not host or pipeline == root or pipeline in set(built_here):
+        return entry
+    location = (was or {}).get("location", {})
+    pinned_from_repository = location.get("kind") == "git" and location.get("pipeline") == pipeline
+    if not may_move and location.get("kind") == "store":
+        return entry
+    if (may_move or not pinned_from_repository) and any(taken.pipeline == pipeline for taken in snapshots()):
+        return entry
+    url = entry.get("_repository") or clone_url_for(pipeline, host)
+    if url is None:
+        return entry
+    converted = {"git": url, "_from_id": pipeline}
+    if entry.get("commit"):
+        converted["rev"] = entry["commit"]
+    if entry.get("_repository"):
+        converted["_repository"] = entry["_repository"]
+    return converted
 
 
-def _read_pipeline(project_dir: Path, store: Optional[Store] = None) -> tuple[str, dict]:
+def _read_pipeline(project_dir: Path) -> tuple[str, dict]:
     """A pipeline's ID and its ``[dependencies]``, from its manifest alone.
 
     Only what pinning needs is read and checked, so a manifest with
-    something else wrong in it can still be pinned. With *store*, a
-    dependency named by its ID that the store has no snapshot of is a
-    ``git`` one, on the default host (:func:`through_git`).
+    something else wrong in it can still be pinned.
     """
     source = project_dir / MANIFEST_NAME
     try:
@@ -408,26 +424,7 @@ def _read_pipeline(project_dir: Path, store: Optional[Store] = None) -> tuple[st
         dependencies = validate_dependencies(raw.get("dependencies") or {}, project_dir)
     except ValueError as error:
         raise type(error)(f"{source}: {error}") from None
-    root = derive_pipeline_id(raw.get("project", {}), project_dir)
-    if store is not None:
-        dependencies = _with_clones(dependencies, root, lambda: snapshot.readable_snapshots(store)[0])
-    return root, dependencies
-
-
-def _with_clones(dependencies: dict, root: str, snapshots) -> dict:
-    """:func:`through_git`, reading the store (*snapshots*, a function) only when a default host is set and an entry is named by its ID."""
-    from chartbook.config import get_default_host
-
-    if not any(entry.get("_store") for entry in dependencies.values()):
-        return dependencies
-    host = get_default_host()
-    if not host:
-        return dependencies
-    try:
-        found = snapshots()
-    except (StoreError, OSError):
-        return dependencies  # a store that cannot be read says nothing about what it lacks
-    return through_git(dependencies, root, found, host)
+    return derive_pipeline_id(raw.get("project", {}), project_dir), dependencies
 
 
 def _dependency_entry(key: str, entry: dict) -> dict:
@@ -439,13 +436,19 @@ def _dependency_entry(key: str, entry: dict) -> dict:
         if entry.get("_repository"):
             location["repository"] = entry["_repository"]
         return {"id": key, "via": "store", "location": location}
+    if entry.get("_from_id"):
+        # Named by its ID, and got from its repository: by its ID, not by an
+        # address, which each machine works out from its own default host
+        location = {"kind": "git", "pipeline": entry["_from_id"]}
+        if entry.get("rev"):
+            location["rev"] = entry["rev"]
+        if entry.get("_repository"):
+            location["repository"] = entry["_repository"]
+        return {"id": key, "via": "rev", "location": location}
     if "git" in entry:
         location = {"kind": "git", "url": strip_url_credentials(entry["git"])}
         if entry.get("rev"):
             location["rev"] = entry["rev"]
-        if entry.get("_from_id"):
-            # Named by its ID, with no snapshot in the store: cloned from the default host
-            location["pipeline"] = entry["_from_id"]
         return {"id": key, "via": "rev", "location": location}
     return {"id": key, "via": "path", "location": {"kind": "path", "path": entry["path"]}}
 
@@ -520,10 +523,11 @@ def _sync(
     from_folder: bool = False,
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
+    built_here: Iterable[str] = (),
 ) -> PinReport:
     """:func:`_sync_now`, one at a time for each lockfile."""
     with _one_at_a_time(Path(project_dir) / LOCK_FILE):
-        return _sync_now(project_dir, store, move, git_cache, from_folder, only, clone_missing)
+        return _sync_now(project_dir, store, move, git_cache, from_folder, only, clone_missing, built_here)
 
 
 def _sync_now(
@@ -534,6 +538,7 @@ def _sync_now(
     from_folder: bool = False,
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
+    built_here: Iterable[str] = (),
 ) -> PinReport:
     """Bring a pipeline's lockfile and the store in line with its manifest.
 
@@ -545,7 +550,9 @@ def _sync_now(
         All of them by default.
     :param clone_missing: Whether a dependency named by its ID that the
         store has no snapshot of is cloned from the default host
-        (:func:`through_git`). A read pins with it off: a read never fetches.
+        (:func:`clone_instead`). A read pins with it off: a read never fetches.
+    :param built_here: The IDs of pipelines built in the same run (a
+        catalog's own), which are never cloned.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
     :param from_folder: Pin a ``path`` dependency from what is in its
@@ -562,8 +569,7 @@ def _sync_now(
             read.append(snapshot.readable_snapshots(store)[0])
         return read[0]
 
-    if clone_missing:
-        dependencies = _with_clones(dependencies, root, snapshots_in_store)
+    host: Optional[str] = None  # the default host, read when a dependency is named by its ID
     lock_path = project_dir / LOCK_FILE
     before = read_lock(lock_path) or Lock(root=root)
 
@@ -609,29 +615,47 @@ def _sync_now(
         # pin from a folder or a repository carries what it has unchanged
         had_labels = {k: v for k, v in had.items() if (v.get("ref") or {}).get("rev")}
         had_assets = {k: v for k, v in had.items() if k not in had_labels}
-        listed = _dependency_entry(key, entry)
         was = locked.get(key)
-        commit_moved = False
-        was_location = (was or {}).get("location", {})
+        kept_as_it_is = False
+        if entry.get("_store"):
+            if host is None:
+                from chartbook.config import get_default_host
 
-        if (
-            not may_move
-            and any(record.get("content_hash") for record in had.values())
-            and {was_location.get("kind"), listed["location"].get("kind")} == {"store", "git"}
-            and was_location.get("pipeline")
-            and was_location.get("pipeline") == listed["location"].get("pipeline")
-        ):
-            # Named by its ID, and pinned from its repository when the store
-            # had no snapshot of it (or from the store, before its snapshots
-            # were cleared): a pin keeps it where it was pinned from, and
-            # `chartbook update` takes what there is now
+                host = get_default_host()
+            was_location = (was or {}).get("location", {})
+            if (
+                not may_move
+                and was_location.get("kind") == "git"
+                and was_location.get("pipeline") == entry["_store"]
+                and not (clone_missing and host)
+            ):
+                # Pinned from its repository, and that repository cannot be
+                # asked here (no default host, or a read): the pin stays as it is
+                kept_as_it_is = True
+            elif clone_missing:
+                entry = clone_instead(entry, root, was, may_move, snapshots_in_store, host, built_here)
+        listed = _dependency_entry(key, entry)
+        commit_moved = False
+
+        if kept_as_it_is:
             records = dict(had)
-            listed = {**was, "location": dict(was_location)}
+            if _declared_elsewhere(was, listed):
+                report.events.append(PinEvent("relocated", key, detail=_describe(listed["location"])))
+            listed = {**was, "location": dict(was["location"])}
+            report.git.add(key)
             for asset_id, record in sorted(had.items()):
-                if record.get("content_hash"):
-                    report.events.append(PinEvent("kept", key, asset_id, old=record["content_hash"], new=record["content_hash"]))
-            if was_location.get("kind") == "git":
-                report.git.add(key)
+                content_hash = record.get("content_hash")
+                if not content_hash:
+                    continue
+                if store.has(content_hash):
+                    report.events.append(PinEvent("kept", key, asset_id, old=content_hash, new=content_hash))
+                else:
+                    report.events.append(
+                        PinEvent(
+                            "lost", key, asset_id, old=content_hash,
+                            detail="it was pinned from its repository, and no [resolve] default_host is set here to get it again",
+                        )
+                    )
         elif "git" in entry:
             if git_cache is None:
                 git_cache = default_git_cache()
@@ -639,6 +663,18 @@ def _sync_now(
                 key, entry, was, listed, may_move, project_dir, git_cache, report
             )
             report.git.add(key)
+            if entry.get("_from_id"):
+                why = f"the store has no snapshot of {entry['_from_id']}, so it is got from its repository, {strip_url_credentials(entry['git'])} ([resolve] default_host)"
+                if failure:
+                    failure = f"{why}: {failure}"
+                elif directory is not None:
+                    try:
+                        named = (_read_manifest_file(Path(directory)).get("project") or {}).get("id")
+                    except (OSError, ValueError):
+                        named = None
+                    if named and named != entry["_from_id"]:
+                        failure = f"{why}, and that repository names itself {named}, not {entry['_from_id']}"
+                        directory = None
             commit_was = (was or {}).get("location", {}).get("commit")
             commit_now = listed.get("location", {}).get("commit")
             commit_moved = bool(commit_was and commit_now and commit_was != commit_now)
@@ -837,7 +873,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
-    _, dependencies = _read_pipeline(project_dir, store)
+    _, dependencies = _read_pipeline(project_dir)
     lock_path = project_dir / LOCK_FILE
     report = FrozenReport(lockfile=lock_path, dependencies=len(dependencies))
     locked = read_lock(lock_path)
@@ -915,6 +951,11 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
             elif not store.has(content_hash):
                 if assets[asset_id].get("label"):
                     remedy = f"its owner makes a snapshot that holds that version again, and then `chartbook update {key}`"
+                elif entry.get("via") == "rev" and not entry.get("location", {}).get("url"):
+                    remedy = (
+                        "`chartbook pin`, where the store can be written and `[resolve] default_host` "
+                        "is set, puts it back from its repository"
+                    )
                 elif entry.get("via") == "rev":
                     remedy = "`chartbook pin`, where the store can be written, puts it back from the repository"
                 elif entry.get("location", {}).get("commit"):
@@ -953,10 +994,16 @@ def _declared_elsewhere(was: dict, now: dict) -> bool:
     # pinned from the store or, with no snapshot there, from its repository
     # on the default host
     kinds = {was.get("location", {}).get("kind"), now.get("location", {}).get("kind")}
-    if kinds == {"store", "git"} and was["location"].get("pipeline") and (
-        was["location"].get("pipeline") == now["location"].get("pipeline")
-    ):
-        return False
+    if kinds == {"store", "git"} and was["location"].get("pipeline") and now["location"].get("pipeline"):
+
+        def by_id(location: dict) -> tuple:
+            return (
+                location.get("pipeline"),
+                location.get("at") or location.get("rev"),
+                repository_key(location.get("repository")),
+            )
+
+        return by_id(was["location"]) != by_id(now["location"])
 
     # A dependency named by its ID records the repository its snapshot came
     # from; that is where the manifest says it is only when it names one.
@@ -993,6 +1040,8 @@ def _describe(location: dict) -> str:
         return f"{location.get('pipeline')}{at}, from the store{made_in}"
     if location.get("kind") == "git":
         rev = f" at {location['rev']}" if location.get("rev") else ""
+        if not location.get("url"):
+            return f"{location.get('pipeline')}{rev}, from its repository"
         return f"{location['url']}{rev}"
     return str(location.get("path"))
 
@@ -1688,6 +1737,7 @@ def pin(
     from_folder: bool = False,
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
+    built_here: Iterable[str] = (),
 ) -> PinReport:
     """Pin whatever a pipeline depends on that has no pin yet.
 
@@ -1719,7 +1769,9 @@ def pin(
         the lockfile has, and nothing of them is fetched. All by default.
     :param clone_missing: Whether a dependency named by its ID that the
         store has no snapshot of is cloned from the default host, and
-        pinned from the clone (:func:`through_git`).
+        pinned from the clone (:func:`clone_instead`).
+    :param built_here: The IDs of pipelines a run builds itself (a
+        catalog's own), which are never cloned.
     :returns: What was done.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
@@ -1729,6 +1781,7 @@ def pin(
         project_dir, store, move=None, git_cache=git_cache, from_folder=from_folder,
         only=None if only is None else ({only} if isinstance(only, str) else set(only)),
         clone_missing=clone_missing,
+        built_here=built_here,
     )
 
 

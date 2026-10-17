@@ -417,7 +417,8 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
                     warnings.warn(
                         f"{toml_file}: [{table}] not pinned. Nothing of {key!r} can be read until "
                         f"it is; `chartbook pin` pins the newest snapshot of {location.pipeline} "
-                        f"in the store, and so does `chartbook run` (the build).",
+                        f"in the store (or, with none and a [resolve] default_host set, its "
+                        f"repository there), and so does `chartbook run` (the build).",
                         UserWarning,
                         stacklevel=2,
                     )

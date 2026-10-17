@@ -138,7 +138,7 @@
               },
               "pipeline": {
                 "type": "string",
-                "description": "For a dependency named by its ID alone (`kind: store`): the pipeline's own ID, whose snapshots are looked for in the store."
+                "description": "For a dependency named by its ID alone: the pipeline's own ID, whose snapshots are looked for in the store (`kind: store`), or whose repository it was got from when the store had none (`kind: git`, with no `url`: each machine works the address out from its `[resolve] default_host`)."
               },
               "at": {
                 "type": "string",

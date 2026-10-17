@@ -300,6 +300,20 @@ def plan(
     visiting: list[Path] = []
     caches = [git_cache]  # made only if some pipeline has a git dependency
     found_in_store: list = [None]  # read only if some pipeline names a dependency by its ID
+    host: list = [None]  # the default host, read likewise
+    by_id: list = [None]
+
+    def asked_by_id() -> dict:
+        """The pipelines of this run, by their own ID."""
+        if by_id[0] is None:
+            by_id[0] = {}
+            for there in asked:
+                try:
+                    raw = _read_manifest(there)
+                except (OSError, ValueError):
+                    continue
+                by_id[0][derive_pipeline_id(raw.get("project") or {}, there)] = there
+        return by_id[0]
 
     def visit(directory: Path, source: str, name: str) -> None:
         directory = directory.resolve()
@@ -329,16 +343,31 @@ def plan(
             scripts = read_scripts(raw)
         except ValueError as error:
             raise ValueError(f"{manifest_path}: {error}") from None
-        if git:
-            # One named by its ID that the store has no snapshot of is built
-            # from its repository on the default host, as a git one is
+        if git and any(entry.get("_store") for entry in dependencies.values()):
+            # One named by its ID that pin will get from its repository on the
+            # default host (lock.clone_instead, the one decision both make) is
+            # built as a git one is. One that is a pipeline of this run is
+            # built here, before it, and never cloned.
+            if host[0] is None:
+                from chartbook.config import get_default_host
+
+                host[0] = get_default_host()
 
             def in_store() -> list:
                 if found_in_store[0] is None:
                     found_in_store[0] = snapshots.readable_snapshots(store if store is not None else default_store())[0]
                 return found_in_store[0]
 
-            dependencies = lock._with_clones(dependencies, derive_pipeline_id(raw.get("project") or {}, directory), in_store)
+            try:
+                locked = lock.read_lock(directory)
+            except lock.LockError:
+                locked = None
+            listed = {entry.get("id"): entry for entry in (locked.dependencies if locked else [])}
+            own = derive_pipeline_id(raw.get("project") or {}, directory)
+            dependencies = {
+                key: lock.clone_instead(entry, own, listed.get(key), False, in_store, host[0], asked_by_id())
+                for key, entry in dependencies.items()
+            }
 
         built = source == "git" and is_built(directory)
         if not built or force:
@@ -357,8 +386,11 @@ def plan(
                         visit(copy, "git", key)
                 elif entry.get("_store"):
                     # Named by its ID alone: its snapshots are read from the
-                    # store, and nothing of it is built here
-                    continue
+                    # store, and nothing of it is built here, unless it is a
+                    # pipeline of this run, which is built before it
+                    there = asked_by_id().get(entry["_store"])
+                    if there is not None:
+                        visit(there, "asked", key)
                 else:
                     # A folder somebody works in is not built from here. It
                     # is in the order only if it was asked for itself, as
@@ -604,7 +636,10 @@ def run(
         elif building and step.has_dependencies:
             # What its code reads from other pipelines has to be pinned
             # before it runs. Nothing that is pinned is moved.
-            pins = lock.pin(step.directory, store, git_cache)
+            pins = lock.pin(
+                step.directory, store, git_cache,
+                built_here={other.id for other in steps if other.source == "asked"},
+            )
             if on_pin is not None:
                 on_pin(step, pins)
             if pins.problems:
