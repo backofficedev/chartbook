@@ -11,21 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 The entries below are newest first, each written as its piece landed. Where a later entry changed what an earlier one says, the later one holds.
 
-**Breaking changes** (each is marked where it is described):
+**Breaking changes** (each is marked where an entry below describes it):
 
 - `chartbook build` is now `chartbook docs`, and `chartbook build` builds everything.
-- A pipeline's ID comes from its repository's remote, not its folder's name, and a scope worked out from it is lowercased. A clone in another folder keeps its ID; a pipeline whose ID changes gets new catalog keys and page addresses, and references to the old ID stop resolving.
+- A pipeline's ID comes from its repository (`repo_url`, else the `origin` remote), not its folder's name, and a scope worked out from it is lowercased. A clone in a folder named otherwise than its repository now takes the repository's ID, so its ID changes (one in a subfolder, with no remote, or with `[project] id` keeps it). A pipeline whose ID changes gets new catalog keys and page addresses; a dependency or catalog entry naming the old ID stays on the old ID's snapshots, and `pin` and `update` say what to write instead.
 - A write-up is plain text: Jinja syntax in a docs file (`{{ … }}`, `{% include %}`) is shown as written, not evaluated.
 - Only the templates the build guide lists as overridable are read from a pipeline's or a catalog's root. `conf.py` is always rendered from the package's own template, so a `conf.py.j2` in a project is ignored.
 - `chartbook.markdown_generator` is removed; the site is written by `chartbook.writers.sphinx` (or `chartbook.writers.mkdocs`).
 - A `[pipelines]` entry with a key other than `path` and `disabled` is an error.
+- A dataframe, chart, notebook or note key must match `[A-Za-z0-9._-]+`, since it becomes part of an address; a key such as `"10y spread"` stops the manifest from loading.
+- `chartbook build` and `chartbook run` execute `[project] build`, which 0.2.0 only showed. In that build, a read of another pipeline that is not in `[dependencies]`, or that has no snapshot, is an error, where 0.2.0 read it through the catalog: declare it (`chartbook add`), and have its owner run `chartbook snapshot`.
+- ChartBook needs polars 1.20 or later (was 1.9), and now duckdb 1.4 or later and cookiecutter 2.2 or later.
 
 **What later entries changed in earlier ones:**
 
 - `pin --from-folder` and `update --from-folder` are removed. A pipeline reads another's snapshots, never its folder, except with a `WorkingVersionWarning` when it has none.
 - `store gc` keeps an unneeded snapshot for 7 days, not 30.
 - The store is set by `[store] url` (`[store] path` is still read, with a warning), and can be an S3 bucket or a synced folder that machines share.
-- `data.load`, including the two-argument `data.load(pipeline=…, dataframe=…)`, reads the store first. A dependency declared and not pinned is pinned on its first read, not refused; one not declared is read with an `UnrecordedReadWarning`, and is an error only in `chartbook run`.
+- `data.load`, including the two-argument `data.load(pipeline=…, dataframe=…)`, reads the store first. A dependency declared and not pinned is pinned on its first read, not refused; one not declared is read with an `UnrecordedReadWarning`, and is an error only in a build run by `chartbook build` or `chartbook run`.
 - `chartbook init` renders the template that comes with the installed ChartBook, with cookiecutter, and writes `.cruft.json` only when the template's commit is known. The template's `dodo.py` no longer builds the site.
 - Built since the entries that call them "not built yet": sharing snapshots between machines, `--frozen`, versions and labels of a model, a dependency named by its ID alone and cloned from its repository, and tables and queries pinned as parquet (a Databricks source is still not pinned).
 - The Markdown generator is gone, and the site is written from the index.
@@ -429,7 +432,7 @@ Until now, a pipeline that read another's data was built by hand in steps: `char
 
 **It builds a `git` dependency, once.** `chartbook pin` can pin only what a repository commits, because a clone has no built data in it. Nobody works in ChartBook's own copy of a commit, so there is nothing to disturb: `chartbook run` makes a writable copy of the checkout under `~/.chartbook/git/work/`, runs the dependency's `build` there, and pins what that produces. This is what the note under "`git` dependencies" below was waiting for. It is built once for a commit, and nothing builds it again by itself. `chartbook run --force` does, which is how data it pulls from outside is refreshed on purpose. `run` stays at the commit in the lockfile. `chartbook update` moves to a newer one, and when it does, data that was built at the old commit and is not built at the new one is let go from the lockfile, since it did not come from the commit now named; the next `chartbook run` builds it and pins it.
 
-**`[project] build` is now executed.** It has always been described as a script, and until now it was only shown on the pipeline's page. It is the same thing as `[scripts] build` and is still read; a manifest that gives both, differently, does not load. If yours holds a note and not the command that builds the pipeline (one of the examples here had `build = "module load anaconda3/3.11.4 TeXLive/2023"`), `chartbook run` will run that note. Make it the command. Nothing else reads the field differently, so this matters only once you use `chartbook run`.
+**`[project] build` is now executed** (**breaking**, for what a build may read: see the top of this section). It has always been described as a script, and until now it was only shown on the pipeline's page. It is the same thing as `[scripts] build` and is still read; a manifest that gives both, differently, does not load. If yours holds a note and not the command that builds the pipeline (one of the examples here had `build = "module load anaconda3/3.11.4 TeXLive/2023"`), `chartbook run` will run that note. Make it the command. Nothing else reads the field differently, so this matters only once you use `chartbook run`.
 
 `index.json` lists all of a pipeline's scripts under `scripts`, where it had only `build`.
 
