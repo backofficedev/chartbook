@@ -931,7 +931,7 @@ def labels_skipped(raw: dict) -> list[tuple[str, str]]:
 
 
 def versions_of_pipeline(
-    store: Store, pipeline: str, subdirectory: str, name: str
+    store: Store, pipeline: str, subdirectory: str, name: str, found: Optional[list] = None
 ) -> list[tuple[str, "Snapshot"]]:
     """The versions of one asset of a pipeline, from the store alone.
 
@@ -940,11 +940,13 @@ def versions_of_pipeline(
     the pipeline gives itself. For a pipeline that depends on another: it
     never reads the other's folder.
 
+    :param found: The store's snapshots, read already; read from the
+        store when not given.
     :returns: Each content hash with the first snapshot that held it,
         oldest first.
     """
     seen: dict[str, Snapshot] = {}
-    for taken in all_snapshots(store):
+    for taken in found if found is not None else all_snapshots(store):
         if taken.pipeline != pipeline or taken.subdirectory != subdirectory:
             continue
         content_hash = (taken.assets.get(name) or {}).get("content_hash")
@@ -954,7 +956,7 @@ def versions_of_pipeline(
 
 
 def label_records(
-    newest: "Snapshot", key: str, store: Store
+    newest: "Snapshot", key: str, store: Store, found: Optional[list] = None
 ) -> tuple[dict[str, dict], list[tuple[str, str, str]]]:
     """The lockfile records for the labels a snapshot carries, resolved to bytes.
 
@@ -967,6 +969,8 @@ def label_records(
     :param newest: The snapshot being pinned from, whose ``labels`` say
         what the owner's manifest said when it was made.
     :param key: The dependency's key in ``[dependencies]``.
+    :param found: The store's snapshots, read already (see
+        :func:`versions_of_pipeline`).
     :returns: The records, by ID; and the labels that could not be
         resolved, as ``(model, label, start, why)``: no snapshot of the
         pipeline in the store names such a version, two versions share
@@ -979,7 +983,7 @@ def label_records(
         versions = None
         for label, start in sorted(labels.items()):
             if versions is None:
-                versions = versions_of_pipeline(store, newest.pipeline, newest.subdirectory, name)
+                versions = versions_of_pipeline(store, newest.pipeline, newest.subdirectory, name, found)
             named = [
                 (content_hash, taken)
                 for content_hash, taken in versions
@@ -1122,7 +1126,9 @@ def plan_removals(
     4. a label points at a model version it holds: in the pipeline's
        manifest, read from the folder the snapshots were made from, or as
        recorded in the newest snapshot of the pipeline (:func:`labels_of`);
-    5. it was made in the last *keep_days* days.
+    5. it was made in the last *keep_days* days;
+    6. a snapshot kept for any of these reasons was made from it, and so on
+       up: a kept snapshot's lineage stays whole (:func:`_keep_lineage`).
 
     Otherwise it may be removed. What it names and nothing else names is
     then removed with it, by :func:`chartbook.lock.plan_gc`.
@@ -1166,7 +1172,41 @@ def plan_removals(
                 )
                 continue
             plan.keep.append((taken, why))
+    _keep_lineage(plan, groups)
     return plan
+
+
+def _keep_lineage(plan: SnapshotPlan, groups: dict) -> None:
+    """Keep what a kept snapshot's lineage needs, as far up as it goes.
+
+    A snapshot records the snapshots it was made from (``inputs``), and
+    ``chartbook lineage`` walks to them and checks them by hash. So each of
+    those is kept too, and what it was made from, and so on. (The versions a
+    kept snapshot's labels name need no snapshot kept for them: a lockfile
+    that pinned a label keeps its bytes, and the walk finds them by their
+    hash. Only the newest snapshot's labels keep a version's snapshot, as
+    before, so taking a label away still releases it.)
+    """
+    removable = {id(taken): (taken, why) for taken, why in plan.remove}
+    by_moment: dict[tuple[str, str], list] = {}
+    for group in groups.values():
+        for taken in group:
+            by_moment.setdefault((taken.commit, taken.made_at), []).append(taken)
+    queue = [taken for taken, _ in plan.keep]
+    while queue and removable:
+        taken = queue.pop()
+        rescued = []
+        for entry in taken.inputs if isinstance(taken.inputs, list) else []:
+            location = entry.get("location") if isinstance(entry, dict) else None
+            if isinstance(location, dict) and isinstance(location.get("commit"), str) and isinstance(entry.get("snapshot"), str):
+                for upstream in by_moment.get((location["commit"], entry["snapshot"]), []):
+                    rescued.append((upstream, "a snapshot that is kept was made from it"))
+        for upstream, why in rescued:
+            if id(upstream) in removable:
+                del removable[id(upstream)]
+                plan.keep.append((upstream, why))
+                queue.append(upstream)
+    plan.remove = [(taken, why) for taken, why in plan.remove if id(taken) in removable]
 
 
 def remove(store: Store, taken: Snapshot) -> bool:

@@ -83,7 +83,7 @@ class TestTheWalk:
 
         _rewrite(_snapshot_of("acme/rates"), tamper)
         (gap,) = lineage.walk(forecast).gaps()
-        assert gap[0].label == "fred" and "that snapshot gives another" in gap[1]
+        assert gap[0].label == "fred" and gap[0].kind == "mismatch" and "that snapshot gives another" in gap[1]
 
     def test_an_upstream_snapshot_gone(self, chain):
         fred, rates, forecast = chain
@@ -157,3 +157,109 @@ class TestTheCommand:
         monkeypatch.chdir(forecast)
         result = CliRunner().invoke(main, ["lineage", "--rehash"])
         assert result.exit_code == 0 and "object(s) hashed again; no gaps." in result.output
+
+
+def _model_pipeline(folder: Path, aliases=None) -> None:
+    model = {"path": "./_models/m.json", "metrics_path": "./_output/metrics.json", "docs": "A model."}
+    if aliases:
+        model["aliases"] = aliases
+    (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/model"}, "models": {"m": model}}))
+
+
+def _train(folder: Path, weights: bytes) -> None:
+    (folder / "_models").mkdir(exist_ok=True)
+    (folder / "_models" / "m.json").write_bytes(weights)
+    (folder / "_output").mkdir(exist_ok=True)
+    (folder / "_output" / "metrics.json").write_text(json.dumps({"rmse": 0.3}))
+
+
+@pytest.fixture
+def labelled(tmp_path):
+    """``model`` <- ``serve`` (pins model's `champion` label) <- ``top``."""
+    work = tmp_path.resolve()
+    model, serve, top = work / "model", work / "serve", work / "top"
+    model.mkdir()
+    _model_pipeline(model)
+    _train(model, b"w1")
+    _pipeline(serve, "acme/serve", "served", {"model": "model"})
+    _pipeline(top, "acme/top", "topdf", {"serve": "serve"})
+    _git(work, "init", "--quiet", "-b", "main")
+    (work / ".gitignore").write_text("_data/\nchartbook.lock\n_models/\n_output/\n")
+    _commit(work)
+    first = snapshot.make(model).new_versions[0][1]
+    _train(model, b"w2")
+    _model_pipeline(model, {"champion": first})
+    _commit(work)
+    snapshot.make(model)
+    lock.pin(serve)
+    snapshot.make(serve)
+    lock.pin(top)
+    return work, model, serve, top, first
+
+
+class TestWhatTheReviewFound:
+    def test_gc_keeps_what_a_kept_snapshot_was_made_from(self, chain):
+        fred, rates, forecast = chain
+        (fred / "_data" / "series.parquet").unlink()
+        pl.DataFrame({"d": ["2024-02-01"], "series": [2.0]}).write_parquet(fred / "_data" / "series.parquet")
+        snapshot.make(fred)                   # f2
+        lock.update(rates)
+        snapshot.make(rates)                  # r2, from f2; forecast stays on r1, from f1
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        kept = {(t.pipeline, why) for t, why in plan.snapshots_kept}
+        assert ("acme/fred", "a snapshot that is kept was made from it") in kept
+        lock.run_gc(plan, default_store())
+        assert lineage.walk(forecast).gaps() == []
+        assert snapshot.make(forecast, deep=True).snapshot
+
+    def test_a_moved_label_and_gc_leave_no_false_gap(self, labelled):
+        work, model, serve, top, first = labelled
+        assert lineage.walk(top).gaps() == []
+        found, _ = snapshot.readable_snapshots(default_store())
+        newest = max((t for t in found if t.pipeline == "acme/model"), key=lambda t: t.made_at)
+        second = newest.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
+        _model_pipeline(model, {"champion": second})
+        _commit(work)
+        _train(model, b"w3")
+        snapshot.make(model)
+        lock.run_gc(lock.plan_gc(default_store(), recent_seconds=0, keep_days=0), default_store())
+        assert lineage.walk(top).gaps() == []
+
+    def test_a_record_that_cannot_be_read_elsewhere_does_not_stop_the_walk(self, labelled):
+        work, model, serve, top, first = labelled
+        record = _snapshot_of("acme/serve").path
+        stranger = record.with_name("20991231T000000.000000Z.json")
+        document = json.loads(record.read_text())
+        document["schema"] = "chartbook/snapshot/v99"
+        stranger.write_text(json.dumps(document))
+        assert lineage.walk(top).gaps() == []
+
+    def test_rehash_reads_the_versions_labels_pinned(self, labelled):
+        work, model, serve, top, first = labelled
+        store = default_store()
+        (version,) = [h for h in store.hashes() if h.split(":", 1)[1].startswith(first)]
+        for file in Path(store.get(version)).rglob("*"):
+            os.chmod(file, stat.S_IRUSR | stat.S_IWUSR)
+            file.write_bytes(b"changed")
+        assert any("is not what its name says" in gap for _, gap in lineage.walk(top, rehash=True).gaps())
+
+    @pytest.mark.parametrize(
+        "change",
+        [
+            lambda d: d["inputs"][0].update(location="here"),
+            lambda d: d["inputs"][0]["location"].update(commit=5),
+            lambda d: d["inputs"][0].update(pinned_hash={"a": 1}),
+            lambda d: d["inputs"][0].update(id="a:b"),
+            lambda d: next(r for r in d["records"] if r.get("content_hash")).update(content_hash="abc"),
+            lambda d: d["inputs"][0].update(snapshot=7),
+        ],
+        ids=["location-text", "commit-number", "hash-table", "id-with-colon", "short-hash", "time-number"],
+    )
+    def test_a_record_not_as_written_is_a_gap_not_a_crash(self, chain, monkeypatch, change):
+        fred, rates, forecast = chain
+        _rewrite(_snapshot_of("acme/rates"), change)
+        found = lineage.walk(forecast)
+        assert found.gaps()
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["lineage", "--check"])
+        assert result.exit_code == 1 and "gap:" in result.output, result.output

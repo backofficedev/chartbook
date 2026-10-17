@@ -2068,6 +2068,10 @@ def _lineage_line(node) -> str:
         return f"{node.label}: pinned from its working folder"
     if node.kind == "nothing":
         return f"{node.label}: nothing pinned"
+    if node.kind == "mismatch":
+        return f"{node.label}: its snapshot at {node.commit[:7]} does not hold what was pinned"
+    if node.kind == "unreadable":
+        return f"{node.label}: a record that cannot be read"
     return f"{node.label}: not found in the store"
 
 

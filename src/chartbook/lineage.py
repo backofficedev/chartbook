@@ -24,6 +24,7 @@ is written.
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
@@ -31,6 +32,7 @@ from typing import Optional, Union
 import tomli
 
 from chartbook import lock, snapshot
+from chartbook.refs import AssetRef
 from chartbook.store import Store, StoreError, default_store
 
 #: How many snapshots up the walk goes before it stops and says so:
@@ -39,6 +41,10 @@ DEEPEST = 64
 
 #: The most of a snapshot's kept manifest that is read
 MANIFEST_LIMIT = 1024 * 1024
+
+#: The most inputs of one snapshot that are walked: more than any pipeline
+#: declares, and a bound on a record written to make the walk wide
+MOST_INPUTS = 1000
 
 
 @dataclass
@@ -55,8 +61,10 @@ class Node:
         made_at: When the snapshot was made.
         kind: ``working`` (the folder the walk starts from), ``snapshot``,
             ``git`` (pinned from a clone; not walked further), ``folder``
-            (pinned from a working folder), ``nothing`` (nothing pinned) or
-            ``missing`` (no such snapshot in the store).
+            (pinned from a working folder), ``nothing`` (nothing pinned),
+            ``missing`` (no such snapshot in the store), ``mismatch`` (the
+            snapshot is there and does not hold what was pinned) or
+            ``unreadable`` (a record that is not one ChartBook wrote).
         gaps: What is wrong at this point of the lineage, one line each.
         children: The pipelines it was pinned to.
         seen: Whether this snapshot was met before in the walk, and is
@@ -124,29 +132,38 @@ class Lineage:
 def walk(project_dir: Union[str, Path] = ".", store: Optional[Store] = None, rehash: bool = False) -> Lineage:
     """Walk a pipeline's lineage up from its lockfile, through every snapshot it leads to, and check each edge.
 
+    What is read from the store was written by whoever can write to it, so
+    a record that is not what ChartBook writes is a gap where it is met,
+    never an error that stops the walk.
+
     :param project_dir: The pipeline's folder.
     :param store: The store; this user's by default.
-    :param rehash: Also hash every asset of every snapshot again, which
-        reads all their bytes.
+    :param rehash: Also hash every asset of every snapshot again, and every
+        model version a label pinned, which reads all their bytes.
     :raises chartbook.snapshot.SnapshotError: If the folder holds no pipeline.
     """
     directory = Path(project_dir).resolve()
     store = store if store is not None else default_store()
     pipeline = snapshot.pipeline_in(directory)
     root = Node(label=pipeline, pipeline=pipeline, kind="working")
+    locked = None
     try:
         root.gaps = snapshot.lineage_gaps(directory, store)
         locked = lock.read_lock(directory / lock.LOCK_FILE)
-    except (lock.LockError, ValueError) as error:
-        root.gaps = [str(error)]
-        locked = None
+    except Exception as error:  # a lockfile written by hand: said, not raised
+        root.gaps = [f"its lockfile cannot be checked: {error}"]
     found, unreadable = snapshot.readable_snapshots(store)
     walker = _Walker(store, found, unreadable)
     for entry in locked.dependencies if locked is not None else []:
-        root.children.append(walker.from_lockfile(entry, locked.assets_of(entry.get("id"))))
+        root.children.append(walker.guarded(lambda: walker.from_lockfile(entry, locked.assets_of(entry.get("id"))), entry))
     lineage = Lineage(root, snapshots=len(walker.visited))
     walker.check_objects(lineage, rehash)
     return lineage
+
+
+def _text(value: object) -> str:
+    """A value of a record as text, if it is text; else empty."""
+    return value if isinstance(value, str) else ""
 
 
 class _Walker:
@@ -156,7 +173,18 @@ class _Walker:
         self.store = store
         self.found = found
         self.unreadable = unreadable
-        self.visited: dict[tuple, Node] = {}
+        self.visited: dict[str, Node] = {}
+        self.extra: dict[str, set] = {}
+
+    def guarded(self, make, entry: object) -> Node:
+        """A node made from records anyone may have written: a gap, not an error, if they are not what they should be."""
+        try:
+            return make()
+        except Exception as error:
+            key = entry.get("id") if isinstance(entry, dict) else None
+            node = Node(label=_text(key) or "?", kind="unreadable")
+            node.gaps.append(f"its record is not one ChartBook wrote ({type(error).__name__}: {error})")
+            return node
 
     def _at(self, commit: str, made_at: str) -> list:
         return [taken for taken in self.found if taken.same_moment(commit, made_at)]
@@ -168,10 +196,13 @@ class _Walker:
 
     def from_lockfile(self, entry: dict, records: dict) -> Node:
         """A dependency of the pipeline's own lockfile. Its gaps are the pipeline's, said at the top."""
-        key = str(entry.get("id") or "?")
-        location = entry.get("location") or {}
-        node = Node(label=key, commit=location.get("commit") or "", made_at=entry.get("snapshot") or "")
-        hashed = {asset_id: record for asset_id, record in records.items() if record.get("content_hash")}
+        key = _text(entry.get("id")) or "?"
+        location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
+        node = Node(label=key, commit=_text(location.get("commit")), made_at=_text(entry.get("snapshot")))
+        hashed = {
+            asset_id: record for asset_id, record in records.items()
+            if isinstance(record, dict) and _text(record.get("content_hash"))
+        }
         if location.get("kind") == "git":
             node.kind = "git"
             return node
@@ -182,19 +213,21 @@ class _Walker:
             node.kind = "folder"
             return node
         plain = [record for record in hashed.values() if not (record.get("ref") or {}).get("rev")]
+        labels = {record["content_hash"] for record in hashed.values() if (record.get("ref") or {}).get("rev")}
+        at = self._at(node.commit, node.made_at)
         held = [
-            taken for taken in self._at(node.commit, node.made_at)
+            taken for taken in at
             if all(taken.content().get(snapshot.local_name(record)) == record["content_hash"] for record in plain)
         ]
         if not held:
-            node.kind = "missing"
+            node.kind = "missing" if not at else "mismatch"
             return node
-        return self._up(node, held[0], depth=1)
+        return self._up(node, held[0], depth=1, labels=labels)
 
     def _from_input(self, key: str, entry: dict, depth: int) -> Node:
         """A dependency a snapshot recorded among its inputs."""
-        location = entry.get("location") or {}
-        node = Node(label=key, commit=location.get("commit") or "", made_at=entry.get("snapshot") or "")
+        location = entry.get("location") if isinstance(entry.get("location"), dict) else {}
+        node = Node(label=key, commit=_text(location.get("commit")), made_at=_text(entry.get("snapshot")))
         if location.get("kind") == "git":
             node.kind = "git"
             return node
@@ -202,6 +235,8 @@ class _Walker:
         if not expected:
             node.kind = "nothing"
             return node
+        if not isinstance(expected, str):
+            raise TypeError(f"its pinned_hash is {type(expected).__name__}, not text")
         if not (node.commit and node.made_at):
             node.kind = "folder"
             node.gaps.append(
@@ -210,9 +245,13 @@ class _Walker:
             )
             return node
         at = self._at(node.commit, node.made_at)
-        matching = [taken for taken in at if self._pinned_hash(taken, key) == expected]
+        matching = []
+        for taken in at:
+            made, labels = self._pinned_hash(taken, key)
+            if made == expected:
+                matching.append((taken, labels))
         if not matching:
-            node.kind = "missing"
+            node.kind = "missing" if not at else "mismatch"
             if not at:
                 node.gaps.append(self._missing(node.commit, node.made_at))
             else:
@@ -222,25 +261,29 @@ class _Walker:
                     f"holds (or a version one of its labels names is no longer in the store)"
                 )
             return node
-        return self._up(node, matching[0], depth)
+        taken, labels = matching[0]
+        return self._up(node, taken, depth, labels=labels)
 
-    def _up(self, node: Node, taken, depth: int) -> Node:
+    def _up(self, node: Node, taken, depth: int, labels: frozenset = frozenset()) -> Node:
         """A snapshot found: what it is, whether its inputs are complete, and what it was pinned to."""
         node.kind = "snapshot"
         node.pipeline, node.commit, node.made_at = taken.pipeline, taken.commit, taken.made_at
-        node.hashes = {content_hash for content_hash in taken.content().values() if content_hash}
-        moment = (taken.pipeline, taken.commit, taken.made_at)
-        if moment in self.visited:
-            node.seen = True
-            return node
-        self.visited[moment] = node
+        node.hashes = {h for h in taken.content().values() if isinstance(h, str) and h} | set(labels)
         if depth > DEEPEST:
             node.gaps.append(f"the walk stops here, {DEEPEST} snapshots up: the store may have been made to loop")
             return node
+        place = str(taken.path)
+        if place in self.visited:
+            node.seen = True
+            return node
+        self.visited[place] = node
+        listed = taken.inputs if isinstance(taken.inputs, list) else []
         inputs = {
-            str(entry.get("id")): entry for entry in taken.inputs or []
-            if isinstance(entry, dict) and entry.get("id")
+            entry["id"]: entry for entry in listed[:MOST_INPUTS]
+            if isinstance(entry, dict) and isinstance(entry.get("id"), str) and entry.get("id")
         }
+        if len(listed) > MOST_INPUTS:
+            node.gaps.append(f"its record lists {len(listed)} inputs; the first {MOST_INPUTS} are walked")
         declared, why = self._declared(taken)
         if declared is None:
             node.gaps.append(why)
@@ -252,7 +295,7 @@ class _Walker:
                     f"not list it"
                 )
         for key, entry in sorted(inputs.items()):
-            node.children.append(self._from_input(key, entry, depth + 1))
+            node.children.append(self.guarded(lambda: self._from_input(key, entry, depth + 1), entry))
         return node
 
     def _declared(self, taken) -> tuple[Optional[set], str]:
@@ -273,21 +316,70 @@ class _Walker:
         dependencies = raw.get("dependencies")
         return (set(dependencies) if isinstance(dependencies, dict) else set()), ""
 
-    def _pinned_hash(self, taken, key: str) -> Optional[str]:
-        """The hash over everything a pin of this snapshot under this key would hold, as ``chartbook pin`` makes it."""
+    def _pinned_hash(self, taken, key: str) -> tuple[Optional[str], frozenset]:
+        """The hash over everything a pin of this snapshot under this key would hold, as ``chartbook pin`` makes it; and the label versions in it."""
         records = {}
         for name in sorted(taken.assets):
             record = snapshot.renamed(taken.assets[name], key)
             records[record["id"]] = record
-        try:
-            labelled, _ = snapshot.label_records(taken, key, self.store)
-        except (StoreError, ValueError, OSError):
-            labelled = {}
+        labelled = self._label_records(taken, key)
         records.update(labelled)
-        return lock.pinned_hash(records.values())
+        versions = frozenset(record["content_hash"] for record in labelled.values())
+        return lock.pinned_hash(records.values()), versions
+
+    def _label_records(self, taken, key: str) -> dict:
+        """The records a pin makes of the snapshot's labels, as :func:`chartbook.snapshot.label_records` makes them.
+
+        Each label names the start of a version's hash. The version is looked
+        for among the snapshots this walk read (never the store's records
+        again, so one that cannot be read does not stop it); failing that,
+        among the store's objects, since a lockfile that pinned the label
+        keeps the version's bytes after ``store gc`` has let the snapshot
+        that made it go. One version, with its bytes in the store, or none.
+        """
+        records = {}
+        labels = taken.labels if isinstance(taken.labels, dict) else {}
+        for name, named in sorted(labels.items()):
+            if not isinstance(named, dict) or name not in taken.assets:
+                continue
+            versions = None
+            for label, start in sorted(named.items()):
+                start = str(start).split(":", 1)[-1]
+                if len(start) < 12:
+                    continue
+                if versions is None:
+                    versions = {
+                        content_hash for content_hash, _ in snapshot.versions_of_pipeline(
+                            self.store, taken.pipeline, taken.subdirectory, name, found=self.found
+                        )
+                    }
+                named_hashes = {h for h in versions if h.split(":", 1)[-1].startswith(start)}
+                if not named_hashes:
+                    named_hashes = {h for h in self._objects() if h.split(":", 1)[-1].startswith(start)}
+                if len(named_hashes) != 1:
+                    continue
+                (content_hash,) = named_hashes
+                try:
+                    if not self.store.has(content_hash):
+                        continue
+                except (StoreError, OSError, ValueError):
+                    continue
+                record = {k: v for k, v in snapshot.renamed(taken.assets[name], key).items() if k != "trained_on"}
+                ref = dataclasses.replace(AssetRef.from_dict(record["ref"]), rev=label)
+                records[str(ref)] = {**record, "id": str(ref), "ref": ref.to_dict(), "label": label, "content_hash": content_hash}
+        return records
+
+    def _objects(self) -> set:
+        """Every object's hash in the store, listed once a walk needs it."""
+        if not hasattr(self, "_listed"):
+            try:
+                self._listed = set(self.store.hashes())
+            except (StoreError, OSError, ValueError):
+                self._listed = set()
+        return self._listed
 
     def check_objects(self, lineage: Lineage, rehash: bool) -> None:
-        """Each walked snapshot's assets: in the store, and with ``rehash``, still what their names say."""
+        """Each walked snapshot's assets, and each label version pinned: in the store, and with ``rehash``, still what their names say."""
         owners: dict[str, list[Node]] = {}
         for node in self.visited.values():
             for content_hash in sorted(node.hashes):

@@ -649,14 +649,14 @@ acme/forecast (this folder)
 2 snapshot(s) upstream; 1 gap(s).
 ```
 
-A snapshot met twice is walked once and marked "shown above". A `git` dependency is pinned from its clone, not from a snapshot, so the walk stops there. Nothing is written.
+A snapshot met twice is walked once and marked "shown above". A `git` dependency is pinned from its clone, not from a snapshot, so the walk stops there. What the walk reads was written by whoever can write to the store, so a record that is not what ChartBook writes is a gap where it is met ("a record that cannot be read"), never an error that stops the walk; a snapshot that is there and does not hold what was pinned is shown as such. Model labels are resolved from the snapshots the walk has read, or by their hash among the store's objects when `store gc` has let the snapshot that made a version go (the lockfile that pinned the label keeps its bytes); `--rehash` reads those versions too. `store gc` keeps what a kept snapshot was made from, so it does not open gaps. Nothing is written.
 
 | Option | Effect |
 |--------|--------|
 | `--project-dir PATH` | The pipeline (default: the current directory) |
 | `--check` | Exit `1` if there is any gap: for CI |
 | `--rehash` | Also hash every asset of every snapshot again, which reads all of their bytes |
-| `--json` | Print the graph as JSON: each pipeline's `label`, `kind`, `pipeline`, `commit`, `made_at`, `gaps` and `children` |
+| `--json` | Print the graph as JSON: each pipeline's `label`, `kind` (`working`, `snapshot`, `git`, `folder`, `nothing`, `missing`, `mismatch`, `unreadable`), `pipeline`, `commit`, `made_at`, `gaps` and `children` |
 
 ## chartbook run
 
@@ -840,6 +840,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | It is the newest of its pipeline, or the newest a branch or tag can pin from | The last build of `yield_curve` that was declared ready; the last one on its `release` branch |
 | A label points at a model version in it | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as its newest snapshot recorded |
 | It was made in the last 30 days | `--keep-days` changes the number |
+| A snapshot kept for any of these was made from it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
 
 Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last month of snapshots, the ones somebody pins, and the ones a label names.
 
