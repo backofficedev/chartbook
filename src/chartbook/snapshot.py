@@ -1137,17 +1137,17 @@ def plan_removals(
        manifest, read from the folder the snapshots were made from, or as
        recorded in the newest snapshot of the pipeline (:func:`labels_of`);
     5. it was made in the last *keep_days* days;
-    With *aggressive*, names keep nothing: 3 is only the newest of the
-    pipeline, never the newest a branch or tag can pin from, and 4 is not
-    asked at all, so a tagged version, or a labelled model version, goes
-    once nothing else keeps it.
-
     6. with *keep_lineage*: a snapshot kept for any of these reasons was
        made from it, or from a label pointing into it, and so on up, so
        that a kept snapshot's lineage stays whole (:func:`_keep_lineage`).
        Without it, which is the default, a store keeps what work needs now
        and lets old lineage go; ``chartbook lineage`` then says a snapshot
        upstream is not in the store.
+
+    With *aggressive*, names keep nothing: 3 is only the newest of the
+    pipeline, never the newest a branch or tag can pin from, and 4 is not
+    asked at all, so a tagged version, or a labelled model version, goes
+    once nothing else keeps it.
 
     Otherwise it may be removed. What it names and nothing else names is
     then removed with it, by :func:`chartbook.lock.plan_gc`.
@@ -1665,7 +1665,10 @@ def make(
     documents, documents_skipped = document_paths(directory, raw)
     before = find(store, code.commit, code.subdirectory)
     if before and before[0].content() == snapshot.content():
-        if before[0].documents is not None or not documents:
+        # The same bytes; made again only to say more than the one before:
+        # its documents, that a run built them, or the commit's tags, since
+        # a commit is often tagged after it is built
+        if (before[0].documents is not None or not documents) and before[0].tags == snapshot.tags:
             if before[0].built_by_run or not built_by_run:
                 store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
                 return SnapshotReport(before[0], False, not_built, skipped_labels=labels_skipped(raw))

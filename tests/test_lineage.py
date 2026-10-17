@@ -343,13 +343,10 @@ class TestNames:
     def test_the_tree_and_the_versions_page_say_a_versions_tags(self, chain, monkeypatch):
         fred, rates, forecast = chain
         _git(forecast.parent, "tag", "paper-2026")
-        snapshot.make(fred)  # nothing new at this commit: the tag is recorded only by a snapshot made after it
-        taken = _snapshot_of("acme/fred")
-        assert taken.tags == []
-        (fred / "_data" / "series.parquet").unlink()
-        pl.DataFrame({"d": ["2024-03-01"], "series": [3.0]}).write_parquet(fred / "_data" / "series.parquet")
-        made = snapshot.make(fred).snapshot
-        assert made.tags == ["paper-2026"]
+        # Tagged after it was built: the same bytes, made again to record the tag
+        report = snapshot.make(fred)
+        assert report.made and report.snapshot.tags == ["paper-2026"]
+        assert not snapshot.make(fred).made  # and only once
         lock.update(rates)
         monkeypatch.chdir(rates)
         output = CliRunner().invoke(main, ["lineage"]).output

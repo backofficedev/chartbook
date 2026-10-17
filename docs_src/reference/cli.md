@@ -430,7 +430,7 @@ Nothing has changed since the snapshot of 2026-10-13 18:22 UTC. No new one was m
 
 An asset that is declared and not built is listed, and the rest is in the snapshot all the same. A pipeline that has built nothing has no snapshot to make.
 
-**A git tag is a version's name.** A snapshot records the git tags on its commit when it is made (`tags`; a tag made later is in the next snapshot made after it), and `chartbook lineage` and a catalog's Versions page show them. Name a version with `git tag`, and unname it with `git tag -d`: `store gc` keeps the newest snapshot a tag can pin from while the tag is there, and lets it go once it is not, or always with `--aggressive`. A name keeps that snapshot only, not what it was made from (`store gc --keep-lineage` does that).
+**A git tag is a version's name.** A snapshot records the git tags on its commit when it is made (`tags`). A commit is often tagged after it is built: run `chartbook snapshot` again after tagging, and since the tags are new it records them, with the same bytes; and `chartbook lineage` and a catalog's Versions page show them. Name a version with `git tag`, and unname it with `git tag -d`: `store gc` keeps the newest snapshot a tag can pin from while the tag is there, and lets it go once it is not, or always with `--aggressive`. A name keeps that snapshot only, not what it was made from (`store gc --keep-lineage` does that).
 
 **The snapshot holds the description of its data.** With the bytes, a snapshot keeps the pipeline's own index at that commit, without any path of your machine, and the files a site needs that are not assets: `chartbook.toml`, `chartbook.lock`, the README, every write-up (`docs_path`), the pipeline's own site pages and its logo and favicon. Only files git tracks are taken, so a `.env` or an ignored draft never reaches the store; only plain paths inside the pipeline's folder, and no file that is a link or under one. Each document named and not kept is listed (`document not kept: …`). So the data dictionary of each version is kept as it stood when the data was made, and a version's site can be built from the store alone, with the repository gone: `chartbook.snapshot.materialize(taken, folder)` lays the version out as a folder, under the pipeline's own ID whatever the folder is called, with each model's recorded scores written back to its `metrics_path`, and `chartbook docs` builds there. A dataframe that is a table or a query is in the store as parquet while its manifest names a database, so in a laid-out version its page says it is not built. A manifest a docs build would refuse still gets its snapshot; the index is then left out and the command says why:
 
@@ -839,12 +839,13 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | Kept because | Example |
 |---|---|
 | A lockfile pins it | `rate_forecast` is pinned to it |
-| It is the newest of its pipeline, or the newest a branch or tag can pin from (not with `--aggressive`) | The last build of `yield_curve` that was declared ready; the last one on its `release` branch, or at its `v1.0` tag |
+| It is the newest of its pipeline | The last build of `yield_curve` that was declared ready |
+| It is the newest a branch or tag can pin from (not with `--aggressive`) | The last one on its `release` branch, or at its `v1.0` tag |
 | A label points at a model version in it (not with `--aggressive`) | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as its newest snapshot recorded |
 | It was made in the last 7 days | `--keep-days` changes the number |
 | With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
 
-Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last month of snapshots, the ones somebody pins, and the ones a label names.
+Everything else may be removed. So a nightly `chartbook run --snapshot` leaves, after a while, the last week of snapshots, the ones somebody pins, and the ones a tag or a label names.
 
 It lists what it would remove and asks before removing anything:
 
