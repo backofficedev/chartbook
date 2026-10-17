@@ -1822,13 +1822,19 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
         raise AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}.")
     if dependency.kind == "path" and dependency.path is not None:
         return _read_working(asset, Path(dependency.path), why)
-    from chartbook.config import clone_url_for
+    clone = ""
+    if dependency.kind == "store":
+        from chartbook.config import get_default_host
+        from chartbook.identity import strip_url_credentials
 
-    url = clone_url_for(real_id) if dependency.kind == "store" else None
-    clone = (
-        f" `chartbook pin` gets it from its repository, {url} ([resolve] default_host); a read never fetches."
-        if url else ""
-    )
+        # The address pin would clone: the repository the entry names, or the default host's
+        converted = lock.clone_instead(entry, _own_id(manifest_dir) or "", None, True, lambda: [], get_default_host())
+        if "git" in converted:
+            at = f" at {converted['rev']}" if converted.get("rev") else ""
+            clone = (
+                f" `chartbook pin` gets it from its repository{at}, {strip_url_credentials(converted['git'])} "
+                f"({converted['_from']}); a read never fetches."
+            )
     return working(
         real,
         why,

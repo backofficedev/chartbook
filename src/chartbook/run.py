@@ -363,9 +363,12 @@ def plan(
             except lock.LockError:
                 locked = None
             listed = {entry.get("id"): entry for entry in (locked.dependencies if locked else [])}
-            own = derive_pipeline_id(raw.get("project") or {}, directory)
+            own = derive_pipeline_id(raw.get("project") if isinstance(raw.get("project"), dict) else {}, directory)
             dependencies = {
-                key: lock.clone_instead(entry, own, listed.get(key), False, in_store, host[0], asked_by_id())
+                key: lock.clone_instead(
+                    entry, own, listed.get(key), False, in_store, host[0], asked_by_id(),
+                    pinned=bool(locked) and any(r.get("content_hash") for r in locked.assets_of(key).values()),
+                )
                 for key, entry in dependencies.items()
             }
 
@@ -380,14 +383,15 @@ def plan(
                     if caches[0] is None:
                         caches[0] = default_git_cache()
                     copy, why = _working_copy(directory, key, entry, caches[0])
-                    if copy is not None and entry.get("_from_id"):
-                        # Got from its repository by its ID: it must call itself that, or it is not built
-                        try:
-                            named = (_read_manifest(copy).get("project") or {}).get("id")
-                        except (OSError, ValueError):
-                            named = None
-                        if named and named != entry["_from_id"]:
-                            copy, why = None, f"its repository names itself {named}, not {entry['_from_id']}"
+                    if entry.get("_from_id"):
+                        got_from = f"{strip_url_credentials(entry['git'])} ({entry.get('_from', '[resolve] default_host')})"
+                        if copy is None:
+                            why = f"it is got from its repository, {got_from}, and {why}"
+                        else:
+                            # Got from its repository by its ID: it must call itself that, or it is not built
+                            named = lock._project_id_in(copy)
+                            if named and named != entry["_from_id"]:
+                                copy, why = None, f"its repository, {got_from}, names itself {named}, not {entry['_from_id']}"
                     if copy is None:
                         order.append(Step(key, None, "git", missing=why))
                     else:
@@ -409,7 +413,7 @@ def plan(
             visiting.pop()
 
         done.add(directory)
-        project = raw.get("project") or {}
+        project = raw.get("project") if isinstance(raw.get("project"), dict) else {}
         if source == "git" and not project.get("id"):
             # A working copy's directory is named after a commit, and has no
             # remote to take a scope from. The name it is declared under is

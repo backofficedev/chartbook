@@ -409,3 +409,69 @@ class TestWhatTheSecondReviewFound:
         (tmp_path / "user").mkdir()
         config.get_global_settings_path().write_text('[resolve]\ndefault_host = "/"\n')
         assert config.get_default_host() == "/"
+
+
+class TestWhatTheThirdReviewFound:
+    def test_a_failed_clone_leaves_nothing_that_keeps_it_from_the_store(self, host):
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)  # the host has no acme/rates: the clone fails, nothing is pinned
+        elsewhere = host / "elsewhere"
+        (elsewhere / "_data").mkdir(parents=True)
+        (elsewhere / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}))
+        pl.DataFrame({"d": ["2024-01-01"], "r": [3.0]}).write_parquet(elsewhere / "_data" / "treasury.parquet")
+        _git(elsewhere, "init", "--quiet", "-b", "main")
+        (elsewhere / ".gitignore").write_text("_data/\n")
+        _commit(elsewhere)
+        snapshot.make(elsewhere)
+        report = lock.pin(forecast)
+        assert not report.git and _entry(forecast)["via"] == "store"
+        _set_host(host, "")
+        assert not lock.pin(forecast).problems
+
+    def test_a_refused_clone_records_none_of_its_commit(self, host):
+        repository = _upstream(host, 4.0)
+        (repository / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "evil/other"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}))
+        _commit(repository, "Another name")
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert "commit" not in _entry(forecast)["location"]
+
+    def test_a_store_listing_with_bytes_and_no_commit_stays_in_the_store(self):
+        entry = {"_store": "acme/rates"}
+        was = {"id": "acme/rates", "via": "store", "location": {"kind": "store", "pipeline": "acme/rates"}}
+        assert lock.clone_instead(entry, "acme/forecast", was, False, lambda: [], "github.com", pinned=True) is entry
+
+    def test_a_named_repository_with_no_snapshot_of_its_own_is_cloned(self):
+        from types import SimpleNamespace
+
+        entry = {"_store": "acme/rates", "repository": "https://example.org/acme/rates", "_repository": "https://example.org/acme/rates"}
+        others = [SimpleNamespace(pipeline="acme/rates", commit="a" * 40, repository="https://example.org/someone/rates")]
+        converted = lock.clone_instead(entry, "acme/forecast", None, False, lambda: others, "github.com")
+        assert converted["git"] == "https://example.org/acme/rates"
+
+    def test_the_read_names_the_address_pin_would_use(self, host, monkeypatch):
+        forecast = _forecast(host / "forecast", {"acme/rates": {"repository": "https://example.invalid/someone/rates", "commit": "abcdef1"}})
+        monkeypatch.chdir(forecast)
+        with pytest.raises(AssetNotPinnedError, match="from its repository at abcdef1, https://example.invalid/someone/rates \\(the repository its entry names\\)"):
+            data.load("acme/rates:treasury")
+
+    def test_an_update_with_no_host_keeps_a_repository_pin_and_says_no_problem(self, host):
+        _upstream(host, 4.0)
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        _set_host(host, "")
+        report = lock.update(forecast)
+        assert not report.problems and _entry(forecast)["via"] == "rev"
+
+    def test_a_clone_whose_project_is_no_table_does_not_crash_run(self, host):
+        from chartbook import run
+
+        repository = _upstream(host, 4.0)
+        (repository / "chartbook.toml").write_text('project = "not a table"\n')
+        _commit(repository, "Broken")
+        forecast = _forecast(host / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
+        try:
+            report = run.run(forecast, echo=lambda *a, **k: None)
+        except (ValueError, run.RunError):
+            return  # said, not a crash
+        assert report.failed is not None

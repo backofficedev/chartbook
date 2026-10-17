@@ -117,7 +117,10 @@ def resolve_project_type(raw_manifest: dict, source: str = "chartbook.toml") -> 
     :raises ValueError: On an invalid ``type`` value, a contradiction, or
         an ambiguous file.
     """
-    explicit = raw_manifest.get("project", {}).get("type")
+    project = raw_manifest.get("project", {})
+    if not isinstance(project, dict):
+        raise ValueError(f"{source}: [project] must be a table, not {type(project).__name__}.")
+    explicit = project.get("type")
     has_registry = "pipelines" in raw_manifest
     entity_sections = [
         s for s in ENTITY_SECTIONS if raw_manifest.get(s)
