@@ -1,8 +1,9 @@
 # Depending on Another Pipeline
 
-A pipeline often builds on data another pipeline made. ChartBook lets it do that without ever
-reading the other pipeline's folder: the other pipeline's owner declares a build ready, and you
-pin that build and read it by name.
+A pipeline often builds on data another pipeline made. ChartBook lets it do that without reading
+the other pipeline's folder: the other pipeline's owner declares a build ready, and you pin that
+build and read it by name. (Before there is any build to pin, a notebook can read the folder, with
+a loud warning; see [Reading before you pin](#reading-before-you-pin).)
 
 ```{image} ../_static/diagrams/depending-light.svg
 :alt: their folder, a snapshot in the store, your folder: run --snapshot, then pin; never read the folder directly
@@ -48,7 +49,7 @@ committed:
 $ chartbook run --snapshot     # build it, and copy what it built into the store, labelled with the commit
 ```
 
-That is a snapshot, and it is the only thing of theirs you ever read. You never read their folder.
+That is a snapshot, and it is what of theirs you read. Their folder is not read, except as the warning below says.
 (`chartbook run` and then `chartbook snapshot` are nearly the same two steps, apart; `--snapshot`
 checks that everything is committed *before* it builds, and the snapshot records that the build
 ran in the same command.)
@@ -80,6 +81,43 @@ $ chartbook update       # move the pins; chartbook.lock shows the change in a d
 | The other pipeline's owner | `chartbook run --snapshot` | When a build is ready for others |
 | You | `chartbook pin`, once | To start depending on it |
 | You | `chartbook update` | When you want their newer snapshot |
+
+## Reading before you pin
+
+In a notebook, or any script you run yourself, a read does what you most likely meant and says
+what it did. In a build under `chartbook run`, which sets `CHARTBOOK_BATCH=1` for it, only a pin is
+read, and the rest are errors, since nothing would record what was read.
+
+| What you read | In a notebook | In a build under `chartbook run` |
+|---|---|---|
+| A dependency that is pinned | The pinned copy | The pinned copy |
+| A dependency declared and not pinned | Pins its newest snapshot now and says so, as `uv` writes its lockfile | `run` pinned it before the build |
+| A pipeline not in `[dependencies]` | Its newest snapshot, with a warning that nothing records it | An error |
+| This pipeline itself, through the catalog that lists its folder | Its own file, as a name of its own resolves | The same |
+| This pipeline's own ID, with no dependency known to be that pipeline | An error: read its own assets by their own names | An error |
+| One with no snapshot, whose folder is here | Its working version, with a loud warning | An error |
+
+```python
+>>> data.load("acme/rates:treasury")
+acme/rates: pinned to its newest snapshot, 3f2a9c1, made 2026-10-16 22:06 UTC (chartbook.lock). `chartbook update acme/rates` moves it.
+```
+
+A pin on the first read is a note of what you read, which `chartbook update` moves whenever you
+like; commit `chartbook.lock` with your pipeline. A `git` dependency is never fetched by a read:
+`chartbook pin` or `chartbook run` fetches it. `chartbook add acme/yields` declares a pipeline
+the warning names. A dependency declared under another key (`yc = { path = "../yield_curve" }`)
+is found by its ID too. When the store cannot be read, a bare name is more than one pipeline's, or
+the store has snapshots of the pipeline and none a pin can take (two repositories claim its ID, the
+only one is dated ahead, none is at the commit asked for), the read is an error, never a read of a
+folder. A read that could not pin tries again once the store's snapshots change. A script other than `build` (`chartbook run lab`)
+is as interactive as the shell it runs from.
+
+**Outside any pipeline**, in a folder with no `chartbook.toml` in it or above it, a read is a
+one-off exploration: `data.load("acme/rates:treasury")` and
+`data.load(pipeline="acme/rates", dataframe="treasury")` read its newest snapshot, and say nothing.
+Only a read of a working folder, when there is no snapshot, warns, since that warning is about
+which data you got. A notebook in a catalog's folder reads this way too: a catalog has no
+dependencies.
 
 The `rate_forecast` example does exactly this, with a model trained on the `yield_curve`
 example's data. {ref}`[dependencies] <dependencies>` and {ref}`chartbook snapshot

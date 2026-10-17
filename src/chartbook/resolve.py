@@ -25,11 +25,15 @@ Three forms of reference resolve today:
   does not care whether the asset has been built yet;
 - a **cross-pipeline** reference — ``pipeline:name`` — to an asset of a
   pipeline that ``[dependencies]`` declares. It resolves *pinned*: through
-  ``chartbook.lock`` to the copy in the store, and never to the other
-  pipeline's working directory. So what a pipeline reads from another one
-  does not change until it runs ``chartbook update``;
-- a **catalog** reference — a pipeline plus a dataframe name — through a
-  catalog, as ``data.load(pipeline=..., dataframe=...)`` always has.
+  ``chartbook.lock`` to the copy in the store. So what a pipeline reads
+  from another one does not change until it runs ``chartbook update``.
+  Before a pin, interactively, a read pins on first use, reads the newest
+  snapshot of a pipeline not declared, or reads a working folder when there
+  is no snapshot, each with what it did said; a batch run refuses all but
+  the pin, and a script in no pipeline reads the newest snapshot quietly
+  (see :func:`_read_in_a_pipeline`);
+- a **catalog** reference — a pipeline plus a dataframe name — read by the
+  same rules, with the catalog's folder as the working version.
 
 The rest of the grammar (``#part``, ``@rev``, a registry prefix) is
 recognized and refused as not yet supported. See
@@ -46,6 +50,7 @@ from __future__ import annotations
 import dataclasses
 import difflib
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar, Iterable, Mapping, Optional, Union
@@ -1147,15 +1152,667 @@ def resolve(
     """
     if pipeline is None:
         asset = parse_declared_ref(ref, kind=kind, resolving=True)
-        manifest_dir = find_manifest_dir(*start_dirs)
+        try:
+            manifest_dir = find_manifest_dir(*start_dirs)
+        except ManifestNotFoundError:
+            if asset.is_local:
+                raise
+            manifest_dir = None
         if asset.is_local:
             return _resolve_local(asset, manifest_dir)
-        return _resolve_pinned(asset, manifest_dir)
+        return _read_another(asset, manifest_dir, _in_a_catalog_folder(catalog_path))
     if kind not in (None, DEFAULT_KIND):
         raise UnsupportedReferenceError(
             f"Only dataframes resolve through a catalog, not a {kind}."
         )
-    return _resolve_in_catalog(resolve_catalog_path(catalog_path), pipeline, str(ref))
+    # Through a catalog: the same read as a reference to the pipeline's
+    # dataframe, by the ID its own chartbook.toml gives it. The catalog is
+    # where its working version is read from when there is no snapshot to
+    # read, with what it says when it has not got it.
+    catalog, key, folder, why_not = None, pipeline, None, None
+    try:
+        catalog = resolve_catalog_path(catalog_path)
+        listed = _catalog_manifest(catalog)
+        key = locate_in_catalog(listed, pipeline)
+        folder = listed["pipelines"][key].get("pipeline_base_dir")
+    except (CatalogNotConfiguredError, KeyError, OSError, ValueError) as error:
+        why_not = error  # the store may still have it
+    try:
+        asset = AssetRef(name=str(ref)).in_pipeline((_own_id(Path(folder)) if folder else None) or key)
+    except ValueError:
+        if why_not is not None:
+            raise why_not from None
+        raise
+
+    def from_the_catalog(asset: AssetRef, why: str, error: Exception) -> Location:
+        if why_not is not None:
+            raise why_not from None
+        working = Path(folder) if folder else catalog.parent
+        _refuse_working_in_a_batch(asset, why, working)
+        location = _resolve_in_catalog(catalog, key, str(ref))
+        _warn_working(asset, location, working, why)
+        return location
+
+    try:
+        manifest_dir = find_manifest_dir(*start_dirs)
+    except ManifestNotFoundError:
+        manifest_dir = None
+    return _read_another(asset, manifest_dir, from_the_catalog, folder=folder)
+
+
+#: Set to ``1`` for a pipeline's ``build`` script under ``chartbook run``,
+#: so that a read of another pipeline that nothing would record is refused
+#: there, not warned about. CI can set it too.
+BATCH_ENV_VAR = "CHARTBOOK_BATCH"
+
+
+def batch() -> bool:
+    """Whether this is a batch run, where every read of another pipeline must be one the lockfile records."""
+    return os.environ.get(BATCH_ENV_VAR, "").strip().lower() in ("1", "true", "yes")
+
+
+class UnrecordedReadWarning(UserWarning):
+    """A read of another pipeline that nothing records: it is not in ``[dependencies]``."""
+
+
+class WorkingVersionWarning(UserWarning):
+    """A read of another pipeline's working folder, as it is now, and not of a snapshot."""
+
+
+def _warn(warning: Warning) -> None:
+    """Warn, from the first caller outside ChartBook: the user's line that read."""
+    import sys
+    import warnings
+
+    package = os.path.normcase(str(Path(__file__).parent)) + os.sep
+    level, frame = 2, sys._getframe(1)
+    while frame is not None and os.path.normcase(frame.f_code.co_filename).startswith(package):
+        frame = frame.f_back
+        level += 1
+    warnings.warn(warning, stacklevel=level)
+
+
+def _catalog_manifest(catalog_path: Path) -> dict:
+    from chartbook.manifest import load_manifest
+
+    return load_manifest(base_dir=Path(catalog_path).parent)
+
+
+def _own_id(folder: Path) -> Optional[str]:
+    """The ID a pipeline's own chartbook.toml gives it; None if it cannot be read."""
+    from chartbook.identity import derive_pipeline_id
+
+    try:
+        raw = _read_raw_manifest(Path(folder) / MANIFEST_NAME)
+        return derive_pipeline_id(raw.get("project", {}), Path(folder))
+    except Exception:  # noqa: BLE001 - no pipeline there, or one that cannot be read
+        return None
+
+
+def _read_another(asset: AssetRef, manifest_dir: Optional[Path], working, folder=None) -> Location:
+    """Another pipeline's asset, read from where the caller is: in a pipeline, or not.
+
+    A catalog's folder is no pipeline, so a notebook there reads as one in
+    no pipeline does. Through a catalog that lists the caller's own folder,
+    the read is a local one. A name that is the caller's own ID, or the end
+    of it, reads a dependency only where one is known to be that pipeline
+    (a copy may depend on its original under the original's ID); otherwise
+    it is refused, and its own assets are read by their own names. Nothing
+    is guessed: a dependency whose ID cannot be known here might be it.
+    """
+    from chartbook.manifest import resolve_project_type
+
+    if manifest_dir is not None:
+        raw = _read_raw_manifest(manifest_dir / MANIFEST_NAME)
+        if resolve_project_type(raw, source=str(manifest_dir / MANIFEST_NAME)) == "catalog":
+            manifest_dir = None
+        elif folder is not None and _same_directory(folder, manifest_dir):
+            return _resolve_local(AssetRef(kind=asset.kind, name=asset.name, rev=asset.rev), manifest_dir)
+        else:
+            _refuse_this_pipeline_by_name(asset, manifest_dir, raw)
+    if manifest_dir is None:
+        return _read_outside_a_pipeline(asset, working)
+    return _read_in_a_pipeline(asset, manifest_dir, working)
+
+
+def _refuse_this_pipeline_by_name(asset: AssetRef, manifest_dir: Path, raw: dict) -> None:
+    """Refuse a name that is the caller's own pipeline, unless a dependency is known to be that pipeline.
+
+    :raises ValueError: If the name is this pipeline's own ID, or the end of
+        it, and no dependency is known to be the pipeline it names; or if
+        ``[dependencies]`` cannot be read.
+    """
+    from chartbook.manifest import validate_dependencies
+
+    own, wanted = _own_id(manifest_dir), asset.pipeline_id
+    if not own or (wanted != own and ("/" in wanted or own.rsplit("/", 1)[-1] != wanted)):
+        return
+    try:
+        dependencies = validate_dependencies(raw.get("dependencies") or {}, manifest_dir)
+    except ValueError as error:
+        raise type(error)(f"{manifest_dir / MANIFEST_NAME}: {error}") from None
+    try:
+        locate_pipeline(wanted, dependencies=dependencies)
+        return  # a dependency by that key
+    except PipelineNotFoundError:
+        pass
+    if _declared_as(wanted, manifest_dir) is not None:
+        return  # a dependency under another key that is that pipeline
+    raise ValueError(
+        f"{str(asset)!r} names this pipeline, {own}. Read its own assets by their own names "
+        f"({asset.local_name!r}); a dependency by its key in [dependencies]."
+    )
+
+
+# Snapshot records read from a store, by file, with the (mtime, size) they
+# were read at: a notebook that reads another pipeline in a loop reads each
+# record once
+_snapshot_cache: dict[str, tuple[tuple[int, int], object]] = {}
+
+
+def _snapshots_in(store) -> list:
+    """Every snapshot in a store that can be read, oldest first, each record parsed once while it is unchanged."""
+    from chartbook import snapshot
+
+    found = []
+    for file in store.all_snapshot_files():
+        try:
+            stat = os.stat(file)
+        except OSError:
+            continue
+        stamp = (stat.st_mtime_ns, stat.st_size)
+        cached = _snapshot_cache.get(str(file))
+        if cached is None or cached[0] != stamp:
+            try:
+                cached = (stamp, snapshot.read(file))
+            except snapshot.SnapshotError:
+                continue
+            _snapshot_cache[str(file)] = cached
+        found.append(cached[1])
+    found.sort(key=lambda taken: (taken.made_at, snapshot._count(taken.path)))
+    return found
+
+
+def _newest_snapshot_of(asset: AssetRef):
+    """The asset as the newest snapshot of its pipeline in the store holds it.
+
+    The pipeline is found by its ID, or by a bare name that only one ID in
+    the store ends with; the snapshot by the rules of a dependency named by
+    its ID (:func:`chartbook.lock._newest_in_store`). A version (``@hash``,
+    ``@label``) is found among that repository's snapshots, by the labels
+    the newest one records.
+
+    :returns: The location (None if there is none to read); why there is
+        none; the snapshot; and whether that is settled, so that the
+        pipeline's working folder must not be read instead: the store could
+        not be read, a bare name is more than one pipeline's, or the store
+        has snapshots of it that none can be taken from.
+    """
+    from chartbook import lock
+    from chartbook.store import default_store
+
+    try:
+        store = default_store()
+        found = _snapshots_in(store)
+    except Exception as error:  # noqa: BLE001 - an unreadable store is a reason, said in the error
+        return None, f"the store cannot be read ({error})", None, True
+    pipeline_id = asset.pipeline_id
+    ids = {taken.pipeline for taken in found}
+    if pipeline_id not in ids:
+        ending = sorted(i for i in ids if i.rsplit("/", 1)[-1] == pipeline_id)
+        if len(ending) > 1:
+            return None, f"the store has snapshots of {', '.join(ending)}; name one by its ID", None, True
+        if not ending:
+            return None, f"the store at {store} has no snapshot of {pipeline_id}", None, False
+        pipeline_id = ending[0]
+    newest, why, _ = lock._newest_in_store(pipeline_id, None, store, found=found)
+    if newest is None:
+        return None, why, None, True
+    location, why = _held_in(asset, newest, found, store)
+    # A snapshot that lacks the asset settles it too: the folder is read
+    # only when the store has no snapshot of the pipeline at all
+    return location, why, newest, True
+
+
+def _held_in(asset: AssetRef, newest, found: list, store):
+    """The asset, or a version of it (``@hash``, ``@label``), as a snapshot holds it; None, and why, where it does not.
+
+    A version is found among the snapshots of the snapshot's repository, by
+    the labels it records, or by four or more digits of its hash.
+    """
+    from chartbook import snapshot
+
+    name = asset.local_name
+    if asset.rev is not None:
+        start = (newest.labels.get(name) or {}).get(asset.rev)
+        if start is None and not re.fullmatch(r"(sha256:)?[0-9a-f]{4,64}", asset.rev):
+            return None, (
+                f"{asset.rev!r} is neither a label its newest snapshot, {newest.commit[:7]}, gives {name}, "
+                f"nor the start of a version"
+            )
+        start = (start or asset.rev).split(":", 1)[-1]
+        of_it = [t for t in found if t.pipeline == newest.pipeline and t.subdirectory == newest.subdirectory]
+        named, unnamed = snapshot.repository_groups(of_it + [newest])
+        group = next((g for g in named if any(t is newest for t in g)), []) + unnamed
+        held = [
+            (content_hash, taken)
+            for content_hash, taken in snapshot.versions_of_pipeline(store, newest.pipeline, newest.subdirectory, name, group)
+            if content_hash.split(":", 1)[-1].startswith(start)
+        ]
+        if len(held) != 1:
+            return None, (
+                f"{'no' if not held else len(held)} version{'s' if len(held) > 1 else ''} of {name} in the store "
+                f"{'starts' if len(held) <= 1 else 'start'} with {start}"
+            )
+        record = held[0][1].assets[name]
+    else:
+        record = newest.assets.get(name)
+    if record is None:
+        names = sorted(n for n in newest.assets if "/" not in n) if asset.kind == DEFAULT_KIND else sorted(newest.assets)
+        close = difflib.get_close_matches(name, names, n=1)
+        return None, (
+            f"its newest snapshot, {newest.commit[:7]}, has no {name}"
+            f"{f' (did you mean {close[0]!r}?)' if close else ''}; it has {', '.join(names) or 'nothing'}"
+        )
+    if not record.get("content_hash"):
+        return None, f"its newest snapshot, {newest.commit[:7]}, did not build {name}"
+    if not store.has(record["content_hash"]):
+        return None, f"the store does not have the bytes of {name} from its newest snapshot"
+    return _held(store, record), ""
+
+
+def _refuse_working_in_a_batch(asset: AssetRef, why: str, folder: Path) -> None:
+    if batch():
+        raise AssetNotPinnedError(
+            str(asset),
+            "working",
+            f"{asset} cannot be read: {why}. A batch run (`chartbook run`, or {BATCH_ENV_VAR}=1) "
+            f"does not read another pipeline's working folder, since nothing would record what "
+            f"was read. Its owner makes a snapshot with `chartbook snapshot` in {folder}.",
+        )
+
+
+def _warn_working(asset: AssetRef, location: Location, folder: Path, why: str) -> None:
+    what = f"{asset.local_name}@{asset.rev} as its working chartbook.toml names it" if asset.rev else "its WORKING version"
+    _warn(
+        WorkingVersionWarning(
+            f"{asset.pipeline_id} has no snapshot to read this from ({why}): reading {what}, "
+            f"{getattr(location, 'path', folder)}, as it is right now. Nothing records this read, "
+            f"and a build under `chartbook run` refuses it."
+        )
+    )
+
+
+def _read_working(asset: AssetRef, folder: Path, why: str) -> Location:
+    """Read another pipeline's asset from its working folder, and say so loudly; refused in a batch run."""
+    _refuse_working_in_a_batch(asset, why, folder)
+    if not (Path(folder) / MANIFEST_NAME).is_file():
+        raise AssetNotPinnedError(
+            str(asset), "no_snapshot", f"{asset} cannot be read: {why}, and {folder} has no {MANIFEST_NAME}."
+        )
+    try:
+        location = _resolve_local(AssetRef(kind=asset.kind, name=asset.name, rev=asset.rev), Path(folder))
+    except AssetNotDeclaredError:
+        raise AssetNotPinnedError(
+            str(asset),
+            "no_snapshot",
+            f"{asset} cannot be read: {why}, and its working folder, {folder}, declares no {asset.local_name} either.",
+        ) from None
+    _warn_working(asset, location, Path(folder), why)
+    return location
+
+
+def _in_a_catalog_folder(catalog_path=None):
+    """How a reference reads a pipeline's working version: from the folder a catalog lists it in.
+
+    The folder's own chartbook.toml must give the pipeline's ID (a bare name:
+    the end of it), so that a catalog's key never stands for another
+    pipeline.
+
+    :returns: A function of the asset, why there is no snapshot to read,
+        and the error to raise when no catalog lists a folder of it.
+    """
+    from chartbook.manifest import get_pipeline_dirs
+
+    def working(asset: AssetRef, why: str, error: Exception) -> Location:
+        wanted = asset.pipeline_id
+        try:
+            folders = get_pipeline_dirs(_catalog_manifest(resolve_catalog_path(catalog_path)))
+        except Exception:  # noqa: BLE001 - no catalog: no folder to read
+            raise error from None
+        found = []
+        for folder in folders.values():
+            own = _own_id(Path(folder))
+            if own and (own == wanted or ("/" not in wanted and own.rsplit("/", 1)[-1] == wanted)):
+                found.append(Path(folder))
+        if len(found) != 1:
+            raise error from None
+        return _read_working(asset, found[0], why)
+
+    return working
+
+
+def _read_outside_a_pipeline(asset: AssetRef, working) -> Location:
+    """Another pipeline's asset, read from a script in no pipeline: its newest snapshot, quietly.
+
+    With no ``chartbook.toml`` there is no lineage to record, so nothing is
+    said. With no snapshot to read, its working version is read, with the
+    working-version warning: that one is about what was read, not about
+    lineage.
+    """
+    location, why, _, settled = _newest_snapshot_of(asset)
+    if location is not None:
+        return location
+    if settled:
+        raise AssetNotPinnedError(str(asset), "no_snapshot", f"{asset} cannot be read: {why}.")
+    error = AssetNotPinnedError(
+        str(asset),
+        "no_snapshot",
+        f"{asset} cannot be read: {why}. Its owner makes a snapshot with `chartbook snapshot`; on "
+        f"another machine, the store must be the one theirs syncs with or shares ([store] url).",
+    )
+    return working(asset, why, error)
+
+
+_ids_cache: dict[str, tuple[float, tuple, dict]] = {}
+
+
+def _dependency_ids(manifest_dir: Path, dependencies: dict) -> dict[str, Optional[str]]:
+    """Each dependency's own pipeline ID, where it can be known here; None where it cannot.
+
+    A store entry names it. A folder's chartbook.toml gives it, or, for a
+    folder not on this machine, the snapshot the lockfile pinned it from. A
+    ``git`` dependency's checkout at its pinned commit gives it, if the git
+    cache has it and its manifest names its ID (a checkout's folder is
+    named after its commit, so an ID derived from it means nothing).
+    Nothing is fetched, and a lockfile that cannot be read identifies
+    nothing.
+    """
+    import time
+
+    def stamp(path: Path):
+        try:
+            stat = path.stat()
+            return (stat.st_mtime_ns, stat.st_size)
+        except OSError:
+            return None
+
+    key = str(manifest_dir)
+    stamps = (stamp(manifest_dir / MANIFEST_NAME), stamp(manifest_dir / "chartbook.lock"))
+    cached = _ids_cache.get(key)
+    if cached is not None and cached[1] == stamps and time.monotonic() - cached[0] < _TRY_AGAIN_SECONDS:
+        return cached[2]
+
+    from chartbook.gitcache import default_git_cache, local_url
+    from chartbook.store import default_store
+
+    listed: Optional[dict] = None
+    found: Optional[list] = None
+
+    def lockfile_entry(name: str) -> dict:
+        nonlocal listed
+        if listed is None:
+            try:
+                locked = _read_lock(manifest_dir)
+            except Exception:  # noqa: BLE001 - a lockfile that cannot be read identifies nothing
+                locked = None
+            listed = {
+                entry.get("id"): entry
+                for entry in (locked.dependencies if locked else [])
+                if isinstance(entry, dict) and isinstance(entry.get("location"), dict)
+            }
+        return listed.get(name) or {}
+
+    ids: dict[str, Optional[str]] = {}
+    for name, entry in dependencies.items():
+        own = entry.get("_store") or (_own_id(Path(entry["_resolved_path"])) if entry.get("_resolved_path") else None)
+        if own is None and "git" not in entry:
+            pinned = lockfile_entry(name)
+            commit, made_at = pinned.get("location", {}).get("commit"), pinned.get("snapshot")
+            if commit and made_at:
+                try:
+                    found = found if found is not None else _snapshots_in(default_store())
+                except Exception:  # noqa: BLE001 - a store that cannot be read identifies nothing
+                    found = []
+                own = next((t.pipeline for t in found if t.commit == commit and t.made_at == made_at), None)
+        if own is None and "git" in entry:
+            commit = lockfile_entry(name).get("location", {}).get("commit")
+            checkout = None
+            if commit:
+                try:
+                    checkout = default_git_cache().find(local_url(entry["git"], manifest_dir), commit)
+                except Exception:  # noqa: BLE001 - no git cache: not known here
+                    checkout = None
+            if checkout is not None:
+                try:
+                    named = (_read_raw_manifest(Path(checkout) / MANIFEST_NAME).get("project") or {}).get("id")
+                except Exception:  # noqa: BLE001 - a checkout with no manifest names nothing
+                    named = None
+                own = named if isinstance(named, str) and named else None
+        ids[name] = own
+    _ids_cache[key] = (time.monotonic(), stamps, ids)
+    return ids
+
+
+def _declared_as(pipeline_id: str, manifest_dir: Path) -> Optional[str]:
+    """The key ``[dependencies]`` declares a pipeline under, when it is not its ID: by the ID it is known to have (:func:`_dependency_ids`)."""
+    from chartbook.manifest import validate_dependencies
+
+    dependencies = validate_dependencies(
+        _read_raw_manifest(manifest_dir / MANIFEST_NAME).get("dependencies") or {}, manifest_dir
+    )
+    exact, ending = [], []
+    for key, own in _dependency_ids(manifest_dir, dependencies).items():
+        if own == pipeline_id:
+            exact.append(key)
+        elif own and "/" not in pipeline_id and own.rsplit("/", 1)[-1] == pipeline_id:
+            ending.append(key)
+    chosen = exact or ending
+    if len(chosen) > 1:
+        raise ValueError(
+            f"{pipeline_id!r} is more than one dependency's: {', '.join(sorted(chosen))}. Name it by "
+            f"its key in [dependencies]{'' if '/' in pipeline_id else ', or by its scoped ID'}."
+        )
+    return chosen[0] if chosen else None
+
+
+def _pinned_now(report, key: str) -> None:
+    """Say what a pin on first read pinned, on stderr, as ``uv`` says what it locked."""
+    import sys
+
+    if key in report.snapshots and any(e.dependency == key and e.status == "pinned" for e in report.events):
+        taken = report.snapshots[key]
+        sys.stderr.write(
+            f"{key}: pinned to its newest snapshot, {taken.commit[:7]}, made "
+            f"{taken.made_at[:16].replace('T', ' ')} UTC ({report.lockfile.name}). "
+            f"`chartbook update {key}` moves it.\n"
+        )
+
+
+#: When a read last tried to pin a dependency that had no snapshot, so that
+#: a loop of reads does not pin again on every one
+_tried: dict[tuple[str, str], tuple[float, int, str, str]] = {}
+_TRY_AGAIN_SECONDS = 30
+
+
+def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Location:
+    """Another pipeline's asset, read from a pipeline: through its lockfile, with the interactive rules.
+
+    - Declared and pinned: the pinned copy.
+    - Declared and not pinned, a folder or an ID: pinned now, to its newest
+      snapshot, and said (as ``uv`` writes its lockfile on first use). A
+      ``git`` dependency is not fetched to read it: ``chartbook pin`` does.
+    - Not declared: its newest snapshot, with a warning that nothing records
+      the read.
+    - No snapshot to read, and a folder of it here (a ``path`` dependency,
+      or the catalog lists it): the working version, with a loud warning.
+
+    A dependency declared under a key other than its ID is found by its ID.
+    A batch run (:func:`batch`) takes only the first: ``chartbook run`` pins
+    before it builds, and the rest would read what no lockfile records.
+
+    :param working: How its working version is read when there is no
+        snapshot (:func:`_in_a_catalog_folder`).
+    """
+    import time
+
+    try:
+        return _resolve_pinned(asset, manifest_dir)
+    except DependencyNotDeclaredError as error:
+        key = _declared_as(asset.pipeline_id, manifest_dir)
+        if key is not None:
+            return _read_in_a_pipeline(asset.in_pipeline(key), manifest_dir, working)
+        if batch():
+            raise
+        location, why, newest, settled = _newest_snapshot_of(asset)
+        if location is None:
+            if settled:
+                raise AssetNotPinnedError(str(asset), "no_snapshot", f"{asset} cannot be read: {why}.") from None
+            return working(asset, why, error)
+        from chartbook.manifest import validate_dependencies
+
+        unknown = sorted(
+            key for key, known in _dependency_ids(
+                manifest_dir,
+                validate_dependencies(_read_raw_manifest(manifest_dir / MANIFEST_NAME).get("dependencies") or {}, manifest_dir),
+            ).items() if known is None
+        )
+        perhaps = (
+            f" If it is {', '.join(unknown)} in [dependencies], whose ID cannot be known here, read it by that key."
+            if unknown else ""
+        )
+        _warn(
+            UnrecordedReadWarning(
+                f"{asset.pipeline_id} is not known to be a dependency of this pipeline: reading its newest "
+                f"snapshot, {newest.commit[:7]}, and recording nothing. `chartbook add "
+                f"{newest.pipeline}` declares it; until then a build under `chartbook run` refuses this read.{perhaps}"
+            )
+        )
+        return location
+    except AssetNotPinnedError as error:
+        if error.reason != "no_lockfile" or batch():
+            raise
+        not_pinned = error
+
+    from chartbook import lock
+    from chartbook.manifest import validate_dependencies
+    from chartbook.store import default_store
+
+    dependencies = validate_dependencies(
+        _read_raw_manifest(manifest_dir / MANIFEST_NAME).get("dependencies") or {}, manifest_dir
+    )
+    dependency = locate_pipeline(asset.pipeline_id, dependencies=dependencies)
+    if dependency.kind not in ("path", "store"):
+        raise not_pinned  # a repository is fetched by `chartbook pin`, never by a read
+    entry = dependencies[dependency.id]
+    # The pipeline by its own ID, which its snapshots carry, whatever key it is declared under
+    if dependency.kind == "store":
+        real_id = dependency.pipeline
+    else:
+        real_id = (_own_id(Path(dependency.path)) if dependency.path else None) or dependency.id
+    real = asset.in_pipeline(real_id)
+    if (dependency.kind == "store" and real_id == _own_id(manifest_dir)) or (
+        dependency.kind == "path" and dependency.path is not None and _same_directory(dependency.path, manifest_dir)
+    ):
+        # As `chartbook pin` refuses a store one and `chartbook check` a folder one; a copy may
+        # depend on its original under the original's ID
+        raise AssetNotPinnedError(
+            not_pinned.asset, "no_snapshot", f"{dependency.id!r} is this pipeline itself: a pipeline cannot depend on itself."
+        )
+    store = default_store()
+    try:
+        found = _snapshots_in(store)
+    except Exception as error:  # noqa: BLE001 - an unreadable store: no folder is read for want of it
+        raise AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"the store cannot be read ({error}).") from None
+    has_snapshots = any(taken.pipeline == real_id for taken in found)
+
+    # Declared, and nothing of it pinned: pin it now, from its newest
+    # snapshot. One that could not be is not tried again on every read of a
+    # loop, until the store has a snapshot of it.
+    memo = (str(manifest_dir), dependency.id)
+    tried = _tried.get(memo)
+    retry_unwritable = tried is not None and tried[2] == "unwritable" and _writable(manifest_dir)
+    if (
+        tried is not None
+        and not retry_unwritable
+        and (not has_snapshots or tried[2] == "unwritable")
+        and time.monotonic() - tried[0] < _TRY_AGAIN_SECONDS
+    ):
+        kind, why = tried[2], tried[3]
+    else:
+        try:
+            report = lock.pin(manifest_dir, only=[dependency.id])
+        except OSError as failure:
+            kind, why = "unwritable", str(failure)
+        else:
+            _pinned_now(report, dependency.id)
+            try:
+                return _resolve_pinned(asset, manifest_dir)
+            except AssetNotPinnedError as error:
+                no_snapshot = [e for e in report.problems if e.dependency == dependency.id and e.status == "no_snapshot"]
+                if error.reason != "no_lockfile" or not no_snapshot:
+                    raise
+                kind, why = "no_snapshot", no_snapshot[0].detail or "it has no snapshot"
+        _tried[memo] = (time.monotonic(), 0, kind, why)
+
+    if kind == "unwritable":
+        # The pipeline's folder cannot be written: read what a pin would take, and say nothing was pinned
+        location, newest, reason = _as_a_pin_would_take(real, entry, store, found)
+        if location is None and has_snapshots:
+            raise AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be read: {reason or why}.")
+        if location is not None:
+            _warn(
+                UnrecordedReadWarning(
+                    f"{dependency.id} could not be pinned ({why}): reading the snapshot a pin would take, "
+                    f"{newest.commit[:7]}, and recording nothing."
+                )
+            )
+            return location
+    # Nothing a pin could take. Its working version is read only when the
+    # store has no snapshot of it at all: one that two repositories claim,
+    # one dated ahead, or none at the commit asked for, is not a reason to
+    # read a folder.
+    if has_snapshots:
+        raise AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}.")
+    if dependency.kind == "path" and dependency.path is not None:
+        return _read_working(asset, Path(dependency.path), why)
+    return working(
+        real,
+        why,
+        AssetNotPinnedError(not_pinned.asset, "no_snapshot", f"{not_pinned.asset!r} cannot be pinned: {why}."),
+    )
+
+
+def _writable(folder: Path) -> bool:
+    """Whether a file can be made in a folder, by making one: a directory's mode says nothing on Windows."""
+    import tempfile
+
+    try:
+        with tempfile.NamedTemporaryFile(dir=folder, prefix=".chartbook-", delete=True):
+            return True
+    except OSError:
+        return False
+
+
+def _as_a_pin_would_take(asset: AssetRef, entry: dict, store, found: list):
+    """The asset as the snapshot a pin of this dependency would take holds it, that snapshot, and why there is none."""
+    from chartbook import lock, snapshot
+
+    try:
+        if entry.get("_store"):
+            newest, why, _ = lock._newest_in_store(
+                entry["_store"], entry.get("commit"), store, entry.get("_repository"),
+                found=found, named=bool(entry.get("_repository")),
+            )
+        else:
+            newest, _ = snapshot.newest_for(Path(entry["_resolved_path"]), store)
+            why = ""
+    except snapshot.SnapshotError as error:
+        return None, None, str(error)
+    if newest is None:
+        return None, None, why
+    location, why = _held_in(asset, newest, found, store)
+    return location, newest, why
 
 
 def caller_start_dirs(

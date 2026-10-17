@@ -147,8 +147,8 @@ Promoting a newer version is changing that one line. See {ref}`Versions and labe
 ## Depending on another pipeline
 
 A pipeline that uses another pipeline's data declares it in `[dependencies]`, pins a **snapshot**
-of it with `chartbook pin`, and reads the pinned copy by name. It never reads the other
-pipeline's folder. {doc}`depending-on-pipelines` has the whole of it: snapshots, pins, the
+of it with `chartbook pin`, and reads the pinned copy by name. It does not read the other
+pipeline's folder, except, with a loud warning, before there is any snapshot of it. {doc}`depending-on-pipelines` has the whole of it: snapshots, pins, the
 lockfile, `chartbook run`, and a diagram.
 
 ## Notes and custom pages

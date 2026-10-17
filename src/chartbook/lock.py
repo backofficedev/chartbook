@@ -56,8 +56,9 @@ in ``docs_src/design/asset-graph.md``.
 
 from __future__ import annotations
 
-import hashlib
+import contextlib
 import dataclasses
+import hashlib
 import errno
 import json
 import os
@@ -388,18 +389,97 @@ def _dependency_entry(key: str, entry: dict) -> dict:
     return {"id": key, "via": "path", "location": {"kind": "path", "path": entry["path"]}}
 
 
+_in_process_locks: dict[str, "threading.Lock"] = {}
+
+
+@contextlib.contextmanager
+def _one_at_a_time(lock_path: Path):
+    """Hold a lockfile while it is read, worked out and written, across threads and processes.
+
+    Two pins of one pipeline at once, as two first reads by a notebook's
+    threads or two parallel tasks would make, otherwise each write what the
+    other did not see. The lock is a file under the cache, not beside the
+    lockfile, so the pipeline's folder gains nothing to ignore. Where it
+    cannot be made, the pin goes ahead without it.
+    """
+    import threading
+
+    from chartbook.config import get_cache_path
+
+    name = hashlib.sha256(str(Path(lock_path).resolve()).encode()).hexdigest()[:24]
+    guard = _in_process_locks.setdefault(name, threading.Lock())
+    with guard:
+        handle = None
+        try:
+            folder = get_cache_path() / "locks"
+            folder.mkdir(parents=True, exist_ok=True)
+            handle = open(folder / f"{name}.lock", "a+b")
+        except (OSError, ValueError):
+            pass  # no cache to lock in, or a [cache] setting that is no path
+        if handle is None:
+            yield
+            return
+        with handle:
+            locked = False
+            try:
+                if os.name == "nt":
+                    import msvcrt
+
+                    handle.seek(0)
+                    while not locked:
+                        try:
+                            # It tries for ten seconds, and then says so: try again
+                            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                            locked = True
+                        except OSError as error:
+                            if error.errno not in (errno.EDEADLK, errno.EACCES):
+                                break
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+                    locked = True
+            except OSError:
+                pass
+            try:
+                yield
+            finally:
+                if locked and os.name == "nt":
+                    import msvcrt
+
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+
+
 def _sync(
     project_dir: Union[str, Path],
     store: Optional[Store],
     move: Optional[Iterable[str]],
     git_cache: Optional[GitCache] = None,
     from_folder: bool = False,
+    only: Optional[Iterable[str]] = None,
+) -> PinReport:
+    """:func:`_sync_now`, one at a time for each lockfile."""
+    with _one_at_a_time(Path(project_dir) / LOCK_FILE):
+        return _sync_now(project_dir, store, move, git_cache, from_folder, only)
+
+
+def _sync_now(
+    project_dir: Union[str, Path],
+    store: Optional[Store],
+    move: Optional[Iterable[str]],
+    git_cache: Optional[GitCache] = None,
+    from_folder: bool = False,
+    only: Optional[Iterable[str]] = None,
 ) -> PinReport:
     """Bring a pipeline's lockfile and the store in line with its manifest.
 
     :param move: None to leave every existing pin where it is (``pin``).
         Otherwise the dependencies whose pins may move (``update``); empty
         means all of them.
+    :param only: The keys of the dependencies to look at; the others keep
+        what the lockfile had for them, and nothing of them is fetched.
+        All of them by default.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
     :param from_folder: Pin a ``path`` dependency from what is in its
@@ -432,6 +512,11 @@ def _sync(
 
     locked_before = {entry["id"] for entry in before.dependencies}
     for key in sorted(locked_before - set(dependencies)):
+        if only is not None:
+            # Only what was asked is looked at: the rest stays as it was
+            after.dependencies.append(next(entry for entry in before.dependencies if entry["id"] == key))
+            after.assets.update(before.assets_of(key))
+            continue
         report.events.append(PinEvent("removed", key))
 
     locked = {entry["id"]: entry for entry in before.dependencies}
@@ -447,6 +532,11 @@ def _sync(
         entry = dependencies[key]
         may_move = key in moving
         had = before.assets_of(key)
+        if only is not None and key not in only:
+            if key in locked:
+                after.dependencies.append(locked[key])
+                after.assets.update(had)
+            continue
         # A label's record is pinned from a snapshot and only from one; a
         # pin from a folder or a repository carries what it has unchanged
         had_labels = {k: v for k, v in had.items() if (v.get("ref") or {}).get("rev")}
@@ -1497,6 +1587,7 @@ def pin(
     store: Optional[Store] = None,
     git_cache: Optional[GitCache] = None,
     from_folder: bool = False,
+    only: Optional[Iterable[str]] = None,
 ) -> PinReport:
     """Pin whatever a pipeline depends on that has no pin yet.
 
@@ -1524,13 +1615,16 @@ def pin(
         folder at this moment, and not from a snapshot. For someone working
         on both pipelines at once. The folder may be in any state, and the
         lockfile then names no commit.
+    :param only: The keys of the dependencies to pin; the rest keep what
+        the lockfile has, and nothing of them is fetched. All by default.
     :returns: What was done.
     :raises LockError: If *project_dir* is not a pipeline, or its lockfile
         cannot be read.
     :raises ValueError: If its ``[dependencies]`` table is malformed.
     """
     return _sync(
-        project_dir, store, move=None, git_cache=git_cache, from_folder=from_folder
+        project_dir, store, move=None, git_cache=git_cache, from_folder=from_folder,
+        only=None if only is None else ({only} if isinstance(only, str) else set(only)),
     )
 
 

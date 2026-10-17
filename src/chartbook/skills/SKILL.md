@@ -144,6 +144,8 @@ df = data.load(pipeline="crsp_treasury", dataframe="my_data", format="pandas")
 
 # Load with explicit catalog path
 lf = data.load(pipeline="crsp_treasury", dataframe="my_data", catalog_path="/path/to/catalog")
+# Through a catalog, it is the pipeline's NEWEST SNAPSHOT in the store (its pin, in a pipeline
+# that declares it); with no snapshot, its working folder, with a WorkingVersionWarning.
 
 # Get data file path (through the catalog)
 path = data.get_data_path(pipeline="crsp_treasury", dataframe="my_data")
@@ -175,8 +177,13 @@ joblib.dump(model, models.path("my_model"))
 #   "ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
 # The other pipeline's owner declares a build ready there: `chartbook snapshot`
 # (everything committed first). Then here: `chartbook pin` (writes chartbook.lock;
-# commit it), or `chartbook run`, which pins what has no pin and builds THIS pipeline.
-# Nothing ever reads the other pipeline's folder. After that,
+# commit it), or `chartbook run`, which pins what has no pin and builds THIS pipeline,
+# or just a first data.load(), which pins it and says so on stderr. Before a pin:
+#   declared, not pinned      -> pinned now to its newest snapshot (a git one: `chartbook pin`)
+#   not in [dependencies]     -> its newest snapshot + UnrecordedReadWarning; `chartbook add <id>`
+#   no snapshot, folder here  -> its WORKING version + WorkingVersionWarning
+#   no chartbook.toml at all  -> its newest snapshot, silently
+# In a build under `chartbook run` (CHARTBOOK_BATCH=1) only a pin is read; the others are errors. After that,
 # "pipeline:name" is that pipeline's asset AS PINNED: a frozen copy in the store,
 # not its working directory. It changes only on `chartbook update`. Read-only.
 rates = data.load("fed_yield_curve:treasury_rates")           # LazyFrame, pinned copy

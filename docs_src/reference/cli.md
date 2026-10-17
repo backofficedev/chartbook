@@ -238,6 +238,8 @@ $ chartbook path repo_rates --kind chart
 
 `--kind` is the same as writing the kind in front, for when the name comes from a variable. If `REF` already names a kind, `--kind` must agree with it.
 
+Another pipeline's asset, `rates:treasury`, is read as `data.load` reads it: its pinned copy in the store, and before anything is pinned, by the rules in {doc}`../guide/depending-on-pipelines`. A dependency declared and not pinned is pinned then, which writes `chartbook.lock` and says so on stderr.
+
 The path is absolute and is printed whether or not the file exists, so a build tool can use it for outputs as well as inputs. This is the command-line form of `chartbook.assets.path()` in Python: one rule for where things live, reachable from Make, a shell, R (`system2`) or Stata (`shell`).
 
 ```makefile
@@ -256,7 +258,7 @@ $ chartbook path fed_yield_curve:chart/curve_today
 /Users/x/.chartbook/store/objects/sha256/cc/71…/curve_today.html
 ```
 
-This resolves differently, on purpose. Your own assets resolve *live*, to the file you are working on. Another pipeline's resolve *pinned*: to the copy that `chartbook.lock` names, in the store, and never to that pipeline's working directory. So what you read from it stays the same while it is being worked on, and changes only when you run `chartbook update`.
+This resolves differently, on purpose. Your own assets resolve *live*, to the file you are working on. Another pipeline's resolve *pinned*: to the copy that `chartbook.lock` names, in the store, not to that pipeline's working directory (before a pin, by the rules in {doc}`../guide/depending-on-pipelines`). So what you read from it stays the same while it is being worked on, and changes only when you run `chartbook update`.
 
 Three things have to be true, and each has its own message when it is not:
 
@@ -711,6 +713,8 @@ What `chartbook run` does for `build`, in order:
 1. **Builds a `git` dependency that is not built yet**, in ChartBook's own clean copy of the commit.
 2. **Pins what has no pin yet**, so this pipeline's code can read it: a folder you depend on from its newest {ref}`snapshot <chartbook-snapshot>`, a repository from that clean copy.
 3. **Runs this pipeline's `build`**, in its own directory. What the script prints is shown as it runs. If it fails, the command exits with the script's exit code.
+
+`build` runs with `CHARTBOOK_BATCH=1` set; another script runs as interactively as the shell it was run from. In a batch run, `data.load` and the other readers read another pipeline only through its pin: one that is not declared, or that has no snapshot and is read from its working folder, is an error rather than a warning, since nothing would record what was read. CI can set the variable too. See {doc}`../guide/depending-on-pipelines`.
 
 In a fresh clone, `chartbook run` is the only command you need: there is no `chartbook pin` to remember first.
 

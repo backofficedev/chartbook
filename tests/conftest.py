@@ -28,6 +28,23 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
     # The organization's settings file, read where the user's is silent:
     # a real one on this machine must not reach a test
     monkeypatch.setenv("CHARTBOOK_SYSTEM_SETTINGS", str(scratch / "system-settings.toml"))
+    # A test is interactive unless it says otherwise, even under `chartbook run`
+    monkeypatch.delenv("CHARTBOOK_BATCH", raising=False)
+    # Nor does the user's own ~/.chartbook (their catalog and settings) reach
+    # a test; a test that moves HOME gets the one under it
+    from pathlib import Path
+
+    from chartbook import config
+
+    from chartbook import backends
+
+    real_home = Path.home()
+
+    def config_dir() -> Path:
+        return Path.home() / ".chartbook" if Path.home() != real_home else scratch / "user" / ".chartbook"
+
+    monkeypatch.setattr(config, "get_global_config_dir", config_dir)
+    monkeypatch.setattr(backends, "get_global_config_dir", config_dir)
 
 
 @pytest.fixture

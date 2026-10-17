@@ -73,7 +73,7 @@ from chartbook.manifest import (
     resolve_project_type,
     validate_dependencies,
 )
-from chartbook.resolve import MANIFEST_NAME
+from chartbook.resolve import BATCH_ENV_VAR, MANIFEST_NAME
 from chartbook.store import Store
 
 
@@ -402,6 +402,12 @@ def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
         except (AttributeError, OSError, ValueError):
             pass
     environment = dict(os.environ)
+    if name == BUILD_SCRIPT:
+        # A build is a batch run: a read of another pipeline that nothing
+        # would record is refused there, not warned about
+        # (chartbook.resolve.batch). Another script, `lab` or `test`, is as
+        # interactive as the shell it was run from.
+        environment[BATCH_ENV_VAR] = "1"
     if name is not None:
         where = str(Path(directory).resolve())
         environment[RUN_DIR_ENV_VAR] = where
