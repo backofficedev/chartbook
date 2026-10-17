@@ -513,12 +513,25 @@ class TestCheckCommand:
 
         without = _invoke(*args)
         assert without.exit_code == 1
-        assert "[dataframes.dataframe_0] path: file not found" in without.output
-        assert "[charts.chart_0_0] path: file not found" in without.output
+        # Nothing built is not a mistake in the manifest, and the way on is named
+        assert "[dataframes.dataframe_0] path: not built yet:" in without.output
+        assert "[charts.chart_0_0] path: not built yet:" in without.output
+        assert "file not found" not in without.output
+        assert "Nothing is built yet: `chartbook build` builds it" in without.output
+        assert "`chartbook check --skip-outputs` checks the rest" in without.output
 
         result = _invoke(*args, "--skip-outputs")
         assert result.exit_code == 0, result.output
         assert "built outputs not checked" in result.output
+
+    def test_a_pipeline_built_in_part_lacks_a_file(self, pipeline_project, lenient_policy):
+        """Built, and one output missing: that is a mistake, and no "nothing is built" hint."""
+        (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").unlink()
+        result = _invoke("--project-dir", pipeline_project, "--policy", lenient_policy)
+        assert result.exit_code == 1
+        assert "[dataframes.dataframe_0] path: file not found" in result.output
+        assert "not built yet" not in result.output
+        assert "Nothing is built yet" not in result.output
 
     def test_skip_outputs_still_checks_files_kept_in_the_repository(
         self, pipeline_project_with_notes, lenient_policy
