@@ -866,7 +866,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | It is the newest of its pipeline, from its repository | The last build of `yield_curve` that was declared ready; a copy of the project that gives itself the same ID keeps its own newest |
 | It is the newest a branch or tag can pin from (not with `--aggressive`) | The last one on its `release` branch, or at its `v1.0` tag |
 | A label points at a model version in it (not with `--aggressive`) | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as its newest snapshot recorded |
-| It records its repository's address and first commit together, the newest that does | The main checkout's last snapshot, which tells a shallow clone's and an agent's clone's snapshots are one repository |
+| Removing it would split its repository: it is the newest that names an address and first commit together that its kept snapshots need, or the newest that names its repository where the rest kept name none | The main checkout's last snapshot, which tells a shallow clone's and an agent's clone's snapshots are one repository |
 | It was made in the last 7 days | `--keep-days` changes the number |
 | With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
 
@@ -895,7 +895,7 @@ Remove them? [y/N]:
 | `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found. On a store a team shares, every other machine's lockfile is one |
 | `--keep-days DAYS` | Keep an unpinned snapshot that is not the newest of its pipeline for this long. Default 7 |
 | `--keep-lineage` | Also keep every snapshot a kept snapshot was made from, as far up as it goes, so that `chartbook lineage` finds them all. By default a store keeps what work needs now and lets old lineage go |
-| `--aggressive` | Let names keep nothing: no snapshot is kept for a git tag or branch, or for a model label. What a lockfile pins, the newest of each pipeline, the snapshot that joins its repository's and the last `--keep-days` days are still kept; `--keep-days 0` leaves only those first three |
+| `--aggressive` | Let names keep nothing: no snapshot is kept for a git tag or branch, or for a model label. What a lockfile pins, the newest of each pipeline, what keeps a repository's snapshots one, and the last `--keep-days` days are still kept; `--keep-days 0` leaves only the first three |
 
 Five things it is careful about:
 

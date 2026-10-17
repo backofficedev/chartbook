@@ -2453,7 +2453,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     snapshot: what `chartbook snapshot` kept of a pipeline at a commit.
 
     A snapshot is kept if a lockfile pins it, if it is the newest of its
-    pipeline or the newest a branch or tag can pin from, if a label points
+    pipeline from its repository or the newest a branch or tag can pin
+    from, if removing it would split its repository's snapshots in two, if a label points
     at a model version in it (in that pipeline's chartbook.toml, or as its
     newest snapshot recorded), or if it was made in the last 7 days
     (--keep-days). Otherwise it may be removed, and what only it named

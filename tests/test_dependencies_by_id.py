@@ -623,7 +623,7 @@ class TestWhatTheFourthReviewFound:
         ci = (real.commit, "2026-10-01T00:00:00.000000Z")
         now = datetime(2026, 10, 16, tzinfo=timezone.utc)
         plan = snapshot.plan_removals(store, {ci}, set(), keep_days=7, now=now)
-        assert ("2026-09-01T00:00:00.000000Z", "it records its repository's address and first commit together") in [
+        assert ("2026-09-01T00:00:00.000000Z", "it names its repository's address and first commit together, which joins its snapshots") in [
             (t.made_at, why) for t, why in plan.keep
         ]
         for taken, _ in plan.remove:
@@ -711,6 +711,92 @@ class TestWhatTheFourthReviewFound:
         (event,) = [e for e in lock.update(forecast).events if e.status == "passed_over"]
         assert "someone/rates" in event.detail
         assert lock._made_in(dataclasses_replace_identity()) == "a ChartBook that did not record its repository"
+
+
+class TestWhatTheFifthReviewFound:
+    def test_a_checkouts_own_snapshot_is_not_lost_to_a_clones_newer_one(self, tmp_path):
+        work = tmp_path.resolve()
+        _another(work, "real", 4.0, remote=A)
+        _git(work, "clone", "--quiet", str(work / "real"), str(work / "agent"))
+        _rates(work / "agent" / "rates", 7.0)  # the agent's clone builds other bytes at the same commit
+        snapshot.make(work / "agent" / "rates")
+        report = snapshot.make(work / "real" / "rates")  # the main checkout declares its own again
+        assert report.made
+        newest, _ = snapshot.newest_for(work / "real" / "rates", __import__("chartbook.store", fromlist=["x"]).default_store())
+        assert newest.made_at == report.snapshot.made_at
+
+    def test_gc_keeps_the_newest_that_names_its_repository(self, tmp_path):
+        from datetime import datetime, timezone
+
+        from chartbook.store import default_store
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        _record(real, made_at="2026-09-01T00:00:00.000000Z", first_commit="")  # CI, a shallow clone
+        _record(real, made_at="2026-09-20T00:00:00.000000Z", repository="", first_commit="")  # an older ChartBook
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _pinned(forecast)["location"]["repository"] == A
+        later = _again(work / "real", 5.0, "Later")
+        later.path.unlink()
+        _record(later, made_at="2026-10-10T00:00:00.000000Z", repository="", first_commit="")
+        store = default_store()
+        for taken in snapshot.all_snapshots(store):
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n")
+        plan = snapshot.plan_removals(store, set(), set(), keep_days=7, now=datetime(2026, 10, 16, tzinfo=timezone.utc))
+        assert ("2026-09-01T00:00:00.000000Z", "it is the newest that names its repository") in [(t.made_at, w) for t, w in plan.keep]
+        for taken, _ in plan.remove:
+            taken.path.unlink()
+        lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == later.commit
+
+    def test_a_pin_that_recorded_its_repository_takes_unnamed_snapshots_when_none_is_named(self, tmp_path):
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        real.path.unlink()
+        later = _again(work / "real", 5.0, "Later")
+        later.path.unlink()
+        _record(later, repository="", first_commit="")  # only an older ChartBook's snapshot is left
+        lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == later.commit
+
+    def test_old_addresses_keep_nothing_when_nothing_would_split(self, tmp_path):
+        from chartbook.store import default_store
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        for day, address in enumerate(("acme/rates", "acme/rates-old2", "forker/rates", "acme/rates-now", "acme/rates-now"), 1):
+            _record(real, made_at=f"2026-09-0{day}T00:00:00.000000Z", repository=f"https://github.com/{address}")
+        store = default_store()
+        for taken in snapshot.all_snapshots(store):
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n")
+        plan = snapshot.plan_removals(store, set(), set(), keep_days=0, aggressive=True)
+        assert [(t.made_at, w) for t, w in plan.keep] == [("2026-09-05T00:00:00.000000Z", "it is the newest of its pipeline")]
+
+    def test_a_joining_snapshot_dated_a_little_ahead_is_kept(self, tmp_path):
+        from datetime import datetime, timedelta, timezone
+
+        from chartbook.store import default_store
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        now = datetime(2026, 10, 16, tzinfo=timezone.utc)
+        ahead = (now + timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M:%S.000000Z")
+        _record(real, made_at=ahead)  # the main checkout, its clock 30 minutes ahead
+        _record(real, made_at="2026-10-01T00:00:00.000000Z", first_commit="")  # CI, pinned
+        _record(real, made_at="2026-10-15T00:00:00.000000Z", repository="")  # an agent's clone
+        store = default_store()
+        for taken in snapshot.all_snapshots(store):
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n")
+        plan = snapshot.plan_removals(
+            store, {(real.commit, "2026-10-01T00:00:00.000000Z")}, set(), keep_days=0, aggressive=True, now=now
+        )
+        assert ahead in [t.made_at for t, _ in plan.keep]
 
 
 def dataclasses_replace_assets(taken, marker: str):

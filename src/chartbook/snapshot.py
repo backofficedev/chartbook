@@ -1330,9 +1330,8 @@ def plan_removals(
             for _, _, labels, _ in of_whole[:-1]:
                 for name, starts in labels.items():
                     of_whole[-1][2].setdefault(name, set()).update(starts)
-        joining = _joining(whole, now)
-        planned.extend((part, newest, labels, pinnable, joining) for part, newest, labels, pinnable in of_whole)
-    for group, newest, labels, pinnable, joining in planned:
+        planned.extend(of_whole)
+    for group, newest, labels, pinnable in planned:
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
@@ -1349,8 +1348,6 @@ def plan_removals(
                 for start in starts
             ):
                 why = "a label points at a version in it"
-            elif taken.path in joining:
-                why = "it records its repository's address and first commit together"
             elif made_in_the_future(taken, now) and _ahead(taken, now) > keep_days * 86400:
                 plan.remove.append(
                     (taken, f"nothing pins it, and it is dated more than {keep_days:g} days after now, so it is not taken as made")
@@ -1369,25 +1366,49 @@ def plan_removals(
             plan.keep.append((taken, why))
     if keep_lineage:
         _keep_lineage(plan, groups)
+    _keep_repositories_whole(plan, groups, now)
     return plan
 
 
-def _joining(snapshots: list, now: datetime) -> set:
-    """The snapshots that tell which repository the rest are of: the newest of each address and first commit recorded together.
+def _keep_repositories_whole(plan: SnapshotPlan, groups: dict, now: datetime) -> None:
+    """Keep, of what the plan would remove, what tells a repository's snapshots are one.
 
-    A shallow clone's snapshots name an address and no first commit, and a
-    clone whose remote is a path names a first commit and no address; only
-    a snapshot that names both says they are one repository
-    (:func:`repository_groups`). Removing the last of those would split the
-    repository in two for every pin after.
-
-    :returns: Their records' paths.
+    Snapshots of an ID are one repository by a shared address or first
+    commit (:func:`repository_groups`), and only a snapshot that names both
+    joins, say, a shallow clone's snapshots to those of a clone whose remote
+    is a path. Where removing snapshots would leave a repository's kept
+    snapshots looking like two, the newest that names each address and
+    first commit together is kept, and nothing more: an old address no
+    kept snapshot needs keeps nothing. Where the only snapshots kept of the
+    one repository there is name no repository (made by a ChartBook from
+    before), its newest that names it is kept, so that a pin that recorded
+    the repository still finds it.
     """
-    newest: dict = {}
-    for taken in snapshots:
-        if taken.repository and taken.first_commit and not made_in_the_future(taken, now):
-            newest[(repository_key(taken.repository), taken.first_commit)] = taken
-    return {taken.path for taken in newest.values()}
+    kept = {taken.path for taken, _ in plan.keep}
+    removable = {taken.path: taken for taken, _ in plan.remove}
+    rescued: dict = {}
+    for whole in groups.values():
+        named, unnamed = repository_groups(whole)
+        for group in named:
+            held = [taken for taken in group if taken.path in kept]
+            if len(repository_groups(held)[0]) > 1:
+                holders: dict = {}
+                for taken in group:
+                    if taken.repository and taken.first_commit:
+                        pair = (repository_key(taken.repository), taken.first_commit)
+                        # The newest that is not dated ahead; one dated ahead only if there is none
+                        if not made_in_the_future(taken, now) or pair not in holders:
+                            holders[pair] = taken
+                for taken in holders.values():
+                    if taken.path in removable:
+                        rescued[taken.path] = (taken, "it names its repository's address and first commit together, which joins its snapshots")
+            if not held and len(named) == 1 and any(taken.path in kept for taken in unnamed):
+                present = [taken for taken in group if not made_in_the_future(taken, now)] or group
+                if present[-1].path in removable:
+                    rescued[present[-1].path] = (present[-1], "it is the newest that names its repository")
+    if rescued:
+        plan.remove = [(taken, why) for taken, why in plan.remove if taken.path not in rescued]
+        plan.keep.extend(rescued.values())
 
 
 def _keep_lineage(plan: SnapshotPlan, groups: dict) -> None:
@@ -1862,10 +1883,18 @@ def make(
     # Not one dated after now: it would stand for this commit for as long as its date says
     before = [taken for taken in find(store, code.commit, code.subdirectory) if not made_in_the_future(taken)]
     # The newest record of this commit that says at least as much of its
-    # repository as this one would: a clone with a path remote, or a shallow
-    # one, reuses its main checkout's, and the main checkout makes its own once
-    same = next((taken for taken in before if identity_keys(snapshot) <= identity_keys(taken)), None)
-    if same is not None and same.content() == snapshot.content():
+    # repository as this one would, with nothing newer that holds other
+    # bytes: a clone with a path remote, or a shallow one, reuses its main
+    # checkout's, and the main checkout makes its own once. A newer record
+    # with other bytes would otherwise be the one a pin takes.
+    same = None
+    for taken in before:
+        if taken.content() != snapshot.content():
+            break
+        if identity_keys(snapshot) <= identity_keys(taken):
+            same = taken
+            break
+    if same is not None:
         # The same bytes; made again only to say more than the one before:
         # its documents, that a run built them, or the commit's tags, since
         # a commit is often tagged after it is built

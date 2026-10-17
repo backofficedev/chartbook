@@ -936,9 +936,12 @@ def _newest_in_store(
     if first_commit and not named:
         known.add(("first", first_commit))
 
-    def unnamed_of(index_matches) -> bool:
+    def unnamed_of(index_matches, none_named_is_one: bool = False) -> bool:
         # One that names no repository was made by a ChartBook from before
-        # snapshots named one: it is the repository's when only one claims the ID
+        # snapshots named one: it is the repository's when only one claims
+        # the ID, or, for a pin that recorded its repository, when none does
+        if not groups:
+            return none_named_is_one
         return len(groups) == 1 and index_matches(0)
 
     if named:
@@ -959,7 +962,7 @@ def _newest_in_store(
         def made_there(taken) -> bool:
             if id(taken) in group_of:
                 return group_of[id(taken)] in chosen
-            return unnamed_of(lambda index: index in chosen)
+            return unnamed_of(lambda index: index in chosen, none_named_is_one=True)
 
         there = f"the repository it was first pinned from ({repository or f'first commit {first_commit[:7]}'})"
     else:
