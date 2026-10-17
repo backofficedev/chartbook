@@ -94,7 +94,7 @@ read, and the rest are errors, since nothing would record what was read.
 | A dependency declared and not pinned | Pins its newest snapshot now and says so, as `uv` writes its lockfile | `run` pinned it before the build |
 | A pipeline not in `[dependencies]` | Its newest snapshot, with a warning that nothing records it | An error |
 | This pipeline itself, through the catalog that lists its folder | Its own file, as a name of its own resolves | The same |
-| This pipeline's own ID, with no dependency known to be that pipeline | An error: read its own assets by their own names | An error |
+| This pipeline's own ID (or the end of it), with no dependency known to be that pipeline | An error: read its own assets by their own names | An error |
 | One with no snapshot, whose folder is here | Its working version, with a loud warning | An error |
 
 ```python

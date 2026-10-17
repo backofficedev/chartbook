@@ -687,6 +687,13 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             found_at=_catalog_hint(asset.pipeline_id, manifest_dir),
         ) from None
 
+    if dependency.kind == "path" and dependency.path is not None and _same_directory(dependency.path, manifest_dir):
+        raise AssetNotPinnedError(
+            str(asset), "no_snapshot",
+            f"{dependency.id!r} is {manifest_dir}, this pipeline itself: a pipeline cannot depend on itself. "
+            f"Read its own assets by their own names.",
+        )
+
     # The lockfile knows the pipeline by its key in [dependencies]
     pinned = asset.in_pipeline(dependency.id)
     asset_id = str(pinned)
@@ -1269,39 +1276,65 @@ def _read_another(asset: AssetRef, manifest_dir: Optional[Path], working, folder
         elif folder is not None and _same_directory(folder, manifest_dir):
             return _resolve_local(AssetRef(kind=asset.kind, name=asset.name, rev=asset.rev), manifest_dir)
         else:
-            _refuse_this_pipeline_by_name(asset, manifest_dir, raw)
+            key = _refuse_this_pipeline_by_name(asset, manifest_dir, raw)
+            if key is not None:
+                # The dependency found to be the pipeline that name is: read it by its key
+                asset = asset.in_pipeline(key)
     if manifest_dir is None:
         return _read_outside_a_pipeline(asset, working)
     return _read_in_a_pipeline(asset, manifest_dir, working)
 
 
-def _refuse_this_pipeline_by_name(asset: AssetRef, manifest_dir: Path, raw: dict) -> None:
+def _names_this_pipeline(asset: AssetRef, manifest_dir: Path) -> Optional[str]:
+    """This pipeline's own ID, if a reference's pipeline is it or the end of it; else None."""
+    own, wanted = _own_id(manifest_dir), asset.pipeline_id
+    if not own or (wanted != own and ("/" in wanted or own.rsplit("/", 1)[-1] != wanted)):
+        return None
+    return own
+
+
+def _this_pipeline_error(asset: AssetRef, manifest_dir: Path, own: str, unknown=()) -> ValueError:
+    named = asset.local_name + (f"@{asset.rev}" if asset.rev else "")
+    perhaps = (
+        f" If you mean {', '.join(unknown)} in [dependencies], whose ID cannot be known here, read it "
+        f"by that key (`chartbook pin` may settle which pipeline it is)."
+        if unknown else ""
+    )
+    return ValueError(
+        f"{str(asset)!r} names this pipeline, {own}. Read its own assets by their own names "
+        f"({named!r}); a dependency by its key in [dependencies].{perhaps}"
+    )
+
+
+def _refuse_this_pipeline_by_name(asset: AssetRef, manifest_dir: Path, raw: dict) -> Optional[str]:
     """Refuse a name that is the caller's own pipeline, unless a dependency is known to be that pipeline.
 
+    :returns: The key of the dependency under another key that the name is,
+        if it is one; None otherwise (including a name that is no such
+        thing, or a dependency's own key).
     :raises ValueError: If the name is this pipeline's own ID, or the end of
         it, and no dependency is known to be the pipeline it names; or if
         ``[dependencies]`` cannot be read.
     """
     from chartbook.manifest import validate_dependencies
 
-    own, wanted = _own_id(manifest_dir), asset.pipeline_id
-    if not own or (wanted != own and ("/" in wanted or own.rsplit("/", 1)[-1] != wanted)):
-        return
+    own = _names_this_pipeline(asset, manifest_dir)
+    if own is None:
+        return None
     try:
         dependencies = validate_dependencies(raw.get("dependencies") or {}, manifest_dir)
     except ValueError as error:
         raise type(error)(f"{manifest_dir / MANIFEST_NAME}: {error}") from None
     try:
-        locate_pipeline(wanted, dependencies=dependencies)
-        return  # a dependency by that key
+        locate_pipeline(asset.pipeline_id, dependencies=dependencies)
+        return None  # a dependency by that key
     except PipelineNotFoundError:
         pass
-    if _declared_as(wanted, manifest_dir) is not None:
-        return  # a dependency under another key that is that pipeline
-    raise ValueError(
-        f"{str(asset)!r} names this pipeline, {own}. Read its own assets by their own names "
-        f"({asset.local_name!r}); a dependency by its key in [dependencies]."
-    )
+    key = _declared_as(asset.pipeline_id, manifest_dir)
+    if key is not None:
+        return key  # a dependency under another key that is that pipeline
+    unknown = sorted(name for name, known in _dependency_ids(manifest_dir, dependencies).items() if known is None)
+    raise _this_pipeline_error(asset, manifest_dir, own, unknown)
 
 
 # Snapshot records read from a store, by file, with the (mtime, size) they
@@ -1538,7 +1571,16 @@ def _dependency_ids(manifest_dir: Path, dependencies: dict) -> dict[str, Optiona
             return None
 
     key = str(manifest_dir)
-    stamps = (stamp(manifest_dir / MANIFEST_NAME), stamp(manifest_dir / "chartbook.lock"))
+    stamps = (
+        stamp(manifest_dir / MANIFEST_NAME),
+        stamp(manifest_dir / "chartbook.lock"),
+        # A dependency's folder may be given another ID at any moment
+        tuple(
+            stamp(Path(entry["_resolved_path"]) / MANIFEST_NAME)
+            for _, entry in sorted(dependencies.items())
+            if entry.get("_resolved_path")
+        ),
+    )
     cached = _ids_cache.get(key)
     if cached is not None and cached[1] == stamps and time.monotonic() - cached[0] < _TRY_AGAIN_SECONDS:
         return cached[2]
@@ -1559,7 +1601,7 @@ def _dependency_ids(manifest_dir: Path, dependencies: dict) -> dict[str, Optiona
             listed = {
                 entry.get("id"): entry
                 for entry in (locked.dependencies if locked else [])
-                if isinstance(entry, dict) and isinstance(entry.get("location"), dict)
+                if isinstance(entry, dict) and isinstance(entry.get("id"), str) and isinstance(entry.get("location"), dict)
             }
         return listed.get(name) or {}
 
@@ -1662,6 +1704,10 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
         key = _declared_as(asset.pipeline_id, manifest_dir)
         if key is not None:
             return _read_in_a_pipeline(asset.in_pipeline(key), manifest_dir, working)
+        own = _names_this_pipeline(asset, manifest_dir)
+        if own is not None:
+            # Never this pipeline's own snapshot read as another's
+            raise _this_pipeline_error(asset, manifest_dir, own) from None
         if batch():
             raise
         location, why, newest, settled = _newest_snapshot_of(asset)
