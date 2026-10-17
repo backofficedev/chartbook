@@ -132,7 +132,7 @@ class TestNoSnapshotButAWorkingFolder:
         with pytest.warns(WorkingVersionWarning, match="reading its WORKING version") as said:
             assert _value("acme/rates:treasury") == [7.0]
         assert str(work / "rates" / "_data" / "treasury.parquet") in str(said[0].message)
-        assert not lock.read_lock(forecast / lock.LOCK_FILE).hashes()  # nothing records the read
+        assert not (forecast / lock.LOCK_FILE).exists()  # nothing records the read, and no empty lockfile is made
 
     def test_a_batch_run_refuses_it(self, tmp_path, monkeypatch):
         work = tmp_path.resolve()

@@ -16,6 +16,7 @@ keeps their own choices for everything else::
     ├── chartbook.toml       # the global catalog (optional)
     ├── settings.toml        # the user's settings
     ├── sources.toml         # the machine's urls and credentials for [sources]
+    ├── machine-id           # what names this machine in a store's notes of lockfiles
     ├── store/               # the store, unless settings say otherwise
     ├── cache/               # what was read from a remote store
     └── git/                 # clones of git dependencies
@@ -355,13 +356,30 @@ def get_store_url() -> str:
     :raises ValueError: If the user's settings file is faulty; a fault in
         the organization's file is a warning, and that file is ignored.
     """
+    return get_store_setting()[0]
+
+
+def get_store_setting() -> tuple[str, str]:
+    """Where the store is (:func:`get_store_url`), and which layer said so.
+
+    :returns: The URL, and where it came from: ``"environment"``
+        (``CHARTBOOK_STORE``), ``"user"`` (``[store] url`` in the user's
+        settings file), ``"system"`` (in the organization's), or
+        ``"default"``.
+    :raises ValueError: If the user's settings file is faulty.
+    """
     from_environment = os.environ.get(STORE_ENV_VAR, "").strip()
     if from_environment:
-        return from_environment
+        return from_environment, "environment"
     configured = read_settings().get("store")
     if configured is not None:
-        return configured["url"]
-    return str(get_global_config_dir() / "store")
+        # The user's own file, if it sets the store; the organization's
+        # otherwise. Read again only to say which: what it warns of was said
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            user = _normalized(read_global_settings(), get_global_settings_path()).get("store")
+        return configured["url"], "user" if user is not None else "system"
+    return str(get_global_config_dir() / "store"), "default"
 
 
 def store_kind(url: str) -> str:
@@ -404,6 +422,63 @@ def get_store_path() -> Path:
         built, or ``[store]`` is malformed.
     """
     return folder_of_store_url(get_store_url())
+
+
+#: The file under ``~/.chartbook`` that names this machine to the stores it uses.
+MACHINE_FILE = "machine-id"
+
+
+def get_machine_id(create: bool = True) -> str:
+    """The name this machine goes by in a store's notes of its lockfiles.
+
+    A store keeps a note of each lockfile whose pins it keeps, and a path
+    names a file on one machine only: one person's two machines can each
+    have a lockfile at the same path. So a note names its machine too.
+    The name is made at random the first time a note is written, and kept
+    in ``~/.chartbook/machine-id``; it says nothing about the machine. A
+    home folder that several computers share (a cluster's) is one machine
+    here, as its lockfiles are the same files. Where the file cannot be
+    written, a name made from the host's is used.
+
+    :param create: Whether to make the name if there is none yet. Without
+        it, the name made from the host's is given, which only a machine
+        that could not keep a name of its own wrote notes under.
+    """
+    import socket
+    import uuid
+
+    path = get_global_config_dir() / MACHINE_FILE
+
+    def kept() -> Optional[str]:
+        try:
+            text = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            return None
+        return text if re.fullmatch(r"[0-9a-f]{32}", text) else None
+
+    from_host = uuid.uuid5(uuid.NAMESPACE_DNS, socket.gethostname()).hex
+    found = kept()
+    if found is not None:
+        return found
+    if not create:
+        return from_host
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
+        temporary.write_text(uuid.uuid4().hex + "\n", encoding="utf-8")
+        try:
+            # The first of two made at once is the one: a link is not made over a file
+            os.link(temporary, path)
+        except FileExistsError:
+            pass
+        except OSError:
+            os.replace(temporary, path)  # a disk with no links
+        finally:
+            if temporary.exists():
+                temporary.unlink()
+    except OSError:
+        pass
+    return kept() or from_host
 
 
 def get_default_host() -> str:

@@ -794,9 +794,10 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             asset_id,
             "not_in_store",
             f"{asset_id!r} is pinned at {content_hash}, and the store at "
-            f"{store} does not have it. Run `chartbook pin` in "
-            f"{manifest_dir}: it puts it back if it can, and says what to do "
-            f"if it cannot.",
+            f"{store} does not have it. In a store shared through a synced folder, "
+            f"the likeliest cause is a sync that has not finished: wait for it, and "
+            f"read again. Otherwise run `chartbook pin` in {manifest_dir}: it puts it "
+            f"back if it can, and says what to do if it cannot.",
         )
 
     return _held(store, record)
@@ -808,6 +809,11 @@ def _held(store, record: dict) -> Location:
     from chartbook.utils import is_glob_pattern
 
     held = store.get(record["content_hash"])
+    # The sizes the record gives, against the files': a store in a synced
+    # folder can have a file before the whole of it. Nothing is read
+    unsynced = store.incomplete(record["content_hash"], record.get("size_bytes"))
+    if unsynced:
+        raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
         from chartbook.snapshot import materialized_name
@@ -1812,6 +1818,14 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
                 return _resolve_pinned(asset, manifest_dir)
             except AssetNotPinnedError as error:
                 no_snapshot = [e for e in report.problems if e.dependency == dependency.id and e.status == "no_snapshot"]
+                # Its newest snapshot is in the store, and not all of it yet: a store in a synced folder
+                not_whole = [e for e in report.problems if e.dependency == dependency.id and e.status in ("unsynced", "lost")]
+                if error.reason == "no_lockfile" and not_whole:
+                    reason = "not_synced" if not_whole[0].status == "unsynced" else "not_in_store"
+                    raise AssetNotPinnedError(
+                        not_pinned.asset, reason,
+                        f"{not_pinned.asset!r} cannot be pinned yet: {not_whole[0].asset}: {not_whole[0].detail}.",
+                    ) from None
                 if error.reason != "no_lockfile" or not no_snapshot:
                     raise
                 kind, why = "no_snapshot", no_snapshot[0].detail or "it has no snapshot"

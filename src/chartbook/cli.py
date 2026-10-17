@@ -1952,6 +1952,7 @@ def _echo_pin_report(report):
             "let_go": "let go",
             "dropped": "no longer declared",
             "lost": "lost",
+            "unsynced": "not fully synced",
         }
         summary = ", ".join(
             f"{counts[status]} {words[status]}" for status in words if status in counts
@@ -1988,7 +1989,10 @@ def _echo_pin_report(report):
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
-                click.echo(f"  lost: {event.asset} ({_short_hash(event.old)}): {event.detail}")
+                pinned_at = f" ({_short_hash(event.old)})" if event.old else ""
+                click.echo(f"  lost: {event.asset}{pinned_at}: {event.detail}")
+            elif event.status == "unsynced":
+                click.echo(f"  not fully synced: {event.asset}: {event.detail}")
         if dependency in report.snapshots:
             taken = report.snapshots[dependency]
             made_in = f", which says it was made in {taken.repository}" if getattr(taken, "repository", "") else ""
@@ -2546,14 +2550,61 @@ def _run_script(project_dir, script, force=False, snapshot=False, frozen=False):
 
 @main.group()
 def store():
-    """Look after the store: the local folder of pinned files.
+    """Look after the store: where pinned files and snapshots are kept.
 
-    The store keeps files under the hash of what is in them. It is at
-    ~/.chartbook/store unless CHARTBOOK_STORE, or [store] url in
-    ~/.chartbook/settings.toml or in the organization's settings file
-    (/etc/chartbook/settings.toml, or what CHARTBOOK_SYSTEM_SETTINGS names), says
-    otherwise.
+    The store keeps files under the hash of what is in them. It is a folder
+    on this machine, or one machines share (on a shared disk, or synced by
+    a service such as Google Drive), or a bucket. It is ~/.chartbook/store
+    unless CHARTBOOK_STORE, or [store] url in ~/.chartbook/settings.toml or
+    in the organization's settings file (/etc/chartbook/settings.toml, or
+    what CHARTBOOK_SYSTEM_SETTINGS names), says otherwise. `chartbook store
+    info` says which it is.
     """
+
+
+@store.command("info")
+def store_info():
+    """Say which store this machine uses, and what set it.
+
+    The store is a setting of the machine, read in layers: CHARTBOOK_STORE,
+    then [store] url in your settings file, then in the organization's,
+    then the default. On a machine that is to share a store with another,
+    this is what to check first.
+
+    \b
+    Examples:
+        chartbook store info
+        CHARTBOOK_STORE=/shared/store chartbook store info
+    """
+    from chartbook.config import (
+        STORE_ENV_VAR,
+        folder_of_store_url,
+        get_cache_path,
+        get_global_settings_path,
+        get_store_setting,
+        get_system_settings_path,
+        store_kind,
+    )
+
+    try:
+        url, origin = get_store_setting()
+        shown = str(folder_of_store_url(url)) if store_kind(url) == "folder" else url
+        cache = get_cache_path()
+    except ValueError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        raise SystemExit(1)
+    said_by = {
+        "environment": f"set by {STORE_ENV_VAR}",
+        "user": f"set by [store] url in {get_global_settings_path()}, your settings",
+        "system": f"set by [store] url in {get_system_settings_path()}, the organization's settings",
+        "default": f"the default: neither {STORE_ENV_VAR} nor a [store] url in a settings file says otherwise",
+    }[origin]
+    if store_kind(url) == "folder" and not Path(shown).exists():
+        said_by += "; nothing is there yet"
+    click.echo(f"Store: {shown}")
+    click.echo(f"  {said_by}")
+    click.echo(f"Cache: {cache}")
+    click.echo("  where what is read from a remote store is kept on this machine")
 
 
 @store.command("verify")
@@ -2607,7 +2658,7 @@ def _format_bytes(size):
 @click.option(
     "--forget-missing",
     is_flag=True,
-    help="Stop keeping the pins of a lockfile that cannot be found (on a store a team shares, that is every other machine's)",
+    help="Stop keeping the pins of a lockfile on this machine that cannot be found (another machine's are never forgotten from here)",
 )
 @click.option(
     "--keep-days",
@@ -2649,9 +2700,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
-    --forget-missing to let those go. On a store a team shares, every other
-    machine's lockfile is one that cannot be found from here, so there the
-    store's owner runs gc without it.
+    --forget-missing to let those go. A lockfile on another machine, which a
+    store in a shared or synced folder has notes of, is not read from here:
+    what it last pinned is kept, with --forget-missing or without.
 
     What would be removed is listed, and nothing is removed until you say
     yes. An object stored in the last hour is never removed: a pin puts
@@ -2680,7 +2731,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         raise SystemExit(1)
 
     # A kept snapshot keeps objects too, which no lockfile may name
-    named_by = f"{len(plan.lockfiles)} lockfile(s)" + (" or a kept snapshot" if plan.snapshots_kept else "")
+    named_by = f"{len(plan.lockfiles) + len(plan.elsewhere)} lockfile(s)" + (" or a kept snapshot" if plan.snapshots_kept else "")
     click.echo(f"Kept: {plan.kept} object(s), named by {named_by}")
     for lockfile, found in plan.lockfiles:
         if found:
@@ -2692,6 +2743,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         else:
             note = "  (not found; its pins are kept)"
         click.echo(f"  {lockfile}{note}")
+    for root in plan.elsewhere:
+        machine = f"on another machine, {root.host}" if root.host else "on another machine"
+        click.echo(f"  {root.lockfile}  ({machine}: not read here; its pins are kept)")
     if plan.snapshots_kept:
         reasons = {}
         for _, why in plan.snapshots_kept:
@@ -2711,8 +2765,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     ):
         click.echo(
             "  A lockfile that cannot be found keeps every snapshot that holds "
-            "something it named. --forget-missing lets them go; on a store a team "
-            "shares, that includes what other machines pin."
+            "something it named. --forget-missing lets them go."
         )
 
     if not plan.delete and not plan.snapshots_delete:

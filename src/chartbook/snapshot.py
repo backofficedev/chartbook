@@ -1275,14 +1275,15 @@ def plan_removals(
     now: Optional[datetime] = None,
     keep_lineage: bool = False,
     aggressive: bool = False,
+    hashes_elsewhere: set[str] = frozenset(),
 ) -> SnapshotPlan:
     """Say which snapshots may be removed. Nothing is removed.
 
     A snapshot is kept if, in this order:
 
     1. a lockfile pins it (its commit and time are named by a dependency);
-    2. a lockfile that cannot be found named one of its objects when it was
-       last pinned;
+    2. a lockfile that cannot be found, or one on another machine, named
+       one of its objects when it was last pinned;
     3. it is the newest snapshot of its pipeline, or the newest that a
        branch or a tag of the repository it came from can pin from;
     4. a label points at a model version it holds: in the pipeline's
@@ -1310,6 +1311,8 @@ def plan_removals(
         pin.
     :param hashes_of_missing: The objects named by lockfiles that cannot be
         found and are not to be forgotten.
+    :param hashes_elsewhere: The objects named by lockfiles on other
+        machines, which are not read here.
     :raises SnapshotError: If a record cannot be read.
     """
     now = now if now is not None else datetime.now(timezone.utc)
@@ -1344,6 +1347,8 @@ def plan_removals(
                 why = "a lockfile pins it"
             elif taken.hashes() & set(hashes_of_missing):
                 why = "a lockfile that cannot be found named what it holds"
+            elif taken.hashes() & set(hashes_elsewhere):
+                why = "a lockfile on another machine named what it holds"
             elif taken is newest:
                 why = "it is the newest of its pipeline"
             elif taken.path in pinnable:

@@ -155,7 +155,7 @@ def _plant(store_root: Path, commit: str, document: dict) -> Path:
     """Write a snapshot record straight into a folder store, as anyone who can write a shared one could."""
     folder = store_root / "snapshots" / commit / "_top"
     folder.mkdir(parents=True, exist_ok=True)
-    path = folder / "planted.json"
+    path = folder / "20260101T000000.000000Z.json"  # named as a record is, or it is passed over
     path.write_text(json.dumps(document))
     return path
 

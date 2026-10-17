@@ -37,7 +37,6 @@ making the snapshot again uploads what is missing and completes it.
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import json
 import os
 import re
@@ -71,6 +70,12 @@ from chartbook.store import (
     _FULL_COMMIT,
     _HEX,
     _split_hash,
+    is_record_name,
+    is_root_name,
+    read_root,
+    root_document,
+    root_name,
+    this_machine,
     what_is_wrong,
 )
 
@@ -585,41 +590,40 @@ class S3Store(Store):
 
     # -- roots ------------------------------------------------------------
 
-    def _root_key(self, lockfile: Union[str, Path]) -> str:
-        digest = hashlib.sha256(os.path.abspath(lockfile).encode("utf-8")).hexdigest()
-        return self._key(ROOTS_DIR, f"{digest[:32]}.json")
+    def _root_key(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> str:
+        return self._key(ROOTS_DIR, root_name(lockfile, this_machine() if machine is None else machine))
 
     def add_root(self, lockfile: Union[str, Path], hashes: Iterable[str]) -> None:
         hashes = sorted(set(hashes))
         for content_hash in hashes:
             _split_hash(content_hash)
         self._check_layout(create=True)
-        document = {"lockfile": os.path.abspath(lockfile), "hashes": hashes}
+        document = root_document(lockfile, hashes)
         self._write(self._root_key(lockfile), (json.dumps(document, indent=1) + "\n").encode())
+        before = self._root_key(lockfile, machine="")  # the note from before notes named their machine
+        if self._exists(before):
+            self._delete_keys([before])
 
     def remove_root(self, lockfile: Union[str, Path]) -> bool:
-        key = self._root_key(lockfile)
-        if not self._exists(key):
+        mine = self._root_key(lockfile, this_machine(create=False))
+        keys = [key for key in (mine, self._root_key(lockfile, machine="")) if self._exists(key)]
+        if not keys:
             return False
-        self._delete_keys([key])
+        self._delete_keys(keys)
         return True
 
     def roots(self) -> list[Root]:
         self._check_layout()
         found = []
         for entry in self._list(self._key(ROOTS_DIR) + "/"):
-            if not entry["Key"].endswith(".json"):
+            if not is_root_name(entry["Key"].rpartition("/")[2]):
                 continue
             body = self._read(entry["Key"])
             try:
-                stored = json.loads(body.decode("utf-8")) if body is not None else {}
-                root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]))
-                for content_hash in root.hashes:
-                    _split_hash(content_hash)
+                found.append(read_root(json.loads(body.decode("utf-8")) if body is not None else {}))
             except (ValueError, KeyError, TypeError) as error:
                 raise StoreError(f"Cannot read {self}/{entry['Key']}: {error}") from None
-            found.append(root)
-        return sorted(found, key=lambda root: str(root.lockfile))
+        return sorted(found, key=lambda root: (str(root.lockfile), root.machine))
 
     # -- snapshot records ---------------------------------------------------
 
@@ -643,7 +647,7 @@ class S3Store(Store):
         for entry in self._list(prefix):
             rest = _plain_parts(entry["Key"][len(prefix):])
             # A key that is not a plain path is no record this store wrote
-            if rest is not None and len(rest) == depth and rest[-1].endswith(".json"):
+            if rest is not None and len(rest) == depth and is_record_name(rest[-1]):
                 remote[entry["Key"]] = entry
         local_folder = self._local(prefix.rstrip("/"))
         wanted = set()
@@ -724,7 +728,7 @@ class S3Store(Store):
         was_there = self._exists(key)
         if was_there:
             self._delete_keys([key])
-            if not any(entry["Key"].endswith(".json") for entry in self._list(folder)):
+            if not any(is_record_name(entry["Key"].rpartition("/")[2]) for entry in self._list(folder)):
                 self._delete_keys([folder + ORIGINS_FILE])
         if path.is_file():
             os.chmod(path, _WRITABLE)

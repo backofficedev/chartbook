@@ -440,6 +440,53 @@ def _pinned_keys(pipeline_dir: Path) -> Optional[set[str]]:
     return {listed["id"] for listed in locked.dependencies if listed.get("id")}
 
 
+def _not_on_this_machine(pipeline_dir: Path, key: str, entry: dict, directory: Path) -> tuple[str, bool]:
+    """What to say of a ``path`` dependency whose folder is not here, and whether the pipeline builds without it.
+
+    It builds when the lockfile pins it from that path, and the store has
+    every pin whole (``chartbook run --frozen`` reads nothing else). The
+    store is looked in only when it is a folder: a check uses no network,
+    and with a bucket the lockfile is taken at its word, which ``chartbook
+    pin --frozen`` checks.
+    """
+    from chartbook import lock, snapshot
+    from chartbook.store import FolderStore, StoreError, default_store
+
+    try:
+        locked = lock.read_lock(pipeline_dir)
+    except lock.LockError:
+        locked = None  # said already, by _pinned_keys
+    pinned = next((e for e in (locked.dependencies if locked else []) if e.get("id") == key), None)
+    try:
+        store = default_store()
+    except (ValueError, StoreError):
+        store = None
+    folder = store if isinstance(store, FolderStore) else None
+    advice = lock.name_it_by_its_id(key, pinned, lambda: snapshot.readable_snapshots(folder)[0] if folder else [])
+    records = [r for r in locked.assets_of(key).values() if r.get("content_hash")] if pinned else []
+    if not records or lock._declared_elsewhere(pinned, lock._dependency_entry(key, entry)):
+        return (
+            f"directory not found: {directory}. Nothing of it is pinned from there, so nothing of it "
+            f"can be read on this machine. {advice}",
+            False,
+        )
+    if store is None or (
+        folder is not None
+        and not all(folder.has(r["content_hash"]) and not lock._incomplete(folder, r) for r in records)
+    ):
+        return (
+            f"directory not found: {directory}, and the store does not have all that the lockfile "
+            f"pins of it (`chartbook pin --frozen` says what). {advice}",
+            False,
+        )
+    return (
+        f"{entry['path']} is not on this machine. It is pinned, with its pins in the store, so this "
+        f"pipeline builds here (`chartbook run --frozen`), and only `chartbook update` needs the "
+        f"folder. {advice}",
+        True,
+    )
+
+
 def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     """Report every declared dependency that cannot be found.
 
@@ -507,6 +554,15 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
                     problems.append(Problem(toml_file, table, "git", wrong))
                 continue
 
+            if not location.path.is_dir():
+                # Not on this machine: another machine's folder, perhaps, which
+                # is a problem only if nothing of it can be built from here
+                said, builds = _not_on_this_machine(pipeline_dir, key, entry, location.path)
+                if builds:
+                    warnings.warn(f"{toml_file}: [{table}] path: {said}", UserWarning, stacklevel=2)
+                else:
+                    problems.append(Problem(toml_file, table, "path", said))
+                continue
             wrong = _pipeline_at(location.path)
             if wrong is None and location.path.samefile(pipeline_dir):
                 wrong = (

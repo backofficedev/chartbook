@@ -304,7 +304,7 @@ class TestWhatIsMissing:
 
         # Which is what it says to run: here it cannot, and says what can
         (lost,) = lock.pin(pinned, store).problems
-        assert lost.status == "lost" and "A snapshot puts it there" in lost.detail
+        assert lost.status == "lost" and "a snapshot puts it there" in lost.detail
         pin_from_snapshots(pinned, store)  # its owner makes the snapshot again
         assert data.path("rates:treasury", project_dir=pinned).read_bytes() == b"hello"
 

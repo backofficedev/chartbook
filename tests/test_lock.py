@@ -442,7 +442,7 @@ class TestPin:
             store.delete(content_hash)
         # `pin` reads nothing of the other pipeline's folder to put them back from
         lost = lock.pin(downstream, store).problems
-        assert {p.status for p in lost} == {"lost"} and "A snapshot puts it there" in lost[0].detail
+        assert {p.status for p in lost} == {"lost"} and "a snapshot puts it there" in lost[0].detail
 
         report = pin_from_snapshots(downstream, store)  # its owner makes the snapshot again
         assert _statuses(report)["treasury"] == "kept"
@@ -460,7 +460,8 @@ class TestPin:
         (problem,) = report.problems
         assert problem.status == "lost" and problem.asset == "acme/rates:treasury"
         assert problem.old == HELLO
-        assert "it is not in the store. A snapshot puts it there: `chartbook update`" in problem.detail
+        assert "it is not in the store at " in problem.detail and "a sync that has not finished" in problem.detail
+        assert "Otherwise a snapshot puts it there: `chartbook update`" in problem.detail
         # The pin is not quietly moved to what the newest snapshot has
         assert (downstream / LOCK_FILE).read_bytes() == before
 

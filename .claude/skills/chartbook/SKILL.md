@@ -58,6 +58,7 @@ chartbook run               # Pin what has no pin, then run this pipeline's [scr
 chartbook run --frozen      # Pin nothing, fetch nothing, write nothing; build only if every pin is in the store (CI). Not with --snapshot
 chartbook run <script>      # ...or another named script, e.g. `chartbook run test` (pins nothing)
 chartbook run --force       # Also rebuild git dependencies (each is built once, in a clean copy); refreshes data they pull from outside
+chartbook store info        # Which store this machine uses and what set it (CHARTBOOK_STORE, your settings, the organization's, or the default); check it on each machine that shares a store (a synced folder, a shared disk)
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, `[store] url` in settings, or CHARTBOOK_STORE; a folder or s3://bucket/prefix with chartbook[s3]); exit 1 if an object changed
 chartbook store gc          # Remove old snapshots (unpinned, not the newest of their repository, unlabelled, >7 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets git tags, branches and model labels keep nothing. A git tag names a version (snapshots record their commit's tags)
 chartbook config            # Configure default catalog path (interactive)

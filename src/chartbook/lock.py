@@ -285,7 +285,10 @@ class PinEvent:
             which the pipeline probably calls itself now),
             ``let_go`` (an update moved a ``git`` dependency to another
             commit, and this was built from the one before and is not built
-            at the new one, so it is no longer pinned). For a
+            at the new one, so it is no longer pinned), ``unsynced`` (its
+            object is in the store with other than the bytes its record
+            says: a store in a synced folder whose sync has not finished).
+            For a
             whole dependency: ``removed`` (no longer in ``[dependencies]``),
             ``unreachable`` (its directory holds no pipeline), ``fetched`` (a
             ``git`` dependency was got from its repository), ``unfetched``
@@ -310,7 +313,23 @@ class PinEvent:
 
 
 #: The statuses that mean a project is not fully pinned, and should fail CI.
-PROBLEM_STATUSES = frozenset({"lost", "unreachable", "unfetched", "no_snapshot", "outside"})
+PROBLEM_STATUSES = frozenset({"lost", "unsynced", "unreachable", "unfetched", "no_snapshot", "outside"})
+
+#: What to do about an object a snapshot names that the store does not have.
+#: In a store that machines share through a sync service, the likeliest
+#: cause is a sync that has not finished, on one side or the other.
+NOT_SYNCED_YET = (
+    "In a store that machines share through a synced folder, the likeliest cause is a sync "
+    "that has not finished: here, wait for it and run this again; on the machine that put it "
+    "in the store, see that its sync has sent everything"
+)
+
+
+def _incomplete(store: Store, record: dict) -> Optional[str]:
+    """Why the store's object of a record with a hash does not hold all of its bytes yet; None if it does, or that cannot be told."""
+    if not record.get("content_hash"):
+        return None
+    return store.incomplete(record["content_hash"], record.get("size_bytes"))
 
 
 @dataclass
@@ -951,7 +970,12 @@ def _sync_now(
                 if not content_hash:
                     continue
                 if store.has(content_hash):
-                    report.events.append(PinEvent("kept", key, asset_id, old=content_hash, new=content_hash))
+                    unsynced = _incomplete(store, record)
+                    report.events.append(
+                        PinEvent("unsynced", key, asset_id, old=content_hash, new=content_hash, detail=unsynced)
+                        if unsynced
+                        else PinEvent("kept", key, asset_id, old=content_hash, new=content_hash)
+                    )
                 else:
                     report.events.append(
                         PinEvent(
@@ -1116,8 +1140,10 @@ def _sync_now(
         after.dependencies.append(listed)
         after.assets.update(records)
 
-    # With nothing to lock and no lockfile yet, do not make an empty one
-    if dependencies or lock_path.exists():
+    # With nothing to lock and no lockfile yet, do not make an empty one; nor
+    # for a pin of some dependencies only (the first read of one) that found
+    # nothing of them to record, a snapshot say
+    if lock_path.exists() or (dependencies and (only is None or after.assets)):
         report.written = write_lock(after, lock_path)
     hashes = after.hashes()
     try:
@@ -1327,9 +1353,13 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                         key,
                         asset_id,
                         f"is pinned at {content_hash[:19]}… and the store at {store} "
-                        f"does not have it. Point CHARTBOOK_STORE at the store that has it; "
-                        f"or {remedy}.",
+                        f"does not have it. {NOT_SYNCED_YET}. Otherwise point CHARTBOOK_STORE "
+                        f"at the store that has it; or {remedy}.",
                     )
+                )
+            elif unsynced := _incomplete(store, assets[asset_id]):
+                report.problems.append(
+                    FrozenProblem(key, asset_id, f"is pinned at {content_hash[:19]}…, and {unsynced}.")
                 )
             else:
                 report.pins += 1
@@ -1387,6 +1417,39 @@ def _where(record: dict) -> str:
     if location.get("kind") == "query":
         return f"query in source {location.get('source')!r}"
     return str(location.get("path"))
+
+
+def by_its_id(key: str, pinned: Optional[dict], found: Callable[[], list]) -> str:
+    """The ``[dependencies]`` line that names a ``path`` dependency by its ID instead, for a message.
+
+    The ID is the one its pinned snapshot carries, when the lockfile names
+    a snapshot that *found* (the store's snapshots) has; otherwise a key
+    with a scope is taken for the ID, and one without is given a place for it.
+
+    :param pinned: The dependency's entry in the lockfile, if it has one.
+    """
+    location = (pinned or {}).get("location", {})
+    pipeline_id = None
+    if location.get("commit") and (pinned or {}).get("snapshot"):
+        try:
+            pipeline_id = next(
+                (t.pipeline for t in found() if t.same_moment(location["commit"], pinned["snapshot"])), None
+            )
+        except (StoreError, snapshot.SnapshotError, OSError, ValueError):
+            pipeline_id = None  # a store that cannot be read: the key is said instead
+    if pipeline_id is None and "/" not in key:
+        return f'"{key}" = {{ id = "<its ID>" }}'
+    if pipeline_id is None or pipeline_id == key:
+        return f'"{key}" = {{}}'
+    return f'"{key}" = {{ id = "{pipeline_id}" }}'
+
+
+def name_it_by_its_id(key: str, pinned: Optional[dict], found: Callable[[], list]) -> str:
+    """What to say of a ``path`` dependency whose folder is not on this machine: how to name it so that it is read from the store."""
+    return (
+        f"A pipeline in another repository is named by its ID, and read from a store this machine "
+        f"shares with the one it is on: {by_its_id(key, pinned, found)} in [dependencies]"
+    )
 
 
 def _describe(location: dict) -> str:
@@ -1815,6 +1878,10 @@ def _sync_from_snapshots(
             newest, code = snapshot.newest_for(directory, store)
         except snapshot.SnapshotError as error:
             newest, code, why = None, None, str(error)
+            if not Path(directory).is_dir():
+                # Another machine's folder, most likely: said with the entry that works here
+                found_now = found if found is not None else (lambda: snapshot.readable_snapshots(store)[0])
+                why = f"{why}. {name_it_by_its_id(key, was, found_now)}"
 
     def as_it_was() -> dict:
         """The listing, still naming the snapshot the pins came from, and the repository it came from."""
@@ -1868,11 +1935,13 @@ def _sync_from_snapshots(
                         record["id"],
                         old=old,
                         detail=(
-                            "it is not in the store. A snapshot puts it there: "
-                            "`chartbook update` moves to the newest one"
+                            f"it is not in the store at {store}. {NOT_SYNCED_YET}. Otherwise a "
+                            f"snapshot puts it there: `chartbook update` moves to the newest one"
                         ),
                     )
                 )
+            elif unsynced := _incomplete(store, record):
+                report.events.append(PinEvent("unsynced", key, record["id"], old=old, new=old, detail=unsynced))
             else:
                 now = theirs.get(snapshot.local_name(record))
                 status = "stale" if now is not None and now != old else "kept"
@@ -1920,7 +1989,15 @@ def _sync_from_snapshots(
         if newest.assets[name].get("content_hash")
         and not store.has(newest.assets[name]["content_hash"])
     ]
-    if missing:
+    # Or it has the object, and not all of its bytes yet: a store in a
+    # synced folder can have a file before the whole of it
+    unsynced = []
+    for name in sorted(newest.assets):
+        if newest.assets[name].get("content_hash") and store.has(newest.assets[name]["content_hash"]):
+            short = _incomplete(store, newest.assets[name])
+            if short:
+                unsynced.append((snapshot.renamed(newest.assets[name], key)["id"], short))
+    if missing or unsynced:
         for record in pinned:
             _report_kept(record, key, store, report)
         had = {**had, **had_labels}
@@ -1931,10 +2008,18 @@ def _sync_from_snapshots(
                     key,
                     asset_id,
                     detail=(
-                        f"the snapshot at {newest.commit[:7]} names it, and it is "
-                        f"not in the store, so nothing was moved. Making the "
-                        f"snapshot again puts it back"
+                        f"the snapshot at {newest.commit[:7]} names it, and the store at {store} does "
+                        f"not have it, so nothing was moved. {NOT_SYNCED_YET}. If that machine's store "
+                        f"lacks it too, its owner makes the snapshot again (`chartbook snapshot` in its "
+                        f"folder, at that commit)"
                     ),
+                )
+            )
+        for asset_id, why in unsynced:
+            report.events.append(
+                PinEvent(
+                    "unsynced", key, asset_id,
+                    detail=f"nothing was moved to the snapshot at {newest.commit[:7]}, which names it: {why}",
                 )
             )
         return dict(had), as_it_was()
@@ -2114,7 +2199,10 @@ def _report_kept(record: dict, key: str, store: Store, report: PinReport) -> Non
     pinned = record.get("content_hash")
     if not pinned:
         return
-    if store.has(pinned):
+    unsynced = _incomplete(store, record) if store.has(pinned) else None
+    if unsynced:
+        report.events.append(PinEvent("unsynced", key, record["id"], old=pinned, new=pinned, detail=unsynced))
+    elif store.has(pinned):
         report.events.append(
             PinEvent("kept", key, record["id"], old=pinned, new=pinned)
         )
@@ -2208,7 +2296,10 @@ def _pin_asset(
         warnings.warn(f"Could not read {absolute}: {error}", stacklevel=2)
         current = None
     same = current is not None and current.content_hash == old
-    if store.has(old):
+    unsynced = _incomplete(store, had) if store.has(old) else None
+    if unsynced:
+        report.events.append(PinEvent("unsynced", key, asset_id, old=old, new=old, detail=unsynced))
+    elif store.has(old):
         status = "kept" if same else "stale"
         report.events.append(PinEvent(status, key, asset_id, old=old, new=old))
     elif same:
@@ -2262,6 +2353,9 @@ def pin(
         user's by default.
     :param only: The keys of the dependencies to pin; the rest keep what
         the lockfile has, and nothing of them is fetched. All by default.
+        Where there is no lockfile yet, one is made only if something of
+        them is recorded: the first read of a pipeline with no snapshot
+        writes nothing.
     :param clone_missing: Whether a dependency named by its ID that the
         store has no snapshot of is cloned from the default host, and
         pinned from the clone (:func:`clone_instead`).
@@ -2330,6 +2424,9 @@ class GcPlan:
         delete: Objects that nothing names, each with its size in bytes.
         not_read: Lockfiles a store names that are not read here, as they are
             not a local ``chartbook.lock``: what their notes name is kept.
+        elsewhere: The notes of lockfiles on other machines, which are not
+            read here and never forgotten from here: what they name is kept.
+            They are not in *lockfiles*, which are this machine's.
         forget: Lockfiles that could not be found and are to be forgotten.
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
             with, so that it can be made again the same way when it is
@@ -2345,6 +2442,7 @@ class GcPlan:
     delete: list[tuple[str, int]] = field(default_factory=list)
     forget: list[Path] = field(default_factory=list)
     not_read: list[Path] = field(default_factory=list)
+    elsewhere: list = field(default_factory=list)
     forget_missing: bool = False
     recent_seconds: float = RECENT_SECONDS
     keep_days: float = snapshot.KEEP_DAYS
@@ -2375,15 +2473,16 @@ def plan_gc(
     (:func:`chartbook.snapshot.plan_removals`). Then the objects: one is
     kept if a lockfile the store knows of names it, or a kept snapshot
     does. The store knows of every lockfile that was pinned or updated into
-    it. A lockfile is read as it is now; one that cannot be found (a
-    deleted project, a drive that is not plugged in) still keeps what it
-    named when it was last pinned, unless *forget_missing* is set.
+    it. A lockfile on this machine is read as it is now; one that cannot
+    be found (a deleted project, a drive that is not plugged in) still
+    keeps what it named when it was last pinned, unless *forget_missing*
+    is set. A lockfile on another machine, which a store in a shared or
+    synced folder has notes of, is not read: what its note names is kept.
 
     :param store: The store; this user's by default.
-    :param forget_missing: If True, a lockfile that cannot be found keeps
-        nothing, and is forgotten when the plan is carried out. On a store
-        a team shares, every other machine's lockfile is one that cannot be
-        found from here.
+    :param forget_missing: If True, a lockfile on this machine that cannot
+        be found keeps nothing, and is forgotten when the plan is carried
+        out. Another machine's lockfiles are never forgotten from here.
     :param recent_seconds: An unnamed object newer than this is left alone.
     :param keep_days: How long an unpinned snapshot that is not the newest
         of its pipeline is kept.
@@ -2400,7 +2499,20 @@ def plan_gc(
     keep: set[str] = set()
     pinned_snapshots: set[tuple[str, str]] = set()
     hashes_of_missing: set[str] = set()
+    hashes_elsewhere: set[str] = set()
+    from chartbook.store import this_machine
+
+    here = this_machine(create=False)  # a machine that has written no note has none of its own
     for root in store.roots():
+        if root.machine and root.machine != here:
+            # Another machine's lockfile: the path names a file there, which
+            # one here at the same path is not. It is not read, and never
+            # taken as gone: what its note names is kept, even with
+            # forget_missing, since only that machine can tell
+            plan.elsewhere.append(root)
+            keep |= set(root.hashes)
+            hashes_elsewhere |= set(root.hashes)
+            continue
         # A root is written by whoever can write to the store, and names a
         # path: only a lockfile on this machine is read, never another file
         # or a path on another host. One that is not read is never taken
@@ -2428,7 +2540,8 @@ def plan_gc(
 
     try:
         snapshots = snapshot.plan_removals(
-            store, pinned_snapshots, hashes_of_missing, keep_days=keep_days, keep_lineage=keep_lineage, aggressive=aggressive
+            store, pinned_snapshots, hashes_of_missing, keep_days=keep_days, keep_lineage=keep_lineage,
+            aggressive=aggressive, hashes_elsewhere=hashes_elsewhere,
         )
     except snapshot.SnapshotError as error:
         raise LockError(str(error)) from None

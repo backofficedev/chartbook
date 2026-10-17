@@ -26,19 +26,36 @@ nothing else.
 
 ## Declare it
 
-Say which pipeline and where it is:
+Say which pipeline. When it is in another repository, as it usually is, name it by its ID:
 
 ```toml
 [dependencies]
-"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+"ftsfr/fed_yield_curve" = {}
 
 [models.rate_forecaster]
 path = "./_models/rate_forecaster.joblib"
 trained_on = ["fed_yield_curve:treasury_rates"]
 ```
 
-`chartbook check` then confirms that the other pipeline is there and that it declares that
-dataframe, and warns while you have not pinned it yet.
+`chartbook add ftsfr/fed_yield_curve` writes that line for you. Its snapshots are found in the
+store by that ID, so nothing of the other repository has to be on your disk, and the same line
+works on any machine whose store has them: a colleague's, or your other computer, when the store
+is shared (a folder on a shared disk or in a synced folder, or a bucket; see
+[In CI, and on a shared store](#in-ci-and-on-a-shared-store)).
+
+When the two pipelines are in one repository, name the other by its folder instead:
+
+```toml
+[dependencies]
+"ftsfr/fed_yield_curve" = { path = "../fed_yield_curve" }
+```
+
+Its snapshots are then found by the commit that folder is on, which is your repository's own, so
+every clone of the repository has the folder too. A `path` into another repository works on your
+machine only: `chartbook check` warns about one, and shows the line that names it by its ID.
+
+`chartbook check` warns while you have not pinned it yet, and for a `path` it also confirms that
+the other pipeline is there and that it declares that dataframe.
 
 ## They declare a build ready
 
@@ -68,8 +85,8 @@ rates = data.load("fed_yield_curve:treasury_rates")     # the pinned copy
 path = data.path("fed_yield_curve:treasury_rates")      # or just where it is
 ```
 
-What you get is the build they declared ready, not whatever is in `../fed_yield_curve/_data/`
-this minute. They can rebuild, or be half-way through a change, and your results do not move.
+What you get is the build they declared ready, not whatever is in their `_data/` folder this
+minute. They can rebuild, or be half-way through a change, and your results do not move.
 When they have made a newer snapshot and you want it:
 
 ```console
@@ -144,8 +161,8 @@ ftsfr/rate_forecast: build
 Ran build in 1 pipeline(s).
 ```
 
-`chartbook run` does not build `../fed_yield_curve`, and does not read it. That folder is
-somebody's work, perhaps in the middle of a change. Whoever owns it builds it and makes the
+`chartbook run` does not build `ftsfr/fed_yield_curve`, and does not read its folder. That folder
+is somebody's work, perhaps in the middle of a change. Whoever owns it builds it and makes the
 snapshot.
 
 It never moves a pin either. If the other pipeline has a newer snapshot, yours is still built
@@ -163,11 +180,15 @@ A build server should change nothing. `chartbook run --frozen` pins nothing, fet
 writes nothing: it builds only if the lockfile is complete and every pin is in the store, and
 fails with a list of what is missing otherwise. `chartbook pin --frozen` is the same check alone.
 A team can point every machine at one store (`[store] url` in the organization's settings file or
-the user's `~/.chartbook/settings.toml`, or `CHARTBOOK_STORE`): a folder on a shared disk, or an
-S3 bucket, `s3://bucket/prefix`, with `pip install chartbook[s3]`. It may be read-only for the
-build server; pinning from a snapshot and reading pinned data need no write to it. A bucket is read
-through a copy on each machine, so your code opens files as it always did; {doc}`../reference/configuration`
-has the details.
+the user's `~/.chartbook/settings.toml`, or `CHARTBOOK_STORE`): a folder on a shared disk, a folder
+a sync service such as Google Drive keeps in step between machines, or an S3 bucket,
+`s3://bucket/prefix`, with `pip install chartbook[s3]`. `chartbook store info` says which store a
+machine uses. A dependency named by its ID is then pinned, updated and read on any of them. It may
+be read-only for the build server; pinning from a snapshot and reading pinned data need no write to
+it. A bucket is read through a copy on each machine, so your code opens files as it always did. In a
+synced folder, a snapshot made on one machine is there on another once the sync has finished, and
+until then a command that meets a file not fully synced says so and asks you to run it again;
+{doc}`../reference/configuration` has the details.
 
 ## What the site and the index say
 

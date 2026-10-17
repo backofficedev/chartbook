@@ -67,6 +67,18 @@ are what put things in the store. A snapshot's record is kept under
 leaves a note of each lockfile under ``roots/`` so that clearing the store
 out never removes another project's pins. The design is "The store" in
 ``docs_src/design/asset-graph.md``.
+
+**A store in a synced folder.** A folder that a sync service (Google
+Drive, Dropbox, OneDrive) keeps in step between machines is a store they
+share, and the service leaves two marks of its own in it. A file can be
+there before all of its bytes are: a record says how many an asset has
+(``size_bytes``), and :meth:`Store.incomplete` compares the sizes on disk
+with it, which costs no read. And a file changed in two places at once is
+kept twice, the second under a name of the service's
+(``20261017T163232.294414Z (1).json``): records, origin notes and notes of
+lockfiles are listed by the names a store gives them
+(:func:`is_record_name`, :func:`is_root_name`), so such a copy is passed
+over.
 """
 
 from __future__ import annotations
@@ -85,7 +97,7 @@ import stat
 import sys
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Iterator, Optional, Union
 
@@ -192,10 +204,19 @@ class Root:
         hashes: The objects it named when it was last pinned or updated.
             That is what the store goes by if the file can no longer be
             found, on a drive that is unplugged, say.
+        machine: The machine the lockfile is on
+            (:func:`chartbook.config.get_machine_id`). A path names a file
+            on one machine only, and one person's two machines can each
+            have a lockfile at the same path. Empty for a note from before
+            notes named their machine, which is taken as this machine's.
+        host: That machine's host name when the note was written, for a
+            person to read; nothing goes by it.
     """
 
     lockfile: Path
     hashes: tuple[str, ...]
+    machine: str = field(default="", compare=False)
+    host: str = field(default="", compare=False)
 
 
 @dataclass(frozen=True)
@@ -339,6 +360,95 @@ SNAPSHOTS_DIR = "snapshots"
 #: The file beside a pipeline's records that notes the folders they were made from.
 ORIGINS_FILE = "origins"
 _FULL_COMMIT = re.compile(r"^[0-9a-f]{40}$")
+#: A record's name: when it was made, ``20261013T182205.123456Z``, and a count if two share that time.
+_RECORD_NAME = re.compile(r"^[0-9]{8}T[0-9]{6}(\.[0-9]{1,9})?Z(-[0-9]+)?\.json$")
+#: A note of a lockfile's name: 32 hex digits of a hash (:func:`root_name`).
+_ROOT_NAME = re.compile(r"^[0-9a-f]{32}\.json$")
+
+
+def is_record_name(name: str) -> bool:
+    """Whether a file is named as a store names a snapshot record.
+
+    A sync service that finds a file changed in two places keeps both, the
+    second under a name of its own, ``20261017T163232.294414Z (1).json``.
+    That copy is not a record the store wrote, and is passed over.
+    """
+    return bool(_RECORD_NAME.match(name))
+
+
+def is_root_name(name: str) -> bool:
+    """Whether a file is named as a store names its note of a lockfile; a sync service's copy of one is not."""
+    return bool(_ROOT_NAME.match(name))
+
+
+def root_name(lockfile: Union[str, Path], machine: str = "") -> str:
+    """The name of a store's note of one lockfile: a hash of the machine and the lockfile's path.
+
+    Two machines can have a lockfile at one path, and each keeps its own
+    note. With no machine, the name a note had before notes named theirs.
+    """
+    path = os.path.abspath(lockfile)
+    key = f"{machine}\n{path}" if machine else path
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:32] + ".json"
+
+
+def this_machine(create: bool = True) -> str:
+    """The name this machine goes by in a store's notes of lockfiles (:func:`chartbook.config.get_machine_id`).
+
+    :param create: Whether to make it if there is none yet: only writing a note needs one.
+    """
+    from chartbook.config import get_machine_id
+
+    return get_machine_id(create=create)
+
+
+def root_document(lockfile: Union[str, Path], hashes: Iterable[str]) -> dict:
+    """A note of a lockfile on this machine, as a store keeps it."""
+    import socket
+
+    return {
+        "lockfile": os.path.abspath(lockfile),
+        "machine": this_machine(),
+        "host": socket.gethostname(),
+        "hashes": list(hashes),
+    }
+
+
+def read_root(stored: dict) -> Root:
+    """A note of a lockfile, from what a store kept.
+
+    :raises ValueError: If it is not a note a store writes, or a hash in it
+        is not a content hash. So may ``KeyError`` and ``TypeError``.
+    """
+    machine, host = stored.get("machine", ""), stored.get("host", "")
+    if not isinstance(machine, str) or not isinstance(host, str):
+        raise ValueError("its machine and host are not names")
+    root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host)
+    for content_hash in root.hashes:
+        _split_hash(content_hash)
+    return root
+
+
+def short_of(path: Path, size_bytes: int) -> Optional[int]:
+    """How many bytes an object's folder holds, when that is not what its record gives; None when it is.
+
+    An asset of several files holds the sum of their sizes. One that is a
+    single file may be in its object under more than one name, each the
+    whole file. Only sizes are looked at: nothing is read.
+    """
+    sizes = []
+    flat = True
+    for file in hashing.directory_files(path):
+        try:
+            sizes.append(file.stat().st_size)
+        except OSError:
+            sizes.append(0)  # a link whose file has gone
+        flat = flat and file.parent == path
+    total = sum(sizes)
+    if sizes and (total == size_bytes or (flat and all(size == size_bytes for size in sizes))):
+        return None
+    # A single file under several names, one of them cut short, is as short as that one
+    return min(sizes) if flat and sizes and total > size_bytes else total
 
 
 class Store(abc.ABC):
@@ -383,6 +493,17 @@ class Store(abc.ABC):
     @abc.abstractmethod
     def verify(self, content_hashes: Optional[Iterable[str]] = None) -> list["StoreProblem"]:
         """Hash objects again, and report each that is not what its name says."""
+
+    def incomplete(self, content_hash: str, size_bytes: Optional[int]) -> Optional[str]:
+        """Why an object the store has does not hold all of its bytes yet; None if it does, or if that cannot be told cheaply.
+
+        A record says how many bytes an asset has (``size_bytes``), and a
+        store in a folder a sync service keeps can have an object before
+        all of them have arrived. Asked of every pin and every read, so it
+        reads nothing; :meth:`verify` reads every byte. A store that cannot
+        tell without reading says None.
+        """
+        return None
 
     @abc.abstractmethod
     def add_root(self, lockfile: Union[str, Path], hashes: Iterable[str]) -> None:
@@ -459,11 +580,15 @@ class FolderStore(Store):
 
     def snapshot_files(self, commit: str, name: str) -> list[Path]:
         folder = self.snapshot_folder(commit, name)
-        return sorted(folder.glob("*.json")) if folder.is_dir() else []
+        if not folder.is_dir():
+            return []
+        return sorted(path for path in folder.glob("*.json") if is_record_name(path.name))
 
     def all_snapshot_files(self) -> list[Path]:
         directory = self.root / SNAPSHOTS_DIR
-        return sorted(directory.glob("*/*/*.json")) if directory.is_dir() else []
+        if not directory.is_dir():
+            return []
+        return sorted(path for path in directory.glob("*/*/*.json") if is_record_name(path.name))
 
     def write_snapshot(self, commit: str, name: str, stamp: str, document: dict) -> Path:
         folder = self.snapshot_folder(commit, name)
@@ -490,7 +615,7 @@ class FolderStore(Store):
             return False
         path.unlink()
         folder = path.parent
-        if not any(folder.glob("*.json")):
+        if not any(is_record_name(other.name) for other in folder.glob("*.json")):
             # The last record of this pipeline at this commit: its note of
             # origins goes too, and the folders if nothing else is in them. A
             # record another process is writing this moment is left alone.
@@ -738,16 +863,12 @@ class FolderStore(Store):
             pass
         return False
 
-    def _root_file(self, lockfile: Union[str, Path]) -> Path:
-        """Where the store notes one lockfile: a name made from its path."""
-        key = hashlib.sha256(os.path.abspath(lockfile).encode("utf-8")).hexdigest()
-        return self.root / ROOTS_DIR / f"{key[:32]}.json"
-
     def add_root(self, lockfile: Union[str, Path], hashes: Iterable[str]) -> None:
-        """Note that a lockfile names these objects, so that they are kept.
+        """Note that a lockfile on this machine names these objects, so that they are kept.
 
         Called whenever a lockfile is written. One note is kept per
-        lockfile, and a later call replaces it.
+        lockfile and machine, and a later call replaces it, as it does a
+        note of the same lockfile from before notes named their machine.
 
         :param lockfile: The path of a ``chartbook.lock``.
         :param hashes: The content hashes it names.
@@ -762,9 +883,7 @@ class FolderStore(Store):
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
         try:
             with open(temporary, "w", encoding="utf-8") as f:
-                json.dump(
-                    {"lockfile": os.path.abspath(lockfile), "hashes": hashes}, f, indent=1
-                )
+                json.dump(root_document(lockfile, hashes), f, indent=1)
                 f.write("\n")
             os.replace(temporary, note)
         except BaseException:
@@ -774,20 +893,32 @@ class FolderStore(Store):
             except OSError:
                 pass
             raise
+        try:
+            self._root_file(lockfile, machine="").unlink()
+        except FileNotFoundError:
+            pass
 
     def remove_root(self, lockfile: Union[str, Path]) -> bool:
-        """Forget a lockfile. Its objects are then kept by nothing.
+        """Forget a lockfile on this machine. Its objects are then kept by nothing.
 
         :returns: True if the store had a note of it.
         """
-        note = self._root_file(lockfile)
-        if not note.is_file():
-            return False
-        note.unlink()
-        return True
+        removed = False
+        for note in (self._root_file(lockfile, this_machine(create=False)), self._root_file(lockfile, machine="")):
+            if note.is_file():
+                note.unlink()
+                removed = True
+        return removed
+
+    def _root_file(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> Path:
+        """Where the store notes one lockfile of a machine; this machine's by default."""
+        return self.root / ROOTS_DIR / root_name(lockfile, this_machine() if machine is None else machine)
 
     def roots(self) -> list[Root]:
-        """Every lockfile the store has a note of, by path.
+        """Every lockfile the store has a note of, on every machine, by path.
+
+        A file in ``roots/`` that is not named as the store names a note
+        (a sync service's copy of one) is passed over.
 
         :raises StoreError: If a note cannot be read. Nothing should be
             removed from a store that cannot say what it is keeping.
@@ -798,16 +929,35 @@ class FolderStore(Store):
             return []
         found = []
         for note in sorted(directory.glob("*.json")):
+            if not is_root_name(note.name):
+                continue
             try:
                 with open(note, encoding="utf-8") as f:
-                    stored = json.load(f)
-                root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]))
-                for content_hash in root.hashes:
-                    _split_hash(content_hash)
+                    found.append(read_root(json.load(f)))
             except (OSError, ValueError, KeyError, TypeError) as error:
                 raise StoreError(f"Cannot read {note}: {error}") from None
-            found.append(root)
-        return sorted(found, key=lambda root: str(root.lockfile))
+        return sorted(found, key=lambda root: (str(root.lockfile), root.machine))
+
+    def incomplete(self, content_hash: str, size_bytes: Optional[int]) -> Optional[str]:
+        """Why an object does not hold all of its bytes yet, by the sizes of its files; None if it does.
+
+        A folder that a sync service keeps can have an object's files before
+        their bytes, or some of its files before the rest. The sizes are
+        compared with the record's, which reads nothing.
+        """
+        if not isinstance(size_bytes, int) or isinstance(size_bytes, bool):
+            return None
+        path = self.object_path(content_hash)
+        if not path.is_dir():
+            return None  # not there at all, which `has` says
+        held = short_of(path, size_bytes)
+        if held is None:
+            return None
+        return (
+            f"its object in the store at {self.root} has {held:,} bytes where its record says "
+            f"{size_bytes:,}: it is not fully synced yet. Wait for the sync to finish, and run "
+            f"this again (if it stays so, `chartbook store verify` says more)"
+        )
 
     def size_of(self, content_hash: str) -> int:
         """The total size in bytes of an object's files; 0 if it has none."""
