@@ -10,6 +10,7 @@ pipelines; that is the next part.
 import hashlib
 import json
 import os
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -1104,7 +1105,8 @@ class TestCommands:
         """Decided 2026-10-16: a lockfile never records a read of another pipeline's working folder."""
         for command in ("pin", "update"):
             result = CliRunner().invoke(main, [command, "--from-folder"])
-            assert result.exit_code == 2 and "No such option: --from-folder" in result.output
+            # Click words it "No such option: --from-folder" or "No such option '--from-folder'", by version
+            assert result.exit_code == 2 and re.search(r"No such option:? '?--from-folder", result.output)
         with pytest.raises(TypeError, match="from_folder"):
             lock.pin(downstream, here, from_folder=True)
         with pytest.raises(TypeError, match="from_folder"):
