@@ -67,6 +67,33 @@ def test_the_template_is_put_in_by_the_build_hook_not_a_force_include():
     assert (PYPROJECT.parent / "template" / "cookiecutter.json").is_file()
 
 
+def test_the_sdist_keeps_the_source_layout():
+    """A wheel built from the sdist is the wheel built from the checkout.
+
+    `packages = ["src/chartbook"]` for every target, and a `sources`
+    remapping, made the sdist strip `src/` (hatchling derives a `src/` -> ``
+    source from `packages`, and rewrites every path through it); the
+    sdist's own pyproject then pointed the wheel at a `src/chartbook` that
+    was not there, and the wheel had no code. Only the wheel collapses
+    `src/`, by its own `packages`.
+    """
+    import pathspec
+
+    build = _build_config()
+    for option in ("packages", "include", "sources", "only-include"):
+        assert option not in build, f"[tool.hatch.build] {option} reaches the sdist too"
+    wheel, sdist = build["targets"]["wheel"], build["targets"]["sdist"]
+    assert wheel["packages"] == ["src/chartbook"]
+    assert "sources" not in wheel
+    # Nothing that would make hatchling rewrite the sdist's paths
+    assert "packages" not in sdist and "sources" not in sdist
+    included = pathspec.GitIgnoreSpec.from_lines(sdist["include"])
+    for path in ("src/chartbook/__init__.py", "src/chartbook/skills/SKILL.md", "src/chartbook/built_from.txt"):
+        assert included.match_file(path), path
+    # The template comes in from hatch_build.py, only the files git tracks
+    assert not included.match_file("template/cookiecutter.json")
+
+
 def test_cookiecutter_is_a_dependency_of_its_own():
     """`chartbook init` renders with it directly, and the template's questions need 2.2's __prompts__."""
     assert "cookiecutter>=2.2" in _project()["dependencies"]

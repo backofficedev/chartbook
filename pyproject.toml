@@ -133,15 +133,19 @@ tests = ["tests", "*/chartbook/tests"]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-packages = ["src/chartbook"]
-include = ["src/chartbook/data/**"]
-
+# The wheel alone collapses src/: `packages` there ships src/chartbook as
+# chartbook. Set for every target (as it was, with a `sources` remapping),
+# it made the sdist strip src/ too, and a wheel built from that sdist, whose
+# pyproject still points at src/chartbook, had no code in it.
 [tool.hatch.build.targets.wheel]
 packages = ["src/chartbook"]
 
-[tool.hatch.build.targets.wheel.sources]
-src = ""
+# The sdist keeps the source layout, so that a wheel built from it is the
+# wheel built from the checkout: src/chartbook here; pyproject.toml, the
+# README, the licence and hatch_build.py come with every sdist; template/
+# and src/chartbook/built_from.txt are put in by hatch_build.py.
+[tool.hatch.build.targets.sdist]
+include = ["/src/chartbook"]
 
 # hatch_build.py: the project template `chartbook init` renders comes with
 # the package, so the two always match (chartbook.scaffold.find_template):
