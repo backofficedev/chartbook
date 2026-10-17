@@ -2775,9 +2775,12 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
 def init(use_git, use_github, public):
     """Initialize a new chartbook project from the cookiecutter template.
 
-    The template is the `template/` folder of ChartBook's repository. It is
-    rendered with cruft, so `cruft update` in the new project brings in
-    later changes to it.
+    The template is the one that came with this ChartBook (the `template/`
+    folder of ChartBook's repository, which the package carries), so the
+    two always match, and rendering it needs no network. The new project's
+    `.cruft.json` names the template on GitHub and the commit this
+    ChartBook was built from, so `cruft update` there brings in later
+    changes to it.
 
     With --git, the new project is also made a git repository with one
     commit. With --github, a GitHub repository is then created for it under
@@ -2794,18 +2797,16 @@ def init(use_git, use_github, public):
         chartbook init --github --public
     """
     try:
-        import cruft  # noqa: F401
+        import cookiecutter  # noqa: F401
     except ImportError:
-        click.echo("Error: cruft is not installed.", err=True)
+        click.echo("Error: cookiecutter is not installed.", err=True)
         click.echo("", err=True)
         click.echo(
-            "cruft ships with chartbook, so this usually means a broken or"
+            "cookiecutter ships with chartbook (through cruft), so this usually means a broken or"
             " partial installation. Reinstall with:", err=True
         )
         click.echo("    pip install --force-reinstall chartbook", err=True)
         raise SystemExit(1)
-
-    import subprocess
 
     from chartbook import scaffold
 
@@ -2833,35 +2834,40 @@ def init(use_git, use_github, public):
                 err=True,
             )
 
-    def not_rendered(code):
-        # The template's own message is above cruft's traceback, a hundred
-        # lines up; its advice is said again where it is seen. The name
-        # made from the project's name may be refused too ("2024 Rates")
+    # The template that came with this ChartBook, rendered here: no network
+    from cookiecutter.exceptions import CookiecutterException
+
+    try:
+        rendered = scaffold.render(cwd)
+    except KeyboardInterrupt:
+        raise SystemExit(130)
+    except scaffold.ScaffoldError as e:
+        fail(e)
+    except CookiecutterException as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        # The template's own message is above; its advice is said again
+        # last, where it is seen. The name made from the project's name may
+        # be refused too ("2024 Rates")
         click.echo(
             "If the folder name was refused, run `chartbook init` again and, at the second "
             "question, press Enter, or type a name of lowercase letters, digits and `_`.",
             err=True,
         )
-        raise SystemExit(code)
+        raise SystemExit(1)
+    project_dir = rendered.project_dir
+    if rendered.commit is None:
+        click.echo(
+            f"Note: this ChartBook does not know the commit of {scaffold.TEMPLATE_REPOSITORY} it was "
+            f"built from, so {project_dir.name}/{scaffold.CRUFT_MARKER} has none, and `cruft update` "
+            f"needs one. Set \"commit\" in it to that commit, the one your ChartBook's version was "
+            f"released from, before you run `cruft update`.",
+            err=True,
+        )
 
     if not use_git:
-        try:
-            rendered = subprocess.run(scaffold.template_command())
-        except KeyboardInterrupt:
-            raise SystemExit(130)
-        if rendered.returncode != 0:
-            not_rendered(rendered.returncode)
         return
 
-    # The project's directory is named from an answer at cruft's prompt, so
-    # it is identified afterwards as the one that was not here before
-    before = scaffold.rendered_projects(cwd)
-    rendered = subprocess.run(scaffold.template_command())
-    if rendered.returncode != 0:
-        not_rendered(rendered.returncode)
-
     try:
-        project_dir = scaffold.find_new_project(cwd, before)
         scaffold.git_init_and_commit(project_dir)
         click.echo(f"Initialized a git repository in {project_dir} with one commit.")
         if use_github:

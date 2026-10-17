@@ -43,10 +43,20 @@ This template allows you to generate a customized data science project with:
 ### Generate a New Project
 
 ```bash
-cruft create https://github.com/backofficedev/chartbook --directory template
+chartbook init
 ```
 
-This creates your project and a `.cruft.json` file that tracks the template version, enabling future updates.
+`chartbook init` renders the copy of this template that came with your ChartBook, with no network,
+and writes a `.cruft.json` that tracks the template's version on GitHub, enabling future updates. The
+project's environment files ask for your ChartBook's version or later (the template's private variable
+`_chartbook_version`).
+
+Rendered with cruft instead, it comes from GitHub's main branch, and `_chartbook_version` keeps its
+default in `cookiecutter.json`:
+
+```bash
+cruft create https://github.com/backofficedev/chartbook --directory template
+```
 
 You will be prompted for:
 - Project name, and the folder name, which is made from it (press Enter to keep it)

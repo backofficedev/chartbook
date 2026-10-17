@@ -1120,15 +1120,36 @@ class TestTheQuestions:
         assert "chartbook" not in steps
 
     @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
-    def test_it_asks_for_the_chartbook_that_renders_it(self, template_dir, temp_dir, manager):
-        """The ChartBook that renders the template must satisfy the project's own requirement.
+    def test_the_floor_is_whatever_version_renders_it(self, temp_dir, manager, monkeypatch, capfd):
+        """Not the template's default: a ChartBook of another version asks for that one.
 
-        `chartbook>=0.1.0` let in versions older than the newest release.
-        A floor above this ChartBook's own version (`>=0.2.1` while it says
-        0.2.0) shuts out a ChartBook installed from GitHub, which says 0.2.0
-        too and is the only one that reads `[scripts]` until a release. And
-        no file may pin a Polars older than the one ChartBook needs, or the
-        environment does not resolve.
+        And the step that installs ChartBook from GitHub is only for a
+        ChartBook calling itself 0.2.0, which the 0.2.0 on PyPI is not.
+        """
+        from chartbook import scaffold
+
+        monkeypatch.setattr("chartbook.__about__.__version__", "9.8.7")
+        project = scaffold.render(temp_dir, no_input=True, answers={**WITH_CHARTBOOK, "environment_manager": manager})
+        project = project.project_dir
+        floors = {
+            "pip": [("requirements.txt", "chartbook>=9.8.7")],
+            "conda": [("requirements.txt", "chartbook>=9.8.7"), ("environment.yml", "- chartbook>=9.8.7")],
+            "uv": [("pyproject.toml", '"chartbook>=9.8.7"')],
+            "pixi": [("pixi.toml", 'chartbook = ">=9.8.7"')],
+        }[manager]
+        for name, floor in floors:
+            assert floor in (project / name).read_text(), name
+        assert "git+https://github.com/backofficedev/chartbook" not in (project / "README.md").read_text()
+        assert "git+https://github.com/backofficedev/chartbook" not in capfd.readouterr().out
+
+    @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
+    def test_it_asks_for_the_chartbook_that_renders_it(self, template_dir, temp_dir, manager):
+        """The project asks for the ChartBook that rendered it, or later: `chartbook init` passes its version.
+
+        `chartbook>=0.1.0` let in versions older than the newest release,
+        and a fixed floor goes out of date with each one. And no file may
+        pin a Polars older than the one ChartBook needs, or the environment
+        does not resolve.
         """
         import chartbook
         import tomli
@@ -1136,7 +1157,10 @@ class TestTheQuestions:
         from packaging.specifiers import SpecifierSet
         from packaging.version import Version
 
-        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": manager}))
+        from chartbook import scaffold
+
+        answers = {**WITH_CHARTBOOK, "environment_manager": manager}
+        project = scaffold.render(temp_dir, no_input=True, answers=answers).project_dir
         found = {}  # file -> {package: specifier}
 
         def keep(where, line):
@@ -1168,8 +1192,6 @@ class TestTheQuestions:
         )
         for where, specifiers in found.items():
             if "chartbook" in specifiers:
-                wanted = specifiers["chartbook"]
-                assert wanted.contains(chartbook.__version__), f"{where}: chartbook{wanted}"
-                assert not wanted.contains("0.1.1"), f"{where}: chartbook{wanted}"
+                assert specifiers["chartbook"] == SpecifierSet(f">={chartbook.__version__}"), where
             if "polars" in specifiers:
                 assert specifiers["polars"].contains(polars_floor), f"{where}: polars{specifiers['polars']}"

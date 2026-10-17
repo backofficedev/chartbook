@@ -1,8 +1,10 @@
 """Tests for ``chartbook init --git`` / ``--github``.
 
-``git``, ``gh`` and ``cruft`` are replaced by a fake ``subprocess.run`` that
-records every command, so these tests assert on what would be run and in
-what order. Two tests at the end use real git.
+``git`` and ``gh`` are replaced by a fake ``subprocess.run``, and rendering
+the template by a fake ``scaffold.render``; together they record every
+command, so these tests assert on what would be run and in what order. The
+tests at the end use real git, and render the real template, which comes
+with the package.
 """
 
 import shutil
@@ -17,16 +19,18 @@ from chartbook.cli import main
 from chartbook.identity import clear_git_remote_cache
 from chartbook.manifest import load_manifest
 
-# The template is the `template/` folder of this repository
-TEMPLATE = ["https://github.com/backofficedev/chartbook", "--directory", "template"]
+#: A commit the stand-in for rendering says the template came from
+COMMIT = "0123456789abcdef0123456789abcdef01234567"
 
 
 class FakeTools:
-    """Stands in for cruft, git and gh.
+    """Stands in for rendering the template, and for git and gh.
 
-    ``cruft create`` renders a project directory named by ``project_name``,
-    as the real one names it from the user's answers. Any command whose
-    leading words are in ``failing`` returns a nonzero exit code.
+    Rendering (``scaffold.render``, recorded as the command ``["render"]``)
+    makes a project directory named by ``project_name``, as the real one
+    names it from the user's answers. Any command whose leading words are in
+    ``failing`` returns a nonzero exit code; a failing ``render`` raises what
+    cookiecutter raises when a hook stops it.
     """
 
     def __init__(self, cwd: Path):
@@ -35,7 +39,8 @@ class FakeTools:
         self.installed = {"git", "gh"}
         self.failing: dict[tuple[str, ...], str] = {}
         self.project_name = "my_data_science_project"
-        self.render = True
+        # The commit the template came from, as this ChartBook knows it
+        self.commit = COMMIT
         self.remote_url = None
         # The repository the working directory is inside, if any
         self.outer_repo = None
@@ -46,6 +51,14 @@ class FakeTools:
 
     def which(self, name):
         return f"/usr/bin/{name}" if name in self.installed else None
+
+    def render_template(self, output_dir, **kwargs):
+        from cookiecutter.exceptions import FailedHookException
+
+        result = self.run(["render"], cwd=output_dir)
+        if result.returncode != 0:
+            raise FailedHookException("Hook script failed (exit status: 1)")
+        return scaffold.Rendered(Path(output_dir) / self.project_name, self.commit)
 
     def run(self, command, cwd=None, **kwargs):
         cwd = Path(cwd) if cwd is not None else self.cwd
@@ -63,7 +76,7 @@ class FakeTools:
             return subprocess.CompletedProcess(
                 command, 0, stdout=f"{self.outer_repo}\n", stderr=""
             )
-        if command[0] == "cruft" and self.render:
+        if command[0] == "render":
             project = self.cwd / self.project_name
             project.mkdir()
             (project / ".cruft.json").write_text("{}")
@@ -125,6 +138,7 @@ def tools(tmp_path, monkeypatch):
     fake = FakeTools(workdir.resolve())
     monkeypatch.setattr(subprocess, "run", fake.run)
     monkeypatch.setattr(shutil, "which", fake.which)
+    monkeypatch.setattr(scaffold, "render", fake.render_template)
     clear_git_remote_cache()
     yield fake
     clear_git_remote_cache()
@@ -135,17 +149,27 @@ def _init(*args):
 
 
 class TestPlainInit:
-    def test_runs_only_cruft(self, tools):
+    def test_only_renders(self, tools):
         result = _init()
         assert result.exit_code == 0, result.output
-        assert tools.commands() == [["cruft", "create", *TEMPLATE]]
-        assert scaffold.template_command() == ["cruft", "create", *TEMPLATE]
+        assert tools.commands() == [["render"]]
+        assert "cruft update" not in result.output
 
     def test_the_template_is_in_this_repository(self):
         """Where `chartbook init` says it is, there is a cookiecutter template."""
         template = Path(__file__).parent.parent / scaffold.TEMPLATE_DIRECTORY
         assert (template / "cookiecutter.json").is_file()
         assert (template / "{{cookiecutter.project_slug}}" / "chartbook.toml").is_file()
+        # ...and it is the one this ChartBook, run from its source, renders
+        assert scaffold.find_template() == template.resolve()
+
+    def test_with_no_commit_known_it_says_what_cruft_update_needs(self, tools):
+        tools.commit = None
+        result = _init()
+        assert result.exit_code == 0, result.output
+        said = " ".join(result.output.split())
+        assert "my_data_science_project/.cruft.json has none, and `cruft update` needs one" in said
+        assert 'Set "commit" in it to that commit' in said
 
     def test_git_and_github_are_off_by_default(self, tools):
         _init()
@@ -154,9 +178,8 @@ class TestPlainInit:
 
     @pytest.mark.parametrize("flags", [(), ("--git",)])
     def test_a_refused_folder_name_is_said_again_last(self, tools, flags):
-        """The template's own message is above cruft's traceback, about 118 lines of it."""
-        tools.failing[("cruft",)] = "Traceback (most recent call last): ..."
-        tools.render = False
+        """The template's own message is above cookiecutter's (cruft's traceback was about 118 lines)."""
+        tools.failing[("render",)] = "Traceback (most recent call last): ..."
         result = _init(*flags)
         assert result.exit_code == 1
         # Enter is not always the answer: "2024 Rates" makes `2024_rates`, refused too
@@ -206,8 +229,8 @@ class TestGit:
         assert ["git", "init"] in tools.commands("git")
         assert tools.ran("git", "commit")
 
-    def test_project_directory_is_found_not_guessed(self, tools):
-        """The directory is named by an answer at cruft's prompt."""
+    def test_git_is_set_up_in_the_project_rendered(self, tools):
+        """The directory is named by an answer at the prompt; rendering says which it is."""
         tools.project_name = "whatever_the_user_typed"
         # A project rendered earlier must not be mistaken for the new one
         older = tools.cwd / "an_older_project"
@@ -222,7 +245,7 @@ class TestGit:
 
     def test_checks_git_before_rendering(self, tools):
         _init("--git")
-        assert tools.index_of("git", "var", "GIT_AUTHOR_IDENT") < tools.index_of("cruft")
+        assert tools.index_of("git", "var", "GIT_AUTHOR_IDENT") < tools.index_of("render")
 
     def test_without_git_installed_nothing_is_created(self, tools):
         tools.installed = {"gh"}
@@ -230,7 +253,7 @@ class TestGit:
         assert result.exit_code == 1
         assert "git is not installed" in result.output
         assert "https://git-scm.com/downloads" in result.output
-        assert not tools.ran("cruft")
+        assert not tools.ran("render")
         assert list(tools.cwd.iterdir()) == []
 
     def test_without_a_git_identity_nothing_is_created(self, tools):
@@ -239,22 +262,12 @@ class TestGit:
         assert result.exit_code == 1
         assert "git config --global user.name" in result.output
         assert "git config --global user.email" in result.output
-        assert not tools.ran("cruft")
+        assert not tools.ran("render")
 
-    def test_cruft_failure_stops_before_git(self, tools):
-        tools.failing[("cruft",)] = "aborted"
-        tools.render = False
+    def test_a_render_that_fails_stops_before_git(self, tools):
+        tools.failing[("render",)] = "aborted"
         result = _init("--git")
         assert result.exit_code == 1
-        assert not tools.ran("git", "init")
-
-    def test_unidentifiable_project_is_reported(self, tools):
-        tools.render = False
-        result = _init("--git")
-        assert result.exit_code == 1
-        assert "Could not tell which directory the template was rendered into" in (
-            result.output
-        )
         assert not tools.ran("git", "init")
 
     def test_commit_failure_says_how_to_finish(self, tools):
@@ -294,7 +307,7 @@ class TestGitHub:
     def test_implies_git_and_pushes_after_the_commit(self, tools):
         _init("--github")
         assert (
-            tools.index_of("cruft")
+            tools.index_of("render")
             < tools.index_of("git", "init")
             < tools.index_of("git", "commit")
             < tools.index_of("gh", "repo", "create")
@@ -316,7 +329,7 @@ class TestGitHub:
         _init("--github")
         assert tools.ran("gh", "auth", "status", "--hostname", "github.com")
         assert not tools.ran("gh", "auth", "login")
-        assert tools.index_of("gh", "auth", "status") < tools.index_of("cruft")
+        assert tools.index_of("gh", "auth", "status") < tools.index_of("render")
 
     def test_respects_gh_host(self, tools, monkeypatch):
         monkeypatch.setenv("GH_HOST", "github.example.edu")
@@ -330,7 +343,7 @@ class TestGitHub:
         assert "GitHub CLI (gh), which is not installed" in result.output
         assert "https://cli.github.com" in result.output
         assert "gh auth login" in result.output
-        assert not tools.ran("cruft")
+        assert not tools.ran("render")
         assert not tools.ran("git", "init")
         assert list(tools.cwd.iterdir()) == []
 
@@ -340,7 +353,7 @@ class TestGitHub:
         assert result.exit_code == 1
         assert "needs gh to be logged in to github.com" in result.output
         assert "Run 'gh auth login'" in result.output
-        assert not tools.ran("cruft")
+        assert not tools.ran("render")
         assert not tools.ran("gh", "repo", "create")
         assert list(tools.cwd.iterdir()) == []
 
@@ -372,21 +385,6 @@ class TestGitHub:
         assert result.exit_code == 0, result.output
         assert "Pipeline ID" not in result.output
         assert load_manifest(tools.project)["project"]["id"] == "my_pipeline"
-
-
-class TestFindNewProject:
-    def test_two_new_projects_is_ambiguous(self, tmp_path):
-        for name in ("a", "b"):
-            (tmp_path / name).mkdir()
-            (tmp_path / name / ".cruft.json").write_text("{}")
-        with pytest.raises(scaffold.ScaffoldError, match="a, b"):
-            scaffold.find_new_project(tmp_path, before=set())
-
-    def test_directories_without_the_marker_are_ignored(self, tmp_path):
-        (tmp_path / "not_a_project").mkdir()
-        (tmp_path / "project").mkdir()
-        (tmp_path / "project" / ".cruft.json").write_text("{}")
-        assert scaffold.find_new_project(tmp_path, before=set()) == tmp_path / "project"
 
 
 needs_git = pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
@@ -456,3 +454,128 @@ def test_real_remote_gives_the_pipeline_its_scope(tmp_path, real_git):
         clear_git_remote_cache()
         assert load_manifest(project)["project"]["id"] == "octo/my_pipeline"
         _git(project, "remote", "remove", "origin")
+
+
+REPOSITORY = Path(__file__).parent.parent
+
+
+def _template_copy(destination: Path) -> Path:
+    """A copy of this repository's template at *destination*."""
+    shutil.copytree(REPOSITORY / "template", destination)
+    return destination
+
+
+class TestTheTemplateThatCameWithIt:
+    """`chartbook init` renders the template that came with this ChartBook, with no network."""
+
+    def test_a_wheel_carries_it_in_the_package(self, tmp_path):
+        """The layout `[tool.hatch.build.targets.wheel.force-include]` makes, with the commit the build recorded."""
+        package = tmp_path / "site-packages" / "chartbook"
+        package.mkdir(parents=True)
+        _template_copy(package / "template")
+        assert scaffold.find_template(package) == package / "template"
+        assert scaffold.template_commit(package) is None
+        (package / scaffold.BUILT_FROM).write_text(COMMIT + "\n")
+        assert scaffold.template_commit(package) == COMMIT
+
+    def test_a_source_checkout_has_it_beside_src(self, tmp_path):
+        package = tmp_path / "checkout" / "src" / "chartbook"
+        package.mkdir(parents=True)
+        _template_copy(tmp_path / "checkout" / "template")
+        assert scaffold.find_template(package) == tmp_path / "checkout" / "template"
+        # Not a git checkout: the commit is not known
+        assert scaffold.template_commit(package) is None
+
+    def test_a_template_beside_an_installed_package_is_not_taken(self, tmp_path):
+        """Only `src/` makes a folder a source checkout."""
+        package = tmp_path / "lib" / "site-packages" / "chartbook"
+        package.mkdir(parents=True)
+        _template_copy(tmp_path / "lib" / "template")
+        with pytest.raises(scaffold.ScaffoldError, match="no project template"):
+            scaffold.find_template(package)
+
+    @needs_git
+    def test_a_source_checkout_is_asked_for_its_commit(self, tmp_path, real_git, monkeypatch):
+        checkout = tmp_path / "checkout"
+        package = checkout / "src" / "chartbook"
+        package.mkdir(parents=True)
+        _template_copy(checkout / "template")
+        _git(checkout, "init", "--quiet")
+        _git(checkout, "add", "-A")
+        _git(checkout, "commit", "--quiet", "-m", "Template")
+        head = _git(checkout, "rev-parse", "HEAD").strip()
+        # Where the environment points git elsewhere, as inside a git hook
+        monkeypatch.setenv("GIT_DIR", str(tmp_path / "elsewhere.git"))
+        assert scaffold.template_commit(package) == head
+
+    @needs_git
+    def test_a_checkout_inside_another_repository_is_not_that_repository(self, tmp_path, real_git):
+        outer = tmp_path / "outer"
+        package = outer / "unpacked" / "src" / "chartbook"
+        package.mkdir(parents=True)
+        _template_copy(outer / "unpacked" / "template")
+        (outer / "README.md").write_text("Someone else's repository\n")
+        _git(outer, "init", "--quiet")
+        _git(outer, "add", "README.md")
+        _git(outer, "commit", "--quiet", "-m", "Theirs")
+        assert scaffold.template_commit(package) is None
+
+    def test_init_renders_it_with_no_network(self, tmp_path, monkeypatch):
+        """Pressing Enter at every question: the template is read from this package, and nothing is cloned."""
+        import json
+        import socket
+
+        import git
+
+        def no_network(*args, **kwargs):
+            raise AssertionError("chartbook init reached for the network")
+
+        monkeypatch.setattr(git.Repo, "clone_from", no_network)
+        monkeypatch.setattr(socket.socket, "connect", no_network)
+        monkeypatch.setattr(scaffold, "template_commit", lambda package_dir=None: COMMIT)
+        monkeypatch.chdir(tmp_path)
+        result = CliRunner().invoke(main, ["init"], input="\n" * 30)
+        assert result.exit_code == 0, result.output
+        project = tmp_path / "my_data_science_project"
+        assert (project / "chartbook.toml").is_file()
+        state = json.loads((project / ".cruft.json").read_text())
+        assert state["template"] == "https://github.com/backofficedev/chartbook"
+        assert state["directory"] == "template"
+        assert state["commit"] == COMMIT
+        assert state["checkout"] is None and state["skip"] == []
+        answers = state["context"]["cookiecutter"]
+        assert answers["project_slug"] == "my_data_science_project"
+        assert answers["_template"] == "https://github.com/backofficedev/chartbook" and answers["_commit"] == COMMIT
+        # The floor is the ChartBook that rendered it
+        from chartbook import __version__
+
+        assert answers["_chartbook_version"] == __version__
+        assert f"chartbook>={__version__}" in (project / "requirements.txt").read_text()
+
+    @needs_git
+    def test_cruft_reads_the_file_it_writes(self, tmp_path, real_git, monkeypatch):
+        """`cruft check` clones the template named in `.cruft.json` and compares commits.
+
+        Here the template is a local repository holding this one's
+        `template/`, so it runs with no network; the file is otherwise as
+        `chartbook init` writes it.
+        """
+        import json
+
+        import cruft
+
+        upstream = tmp_path / "upstream"
+        _template_copy(upstream / "template")
+        _git(upstream, "init", "--quiet")
+        _git(upstream, "add", "-A")
+        _git(upstream, "commit", "--quiet", "-m", "Template")
+        head = _git(upstream, "rev-parse", "HEAD").strip()
+        monkeypatch.setattr(scaffold, "template_commit", lambda package_dir=None: head)
+        out = tmp_path / "projects"
+        out.mkdir()
+        project = scaffold.render(out, no_input=True).project_dir
+        cruft_file = project / ".cruft.json"
+        state = json.loads(cruft_file.read_text())
+        state["template"] = str(upstream)
+        cruft_file.write_text(json.dumps(state))
+        assert cruft.check(project) is True

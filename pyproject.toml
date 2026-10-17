@@ -61,7 +61,10 @@ dependencies = [
     "sphinx-copybutton>=0.5.2",
     "sphinx_design>=0.6.1",
     "sphinx_external_toc>=1.0.1",
-    # Project scaffolding (chartbook init)
+    # Project scaffolding: chartbook init renders with cookiecutter (2.2
+    # reads the template's __prompts__), and a project follows the template
+    # with cruft
+    "cookiecutter>=2.2",
     "cruft",
 ]
 
@@ -139,6 +142,19 @@ packages = ["src/chartbook"]
 
 [tool.hatch.build.targets.wheel.sources]
 src = ""
+
+# The project template `chartbook init` renders comes with the package, so
+# the two always match (chartbook.scaffold.find_template)
+[tool.hatch.build.targets.wheel.force-include]
+"template" = "chartbook/template"
+
+# ...and with the sdist, so that a wheel built from it has it too
+[tool.hatch.build.targets.sdist.force-include]
+"template" = "template"
+
+# hatch_build.py: records the commit a wheel or sdist is built from, in
+# chartbook/built_from.txt, for the .cruft.json `chartbook init` writes
+[tool.hatch.build.hooks.custom]
 
 [tool.hatch.envs.hatch-test]
 # Use dev-mode to install local chartbook from src/ (base deps now include

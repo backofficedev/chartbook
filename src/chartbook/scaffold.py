@@ -5,9 +5,18 @@ is the ``template/`` folder of ChartBook's own repository
 (:data:`TEMPLATE_REPOSITORY`, :data:`TEMPLATE_DIRECTORY`). It lives beside
 the code so that a command the template uses and the command itself change
 in one pull request, and so that the tests here build a freshly rendered
-project. It is rendered with cruft, which records where the project came
-from in ``.cruft.json``, so ``cruft update`` can bring in later changes. With
-``--git`` it also runs ``git init`` and makes the first commit; with
+project. It comes with the package (a wheel carries it as
+``chartbook/template``; a source checkout has it beside ``src/``), so the
+template a project gets is always the one this ChartBook was made with, and
+rendering it needs no network (:func:`find_template`, :func:`render`).
+
+It is rendered with cookiecutter, and ``.cruft.json`` is written as cruft
+writes it, naming the repository on GitHub, its ``template`` folder and the
+commit this ChartBook was built from (:func:`template_commit`), so ``cruft
+update`` and ``cruft check`` follow the template from there. cruft itself
+would clone the template, which a wheel's folder is not.
+
+With ``--git`` it also runs ``git init`` and makes the first commit; with
 ``--github`` it then creates a GitHub repository and pushes that commit.
 These are the same three commands every time, run here through ``git`` and
 ``gh`` as subprocesses, with the user's existing configuration and login.
@@ -18,9 +27,12 @@ Everything that can be checked is checked *before* the template is rendered
 
 from __future__ import annotations
 
+import importlib.resources
+import json
 import os
 import shutil
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -38,10 +50,13 @@ TEMPLATE_REPOSITORY = "https://github.com/backofficedev/chartbook"
 #: The folder of that repository that is the template.
 TEMPLATE_DIRECTORY = "template"
 
+#: The file a built package carries the commit it was built from in, beside
+#: its modules (written by ``hatch_build.py`` at the repository's root).
+BUILT_FROM = "built_from.txt"
 
-def template_command() -> list[str]:
-    """The command that renders a new project from the template."""
-    return ["cruft", "create", TEMPLATE_REPOSITORY, "--directory", TEMPLATE_DIRECTORY]
+#: The template's private variable for the ChartBook that rendered it: the
+#: new project's environment files ask for this version or later.
+VERSION_VARIABLE = "_chartbook_version"
 
 
 class ScaffoldError(Exception):
@@ -119,36 +134,143 @@ def preflight(cwd: Path, use_github: bool) -> None:
         )
 
 
-def rendered_projects(cwd: Path) -> set[Path]:
-    """The cruft-rendered projects directly inside *cwd*."""
-    return {
-        child
-        for child in cwd.iterdir()
-        if child.is_dir() and (child / CRUFT_MARKER).is_file()
-    }
+def _package_dir() -> Path:
+    """This package's folder, as installed."""
+    return Path(str(importlib.resources.files("chartbook")))
 
 
-def find_new_project(cwd: Path, before: set[Path]) -> Path:
-    """Find the project cruft just rendered into *cwd*.
+def find_template(package_dir: Optional[Path] = None) -> Path:
+    """The project template that came with this ChartBook: the folder holding ``cookiecutter.json``.
 
-    The directory is named from an answer given at cruft's prompt, so it is
-    found afterwards — the one rendered project that was not there before —
-    rather than guessed.
+    A wheel carries it in the package as ``chartbook/template``. A source
+    checkout, which an editable install runs from, has it as ``template/``
+    beside ``src/``.
 
-    :param cwd: The directory cruft was run in.
-    :param before: :func:`rendered_projects` of *cwd* from before it ran.
-    :returns: The new project's directory.
-    :raises ScaffoldError: If there is not exactly one new project.
+    :param package_dir: The package's folder; this ChartBook's by default.
+    :raises ScaffoldError: If neither is there, as in a broken install.
     """
-    new = sorted(rendered_projects(cwd) - before)
-    if len(new) == 1:
-        return new[0]
-    found = ", ".join(p.name for p in new) if new else "none"
+    package_dir = Path(package_dir) if package_dir is not None else _package_dir()
+    candidates = [package_dir / TEMPLATE_DIRECTORY]
+    if package_dir.parent.name == "src":
+        candidates.append(package_dir.parent.parent / TEMPLATE_DIRECTORY)
+    for candidate in candidates:
+        if (candidate / "cookiecutter.json").is_file():
+            return candidate
     raise ScaffoldError(
-        f"Could not tell which directory the template was rendered into "
-        f"(new projects found in {cwd}: {found}), so git was not initialized. "
-        f"Run 'git init' in the new project yourself."
+        f"This ChartBook has no project template (looked in {', '.join(map(str, candidates))}). "
+        f"Reinstall it: pip install --force-reinstall chartbook"
     )
+
+
+def template_commit(package_dir: Optional[Path] = None) -> Optional[str]:
+    """The commit of ChartBook's repository that the template came from, or None if it is not known.
+
+    A built package records it (``built_from.txt``, written at build time).
+    A source checkout is asked with git for its ``HEAD``, without the
+    environment's git location variables, as other reads of a repository
+    here are.
+    """
+    package_dir = Path(package_dir) if package_dir is not None else _package_dir()
+    template = find_template(package_dir)
+    if template.parent == package_dir:
+        recorded = package_dir / BUILT_FROM
+        if recorded.is_file():
+            return recorded.read_text(encoding="utf-8").strip() or None
+        return None
+    from chartbook.gitcache import GIT_LOCATION_VARIABLES
+
+    checkout = template.parent
+    environment = {k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARIABLES}
+
+    def git(*arguments) -> Optional[str]:
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(checkout), *arguments],
+                capture_output=True,
+                text=True,
+                env=environment,
+                timeout=30,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return result.stdout.strip() if result.returncode == 0 else None
+
+    # The checkout's own repository, not one it happens to sit inside
+    top = git("rev-parse", "--show-toplevel")
+    if not top or Path(top).resolve() != checkout.resolve():
+        return None
+    return git("rev-parse", "HEAD") or None
+
+
+@dataclass(frozen=True)
+class Rendered:
+    """A project :func:`render` made: its folder, and the template commit its ``.cruft.json`` names."""
+
+    project_dir: Path
+    commit: Optional[str]
+
+
+def render(
+    output_dir: Path,
+    no_input: bool = False,
+    answers: Optional[dict] = None,
+    package_dir: Optional[Path] = None,
+) -> Rendered:
+    """Render a new project from the template that came with this ChartBook, into *output_dir*.
+
+    The questions are asked as cookiecutter asks them (``no_input`` takes
+    the defaults, and *answers*, by name), and the template's hooks run.
+    The template's private ``_chartbook_version`` is this ChartBook's
+    version, which the project's environment files ask for at least. Then
+    ``.cruft.json`` is written as ``cruft create`` writes it.
+
+    :raises cookiecutter.exceptions.CookiecutterException: If cookiecutter
+        refuses, as when a hook stops it (the template's own hooks print why).
+    """
+    from cookiecutter.config import get_user_config
+    from cookiecutter.generate import generate_context, generate_files
+    from cookiecutter.prompt import prompt_for_config
+
+    from chartbook.__about__ import __version__
+
+    template = find_template(package_dir)
+    commit = template_commit(package_dir)
+    context = generate_context(
+        context_file=str(template / "cookiecutter.json"),
+        default_context=get_user_config()["default_context"],
+        extra_context={**(answers or {}), VERSION_VARIABLE: __version__},
+    )
+    context["cookiecutter"] = prompt_for_config(context, no_input)
+    # What cruft adds, so that the context is the one `cruft create` would record
+    context["cookiecutter"]["_template"] = TEMPLATE_REPOSITORY
+    context["cookiecutter"]["_commit"] = commit
+    project_dir = Path(
+        generate_files(repo_dir=str(template), context=context, overwrite_if_exists=False, output_dir=str(output_dir))
+    )
+    write_cruft_file(project_dir, context, commit)
+    return Rendered(project_dir, commit)
+
+
+def write_cruft_file(project_dir: Path, context: dict, commit: Optional[str]) -> Path:
+    """Write ``.cruft.json`` as ``cruft create`` does, naming the template on GitHub.
+
+    ``cruft update`` and ``cruft check`` read it, and clone the template from
+    :data:`TEMPLATE_REPOSITORY` at ``commit``. With no commit known it holds
+    ``null``, which ``cruft update`` cannot start from: ``chartbook init``
+    says so.
+    """
+    state = {
+        "template": TEMPLATE_REPOSITORY,
+        "commit": commit,
+        "checkout": None,
+        "context": context,
+        "directory": TEMPLATE_DIRECTORY,
+        "skip": [],
+    }
+    path = Path(project_dir) / CRUFT_MARKER
+    # cruft's own layout (cruft._commands.utils.cruft.json_dumps)
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=2, separators=(",", ": ")) + "\n", encoding="utf-8")
+    return path
 
 
 def git_init_and_commit(project_dir: Path) -> None:

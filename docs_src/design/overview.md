@@ -1571,7 +1571,7 @@ repository, `cookiecutter_chartbook`.
 | What | Where |
 |---|---|
 | The template | `template/`: `cookiecutter.json`, `hooks/`, `{{cookiecutter.project_slug}}/` |
-| Where `chartbook init` gets it | `chartbook/scaffold.py`, `template_command()` |
+| Where `chartbook init` gets it | `chartbook/scaffold.py`, `find_template()`: the package's own copy (`chartbook/template` in the wheel), or `template/` of a source checkout |
 | The template's own tests, and a build of a fresh project | `tests/test_template.py` |
 
 **Why.** The rename of 4c showed it: the template called a command that had changed its
@@ -1583,10 +1583,16 @@ with the ChartBook of the same commit.
 **Proposed: implemented, and waiting on the maintainer's yes.**
 
 1. **It is a folder at the top of the repository, `template/`**, not inside the package. It is
-   fetched from git by cruft, as before, so it does not need to be installed.
+   fetched from git by cruft, as before, so it does not need to be installed. *(Changed
+   2026-10-17, asked by the maintainer: `chartbook init` renders the template that came with
+   the installed ChartBook. The folder stays at the top of the repository, and the wheel and
+   the sdist carry it, as `chartbook/template` in the wheel.)*
 2. **A project is still made with cruft**, and its `.cruft.json` records this repository and
    the `template` folder, so `cruft update` goes on working for new projects. The template's
-   own README calls that one of its main benefits.
+   own README calls that one of its main benefits. *(Changed 2026-10-17: it is rendered with
+   cookiecutter, since cruft clones its template; `.cruft.json` is written as cruft writes
+   it, with the commit the ChartBook was built from, which a build hook records in the
+   package.)*
 3. **The template was copied, not merged in with its history.** It came from
    `cookiecutter_chartbook` at commit `a67eeea`, and that is written here and in the test
    file. The old repository has the history.

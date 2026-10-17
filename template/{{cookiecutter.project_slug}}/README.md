@@ -52,11 +52,12 @@ Then install the dependencies:
 pixi install
 ```
 {% endif %}
-{% if cookiecutter.include_chartbook %}
+{% if cookiecutter.include_chartbook and cookiecutter._chartbook_version == "0.2.0" %}
 **Until the next ChartBook release**, install ChartBook from GitHub in this environment too. This project
-was made by `chartbook init` from the template on the main branch of ChartBook's GitHub repository, which is
-ahead of the newest release, 0.2.0: that release does not read the `[scripts]` table of `chartbook.toml`, and
-has no `chartbook docs`. The main branch calls itself 0.2.0 too, so the 0.2.0 installed above has to be replaced:
+was made by `chartbook init` with the template that came with a ChartBook installed from GitHub, which calls
+itself 0.2.0 and is ahead of the 0.2.0 on PyPI that the files above ask for: that one does not read the
+`[scripts]` table of `chartbook.toml`, and has no `chartbook docs`. pip keeps the 0.2.0 it installed above
+unless it is told to replace it:
 ```bash
 {% if cookiecutter.environment_manager == "uv" %}uv add "chartbook @ git+https://github.com/backofficedev/chartbook"{% elif cookiecutter.environment_manager == "pixi" %}pixi add --pypi "chartbook @ git+https://github.com/backofficedev/chartbook"{% else %}pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"{% endif %}
 ```

@@ -13,14 +13,14 @@ One install, everything included: the site-building CLI, the plotting module, da
 ## Scaffold a project
 
 ````{note}
-Until the next release, install ChartBook from GitHub for what follows. `chartbook init` renders the project template from the main branch of ChartBook's GitHub repository, and the newest release, 0.2.0, cannot build what it makes: it does not read the `[scripts]` table of the template's `chartbook.toml`, and has no `chartbook docs`. The main branch calls itself 0.2.0 too, so pip keeps a 0.2.0 it has installed already unless it is told to replace it:
+Until the next release, install ChartBook from GitHub for what follows: what this page describes is there, and the newest release, 0.2.0, has none of it (it has no `chartbook docs`, and its `chartbook init` makes a different project). The ChartBook on GitHub calls itself 0.2.0 too, so pip keeps a 0.2.0 it has installed already unless it is told to replace it:
 
 ```console
 pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"
 pipx install --force "chartbook @ git+https://github.com/backofficedev/chartbook"   # if you use pipx
 ```
 
-Do the same in the project's own environment, after its requirements, as below. `chartbook --version` says 0.2.0 for both; `chartbook docs --help` works only in the one from GitHub.
+The project's own environment installs ChartBook from PyPI, so do the same there, after its requirements, as below. `chartbook --version` says 0.2.0 for both; `chartbook docs --help` works only in the one from GitHub.
 ````
 
 ```console
@@ -34,7 +34,7 @@ It asks 19 questions, each with its default in parentheses; Enter takes the defa
 
 The other seventeen can stay as they are: a one-line description, your name and email, the Python version, how to install the dependencies (pip, uv, conda or pixi; pip is the default), and which examples to include. The defaults include an example notebook and the ChartBook site, and leave out LaTeX reports (they need TeX installed), R, Stata, a GitHub Actions workflow and the data sources (FRED, the Fed's yield curve and the OFR API download data; Bloomberg needs a Terminal and CRSP a WRDS account).
 
-It then creates the project from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template): `chartbook.toml`, `README.md`, a `dodo.py` task runner, scripts and a notebook in `src/`, and the project's own pages in `docs_src/site/`. It ends by printing the next steps, which the rest of this section walks through. Because the project is created with [cruft](https://cruft.github.io/cruft/), you can pull template improvements later with `cruft update`.
+It then creates the project from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template) that came with your ChartBook, so the two always match, and it needs no network to do it: `chartbook.toml`, `README.md`, a `dodo.py` task runner, scripts and a notebook in `src/`, and the project's own pages in `docs_src/site/`. Its environment files ask for your ChartBook's version or later. It ends by printing the next steps, which the rest of this section walks through. Its `.cruft.json` names the template on GitHub and the commit your ChartBook was built from, so you can pull template improvements later with [cruft](https://cruft.github.io/cruft/): `cruft update`.
 
 ```console
 cd rates_study
