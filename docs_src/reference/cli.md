@@ -70,7 +70,7 @@ Beside the HTML it writes `index.json`: one record for every pipeline, dataframe
 | `-f, --force-write` | off | Delete and recreate an existing output directory |
 | `--project-dir PATH` | `.` | The project whose site is rendered |
 | `--strict / --no-strict` | `--strict` | Strict: a `path`/`docs_path` pointing at a missing file fails the build, naming the file and the manifest entry. `--no-strict` warns and skips the affected pipeline of a catalog (a single pipeline still fails: there would be nothing left to build) |
-| `--size-threshold FLOAT` | `50` | File size (MB) above which parquet glimpses use memory-efficient loading |
+| `--size-threshold FLOAT` | `50` | File size (MB) above which a dataframe page does not read the file for its date range ("N/A (large file)"); the glimpse reads only the first rows at any size |
 | `--strip-mathjax2 / --no-strip-mathjax2` | on | Strip Plotly's MathJax 2 scripts from notebook outputs so they don't clash with Sphinx's MathJax 3 |
 | `--incremental` | off | Keep the intermediate `_docs/` directory between builds and redo only what changed since the last incremental build |
 | `--watch` | off | Build incrementally, then rebuild each time a file of the project changes, until Ctrl-C |
@@ -155,7 +155,7 @@ chartbook check [--project-dir PATH] [--within DAYS] [--policy PATH] [--skip-out
 
 The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
 
-- **a missing required field** — a field the policy requires that is absent or empty;
+- **a missing required field** — a field the policy requires that is absent or empty (with no policy given, the recommended fields are only warnings; see below);
 - **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing);
 - **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare;
 - **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days.
@@ -163,8 +163,8 @@ The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
 Each finding is one line naming the manifest, the table and the field, so a CI log is enough to fix it:
 
 ```console
-$ chartbook check
-chartbook.toml: [charts.repo_rates] units: required by the default policy, but missing or empty
+$ chartbook check --policy ../catalog
+chartbook.toml: [charts.repo_rates] units: required by the policy in ../catalog, but missing or empty
 chartbook.toml: [dataframes.crsp_bonds] license_expiration: license expires on 2026-11-02 (in 22 days, inside the 30-day window)
 chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/repo_public.parquet
 
@@ -178,7 +178,16 @@ chartbook.toml: [dataframes.repo_public] path: file not found: /work/repo/_data/
 | `--policy PATH` | — | Take required fields from the `[policy]` table of this file (a catalog's `chartbook.toml`, its directory, or any TOML file with a `[policy]` table) |
 | `--skip-outputs` | off | Do not require data files, charts and notebooks to exist |
 
-**Which fields are required.** Run in a catalog, `check` applies the catalog's {ref}`[policy.required] <policy>` to every member pipeline. Run in a standalone pipeline, it applies the built-in recommended-field lists — the same ones that drive the diagnostics page. To hold a pipeline to the policy of the catalog it is published to, or to a list of your own, pass `--policy`; only the `[policy]` table is read, so the catalog's other pipelines need not be checked out.
+**Which fields are required.** Run in a catalog, `check` applies the catalog's {ref}`[policy.required] <policy>` to every member pipeline. Run in a pipeline, it applies the pipeline's own `[policy]`. To hold a pipeline to the policy of the catalog it is published to, or to a list of your own, pass `--policy`; only the `[policy]` table is read, so the catalog's other pipelines need not be checked out, and it replaces the pipeline's own `[policy]`. A field that a policy requires and that is missing or empty is a problem, and the check fails.
+
+When no policy is given anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, no `--policy`, or a `--policy` file with no `[policy]` table, as a catalog that sets none), `check` uses the built-in recommended-field lists, the same ones that drive the diagnostics page, as advice only: each missing field is a `warning:` line, and none of them makes the check fail. The one exception is a write-up: a dataframe or chart whose `docs_path` or `docs` is empty fails the check whatever the policy, since the format itself requires one.
+
+```console
+$ chartbook check
+warning: chartbook.toml: [project] repo_url: recommended by the default policy, but missing or empty
+warning: chartbook.toml: [charts.repo_rates] units: recommended by the default policy, but missing or empty
+chartbook.toml: OK (1 pipeline(s), 1 dataframes, 1 charts, 0 notebooks)
+```
 
 `policy.mode` is not consulted. It decides what a *build* does about missing metadata; `check` always reports it.
 
@@ -202,7 +211,7 @@ chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a data
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
-**Warnings, not problems.** Five things are said with `warning:` and do not fail the command: a `git` dependency that has not been fetched here, a `path` dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
+**Warnings, not problems.** Six things are said with `warning:` and do not fail the command: a recommended field that is missing when no policy is given, a `git` dependency that has not been fetched here, a `path` dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
 
 ## chartbook path
 
@@ -318,7 +327,7 @@ chartbook catalog enable ftsfr/sovereign_bonds
 
 ### catalog build
 
-Build the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike top-level `build`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
+Build the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike `chartbook docs`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
 
 ```console
 chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [--watch-interval SECONDS]]
@@ -377,6 +386,8 @@ chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-thre
 ```
 
 The manifest is the only source of the list. Nothing about how the project is built is consulted, so a pipeline built with doit, Snakemake, Make or plain scripts gets the same report, and a data file the manifest does not declare is not included. Partitioned dataframes (a glob `path`) are summarized as one dataset. Declared dataframes whose files do not exist yet are skipped with a note. Run in a catalog, the report covers every member pipeline.
+
+`-o DIR` (`--output-dir`) is the directory the report is written in, as `DIR/data_glimpses.md`; it is made if it does not exist. A path ending in `.md` is taken as the report's own path; anything else already there that is not a directory, a file or a broken link, is refused, as it is neither. Without `-o`, the report is `data_glimpses.md` in the current directory.
 
 (chartbook-snapshot)=
 ## chartbook snapshot
@@ -613,7 +624,7 @@ Move pins forward, and rewrite `chartbook.lock`. A folder you depend on moves to
 $ chartbook update fed_yield_curve
 ftsfr/fed_yield_curve: 1 moved, 2 already pinned, 1 not built
   ftsfr/fed_yield_curve:treasury_rates
-    sha256:4b1f… -> sha256:99ab…
+    sha256:4b1f9a0c2e3d… -> sha256:99ab40d12e77…
   not built: ftsfr/fed_yield_curve:model/term_premium_ar1 (./_models/term_premium_ar1.json)
   From its snapshot at 9c1d2e3, made 2026-10-14 09:00 UTC.
 Wrote chartbook.lock.

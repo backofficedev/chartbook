@@ -49,11 +49,11 @@ def _generate(project: Path, docs_build_dir: Path):
 
 class TestFreshnessFact:
     def test_fields(self):
-        moment = datetime(2024, 3, 5, 14, 7, 9)
+        moment = datetime(2024, 3, 5, 14, 7, 9, tzinfo=timezone.utc)
         fact = freshness_fact("Data updated", moment)
         assert fact["label"] == "Data updated"
         assert fact["date"] == "2024-03-05"
-        assert fact["title"].startswith("2024-03-05 14:07")
+        assert fact["title"] == "2024-03-05 14:07 UTC"
         # ISO 8601 with a UTC offset, so a browser in any timezone agrees
         parsed = datetime.fromisoformat(fact["iso"])
         assert parsed.utcoffset() is not None
@@ -61,6 +61,17 @@ class TestFreshnessFact:
 
     def test_unknown_moment_gives_no_fact(self):
         assert freshness_fact("Data updated", None) is None
+
+    def test_a_time_in_another_zone_is_said_in_utc(self):
+        """Found by a new user: the front page said local and UTC times side by side,
+        unlabelled. Every time on the site is in UTC and says so."""
+        from datetime import timedelta
+
+        chicago = timezone(timedelta(hours=-6))
+        fact = freshness_fact("Data updated", datetime(2024, 3, 5, 23, 7, 9, tzinfo=chicago))
+        assert fact["title"] == "2024-03-06 05:07 UTC"
+        assert fact["date"] == "2024-03-06"
+        assert fact["iso"] == "2024-03-06T05:07:09+00:00"
 
 
 class TestGeneratedPages:
@@ -79,7 +90,7 @@ class TestGeneratedPages:
         # Only facts about this dataframe. When the pipeline's code changed is
         # said once, on the pipeline's own page.
         assert list(facts) == ["Data updated"]
-        assert facts["Data updated"].replace(tzinfo=None) == data_moment
+        assert facts["Data updated"] == data_moment.astimezone()
         assert "Code updated" not in page
         assert "Date of Last Code Update" not in page
 
@@ -108,13 +119,14 @@ class TestGeneratedPages:
 
         facts = _facts(page)
         assert list(facts) == ["Chart updated", "Data updated"]
-        assert facts["Chart updated"].replace(tzinfo=None) == chart_moment
-        assert facts["Data updated"].replace(tzinfo=None) == data_moment
+        assert facts["Chart updated"] == chart_moment.astimezone()
+        assert facts["Data updated"] == data_moment.astimezone()
         assert "Code updated" not in page
         assert "Date of Last Code Update" not in page
         # Shown before the chart itself, not in the tables at the bottom
         assert page.index('class="cb-freshness"') < page.index("## Chart")
-        # In chart listings, a chart is dated by when it was itself written
+        # In chart listings, a chart is dated by when it was itself written, in
+        # the local time ABlog compares it with
         assert page.startswith('---\ndate: "2024-04-01 08:30:00"')
 
     def test_asset_pages_do_not_change_when_only_the_code_does(
@@ -143,9 +155,10 @@ class TestGeneratedPages:
             tmp_path / "_docs" / "cb" / "dataframes" / pipeline_id / "dataframe_0.md"
         ).read_text()
         match = TIME_TAG.search(page)
-        assert match["title"].startswith("2024-03-05 12:00")
+        in_utc = datetime(2024, 3, 5, 12, 0, 0).astimezone(timezone.utc)
+        assert match["title"] == in_utc.strftime("%Y-%m-%d %H:%M UTC")
         # ...and the text shown if the script never runs is the date itself
-        assert match["date"] == "2024-03-05"
+        assert match["date"] == in_utc.strftime("%Y-%m-%d")
 
     def test_partitioned_dataframe_reports_real_data_time(self, tmp_path):
         """A glob path used to be stamped with the build time."""
@@ -159,7 +172,7 @@ class TestGeneratedPages:
             tmp_path / "_docs" / "cb" / "charts" / f"{pipeline_id}.chart_0_0.md",
         ):
             facts = _facts(page_path.read_text())
-            assert facts["Data updated"].replace(tzinfo=None) == moment
+            assert facts["Data updated"] == moment.astimezone()
 
     def test_pages_do_not_change_between_builds(self, pipeline_project, tmp_path):
         """No "ago" text is baked in, so an unchanged project yields identical pages."""

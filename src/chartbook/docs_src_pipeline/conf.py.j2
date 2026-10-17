@@ -100,7 +100,9 @@ exclude_patterns = [
 ## For including date and time in MyST
 # https://myst-parser.readthedocs.io/en/latest/syntax/roles-and-directives.html#insert-the-date-and-reading-time
 # today_fmt = '%b %d, %Y'
-today_fmt = "%c"  # Locale’s appropriate date and time representation.
+# The zone is named: UTC from Sphinx 8, as every time on the site is; before
+# it, Sphinx gives the local time, and the offset says so
+today_fmt = "%Y-%m-%d %H:%M:%S %Z"
 
 
 # -- Options for HTML output -------------------------------------------------

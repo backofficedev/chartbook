@@ -18,7 +18,6 @@ pipelines/{{pipeline_id | replace("/", "--")}}_README.md
 Not on this machine: the catalog shows it from its snapshots in the store.
 {% endif %}
 
-  {# Use passed docs_src_dir variable #}
-  {% include (docs_src_dir ~ "/_templates/pipeline_manifest.md") with context %}
+  {% include "pipeline_manifest.md" with context %}
 
 {% endfor %}

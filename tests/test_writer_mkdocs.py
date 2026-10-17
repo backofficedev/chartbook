@@ -21,6 +21,7 @@ from chartbook.writers import writer_class
 from chartbook.writers.mkdocs import MkDocsWriter
 from chartbook.writers.sphinx import SphinxWriter
 from tests.test_model_versions import trained  # noqa: F401 - a fixture: two pipelines, a model trained on both
+from tests.test_writer_sphinx import first_pipeline  # noqa: F401 - a fixture: a pipeline with nothing optional
 
 MYST = re.compile(r"^```\{[a-z-]+\}|\{(?:ref|doc|sub-ref)\}`|^:::+\{|\{toctree\}|\{postlist\}", re.M)
 
@@ -69,11 +70,23 @@ class TestThePages:
         model_page = next(text for path, text in pages.items() if path.startswith("cb/models/"))
         assert "## Provenance" in model_page
         assert "## Pipeline Specs" in front
+        # What the pipeline depends on, as the Sphinx front page lists it
+        assert "## Dependencies" in front and "- `rates` (path `../rates`): not pinned yet" in front
+        # In UTC and said so, as on the Sphinx front page (found by a reviewer: a bare local date)
+        assert re.search(r"^Last updated: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC$", front, re.M)
         model = next(r for r in index["records"] if r["kind"] == "Model")
         if model.get("versions"):
             header = model_page.index("| Version | Made |")
             table = model_page[header:].split("\n\n", 1)[0]
             assert table.count("\n") >= 2, "the versions table is header, delimiter and rows on consecutive lines"
+
+    def test_a_chart_with_no_sources_or_tags_says_none(self, first_pipeline, monkeypatch):  # noqa: F811
+        """Found by a reviewer: as on the Sphinx side, a field left out is not written empty."""
+        index = _built(first_pipeline, monkeypatch)
+        page = MkDocsWriter(index, theme="pipeline", docs_src_dir=first_pipeline / "no-overrides").chart_page("first_pipeline:chart/rates_chart")
+        front_matter = page.split("---")[1]
+        assert "date:" in front_matter and "sources:" not in front_matter and "category:" not in front_matter
+        assert "Sources:" not in page and "</iframe>\n\n[Full Screen Chart]" in page
 
     def test_a_catalog_site_lists_its_pages(self, catalog_project, monkeypatch):
         catalog = catalog_project.resolve()

@@ -60,7 +60,7 @@ chartbook docs -f --watch    # rebuild as you edit; refresh the browser
 ### Check a project in CI
 
 ```bash
-chartbook check               # fails on missing metadata, broken paths, expiring licenses
+chartbook check               # fails on broken paths, expiring licenses, and fields a [policy] requires
 ```
 
 ### Ask the manifest where a file belongs

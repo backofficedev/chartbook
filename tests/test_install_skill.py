@@ -111,3 +111,13 @@ def test_hidden_files_do_not_break_idempotency(claude_config_dir):
     assert result.exit_code == 0
     assert "already up to date" in result.output
     assert (target / ".DS_Store").exists()
+
+
+def test_the_groups_help_says_where_it_installs():
+    """Found by a new user: the help said "into the current project", while the
+    command installs user-level unless --project is given."""
+    result = CliRunner().invoke(main, ["install", "--help"])
+    assert result.exit_code == 0
+    text = " ".join(result.output.split())
+    assert "into the current project" not in text
+    assert "user-level by default" in text and "--project" in text

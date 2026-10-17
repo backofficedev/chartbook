@@ -51,6 +51,19 @@ print(result.paths)
 #  'png': Path('_output/gdp_growth.png'), ...}
 ```
 
+### Data from `data.load()`
+
+Every chart function takes a pandas DataFrame, a polars DataFrame, or a polars LazyFrame. `data.load()` returns a LazyFrame, so you can pass what it gives you straight in; a LazyFrame is collected, and polars data is converted to pandas inside the function, since the plotting backends draw from pandas:
+
+```python
+from chartbook import data
+
+rates = data.load("treasury_rates")
+chartbook.plotting.line(rates, x="date", y="rate", title="Rates").save("rates_chart")
+```
+
+The whole frame is collected, so filter or select in polars first if it is large. A polars category or enum column is drawn as text, and a decimal column as a float.
+
 ## ChartResult Object
 
 All chart functions return a `ChartResult` object that provides access to the underlying figures and saving functionality:

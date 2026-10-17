@@ -45,6 +45,8 @@ Last updated: {{ today }}
 
 {{ readme_text }}
 
+{% include "pipeline_dependencies.md" %}
+
 ## Pipeline Specs
 
 {% include "pipeline_manifest.md" %}

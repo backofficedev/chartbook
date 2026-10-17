@@ -426,7 +426,9 @@ def main(
 ):
     """Main function to create the data glimpses report for a project.
 
-    :param output_dir: Directory to save the output file. If None, saves to current directory.
+    :param output_dir: Directory to save ``data_glimpses.md`` in, made if it does not
+        exist; a path ending in ``.md`` is the report's own path. If None, saves to
+        the current directory.
     :type output_dir: str or Path, optional
     :param no_samples: If True, exclude sample values sections from the report.
     :type no_samples: bool
@@ -438,6 +440,7 @@ def main(
         current directory.
     :type project_dir: str or Path, optional
     :raises FileNotFoundError: If the project directory has no chartbook.toml.
+    :raises NotADirectoryError: If ``output_dir`` is there, is not a directory, and does not end in ``.md``.
     """
     project_dir = Path(project_dir) if project_dir is not None else Path.cwd()
     print(f"Reading declared dataframes from {project_dir / 'chartbook.toml'}...")
@@ -457,14 +460,22 @@ def main(
                 f"(no data at {dataframe.path})"
             )
 
-    # Determine output directory
+    # Determine output directory: a directory, made below if it does not
+    # exist yet, unless it names the report itself
     if output_dir is None:
         output_path = Path.cwd() / "data_glimpses.md"
     else:
         output_path = Path(output_dir)
-        if output_path.is_dir():
+        # Something already there that is not a directory: a file, a link
+        # to nothing, a pipe
+        taken = output_path.exists() or output_path.is_symlink()
+        if taken and not output_path.is_dir() and output_path.suffix.lower() != ".md":
+            raise NotADirectoryError(
+                f"{output_path} is there and is not a directory. Give a directory to "
+                f"write data_glimpses.md in, or a path ending in .md for the report itself."
+            )
+        if output_path.is_dir() or output_path.suffix.lower() != ".md":
             output_path = output_path / "data_glimpses.md"
-        # If output_dir is a file path, use it as is
 
     # Create parent directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)

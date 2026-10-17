@@ -1288,6 +1288,11 @@ def _resolve_policy(raw_manifest: dict, source: str) -> dict:
     from chartbook.diagnostics import DEFAULT_REQUIRED_FIELDS
 
     policy_raw = raw_manifest.get("policy", {})
+    if not isinstance(policy_raw, dict):
+        raise ValueError(
+            f"{source}: [policy] must be a table, with `mode` and `[policy.required]` "
+            f"under it; it is {policy_raw!r}."
+        )
     mode = policy_raw.get("mode", "warn")
     if mode not in ("warn", "strict"):
         raise ValueError(
@@ -1295,6 +1300,11 @@ def _resolve_policy(raw_manifest: dict, source: str) -> dict:
         )
 
     required_raw = policy_raw.get("required", {})
+    if not isinstance(required_raw, dict):
+        raise ValueError(
+            f"{source}: policy.required must be a table, `[policy.required]`, of "
+            f"field lists by kind; it is {required_raw!r}."
+        )
     for key in required_raw:
         if key not in DEFAULT_REQUIRED_FIELDS:
             raise ValueError(

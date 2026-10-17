@@ -121,9 +121,9 @@ per record that has one, plus the catalog's own pages:
 | Record | Page |
 |---|---|
 | `Dataframe` | `cb/dataframes/{pipeline}/{name}.md`: the write-up, a glimpse of the first rows read from the data file, the manifest tables, the provenance panel |
-| `Chart` | `cb/charts/{pipeline}.{name}.md`: ABlog front matter (date, tags, category), the chart in an `<iframe>`, the write-up, the specs table |
+| `Chart` | `cb/charts/{pipeline}.{name}.md`: ABlog front matter (date, and tags and category when there are any), the chart in an `<iframe>`, the write-up, the specs table |
 | `Model` | `cb/models/{pipeline}/{name}.md`: scores, versions, what it was trained on and whether it is out of date, files |
-| `Pipeline` | `index.md` (pipeline theme): the README's text with the tables of contents; or `cb/pipelines/{pipeline}_README.md` (catalog) |
+| `Pipeline` | `index.md` (pipeline theme): the README's text with the tables of contents; or `cb/pipelines/{pipeline}_README.md` (catalog). Either way, the pipelines it depends on, each with what `chartbook.lock` pins it to |
 | `Catalog` | `index.md`, `cb/dataframes.md`, `cb/models.md` (when some pipeline declares a model), `cb/pipelines.md`, `cb/diagnostics.md` |
 
 `{pipeline}` is the pipeline's ID with `/` replaced by `--` (`acme/yield_curve` becomes
@@ -137,6 +137,14 @@ come from the file (or the database) its record locates. "Data updated" is the r
 `modified_at`; a model's scores are the record's `metrics`; the diagnostics page is a comparison
 the writer makes between each record's declared fields and the policy the `Catalog` record
 carries. Nothing is looked up in a manifest or a folder.
+
+The times a page shows are in UTC and say so, whatever the zone of the machine that builds it.
+The one exception is a chart's date in the chart listings (the "All Posts" page, the archive,
+and the year, category and tag pages ABlog makes): that day is in the build machine's own zone,
+so it can differ by a day from the UTC "Chart updated" on the chart's page. ABlog publishes a
+chart only when it is dated before the machine's next local midnight, and keeps any later one as
+a draft, out of every listing; a chart written in the evening west of UTC is already tomorrow in
+UTC. A chart whose file is dated in the future is listed as of the build.
 
 Beside the pages, the build copies the **files the index names** into the Sphinx tree, again from
 the records:
@@ -165,7 +173,9 @@ Each page is rendered from Jinja2 templates. The writer looks for a template, fi
 So to change a page, put a file with the same name in the **pipeline's root**:
 `chart_entry_bottom.md` there replaces the footer of every chart page of that pipeline. In a
 catalog, each pipeline's own root is what its pages see; the catalog's root is searched only for
-the catalog's own pages. A project's `docs_src/_templates/` is not on the list.
+the catalog's own pages. A project's `docs_src/_templates/` is not on the list. Only the templates
+in the table below are taken from a root: any other file there, a `CHARTS.md` or a `models.md`, is
+the project's own and is never read as a template.
 
 | Template | What it controls |
 |---|---|
@@ -173,6 +183,7 @@ the catalog's own pages. A project's `docs_src/_templates/` is not on the list.
 | `chart_entry_top.md`, `chart_entry_bottom.md` | A chart page's head (front matter, title, iframe) and foot (specs, manifests) |
 | `dataframe_manifest.md`, `pipeline_manifest.md`, `model_manifest.md` | The manifest tables |
 | `provenance.md` | The provenance panel: what an asset was made from, what uses it, pins and versions |
+| `pipeline_dependencies.md` | The "Dependencies" section of a pipeline's page: each pipeline it reads from, as declared, and the snapshot or commit it is pinned to |
 | `index.md` | The front page's layout and tables of contents |
 
 The Sphinx configuration, `conf.py.j2`, comes from the packaged theme and is not overridable.

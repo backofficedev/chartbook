@@ -992,15 +992,19 @@ class TestCommands:
             result.output
         )
 
-    def test_update_shows_what_moved(self, here, rates):
+    def test_update_shows_what_moved(self, here, rates, downstream):
         self._run("pin")
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
         now = hashing.hash_file(rates / "_data" / "treasury.parquet").content_hash
         result = self._run("update", "rates")
         assert result.exit_code == 0, result.output
         assert "acme/rates: 1 moved, 2 already pinned, 1 not built" in result.output
-        assert f"  acme/rates:treasury\n    {HELLO} -> {now}" in result.output
+        # Found by a new user: 64 digits a line, where the docs show the start of each
+        assert f"  acme/rates:treasury\n    {HELLO[:19]}… -> {now[:19]}…" in result.output
+        assert now not in result.output and HELLO not in result.output
         assert "Wrote chartbook.lock." in result.output
+        # The lockfile keeps the whole hash
+        assert now in (downstream / LOCK_FILE).read_text()
 
     def test_update_of_something_that_is_not_a_dependency(self, here):
         result = self._run("update", "nope")

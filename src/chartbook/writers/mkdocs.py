@@ -24,14 +24,15 @@ the Sphinx pages use holds.
 
 from __future__ import annotations
 
+import functools
 import importlib.resources
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import jinja2
 
-from chartbook.writers.sphinx import SphinxWriter, _laid_out_version, _local_name, _sandboxed, _slug
+from chartbook.writers.sphinx import SphinxWriter, _laid_out_version, _literal, _local_name, _sandboxed, _slug
 
 #: The install extra that brings MkDocs, the Material theme and the notebook plugin.
 EXTRA = "chartbook[mkdocs]"
@@ -56,11 +57,14 @@ class MkDocsWriter(SphinxWriter):
         package = Path(str(importlib.resources.files("chartbook")))
         own = package / "docs_src_mkdocs" / self.theme
         sphinx_theme = package / _SPHINX_THEMES[self.theme]
-        paths = [] if untrusted_source() else [base_dir]
+        paths = []
         if self.docs_src_dir is not None:
             paths += [Path(self.docs_src_dir), Path(self.docs_src_dir) / "_templates"]
         paths += [own, own / "_templates", package / "templates", sphinx_theme / "_templates"]
-        return _sandboxed(paths)
+        environment = _sandboxed(paths, own=None if untrusted_source() else base_dir)
+        # Python-Markdown reads a pipe in code as text, in a table cell too
+        environment.filters["literal"] = functools.partial(_literal, escape_pipes=False)
+        return environment
 
     # --- the pages this writer renders besides the records' -------------------
 
@@ -117,7 +121,7 @@ class MkDocsWriter(SphinxWriter):
                 manifest={"project": {"name": catalog.get("name", "")}},
                 model_file_list=self._pages("Model"),
                 readme_text="",
-                today=date.today().isoformat(),
+                today=_built_at(),
                 has_versions=self._has_versions(),
             )
         if page_path == "cb/dataframes.md":
@@ -154,7 +158,7 @@ class MkDocsWriter(SphinxWriter):
             dot_or_dotdot="cb",
             show_code_updated=True,
             readme_text="".join(readme[2:]),
-            today=date.today().isoformat(),
+            today=_built_at(),
             site_pages=self._site_pages(pipeline),
             notebooks=notebooks,
             notes=notes,
@@ -163,6 +167,7 @@ class MkDocsWriter(SphinxWriter):
             models=self._pages("Model"),
             freshness=[fact for fact in [_freshness_of(pipeline)] if fact],
             version=_laid_out_version(pipeline),
+            dependencies=self._dependencies(pipeline, self.pipeline_page_path(pipeline)),
         )
 
     def _site_pages(self, pipeline: dict) -> list:
@@ -286,6 +291,11 @@ def _freshness_of(pipeline: dict) -> Optional[dict]:
     from chartbook.writers.sphinx import _freshness
 
     return _freshness("Code updated", pipeline.get("code_changed_at"))
+
+
+def _built_at() -> str:
+    """The front page's "Last updated": now, in UTC and said so, as every time on the site is."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
 
 def is_installed() -> bool:

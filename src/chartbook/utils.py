@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import re
 import shutil
@@ -162,16 +163,23 @@ def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
             pass
 
 
-def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB):
+#: How many rows a dataframe's glimpse shows, from the top of the file
+GLIMPSE_ROWS = 5
+
+#: How many significant digits a float in a glimpse may be rounded to: as
+#: many as a float holds for certain. See :func:`_for_display` for when it is
+GLIMPSE_DIGITS = 15
+
+
+def get_dataframe_glimpse(filepath):
     """Get a simple glimpse of a dataframe showing columns and data types.
 
-    For files larger than size_threshold_mb, uses memory-efficient loading by only
-    collecting sampled data and correcting the row count in glimpse output.
+    Shows the first :data:`GLIMPSE_ROWS` rows, with floats rounded for
+    display (:func:`glimpse_text`). Only those rows are collected, whatever
+    the size of the file; the row count is the file's own.
 
     :param filepath: Path to the parquet or CSV file.
     :type filepath: str or Path
-    :param size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
-    :type size_threshold_mb: float
     :returns: The glimpse output as a string, or error message if file cannot be read.
     :rtype: str
     """
@@ -181,42 +189,80 @@ def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB)
         if is_glob_pattern(str(filepath)):
             # Glob/hive-partitioned paths: use scan_parquet directly
             lf = pl.scan_parquet(filepath, hive_partitioning=True)
-            is_large_file = False
+        elif filepath.suffix.lower() == ".csv":
+            lf = pl.scan_csv(filepath)
+        elif filepath.suffix.lower() == ".parquet":
+            lf = pl.scan_parquet(filepath)
         else:
-            # Check file size to determine loading strategy
-            file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
-            is_large_file = file_size_mb > size_threshold_mb
-
-            # Load data lazily
-            if filepath.suffix.lower() == ".csv":
-                lf = pl.scan_csv(filepath)
-            elif filepath.suffix.lower() == ".parquet":
-                lf = pl.scan_parquet(filepath)
-            else:
-                return f"Unsupported file type: {filepath.suffix}"
+            return f"Unsupported file type: {filepath.suffix}"
 
         # Get actual row count efficiently (works for both small and large files)
         row_count_df = lf.select(pl.len().alias("count")).collect()
         actual_row_count = row_count_df["count"][0]
 
-        # For large files, use head() to avoid full scan; for small files, tail() is fine
-        if is_large_file:
-            sample_df = lf.head(1).collect()
-        else:
-            sample_df = lf.tail(1).collect()
-
-        # Capture the glimpse output
-        output = StringIO()
-        with redirect_stdout(output):
-            sample_df.glimpse()
-
-        glimpse_text = output.getvalue()
+        sample_df = lf.head(GLIMPSE_ROWS).collect()
 
         # Fix row count in glimpse to show actual total rows
-        return fix_glimpse_row_count(glimpse_text, actual_row_count)
+        return fix_glimpse_row_count(glimpse_text(sample_df), actual_row_count)
 
     except Exception as e:
         return f"Error reading file: {e!s}"
+
+
+def glimpse_text(sample: pl.DataFrame) -> str:
+    """Polars' glimpse of a few rows, as text, with floats rounded for a reader.
+
+    A float that is the noise of a binary fraction is shown as the number it
+    stands for (``3.8499999999999996`` reads ``3.85``; :func:`_for_display`),
+    and every other value as it is. A ``f32`` column is widened to show its
+    digits as written (``1.1``, not ``1.100000023841858``), and is still
+    labelled ``<f32>``; not when a column's name has a line break in it,
+    since the label is put back by the line the column is on.
+    """
+    broken = any("\n" in name or "\r" in name for name in sample.columns)
+    narrow = set() if broken else {name for name, dtype in sample.schema.items() if dtype == pl.Float32}
+    shown = sample.with_columns(pl.col(sorted(narrow)).cast(pl.String).cast(pl.Float64))
+    shown = shown.with_columns(
+        [
+            pl.Series(name, [_for_display(value) for value in shown[name].to_list()], dtype=pl.Float64)
+            for name, dtype in shown.schema.items()
+            if dtype == pl.Float64
+        ]
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        shown.glimpse()
+    # "Rows: …" and "Columns: …", then one line per column in order. A name
+    # is shown left-aligned and cut at 50 characters, so the type's label
+    # comes after it
+    lines = output.getvalue().split("\n")
+    if len(lines) < sample.width + 2:
+        return "\n".join(lines)
+    for position, name in enumerate(sample.columns):
+        if name in narrow:
+            line = lines[2 + position]
+            at = line.find("<f64>", 2 + min(len(name), 49))
+            if at >= 0:
+                lines[2 + position] = line[:at] + "<f32>" + line[at + len("<f64>") :]
+    return "\n".join(lines)
+
+
+def _for_display(value):
+    """A float as a glimpse shows it: rounded only when what is cut is noise.
+
+    A whole number (a date written as 20240115.0, an ID, ``2**53``) and a
+    value that is not finite are shown as they are. Any other is rounded to
+    :data:`GLIMPSE_DIGITS` significant digits, with Python's formatting,
+    exact at any magnitude, when the result is within two units in the last
+    place of the value: so ``3.8499999999999996`` reads ``3.85`` and
+    ``0.1 + 0.2`` reads ``0.3``, while ``1/3`` keeps all its digits.
+    """
+    if value is None or not math.isfinite(value) or value.is_integer():
+        return value
+    rounded = float(f"{value:.{GLIMPSE_DIGITS}g}")
+    if math.isfinite(rounded) and abs(rounded - value) <= 2 * math.ulp(value):
+        return rounded
+    return value
 
 
 # Regex to match MathJax 2 script tags injected by Plotly's NotebookRenderer.
