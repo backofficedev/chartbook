@@ -1,5 +1,9 @@
 # Reading From a Databricks Warehouse
 
+```{warning}
+An early experiment, more so than the rest of ChartBook: tested against a stand-in for the warehouse, not yet against a real workspace, and likely to change. See the {doc}`../roadmap`.
+```
+
 A dataframe can be a table, or a query, in a Databricks SQL warehouse. The pipeline names the
 table; the warehouse keeps it. ChartBook reads it where it is, documents it on the site like any
 other dataframe, and copies nothing.
