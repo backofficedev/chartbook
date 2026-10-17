@@ -1538,14 +1538,13 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
     were made from those bytes. So first the check ``chartbook pin --frozen``
     makes (:func:`chartbook.lock.verify`): a lockfile, every dependency in
     it, pinned from where the manifest says, its bytes in the store. Then,
-    for a ``path`` dependency something was pinned from: that it was pinned
-    from a snapshot, not its working folder (``--from-folder`` names no
-    commit), that the store has that snapshot and it holds each asset
-    pinned from it under its name at its hash, and that each label pinned
-    names a version some snapshot of the pipeline holds; so that a lockfile
-    changed by hand, or brought from another store, is caught. (A ``git``
-    dependency is pinned from its clone, not a snapshot, and its hashes are
-    checked only to be in the store.)
+    for a ``path`` dependency something was pinned from: that its pin names
+    a snapshot, by its commit and time, that the store has that snapshot
+    and it holds each asset pinned from it under its name at its hash, and
+    that each label pinned names a version some snapshot of the pipeline
+    holds; so that a lockfile changed by hand, or brought from another
+    store, is caught. (A ``git`` dependency is pinned from its clone, not a
+    snapshot, and its hashes are checked only to be in the store.)
 
     Nothing that could not have been read is a gap: an asset the other
     pipeline had not built when it was pinned, and a dependency of which
@@ -1581,8 +1580,8 @@ def lineage_gaps(directory: Union[str, Path], store: Optional[Store] = None) -> 
         commit, made_at = location.get("commit"), entry.get("snapshot")
         if not (commit and made_at):
             gaps.append(
-                f"{key}: is pinned from its working folder, not from a snapshot, so nothing says "
-                f"which commit its bytes came from. `chartbook update {key}` pins its newest snapshot "
+                f"{key}: its pin names no snapshot, so nothing says which commit its bytes "
+                f"came from. `chartbook update {key}` pins its newest snapshot "
                 f"(its owner makes one with `chartbook snapshot`)."
             )
             continue

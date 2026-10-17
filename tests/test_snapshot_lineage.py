@@ -12,6 +12,7 @@ from click.testing import CliRunner
 from chartbook import lock, snapshot
 from chartbook.cli import main
 from chartbook.store import default_store
+from tests.fixtures import name_no_snapshot
 from tests.test_model_versions import _commit, _git
 
 
@@ -71,10 +72,11 @@ class TestASnapshotCarriesItsLineage:
         with pytest.raises(snapshot.SnapshotError, match="other: is in \\[dependencies\\] and not in the lockfile"):
             snapshot.make(forecast)
 
-    def test_a_pin_from_a_working_folder(self, two):
+    def test_a_pin_that_names_no_snapshot(self, two):
         rates, forecast = two
-        lock.pin(forecast, from_folder=True)
-        with pytest.raises(snapshot.SnapshotError, match="rates: is pinned from its working folder"):
+        lock.pin(forecast)
+        name_no_snapshot(forecast, "rates")
+        with pytest.raises(snapshot.SnapshotError, match="rates: its pin names no snapshot, so nothing says which commit"):
             snapshot.make(forecast)
 
     def test_a_pin_the_store_does_not_have(self, two):
@@ -137,10 +139,11 @@ class TestWhatTheReviewFound:
         manifest["scripts"] = {"build": f"{sys.executable} -c \"open('_data/built', 'w').close()\""}
         (forecast / "chartbook.toml").write_text(tomli_w.dumps(manifest))
         _commit(forecast.parent)
-        lock.pin(forecast, from_folder=True)  # kept by the pin before the build
+        lock.pin(forecast)
+        name_no_snapshot(forecast, "rates")  # kept by the pin before the build
         report = run.run(forecast, echo=lambda *a, **k: None, snapshot=True)
         assert report.failed is not None and "it was not built" in report.reason
-        assert "pinned from its working folder" in report.reason
+        assert "its pin names no snapshot" in report.reason
         assert not marker.exists()
 
     def test_a_dependency_with_no_snapshot_yet_is_nothing_read(self, two):

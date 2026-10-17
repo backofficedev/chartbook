@@ -61,7 +61,8 @@ class Node:
         made_at: When the snapshot was made.
         kind: ``working`` (the folder the walk starts from), ``snapshot``,
             ``git`` (pinned from a clone; not walked further), ``folder``
-            (pinned from a working folder), ``nothing`` (nothing pinned),
+            (a pin that names no snapshot, as one taken from a working
+            folder before that was removed did), ``nothing`` (nothing pinned),
             ``missing`` (no such snapshot in the store), ``mismatch`` (the
             snapshot is there and does not hold what was pinned) or
             ``unreadable`` (a record that is not one ChartBook wrote).
@@ -251,8 +252,7 @@ class _Walker:
         if not (node.commit and node.made_at):
             node.kind = "folder"
             node.gaps.append(
-                "was pinned from its working folder, not from a snapshot, so nothing says which commit "
-                "its bytes came from"
+                "its pin named no snapshot, so nothing says which commit its bytes came from"
             )
             return node
         at = self._at(node.commit, node.made_at)

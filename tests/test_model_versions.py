@@ -25,6 +25,7 @@ from chartbook.errors import AssetNotDeclaredError, VersionNotFoundError
 from chartbook.identity import UnsupportedRevisionError
 from chartbook.manifest import load_manifest, validate_aliases
 from chartbook.store import default_store
+from tests.fixtures import name_no_snapshot
 
 
 def _git(directory: Path, *arguments: str) -> str:
@@ -561,8 +562,8 @@ class TestAnotherPipelinesVersion:
         # ...and so does every later pin, not only the first, whichever way it goes
         again = lock.pin(serve)
         assert _label_statuses(again)["forecast:model/m@champion"] == "not_built"
-        from_folder = lock.update(serve, from_folder=True)
-        assert _label_statuses(from_folder)["forecast:model/m@champion"] == "not_built"
+        updated = lock.update(serve)
+        assert _label_statuses(updated)["forecast:model/m@champion"] == "not_built"
 
     def test_a_git_dependency_has_no_versions(self, forecast):
         """Found by a reviewer: the messages gave a git dependency the remedies of a
@@ -630,27 +631,18 @@ class TestAnotherPipelinesVersion:
         assert _label_statuses(report)["forecast:model/m@champion"] == "pinned"
         assert (serve / lock.LOCK_FILE).exists()
 
-    def test_a_pin_from_the_folder_carries_labels_and_gains_none(self, forecast):
-        """Found by a reviewer: `update --from-folder` dropped them as undeclared."""
+    def test_an_exact_version_through_a_pin_that_names_no_snapshot_says_why(self, forecast):
+        """A lockfile from before every pin came from a snapshot, or changed by hand."""
         from chartbook import lock
         from chartbook.errors import AssetNotPinnedError
 
-        first, _ = _labelled(forecast)
+        first = _version(forecast)
         serve = _serve(forecast)
         lock.pin(serve)
-        report = lock.update(serve, from_folder=True)
-        assert _label_statuses(report).get("forecast:model/m@champion") is None  # untouched, not dropped
-        assert models.path("forecast:m@champion", project_dir=serve).read_bytes() == b"weights-1"
-        # A pipeline pinned from its folder from the start has no labels, and an
-        # exact version says why it cannot be looked up
-        other = forecast.parent / "other"
-        other.mkdir()
-        (other / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/other"}, "dependencies": {"forecast": {"path": "../forecast"}}})
-        )
-        lock.pin(other, from_folder=True)
-        with pytest.raises(AssetNotPinnedError, match="pinned from its folder .*--from-folder.*, not from a snapshot"):
-            models.path(f"forecast:m@{first}", project_dir=other)
+        name_no_snapshot(serve, "forecast")
+        with pytest.raises(AssetNotPinnedError, match="the pin of 'forecast' in the lockfile names no snapshot") as e:
+            models.path(f"forecast:m@{first}", project_dir=serve)
+        assert "`chartbook update forecast` pins it from a snapshot" in str(e.value)
 
     def test_a_labelled_version_survives_gc_clearing_the_snapshot_that_made_it(self, forecast):
         """The lockfile's root keeps the bytes; the exact hash finds them through the label."""

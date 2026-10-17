@@ -13,8 +13,7 @@ directory, which may be in any state. A ``path`` dependency is pinned from
 a **snapshot**: what its owner declared ready, at a commit
 (:mod:`chartbook.snapshot`). A ``git`` dependency is pinned from
 ChartBook's own clean copy of a commit. The lockfile records the commit
-either way. Pinning from a folder as it stands is still there, as
-``from_folder``, for someone working on both pipelines at once.
+either way.
 
 ::
 
@@ -325,8 +324,6 @@ class PinReport:
             these has only what its repository commits.
         snapshots: The snapshot each ``path`` dependency was pinned from in
             this run, by key.
-        from_folder: The ``path`` dependencies that were pinned from what
-            was in their folder, because that was asked for.
         unrooted: Why the store's note of this lockfile could not be
             written or removed, when it could not: the store is read-only
             for this user, as a store a team shares may be for everyone but
@@ -339,7 +336,6 @@ class PinReport:
     written: bool = False
     git: set = field(default_factory=set)
     snapshots: dict = field(default_factory=dict)
-    from_folder: set = field(default_factory=set)
     unrooted: str = ""
 
     def count(self, *statuses: str) -> int:
@@ -785,14 +781,13 @@ def _sync(
     store: Optional[Store],
     move: Optional[Iterable[str]],
     git_cache: Optional[GitCache] = None,
-    from_folder: bool = False,
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
 ) -> PinReport:
     """:func:`_sync_now`, one at a time for each lockfile."""
     with _one_at_a_time(Path(project_dir) / LOCK_FILE):
-        return _sync_now(project_dir, store, move, git_cache, from_folder, only, clone_missing, built_here)
+        return _sync_now(project_dir, store, move, git_cache, only, clone_missing, built_here)
 
 
 def _sync_now(
@@ -800,7 +795,6 @@ def _sync_now(
     store: Optional[Store],
     move: Optional[Iterable[str]],
     git_cache: Optional[GitCache] = None,
-    from_folder: bool = False,
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
@@ -820,8 +814,6 @@ def _sync_now(
         catalog's own), which are never cloned.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
-    :param from_folder: Pin a ``path`` dependency from what is in its
-        folder now, and not from a snapshot.
     """
     project_dir = Path(project_dir).resolve()
     store = store if store is not None else default_store()
@@ -877,7 +869,7 @@ def _sync_now(
                 after.assets.update(had)
             continue
         # A label's record is pinned from a snapshot and only from one; a
-        # pin from a folder or a repository carries what it has unchanged
+        # pin from a repository lets go of any it had
         had_labels = {k: v for k, v in had.items() if (v.get("ref") or {}).get("rev")}
         had_assets = {k: v for k, v in had.items() if k not in had_labels}
         was = locked.get(key)
@@ -1108,28 +1100,6 @@ def _sync_now(
                 ),
                 found=snapshots_in_store,
             )
-        elif from_folder:
-            # What is in the folder this minute, whatever state it is in.
-            # The lockfile then names no commit: nothing says which one
-            # these bytes came from.
-            report.from_folder.add(key)
-            records = _sync_dependency(
-                key, Path(entry["_resolved_path"]), had_assets, may_move, store, cache, report
-            )
-            records.update(had_labels)
-            for asset_id, record in sorted(had_labels.items()):
-                if not record.get("content_hash"):
-                    report.events.append(
-                        PinEvent("not_built", key, asset_id, detail=record.get("missing") or "the label was pinned without its bytes")
-                    )
-            if not may_move and was is not None and records == had:
-                # Nothing moved, so the pins are still the snapshot's, and
-                # the lockfile goes on saying so
-                if _declared_elsewhere(was, listed):
-                    report.events.append(
-                        PinEvent("relocated", key, detail=_describe(listed["location"]))
-                    )
-                listed = {**was, "location": dict(was["location"])}
         else:
             records, listed = _sync_from_snapshots(
                 key, Path(entry["_resolved_path"]), was, listed, had, may_move, store, report,
@@ -1317,7 +1287,7 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                 report.problems.append(
                     FrozenProblem(
                         key, asset_id, "is a table or query in a source and has no pinned copy: a pin from a "
-                        "folder takes no table, and a snapshot writes one out only from a DuckDB file. "
+                        "repository takes no table, and a snapshot writes one out only from a DuckDB file. "
                         "`chartbook snapshot` there, then `chartbook update`.",
                         "not_built",
                     )
@@ -1345,7 +1315,12 @@ def verify(project_dir: Union[str, Path] = ".", store: Optional[Store] = None) -
                         f"`chartbook snapshot` in its folder at that commit makes it again"
                     )
                 else:
-                    remedy = "`chartbook pin --from-folder`, where the store can be written, puts it back from the folder"
+                    # The pin names no commit (a lockfile changed by hand,
+                    # or from before every pin came from a snapshot)
+                    remedy = (
+                        f"`chartbook update {key}` pins it from a snapshot the store has "
+                        f"(its owner makes one with `chartbook snapshot`)"
+                    )
                 report.problems.append(
                     FrozenProblem(
                         key,
@@ -1910,8 +1885,8 @@ def _sync_dependency(
 ) -> dict[str, dict]:
     """Work out the records of one dependency's assets, pinning as needed.
 
-    :param directory: Where the dependency's files are: its ``path``, or
-        the checkout of a ``git`` dependency. None if they could not be got.
+    :param directory: Where the dependency's files are: the checkout of a
+        ``git`` dependency. None if they could not be got.
     :param had: The records the lockfile has for it now, by asset ID.
     :param may_move: Whether its existing pins may move (an update).
     :param commit_moved: Whether this update moved a ``git`` dependency to
@@ -1975,7 +1950,7 @@ def _sync_dependency(
         report.events.append(
             PinEvent(
                 "not_built", key, asset_id,
-                detail="a table or query in a source is not taken from a folder; "
+                detail="a table or query in a source is not taken from a repository; "
                 "`chartbook snapshot` there writes it out, then `chartbook update` pins it",
             )
         )
@@ -2123,7 +2098,6 @@ def pin(
     project_dir: Union[str, Path] = ".",
     store: Optional[Store] = None,
     git_cache: Optional[GitCache] = None,
-    from_folder: bool = False,
     only: Optional[Iterable[str]] = None,
     clone_missing: bool = True,
     built_here: Iterable[str] = (),
@@ -2150,10 +2124,6 @@ def pin(
     :param store: The store to pin into; this user's by default.
     :param git_cache: Where ``git`` dependencies are fetched to; this
         user's by default.
-    :param from_folder: Pin a ``path`` dependency from what is in its
-        folder at this moment, and not from a snapshot. For someone working
-        on both pipelines at once. The folder may be in any state, and the
-        lockfile then names no commit.
     :param only: The keys of the dependencies to pin; the rest keep what
         the lockfile has, and nothing of them is fetched. All by default.
     :param clone_missing: Whether a dependency named by its ID that the
@@ -2167,7 +2137,7 @@ def pin(
     :raises ValueError: If its ``[dependencies]`` table is malformed.
     """
     return _sync(
-        project_dir, store, move=None, git_cache=git_cache, from_folder=from_folder,
+        project_dir, store, move=None, git_cache=git_cache,
         only=None if only is None else ({only} if isinstance(only, str) else set(only)),
         clone_missing=clone_missing,
         built_here=built_here,
@@ -2179,7 +2149,6 @@ def update(
     dependencies: Iterable[str] = (),
     store: Optional[Store] = None,
     git_cache: Optional[GitCache] = None,
-    from_folder: bool = False,
 ) -> PinReport:
     """Move a pipeline's pins forward to what its dependencies have now.
 
@@ -2194,8 +2163,6 @@ def update(
         ``[dependencies]`` (the scope may be left off when unambiguous).
         All of them by default.
     :param store: The store to pin into; this user's by default.
-    :param from_folder: Take a ``path`` dependency from what is in its
-        folder at this moment, and not from a snapshot. See :func:`pin`.
     :returns: What was done. An asset whose pin changed has the status
         ``moved``.
     :raises LockError: If *project_dir* is not a pipeline, its lockfile
@@ -2207,7 +2174,6 @@ def update(
         store,
         move=list(dependencies),
         git_cache=git_cache,
-        from_folder=from_folder,
     )
 
 

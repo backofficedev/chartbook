@@ -567,21 +567,26 @@ class TestIndexAndSite:
 
 
 class TestNotPinnedAcrossPipelines:
-    def test_a_table_pinned_from_a_folder_is_not_there_and_says_what_writes_it_out(self, pipeline, tmp_path):
-        """`pin --from-folder` takes files as they are in the folder, and a table has none;
-        a snapshot writes it out as parquet, and a reference to it says so."""
+    def test_a_table_pinned_from_a_repository_is_not_there_and_says_what_writes_it_out(self, pipeline, tmp_path):
+        """A pin from a repository takes the files it commits, and a table has none;
+        a snapshot writes it out as parquet, and the pin, `--frozen` and a reference to it say so."""
         from chartbook import lock
         from chartbook.errors import AssetNotPinnedError
         from chartbook.resolve import FileLocation, declared_files
+        from tests.test_model_versions import _commit
 
         assert [str(ref) for ref, _, _ in declared_files(pipeline)] == ["rates"]
+        _commit(pipeline)  # its data with it
         downstream = _manifest(
             tmp_path / "down",
-            {"project": {"id": "acme/down"}, "dependencies": {"rates": {"path": "../rates"}}},
+            {"project": {"id": "acme/down"}, "dependencies": {"rates": {"git": str(pipeline)}}},
         )
-        lock.pin(downstream, from_folder=True)
+        report = lock.pin(downstream)
+        said = [e for e in report.events if e.status == "not_built" and e.asset == "rates:curve"]
+        assert said and "is not taken from a repository; `chartbook snapshot` there writes it out" in said[0].detail
+        assert any("has no pinned copy: a pin from a repository" in p.message for p in lock.verify(downstream).problems)
         assert isinstance(resolve("rates:rates", start_dirs=[downstream]), FileLocation)
-        with pytest.raises(AssetNotPinnedError, match="is a table in a source of the pipeline 'rates' and has no pinned copy: a pin from a folder takes no table") as e:
+        with pytest.raises(AssetNotPinnedError, match="is a table in a source of the pipeline 'rates' and has no pinned copy: a pin from a repository takes no table") as e:
             resolve("rates:curve", start_dirs=[downstream])
         assert e.value.reason == "not_built"
         with pytest.raises(AssetNotPinnedError, match="is a query in a source"):

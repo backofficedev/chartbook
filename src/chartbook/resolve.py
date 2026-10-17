@@ -769,7 +769,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             asset_id,
             "not_built",
             f"{asset_id!r} is a {record['location']['kind']} in a source of the pipeline "
-            f"{dependency.id!r} and has no pinned copy: a pin from a folder takes no table, "
+            f"{dependency.id!r} and has no pinned copy: a pin from a repository takes no table, "
             f"and a snapshot writes one out only from a DuckDB file (`chartbook snapshot` "
             f"there says what it could not). `chartbook snapshot` in that pipeline's folder, "
             f"then `chartbook update` in {manifest_dir}, pins it.",
@@ -965,8 +965,8 @@ def _resolve_pinned_version(
         raise AssetNotPinnedError(
             asset_id,
             "not_in_store",
-            f"{asset_id!r} names a version by its hash, and {dependency.id!r} is "
-            f"pinned from its folder (`--from-folder`), not from a snapshot, so its "
+            f"{asset_id!r} names a version by its hash, and the pin of "
+            f"{dependency.id!r} in the lockfile names no snapshot, so its "
             f"versions cannot be looked up in the store. `chartbook update "
             f"{dependency.id}` pins it from a snapshot.",
         )

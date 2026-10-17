@@ -37,8 +37,9 @@ from chartbook.gitcache import (
 from chartbook.lock import LOCK_FILE
 from chartbook.manifest import load_manifest, validate_dependencies
 from chartbook.store import default_store
+from tests.fixtures import pin_from_snapshots
 
-HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+HELLO ="sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
 # Nothing listens on port 1, so this fails at once and without a network
 UNREACHABLE = "https://user:s3cret@localhost:1/acme/crsp.git"
@@ -567,9 +568,9 @@ class TestPinning:
                 }
             },
         )
-        report = lock.pin(downstream, git_cache=cache, from_folder=True)
+        report = pin_from_snapshots(downstream, git_cache=cache)
         assert report.git == {"acme/upstream"}
-        assert report.from_folder == {"local"}
+        assert set(report.snapshots) == {"local"}
         assert set(lock.read_lock(downstream).assets) == {
             "acme/upstream:committed",
             "acme/upstream:ignored",

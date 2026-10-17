@@ -217,34 +217,6 @@ class TestWhatTheReviewFound:
         assert "content_hash" not in report.snapshot.assets["spans"]
         assert report.snapshot.assets["curve"]["content_hash"]  # the rest is there
 
-    def test_pinning_from_the_folder_keeps_a_tables_pin(self, work):
-        """Found by a reviewer: `update --from-folder` took the folder's files and let the
-        tables go as "no longer declared"; `pin --from-folder` never made them. A folder has no
-        table to take, so a table's pin is kept from the snapshot."""
-        rates, forecast = work
-        snapshot.make(rates)
-        lock.pin(forecast)
-        before = lock.read_lock(forecast / lock.LOCK_FILE).assets
-        report = lock.update(forecast, from_folder=True)
-        after = lock.read_lock(forecast / lock.LOCK_FILE).assets
-        assert set(after) == set(before) and after["rates:curve"] == before["rates:curve"]
-        assert not [e for e in report.events if e.status == "dropped"]
-        fresh = forecast.parent / "fresh"
-        fresh.mkdir()
-        (fresh / "README.md").write_text("# Fresh\n")
-        (fresh / "chartbook.toml").write_text(
-            tomli_w.dumps({"project": {"id": "acme/fresh"}, "dependencies": {"rates": {"path": "../rates"}}})
-        )
-        report = lock.pin(fresh, from_folder=True)
-        assets = lock.read_lock(fresh / lock.LOCK_FILE).assets
-        assert assets["rates:treasury"]["content_hash"]
-        # A folder has no table to take: listed without a hash, and said so
-        assert "content_hash" not in assets["rates:curve"] and assets["rates:curve"]["location"]["kind"] == "table"
-        said = [e for e in report.events if e.status == "not_built" and e.asset == "rates:curve"]
-        assert said and "`chartbook snapshot` there writes it out" in said[0].detail
-        frozen = lock.verify(fresh)
-        assert any("has no pinned copy" in problem.message for problem in frozen.problems)
-
     def test_a_table_that_could_not_be_written_out_says_so_when_read(self, work, monkeypatch):
         """Found by a reviewer: the advice was "build it there", and building cannot help."""
         import tomli

@@ -7,11 +7,11 @@ and their hashes in a lockfile. References still do not resolve across
 pipelines; that is the next part.
 """
 
-import functools
 import hashlib
 import json
 import os
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import jsonschema
@@ -19,20 +19,26 @@ import pytest
 import tomli_w
 from click.testing import CliRunner
 
-from chartbook import config, hashing, index, lock
+from chartbook import config, hashing, index, lock, snapshot
 from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.lock import LOCK_FILE, SCHEMA, Lock, LockError, PinEvent
 from chartbook.store import FolderStore, Root, Store, StoreError
-from tests.fixtures import create_catalog_project
+from tests.fixtures import (
+    create_catalog_project,
+    name_no_snapshot,
+    pin_from_snapshots,
+    snapshot_dependencies,
+    update_from_snapshots,
+)
 
 HELLO = "sha256:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 
-# These tests pin from a folder as it stands. That is what ``--from-folder``
-# does, and what pinning did before there were snapshots. Pinning from a
-# snapshot, which is the ordinary way, is tested in tests/test_snapshot.py.
-pin_folder = functools.partial(lock.pin, from_folder=True)
-update_folder = functools.partial(lock.update, from_folder=True)
+# A dependency is pinned from a snapshot. These tests change the other
+# pipeline's folder and pin again, so before each pin its owner does what
+# an owner does: commits, and makes a snapshot of the folder as it stands.
+# What a snapshot is, and how one is chosen, is tested in
+# tests/test_snapshot.py.
 
 
 def _write_manifest(directory: Path, config_table: dict) -> None:
@@ -72,6 +78,12 @@ def _age(store: Store, seconds: float = 2 * lock.RECENT_SECONDS) -> None:
     then = time.time() - seconds
     for content_hash in store.hashes():
         os.utime(store.object_path(content_hash), (then, then))
+
+
+def _days_ago(days: float) -> str:
+    """A snapshot's time, so many days before now."""
+    then = datetime.now(timezone.utc) - timedelta(days=days)
+    return then.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 @pytest.fixture
@@ -143,7 +155,7 @@ class TestFrozen:
 
     def test_every_pin_in_the_store_is_no_problem_and_writes_nothing(self, downstream, rates, store):
         _train(rates)
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         before = (downstream / lock.LOCK_FILE).read_bytes()
         report = self._ok(downstream, store)
         assert (report.dependencies, report.pins) == (1, 4)
@@ -151,13 +163,13 @@ class TestFrozen:
 
     def test_an_asset_not_built_when_pinned_is_a_problem(self, downstream, store):
         """The stricter choice the design kept for --frozen."""
-        pin_folder(downstream, store)  # the model is declared and not built
+        pin_from_snapshots(downstream, store)  # the model is declared and not built
         (problem,) = lock.verify(downstream, store).problems
         assert problem.asset == "acme/rates:model/ar1" and "not built when it was pinned" in problem.message
 
     def test_a_pin_the_store_has_lost_is_a_problem(self, downstream, rates, store):
         _train(rates)
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         store.delete(HELLO)
         (problem,) = lock.verify(downstream, store).problems
         assert problem.asset == "acme/rates:treasury" and "does not have it" in problem.message
@@ -165,7 +177,7 @@ class TestFrozen:
 
     def test_the_manifest_and_the_lockfile_must_agree(self, downstream, rates, store, work):
         _train(rates)
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         # A dependency added since
         _write_manifest(work / "other", {"project": {"id": "other"}})
         _depend(downstream, acme__rates={"path": "../rates"}, other={"path": "../other"})
@@ -190,12 +202,10 @@ class TestFrozen:
         assert result.exit_code == 1 and "does not exist" in result.output
         assert "Nothing written" in result.output and not (downstream / lock.LOCK_FILE).exists()
         _train(rates)
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         result = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(downstream)])
         assert result.exit_code == 0, result.output
         assert "4 pin(s) of 1 dependency, all in the store. Nothing written." in result.output
-        refused = CliRunner().invoke(main, ["pin", "--frozen", "--from-folder", "--project-dir", str(downstream)])
-        assert refused.exit_code == 1 and "One or the other" in refused.output
 
     def test_a_full_disk_is_still_an_error_and_leaves_no_half_written_note(self, downstream, rates, store, monkeypatch):
         """Found by a reviewer: every OSError was read as "read-only"."""
@@ -203,7 +213,7 @@ class TestFrozen:
         import json
 
         _train(rates)
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         store.remove_root(downstream / lock.LOCK_FILE)
 
         def full(*args, **kwargs):
@@ -211,7 +221,7 @@ class TestFrozen:
 
         monkeypatch.setattr(json, "dump", full)
         with pytest.raises(lock.LockError, match="was written, and the store's note.*No space left"):
-            pin_folder(downstream, store)
+            pin_from_snapshots(downstream, store)
         assert not list((store.root / "roots").glob("*.tmp"))
         assert (downstream / lock.LOCK_FILE).exists()
 
@@ -219,7 +229,7 @@ class TestFrozen:
         import json
 
         _train(rates)
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         path = downstream / lock.LOCK_FILE
         document = json.loads(path.read_text())
         del document["records"][0]["dependencies"][0]["id"]
@@ -230,25 +240,33 @@ class TestFrozen:
     def test_the_remedy_for_a_lost_pin_depends_on_the_kind(self, downstream, rates, store):
         """Found by a reviewer: `chartbook pin` never re-stores a path dependency's lost pin."""
         _train(rates)
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         store.delete(HELLO)
         (problem,) = lock.verify(downstream, store).problems
-        # Pinned from the folder: only the folder can put it back
-        assert "`chartbook pin --from-folder`, where the store can be written, puts it back" in problem.message
-        assert lock.pin(downstream, store, from_folder=True) and store.has(HELLO)
+        # Pinned from a snapshot: one the store has, or that snapshot made again
+        assert (
+            "`chartbook update acme/rates` moves to a snapshot the store has, or `chartbook snapshot` "
+            "in its folder at that commit makes it again" in problem.message
+        )
+        # A pin that names no commit, as one in a lockfile changed by hand
+        name_no_snapshot(downstream, "acme/rates")
+        (problem,) = lock.verify(downstream, store).problems
+        assert "`chartbook update acme/rates` pins it from a snapshot the store has" in problem.message
+        assert update_from_snapshots(downstream, store=store).problems == [] and store.has(HELLO)
+        assert lock.verify(downstream, store).problems == []
 
     @pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="needs a store this user cannot write")
     def test_a_read_only_roots_folder_is_a_note_not_a_failure(self, downstream, rates, store):
         """Only the note for gc could not be left; the pins are made."""
         _train(rates)
-        pin_folder(downstream, store)  # the objects get into the store
+        pin_from_snapshots(downstream, store)  # the objects get into the store
         (downstream / lock.LOCK_FILE).unlink()
         store.remove_root(downstream / lock.LOCK_FILE)
         roots = store.root / "roots"
         mode = roots.stat().st_mode
         os.chmod(roots, 0o555)
         try:
-            report = pin_folder(downstream, store)
+            report = pin_from_snapshots(downstream, store)
         finally:
             os.chmod(roots, mode)
         assert report.written and "Permission denied" in report.unrooted
@@ -265,7 +283,7 @@ def _train(rates: Path) -> None:
 
 class TestPin:
     def test_every_built_asset_of_a_dependency_is_pinned(self, downstream, rates, store):
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         assert report.lockfile == downstream / LOCK_FILE and report.written
         assert _statuses(report) == {
             "treasury": "pinned",
@@ -282,7 +300,10 @@ class TestPin:
         assert (store.get(HELLO) / "treasury.parquet").read_bytes() == b"hello"
         partitioned = locked.assets["acme/rates:by_year"]["content_hash"]
         assert (store.get(partitioned) / "year=2024" / "part-0.parquet").is_file()
-        assert set(store.hashes()) == locked.hashes()
+        # The store has what the snapshot holds: the assets the lockfile
+        # names, and the version's index and documents
+        (taken,) = snapshot.all_snapshots(store)
+        assert locked.hashes() == taken.asset_hashes() and set(store.hashes()) == taken.hashes()
 
     def test_the_lockfile(self, downstream, rates, store):
         """The whole file, for a dependency with one asset built and one not."""
@@ -294,7 +315,9 @@ class TestPin:
                 "models": {"ar1": {"path": "./_models/ar1"}},
             },
         )
-        pin_folder(downstream, store)
+        (made,) = snapshot_dependencies(downstream, store)
+        lock.pin(downstream, store)
+        taken = made.snapshot
         listing = f"{HELLO.split(':')[1]}  acme/rates:treasury\n"
         overall = "sha256:" + hashlib.sha256(listing.encode()).hexdigest()
         assert json.loads((downstream / LOCK_FILE).read_text()) == {
@@ -309,7 +332,8 @@ class TestPin:
                         {
                             "id": "acme/rates",
                             "via": "path",
-                            "location": {"kind": "path", "path": "../rates"},
+                            "location": {"kind": "path", "path": "../rates", "commit": taken.commit},
+                            "snapshot": taken.made_at,
                             "pinned_hash": overall,
                         }
                     ],
@@ -348,7 +372,7 @@ class TestPin:
     def test_it_has_nothing_of_this_machine_or_this_moment_in_it(
         self, downstream, rates, store, work
     ):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         text = (downstream / LOCK_FILE).read_text()
         assert str(work) not in text
         document = json.loads(text)
@@ -356,10 +380,10 @@ class TestPin:
         assert text.endswith("}\n")
 
     def test_pinning_twice_writes_the_same_bytes(self, downstream, rates, store):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         lockfile = downstream / LOCK_FILE
         first, written_at = lockfile.read_bytes(), lockfile.stat().st_mtime_ns
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         assert report.written is False
         assert lockfile.read_bytes() == first
         assert lockfile.stat().st_mtime_ns == written_at
@@ -367,21 +391,23 @@ class TestPin:
 
     def test_a_pin_is_never_moved_by_pinning_again(self, downstream, rates, store):
         """The decision: only `update` moves a pin."""
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
 
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         assert _statuses(report)["treasury"] == "stale"
         assert report.count("stale") == 1 and report.problems == []
         assert report.written is False
         assert (downstream / LOCK_FILE).read_bytes() == before
         assert (store.get(HELLO) / "treasury.parquet").read_bytes() == b"hello"
 
-    def test_what_has_no_pin_yet_is_pinned(self, downstream, rates, store):
-        pin_folder(downstream, store)
+    def test_what_was_not_built_is_pinned_by_update_once_a_snapshot_has_it(self, downstream, rates, store):
+        """A dependency is pinned to one snapshot, whole: `pin` moves none of it."""
+        pin_from_snapshots(downstream, store)
         _train(rates)  # an asset that was declared and not built
-        report = pin_folder(downstream, store)
+        assert _statuses(pin_from_snapshots(downstream, store))["model/ar1"] == "not_built"
+        report = update_from_snapshots(downstream, store=store)
         assert _statuses(report) == {
             "treasury": "kept",
             "by_year": "kept",
@@ -396,7 +422,7 @@ class TestPin:
     def test_an_asset_that_is_not_built_is_recorded_without_a_hash(
         self, downstream, rates, store
     ):
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         (event,) = [e for e in report.events if e.status == "not_built"]
         assert event == PinEvent(
             "not_built", "acme/rates", "acme/rates:model/ar1", detail="./_models/ar1"
@@ -406,43 +432,45 @@ class TestPin:
         assert record["location"] == {"kind": "file", "path": "./_models/ar1"}
 
     def test_a_clean_clone_gets_its_pins_back(self, downstream, rates, store):
-        """The lockfile is committed; the store is not. `pin` fills it again."""
-        pin_folder(downstream, store)
+        """The lockfile is committed; the store is not. A snapshot fills it again."""
+        pin_from_snapshots(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         for content_hash in list(store.hashes()):
             store.delete(content_hash)
+        # `pin` reads nothing of the other pipeline's folder to put them back from
+        lost = lock.pin(downstream, store).problems
+        assert {p.status for p in lost} == {"lost"} and "A snapshot puts it there" in lost[0].detail
 
-        report = pin_folder(downstream, store)
-        assert _statuses(report)["treasury"] == "restored"
+        report = pin_from_snapshots(downstream, store)  # its owner makes the snapshot again
+        assert _statuses(report)["treasury"] == "kept"
         assert report.problems == [] and report.written is False
         assert (downstream / LOCK_FILE).read_bytes() == before
         assert store.has(HELLO)
 
     def test_a_pin_that_cannot_be_got_back_is_a_problem(self, downstream, rates, store):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         store.delete(HELLO)
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
 
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         (problem,) = report.problems
         assert problem.status == "lost" and problem.asset == "acme/rates:treasury"
         assert problem.old == HELLO
-        assert "the other pipeline no longer has those bytes" in problem.detail
-        # The pin is not quietly moved to what is there now
+        assert "it is not in the store. A snapshot puts it there: `chartbook update`" in problem.detail
+        # The pin is not quietly moved to what the newest snapshot has
         assert (downstream / LOCK_FILE).read_bytes() == before
-        assert not store.has(hashing.hash_file(rates / "_data" / "treasury.parquet").content_hash)
 
     def test_a_dependency_that_is_no_longer_declared_is_let_go(self, downstream, rates, store, work):
         other = work / "macro"
         _write_manifest(other, {"dataframes": {"gdp": {"path": "./gdp.parquet", "docs": "d"}}})
         (other / "gdp.parquet").write_bytes(b"gdp")
         _depend(downstream, acme__rates={"path": "../rates"}, macro={"path": "../macro"})
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         assert "macro:gdp" in lock.read_lock(downstream).assets
 
         _depend(downstream, acme__rates={"path": "../rates"})
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         assert PinEvent("removed", "macro") in report.events
         locked = lock.read_lock(downstream)
         assert "macro:gdp" not in locked.assets
@@ -450,10 +478,10 @@ class TestPin:
 
     def test_a_dependency_that_is_not_there_cannot_be_pinned(self, downstream, store):
         _depend(downstream, acme__rates={"path": "../not_cloned_yet"})
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         (problem,) = report.problems
-        assert problem.status == "unreachable" and problem.dependency == "acme/rates"
-        assert "no pipeline can be read at" in problem.detail
+        assert problem.status == "no_snapshot" and problem.dependency == "acme/rates"
+        assert "there is no folder at" in problem.detail
         assert lock.read_lock(downstream).dependencies == [
             {
                 "id": "acme/rates",
@@ -464,53 +492,59 @@ class TestPin:
 
     def test_a_pinned_dependency_can_go_away(self, downstream, rates, store):
         """What pinning is for: the pins are in the store."""
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         os.rename(rates, rates.with_name("rates_moved_away"))
 
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         assert report.problems == []
-        assert set(_statuses(report).values()) == {"kept"}
+        assert _statuses(report) == {
+            "treasury": "kept",
+            "by_year": "kept",
+            "chart/curve": "kept",
+            "model/ar1": "not_built",
+        }
         assert (downstream / LOCK_FILE).read_bytes() == before
 
     def test_an_asset_the_dependency_stops_declaring_stays_pinned(
         self, downstream, rates, store
     ):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
+        before = (downstream / LOCK_FILE).read_bytes()
         _write_manifest(
             rates,
             {"dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}},
         )
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         assert _statuses(report) == {
             "treasury": "kept",
             "by_year": "kept",
             "chart/curve": "kept",
+            "model/ar1": "not_built",
         }
-        locked = lock.read_lock(downstream)
-        assert "acme/rates:by_year" in locked.assets
-        # The model was never pinned, so there was nothing to keep
-        assert "acme/rates:model/ar1" not in locked.assets
+        assert "acme/rates:by_year" in lock.read_lock(downstream).assets
+        # The snapshot pinned from is kept whole, the model it had not built too
+        assert (downstream / LOCK_FILE).read_bytes() == before
 
     def test_a_pipeline_with_no_dependencies_gets_no_lockfile(self, work, store):
         alone = work / "alone"
         _write_manifest(alone, {"project": {"id": "alone"}})
-        report = pin_folder(alone, store)
+        report = pin_from_snapshots(alone, store)
         assert report.events == [] and report.written is False
         assert not (alone / LOCK_FILE).exists()
         assert not store.root.exists()
 
     def test_the_last_dependency_removed_empties_the_lockfile(self, downstream, rates, store):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         _write_manifest(downstream, {"project": {"id": "downstream"}})
-        report = pin_folder(downstream, store)
+        report = pin_from_snapshots(downstream, store)
         assert report.events == [PinEvent("removed", "acme/rates")]
         locked = lock.read_lock(downstream)
         assert locked.dependencies == [] and locked.assets == {}
         assert store.roots() == []
 
     def test_the_store_is_told_which_lockfile_names_what(self, downstream, rates, store):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         assert store.roots() == [
             Root(downstream / LOCK_FILE, tuple(sorted(lock.read_lock(downstream).hashes())))
         ]
@@ -525,7 +559,7 @@ class TestPin:
             raise OSError(95, "not supported here")
 
         monkeypatch.setattr(store_module, "_reflink", refuse)  # a disk with no clones
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         upstream = rates / "_data" / "treasury.parquet"
         held = store.get(HELLO) / "treasury.parquet"
         assert not held.is_symlink() and not held.samefile(upstream)
@@ -546,7 +580,7 @@ class TestPin:
         store.put(upstream, links=("hardlink",))
         assert (store.get(HELLO) / "treasury.parquet").samefile(upstream)
 
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         held = store.get(HELLO) / "treasury.parquet"
         assert not held.samefile(upstream)
         assert held.read_bytes() == b"hello" and store.verify() == []
@@ -555,34 +589,34 @@ class TestPin:
         """A dataframe with no write-up does not load, and can still be pinned from."""
         with open(downstream / "chartbook.toml", "a") as f:
             f.write('\n[dataframes.broken]\npath = "./x.parquet"\n')
-        assert pin_folder(downstream, store).problems == []
+        assert pin_from_snapshots(downstream, store).problems == []
 
     def test_a_catalog_has_nothing_to_pin(self, work, store):
         catalog = create_catalog_project(work / "cat")
         with pytest.raises(LockError, match="is a catalog"):
-            pin_folder(catalog, store)
+            pin_from_snapshots(catalog, store)
 
     def test_a_directory_with_no_manifest(self, work, store):
         (work / "empty").mkdir()
         with pytest.raises(LockError, match="No chartbook.toml in"):
-            pin_folder(work / "empty", store)
+            pin_from_snapshots(work / "empty", store)
 
     def test_a_malformed_dependencies_table_names_the_file(self, downstream, store):
         _depend(downstream, rates={"path": "../rates", "git": "https://x/y"})
         with pytest.raises(ValueError) as e:
-            pin_folder(downstream, store)
+            pin_from_snapshots(downstream, store)
         assert str(downstream / "chartbook.toml") in str(e.value)
         assert "both 'path' and 'git'" in str(e.value)
 
 
 class TestUpdate:
     def test_it_moves_a_pin_to_what_the_dependency_has_now(self, downstream, rates, store):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         before = lock.read_lock(downstream)
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
         now = hashing.hash_file(rates / "_data" / "treasury.parquet").content_hash
 
-        report = update_folder(downstream, store=store)
+        report = update_from_snapshots(downstream, store=store)
         assert report.written is True
         (moved,) = [e for e in report.events if e.status == "moved"]
         assert moved.asset == "acme/rates:treasury"
@@ -597,8 +631,8 @@ class TestUpdate:
         assert store.has(HELLO) and store.has(now)
 
     def test_nothing_changed_writes_nothing(self, downstream, rates, store):
-        pin_folder(downstream, store)
-        report = update_folder(downstream, store=store)
+        pin_from_snapshots(downstream, store)
+        report = update_from_snapshots(downstream, store=store)
         assert report.written is False
         assert set(_statuses(report).values()) == {"kept", "not_built"}
 
@@ -607,48 +641,42 @@ class TestUpdate:
         _write_manifest(macro, {"dataframes": {"gdp": {"path": "./gdp.parquet", "docs": "d"}}})
         (macro / "gdp.parquet").write_bytes(b"gdp")
         _depend(downstream, acme__rates={"path": "../rates"}, macro={"path": "../macro"})
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
         _replace(macro / "gdp.parquet", b"new gdp")
 
-        report = update_folder(downstream, ["rates"], store=store)  # the scope left off
+        report = update_from_snapshots(downstream, ["rates"], store=store)  # the scope left off
         assert _statuses(report, "acme/rates")["treasury"] == "moved"
         assert _statuses(report, "macro")["gdp"] == "stale"
 
-        report = update_folder(downstream, ["macro"], store=store)
+        report = update_from_snapshots(downstream, ["macro"], store=store)
         assert _statuses(report, "macro")["gdp"] == "moved"
 
     def test_a_name_that_is_not_a_dependency(self, downstream, rates, store):
         with pytest.raises(LockError) as e:
-            update_folder(downstream, ["nope"], store=store)
+            update_from_snapshots(downstream, ["nope"], store=store)
         assert "Pipeline 'nope' not found" in str(e.value)
         assert "Declared in [dependencies]: acme/rates." in str(e.value)
         assert "In the catalog" not in str(e.value)
 
-    def test_an_asset_that_is_no_longer_built_keeps_its_pin(self, downstream, rates, store):
-        pin_folder(downstream, store)
-        (rates / "_data" / "treasury.parquet").unlink()
-        report = update_folder(downstream, store=store)
-        assert _statuses(report)["treasury"] == "kept"
-        assert lock.read_lock(downstream).assets["acme/rates:treasury"]["content_hash"] == HELLO
-
     def test_an_asset_no_longer_declared_is_dropped(self, downstream, rates, store):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         _write_manifest(
             rates,
             {"dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}},
         )
-        report = update_folder(downstream, store=store)
+        report = update_from_snapshots(downstream, store=store)
         dropped = sorted(e.asset for e in report.events if e.status == "dropped")
         assert dropped == ["acme/rates:by_year", "acme/rates:chart/curve"]
         assert set(lock.read_lock(downstream).assets) == {"acme/rates:treasury"}
 
     def test_a_dependency_that_is_not_there_cannot_be_updated(self, downstream, rates, store):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         before = (downstream / LOCK_FILE).read_bytes()
         os.rename(rates, rates.with_name("rates_moved_away"))
-        report = update_folder(downstream, store=store)
-        assert [p.status for p in report.problems] == ["unreachable"]
+        report = update_from_snapshots(downstream, store=store)
+        assert [p.status for p in report.problems] == ["no_snapshot"]
+        assert "there is no folder at" in report.problems[0].detail
         assert (downstream / LOCK_FILE).read_bytes() == before
 
 
@@ -672,7 +700,7 @@ class TestPinnedHash:
 
 class TestReadingAndWriting:
     def test_a_lockfile_reads_back_as_it_was_written(self, downstream, rates, store):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         locked = lock.read_lock(downstream / LOCK_FILE)
         assert isinstance(locked, Lock)
         assert lock.read_lock(downstream) == locked  # a directory will do
@@ -713,7 +741,7 @@ class TestSchemas:
     """The lockfile is in the index's format: no second one."""
 
     def test_the_file_fits_its_schema(self, downstream, rates, store):
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         document = json.loads((downstream / LOCK_FILE).read_text())
         jsonschema.validate(document, json.loads(lock.schema_path().read_text()))
 
@@ -721,7 +749,7 @@ class TestSchemas:
         self, downstream, rates, store
     ):
         _train(rates)
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         records = json.loads((downstream / LOCK_FILE).read_text())["records"]
         kinds = set()
         for record in records[1:]:
@@ -736,7 +764,7 @@ class TestSchemas:
             acme__rates={"path": "../rates"},
             crsp={"git": "https://example.org/acme/crsp.git"},
         )
-        pin_folder(downstream, store)
+        pin_from_snapshots(downstream, store)
         pipeline = json.loads(index.schema_path("Pipeline").read_text())
         dependency = pipeline["properties"]["dependencies"]["items"]
         for entry in lock.read_lock(downstream).dependencies:
@@ -786,82 +814,121 @@ class TestStoreRoots:
             store.roots()
 
 
+def _pin_then_update(downstream: Path, rates: Path, store: Store) -> tuple:
+    """Pin, then update to new data, each from a snapshot made a month ago.
+
+    :returns: The lockfile as it was before the update, the snapshot it
+        pinned, and the one the update moved to.
+    """
+    (old,) = snapshot_dependencies(downstream, store, made_at=_days_ago(31))
+    lock.pin(downstream, store)
+    before = (downstream / LOCK_FILE).read_bytes()
+    _replace(rates / "_data" / "treasury.parquet", b"new numbers")
+    (new,) = snapshot_dependencies(downstream, store, made_at=_days_ago(30))
+    lock.update(downstream, store=store)
+    return before, old.snapshot, new.snapshot
+
+
+def _old_version(old) -> set:
+    """What an update leaves that only the snapshot it moved from names: the old data, and that version's index."""
+    return {HELLO, old.index["content_hash"]}
+
+
 class TestGc:
+    """What no lockfile names, and no snapshot that is kept, can go.
+
+    The snapshots here are a month old, so the one pinned before an update
+    is kept by nothing and goes, with what only it named.
+    """
+
     @pytest.fixture
-    def moved(self, downstream, rates, store):
-        """A store with one object that an update left behind, an hour old."""
-        pin_folder(downstream, store)
-        _replace(rates / "_data" / "treasury.parquet", b"new numbers")
-        update_folder(downstream, store=store)
+    def updated(self, downstream, rates, store):
+        return _pin_then_update(downstream, rates, store)
+
+    @pytest.fixture
+    def moved(self, updated, store):
+        """A store with what an update left behind, an hour old."""
         _age(store)
         return store
 
-    def test_what_no_lockfile_names_can_go(self, moved, downstream):
+    def test_what_no_lockfile_names_can_go(self, moved, updated, downstream):
+        _, old, new = updated
         plan = lock.plan_gc(moved)
         assert plan.lockfiles == [(downstream / LOCK_FILE, True)]
-        assert plan.kept == 3
-        assert plan.delete == [(HELLO, 5)] and plan.size_bytes == 5
+        # What the lockfile names, and the index and documents of its snapshot
+        assert plan.kept == len(new.hashes()) == 5
+        assert [taken for taken, _ in plan.snapshots_delete] == [old]
+        assert {content_hash for content_hash, _ in plan.delete} == _old_version(old)
+        assert plan.size_bytes == 5 + old.index["size_bytes"]
         assert plan.recent == [] and plan.forget == []
         # Planning removes nothing
         assert moved.has(HELLO)
 
-        assert lock.run_gc(plan, moved) == (0, 1)
+        assert lock.run_gc(plan, moved) == (1, 2)
         assert not moved.has(HELLO)
-        assert set(moved.hashes()) == lock.read_lock(downstream).hashes()
+        assert set(moved.hashes()) == new.hashes() and lock.read_lock(downstream).hashes() <= new.hashes()
         assert moved.verify() == []
         assert lock.plan_gc(moved).delete == []
 
-    def test_what_was_stored_in_the_last_hour_is_left_alone(self, downstream, rates, store):
+    def test_what_was_stored_in_the_last_hour_is_left_alone(self, updated, store):
         """A pin stores a file before it writes the lockfile that names it."""
-        pin_folder(downstream, store)
-        _replace(rates / "_data" / "treasury.parquet", b"new numbers")
-        update_folder(downstream, store=store)
+        _, old, _ = updated
         plan = lock.plan_gc(store)
-        assert plan.delete == [] and plan.recent == [HELLO]
-        assert lock.plan_gc(store, recent_seconds=0).delete == [(HELLO, 5)]
+        assert plan.delete == [] and set(plan.recent) == _old_version(old)
+        assert {h for h, _ in lock.plan_gc(store, recent_seconds=0).delete} == _old_version(old)
 
     def test_storing_an_object_again_makes_it_recent(self, moved, rates):
         _replace(rates / "_data" / "old.parquet", b"hello")
         moved.put(rates / "_data" / "old.parquet")
         assert lock.plan_gc(moved).recent == [HELLO]
 
-    def test_another_projects_pins_are_kept(self, moved, downstream, rates, work):
+    def test_another_projects_pins_are_kept(self, moved, updated, downstream, rates, work):
         """The store is shared. Clearing it out from one project spares the rest."""
+        _, old, new = updated
         other = work / "other"
         _write_manifest(rates.with_name("old_rates"), {"dataframes": {"t": {"path": "./t.parquet", "docs": "d"}}})
         (rates.with_name("old_rates") / "t.parquet").write_bytes(b"hello")
         _depend(other, old={"path": "../old_rates"})
-        pin_folder(other, moved)
+        (theirs,) = snapshot_dependencies(other, moved)
+        lock.pin(other, moved)
         _age(moved)
 
         plan = lock.plan_gc(moved)
         assert [found for _, found in plan.lockfiles] == [True, True]
-        assert plan.delete == [] and plan.kept == 4
+        # The old data is the other project's pin: only the old index goes
+        assert plan.delete == [(old.index["content_hash"], old.index["size_bytes"])]
+        assert plan.kept == len(new.hashes() | theirs.snapshot.hashes()) and HELLO in theirs.snapshot.hashes()
 
     def test_a_lockfile_that_cannot_be_found_still_keeps_its_pins(self, moved, downstream):
         kept_before = lock.read_lock(downstream).hashes()
         os.rename(downstream, downstream.with_name("unplugged"))
         plan = lock.plan_gc(moved)
         assert plan.lockfiles == [(downstream / LOCK_FILE, False)]
-        assert plan.kept == 3 and plan.delete == [(HELLO, 5)]
+        # Which snapshot it pins cannot be read either: each that holds what
+        # it named is kept, the one before the update too
+        assert plan.snapshots_delete == [] and plan.delete == []
         lock.run_gc(plan, moved)
-        assert set(moved.hashes()) == kept_before
+        assert kept_before <= set(moved.hashes()) and moved.has(HELLO)
         assert len(moved.roots()) == 1
 
-    def test_unless_told_to_forget_it(self, moved, downstream):
+    def test_unless_told_to_forget_it(self, moved, updated, downstream):
+        _, old, new = updated
         os.rename(downstream, downstream.with_name("deleted"))
         plan = lock.plan_gc(moved, forget_missing=True)
         assert plan.forget == [downstream / LOCK_FILE]
-        assert plan.kept == 0 and len(plan.delete) == 4
-        assert lock.run_gc(plan, moved) == (0, 4)
-        assert list(moved.hashes()) == [] and moved.roots() == []
+        # Nothing is kept for it; what stays is what the newest snapshot holds
+        assert plan.kept == len(new.hashes())
+        assert {h for h, _ in plan.delete} == _old_version(old)
+        assert lock.run_gc(plan, moved) == (1, 2)
+        assert set(moved.hashes()) == new.hashes() and moved.roots() == []
 
-    def test_a_lockfile_is_read_as_it_is_now(self, moved, downstream):
+    def test_a_lockfile_is_read_as_it_is_now(self, moved, updated, downstream):
         """Checked out at another commit, say, and not pinned again since."""
-        locked = lock.read_lock(downstream)
-        del locked.assets["acme/rates:by_year"]
-        lock.write_lock(locked, downstream / LOCK_FILE)
-        assert len(lock.plan_gc(moved).delete) == 2
+        before, old, _ = updated
+        (downstream / LOCK_FILE).write_bytes(before)  # it pins the snapshot before the update
+        plan = lock.plan_gc(moved)
+        assert (old, "a lockfile pins it") in plan.snapshots_kept
+        assert plan.delete == []
 
     def test_a_lockfile_that_cannot_be_read_stops_it(self, moved, downstream):
         (downstream / LOCK_FILE).write_text("not json")
@@ -888,20 +955,24 @@ class TestCommands:
 
     def _run(self, *args, **kwargs):
         if args and args[0] in ("pin", "update"):
-            args = (*args, "--from-folder")
+            # What the other pipeline's owner does first
+            project = Path(args[args.index("--project-dir") + 1]) if "--project-dir" in args else Path.cwd()
+            snapshot_dependencies(project)
         return CliRunner().invoke(main, list(args), **kwargs)
 
     def test_pin(self, here, downstream):
         result = self._run("pin")
         assert result.exit_code == 0, result.output
+        (taken,) = snapshot.all_snapshots(here)
         assert result.output.splitlines() == [
             "acme/rates: 3 pinned, 1 not built",
             "  not built: acme/rates:model/ar1 (./_models/ar1)",
-            "  Taken from its folder as it is now, not from a snapshot.",
+            f"  From its snapshot at {taken.commit[:7]}, made {taken.made_at[:10]} {taken.made_at[11:16]} UTC.",
             "Wrote chartbook.lock.",
         ]
         assert (downstream / LOCK_FILE).is_file()
-        assert len(list(here.hashes())) == 3
+        # The three pins, and the snapshot's index and documents
+        assert set(here.hashes()) == taken.hashes() and len(taken.asset_hashes()) == 3
 
     def test_pin_again_says_nothing_moved(self, here, rates):
         self._run("pin")
@@ -936,7 +1007,7 @@ class TestCommands:
         _depend(downstream, acme__rates={"path": "../not_cloned_yet"})
         result = self._run("pin")
         assert result.exit_code == 1
-        assert "acme/rates: cannot be pinned: no pipeline can be read at" in result.output
+        assert "acme/rates: cannot be pinned: there is no folder at" in result.output
         assert "1 thing(s) could not be pinned." in result.output
 
     def test_no_dependencies(self, here, downstream):
@@ -957,70 +1028,102 @@ class TestCommands:
         assert result.exit_code == 0, result.output
         assert (downstream / LOCK_FILE).is_file()
 
-    @pytest.fixture
-    def garbage(self, here, rates):
-        """A store with one object that an update left behind, an hour old."""
+    def _pin_then_update(self, downstream, rates):
+        """Pin, then update to new data, each from a snapshot made a month ago.
+
+        The snapshot pinned before the update is then kept by nothing, and
+        `store gc` lets it go, with the old data and that version's index,
+        which only it named.
+
+        :returns: The snapshot pinned before the update, and the one after.
+        """
+        (old,) = snapshot_dependencies(downstream, made_at=_days_ago(31))
         self._run("pin")
         _replace(rates / "_data" / "treasury.parquet", b"new numbers")
+        (new,) = snapshot_dependencies(downstream, made_at=_days_ago(30))
         self._run("update")
+        return old.snapshot, new.snapshot
+
+    @pytest.fixture
+    def garbage(self, here, downstream, rates):
+        """A store with what an update left behind, an hour old; the snapshots before and after it."""
+        old, new = self._pin_then_update(downstream, rates)
         _age(here)
-        return here
+        return here, old, new
 
     def test_gc_dry_run_removes_nothing(self, garbage, downstream):
+        from chartbook.cli import _format_bytes
+
+        store, old, _ = garbage
+        left = sorted([(HELLO, 5), (old.index["content_hash"], old.index["size_bytes"])])
         result = self._run("store", "gc", "--dry-run")
         assert result.exit_code == 0, result.output
         assert result.output.splitlines() == [
-            "Kept: 3 object(s), named by 1 lockfile(s)",
+            "Kept: 5 object(s), named by 1 lockfile(s)",
             f"  {downstream / LOCK_FILE}",
-            "Would remove 1 object(s), 5 bytes, that nothing names:",
-            f"  {HELLO}  5 bytes",
+            "Kept: 1 snapshot(s), naming 5 object(s): 1 because a lockfile pins it",
+            "Would remove 1 snapshot(s):",
+            f"  rates at {old.commit[:7]}, made {old.made_at[:10]} {old.made_at[11:16]} UTC: nothing pins it, "
+            f"it is not the newest, and it is older than 7 days",
+            f"Would remove 2 object(s), {_format_bytes(5 + old.index['size_bytes'])}, that nothing names:",
+            *(f"  {content_hash}  {_format_bytes(size)}" for content_hash, size in left),
         ]
-        assert garbage.has(HELLO)
+        assert store.has(HELLO)
 
     def test_gc_asks_first(self, garbage):
+        from chartbook.cli import _format_bytes
+
+        store, old, _ = garbage
+        size = _format_bytes(5 + old.index["size_bytes"])
         result = self._run("store", "gc", input="n\n")
         assert result.exit_code == 0, result.output
-        assert "Would remove 1 object(s), 5 bytes, that nothing names." in result.output
+        assert f"Would remove 2 object(s), {size}, that nothing names." in result.output
         assert "Remove them? [y/N]" in result.output
         assert "Nothing was removed." in result.output
-        assert garbage.has(HELLO)
+        assert store.has(HELLO)
 
         result = self._run("store", "gc", input="y\n")
-        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
-        assert not garbage.has(HELLO)
+        assert f"Removed 1 snapshot(s) and 2 object(s), {size}." in result.output
+        assert not store.has(HELLO)
 
     def test_gc_with_no_answer_removes_nothing(self, garbage):
+        store, _, _ = garbage
         result = self._run("store", "gc", input="")
-        assert garbage.has(HELLO)
+        assert store.has(HELLO)
         assert "Removed" not in result.output
 
     def test_gc_yes(self, garbage):
+        from chartbook.cli import _format_bytes
+
+        store, old, _ = garbage
         result = self._run("store", "gc", "--yes")
         assert result.exit_code == 0, result.output
         assert "Remove them?" not in result.output
-        assert "Removed 0 snapshot(s) and 1 object(s), 5 bytes." in result.output
-        assert not garbage.has(HELLO)
+        assert f"Removed 1 snapshot(s) and 2 object(s), {_format_bytes(5 + old.index['size_bytes'])}." in result.output
+        assert not store.has(HELLO)
         assert "Nothing to remove." in self._run("store", "gc").output
 
-    def test_gc_says_what_it_spared_for_being_new(self, here, rates):
-        self._run("pin")
-        _replace(rates / "_data" / "treasury.parquet", b"new numbers")
-        self._run("update")
+    def test_gc_says_what_it_spared_for_being_new(self, here, downstream, rates):
+        self._pin_then_update(downstream, rates)
         result = self._run("store", "gc", "--yes")
-        assert "Kept: 1 object(s) nothing names, stored in the last hour" in result.output
-        assert "Nothing to remove." in result.output
+        # The old data and the old index, which the old snapshot alone named
+        assert "Kept: 2 object(s) nothing names, stored in the last hour" in result.output
+        assert "Removed 1 snapshot(s) and 0 object(s), 0 bytes." in result.output
         assert here.has(HELLO)
 
     def test_gc_keeps_the_pins_of_a_lockfile_it_cannot_find(self, garbage, downstream):
+        store, _, new = garbage
         os.rename(downstream / LOCK_FILE, downstream / "moved.lock")
         result = self._run("store", "gc", "--yes")
         assert f"  {downstream / LOCK_FILE}  (not found; its pins are kept)" in result.output
-        assert len(list(garbage.hashes())) == 3
+        # ...and with them every snapshot that holds one: nothing goes
+        assert "Nothing to remove." in result.output and store.has(HELLO)
 
         result = self._run("store", "gc", "--yes", "--forget-missing")
         assert f"  {downstream / LOCK_FILE}  (not found; forgotten)" in result.output
-        assert "Removed 0 snapshot(s) and 3 object(s)" in result.output
-        assert list(garbage.hashes()) == [] and garbage.roots() == []
+        assert "Removed 1 snapshot(s) and 2 object(s)" in result.output
+        # What stays is what the newest snapshot holds
+        assert set(store.hashes()) == new.hashes() and store.roots() == []
 
     def test_gc_stops_at_a_lockfile_it_cannot_read(self, garbage, downstream):
         (downstream / LOCK_FILE).write_text("not json")
@@ -1028,7 +1131,18 @@ class TestCommands:
         assert result.exit_code == 1
         assert result.output.startswith("Error: Cannot read")
         assert "Nothing was removed." in result.output
-        assert garbage.has(HELLO)
+        assert garbage[0].has(HELLO)
+
+    def test_there_is_no_pinning_from_a_folder(self, here, downstream):
+        """Decided 2026-10-16: a lockfile never records a read of another pipeline's working folder."""
+        for command in ("pin", "update"):
+            result = CliRunner().invoke(main, [command, "--from-folder"])
+            assert result.exit_code == 2 and "No such option: --from-folder" in result.output
+        with pytest.raises(TypeError, match="from_folder"):
+            lock.pin(downstream, here, from_folder=True)
+        with pytest.raises(TypeError, match="from_folder"):
+            lock.update(downstream, store=here, from_folder=True)
+        assert not (downstream / LOCK_FILE).exists()
 
     def test_sizes_are_written_for_people(self):
         from chartbook.cli import _format_bytes
@@ -1047,6 +1161,6 @@ class TestCommands:
         assert [h for h, _ in plan.delete] == [stray.content_hash]
         # ...and before the yes, a project pins it
         _write_manifest(downstream, {"dependencies": {"stray": {"path": "../stray"}}})
-        pin_folder(downstream, here)
+        pin_from_snapshots(downstream, here)
         removed_snapshots, removed = lock.run_gc(plan, here)
         assert (removed_snapshots, removed) == (0, 0) and here.has(stray.content_hash)
