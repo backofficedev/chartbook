@@ -1251,3 +1251,77 @@ class TestCommands:
 def test_an_unneeded_snapshot_is_kept_a_week():
     """Decided 2026-10-16: 7 days, not 30, so a store stays small."""
     assert snapshot.KEEP_DAYS == 7
+
+
+class TestNamesAndAggressiveGc:
+    """A git tag is a version's name: recorded with the snapshot and shown; `store gc --aggressive`
+    lets names keep nothing (decided 2026-10-16)."""
+
+    def test_a_snapshot_records_the_tags_on_its_commit(self, maker, work):
+        _git(work, "tag", "v1.0")
+        _git(work, "tag", "paper-2026")
+        taken = snapshot.make(maker).snapshot
+        assert taken.tags == ["paper-2026", "v1.0"]
+        assert snapshot.read(taken.path).tags == ["paper-2026", "v1.0"]
+
+    def test_a_tag_not_in_a_tags_shape_is_left_out(self, maker, work):
+        import json
+        import os
+        import stat
+
+        taken = snapshot.make(maker).snapshot
+        os.chmod(taken.path, stat.S_IRUSR | stat.S_IWUSR)
+        document = json.loads(taken.path.read_text())
+        document["tags"] = ["ok-1", "<script>", "a b", "..", 5, "x" * 200]
+        taken.path.write_text(json.dumps(document))
+        assert snapshot.read(taken.path).tags == ["ok-1"]
+
+    def test_aggressive_lets_a_tag_keep_nothing(self, maker, work):
+        release = snapshot.make(maker, made_at=OLDER).snapshot
+        _git(work, "tag", "v1")
+        (maker / "pull.py").write_text("print('main moves on')\n")
+        _commit(work)
+        _build(maker, rates=b"rates-2")
+        newest = snapshot.make(maker).snapshot
+        kept = snapshot.plan_removals(default_store(), set(), set(), keep_days=7)
+        assert (release, "it is the newest a branch or tag can pin from") in kept.keep
+        aggressive = snapshot.plan_removals(default_store(), set(), set(), keep_days=7, aggressive=True)
+        assert [t for t, _ in aggressive.remove] == [release]
+        assert (newest, "it is the newest of its pipeline") in aggressive.keep
+        # A lockfile's pin still keeps it, whatever names say
+        pinned = snapshot.plan_removals(default_store(), {(release.commit, release.made_at)}, set(), keep_days=7, aggressive=True)
+        assert (release, "a lockfile pins it") in pinned.keep
+
+    def test_aggressive_lets_a_label_keep_nothing(self, work):
+        directory = _manifest(work / "forecast", {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json"}}})
+        (directory / "_output").mkdir()
+        (directory / "_output" / "m.json").write_bytes(b"v1")
+        _commit(work)
+        first = snapshot.make(directory, made_at=OLDER).snapshot
+        version = first.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
+        _manifest(directory, {"project": {"id": "acme/forecast"}, "models": {"m": {"path": "./_output/m.json", "aliases": {"champion": version}}}})
+        _commit(work)
+        (directory / "_output" / "m.json").write_bytes(b"v2")
+        snapshot.make(directory)
+        assert (first, "a label points at a version in it") in _plan(default_store()).keep
+        aggressive = snapshot.plan_removals(default_store(), set(), set(), keep_days=7, aggressive=True)
+        assert [t for t, _ in aggressive.remove] == [first]
+
+    def test_the_command_takes_aggressive_and_plans_it_again_on_yes(self, maker, work, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        release = snapshot.make(maker, made_at=OLDER).snapshot
+        _git(work, "tag", "v1")
+        (maker / "pull.py").write_text("print('main moves on')\n")
+        _commit(work)
+        _build(maker, rates=b"rates-2")
+        snapshot.make(maker)
+        monkeypatch.chdir(maker)
+        listed = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--aggressive"])
+        assert listed.exit_code == 0 and release.commit[:7] in listed.output, listed.output
+        plan = lock.plan_gc(default_store(), recent_seconds=0, aggressive=True)
+        assert plan.aggressive and [t for t, _ in plan.snapshots_delete] == [release]
+        removed, _ = lock.run_gc(plan, default_store())
+        assert removed == 1 and not release.path.exists()

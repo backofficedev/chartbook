@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — a git tag names a version; `store gc --aggressive`
+
+A snapshot records the git tags on its commit when it is made, and `chartbook lineage` and a catalog's Versions page show them: a git tag is a version's name, given with `git tag` and taken away with `git tag -d`. `store gc` already kept the newest snapshot a tag can pin from; a name keeps that snapshot only, not its lineage. `store gc --aggressive` lets names keep nothing: no snapshot is kept for a tag or a branch, or for a model label, so only what a lockfile pins, the newest of each pipeline and the last `--keep-days` days stay. Tag names from a store's records are taken only in a tag's shape. Decided by the maintainer on 2026-10-16.
+
 ### Changed — `store gc` keeps an unneeded snapshot for 7 days, not 30
 
 A snapshot that nothing pins, that is not the newest of its pipeline (or the newest a branch or tag can pin from), and that no label points into is now removed after 7 days rather than 30, so a store stays small. `--keep-days` still sets it. Decided by the maintainer on 2026-10-16.

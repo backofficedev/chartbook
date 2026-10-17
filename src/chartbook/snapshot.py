@@ -160,6 +160,9 @@ class Snapshot:
         inputs: What the pipeline itself was pinned to when the snapshot
             was made: the dependencies of its own lockfile, each with its
             commit and its ``pinned_hash``. Empty if it has no lockfile.
+        tags: The git tags on its commit when it was made: the names of
+            that version, as ``git tag`` gave them. A tag made later is not
+            in it. For people and pages; ``store gc`` asks git for tags.
         labels: The labels the pipeline's manifest gave its models' versions
             when the snapshot was made, by the model's reference: ``{"model/x":
             {"champion": "7f3a9c2e41b0"}}``. Labels travel with snapshots so
@@ -193,6 +196,7 @@ class Snapshot:
     built_with: dict = field(default_factory=dict, compare=False)
     inputs: list = field(default_factory=list, compare=False)
     labels: dict = field(default_factory=dict, compare=False)
+    tags: list = field(default_factory=list, compare=False)
     index: Optional[dict] = field(default=None, compare=False)
     documents: Optional[dict] = field(default=None, compare=False)
 
@@ -240,6 +244,8 @@ class Snapshot:
             document["built_with"] = self.built_with
         if self.inputs:
             document["inputs"] = self.inputs
+        if self.tags:
+            document["tags"] = list(self.tags)
         if self.labels:
             document["labels"] = {
                 name: dict(sorted(self.labels[name].items())) for name in sorted(self.labels)
@@ -645,6 +651,7 @@ def read(path: Union[str, Path]) -> Snapshot:
             built_with=dict(document.get("built_with") or {}),
             inputs=list(document.get("inputs") or []),
             labels={k: dict(v) for k, v in (document.get("labels") or {}).items()},
+            tags=_tag_names(document.get("tags")),
             index=dict(document["index"]) if document.get("index") else None,
             documents=dict(document["documents"]) if document.get("documents") else None,
         )
@@ -1115,6 +1122,7 @@ def plan_removals(
     keep_days: float = KEEP_DAYS,
     now: Optional[datetime] = None,
     keep_lineage: bool = False,
+    aggressive: bool = False,
 ) -> SnapshotPlan:
     """Say which snapshots may be removed. Nothing is removed.
 
@@ -1129,6 +1137,11 @@ def plan_removals(
        manifest, read from the folder the snapshots were made from, or as
        recorded in the newest snapshot of the pipeline (:func:`labels_of`);
     5. it was made in the last *keep_days* days;
+    With *aggressive*, names keep nothing: 3 is only the newest of the
+    pipeline, never the newest a branch or tag can pin from, and 4 is not
+    asked at all, so a tagged version, or a labelled model version, goes
+    once nothing else keeps it.
+
     6. with *keep_lineage*: a snapshot kept for any of these reasons was
        made from it, or from a label pointing into it, and so on up, so
        that a kept snapshot's lineage stays whole (:func:`_keep_lineage`).
@@ -1152,8 +1165,8 @@ def plan_removals(
         groups.setdefault((taken.pipeline, taken.subdirectory), []).append(taken)
     for group in groups.values():
         newest = group[-1]
-        labels = _labels_in(store, group)
-        pinnable = _pinnable(store, group)
+        labels = {} if aggressive else _labels_in(store, group)
+        pinnable = set() if aggressive else _pinnable(store, group)
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
@@ -1435,6 +1448,27 @@ def check_within(directory: Union[str, Path], pipeline: str) -> None:
             )
 
 
+#: What a tag name may be, to be recorded and shown: git's own rules are
+#: looser, and a record in a shared store is anyone's to write
+_TAG = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/+-]{0,99}")
+
+
+def _tag_names(value: object) -> list:
+    """Tag names as a record holds them: text in a tag's shape, at most 50; anything else is left out."""
+    if not isinstance(value, list):
+        return []
+    return [tag for tag in value if isinstance(tag, str) and _TAG.fullmatch(tag) and ".." not in tag][:50]
+
+
+def _tags_at(directory: Path, commit: str) -> list:
+    """The git tags on a commit, sorted: the names of the version a snapshot is of."""
+    try:
+        listed = _git(Path(directory), "tag", "--points-at", commit)
+    except SnapshotError:
+        return []
+    return sorted(_tag_names(listed.split()))
+
+
 def _built_with(run: bool, lineage: str = "pins") -> dict:
     """The conditions a snapshot is being made under, as far as they are recorded.
 
@@ -1623,6 +1657,7 @@ def make(
         built_with=_built_with(built_by_run, "deep" if deep else "pins"),
         inputs=_inputs(directory),
         labels=labels_of(raw),
+        tags=_tags_at(directory, code.commit),
     )
     # The files a writer needs that are not assets, worked out before anything
     # is compared, so that a pipeline with none is not given a new snapshot on

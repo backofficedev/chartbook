@@ -1016,3 +1016,19 @@ class TestACatalogEntryWithNoPath:
         with pytest.raises(KeyError) as raised:
             locate_in_catalog(load_manifest(root), reference)
         assert "no folder on this machine" in str(raised.value)
+
+
+class TestATagIsAVersionsName:
+    def test_the_versions_page_says_it(self, catalog, monkeypatch):
+        root, first, second = catalog
+        repository = root.parent
+        a = root / "pipelines" / "pipeline_a"
+        data = next((a / "_data").rglob("*.parquet"))
+        pl.DataFrame({"date": ["2025-02-01"], "value": [1.5]}).write_parquet(data)
+        _commit(repository, "Release")
+        _git(repository, "tag", "release-9")
+        tagged = snapshot.make(a).snapshot
+        assert tagged.tags == ["release-9"]
+        _build(root, monkeypatch)
+        page = (root / "docs" / "cb" / "versions.html").read_text()
+        assert "tagged" in page and "<code>release-9</code>" in page

@@ -173,6 +173,13 @@
           }
         }
       }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The git tags on the snapshot's commit when it was made: the names of that version. A tag made later is not in it."
     }
   }
 }

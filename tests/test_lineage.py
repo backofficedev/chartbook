@@ -337,3 +337,28 @@ class TestWhatTheMaintainerAsked:
         monkeypatch.chdir(forecast)
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run", "--keep-lineage"])
         assert result.exit_code == 0, result.output
+
+
+class TestNames:
+    def test_the_tree_and_the_versions_page_say_a_versions_tags(self, chain, monkeypatch):
+        fred, rates, forecast = chain
+        _git(forecast.parent, "tag", "paper-2026")
+        snapshot.make(fred)  # nothing new at this commit: the tag is recorded only by a snapshot made after it
+        taken = _snapshot_of("acme/fred")
+        assert taken.tags == []
+        (fred / "_data" / "series.parquet").unlink()
+        pl.DataFrame({"d": ["2024-03-01"], "series": [3.0]}).write_parquet(fred / "_data" / "series.parquet")
+        made = snapshot.make(fred).snapshot
+        assert made.tags == ["paper-2026"]
+        lock.update(rates)
+        monkeypatch.chdir(rates)
+        output = CliRunner().invoke(main, ["lineage"]).output
+        assert "└── fred: acme/fred " in output and ", tagged paper-2026, made " in output, output
+        shown = json.loads(CliRunner().invoke(main, ["lineage", "--json"]).output)
+        assert shown["root"]["children"][0]["tags"] == ["paper-2026"]
+        # The catalog's index lists the snapshot's tags, for its Versions page
+        from chartbook.index import _add_snapshots
+
+        records = [{"kind": "Pipeline", "id": "acme/fred", "location": {"kind": "store"}}]
+        _add_snapshots(records)
+        assert any(entry.get("tags") == ["paper-2026"] for entry in records[0]["snapshots"])
