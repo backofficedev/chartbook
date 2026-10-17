@@ -152,6 +152,18 @@ class TestPlainInit:
         assert tools.commands("git") == []
         assert tools.commands("gh") == []
 
+    @pytest.mark.parametrize("flags", [(), ("--git",)])
+    def test_a_refused_folder_name_is_said_again_last(self, tools, flags):
+        """The template's own message is above cruft's traceback, about 118 lines of it."""
+        tools.failing[("cruft",)] = "Traceback (most recent call last): ..."
+        tools.render = False
+        result = _init(*flags)
+        assert result.exit_code == 1
+        assert result.output.strip().splitlines()[-1] == (
+            "If the folder name was refused, run `chartbook init` again and press "
+            "Enter at the second question."
+        )
+
     def test_visibility_without_github_is_a_usage_error(self, tools):
         for flag in ("--public", "--private"):
             result = _init(flag)

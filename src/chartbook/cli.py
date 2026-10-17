@@ -225,7 +225,9 @@ def _render_site(
     :param keep_build_dirs: If True, keeps temporary build directory after generation.
     :param force_write: If True, overwrites existing output directory.
     :param size_threshold: File size in MB above which a dataframe page does not read the file for its date range.
-    :param strict: If True, error and exit on missing source files.
+    :param strict: If True, error and exit on missing source files. Only
+        `--strict` typed on the command line makes a pipeline that has
+        built nothing yet an error too.
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
     :param incremental: If True, keep the build directory and redo only what changed.
     :param watch: If True, render incrementally and again on every change.
@@ -233,6 +235,15 @@ def _render_site(
     :param after_build: The build script has just run, so a pipeline that
         has built nothing it declares is an error, not "not built yet".
     """
+    from click.core import ParameterSource
+
+    context = click.get_current_context(silent=True)
+    asked = context is not None and context.get_parameter_source("strict") is ParameterSource.COMMANDLINE
+    if strict and not asked:
+        # The default, not asked for: generate_docs then leaves room for a
+        # pipeline that has not been built yet
+        strict = None
+
     # Validate paths for shell/platform mismatches
     from chartbook.path_validation import detect_shell_environment, validate_cli_paths
 
@@ -2819,13 +2830,23 @@ def init(use_git, use_github, public):
                 err=True,
             )
 
+    def not_rendered(code):
+        # The template's own message is above cruft's traceback, a hundred
+        # lines up; its advice is said again where it is seen
+        click.echo(
+            "If the folder name was refused, run `chartbook init` again and press "
+            "Enter at the second question.",
+            err=True,
+        )
+        raise SystemExit(code)
+
     if not use_git:
         try:
             rendered = subprocess.run(scaffold.template_command())
         except KeyboardInterrupt:
             raise SystemExit(130)
         if rendered.returncode != 0:
-            raise SystemExit(rendered.returncode)
+            not_rendered(rendered.returncode)
         return
 
     # The project's directory is named from an answer at cruft's prompt, so
@@ -2833,7 +2854,7 @@ def init(use_git, use_github, public):
     before = scaffold.rendered_projects(cwd)
     rendered = subprocess.run(scaffold.template_command())
     if rendered.returncode != 0:
-        raise SystemExit(rendered.returncode)
+        not_rendered(rendered.returncode)
 
     try:
         project_dir = scaffold.find_new_project(cwd, before)

@@ -12,6 +12,16 @@ One install, everything included: the site-building CLI, the plotting module, da
 
 ## Scaffold a project
 
+````{note}
+`chartbook init` renders the project template from the main branch of ChartBook's GitHub repository, which is ahead of the newest release, 0.2.0: that release does not read the `[scripts]` table the template's `chartbook.toml` has, and has no `chartbook docs`. Until the next release, a project made this way needs ChartBook installed from GitHub, both where you run `chartbook init` and in the project's own environment:
+
+```console
+pip install "chartbook @ git+https://github.com/backofficedev/chartbook"
+```
+
+`chartbook --version` says 0.2.0 for both; `chartbook docs --help` works only in the one from GitHub.
+````
+
 ```console
 chartbook init
 ```
@@ -31,12 +41,13 @@ chartbook docs
 chartbook browse
 ```
 
-You already have a documentation site: the README as its front page, the project's own pages, and the example notebook. Nothing is built yet, so the notebook's page says "Not built yet", and so does `chartbook docs`:
+You already have a documentation site: the README as its front page, the project's own pages, and the example notebook. Nothing is built yet, so the notebook's page says "Not built yet", and `chartbook docs` warns:
 
 ```text
-Note: rates_study has built nothing it declares yet, so the site shows each as not built:
+Warning: rates_study has built nothing it declares yet, so the site shows each as not built:
   - notebook: _output/01_example_notebook_interactive.ipynb
 `chartbook build` runs its build script and renders the site again.
+With --strict, this is an error.
 ```
 
 To build it, install the project's dependencies (with pip here; the project's README says how for uv, conda and pixi) and run `chartbook build`:
@@ -45,6 +56,7 @@ To build it, install the project's dependencies (with pip here; the project's RE
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+pip install "chartbook @ git+https://github.com/backofficedev/chartbook"   # until the next release
 chartbook build -f
 chartbook browse
 ```

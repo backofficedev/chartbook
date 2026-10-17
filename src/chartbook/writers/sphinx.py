@@ -401,22 +401,26 @@ class SphinxWriter:
 
     def dataframe_page(self, record_id: str) -> str:
         """The Markdown page of one dataframe, from its record and the files it names."""
+        from chartbook.sitefiles import not_built, not_built_text
+
         record = self.records[record_id]
         pipeline = self.records[record["pipeline"]]
         base_dir = Path(pipeline["location"]["value"])
         environment = self._environment(base_dir)
         location = record.get("location") or {}
         dataframe_manifest = self._dataframe_manifest(record, base_dir)
+        unbuilt = not_built(record)
         if location.get("kind") in ("table", "query"):
             glimpse = _source_glimpse(record, base_dir)
             span = record.get("date_range") or {}
             first, last = span.get("first"), span.get("last")
             freshness = [_freshness("Data updated", location.get("modified_at"))]
-        elif location.get("kind") == "file" and "content_hash" not in record:
+        elif unbuilt:
             # Declared and not built yet: the provenance panel says so too.
-            # The glimpse is shown as code, so this is plain text
-            glimpse = "Not built yet. The pipeline's build makes it: chartbook build runs the build and renders the site again."
-            first, last = None, None
+            # The glimpse is shown as code, so this is plain text, and there
+            # are no dates to give
+            glimpse = not_built_text(path=location.get("path", ""), command="chartbook build")
+            first, last = "", ""
             freshness = []
         else:
             resolved = location.get("resolved_path") or str(base_dir / location.get("path", ""))
@@ -443,7 +447,8 @@ class SphinxWriter:
             most_recent_data_max=last,
             dot_or_dotdot="../..",
             dataframe_glimpse=glimpse,
-            enable_data_download=self.enable_data_download,
+            # Nothing to download from a dataframe that is not built
+            enable_data_download=self.enable_data_download and not unbuilt,
             freshness=[fact for fact in freshness if fact],
         )
 
@@ -455,6 +460,8 @@ class SphinxWriter:
         the chart file's ``modified_at``; "Data updated" is its dataframe's,
         which for a table or query is the engine file's.
         """
+        from chartbook.sitefiles import not_built
+
         record = self.records[record_id]
         pipeline = self.records[record["pipeline"]]
         base_dir = Path(pipeline["location"]["value"])
@@ -501,7 +508,8 @@ class SphinxWriter:
             freshness=[fact for fact in freshness if fact],
             chart_date=chart_date,
             dot_or_dotdot="..",
-            enable_data_download=self.enable_data_download,
+            # Its dataframe's manifest is on the page: nothing to download from one not built
+            enable_data_download=self.enable_data_download and not (dataframe is not None and not_built(dataframe)),
         )
 
     def model_page(self, record_id: str) -> str:

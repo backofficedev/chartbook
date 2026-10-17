@@ -83,8 +83,8 @@ def copy_plan(
         source = location.get("resolved_path")
         if not source or location.get("kind") != "file":
             continue
-        if "content_hash" not in record:
-            continue  # not built yet: write_not_built stands in for it
+        if not_built(record):
+            continue  # write_not_built stands in for it
         slug, name = _slug(record["pipeline"]), record["ref"]["name"]
         if kind == "Chart":
             plan.append((Path(source), root / "cb" / "download_chart" / slug / f"{name}.html"))
@@ -105,12 +105,38 @@ def copy_files(plan: Iterable[tuple[Path, Path]]) -> None:
         shutil.copyfile(source, destination)
 
 
-#: What a chart or a notebook that is not built yet shows in its place, with
-#: its declared path and the command marked up for where it is shown
+#: What a chart, notebook or dataframe that is not built yet shows in its
+#: place, with its declared path and the command marked up for where it is shown
 NOT_BUILT = (
     "Not built yet. This is {path}, which the pipeline's build makes: "
     "{command} runs the build and renders the site again."
 )
+
+#: The same in a version's site, built from the store: the version is as it
+#: was made, and nothing builds it now
+NOT_BUILT_IN_VERSION = "Not built in this version. This is {path}, which was not built when this version was made."
+
+
+def not_built(record: dict) -> bool:
+    """Whether a record is of a declared file that is not there: not built yet.
+
+    A file that is there and could not be read has no hash either, and is
+    not this: copying it fails, and says why.
+    """
+    from chartbook import hashing
+
+    location = record.get("location") or {}
+    if location.get("kind") != "file" or "content_hash" in record or not location.get("resolved_path"):
+        return False
+    found = hashing.find_files(location["resolved_path"])
+    return found is None or not found.files
+
+
+def not_built_text(path: str, command: str) -> str:
+    """What stands in for an output that is not built, with *path* and *command* already marked up."""
+    if untrusted_source():
+        return NOT_BUILT_IN_VERSION.format(path=path)
+    return NOT_BUILT.format(path=path, command=command)
 
 
 def write_not_built(index: dict, docs_build_dir: Path, skip: Iterable[str] = ()) -> None:
@@ -131,11 +157,11 @@ def write_not_built(index: dict, docs_build_dir: Path, skip: Iterable[str] = ())
         if kind not in ("Chart", "Notebook") or record.get("pipeline") in skipped:
             continue
         location = record.get("location") or {}
-        if location.get("kind") != "file" or not location.get("path") or "content_hash" in record:
+        if not location.get("path") or not not_built(record):
             continue
         slug, name = _slug(record["pipeline"]), record["ref"]["name"]
         if kind == "Chart":
-            text = NOT_BUILT.format(
+            text = not_built_text(
                 path=f"<code>{html.escape(location['path'])}</code>", command="<code>chartbook build</code>"
             )
             page = f'<!DOCTYPE html>\n<html><head><meta charset="utf-8"></head><body><p>{text}</p></body></html>\n'
@@ -158,7 +184,7 @@ def write_not_built(index: dict, docs_build_dir: Path, skip: Iterable[str] = ())
                         "source": [
                             f"# {title}\n",
                             "\n",
-                            NOT_BUILT.format(path=f"`{path}`", command="`chartbook build`") + "\n",
+                            not_built_text(path=f"`{path}`", command="`chartbook build`") + "\n",
                         ],
                     }
                 ],

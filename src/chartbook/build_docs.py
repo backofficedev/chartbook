@@ -290,6 +290,11 @@ def _missing_files_hint(manifest: dict, missing_files: list, after_build: bool) 
             hint.append(
                 "The build script has just run and did not make the data, charts, notebooks or models listed."
             )
+            hint.append(
+                "A task the build tool does not run by default is not built: in a project made by "
+                "`chartbook init`, `doit` runs the tasks defined above the `default_tasks` block "
+                "at the end of dodo.py."
+            )
         elif manifest["project"].get("build"):
             hint.append(
                 "`chartbook build` runs the build script, which makes data, charts, notebooks "
@@ -311,7 +316,7 @@ def _say_not_built_yet(manifest: dict, missing_files: list, project_dir: Path) -
             return str(path)
 
     lines = [
-        click.style("Note: ", fg="yellow", bold=True)
+        click.style("Warning: ", fg="yellow", bold=True)
         + f"{missing_files[0].pipeline_id} has built nothing it declares yet, so the site shows each as not built:"
     ]
     lines += [f"  - {missing.file_type}: {shown(missing.file_path)}" for missing in missing_files]
@@ -319,6 +324,7 @@ def _say_not_built_yet(manifest: dict, missing_files: list, project_dir: Path) -
         lines.append("`chartbook build` runs its build script and renders the site again.")
     else:
         lines.append("Build them, then run `chartbook docs` again.")
+    lines.append("With --strict, this is an error.")
     click.echo("\n".join(lines), err=True)
 
 
@@ -331,7 +337,7 @@ def generate_docs(
     temp_docs_src_dir: Path = Path("_docs_src"),
     should_remove_existing: bool = False,
     size_threshold: float = 50,
-    strict: bool = True,
+    strict: Optional[bool] = None,
     strip_mathjax2: bool = True,
     incremental: bool = False,
     after_build: bool = False,
@@ -354,12 +360,14 @@ def generate_docs(
     :type should_remove_existing: bool
     :param size_threshold: File size in MB above which a dataframe page does not read the file for its date range.
     :type size_threshold: float
-    :param strict: If True (default), error and exit when source files are missing.
-        When False, affected pipelines are skipped with warnings. Either way,
-        a lone pipeline that has built none of its outputs yet (see
-        :func:`chartbook.conf_validation.built_nothing`) is rendered, with
-        each of them shown as not built.
-    :type strict: bool
+    :param strict: None (the default) errors and exits when source files are
+        missing, except that a lone pipeline that has built none of its
+        outputs yet (see :func:`chartbook.conf_validation.built_nothing`) is
+        rendered, with a warning and each of them shown as not built. True,
+        what ``--strict`` asks for, errors on that one too. False skips the
+        pipelines that have missing files, with warnings, and renders a lone
+        pipeline that has built nothing as None does.
+    :type strict: bool | None
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs
         to prevent conflicts with Sphinx's MathJax 3. Defaults to True.
     :type strip_mathjax2: bool
@@ -391,6 +399,7 @@ def generate_docs(
     if (
         missing_files
         and pipeline_theme == "pipeline"
+        and strict is not True
         and not after_build
         and built_nothing(manifest, missing_files)
     ):
@@ -401,7 +410,7 @@ def generate_docs(
         error = MissingSourceFilesError(
             missing_files, hint=_missing_files_hint(manifest, missing_files, after_build)
         )
-        if strict:
+        if strict is not False:
             # Raise error and exit
             error.exit_with_message()
         else:

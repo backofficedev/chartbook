@@ -30,7 +30,9 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 
 ## chartbook init
 
-Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template), via [cruft](https://cruft.github.io/cruft/) — so `cruft update` can pull template improvements later. It asks 19 questions, each with a default that Enter takes: the project's name and its folder name (made from the name), a description, your name and email, the Python version, how to install the dependencies, and which examples and data sources to include. {doc}`../getting-started` says which answers matter.
+Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template), via [cruft](https://cruft.github.io/cruft/) — so `cruft update` can pull template improvements later. It asks 19 questions, each with a default that Enter takes: the project's name and its folder name (made from the name), a description, your name and email, the Python version, how to install the dependencies, and which examples and data sources to include. {doc}`../getting-started` says which answers matter. A folder name that is not lowercase letters, digits and `_` stops it with nothing created, and its last line says to press Enter at the second question next time.
+
+It renders the template from the main branch of ChartBook's GitHub repository, so until the next release a project made with it needs ChartBook installed from GitHub (`pip install "chartbook @ git+https://github.com/backofficedev/chartbook"`): 0.2.0 does not read the `[scripts]` table the template's manifest has.
 
 The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook build` builds it and renders its site, and before that `chartbook docs` renders its site with the example notebook shown as not built. `doit` there runs every task in `dodo.py` but the tests, which are `doit run_pytest`. When the project is made, the command prints the next steps: `chartbook docs`, the commands that install its dependencies, then `chartbook build -f`, `chartbook browse` and `chartbook check`.
 
@@ -63,15 +65,18 @@ Render the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the curre
 
 It renders the site from what is already built. It does not build the project's data: {ref}`chartbook run <chartbook-run>` does that, and {ref}`chartbook build <chartbook-build>` does both.
 
-**Before anything is built.** A pipeline that has built none of the data, charts, notebooks and models it declares, as a project just made by `chartbook init` or a fresh clone has not, is rendered all the same. Each of them has its page, saying "Not built yet", and its record in `index.json`, without a hash, and the command lists them:
+**Before anything is built.** A lone pipeline that has built none of the data, charts, notebooks and models it declares, as a project just made by `chartbook init` or a fresh clone has not, is rendered all the same, with a warning that lists them:
 
 ```text
-Note: rates_study has built nothing it declares yet, so the site shows each as not built:
+Warning: rates_study has built nothing it declares yet, so the site shows each as not built:
   - notebook: _output/01_example_notebook_interactive.ipynb
 `chartbook build` runs its build script and renders the site again.
+With --strict, this is an error.
 ```
 
-A pipeline that has built some of them and not others has been built, so a missing one is an error, as is a missing write-up, note or README, which nothing builds.
+Each of them keeps its record in `index.json`, without a hash, and its provenance panel says "not built". A notebook's page is its title and "Not built yet", with how to build it; a chart's embedded frame and its full-screen link say the same, and so does a dataframe's glimpse, which then has no dates and no download link. A model's page says it only in its provenance panel.
+
+It takes every declared output to be missing. A pipeline that has some of them and not others has been built, so a missing one is an error; a clone of a pipeline that commits some of its outputs to git is such a pipeline. A missing write-up, note or README, which nothing builds, is an error too. And so is a pipeline that has built nothing, when `--strict` is given: after a build that should have made everything, as in CI, run `chartbook docs --strict`, or `chartbook build`, which runs the build first and makes no exception.
 
 Beside the HTML it writes `index.json`: one record for every pipeline, dataframe, column, chart, notebook, note and model the site contains, each with an ID and a content hash. See {doc}`"The index" <../guide/how-the-build-works>`. And `llms.txt`, the site for an assistant: one line per pipeline, dataframe, chart and model with its name linking its page, its ID and, in quotation marks, its owner's description; in a catalog, each pipeline's ten newest versions under it, each linking that version's own `llms.txt`.
 
@@ -79,7 +84,7 @@ Beside the HTML it writes `index.json`: one record for every pipeline, dataframe
 |--------|---------|--------|
 | `-f, --force-write` | off | Delete and recreate an existing output directory |
 | `--project-dir PATH` | `.` | The project whose site is rendered |
-| `--strict / --no-strict` | `--strict` | Strict: a `path`/`docs_path` pointing at a missing file fails the build, naming the file and the manifest entry, unless the pipeline has built nothing yet (above). `--no-strict` warns and skips the affected pipeline of a catalog (a single pipeline still fails: there would be nothing left to build, and its error does not suggest `--no-strict`) |
+| `--strict / --no-strict` | `--strict` | Strict: a `path`/`docs_path` pointing at a missing file fails the build, naming the file and the manifest entry, unless the pipeline has built nothing yet (above) and `--strict` was not given. `--no-strict` warns and skips the affected pipeline of a catalog (a single pipeline still fails: there would be nothing left to build, and its error does not suggest `--no-strict`) |
 | `--size-threshold FLOAT` | `50` | File size (MB) above which a dataframe page does not read the file for its date range ("N/A (large file)"); the glimpse reads only the first rows at any size |
 | `--strip-mathjax2 / --no-strip-mathjax2` | on | Strip Plotly's MathJax 2 scripts from notebook outputs so they don't clash with Sphinx's MathJax 3 |
 | `--incremental` | off | Keep the intermediate `_docs/` directory between builds and redo only what changed since the last incremental build |

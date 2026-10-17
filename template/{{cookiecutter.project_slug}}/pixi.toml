@@ -66,7 +66,7 @@ r-stargazer = "*"
 
 [pypi-dependencies]
 {% if cookiecutter.include_chartbook or cookiecutter.include_jupyter_notebooks %}
-chartbook = ">=0.2.1"
+chartbook = ">=0.2.0"
 {% endif %}
 {% if cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat %}
 wrds = ">=3.2.0"

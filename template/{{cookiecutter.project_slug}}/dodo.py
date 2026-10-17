@@ -523,10 +523,14 @@ def task_run_pytest():
 
 
 ## `doit` on its own (and so `chartbook build`) runs every task in this file
-## but the tests, which run with `doit run_pytest`. Keep this at the end, so
-## that a task you add above it is run too.
+## but the tests, which run with `doit run_pytest`.
+##
+## This block must stay the last thing in the file. It lists the tasks
+## defined above it, as the file is read, so a task added below it is not
+## in the list: plain `doit` and `chartbook build` do not run it, and what
+## it makes is not built.
 DOIT_CONFIG["default_tasks"] = [
     name.removeprefix("task_")
-    for name in list(globals())
-    if name.startswith("task_") and name != "task_run_pytest"
+    for name, value in list(globals().items())
+    if name.startswith("task_") and callable(value) and name != "task_run_pytest"
 ]

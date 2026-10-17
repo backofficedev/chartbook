@@ -6,6 +6,7 @@ generate_docs() -> load_manifest() -> _retrieve_correct_docs_src_dir() ->
 run_build_markdown() -> run_sphinx_build()
 """
 
+import os
 import re
 import sys
 import json
@@ -721,6 +722,7 @@ class TestNotBuiltYet:
         toml_path = pipeline_project / "chartbook.toml"
         config = tomli.loads(toml_path.read_text())
         config["notebooks"] = {"walkthrough": {"name": "Walkthrough", "path": "_output/walkthrough.ipynb"}}
+        config["models"] = {"forecast": {"name": "Forecast", "path": "_models/forecast.json"}}
         config["scripts"] = {"build": "true"}
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").unlink()
@@ -743,14 +745,75 @@ class TestNotBuiltYet:
         )
         assert "Not built yet" in dataframe
         assert "Error reading file" not in dataframe
+        # No dates to give, rather than "None"
+        assert "None" not in re.search(r"Data available up to \(min\)(.*?)\n", dataframe).group(1)
+        # A model says so in its provenance panel
+        model = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "models" / "test_pipeline" / "forecast.html").read_text())
+        assert re.search(r"Content\s+not built", model)
         # The index has the records, without hashes
         records = {r["id"]: r for r in json.loads((output_dir / "index.json").read_text())["records"]}
-        for asset in ("test_pipeline:dataframe_0", "test_pipeline:chart/chart_0_0", "test_pipeline:notebook/walkthrough"):
+        for asset in (
+            "test_pipeline:dataframe_0",
+            "test_pipeline:chart/chart_0_0",
+            "test_pipeline:notebook/walkthrough",
+            "test_pipeline:model/forecast",
+        ):
             assert "content_hash" not in records[asset]
         err = capsys.readouterr().err
-        assert "test_pipeline has built nothing it declares yet" in err
+        assert "Warning: test_pipeline has built nothing it declares yet" in err
         assert "  - notebook: _output/walkthrough.ipynb" in err
         assert "`chartbook build` runs its build script" in err
+        assert "With --strict, this is an error." in err
+
+    def test_with_strict_it_is_an_error(self, unbuilt, capsys):
+        """`--strict` asked for, as CI does after a build that should have made everything."""
+        with pytest.raises(SystemExit) as excinfo:
+            generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt, strict=True)
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "Missing source files" in err
+        assert "Ensure these files exist or update the paths in chartbook.toml." in err
+        assert "--no-strict" not in err
+        assert not (unbuilt / "docs").exists()
+
+    def test_with_no_strict_it_is_rendered_too(self, unbuilt):
+        """--no-strict skips a pipeline; one that has built nothing is not skipped, it is shown."""
+        generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt, strict=False)
+        assert (unbuilt / "docs" / "index.html").is_file()
+
+    def test_nothing_to_download_from_a_dataframe_not_built(self, unbuilt):
+        """The download row linked to a file the build had not copied: a dead link, and MkDocs warned."""
+        import tomli
+        import tomli_w
+
+        toml_path = unbuilt / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["project"]["enable_data_download"] = True
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        output_dir = unbuilt / "docs"
+        generate_docs(output_dir=output_dir, project_dir=unbuilt)
+        for page in (
+            output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html",
+            output_dir / "cb" / "charts" / "test_pipeline.chart_0_0.html",
+        ):
+            assert "Download Data as Parquet" not in page.read_text(), page
+            assert "download_dataframe" not in page.read_text(), page
+
+    def test_in_a_version_from_the_store_it_gives_no_advice(self, unbuilt, monkeypatch):
+        """A version's site is built from the store: it is as it was made, and `chartbook build` builds nothing of it."""
+        from chartbook.config import UNTRUSTED_ENV_VAR
+
+        monkeypatch.setenv(UNTRUSTED_ENV_VAR, "1")
+        output_dir = unbuilt / "docs"
+        generate_docs(output_dir=output_dir, project_dir=unbuilt)
+        notebook = (output_dir / "cb" / "notebooks" / "test_pipeline" / "walkthrough.html").read_text()
+        chart = (output_dir / "_static" / "test_pipeline" / "chart_0_0.html").read_text()
+        dataframe = re.sub(
+            r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text()
+        )
+        for page in (notebook, chart, dataframe):
+            assert "Not built in this version" in page
+            assert "chartbook build" not in page
 
     def test_with_no_build_script_it_says_to_build_it(self, unbuilt, capsys):
         import tomli
@@ -771,6 +834,8 @@ class TestNotBuiltYet:
         err = capsys.readouterr().err
         assert "Missing source files" in err
         assert "The build script has just run and did not make" in err
+        # doit's tasks after the `default_tasks` block of the template's dodo.py are not run
+        assert "A task the build tool does not run by default is not built" in err
         assert "--no-strict" not in err
         assert not (unbuilt / "docs").exists()
 
@@ -787,6 +852,18 @@ class TestNotBuiltYet:
         assert "`chartbook build` runs the build script" in err
         # A lone pipeline has nothing left to build once it is skipped
         assert "--no-strict" not in err
+
+    @pytest.mark.skipif(os.name == "nt" or getattr(os, "geteuid", lambda: 1)() == 0, reason="needs a file its owner cannot read")
+    def test_an_output_that_is_there_and_unreadable_is_not_not_built(self, pipeline_project, monkeypatch):
+        """It has no hash, as a file that is not there has none, but it is there: copying it fails, and says why."""
+        monkeypatch.chdir(pipeline_project)
+        chart = pipeline_project / "_output" / "charts" / "chart_0_0.html"
+        chart.chmod(0)
+        try:
+            with pytest.raises(OSError):
+                generate_docs(output_dir=pipeline_project / "docs", project_dir=pipeline_project)
+        finally:
+            chart.chmod(0o644)
 
     def test_a_missing_write_up_is_still_an_error(self, unbuilt, capsys):
         """Nothing builds a write-up."""

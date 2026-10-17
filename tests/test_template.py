@@ -988,6 +988,29 @@ def test_doit_alone_runs_every_task_but_the_tests(template_dir, temp_dir, contex
     assert sorted(json.loads(loaded.stdout)) == sorted(tasks - {"run_pytest"})
 
 
+def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, temp_dir):
+    """A module-level value named `task_…` that is not a function is not a task.
+
+    Listed as a default task, it stopped every plain `doit` with "Invalid
+    parameter". And the list is made when the file is read, so a task added
+    after it is not run: the block says so.
+    """
+    project = Path(generate_project(template_dir, temp_dir, WITH_CHARTBOOK))
+    dodo = project / "dodo.py"
+    text = dodo.read_text()
+    block = text.index("## `doit` on its own")
+    assert "must stay the last thing in the file" in text[block:]
+    dodo.write_text(text[:block] + 'task_owner = "the data team"\n\n\n' + text[block:])
+    loaded = subprocess.run(
+        [sys.executable, "-c", "import json, runpy; print(json.dumps(runpy.run_path('dodo.py')['DOIT_CONFIG']['default_tasks']))"],
+        cwd=project,
+        capture_output=True,
+        text=True,
+    )
+    assert loaded.returncode == 0, loaded.stderr
+    assert "owner" not in json.loads(loaded.stdout)
+
+
 class TestTheQuestions:
     """What `chartbook init` asks, and what an answer left at its default makes."""
 
@@ -1033,6 +1056,24 @@ class TestTheQuestions:
         # The site comes first, before anything is installed
         assert steps.index("chartbook docs") < steps.index("pip install -r requirements.txt")
 
+    def test_with_uv_the_readme_activates_the_environment_before_chartbook_build(self, template_dir, temp_dir):
+        """After `uv sync` alone, a chartbook installed elsewhere ran a `doit` that is not on PATH."""
+        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": "uv"}))
+        readme = (project / "README.md").read_text()
+        quick_start = readme[readme.index("uv sync"):readme.index("And that's it!")]
+        assert quick_start.index("source .venv/bin/activate") < quick_start.index("chartbook build -f")
+        assert "uv run chartbook build -f" in readme
+
+    @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
+    def test_the_readme_says_to_install_chartbook_from_github_until_the_next_release(
+        self, template_dir, temp_dir, manager
+    ):
+        """`chartbook init` renders the template from GitHub's main branch, which 0.2.0 cannot build."""
+        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": manager}))
+        readme = (project / "README.md").read_text()
+        assert '"chartbook @ git+https://github.com/backofficedev/chartbook"' in readme
+        assert readme.index("git+https://github.com/backofficedev/chartbook") < readme.index("chartbook build -f")
+
     def test_without_chartbook_the_next_step_is_doit(self, template_dir, temp_dir, capfd):
         generate_project(template_dir, temp_dir, MINIMAL_CONTEXT)
         steps = capfd.readouterr().out.split("Next steps:")[1]
@@ -1040,14 +1081,17 @@ class TestTheQuestions:
         assert "chartbook" not in steps
 
     @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
-    def test_it_asks_for_a_chartbook_that_reads_its_manifest(self, template_dir, temp_dir, manager):
-        """`chartbook>=0.1.0` let in versions that do not read `[scripts]`, which the manifest has.
+    def test_it_asks_for_the_chartbook_that_renders_it(self, template_dir, temp_dir, manager):
+        """The ChartBook that renders the template must satisfy the project's own requirement.
 
-        0.2.0 is the newest release, and it does not read `[scripts]`
-        (docs_src/changelog.md has it under "Unreleased"), so the floor is
-        the release after it. And no file may pin a Polars older than the
-        one ChartBook needs, or the environment does not resolve.
+        `chartbook>=0.1.0` let in versions older than the newest release.
+        A floor above this ChartBook's own version (`>=0.2.1` while it says
+        0.2.0) shuts out a ChartBook installed from GitHub, which says 0.2.0
+        too and is the only one that reads `[scripts]` until a release. And
+        no file may pin a Polars older than the one ChartBook needs, or the
+        environment does not resolve.
         """
+        import chartbook
         import tomli
         from packaging.requirements import Requirement
         from packaging.specifiers import SpecifierSet
@@ -1085,8 +1129,8 @@ class TestTheQuestions:
         )
         for where, specifiers in found.items():
             if "chartbook" in specifiers:
-                chartbook = specifiers["chartbook"]
-                assert not chartbook.contains("0.2.0"), f"{where}: chartbook{chartbook}"
-                assert chartbook.contains("0.2.1") and chartbook.contains("0.3.0"), f"{where}: chartbook{chartbook}"
+                wanted = specifiers["chartbook"]
+                assert wanted.contains(chartbook.__version__), f"{where}: chartbook{wanted}"
+                assert not wanted.contains("0.1.1"), f"{where}: chartbook{wanted}"
             if "polars" in specifiers:
                 assert specifiers["polars"].contains(polars_floor), f"{where}: polars{specifiers['polars']}"

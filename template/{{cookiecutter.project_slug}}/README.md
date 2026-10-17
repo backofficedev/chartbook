@@ -29,9 +29,10 @@ This project uses [uv](https://docs.astral.sh/uv/) for dependency management. Fi
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-Then sync the environment:
+Then sync the environment and activate it, so that the commands below find its tools:
 ```bash
 uv sync
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 {% elif cookiecutter.environment_manager == "conda" %}
 First, you must have the `conda` package manager installed (e.g., via Anaconda). However, I recommend using `mamba`, via [miniforge](https://github.com/conda-forge/miniforge) as it is faster and more lightweight than `conda`.
@@ -50,6 +51,16 @@ Then install the dependencies:
 ```bash
 pixi install
 ```
+{% endif %}
+{% if cookiecutter.include_chartbook %}
+**Until the next ChartBook release**, install ChartBook from GitHub in this environment too. This project
+was made by `chartbook init` from the template on the main branch of ChartBook's GitHub repository, which is
+ahead of the newest release, 0.2.0: that release does not read the `[scripts]` table of `chartbook.toml`, and
+has no `chartbook docs`.
+```bash
+{% if cookiecutter.environment_manager == "uv" %}uv pip install "chartbook @ git+https://github.com/backofficedev/chartbook"{% elif cookiecutter.environment_manager == "pixi" %}pixi add --pypi "chartbook @ git+https://github.com/backofficedev/chartbook"{% else %}pip install "chartbook @ git+https://github.com/backofficedev/chartbook"{% endif %}
+```
+`chartbook --version` says 0.2.0 for both; `chartbook docs --help` works only in the one from GitHub.
 {% endif %}
 Finally, run the project tasks:
 ```bash
@@ -205,6 +216,11 @@ This project uses [uv](https://docs.astral.sh/uv/) for fast, reliable Python pac
 To sync your environment with the lockfile:
 ```bash
 uv sync
+```
+
+To run a command in it without activating it first, put `uv run` before it:
+```bash
+{% if cookiecutter.include_chartbook %}uv run chartbook build -f{% else %}uv run doit{% endif %}
 ```
 
 To add a new dependency:

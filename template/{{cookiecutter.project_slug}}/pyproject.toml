@@ -41,7 +41,7 @@ dependencies = [
     "jupyterlab",
     "jupytext",
     "notebook",
-{% endif %}{% if cookiecutter.include_chartbook or cookiecutter.include_jupyter_notebooks %}    "chartbook>=0.2.1",
+{% endif %}{% if cookiecutter.include_chartbook or cookiecutter.include_jupyter_notebooks %}    "chartbook>=0.2.0",
 {% endif %}{% if cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat %}    "wrds==3.2.0",
     "jaydebeapi",
 {% endif %}{% if cookiecutter.include_bloomberg %}    "xbbg==0.7.7",
