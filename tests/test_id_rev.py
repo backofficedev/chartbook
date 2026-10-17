@@ -175,3 +175,22 @@ class TestWhatTheReviewFound:
                 data.load("acme/rates:treasury")
         finally:
             os.chmod(forecast, 0o755)
+
+
+    def test_a_store_pin_with_no_records_left_is_asked_of_its_rev_again(self, host):
+        import json
+
+        repository = _upstream(host, 4.0)
+        main = snapshot.make(repository).snapshot
+        _git(repository, "checkout", "--quiet", "-b", "side")
+        _newer(repository, 9.0, "side")
+        snapshot.make(repository)  # newer, on another branch
+        _git(repository, "checkout", "--quiet", "main")
+        forecast = _forecast(host / "forecast", {"acme/rates": {"rev": "main"}})
+        lock.pin(forecast)
+        path = forecast / lock.LOCK_FILE
+        document = json.loads(path.read_text())
+        document["records"] = [r for r in document["records"] if r.get("kind") == "Pipeline"]  # as a hand edit leaves it
+        path.write_text(json.dumps(document))
+        lock.pin(forecast)
+        assert _entry(forecast)["location"]["commit"] == main.commit

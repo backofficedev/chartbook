@@ -429,8 +429,8 @@ def choose_for_rev(
     if converted and entry.get("_repository"):
         converted["_repository"] = entry["_repository"]
     recorded_commit = same and bool(location.get("commit"))
-    if not may_move and (pinned or recorded_commit) and same and location.get("kind") == "store":
-        return "entry", entry  # a plain pin keeps a snapshot it pinned
+    if not may_move and pinned and same and location.get("kind") == "store":
+        return "entry", entry  # a plain pin keeps a snapshot it pinned (a snapshot always holds bytes)
     if not may_move and (pinned or recorded_commit) and same and location.get("kind") == "git" and converted:
         return "entry", converted  # and a commit of its repository, built or not
     if pipeline == root:
@@ -897,7 +897,8 @@ def _sync_now(
             if entry.get("rev") and entry["_store"] in set(built_here):
                 rev_failure = (
                     f"rev = {entry['rev']!r} is not followed for {entry['_store']}, which this run builds "
-                    f"itself from its folder: pin it outside the catalog's run, or leave out its rev"
+                    f"itself from its folder: build this pipeline outside the catalog's run (`chartbook run` "
+                    f"in its folder), which pins and builds what the rev names, or leave out its rev"
                 )
             elif entry.get("rev"):
                 if not clone_missing:
