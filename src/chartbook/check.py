@@ -23,7 +23,7 @@ from typing import Any, Optional, Union
 
 import tomli
 
-from chartbook.conf_validation import validate_source_files
+from chartbook.conf_validation import OUTPUT_FILE_TYPES, validate_source_files
 from chartbook.diagnostics import DOCS_FIELDS, build_diagnostics
 from chartbook.identity import strip_url_credentials
 from chartbook.manifest import (
@@ -43,14 +43,6 @@ DEFAULT_WITHIN_DAYS = 30
 #: ``license_expiration`` values that mean "this license does not expire".
 #: Compared case-insensitively. Anything else must parse as a date.
 NO_EXPIRATION_VALUES = frozenset({"", "n/a", "na", "none", "never"})
-
-#: Kinds of missing file that are things a pipeline *builds*: data, rendered
-#: charts, executed notebooks, and trained models with their scores. They
-#: are normally git-ignored, so on a fresh checkout that has not run the
-#: pipeline they are all absent.
-OUTPUT_FILE_TYPES = frozenset(
-    {"dataframe", "chart", "notebook", "model", "model_metrics"}
-)
 
 # MissingFile.file_type -> (manifest section, field) for per-entity files
 _FILE_TYPE_FIELDS = {

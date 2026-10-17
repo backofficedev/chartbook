@@ -83,6 +83,8 @@ def copy_plan(
         source = location.get("resolved_path")
         if not source or location.get("kind") != "file":
             continue
+        if not_built(record):
+            continue  # write_not_built stands in for it
         slug, name = _slug(record["pipeline"]), record["ref"]["name"]
         if kind == "Chart":
             plan.append((Path(source), root / "cb" / "download_chart" / slug / f"{name}.html"))
@@ -91,9 +93,22 @@ def copy_plan(
             plan.append((Path(source), root / "cb" / "notebooks" / slug / Path(source).name))
         elif kind == "Note":
             plan.append((Path(source), root / "cb" / f"{name}.md"))
-        elif enable_data_download and not is_glob_pattern(source) and not Path(source).is_dir():
+        elif enable_data_download and downloadable(record):
             plan.append((Path(source), root / "cb" / "download_dataframe" / slug / f"{name}.parquet"))
     return plan
+
+
+def downloadable(record: dict) -> bool:
+    """Whether a dataframe is one file the build copies for download: its page links it only then.
+
+    A table, a query, a folder of parts and a glob have no one file to
+    offer, and one not built has none yet.
+    """
+    location = record.get("location") or {}
+    source = location.get("resolved_path")
+    if location.get("kind") != "file" or not source or not_built(record):
+        return False
+    return not is_glob_pattern(source) and not Path(source).is_dir()
 
 
 def copy_files(plan: Iterable[tuple[Path, Path]]) -> None:
@@ -101,6 +116,100 @@ def copy_files(plan: Iterable[tuple[Path, Path]]) -> None:
     for source, destination in plan:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, destination)
+
+
+#: What a chart, notebook or dataframe that is not built yet shows in its
+#: place, with its declared path and the command marked up for where it is shown
+NOT_BUILT = (
+    "Not built yet. This is {path}, which the pipeline's build makes: "
+    "{command} runs the build and renders the site again."
+)
+
+#: The same in a version's site, built from the store: the version is as it
+#: was made, and nothing builds it now
+NOT_BUILT_IN_VERSION = "Not built in this version. This is {path}, which was not built when this version was made."
+
+
+def not_built(record: dict) -> bool:
+    """Whether a record is of a declared file that is not there: not built yet.
+
+    A file that is there and could not be read has no hash either, and is
+    not this: copying it fails, and says why.
+    """
+    from chartbook import hashing
+
+    location = record.get("location") or {}
+    if location.get("kind") != "file" or "content_hash" in record or not location.get("resolved_path"):
+        return False
+    found = hashing.find_files(location["resolved_path"])
+    return found is None or not found.files
+
+
+def not_built_text(path: str, command: str) -> str:
+    """What stands in for an output that is not built, with *path* and *command* already marked up."""
+    if untrusted_source():
+        return NOT_BUILT_IN_VERSION.format(path=path)
+    return NOT_BUILT.format(path=path, command=command)
+
+
+def write_not_built(index: dict, docs_build_dir: Path, skip: Iterable[str] = ()) -> None:
+    """Put a short file saying "not built yet" where each unbuilt chart and notebook would go.
+
+    A pipeline that has built nothing yet is rendered all the same (see
+    ``build_docs.generate_docs``), and its pages link to its charts and
+    notebooks: each link then goes to this, rather than nowhere. The
+    index has the record and no hash, so its provenance panel says "not
+    built" too.
+    """
+    import html
+
+    root = Path(docs_build_dir)
+    skipped = set(skip)
+    for record in index.get("records", []):
+        kind = record.get("kind")
+        if kind not in ("Chart", "Notebook") or record.get("pipeline") in skipped:
+            continue
+        location = record.get("location") or {}
+        if not location.get("path") or not not_built(record):
+            continue
+        slug, name = _slug(record["pipeline"]), record["ref"]["name"]
+        if kind == "Chart":
+            text = not_built_text(
+                path=f"<code>{html.escape(location['path'])}</code>", command="<code>chartbook build</code>"
+            )
+            page = f'<!DOCTYPE html>\n<html><head><meta charset="utf-8"></head><body><p>{text}</p></body></html>\n'
+            # Both places copy_plan would put the chart: the full-screen link, and what the page embeds
+            for destination in (
+                root / "cb" / "download_chart" / slug / f"{name}.html",
+                root / "_static" / slug / f"{name}.html",
+            ):
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(page, encoding="utf-8")
+        else:
+            title = " ".join(str(record.get("name", name)).split())
+            # One code span on one line, whatever the manifest wrote
+            path = " ".join(location["path"].replace("`", "'").split())
+            notebook = {
+                "cells": [
+                    {
+                        "cell_type": "markdown",
+                        "metadata": {},
+                        "source": [
+                            f"# {title}\n",
+                            "\n",
+                            not_built_text(path=f"`{path}`", command="`chartbook build`") + "\n",
+                        ],
+                    }
+                ],
+                "metadata": {},
+                "nbformat": 4,
+                "nbformat_minor": 4,
+            }
+            destination = root / "cb" / "notebooks" / slug / Path(location["path"]).name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with open(destination, "w", encoding="utf-8") as file:
+                json.dump(notebook, file, indent=1, ensure_ascii=False)
+                file.write("\n")
 
 
 def ensure_notebook_titles(index: dict, docs_build_dir: Path, skip: Iterable[str] = ()) -> None:
@@ -244,7 +353,8 @@ def write_site(
     skips, or an incremental build keeps, has none written — plus the
     catalog's own pages, and the files the index names are copied beside
     them: charts, notebooks, notes, downloads, the theme's files and, in
-    the pipeline theme, the pipeline's own site pages.
+    the pipeline theme, the pipeline's own site pages. A chart or notebook
+    that is not built yet gets a short file saying so in its place.
 
     :param code_times: Code-change times already known, by pipeline ID (see
         ``manifest.apply_code_change_times``). Others are worked out here.
@@ -303,6 +413,7 @@ def write_site(
             with_notes=pipeline_theme == "pipeline",
         )
     )
+    write_not_built(built_index, docs_build_dir, skip=not_generated)
     ensure_notebook_titles(built_index, docs_build_dir, skip=not_generated)
     own_pages = writer.own_page_paths()
     copy_theme_files(docs_src_dir, docs_build_dir, charts="cb/charts.md" not in own_pages, templates=writer.THEME_TEMPLATES_IN_SITE)

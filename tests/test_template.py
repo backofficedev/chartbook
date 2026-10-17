@@ -5,12 +5,14 @@ The first part of this file came with the template from its own repository
 that it generates valid projects with different combinations of options.
 
 The classes at the end are what having the template here is for. One checks
-that the template's copy of ChartBook's skill is the package's own. The
-other renders a project and builds it with the ChartBook in this
-repository, so a change to a command the template uses is caught by the
-pull request that makes it.
+that the template's copy of ChartBook's skill is the package's own. One
+renders a project and builds it with the ChartBook in this repository, so a
+change to a command the template uses is caught by the pull request that
+makes it. The last is a new user's first five minutes: what `chartbook init`
+asks, what pressing Enter at each question makes, and what it says next.
 """
 
+import json
 import os
 import re
 import shutil
@@ -849,7 +851,7 @@ class TestOneSourceForTheSkill:
 
 
 # A project with a ChartBook site and one notebook, and nothing that needs a
-# network, a licence or LaTeX
+# network, a licence or LaTeX: what pressing Enter at every question makes
 WITH_CHARTBOOK = {
     **MINIMAL_CONTEXT,
     "project_name": "Scaffold Test",
@@ -857,6 +859,31 @@ WITH_CHARTBOOK = {
     "include_jupyter_notebooks": True,
     "include_chartbook": True,
 }
+
+NOTEBOOK = "01_example_notebook_interactive"
+
+
+def _environment(path=None):
+    """The environment a new user has: this Python's tools first on PATH."""
+    path = path if path is not None else os.environ["PATH"]
+    return {**os.environ, "PATH": f"{Path(sys.executable).parent}{os.pathsep}{path}"}
+
+
+def _chartbook(project, *args, path=None):
+    """Run this environment's `chartbook` in a project, as a user would."""
+    return subprocess.run(
+        [str(Path(sys.executable).with_name("chartbook")), *args],
+        cwd=project,
+        capture_output=True,
+        text=True,
+        timeout=600,
+        env=_environment(path),
+    )
+
+
+def _doit_lines(output):
+    """The tasks doit ran (".  name") or found current ("-- name")."""
+    return sorted(line.split()[-1] for line in output.splitlines() if line.startswith((".  ", "-- ")))
 
 
 @pytest.mark.skipif(os.name == "nt", reason="the build script is run by a POSIX shell")
@@ -867,38 +894,66 @@ class TestARenderedProjectBuilds:
     def project(self, template_dir, temp_dir):
         return Path(generate_project(template_dir, temp_dir, WITH_CHARTBOOK))
 
-    def test_it_names_its_build_and_renders_with_docs(self, project):
+    def test_it_names_its_build_and_leaves_the_site_to_chartbook(self, project):
         from chartbook.manifest import load_manifest
 
         assert load_manifest(project)["scripts"] == {"build": "doit"}
-        dodo = (project / "dodo.py").read_text()
-        assert "chartbook docs -f" in dodo
-        # `chartbook build` there would run this file again
-        assert "chartbook build" not in dodo
+        code = [line for line in (project / "dodo.py").read_text().splitlines() if not line.lstrip().startswith("#")]
+        # `chartbook build` renders the site after `doit`; doit rendering it
+        # too was every build rendering it twice. And `chartbook build`
+        # there would run this file again
+        assert not [line for line in code if "chartbook" in line]
+
+    def test_chartbook_docs_renders_it_before_anything_is_built(self, project):
+        """The first thing the getting-started page has a new user run."""
+        result = _chartbook(project, "docs")
+        assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+        assert "scaffold_test has built nothing it declares yet" in result.stderr
+        assert f"  - notebook: _output/{NOTEBOOK}.ipynb" in result.stderr
+        assert "`chartbook build` runs its build script" in result.stderr
+        assert (project / "docs" / "index.html").is_file()
+        page = project / "docs" / "cb" / "notebooks" / "scaffold_test" / f"{NOTEBOOK}.html"
+        assert "Not built yet" in page.read_text()
+        assert not (project / "_output" / f"{NOTEBOOK}.ipynb").exists()
 
     def test_chartbook_build_builds_it(self, project):
         """`chartbook build` runs its `doit`, and then renders its site."""
-        chartbook = Path(sys.executable).with_name("chartbook")
-        environment = {
-            **os.environ,
-            "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}",
-        }
+        result = _chartbook(project, "build", "-f")
+        assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+        assert "scaffold_test: build" in result.stdout
+        assert "Ran build in 1 pipeline(s)." in result.stdout
+        # The template's own build does not render the site, so nothing warned
+        assert "was called from this pipeline's own build script" not in result.stderr
+        # doit ran what a first project needs, once each: not the tests, and
+        # not the site, which `chartbook build` renders after it
+        assert _doit_lines(result.stdout + result.stderr) == ["config", f"run_notebooks:{NOTEBOOK}.ipynb.py"]
+        assert not (project / "_output" / "pytest_results.xml").exists()
+        assert (project / "docs" / "index.html").is_file()
+        assert (project / "docs" / "index.json").is_file()
+        assert (project / "_output" / f"{NOTEBOOK}.ipynb").is_file()
+        page = project / "docs" / "cb" / "notebooks" / "scaffold_test" / f"{NOTEBOOK}.html"
+        assert "Not built yet" not in page.read_text()
+
+    def test_without_tex_the_latex_reports_are_skipped_and_the_rest_builds(self, template_dir, temp_dir):
+        """With LaTeX chosen and no TeX installed, `doit` used to stop at `latexmk: command not found`."""
+        for package in ["decouple", "matplotlib", "numpy", "pandas", "seaborn"]:
+            pytest.importorskip(package)
+        project = Path(generate_project(template_dir, temp_dir, {**MINIMAL_CONTEXT, "include_latex_reports": True}))
+        no_tex = os.pathsep.join(
+            folder for folder in os.environ["PATH"].split(os.pathsep) if not (Path(folder) / "latexmk").exists()
+        )
         result = subprocess.run(
-            [str(chartbook), "build", "-f"],
+            [str(Path(sys.executable).with_name("doit"))],
             cwd=project,
             capture_output=True,
             text=True,
             timeout=600,
-            env=environment,
+            env=_environment(no_tex),
         )
         assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
-        assert "scaffold_test: build" in result.stdout
-        assert "Ran build in 1 pipeline(s)." in result.stdout
-        # The template's own build renders with `docs`, so nothing warned
-        assert "was called from this pipeline's own build script" not in result.stderr
-        assert (project / "docs" / "index.html").is_file()
-        assert (project / "docs" / "index.json").is_file()
-        assert (project / "_output" / "01_example_notebook_interactive.ipynb").is_file()
+        assert "latexmk was not found, so the reports in ./reports are not compiled" in result.stderr
+        assert (project / "_output" / "example_plot.png").is_file()
+        assert not (project / "reports" / "report_example.pdf").exists()
 
     def test_chartbook_check_has_one_thing_to_say_about_it(self, project):
         """A project with no git remote yet has no `repo_url`. Nothing else is wrong."""
@@ -914,3 +969,252 @@ class TestARenderedProjectBuilds:
         assert result.output.count("recommended by the default policy") == 1, result.output
         assert "[project] repo_url: recommended by the default policy" in result.output
 
+
+@pytest.mark.parametrize("context", [WITH_CHARTBOOK, FULL_CONTEXT], ids=["with_chartbook", "full"])
+def test_doit_alone_runs_every_task_but_the_tests(template_dir, temp_dir, context):
+    """The tests are their own task, `doit run_pytest`; a build used to run them every time."""
+    project = Path(generate_project(template_dir, temp_dir, context))
+    listed = subprocess.run(["doit", "list"], cwd=project, capture_output=True, text=True)
+    assert listed.returncode == 0, listed.stderr
+    tasks = {line.split()[0] for line in listed.stdout.splitlines() if line.strip()}
+    assert "run_pytest" in tasks
+    loaded = subprocess.run(
+        [sys.executable, "-c", "import json, runpy; print(json.dumps(runpy.run_path('dodo.py')['DOIT_CONFIG']['default_tasks']))"],
+        cwd=project,
+        capture_output=True,
+        text=True,
+    )
+    assert loaded.returncode == 0, loaded.stderr
+    assert sorted(json.loads(loaded.stdout)) == sorted(tasks - {"run_pytest"})
+
+
+def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, temp_dir):
+    """The default tasks are what doit takes for tasks: functions named `task_…`, but `task_params`.
+
+    Anything else named `task_…` (a value, doit's own `task_params`
+    decorator imported as its documentation shows, a partial) listed as a
+    default task stopped every plain `doit` with "Invalid parameter"; a task
+    imported from a helper module, which doit runs, was left out. And the
+    list is made when the file is read, so a task added after it is not
+    run: the block says so.
+    """
+    project = Path(generate_project(template_dir, temp_dir, WITH_CHARTBOOK))
+    (project / "src" / "more_tasks.py").write_text('def task_lint():\n    return {"actions": ["true"]}\n')
+    dodo = project / "dodo.py"
+    text = dodo.read_text()
+    block = text.index("## `doit` on its own")
+    assert "must stay the last thing in the file" in text[block:]
+    others = (
+        "import functools\n"
+        "from doit import task_params\n"
+        "from more_tasks import task_lint\n"
+        'task_owner = "the data team"\n'
+        'task_later = functools.partial(print, "later")\n'
+        # doit also takes a bound method named task_..., and anything with create_doit_tasks
+        "class _Checks:\n"
+        "    def task_style(self):\n"
+        '        return {"actions": ["true"]}\n'
+        "task_style = _Checks().task_style\n"
+        "class _Report:\n"
+        "    def create_doit_tasks(self):\n"
+        '        return {"actions": ["true"]}\n'
+        "report = _Report()\n"
+        # The class has create_doit_tasks too, which doit would call unbound
+        "del _Report\n\n\n"
+    )
+    dodo.write_text(text[:block] + others + text[block:])
+    listed = subprocess.run(["doit", "list"], cwd=project, capture_output=True, text=True)
+    assert listed.returncode == 0, listed.stderr
+    tasks = {line.split()[0] for line in listed.stdout.splitlines() if line.strip()}
+    loaded = subprocess.run(
+        [sys.executable, "-c", "import json, runpy; print(json.dumps(runpy.run_path('dodo.py')['DOIT_CONFIG']['default_tasks']))"],
+        cwd=project,
+        capture_output=True,
+        text=True,
+    )
+    assert loaded.returncode == 0, loaded.stderr
+    defaults = set(json.loads(loaded.stdout))
+    assert defaults <= tasks, sorted(defaults - tasks)
+    assert {"lint", "style", "report"} <= tasks
+    assert defaults == tasks - {"run_pytest"}
+
+
+class TestTheQuestions:
+    """What `chartbook init` asks, and what an answer left at its default makes."""
+
+    def test_pressing_enter_at_every_question_makes_a_site_without_latex(self, template_dir, temp_dir, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+
+        project = Path(generate_project(template_dir, temp_dir, {}))
+        # LaTeX needs TeX, which a new user may not have
+        assert not (project / "reports").exists()
+        assert (project / "chartbook.toml").is_file()
+        monkeypatch.chdir(project)
+        result = CliRunner().invoke(main, ["docs"])
+        assert result.exit_code == 0, result.output
+        assert (project / "docs" / "index.html").is_file()
+
+    def test_every_question_says_what_it_asks(self, template_dir):
+        questions = json.loads((template_dir / "cookiecutter.json").read_text())
+        prompts = questions["__prompts__"]
+        asked = [name for name in questions if not name.startswith("_")]
+        assert sorted(prompts) == sorted(asked)
+        # A user typed a project name here when it was asked as `project_slug`
+        assert "Folder name" in prompts["project_slug"]
+        assert "Enter" in prompts["project_slug"]
+        assert "TeX" in prompts["include_latex_reports"]
+
+    def test_a_name_typed_for_the_folder_name_says_what_to_do(self, template_dir, temp_dir, capfd):
+        context = {**MINIMAL_CONTEXT, "project_name": "Rates Study", "project_slug": "Rates Study"}
+        with pytest.raises(Exception, match="Hook script failed"):
+            generate_project(template_dir, temp_dir, context)
+        said = capfd.readouterr().out
+        assert "'Rates Study' cannot be the project's folder name" in said
+        assert "press Enter at the second question to take 'rates_study'" in said
+        assert not any(temp_dir.iterdir())
+
+    def test_next_steps_name_the_chartbook_commands(self, template_dir, temp_dir, capfd):
+        generate_project(template_dir, temp_dir, WITH_CHARTBOOK)
+        said = capfd.readouterr().out
+        steps = said[said.index("Next steps:"):]
+        for command in ("chartbook docs", "chartbook build -f", "chartbook browse", "chartbook check"):
+            assert f"  {command}" in steps
+        # The site comes first, before anything is installed
+        assert steps.index("chartbook docs") < steps.index("pip install -r requirements.txt")
+
+    def test_with_uv_the_readme_activates_the_environment_before_chartbook_build(self, template_dir, temp_dir):
+        """After `uv sync` alone, a chartbook installed elsewhere ran a `doit` that is not on PATH."""
+        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": "uv"}))
+        readme = (project / "README.md").read_text()
+        quick_start = readme[readme.index("uv sync"):readme.index("And that's it!")]
+        assert quick_start.index("source .venv/bin/activate") < quick_start.index("chartbook build -f")
+        assert "uv run chartbook build -f" in readme
+
+    @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
+    def test_the_readme_says_to_install_chartbook_from_github_until_the_next_release(
+        self, template_dir, temp_dir, manager
+    ):
+        """`chartbook init` renders the template from GitHub's main branch, which 0.2.0 cannot build."""
+        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": manager}))
+        readme = (project / "README.md").read_text()
+        # GitHub's main says 0.2.0 too, so pip must be told to replace the 0.2.0 the requirements installed
+        install = {
+            "pip": "pip install --force-reinstall",
+            "conda": "pip install --force-reinstall",
+            "uv": "uv add",
+            "pixi": "pixi add --pypi",
+        }[manager]
+        assert f'{install} "chartbook @ git+https://github.com/backofficedev/chartbook"' in readme
+        assert readme.index("git+https://github.com/backofficedev/chartbook") < readme.index("chartbook build -f")
+
+    @pytest.mark.parametrize(
+        "manager, install, installed",
+        [
+            ("pip", 'pip install --force-reinstall "chartbook @ git+', "pip install -r requirements.txt"),
+            ("conda", 'pip install --force-reinstall "chartbook @ git+', "conda activate"),
+            ("uv", 'uv add "chartbook @ git+', "uv sync"),
+            ("pixi", 'pixi add --pypi "chartbook @ git+', "Next steps:"),
+        ],
+    )
+    def test_next_steps_replace_chartbook_with_the_one_from_github(
+        self, template_dir, temp_dir, capfd, manager, install, installed
+    ):
+        """GitHub's main says 0.2.0 too: a plain `pip install` after the requirements' 0.2.0 does nothing."""
+        generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": manager})
+        said = capfd.readouterr().out
+        steps = said[said.index("Next steps:"):]
+        assert install in steps
+        assert steps.index(installed) < steps.index(install) < steps.index("chartbook build -f")
+
+    def test_without_chartbook_the_next_step_is_doit(self, template_dir, temp_dir, capfd):
+        generate_project(template_dir, temp_dir, MINIMAL_CONTEXT)
+        steps = capfd.readouterr().out.split("Next steps:")[1]
+        assert "  doit" in steps
+        assert "chartbook" not in steps
+
+    @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
+    def test_the_floor_is_the_templates_version(self, temp_dir, manager, capfd):
+        """`render` used to put ChartBook's version over the template's: cruft, which does not carry a
+        private variable forward, then took the template's at `cruft update`, and the two disagreed.
+
+        And the step that installs ChartBook from GitHub is only for a
+        template of version 0.2.0, which the 0.2.0 on PyPI does not have.
+        """
+        from chartbook import scaffold
+
+        answers = {**WITH_CHARTBOOK, "environment_manager": manager, "_chartbook_version": "9.8.7"}
+        project = scaffold.render(temp_dir, no_input=True, answers=answers).project_dir
+        floors = {
+            "pip": [("requirements.txt", "chartbook>=9.8.7")],
+            "conda": [("requirements.txt", "chartbook>=9.8.7"), ("environment.yml", "- chartbook>=9.8.7")],
+            "uv": [("pyproject.toml", '"chartbook>=9.8.7"')],
+            "pixi": [("pixi.toml", 'chartbook = ">=9.8.7"')],
+        }[manager]
+        for name, floor in floors:
+            assert floor in (project / name).read_text(), name
+        assert "git+https://github.com/backofficedev/chartbook" not in (project / "README.md").read_text()
+        assert "git+https://github.com/backofficedev/chartbook" not in capfd.readouterr().out
+
+    def test_the_template_is_of_the_version_of_the_chartbook_it_comes_with(self, template_dir):
+        """So the floor is the rendering ChartBook's, and `cruft update` moves it to the template's: a
+        release bumps both."""
+        from chartbook.__about__ import __version__
+
+        questions = json.loads((template_dir / "cookiecutter.json").read_text())
+        assert questions["_chartbook_version"] == __version__
+
+    @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
+    def test_it_asks_for_the_chartbook_that_renders_it(self, template_dir, temp_dir, manager):
+        """The project asks for the ChartBook that rendered it, or later: the template's version is its.
+
+        `chartbook>=0.1.0` let in versions older than the newest release,
+        and a fixed floor goes out of date with each one. And no file may
+        pin a Polars older than the one ChartBook needs, or the environment
+        does not resolve.
+        """
+        import chartbook
+        import tomli
+        from packaging.requirements import Requirement
+        from packaging.specifiers import SpecifierSet
+        from packaging.version import Version
+
+        from chartbook import scaffold
+
+        answers = {**WITH_CHARTBOOK, "environment_manager": manager}
+        project = scaffold.render(temp_dir, no_input=True, answers=answers).project_dir
+        found = {}  # file -> {package: specifier}
+
+        def keep(where, line):
+            line = line.strip().lstrip("-").strip()
+            if re.match(r"^(chartbook|polars)\b", line):
+                requirement = Requirement(line)
+                found.setdefault(where, {})[requirement.name] = requirement.specifier
+
+        for name in ("requirements.txt", "environment.yml"):
+            if (project / name).exists():
+                for line in (project / name).read_text().splitlines():
+                    keep(name, line)
+        if (project / "pyproject.toml").exists():
+            for line in tomli.loads((project / "pyproject.toml").read_text())["project"]["dependencies"]:
+                keep("pyproject.toml", line)
+        if (project / "pixi.toml").exists():
+            pixi = tomli.loads((project / "pixi.toml").read_text())
+            found["pixi.toml"] = {
+                "chartbook": SpecifierSet(pixi["pypi-dependencies"]["chartbook"]),
+                "polars": SpecifierSet(pixi["dependencies"]["polars"]),
+            }
+        assert found
+
+        ours = tomli.loads((Path(__file__).parent.parent / "pyproject.toml").read_text())["project"]
+        polars_floor = next(
+            Version(spec.version)
+            for spec in next(Requirement(d) for d in ours["dependencies"] if d.startswith("polars")).specifier
+            if spec.operator == ">="
+        )
+        for where, specifiers in found.items():
+            if "chartbook" in specifiers:
+                assert specifiers["chartbook"] == SpecifierSet(f">={chartbook.__version__}"), where
+            if "polars" in specifiers:
+                assert specifiers["polars"].contains(polars_floor), f"{where}: polars{specifiers['polars']}"

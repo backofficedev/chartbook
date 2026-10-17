@@ -174,19 +174,43 @@ if not include_crsp_compustat:
 print("Project configuration complete!")
 print("\nNext steps:")
 print("  cd {{ cookiecutter.project_slug }}")
+if include_chartbook:
+    print("  chartbook docs       # its site already, with nothing built yet")
+
+# Until the next ChartBook release: the ChartBook that renders this template
+# and calls itself 0.2.0 is installed from GitHub, ahead of the 0.2.0 on PyPI
+# that the environment files ask for, which cannot build the project; pip
+# keeps that 0.2.0 unless told to replace it
+from_github = include_chartbook and "{{ cookiecutter._chartbook_version }}" == "0.2.0"
+FROM_GITHUB = '"chartbook @ git+https://github.com/backofficedev/chartbook"'
+UNTIL_RELEASED = "  # until the next ChartBook release"
 
 if environment_manager == "pip":
     print("  python -m venv .venv")
     print("  source .venv/bin/activate  # Windows: .venv\\Scripts\\activate")
     print("  pip install -r requirements.txt")
+    if from_github:
+        print(f"  pip install --force-reinstall {FROM_GITHUB}{UNTIL_RELEASED}")
 elif environment_manager == "uv":
     print("  uv sync")
+    if from_github:
+        print(f"  uv add {FROM_GITHUB}{UNTIL_RELEASED}")
+    print("  source .venv/bin/activate  # Windows: .venv\\Scripts\\activate")
 elif environment_manager == "conda":
     print(
         "  conda env create -f environment.yml"
     )
     print("  conda activate {{ cookiecutter.project_slug }}")
+    if from_github:
+        print(f"  pip install --force-reinstall {FROM_GITHUB}{UNTIL_RELEASED}")
 elif environment_manager == "pixi":
-    print("  pixi install")
+    if from_github:
+        print(f"  pixi add --pypi {FROM_GITHUB}{UNTIL_RELEASED}")
+    print("  pixi shell")
 
-print("  doit")
+if include_chartbook:
+    print("  chartbook build -f   # runs doit, then renders the site again")
+    print("  chartbook browse     # opens the site")
+    print("  chartbook check      # what chartbook.toml still needs")
+else:
+    print("  doit")

@@ -99,7 +99,9 @@ def _site_options(command):
         click.option(
             "--strict/--no-strict",
             default=True,
-            help="Fail on missing source files (default). Use --no-strict to skip affected pipelines instead.",
+            help="Fail on missing source files (default), except in a lone pipeline that has built nothing yet, "
+            "which is rendered with a warning; typed explicitly, --strict fails on that too. In a catalog, "
+            "--no-strict skips the pipelines that have missing files instead.",
         ),
         click.option(
             "--strip-mathjax2/--no-strip-mathjax2",
@@ -138,7 +140,10 @@ def docs(**site):
 
     This renders the site and writes index.json beside it. It does not
     build the project's data: `chartbook run` does that, and
-    `chartbook build` does both.
+    `chartbook build` does both. A lone pipeline that has built none of
+    its data, charts, notebooks and models yet, as a new project has not,
+    is rendered with a warning and each shown as not built; with --strict
+    typed, and in a catalog, that is an error.
 
     By default every render starts from nothing. With --incremental the
     intermediate build directory (--docs-build-dir) is kept, pipelines whose
@@ -179,6 +184,7 @@ def build(**site):
     from chartbook.manifest import BUILD_SCRIPT
 
     project_dir = resolve_project_dir(site["project_dir"])
+    after_build = False
     if runner.running(project_dir, BUILD_SCRIPT):
         click.echo(
             click.style("Warning: ", fg="yellow", bold=True)
@@ -189,9 +195,11 @@ def build(**site):
         )
     elif _has_script(project_dir, BUILD_SCRIPT):
         _run_script(project_dir, BUILD_SCRIPT)
+        # So what the script did not make is an error, not "not built yet"
+        after_build = True
     else:
         click.echo("No `build` script here, so only the site is rendered.")
-    _render_site(**site)
+    _render_site(**site, after_build=after_build)
 
 
 def _render_site(
@@ -208,6 +216,7 @@ def _render_site(
     incremental,
     watch,
     watch_interval,
+    after_build=False,
 ):
     """Render the documentation site: what `docs` does, and `build` does last.
 
@@ -219,12 +228,25 @@ def _render_site(
     :param keep_build_dirs: If True, keeps temporary build directory after generation.
     :param force_write: If True, overwrites existing output directory.
     :param size_threshold: File size in MB above which a dataframe page does not read the file for its date range.
-    :param strict: If True, error and exit on missing source files.
+    :param strict: If True, error and exit on missing source files. Only
+        `--strict` typed on the command line makes a pipeline that has
+        built nothing yet an error too.
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
     :param incremental: If True, keep the build directory and redo only what changed.
     :param watch: If True, render incrementally and again on every change.
     :param watch_interval: Seconds between checks for changes in watch mode.
+    :param after_build: The build script has just run, so a pipeline that
+        has built nothing it declares is an error, not "not built yet".
     """
+    from click.core import ParameterSource
+
+    context = click.get_current_context(silent=True)
+    asked = context is not None and context.get_parameter_source("strict") is ParameterSource.COMMANDLINE
+    if strict and not asked:
+        # The default, not asked for: generate_docs then leaves room for a
+        # pipeline that has not been built yet
+        strict = None
+
     # Validate paths for shell/platform mismatches
     from chartbook.path_validation import detect_shell_environment, validate_cli_paths
 
@@ -280,6 +302,7 @@ def _render_site(
         size_threshold=size_threshold,
         strict=strict,
         strip_mathjax2=strip_mathjax2,
+        after_build=after_build,
     )
     if not watch:
         click.echo(f"Successfully generated documentation in {output_dir}")
@@ -2752,9 +2775,13 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
 def init(use_git, use_github, public):
     """Initialize a new chartbook project from the cookiecutter template.
 
-    The template is the `template/` folder of ChartBook's repository. It is
-    rendered with cruft, so `cruft update` in the new project brings in
-    later changes to it.
+    The template is the one that came with this ChartBook (the `template/`
+    folder of ChartBook's repository, which the package carries), so the
+    two always match, and rendering it needs no network. When the commit
+    the template is at is known, the new project's `.cruft.json` names the
+    template on GitHub and that commit, so `cruft update` there brings in
+    later changes to it; when it is not, there is no `.cruft.json`, and the
+    command prints the `cruft link` that makes one.
 
     With --git, the new project is also made a git repository with one
     commit. With --github, a GitHub repository is then created for it under
@@ -2771,18 +2798,16 @@ def init(use_git, use_github, public):
         chartbook init --github --public
     """
     try:
-        import cruft  # noqa: F401
+        import cookiecutter  # noqa: F401
     except ImportError:
-        click.echo("Error: cruft is not installed.", err=True)
+        click.echo("Error: cookiecutter is not installed.", err=True)
         click.echo("", err=True)
         click.echo(
-            "cruft ships with chartbook, so this usually means a broken or"
+            "cookiecutter ships with chartbook, so this usually means a broken or"
             " partial installation. Reinstall with:", err=True
         )
         click.echo("    pip install --force-reinstall chartbook", err=True)
         raise SystemExit(1)
-
-    import subprocess
 
     from chartbook import scaffold
 
@@ -2810,24 +2835,52 @@ def init(use_git, use_github, public):
                 err=True,
             )
 
-    if not use_git:
-        try:
-            rendered = subprocess.run(scaffold.template_command())
-        except KeyboardInterrupt:
-            raise SystemExit(130)
-        if rendered.returncode != 0:
-            raise SystemExit(rendered.returncode)
-        return
-
-    # The project's directory is named from an answer at cruft's prompt, so
-    # it is identified afterwards as the one that was not here before
-    before = scaffold.rendered_projects(cwd)
-    rendered = subprocess.run(scaffold.template_command())
-    if rendered.returncode != 0:
-        raise SystemExit(rendered.returncode)
+    # The template that came with this ChartBook, rendered here: no network
+    from cookiecutter.exceptions import CookiecutterException
 
     try:
-        project_dir = scaffold.find_new_project(cwd, before)
+        rendered = scaffold.render(cwd)
+    except KeyboardInterrupt:
+        raise SystemExit(130)
+    except scaffold.ScaffoldError as e:
+        # A source checkout git cannot read, or a project folder there already
+        fail(e)
+    except CookiecutterException as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        # The template's own message is above; its advice is said again
+        # last, where it is seen. The name made from the project's name may
+        # be refused too ("2024 Rates")
+        click.echo(
+            "If the folder name was refused, run `chartbook init` again and, at the second "
+            "question, press Enter, or type a name of lowercase letters, digits and `_`.",
+            err=True,
+        )
+        raise SystemExit(1)
+    project_dir = rendered.project_dir
+    if rendered.commit is None:
+        # A .cruft.json naming no commit is one cruft takes for up to date, and never updates
+        click.echo(
+            f"Note: this ChartBook cannot name the commit of {scaffold.TEMPLATE_REPOSITORY} its "
+            f"template is at ({rendered.why}), so {project_dir.name} has no {scaffold.CRUFT_MARKER}, "
+            f"and cruft cannot update it yet. Once you know the commit, run this in "
+            f"{project_dir.name}, with the commit in place of <commit>; it gives cruft the answers "
+            f"you gave here:\n"
+            f"    {rendered.link_command()}",
+            err=True,
+        )
+    elif rendered.pushed is False:
+        click.echo(
+            f"Note: the template's commit, {rendered.commit[:12]}, is on no branch of a remote that is "
+            f"{scaffold.TEMPLATE_REPOSITORY}, and in no tag, of the checkout this ChartBook runs from, "
+            f"so it may not be on GitHub, where `cruft update` looks for it. Push it before you run "
+            f"`cruft update`.",
+            err=True,
+        )
+
+    if not use_git:
+        return
+
+    try:
         scaffold.git_init_and_commit(project_dir)
         click.echo(f"Initialized a git repository in {project_dir} with one commit.")
         if use_github:

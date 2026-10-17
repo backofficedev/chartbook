@@ -8,10 +8,16 @@ import sys
 project_slug = {{ cookiecutter.project_slug | tojson }}
 
 if not re.match(r"^[a-z][a-z0-9_]*$", project_slug):
-    print(f"ERROR: '{project_slug}' is not a valid project slug.")
-    print("Project slug must:")
+    print(f"ERROR: '{project_slug}' cannot be the project's folder name.")
+    print("The folder name (the second question) must:")
     print("  - Start with a lowercase letter")
     print("  - Contain only lowercase letters, numbers, and underscores")
+    # What the second question offered, made from the first answer
+    suggested = {{ cookiecutter.project_name.lower().replace(' ', '_').replace('-', '_') | tojson }}
+    if suggested != project_slug and re.match(r"^[a-z][a-z0-9_]*$", suggested):
+        print(f"Nothing was created. Run it again and press Enter at the second question to take '{suggested}'.")
+    else:
+        print("Nothing was created. Run it again and type a folder name like 'my_project' at the second question.")
     sys.exit(1)
 
 # Validate email format (basic check)

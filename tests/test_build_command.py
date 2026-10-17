@@ -107,6 +107,42 @@ class TestDocs:
         assert not (pipeline_project / "ran.log").exists()
 
 
+class TestDocsBeforeAnythingIsBuilt:
+    """`chartbook docs` warns about a pipeline that has built nothing, unless --strict was asked for."""
+
+    @pytest.fixture
+    def unbuilt(self, pipeline_project, monkeypatch):
+        (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").unlink()
+        (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
+        monkeypatch.chdir(pipeline_project)
+        return pipeline_project
+
+    def test_by_default_it_warns_and_renders(self, unbuilt):
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        assert result.exit_code == 0, result.output
+        assert "Warning: test_pipeline has built nothing it declares yet" in result.output
+        assert (unbuilt / "docs" / "index.html").is_file()
+
+    def test_strict_on_the_command_line_makes_it_an_error(self, unbuilt):
+        """`doit && chartbook docs --strict` in CI: a build that made nothing must fail."""
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--strict"])
+        assert result.exit_code == 1
+        assert "Missing source files" in result.output
+        assert "--no-strict" not in result.output
+        assert not (unbuilt / "docs").exists()
+
+    def test_the_help_says_what_strict_typed_does(self):
+        """The warning says "With --strict, this is an error"; the help said only "(default)"."""
+        said = " ".join(CliRunner().invoke(main, ["docs", "--help"]).output.split())
+        assert "a lone pipeline that has built nothing yet, which is rendered with a warning" in said
+        assert "typed explicitly, --strict fails on that too" in said
+
+    def test_no_strict_renders_it_too(self, unbuilt):
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--no-strict"])
+        assert result.exit_code == 0, result.output
+        assert (unbuilt / "docs" / "index.html").is_file()
+
+
 @posix
 class TestBuild:
     """`chartbook build` is `chartbook run`, then `chartbook docs`."""
@@ -168,6 +204,27 @@ class TestBuild:
         result = CliRunner().invoke(main, ["build", "./docs", "-f"])
         assert result.exit_code == 1
         assert "No chartbook.toml in" in result.output
+
+    def test_a_build_that_makes_nothing_is_an_error(self, pipeline_project, monkeypatch):
+        """`chartbook docs` shows a pipeline that has built nothing as not built yet.
+
+        `chartbook build` has just run the build, so there that is a build
+        that did not make what the manifest says it does.
+        """
+        _add_script(pipeline_project, "echo ran >> ran.log")
+        (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").unlink()
+        (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
+        monkeypatch.chdir(pipeline_project)
+
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        assert result.exit_code == 0, result.output
+        assert "has built nothing it declares yet" in result.output
+
+        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        assert result.exit_code == 1
+        assert (pipeline_project / "ran.log").exists()
+        assert "The build script has just run and did not make" in result.output
+        assert "--no-strict" not in result.output
 
 
 @posix

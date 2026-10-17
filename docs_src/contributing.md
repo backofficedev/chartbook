@@ -143,6 +143,18 @@ The `--all` flag requires having the Python versions installed locally (e.g., vi
 hatch run docs:build
 ```
 
+## Building a release
+
+The project template goes into the wheel and the sdist by `hatch_build.py`: the files git tracks in `template/`, and the commit they are at, which `chartbook init` writes into a new project's `.cruft.json`. Build a release from a clean checkout, with git at hand, and with `CHARTBOOK_BUILD_REQUIRE_GIT=1` in the environment:
+
+```bash
+CHARTBOOK_BUILD_REQUIRE_GIT=1 hatch build
+```
+
+Without that variable, a build in a folder whose `.git` git cannot read (git not installed, or a folder git does not trust) warns and goes on, shipping `template/` as it is on disk and no commit; with it, the build stops. A build whose `template/` has changes git has not committed records no commit, and says so.
+
+A release also bumps the template's `_chartbook_version` in `template/cookiecutter.json` with the version in `src/chartbook/__about__.py` (a test keeps them equal). The step that installs ChartBook from GitHub, in a new project's next steps and README, is shown for a template of version 0.2.0, so it goes away by itself with the next release.
+
 ## Questions?
 
 - Open an issue for discussion

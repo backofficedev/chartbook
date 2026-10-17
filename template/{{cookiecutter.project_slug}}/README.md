@@ -9,9 +9,10 @@
 
 The quickest way to run code in this repo is to use the following steps.
 {% if cookiecutter.include_latex_reports %}
-You must have TexLive (or another LaTeX distribution) installed on your computer and available in your path.
+To compile the LaTeX reports you need TexLive (or another LaTeX distribution) installed on your computer and available in your path.
 You can do this by downloading and installing it from here ([windows](https://tug.org/texlive/windows.html#install)
-and [mac](https://tug.org/mactex/mactex-download.html) installers).
+and [mac](https://tug.org/mactex/mactex-download.html) installers). Without it, the rest of the project
+still builds, and `doit` says that the reports were not compiled.
 {% endif %}
 {% if cookiecutter.environment_manager == "pip" %}
 First, create a virtual environment and activate it:
@@ -28,9 +29,10 @@ This project uses [uv](https://docs.astral.sh/uv/) for dependency management. Fi
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-Then sync the environment:
+Then sync the environment and activate it, so that the commands below find its tools:
 ```bash
 uv sync
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 {% elif cookiecutter.environment_manager == "conda" %}
 First, you must have the `conda` package manager installed (e.g., via Anaconda). However, I recommend using `mamba`, via [miniforge](https://github.com/conda-forge/miniforge) as it is faster and more lightweight than `conda`.
@@ -50,11 +52,24 @@ Then install the dependencies:
 pixi install
 ```
 {% endif %}
+{% if cookiecutter.include_chartbook and cookiecutter._chartbook_version == "0.2.0" %}
+**Until the next ChartBook release**, install ChartBook from GitHub in this environment too. This project
+was made by `chartbook init` with the template that came with a ChartBook installed from GitHub, which calls
+itself 0.2.0 and is ahead of the 0.2.0 on PyPI that the files above ask for: that one does not read the
+`[scripts]` table of `chartbook.toml`, and has no `chartbook docs`. pip keeps the 0.2.0 it installed above
+unless it is told to replace it:
+```bash
+{% if cookiecutter.environment_manager == "uv" %}uv add "chartbook @ git+https://github.com/backofficedev/chartbook"{% elif cookiecutter.environment_manager == "pixi" %}pixi add --pypi "chartbook @ git+https://github.com/backofficedev/chartbook"{% else %}pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"{% endif %}
+```
+`chartbook --version` says 0.2.0 for both; `chartbook docs --help` works only in the one from GitHub.
+{% endif %}
 Finally, run the project tasks:
 ```bash
-{% if cookiecutter.environment_manager == "pixi" %}pixi run doit{% else %}doit{% endif %}
+{% if cookiecutter.include_chartbook %}{% if cookiecutter.environment_manager == "pixi" %}pixi run chartbook build -f{% else %}chartbook build -f{% endif %}{% else %}{% if cookiecutter.environment_manager == "pixi" %}pixi run doit{% else %}doit{% endif %}{% endif %}
 ```
-And that's it!
+{% if cookiecutter.include_chartbook %}`chartbook build` runs `doit` (every task in `dodo.py` but the tests), then renders
+the documentation site into `docs/`. Open it with `chartbook browse`.
+{% endif %}And that's it!
 {% if cookiecutter.include_r_scripts %}
 
 ### Running R Code
@@ -76,12 +91,15 @@ You can run the unit test, including doctests, with the following command:
 ```
 pytest --doctest-modules
 ```
+`doit run_pytest` runs the tests as a task, and saves the results in `_output`.
+A plain `doit` does not run them.
 {% if cookiecutter.include_chartbook %}
-You can build the documentation site with:
+You can render the documentation site, without running anything, with:
 ```
 chartbook docs -f
 ```
-`doit` does this as its last step, and `chartbook build -f` runs `doit` and then renders the site.
+`chartbook build -f` runs `doit` and then renders the site, and `chartbook check`
+says what `chartbook.toml` is missing.
 {% endif %}
 
 #### Setting Environment Variables
@@ -134,8 +152,8 @@ ruff format . && ruff check --select I --fix . && ruff check --fix .
 
  - I'm using the `doit` Python module as a task runner. It works like `make` and
    the associated `Makefile`s. To rerun the code, install `doit`
-   (https://pydoit.org/) and execute the command `doit` from the `src`
-   directory. Note that doit is very flexible and can be used to run code
+   (https://pydoit.org/) and execute the command `doit` in the project's
+   folder, where `dodo.py` is. Note that doit is very flexible and can be used to run code
    commands from the command prompt, thus making it suitable for projects that
    use scripts written in multiple different programming languages.
 
@@ -199,6 +217,11 @@ This project uses [uv](https://docs.astral.sh/uv/) for fast, reliable Python pac
 To sync your environment with the lockfile:
 ```bash
 uv sync
+```
+
+To run a command in it without activating it first, put `uv run` before it:
+```bash
+{% if cookiecutter.include_chartbook %}uv run chartbook build -f{% else %}uv run doit{% endif %}
 ```
 
 To add a new dependency:

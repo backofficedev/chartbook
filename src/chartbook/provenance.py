@@ -7,7 +7,9 @@ hashes, and whether those have moved since; and what is made from it. It is
 the second reader of the index (``docs_src/design/index-schema.md``, "What
 this unblocks"): the page generator builds the index first and hands each
 page its record and the records around it. Nothing here reads a manifest
-or a file; what the panel says is what ``index.json`` says.
+or a file; what the panel says is what ``index.json`` says. The one
+exception: a record with no hash is "not built" only if nothing is at its
+path, and a file there that could not be read is said so.
 """
 
 from __future__ import annotations
@@ -44,11 +46,16 @@ def _where(record: dict) -> str:
 
 
 def _content(record: dict) -> str:
+    from chartbook.sitefiles import not_built
+
     parts = []
     if record.get("content_hash"):
         parts.append(f"`{record['content_hash']}`")
     elif record.get("definition_hash"):
         parts.append(f"definition `{record['definition_hash']}`")
+    elif (record.get("location") or {}).get("resolved_path") and not not_built(record):
+        # No hash, and yet a file is there: it could not be read
+        parts.append("could not be read")
     else:
         parts.append("not built")
     if record.get("size_bytes") is not None:

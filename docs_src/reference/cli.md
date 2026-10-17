@@ -30,9 +30,13 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 
 ## chartbook init
 
-Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template), via [cruft](https://cruft.github.io/cruft/) — so `cruft update` can pull template improvements later. Prompts for project name and author.
+Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template) that came with your ChartBook. It asks 19 questions, each with a default that Enter takes: the project's name and its folder name (made from the name), a description, your name and email, the Python version, how to install the dependencies, and which examples and data sources to include. {doc}`../getting-started` says which answers matter. A folder name that is not lowercase letters, digits and `_`, starting with a letter, stops it with nothing created, and its last line says what to do at the second question next time: press Enter, or type such a name (the name made from the project's name may not be one, as for `2024 Rates`).
 
-The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook build` builds it and renders its site.
+**The template comes with the package**, as `chartbook/template` in the wheel (the files git tracks in the repository's `template/`; in a source checkout, those same files of `template/` beside `src/`), so a project is always made with the template of the ChartBook that makes it, and making it needs no network. It is rendered with cookiecutter, and the project's `.cruft.json` is written as [cruft](https://cruft.github.io/cruft/) writes it: the template's repository on GitHub, its `template` folder, and the commit the template is at (recorded in the package when it is built; asked of git in a source checkout). So `cruft update` and `cruft check` in the project follow the template on GitHub from there. The command says when that commit is in no tag and on no branch of a remote that is the template's repository, in the checkout it runs from, so may not be on GitHub, where `cruft update` looks for it. When the commit is not known (the package recorded none, or the checkout's `template/` has changes git has not committed to tracked files), there is no `.cruft.json`, and the command says why and prints the command that makes one once the commit is known, with the answers you gave: `cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit> --no-input --extra-context '{…}'`. A source checkout that git cannot read, or a copy of one with no `.git`, is not rendered from, since which files git tracks cannot be told; the command says what to do. Everything rendered can be written by its owner, even from a template installed read-only. A folder of the project's name that is there already stops it, with nothing changed. The project's environment files ask for `chartbook>=` the template's version, which is your ChartBook's; `cruft update` moves it to the template's version then.
+
+Until the next release, the ChartBook that has this template is the one on GitHub, which calls itself 0.2.0, as does the release on PyPI that has none of this. A project made by it installs that 0.2.0 from PyPI by its floor, so it needs ChartBook from GitHub in its environment too, and pip keeps a 0.2.0 it has unless told to replace it: `pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"` (with pipx, `pipx install --force`; in a uv project, `uv add`). The next steps the command prints, and the project's README, include it for such a project.
+
+The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook build` builds it and renders its site, and before that `chartbook docs` renders its site with the example notebook shown as not built. `doit` there runs every task in `dodo.py` but the tests, which are `doit run_pytest`. When the project is made, the command prints the next steps: `chartbook docs`, the commands that install its dependencies, then `chartbook build -f`, `chartbook browse` and `chartbook check`.
 
 ```console
 chartbook init [--git] [--github [--public | --private]]
@@ -63,13 +67,28 @@ Render the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the curre
 
 It renders the site from what is already built. It does not build the project's data: {ref}`chartbook run <chartbook-run>` does that, and {ref}`chartbook build <chartbook-build>` does both.
 
+**Before anything is built.** A lone pipeline that has built none of the data, charts, notebooks and models it declares, as a project just made by `chartbook init` or a fresh clone has not, is rendered all the same, with a warning that lists them:
+
+```text
+Warning: rates_study has built nothing it declares yet, so the site shows each as not built:
+  - notebook: _output/01_example_notebook_interactive.ipynb
+`chartbook build` runs its build script and renders the site again.
+With --strict, this is an error.
+```
+
+Each of them keeps its record in `index.json`, without a hash, and its provenance panel says "not built". A notebook's page is its title and "Not built yet", with how to build it; a chart's embedded frame and its full-screen link say the same, and so does a dataframe's glimpse, which then has no dates and no download link. A model's page says it only in its provenance panel.
+
+It takes every declared output to be missing. A pipeline that has some of them and not others has been built, so a missing one is an error; a clone of a pipeline that commits some of its outputs to git is such a pipeline. A missing write-up, note or README, which nothing builds, is an error too. And so is a pipeline that has built nothing, when `--strict` is given: after a build that should have made everything, as in CI, run `chartbook docs --strict`, or `chartbook build`, which runs the build first and makes no exception. An output that is there and cannot be read is not "not built": the render stops and names it.
+
+A version's site, which a catalog builds from the store (see `chartbook snapshot`), holds what that version's build made. Any output it did not make is shown the same way, built in part or not, and says "Not built in this version", with no advice.
+
 Beside the HTML it writes `index.json`: one record for every pipeline, dataframe, column, chart, notebook, note and model the site contains, each with an ID and a content hash. See {doc}`"The index" <../guide/how-the-build-works>`. And `llms.txt`, the site for an assistant: one line per pipeline, dataframe, chart and model with its name linking its page, its ID and, in quotation marks, its owner's description; in a catalog, each pipeline's ten newest versions under it, each linking that version's own `llms.txt`.
 
 | Option | Default | Effect |
 |--------|---------|--------|
 | `-f, --force-write` | off | Delete and recreate an existing output directory |
 | `--project-dir PATH` | `.` | The project whose site is rendered |
-| `--strict / --no-strict` | `--strict` | Strict: a `path`/`docs_path` pointing at a missing file fails the build, naming the file and the manifest entry. `--no-strict` warns and skips the affected pipeline of a catalog (a single pipeline still fails: there would be nothing left to build) |
+| `--strict / --no-strict` | `--strict` | Strict: a `path`/`docs_path` pointing at a missing file fails the build, naming the file and the manifest entry, unless the pipeline has built nothing yet (above) and `--strict` was not given. `--no-strict` warns and skips the affected pipeline of a catalog (a single pipeline still fails: there would be nothing left to build, and its error does not suggest `--no-strict`) |
 | `--size-threshold FLOAT` | `50` | File size (MB) above which a dataframe page does not read the file for its date range ("N/A (large file)"); the glimpse reads only the first rows at any size |
 | `--strip-mathjax2 / --no-strip-mathjax2` | on | Strip Plotly's MathJax 2 scripts from notebook outputs so they don't clash with Sphinx's MathJax 3 |
 | `--incremental` | off | Keep the intermediate `_docs/` directory between builds and redo only what changed since the last incremental build |
@@ -130,11 +149,12 @@ Successfully generated documentation in /work/rate_forecast/docs
 | `chartbook build` | Yes | Yes |
 
 - **If the script fails, the site is not rendered**, and the command exits with the script's exit code.
+- **After the script has run, a declared file that is missing is an error**, even when none of them is there, which `chartbook docs` would show as not built yet: the build has just run and did not make it.
 - **With no `build` script** in {ref}`[scripts] <scripts>`, there is nothing to run. It says so and renders the site.
 - **In a catalog**, the script is run in each of the catalog's pipelines, and then the catalog's site is rendered.
 
 ```{warning}
-**`chartbook build` used to mean what `chartbook docs` means now.** A build script that says `chartbook build -f`, as the `dodo.py` of a project made by an older `chartbook init` does, must say `chartbook docs -f`.
+**`chartbook build` used to mean what `chartbook docs` means now.** A build script that says `chartbook build -f`, as the `dodo.py` of a project made by an older `chartbook init` does, must say `chartbook docs -f`, or, better, not render the site at all: `chartbook build` renders it after the script, and the template's `dodo.py` no longer has a task that does.
 
 Until it does: called from inside the build script that `chartbook build` or `chartbook run` is running, `chartbook build` renders the site and prints a warning, so that it does not run the script that called it without end. Called from a build tool you started yourself (plain `doit`), it runs the build script, which is that same tool, a second time.
 ```

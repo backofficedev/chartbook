@@ -54,6 +54,24 @@ RECORDS = {
 
 
 class TestPanel:
+    def test_no_hash_is_not_built_only_when_nothing_is_there(self, tmp_path):
+        """A file that is there and could not be read has no hash either; it is not "not built"."""
+        there = tmp_path / "there.parquet"
+        there.write_bytes(b"PAR1")
+        records = {
+            "p": {"kind": "Pipeline", "id": "p", "assets": ["p:there", "p:missing"]},
+            "p:there": {
+                "kind": "Dataframe", "id": "p:there", "pipeline": "p",
+                "location": {"kind": "file", "path": "./there.parquet", "resolved_path": str(there)},
+            },
+            "p:missing": {
+                "kind": "Dataframe", "id": "p:missing", "pipeline": "p",
+                "location": {"kind": "file", "path": "./missing.parquet", "resolved_path": str(tmp_path / "missing.parquet")},
+            },
+        }
+        assert provenance.panel("p:there", records)["content"] == "could not be read"
+        assert provenance.panel("p:missing", records)["content"] == "not built"
+
     def test_a_dataframe(self):
         p = provenance.panel("acme/rates:treasury", RECORDS)
         assert p["kind"] == "Dataframe" and p["pipeline"] == "acme/rates"

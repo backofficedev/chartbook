@@ -293,10 +293,10 @@ os_type = chartbook.env.get_os_type()
 ## Scaffolding New Projects
 
 ```bash
-chartbook init   # Wraps cruft create (cruft ships with chartbook)
+chartbook init   # Renders the template that came with this ChartBook (no network)
 ```
 
-Creates a new pipeline project from the cookiecutter template. Projects can later pull upstream template updates via `cruft update`.
+Creates a new pipeline project from the cookiecutter template that came with the installed ChartBook; its environment files ask for that ChartBook's version or later. Its `.cruft.json` names the template on GitHub and the commit the ChartBook was built from, so the project can later pull upstream template updates via `cruft update`.
 
 ## CLI Build & Publish Reference
 

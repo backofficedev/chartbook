@@ -61,7 +61,10 @@ dependencies = [
     "sphinx-copybutton>=0.5.2",
     "sphinx_design>=0.6.1",
     "sphinx_external_toc>=1.0.1",
-    # Project scaffolding (chartbook init)
+    # Project scaffolding: chartbook init renders with cookiecutter (2.2
+    # reads the template's __prompts__), and a project follows the template
+    # with cruft
+    "cookiecutter>=2.2",
     "cruft",
 ]
 
@@ -130,15 +133,28 @@ tests = ["tests", "*/chartbook/tests"]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-packages = ["src/chartbook"]
-include = ["src/chartbook/data/**"]
-
+# The wheel alone collapses src/: `packages` there ships src/chartbook as
+# chartbook. Set for every target (as it was, with a `sources` remapping),
+# it made the sdist strip src/ too, and a wheel built from that sdist, whose
+# pyproject still points at src/chartbook, had no code in it.
 [tool.hatch.build.targets.wheel]
 packages = ["src/chartbook"]
 
-[tool.hatch.build.targets.wheel.sources]
-src = ""
+# The sdist keeps the source layout, so that a wheel built from it is the
+# wheel built from the checkout: src/chartbook here; pyproject.toml, the
+# README, the licence and hatch_build.py come with every sdist; template/
+# and src/chartbook/built_from.txt are put in by hatch_build.py.
+[tool.hatch.build.targets.sdist]
+include = ["/src/chartbook"]
+
+# hatch_build.py: the project template `chartbook init` renders comes with
+# the package, so the two always match (chartbook.scaffold.find_template):
+# the files git tracks in template/, as chartbook/template in the wheel and
+# template/ in the sdist. And the commit it is at, in
+# chartbook/built_from.txt, for the .cruft.json `chartbook init` writes. Not
+# a force-include here, which would ship whatever is in template/, ignored
+# files too, and copy it into site-packages for an editable install.
+[tool.hatch.build.hooks.custom]
 
 [tool.hatch.envs.hatch-test]
 # Use dev-mode to install local chartbook from src/ (base deps now include

@@ -11,12 +11,14 @@ import sys
 
 sys.path.insert(1, "./src/")
 
+import inspect
 import shutil
 from os import environ
 from pathlib import Path
 
 from settings import config
 
+# Which tasks `doit` runs on its own is set at the end of this file
 DOIT_CONFIG = {"backend": "sqlite3", "dep_file": "./.doit-db.sqlite"}
 
 
@@ -286,6 +288,7 @@ def task_run_notebooks():
                 *notebook_tasks[notebook]["file_dep"],
             ],
             "targets": [
+                OUTPUT_DIR / f"{notebook_name}.ipynb",
                 OUTPUT_DIR / f"{notebook_name}.html",
                 *notebook_tasks[notebook]["targets"],
             ],
@@ -323,6 +326,21 @@ def task_compile_latex_docs():
         "./reports/slides_simple_example.pdf",
     ]
 
+    if shutil.which("latexmk") is None:
+        # Without TeX, the rest of the project still builds
+        def say_latex_not_found():
+            print(
+                "latexmk was not found, so the reports in ./reports are not compiled. "
+                "Install TeX Live (https://tug.org/texlive/), then run `doit compile_latex_docs`.",
+                file=sys.stderr,
+            )
+
+        return {
+            "actions": [say_latex_not_found],
+            "targets": targets,
+            "file_dep": file_dep,
+        }
+
     return {
         "actions": [
             # My custom LaTeX templates
@@ -338,37 +356,6 @@ def task_compile_latex_docs():
         ],
         "targets": targets,
         "file_dep": file_dep,
-        "clean": True,
-    }
-{%- endif %}
-{%- if cookiecutter.include_chartbook and cookiecutter.include_jupyter_notebooks %}
-
-sphinx_targets = [
-    "./docs/index.html",
-]
-
-
-def task_build_chartbook_site():
-    """Compile Sphinx Docs"""
-    notebook_scripts = [
-        Path(notebook_tasks[notebook]["path"])
-        for notebook in notebook_tasks.keys()
-    ]
-    file_dep = [
-        "./README.md",
-        "./chartbook.toml",
-        *notebook_scripts,
-    ]
-
-    return {
-        "actions": [
-            "chartbook docs -f",
-        ],  # Use docs as build destination
-        "targets": sphinx_targets,
-        "file_dep": file_dep,
-        "task_dep": [
-            "run_notebooks",
-        ],
         "clean": True,
     }
 {%- endif %}
@@ -534,3 +521,32 @@ def task_run_pytest():
         "clean": True,
         "verbosity": 2,
     }
+
+
+## `doit` on its own (and so `chartbook build`) runs every task in this file
+## but the tests, which run with `doit run_pytest`.
+##
+## This block must stay the last thing in the file. It lists the tasks
+## defined above it, as the file is read, so a task added below it is not
+## in the list: plain `doit` and `chartbook build` do not run it, and what
+## it makes is not built. A task is what doit takes for one: a function whose
+## name starts with `task_` (or a method), defined here or imported, or
+## anything with a `create_doit_tasks`; but not doit's own `task_params`.
+try:
+    from doit import task_params as _doit_task_params
+except ImportError:
+    _doit_task_params = None
+
+
+def _doit_tasks(namespace):
+    """The names of the tasks doit finds in this file, by its own rule."""
+    for name, value in list(namespace.items()):
+        if value is _doit_task_params:
+            continue
+        if name.startswith("task_") and (inspect.isfunction(value) or inspect.ismethod(value)):
+            yield name.removeprefix("task_")
+        elif hasattr(value, "create_doit_tasks"):
+            yield getattr(value.create_doit_tasks, "basename", name)
+
+
+DOIT_CONFIG["default_tasks"] = [name for name in _doit_tasks(globals()) if name != "run_pytest"]

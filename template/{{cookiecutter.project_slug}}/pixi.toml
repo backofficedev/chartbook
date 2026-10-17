@@ -21,7 +21,7 @@ pandas-market-calendars = "4.4.1"
 pandas = "2.2.3"
 paramiko = "3.5.0"
 plotly = "5.24.1"
-polars = "1.9.0"
+polars = ">=1.20"
 pyarrow = "*"
 pytest = "8.3.3"
 python-decouple = "3.8"
@@ -66,7 +66,7 @@ r-stargazer = "*"
 
 [pypi-dependencies]
 {% if cookiecutter.include_chartbook or cookiecutter.include_jupyter_notebooks %}
-chartbook = "*"
+chartbook = ">={{ cookiecutter._chartbook_version }}"
 {% endif %}
 {% if cookiecutter.include_crsp_stock or cookiecutter.include_crsp_compustat %}
 wrds = ">=3.2.0"

@@ -7,7 +7,7 @@
     "python_version": "3.12",
     "environment_manager": ["pip", "uv", "conda", "pixi"],
 
-    "include_latex_reports": true,
+    "include_latex_reports": false,
     "include_jupyter_notebooks": true,
     "include_r_scripts": false,
     "include_stata_scripts": false,
@@ -20,6 +20,36 @@
     "include_bloomberg": false,
     "include_crsp_stock": false,
     "include_crsp_compustat": false,
+
+    "_chartbook_version": "0.2.0",
+
+    "__prompts__": {
+        "project_name": "Project name, the site's title",
+        "project_slug": "Folder name, from the project name (Enter keeps it)",
+        "project_description": "One-line description",
+        "author_name": "Your name",
+        "author_email": "Your email",
+        "python_version": "Python version",
+        "environment_manager": {
+            "__prompt__": "How to install the dependencies",
+            "pip": "pip: a .venv and requirements.txt",
+            "uv": "uv: pyproject.toml",
+            "conda": "conda: environment.yml",
+            "pixi": "pixi: pixi.toml"
+        },
+        "include_latex_reports": "LaTeX reports and slides (needs TeX installed)",
+        "include_jupyter_notebooks": "An example notebook, shown on the site",
+        "include_r_scripts": "R examples (needs conda or pixi)",
+        "include_stata_scripts": "A Stata example (needs Stata)",
+        "include_chartbook": "A ChartBook site: chartbook.toml and docs_src/ (keep yes)",
+        "include_github_actions": "A GitHub Actions workflow that runs the tests",
+        "include_fred": "Data from FRED (downloaded)",
+        "include_fed_yield_curve": "The Fed's yield curve (downloaded)",
+        "include_ofr_api": "Data from the OFR API (downloaded; with FRED, adds a chart)",
+        "include_bloomberg": "Data from Bloomberg (needs a Bloomberg Terminal)",
+        "include_crsp_stock": "CRSP stock data (needs a WRDS account)",
+        "include_crsp_compustat": "CRSP-Compustat data (needs a WRDS account)"
+    },
 
     "_copy_without_render": [
         "*.bst",
