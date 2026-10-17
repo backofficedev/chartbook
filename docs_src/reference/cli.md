@@ -213,7 +213,7 @@ chartbook.toml: OK (1 pipeline(s), 1 dataframes, 1 charts, 0 notebooks)
 
 **License dates** are ISO dates (`license_expiration = "2026-12-31"`, or a bare TOML date). An empty value, `"N/A"`, `"None"` and `"Never"` mean the license does not expire. Anything else that is not a date is itself reported, because a gate that cannot read a date cannot vouch for it.
 
-**In CI, on a project that has not been built.** Data files, rendered charts and executed notebooks are what a pipeline *produces*, and they are usually not in git. A CI job that checks out the repository without running the pipeline — which is every job for a pipeline whose data needs a subscription — would see all of them as broken paths. `--skip-outputs` leaves those three out and still checks everything that lives in the repository: required fields, license dates, write-ups, notes, the README, the logo.
+**In CI, on a project that has not been built.** Data files, rendered charts and executed notebooks are what a pipeline *produces*, and they are usually not in git. A CI job that checks out the repository without running the pipeline — which is every job for a pipeline whose data needs a subscription — would see all of them as broken paths. `--skip-outputs` leaves those three out and still checks everything that lives in the repository: required fields, license dates, write-ups, notes, the README, the logo. Without it, a lone pipeline that has built none of its outputs (a project `chartbook init` just made, a fresh clone) has each reported as "not built yet" rather than "file not found", with one line on what builds them; the check still fails.
 
 ```yaml
 # .github/workflows/check.yml

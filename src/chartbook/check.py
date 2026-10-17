@@ -23,7 +23,7 @@ from typing import Any, Optional, Union
 
 import tomli
 
-from chartbook.conf_validation import OUTPUT_FILE_TYPES, validate_source_files
+from chartbook.conf_validation import OUTPUT_FILE_TYPES, built_nothing, validate_source_files
 from chartbook.diagnostics import DOCS_FIELDS, build_diagnostics
 from chartbook.identity import strip_url_credentials
 from chartbook.manifest import (
@@ -56,6 +56,24 @@ _FILE_TYPE_FIELDS = {
     "model_metrics": ("models", "metrics_path"),
     "model_docs": ("models", "docs_path"),
 }
+
+
+#: How :func:`check_paths` begins the message for an output of a pipeline that has built nothing yet
+NOT_BUILT_YET = "not built yet"
+
+
+def not_built_hint(manifest: dict) -> str:
+    """What to run when :func:`check_paths` found a lone pipeline that has built nothing yet.
+
+    `chartbook build` is named only when there is a build script for it to
+    run, as `chartbook docs` names it.
+    """
+    build = (
+        "`chartbook build` builds it"
+        if manifest["project"].get("build")
+        else "build its outputs (it has no build script for `chartbook build` to run)"
+    )
+    return f"Nothing is built yet: {build}, and the same check with --skip-outputs checks the rest without it."
 
 
 @dataclass(frozen=True)
@@ -211,7 +229,16 @@ def check_paths(
         still checked: write-ups, notes, the README, the logo and favicon.
     """
     problems = []
-    for missing in validate_source_files(manifest, base_dir):
+    missing_files = validate_source_files(manifest, base_dir)
+    # A lone pipeline that has built nothing yet (a project just made, a
+    # fresh clone) lacks every output, which is not a mistake in its
+    # manifest; told as `chartbook docs` tells it
+    unbuilt = (
+        not skip_outputs
+        and manifest["project"].get("type") == "pipeline"
+        and built_nothing(manifest, missing_files)
+    )
+    for missing in missing_files:
         if skip_outputs and missing.file_type in OUTPUT_FILE_TYPES:
             continue
         if missing.file_type in ("logo", "favicon"):
@@ -225,7 +252,9 @@ def check_paths(
             toml_file = _manifest_file(manifest, missing.pipeline_id, base_dir)
             table = f"{section}.{missing.item_id}"
 
-        if is_glob_pattern(str(missing.file_path)):
+        if unbuilt:
+            message = f"{NOT_BUILT_YET}: {missing.file_path}"
+        elif is_glob_pattern(str(missing.file_path)):
             message = f"no files match {missing.file_path}"
         else:
             message = f"file not found: {missing.file_path}"
