@@ -524,11 +524,14 @@ The **key** is the name this pipeline knows the other one by. It is a pipeline I
 | (none) | The pipeline is named by its ID alone, the key, and pinned from its snapshots in the store: no folder of it here, no clone. A store a team shares, or a folder synced between your machines, makes this the way to read a colleague's pipeline, or your own from another machine |
 | `id` | With neither `path` nor `git`: the pipeline's ID, when the key is a shorter name for it |
 | `commit` | With neither `path` nor `git`: the start of a commit (7 to 40 hex digits); the newest snapshot at that commit is pinned, rather than the newest of all |
+| `repository` | With neither `path` nor `git`: the repository its snapshots must have been made in (its web address or git remote), when more than one repository claims the ID |
 | `path` | A directory holding the other pipeline's `chartbook.toml`. Relative to this pipeline's root, or absolute |
 | `git` | A git repository holding it. Any host: an `https://` or `ssh://` URL, `git@host:owner/name`, or a path on disk (relative to this pipeline's root) |
 | `rev` | With `git`: the branch, tag or commit to use. Optional; without it, the repository's default branch |
 
-An entry has `path` or `git`, not both, or neither. Named by its ID alone, "newest" means the snapshot made last, by its owner's clock, on any branch.
+An entry has `path` or `git`, not both, or neither. Named by its ID alone, "newest" means the snapshot made last, by its owner's clock, on any branch; one dated after now (more than ten minutes ahead of this machine's clock) is never taken.
+
+**Which repository.** Each snapshot records the repository it was made in, as the web address of its `origin` remote. A dependency named by its ID is pinned from one repository's snapshots: the one `repository` names, or else the one it was first pinned from, which `chartbook.lock` records and every later `pin` and `update` keeps to. With nothing pinned yet, an ID that snapshots from two repositories claim (a copied `[project] id`, two folders of one name, or a record written to take it over) is not pinned until `repository` says which. A store's records are written by whoever can write to it, and what a record says of its repository is its word, so share a store only with people whose snapshots you would pin.
 
 **The name and the place are separate on purpose.** Your code, your lineage and `index.json` say `ftsfr/fed_yield_curve`. Only this table says where that is. When a repository moves, one line changes.
 

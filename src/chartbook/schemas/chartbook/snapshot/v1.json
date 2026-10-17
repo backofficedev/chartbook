@@ -180,6 +180,10 @@
         "type": "string"
       },
       "description": "The git tags on the snapshot's commit when it was made: the names of that version. A tag made later is not in it."
+    },
+    "repository": {
+      "type": "string",
+      "description": "The repository the snapshot was made in: the web address of its `origin` remote, with no credentials. A dependency named by its ID alone keeps to the repository it was first pinned from."
     }
   }
 }

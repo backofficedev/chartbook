@@ -264,6 +264,11 @@ def locate_pipeline(
 
     # 1. An explicit location in [dependencies]
     key = match_pipeline_ref(dependencies, pipeline, where="[dependencies]")
+    if key is None:
+        # Named by its ID under a shorter key: `rates = { id = "acme/rates" }`
+        named = [k for k, entry in dependencies.items() if isinstance(entry, dict) and entry.get("_store") == pipeline]
+        if len(named) == 1:
+            key = named[0]
     if key is not None:
         entry = dependencies[key]
         if entry.get("_store"):

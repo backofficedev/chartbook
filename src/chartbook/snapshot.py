@@ -84,7 +84,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 from chartbook import hashing
-from chartbook.identity import derive_pipeline_id, validate_pipeline_id
+from chartbook.identity import derive_pipeline_id, get_git_remote_url, remote_to_web_url, validate_pipeline_id, web_link
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import AssetRef
@@ -160,6 +160,10 @@ class Snapshot:
         inputs: What the pipeline itself was pinned to when the snapshot
             was made: the dependencies of its own lockfile, each with its
             commit and its ``pinned_hash``. Empty if it has no lockfile.
+        repository: The repository it was made in, as the web address of
+            its ``origin`` remote (no credentials); empty when it has none.
+            A dependency named by its ID alone keeps to the repository it
+            was first pinned from.
         tags: The git tags on its commit when it was made: the names of
             that version, as ``git tag`` gave them. A tag made later is not
             in it. For people and pages; ``store gc`` asks git for tags.
@@ -197,6 +201,7 @@ class Snapshot:
     inputs: list = field(default_factory=list, compare=False)
     labels: dict = field(default_factory=dict, compare=False)
     tags: list = field(default_factory=list, compare=False)
+    repository: str = field(default="", compare=False)
     index: Optional[dict] = field(default=None, compare=False)
     documents: Optional[dict] = field(default=None, compare=False)
 
@@ -246,6 +251,8 @@ class Snapshot:
             document["inputs"] = self.inputs
         if self.tags:
             document["tags"] = list(self.tags)
+        if self.repository:
+            document["repository"] = self.repository
         if self.labels:
             document["labels"] = {
                 name: dict(sorted(self.labels[name].items())) for name in sorted(self.labels)
@@ -652,6 +659,7 @@ def read(path: Union[str, Path]) -> Snapshot:
             inputs=list(document.get("inputs") or []),
             labels={k: dict(v) for k, v in (document.get("labels") or {}).items()},
             tags=_tag_names(document.get("tags")),
+            repository=web_link(document.get("repository")),
             index=dict(document["index"]) if document.get("index") else None,
             documents=dict(document["documents"]) if document.get("documents") else None,
         )
@@ -698,7 +706,7 @@ def newest_for(
     # Newest first, and the commit the folder is on comes first of all
     for commit in _git(code.top, "rev-list", "HEAD").split():
         if commit in commits:
-            found = find(store, commit, code.subdirectory)
+            found = [t for t in find(store, commit, code.subdirectory) if not made_in_the_future(t)]
             if found:
                 return found[0], code
     return None, code
@@ -1067,7 +1075,9 @@ def _pinnable(store: Store, group: list[Snapshot]) -> set[Path]:
     """
     at_commit: dict[str, list[Snapshot]] = {}
     for taken in group:
-        at_commit.setdefault(taken.commit, []).append(taken)
+        # As pin finds the newest: never one dated after now
+        if not made_in_the_future(taken):
+            at_commit.setdefault(taken.commit, []).append(taken)
     keep: set[Path] = set()
     seen: set[Path] = set()
     for taken in group:
@@ -1093,6 +1103,24 @@ def _pinnable(store: Store, group: list[Snapshot]) -> set[Path]:
 
 def _made_at(taken: Snapshot) -> datetime:
     return datetime.fromisoformat(taken.made_at.rstrip("Z")).replace(tzinfo=timezone.utc)
+
+
+#: How far ahead of this machine's clock a snapshot's time may be and still
+#: count as made: two machines' clocks differ a little, and no more
+FUTURE_SLACK_SECONDS = 600
+
+
+def made_in_the_future(taken: Snapshot, now: Optional[datetime] = None) -> bool:
+    """Whether a snapshot says it was made later than now: a clock far ahead, or a record written to win.
+
+    Such a snapshot is never taken as the newest, which would let it stay
+    the newest, and so be pinned and kept, for as long as its date says.
+    """
+    now = now if now is not None else datetime.now(timezone.utc)
+    try:
+        return (_made_at(taken) - now).total_seconds() > FUTURE_SLACK_SECONDS
+    except ValueError:
+        return True
 
 
 @dataclass
@@ -1164,7 +1192,10 @@ def plan_removals(
     for taken in all_snapshots(store):
         groups.setdefault((taken.pipeline, taken.subdirectory), []).append(taken)
     for group in groups.values():
-        newest = group[-1]
+        # Not one dated after now: it would stay "the newest" while the real
+        # newest went unkept
+        present = [taken for taken in group if not made_in_the_future(taken, now)]
+        newest = present[-1] if present else None
         labels = {} if aggressive else _labels_in(store, group)
         pinnable = set() if aggressive else _pinnable(store, group)
         for taken in group:
@@ -1183,6 +1214,9 @@ def plan_removals(
                 for start in starts
             ):
                 why = "a label points at a version in it"
+            elif made_in_the_future(taken, now):
+                plan.remove.append((taken, "nothing pins it, and it is dated after now, so it is not taken as made"))
+                continue
             elif (now - _made_at(taken)).total_seconds() < keep_days * 86400:
                 why = f"it was made in the last {keep_days:g} days"
             else:
@@ -1658,6 +1692,7 @@ def make(
         inputs=_inputs(directory),
         labels=labels_of(raw),
         tags=_tags_at(directory, code.commit),
+        repository=web_link(remote_to_web_url(get_git_remote_url(code.top))),
     )
     # The files a writer needs that are not assets, worked out before anything
     # is compared, so that a pipeline with none is not given a new snapshot on

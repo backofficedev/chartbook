@@ -13,6 +13,7 @@ The checks are thin wrappers over machinery the build already uses:
 
 from __future__ import annotations
 
+import functools
 import os
 import warnings
 from dataclasses import dataclass
@@ -303,24 +304,31 @@ def _fetched_checkout(pipeline_dir: Path, key: str, entry: dict) -> Optional[Pat
     return None
 
 
-def _repository_top(directory: Path) -> Optional[Path]:
-    """The top of the git repository a directory is in; None if it is in none."""
+@functools.lru_cache(maxsize=256)
+def _repository_top(directory: str) -> Optional[Path]:
+    """The top of the git repository a directory is in, a submodule's superproject's if it is one; None if in none."""
     import subprocess
 
     try:
         found = subprocess.run(
-            ["git", "-C", str(directory), "rev-parse", "--show-toplevel"],
+            ["git", "-C", directory, "rev-parse", "--show-superproject-working-tree", "--show-toplevel"],
             capture_output=True, text=True, check=True, env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
         )
     except (OSError, subprocess.CalledProcessError):
         return None
-    return Path(found.stdout.strip()).resolve()
+    lines = [line for line in found.stdout.splitlines() if line.strip()]
+    return Path(lines[0]).resolve() if lines else None
 
 
-def _another_repository(pipeline_dir: Path, other: Path) -> bool:
-    """Whether a path dependency is in a git repository other than the pipeline's own: then it works on this machine only."""
-    mine, theirs = _repository_top(pipeline_dir), _repository_top(other)
-    return mine is not None and theirs is not None and mine != theirs
+def _elsewhere(pipeline_dir: Path, other: Path) -> str:
+    """Where a path dependency is, when that makes it work on this machine only: in another git repository than the pipeline's own, or in none; empty otherwise."""
+    mine = _repository_top(str(Path(pipeline_dir).resolve()))
+    if mine is None:
+        return ""
+    theirs = _repository_top(str(Path(other).resolve()))
+    if theirs is None:
+        return "in no git repository"
+    return "" if theirs == mine else "in another git repository"
 
 
 def _id_at(directory: Path) -> Optional[str]:
@@ -400,6 +408,11 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
             if location.kind == "store":
                 # Named by its ID alone: there is no folder to look at here,
                 # only whether it is pinned
+                if location.pipeline in (pipeline_id, pipeline_manifest["project"].get("id")):
+                    problems.append(
+                        Problem(toml_file, table, "id", f"{location.pipeline} is this pipeline itself; a pipeline cannot depend on itself")
+                    )
+                    continue
                 if pinned is not None and key not in pinned:
                     warnings.warn(
                         f"{toml_file}: [{table}] not pinned. Nothing of {key!r} can be read until "
@@ -451,11 +464,16 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
                     )
                 )
                 continue
-            if _another_repository(pipeline_dir, location.path):
+            elsewhere = _elsewhere(pipeline_dir, location.path)
+            if elsewhere:
+                found_id = _id_at(location.path) or key
+                instead = (
+                    f'"{key}" = {{}}' if found_id == key else f'"{key}" = {{ id = "{found_id}" }}'
+                )
                 warnings.warn(
-                    f"{toml_file}: [{table}] path: {entry['path']} is in another git repository, so "
-                    f"this works on this machine only. Name it by its ID, "
-                    f"{_quoted(_id_at(location.path) or key)} = {{}}, and it is read from the store on any machine.",
+                    f"{toml_file}: [{table}] path: {entry['path']} is {elsewhere}, so this works on "
+                    f"this machine only. Name it by its ID, {instead}, and it is read from the store "
+                    f"on any machine.",
                     UserWarning,
                     stacklevel=2,
                 )

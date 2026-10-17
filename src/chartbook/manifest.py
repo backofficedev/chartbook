@@ -572,7 +572,7 @@ def validate_dataframe_location(entry: dict, dataframe_id: str, sources: dict) -
 
 
 #: The keys an entry of ``[dependencies]`` may have.
-DEPENDENCY_KEYS = ("path", "git", "rev", "id", "commit")
+DEPENDENCY_KEYS = ("path", "git", "rev", "id", "commit", "repository")
 
 _DEPENDENCY_EXAMPLE = (
     '"ftsfr/fed_yield_curve" = {} (its snapshots in the store, by its ID), '
@@ -601,8 +601,9 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
     An entry with neither ``path`` nor ``git`` names the pipeline by its ID
     alone (the key, or ``id``), and is pinned from its snapshots in the
     store, with no folder of it and no clone: the newest, or the newest at
-    the commit ``commit`` starts. Such an entry gains ``_store``, the
-    pipeline's ID.
+    the commit ``commit`` starts; ``repository`` keeps to the snapshots made
+    in that repository, when more than one claims the ID. Such an entry
+    gains ``_store``, the pipeline's ID, and ``_repository``.
 
     Identity and location are kept apart on purpose. Code, lineage and the
     index say ``ftsfr/fed_yield_curve``; only this table says where that
@@ -685,7 +686,7 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
                 raise ValueError(f"{where}: {error}") from None
         by_id = "path" not in entry and "git" not in entry
         if not by_id:
-            for name in ("id", "commit"):
+            for name in ("id", "commit", "repository"):
                 if name in entry:
                     raise ValueError(
                         f"{where} has '{name}' beside a '{'path' if 'path' in entry else 'git'}'. "
@@ -710,6 +711,14 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
                     f"{where}: commit {entry['commit']!r} is not the start of a commit: "
                     f"7 to 40 of 0-9 and a-f, as `git log` shows it."
                 )
+            if "repository" in entry:
+                from chartbook.identity import remote_to_web_url, web_link
+
+                if not web_link(remote_to_web_url(entry["repository"])):
+                    raise ValueError(
+                        f"{where}: repository {entry['repository']!r} is not a repository's address: "
+                        f"its web address or its git remote, e.g. https://github.com/acme/rates."
+                    )
         if "path" in entry and "rev" in entry:
             raise ValueError(
                 f"{where} has a 'rev' beside a 'path'. A revision belongs to "
@@ -722,6 +731,10 @@ def validate_dependencies(dependencies, base_dir: Union[str, Path]) -> dict:
             entry["_resolved_path"] = (Path(base_dir) / entry["path"]).resolve()
         if by_id:
             entry["_store"] = entry.get("id", key)
+            if "repository" in entry:
+                from chartbook.identity import remote_to_web_url, web_link
+
+                entry["_repository"] = web_link(remote_to_web_url(entry["repository"]))
         validated[key] = entry
     return validated
 
@@ -736,32 +749,48 @@ def with_dependency(text: str, key: str, entry: dict) -> str:
     """A manifest's text with one dependency added to ``[dependencies]``, all else as it was.
 
     The file is edited as text, not written again from what it parses to,
-    so its comments, order and spacing stay. The line goes just under the
-    ``[dependencies]`` header; with no such table, one is added at the end.
+    so its comments, order, spacing and line endings stay. The line goes
+    just under the ``[dependencies]`` header; with no such table, one is
+    added at the end. Each place is tried, and an edit is kept only if the
+    result parses to the manifest as it was with that one entry added, so a
+    line that looks like the header inside a string is never written into.
 
     :param text: The ``chartbook.toml`` as it is.
     :param key: The dependency's key.
     :param entry: Its table, of strings: ``{}``, ``{"id": ...}``,
         ``{"commit": ...}``.
-    :raises ValueError: If the key is in it already, or ``[dependencies]``
-        is written in a form a line cannot be added to.
+    :raises ValueError: If the key is in it already, or no edit gives the
+        manifest with the entry added (the message has the line to add).
     """
     raw = tomli.loads(text)
     dependencies = raw.get("dependencies")
     if isinstance(dependencies, dict) and key in dependencies:
         raise ValueError(f"[dependencies] has {key!r} already.")
     line = dependency_line(key, entry)
-    header = re.search(r"(?m)^[ \t]*\[[ \t]*dependencies[ \t]*\][ \t]*(#.*)?$", text)
-    if header is not None:
+    newline = "\r\n" if "\r\n" in text else "\n"
+    wanted = {**raw, "dependencies": {**(dependencies if isinstance(dependencies, dict) else {}), key: dict(entry)}}
+
+    def gives_it(candidate: str) -> bool:
+        try:
+            return tomli.loads(candidate) == wanted
+        except tomli.TOMLDecodeError:
+            return False
+
+    for header in re.finditer(r"(?m)^[ \t]*\[[ \t]*dependencies[ \t]*\][ \t]*(#[^\r\n]*)?\r?$", text):
         end = header.end()
-        return text[:end] + "\n" + line + text[end:]
-    if dependencies is not None and re.search(r"(?m)^[ \t]*dependencies[ \t]*=", text):
-        raise ValueError(
-            "[dependencies] is written inline (dependencies = { ... }); add the entry there yourself: "
-            + line
-        )
-    joined = text if text.endswith("\n") or not text else text + "\n"
-    return joined + ("\n" if joined else "") + "[dependencies]\n" + line + "\n"
+        if text[end - 1:end] == "\r":
+            end -= 1
+        candidate = text[:end] + newline + line + text[end:]
+        if gives_it(candidate):
+            return candidate
+    joined = text if not text or text.endswith(("\n", "\r")) else text + newline
+    candidate = joined + (newline if joined else "") + "[dependencies]" + newline + line + newline
+    if gives_it(candidate):
+        return candidate
+    raise ValueError(
+        f"[dependencies] in this chartbook.toml is written in a form a line cannot be added to "
+        f"(inline, quoted, or as dotted keys). Add the entry there yourself: {line}"
+    )
 
 
 #: What a label may point at: the start of a model's content hash, at least

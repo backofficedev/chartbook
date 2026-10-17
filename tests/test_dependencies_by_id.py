@@ -178,7 +178,7 @@ class TestAdd:
         assert changed.endswith('\n[dependencies]\n"rates" = { id = "acme/rates", commit = "3f2a9c1" }\n')
         with pytest.raises(ValueError, match="has 'acme/yields' already"):
             with_dependency(text, "acme/yields", {})
-        with pytest.raises(ValueError, match="written inline"):
+        with pytest.raises(ValueError, match="Add the entry there yourself"):
             with_dependency('dependencies = { "a/b" = {} }\n', "acme/rates", {})
 
     def test_the_command_declares_and_pins(self, elsewhere, monkeypatch):
@@ -239,3 +239,163 @@ class TestAPathDependency:
             warnings.simplefilter("always")
             check_dependencies(load_manifest(forecast), forecast)
         assert not [w for w in said if "another git repository" in str(w.message)]
+
+
+def _another(work: Path, name: str, value: float, remote=None, made_at=None):
+    """A pipeline in a repository of its own that also calls itself `acme/rates`, snapshotted."""
+    repository = work / name
+    folder = repository / "rates"
+    _rates(folder, value)
+    _git(repository, "init", "--quiet", "-b", "main")
+    if remote:
+        _git(repository, "remote", "add", "origin", remote)
+    (repository / ".gitignore").write_text("_data/\nchartbook.lock\n")
+    _commit(repository)
+    return snapshot.make(folder, made_at=made_at).snapshot
+
+
+class TestWhatTheReviewFound:
+    def test_a_snapshot_dated_after_now_is_never_the_newest(self, elsewhere, monkeypatch):
+        work, first, second = elsewhere
+        forged = _another(work, "forger", 666.0, made_at="2099-01-01T00:00:00.000000Z")
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _pinned(forecast)["location"]["commit"] == second.commit
+        monkeypatch.chdir(forecast)
+        assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.2]
+        from chartbook.store import default_store
+
+        plan = snapshot.plan_removals(default_store(), set(), set(), keep_days=7)
+        assert (forged.path, "nothing pins it, and it is dated after now, so it is not taken as made") in [(t.path, w) for t, w in plan.remove]
+        assert any(t.commit == second.commit and w == "it is the newest of its pipeline" for t, w in plan.keep)
+
+    def test_two_repositories_claiming_one_id_are_not_pinned_until_one_is_named(self, tmp_path, monkeypatch):
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote="https://github.com/acme/rates.git")
+        assert real.repository == "https://github.com/acme/rates"
+        _another(work, "collision", 9.0, remote="git@github.com:someone/rates.git")
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        report = lock.pin(forecast)
+        (event,) = [e for e in report.events if e.status == "no_snapshot"]
+        assert "2 repositories claim the ID acme/rates" in event.detail and 'repository = "..."' in event.detail
+        _forecast(forecast, {"acme/rates": {"repository": "git@github.com:acme/rates.git"}})
+        lock.pin(forecast)
+        assert _pinned(forecast)["location"]["repository"] == "https://github.com/acme/rates"
+        monkeypatch.chdir(forecast)
+        assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.0]
+
+    def test_an_update_keeps_to_the_repository_first_pinned(self, tmp_path):
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote="https://github.com/acme/rates")
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _pinned(forecast)["location"]["repository"] == "https://github.com/acme/rates"
+        _another(work, "later", 9.0, remote="https://github.com/someone/rates")  # newer, from elsewhere
+        lock.pin(forecast)  # a pin that moves nothing keeps the repository it was pinned from
+        assert _pinned(forecast)["location"]["repository"] == "https://github.com/acme/rates"
+        report = lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == real.commit
+        assert not [e for e in report.events if e.status == "moved"]
+
+    def test_a_pipeline_cannot_depend_on_itself_by_id(self, elsewhere, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.check import check_dependencies
+        from chartbook.cli import main
+
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {"acme/forecast": {}})
+        report = lock.pin(forecast)
+        assert any("cannot depend on itself" in (e.detail or "") for e in report.events)
+        problems = check_dependencies(load_manifest(forecast), forecast)
+        assert problems and "cannot depend on itself" in problems[0].message
+        _forecast(forecast, {})
+        monkeypatch.chdir(forecast)
+        result = CliRunner().invoke(main, ["add", "acme/forecast"])
+        assert result.exit_code == 1 and "cannot depend on itself" in result.output
+
+    def test_a_short_name_still_answers_to_the_full_id(self, elsewhere, monkeypatch):
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {"rates": {"id": "acme/rates", "commit": first.commit[:7]}})
+        lock.pin(forecast)
+        monkeypatch.chdir(forecast)
+        assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.1]
+        _forecast(forecast, {"rates": {"id": "acme/rates"}})
+        lock.update(forecast, ["acme/rates"])
+        assert _pinned(forecast)["location"]["commit"] == second.commit
+
+    def test_a_kept_pin_keeps_how_it_was_pinned(self, tmp_path):
+        work = tmp_path.resolve()
+        _rates(work / "rates", 4.0)
+        forecast = _forecast(work / "forecast", {"acme/rates": {"path": "../rates"}})
+        _git(work, "init", "--quiet", "-b", "main")
+        (work / ".gitignore").write_text("_data/\nchartbook.lock\n")
+        _commit(work)
+        snapshot.make(work / "rates")
+        lock.pin(forecast)
+        _forecast(forecast, {"acme/rates": {}})
+        lock.pin(forecast)
+        entry = _pinned(forecast)
+        assert entry["via"] == "path" and entry["location"]["kind"] == "path"
+        assert any("pinned from" in p.message for p in lock.verify(forecast).problems)
+
+
+class TestTheManifestEdit:
+    def test_a_header_inside_a_string_is_not_written_into(self):
+        from chartbook.manifest import with_dependency
+
+        text = '[project]\ndescription = """\n[dependencies]\n"""\n\n[dependencies]\n"a/b" = {}\n'
+        changed = with_dependency(text, "acme/rates", {})
+        assert changed.count('"acme/rates" = {}') == 1
+        assert changed.index('"acme/rates" = {}') > changed.index('"""\n\n[dependencies]')
+
+    def test_line_endings_are_kept(self, elsewhere, monkeypatch):
+        from click.testing import CliRunner
+
+        from chartbook.cli import main
+        from chartbook.manifest import with_dependency
+
+        crlf = '[project]\r\nid = "acme/forecast"\r\n\r\n[dependencies]\r\n'
+        assert with_dependency(crlf, "acme/rates", {}) == crlf + '"acme/rates" = {}\r\n'
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {})
+        raw = (forecast / "chartbook.toml").read_bytes().replace(b"\n", b"\r\n")
+        (forecast / "chartbook.toml").write_bytes(raw)
+        monkeypatch.chdir(forecast)
+        assert CliRunner().invoke(main, ["add", "acme/rates"]).exit_code == 0
+        written = (forecast / "chartbook.toml").read_bytes()
+        assert b"\r\n" in written and b"\n" not in written.replace(b"\r\n", b"")
+
+    def test_other_forms_say_what_to_add(self):
+        from chartbook.manifest import with_dependency
+
+        for text in ('["dependencies"]\n"a/b" = {}\n', 'dependencies."a/b" = {}\n', 'dependencies = { "a/b" = {} }\n'):
+            with pytest.raises(ValueError, match='Add the entry there yourself: "acme/rates" = {}'):
+                with_dependency(text, "acme/rates", {})
+        assert '"acme/rates" = {}' in with_dependency('[dependencies."a/b"]\npath = "../b"\n', "acme/rates", {})
+
+
+class TestTheRepositoryWarning:
+    def test_a_short_key_is_kept_in_the_hint(self, tmp_path):
+        from chartbook.check import check_dependencies
+
+        work = tmp_path.resolve()
+        _rates(work / "theirs" / "rates", 4.0)
+        _git(work / "theirs", "init", "--quiet", "-b", "main")
+        _commit(work / "theirs")
+        forecast = _forecast(work / "mine" / "forecast", {"rates": {"path": "../../theirs/rates"}})
+        _git(work / "mine", "init", "--quiet", "-b", "main")
+        _commit(work / "mine")
+        with pytest.warns(UserWarning, match=r'"rates" = \{ id = "acme/rates" \}'):
+            check_dependencies(load_manifest(forecast), forecast)
+
+    def test_a_folder_in_no_repository_is_said_too(self, tmp_path):
+        from chartbook.check import check_dependencies
+
+        work = tmp_path.resolve()
+        _rates(work / "loose" / "rates", 4.0)  # in no git repository
+        forecast = _forecast(work / "mine" / "forecast", {"acme/rates": {"path": "../../loose/rates"}})
+        _git(work / "mine", "init", "--quiet", "-b", "main")
+        _commit(work / "mine")
+        with pytest.warns(UserWarning, match="is in no git repository"):
+            check_dependencies(load_manifest(forecast), forecast)

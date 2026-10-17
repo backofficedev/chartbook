@@ -1797,8 +1797,9 @@ def _echo_pin_report(report):
                 click.echo(f"  lost: {event.asset} ({event.old}): {event.detail}")
         if dependency in report.snapshots:
             taken = report.snapshots[dependency]
+            made_in = f" of {taken.repository}" if getattr(taken, "repository", "") else ""
             click.echo(
-                f"  From its snapshot at {taken.commit[:7]}, made {_when(taken.made_at)}."
+                f"  From its snapshot{made_in} at {taken.commit[:7]}, made {_when(taken.made_at)}."
             )
         if dependency in report.from_folder:
             click.echo("  Taken from its folder as it is now, not from a snapshot.")
@@ -2034,13 +2035,22 @@ def add_command(pipeline, key, commit, project_dir):
     manifest_file = project_dir / "chartbook.toml"
     try:
         validate_pipeline_id(pipeline)
+        from chartbook.snapshot import SnapshotError, pipeline_in
+
+        try:
+            itself = pipeline_in(project_dir)
+        except (SnapshotError, ValueError):
+            itself = None
+        if pipeline == itself:
+            raise ValueError(f"{pipeline} is this pipeline itself: a pipeline cannot depend on itself.")
         key = key or pipeline
         entry = {}
         if key != pipeline:
             entry["id"] = pipeline
         if commit:
             entry["commit"] = commit
-        text = manifest_file.read_text(encoding="utf-8")
+        with open(manifest_file, encoding="utf-8", newline="") as f:  # as it is, line endings included
+            text = f.read()
         changed = with_dependency(text, key, entry)
         import tomli
 
@@ -2048,7 +2058,8 @@ def add_command(pipeline, key, commit, project_dir):
     except (ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
-    manifest_file.write_text(changed, encoding="utf-8")
+    with open(manifest_file, "w", encoding="utf-8", newline="") as f:
+        f.write(changed)
     click.echo(f"Added to [dependencies] in {manifest_file}: {dependency_line(key, entry)}")
     _run_pin(project_dir)
 
