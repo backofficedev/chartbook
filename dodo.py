@@ -6,6 +6,7 @@ Run with:
     doit run_notebooks    # Run specific task
 """
 
+import os
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
@@ -166,9 +167,15 @@ def task_build_examples():
 
 
 def task_hatch_build():
-    """Build the package with hatch for publishing."""
+    """Build the package with hatch for publishing.
+
+    A release must record the commit its template is at (`hatch_build.py`):
+    CHARTBOOK_BUILD_REQUIRE_GIT=1 stops the build where it could not.
+    """
+    from doit.action import CmdAction
+
     return {
-        "actions": ["hatch build"],
+        "actions": [CmdAction("hatch build", env={**os.environ, "CHARTBOOK_BUILD_REQUIRE_GIT": "1"})],
         "task_dep": ["build_examples"],
         "verbosity": 2,
     }

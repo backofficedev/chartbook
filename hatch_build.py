@@ -16,12 +16,18 @@ from the checkout and asks git for the commit at run time):
   `chartbook/built_from.txt` in the wheel. It is written to a temporary
   folder, never into the source tree, and force-included, which overrides any
   stray copy in the tree. A build from a checkout whose `template/` has
-  changes git has not committed records an empty file: no commit. Built from
-  an sdist, the sdist's own file is kept.
-- A folder with a `.git` that git cannot read (git not installed, or a
-  folder git does not trust) gets the template as it is on disk and no
-  commit, with a warning; with `CHARTBOOK_BUILD_REQUIRE_GIT=1` in the
-  environment, as a release's build should have, it stops instead.
+  changes git has not committed (or for which `git status` fails) records an
+  empty file: no commit. Built from an sdist, the sdist's own file is kept,
+  with a warning if it records no commit. An sdist is told by its `PKG-INFO`
+  before git is asked, so one unpacked into a repository of its own is still
+  the sdist.
+- A folder that is neither a checkout git can read nor an sdist (git not
+  installed, a folder git does not trust, a copy without `.git`) gets the
+  template as it is on disk and an empty `built_from.txt` (no commit, and
+  never a stray one), with a warning. With `CHARTBOOK_BUILD_REQUIRE_GIT=1`
+  in the environment, as a release's build has (`doit hatch_build`), that
+  stops the build, and so do a `template/` with uncommitted changes and an
+  sdist that records no commit: a release always records its commit.
 
 The version is not touched.
 """
@@ -40,8 +46,8 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 #: The file the package carries the commit in, beside its modules
 BUILT_FROM = "built_from.txt"
 
-#: Set to 1 for a build that must record the commit (a release's): a `.git`
-#: that git cannot read then stops it, where it is otherwise a warning
+#: Set to 1 for a build that must record the commit (a release's): what
+#: would otherwise build with a warning and no commit stops it instead
 REQUIRE_GIT = "CHARTBOOK_BUILD_REQUIRE_GIT"
 
 #: Where the environment can tell git to look; a build looks at its own folder
@@ -74,7 +80,9 @@ def commit_of(root) -> Optional[str]:
     `template/` has no changes git has not committed; None otherwise."""
     if not is_checkout(root):
         return None
-    if (git(root, "status", "--porcelain", "--untracked-files=no", "--", "template") or "").strip():
+    changes = git(root, "status", "--porcelain", "--untracked-files=no", "--", "template")
+    if changes is None or changes.strip():
+        # Changed, or git could not say: either way the commit does not say what ships
         return None
     return (git(root, "rev-parse", "HEAD") or "").strip() or None
 
@@ -109,30 +117,44 @@ class CustomBuildHook(BuildHookInterface):
         if version == "editable":
             return
         root = Path(self.root)
-        checkout = is_checkout(root)
-        if (root / ".git").exists() and not checkout:
-            message = (
-                f"{root} has a .git, and git cannot read it, so the package carries template/ as it is on "
-                f"disk, ignored files and all, and no commit for it. Install git; or, if git does not trust "
-                f"the folder, run `git config --global --add safe.directory {root}`; or build from a copy "
-                f"without .git."
-            )
-            if os.environ.get(REQUIRE_GIT, "").strip() == "1":
-                raise RuntimeError(f"{message} ({REQUIRE_GIT}=1 makes this an error.)")
-            self._warn(message)
+        # An sdist first: one unpacked into a repository of its own (a distribution's packaging) is
+        # still the sdist, and its own file names the commit, not that repository's HEAD
+        sdist = (root / "PKG-INFO").is_file()
+        checkout = not sdist and is_checkout(root)
+        if not checkout and not sdist:
+            if (root / ".git").exists():
+                message = (
+                    f"{root} has a .git, and git cannot read it, so the package carries template/ as it is "
+                    f"on disk, ignored files and all, and no commit for it. Install git; or, if git does not "
+                    f"trust the folder, run `git config --global --add safe.directory {root}`; or build from "
+                    f"an sdist."
+                )
+            else:
+                message = (
+                    f"{root} is neither a git checkout nor an sdist, so the package carries template/ as it "
+                    f"is on disk, ignored files and all, and no commit for it. Build from a git checkout, or "
+                    f"from an sdist."
+                )
+            self._stop_or_warn(message)
 
         inside = "chartbook/template" if self.target_name == "wheel" else "template"
         for name in template_files(root, checkout):
             build_data["force_include"][str(root / "template" / name)] = f"{inside}/{name}"
 
-        if not checkout:
-            # An sdist's own file, if it has one, ships as any file of the package does
+        if sdist:
+            # The sdist's own file ships as any file of the package does
+            shipped = root / "src" / "chartbook" / BUILT_FROM
+            if not (shipped.is_file() and shipped.read_text(encoding="utf-8").strip()):
+                self._stop_or_warn(
+                    f"{root} is an sdist that records no commit for its template/, so the package records "
+                    f"none, and a project chartbook init makes from it has no .cruft.json."
+                )
             return
-        commit = commit_of(root)
-        if commit is None:
-            self._warn(
-                "template/ has changes git has not committed, so the package records no commit for it, "
-                "and a project chartbook init makes from it has no .cruft.json."
+        commit = commit_of(root) if checkout else None
+        if checkout and commit is None:
+            self._stop_or_warn(
+                "template/ has changes git has not committed (or git could not say), so the package "
+                "records no commit for it, and a project chartbook init makes from it has no .cruft.json."
             )
         # Written aside, never into the tree; force-included, which overrides a stray copy there
         self._folder = Path(tempfile.mkdtemp(prefix="chartbook-build-"))
@@ -145,6 +167,12 @@ class CustomBuildHook(BuildHookInterface):
         folder = getattr(self, "_folder", None)
         if folder is not None:
             shutil.rmtree(folder, ignore_errors=True)
+
+    def _stop_or_warn(self, message):
+        """Stop the build with *message* when it must record the commit; else warn."""
+        if os.environ.get(REQUIRE_GIT, "").strip() == "1":
+            raise RuntimeError(f"{message} ({REQUIRE_GIT}=1 makes this an error.)")
+        self._warn(message)
 
     def _warn(self, message):
         app = getattr(self, "app", None)
