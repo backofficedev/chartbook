@@ -412,6 +412,12 @@ class SphinxWriter:
             span = record.get("date_range") or {}
             first, last = span.get("first"), span.get("last")
             freshness = [_freshness("Data updated", location.get("modified_at"))]
+        elif location.get("kind") == "file" and "content_hash" not in record:
+            # Declared and not built yet: the provenance panel says so too.
+            # The glimpse is shown as code, so this is plain text
+            glimpse = "Not built yet. The pipeline's build makes it: chartbook build runs the build and renders the site again."
+            first, last = None, None
+            freshness = []
         else:
             resolved = location.get("resolved_path") or str(base_dir / location.get("path", ""))
             glimpse = get_dataframe_glimpse(Path(resolved))

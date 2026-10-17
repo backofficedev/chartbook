@@ -99,7 +99,7 @@ def _site_options(command):
         click.option(
             "--strict/--no-strict",
             default=True,
-            help="Fail on missing source files (default). Use --no-strict to skip affected pipelines instead.",
+            help="Fail on missing source files (default). In a catalog, --no-strict skips the pipelines that have them instead.",
         ),
         click.option(
             "--strip-mathjax2/--no-strip-mathjax2",
@@ -138,7 +138,9 @@ def docs(**site):
 
     This renders the site and writes index.json beside it. It does not
     build the project's data: `chartbook run` does that, and
-    `chartbook build` does both.
+    `chartbook build` does both. A pipeline that has built none of its
+    data, charts, notebooks and models yet, as a new project has not, is
+    rendered with each shown as not built.
 
     By default every render starts from nothing. With --incremental the
     intermediate build directory (--docs-build-dir) is kept, pipelines whose
@@ -179,6 +181,7 @@ def build(**site):
     from chartbook.manifest import BUILD_SCRIPT
 
     project_dir = resolve_project_dir(site["project_dir"])
+    after_build = False
     if runner.running(project_dir, BUILD_SCRIPT):
         click.echo(
             click.style("Warning: ", fg="yellow", bold=True)
@@ -189,9 +192,11 @@ def build(**site):
         )
     elif _has_script(project_dir, BUILD_SCRIPT):
         _run_script(project_dir, BUILD_SCRIPT)
+        # So what the script did not make is an error, not "not built yet"
+        after_build = True
     else:
         click.echo("No `build` script here, so only the site is rendered.")
-    _render_site(**site)
+    _render_site(**site, after_build=after_build)
 
 
 def _render_site(
@@ -208,6 +213,7 @@ def _render_site(
     incremental,
     watch,
     watch_interval,
+    after_build=False,
 ):
     """Render the documentation site: what `docs` does, and `build` does last.
 
@@ -224,6 +230,8 @@ def _render_site(
     :param incremental: If True, keep the build directory and redo only what changed.
     :param watch: If True, render incrementally and again on every change.
     :param watch_interval: Seconds between checks for changes in watch mode.
+    :param after_build: The build script has just run, so a pipeline that
+        has built nothing it declares is an error, not "not built yet".
     """
     # Validate paths for shell/platform mismatches
     from chartbook.path_validation import detect_shell_environment, validate_cli_paths
@@ -280,6 +288,7 @@ def _render_site(
         size_threshold=size_threshold,
         strict=strict,
         strip_mathjax2=strip_mathjax2,
+        after_build=after_build,
     )
     if not watch:
         click.echo(f"Successfully generated documentation in {output_dir}")

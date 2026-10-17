@@ -6,6 +6,7 @@ generate_docs() -> load_manifest() -> _retrieve_correct_docs_src_dir() ->
 run_build_markdown() -> run_sphinx_build()
 """
 
+import re
 import sys
 import json
 from pathlib import Path
@@ -405,6 +406,16 @@ class TestMissingSourceFilesError:
         message = error.format_cli_message()
         assert "--no-strict" in message
 
+    def test_a_hint_given_is_the_hint(self):
+        """A lone pipeline's hint does not offer --no-strict, which it refuses."""
+        from chartbook.errors import MissingFile, MissingSourceFilesError
+
+        missing = [MissingFile(Path("/a.parquet"), "dataframe", "df1", "pipeline_a")]
+        message = MissingSourceFilesError(missing, hint=["First line.", "Second line."]).format_cli_message()
+        assert "First line." in message
+        assert "      Second line." in message
+        assert "--no-strict" not in message
+
 
 # Sample MathJax 2 script tags as injected by Plotly's NotebookRenderer
 PLOTLY_MATHJAX2_SCRIPT = (
@@ -690,3 +701,149 @@ class TestSmallFixes:
         monkeypatch.setattr(build_docs.subprocess, "run", spy)
         generate_docs(output_dir=pipeline_project / "docs", project_dir=pipeline_project)
         assert "nonexisting document" not in captured["stderr"]
+
+
+class TestNotBuiltYet:
+    """A pipeline that has built nothing it declares still has a site.
+
+    A project just made by `chartbook init` is one, and so is any fresh
+    clone of a pipeline whose data is git-ignored. `chartbook docs` used to
+    stop there, and its hint offered --no-strict, which a lone pipeline
+    refuses.
+    """
+
+    @pytest.fixture
+    def unbuilt(self, pipeline_project, monkeypatch):
+        """The fixture's pipeline, with a notebook and a build script, and none of its outputs."""
+        import tomli
+        import tomli_w
+
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["notebooks"] = {"walkthrough": {"name": "Walkthrough", "path": "_output/walkthrough.ipynb"}}
+        config["scripts"] = {"build": "true"}
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").unlink()
+        (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
+        monkeypatch.chdir(pipeline_project)
+        return pipeline_project
+
+    def test_its_site_shows_each_output_as_not_built(self, unbuilt, capsys):
+        output_dir = unbuilt / "docs"
+        generate_docs(output_dir=output_dir, project_dir=unbuilt)
+
+        assert (output_dir / "index.html").is_file()
+        # Where each one's page links, a page that says so
+        notebook = output_dir / "cb" / "notebooks" / "test_pipeline" / "walkthrough.html"
+        assert "Not built yet" in notebook.read_text()
+        assert "Not built yet" in (output_dir / "_static" / "test_pipeline" / "chart_0_0.html").read_text()
+        # The glimpse is highlighted, a span a word
+        dataframe = re.sub(
+            r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text()
+        )
+        assert "Not built yet" in dataframe
+        assert "Error reading file" not in dataframe
+        # The index has the records, without hashes
+        records = {r["id"]: r for r in json.loads((output_dir / "index.json").read_text())["records"]}
+        for asset in ("test_pipeline:dataframe_0", "test_pipeline:chart/chart_0_0", "test_pipeline:notebook/walkthrough"):
+            assert "content_hash" not in records[asset]
+        err = capsys.readouterr().err
+        assert "test_pipeline has built nothing it declares yet" in err
+        assert "  - notebook: _output/walkthrough.ipynb" in err
+        assert "`chartbook build` runs its build script" in err
+
+    def test_with_no_build_script_it_says_to_build_it(self, unbuilt, capsys):
+        import tomli
+        import tomli_w
+
+        toml_path = unbuilt / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        del config["scripts"]
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
+        assert "Build them, then run `chartbook docs` again." in capsys.readouterr().err
+
+    def test_after_its_build_script_has_run_it_is_an_error(self, unbuilt, capsys):
+        """`chartbook build` says this: the build has just run, and made none of it."""
+        with pytest.raises(SystemExit) as excinfo:
+            generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt, after_build=True)
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "Missing source files" in err
+        assert "The build script has just run and did not make" in err
+        assert "--no-strict" not in err
+        assert not (unbuilt / "docs").exists()
+
+    def test_built_in_part_is_still_an_error_and_the_hint_is_the_build(self, unbuilt, capsys):
+        """One output there means it was built, so what is missing is a mistake."""
+        (unbuilt / "_output" / "walkthrough.ipynb").write_text(
+            json.dumps({"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 4})
+        )
+        with pytest.raises(SystemExit) as excinfo:
+            generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "dataframe_0.parquet" in err and "chart_0_0.html" in err
+        assert "`chartbook build` runs the build script" in err
+        # A lone pipeline has nothing left to build once it is skipped
+        assert "--no-strict" not in err
+
+    def test_a_missing_write_up_is_still_an_error(self, unbuilt, capsys):
+        """Nothing builds a write-up."""
+        (unbuilt / "docs_src" / "charts" / "chart_0_0.md").unlink()
+        with pytest.raises(SystemExit):
+            generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
+        assert "chart_0_0.md" in capsys.readouterr().err
+
+    def test_a_catalog_keeps_its_own_rules(self, catalog_project, monkeypatch, capsys):
+        """A catalog member that has built nothing is skipped by --no-strict, and stops a strict build."""
+        monkeypatch.chdir(catalog_project)
+        for built in (catalog_project / "pipelines" / "pipeline_a").glob("_*/**/*.*"):
+            if built.suffix in (".parquet", ".html"):
+                built.unlink()
+        with pytest.raises(SystemExit):
+            generate_docs(output_dir=catalog_project / "docs_test", project_dir=Path("."))
+        assert "--no-strict" in capsys.readouterr().err
+
+
+class TestBuiltNothing:
+    """`built_nothing`: every output of one pipeline is missing, and nothing else is."""
+
+    def _missing(self, *files):
+        from chartbook.errors import MissingFile
+
+        return [MissingFile(Path(f"/p/{name}"), kind, name, "p") for kind, name in files]
+
+    def _manifest(self):
+        return {
+            "project": {"type": "pipeline", "id": "p"},
+            "dataframes": {"a": {"path": "a.parquet"}, "q": {"source": "local", "query": "select 1"}},
+            "charts": {"c": {"path": "c.html", "docs_path": "c.md"}},
+            "notebooks": {},
+            "models": {"m": {"path": "m.json", "metrics_path": "m_scores.json"}},
+        }
+
+    def test_all_of_them(self):
+        from chartbook import conf_validation
+
+        missing = self._missing(("dataframe", "a"), ("chart", "c"), ("model", "m"), ("model_metrics", "m"))
+        assert conf_validation.built_nothing(self._manifest(), missing)
+
+    def test_some_of_them(self):
+        from chartbook import conf_validation
+
+        missing = self._missing(("dataframe", "a"), ("chart", "c"), ("model", "m"))
+        assert not conf_validation.built_nothing(self._manifest(), missing)
+
+    def test_with_a_write_up(self):
+        from chartbook import conf_validation
+
+        missing = self._missing(
+            ("dataframe", "a"), ("chart", "c"), ("model", "m"), ("model_metrics", "m"), ("chart_docs", "c")
+        )
+        assert not conf_validation.built_nothing(self._manifest(), missing)
+
+    def test_nothing_missing(self):
+        from chartbook import conf_validation
+
+        assert not conf_validation.built_nothing(self._manifest(), [])

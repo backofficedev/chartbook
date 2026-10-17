@@ -356,15 +356,27 @@ class MissingSourceFilesError(Exception):
 
     Attributes:
         missing_files: List of MissingFile objects describing each missing file.
+        hint: The lines the CLI message ends with, saying what to do.
     """
 
-    def __init__(self, missing_files: list[MissingFile]):
+    #: The hint when the caller gives none. It suits a catalog, where
+    #: --no-strict builds the pipelines that are not named.
+    DEFAULT_HINT = (
+        "Ensure these files exist or update the paths in chartbook.toml.",
+        "Use --no-strict to skip affected pipelines instead of failing.",
+    )
+
+    def __init__(self, missing_files: list[MissingFile], hint: Optional[list[str]] = None):
         """Initialize a MissingSourceFilesError.
 
         :param missing_files: List of MissingFile objects.
         :type missing_files: list[MissingFile]
+        :param hint: What to do about them, a line each; the default suits
+            a catalog.
+        :type hint: list[str] | None
         """
         self.missing_files = missing_files
+        self.hint = list(hint) if hint else list(self.DEFAULT_HINT)
         super().__init__(self._format_message())
 
     def _format_message(self) -> str:
@@ -398,11 +410,9 @@ class MissingSourceFilesError(Exception):
             )
 
         lines.append("")
-        lines.append(
-            click.style("Hint: ", fg="green")
-            + "Ensure these files exist or update the paths in chartbook.toml."
-        )
-        lines.append("      Use --no-strict to skip affected pipelines instead of failing.")
+        first, *rest = self.hint
+        lines.append(click.style("Hint: ", fg="green") + first)
+        lines.extend(f"      {line}" for line in rest)
 
         return "\n".join(lines)
 

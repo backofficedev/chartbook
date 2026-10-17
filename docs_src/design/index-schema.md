@@ -778,9 +778,10 @@ hashes everything, as it does everything else.
 **Files that are not built yet.** A declared asset whose file is missing still has a record,
 without `content_hash`, `size_bytes`, `row_count` or `columns`. The index describes what the
 manifest declares; `chartbook check` is what complains about missing files. (By default
-`chartbook build` stops on a missing file before it gets this far; the case arises through the
-Python API and with `--no-strict`, where the affected pipelines are left out of the site and of
-the index alike.)
+`chartbook docs` stops on a missing file before it gets this far, and with `--no-strict` the
+affected pipelines are left out of the site and of the index alike. The case arises through the
+Python API, and in a pipeline that has built none of its outputs yet, which `chartbook docs`
+renders with each of them shown as not built.)
 
 **A key that is not an address.** An asset whose key in `chartbook.toml` cannot be written in a
 reference (it contains a space, say) is left out, with a warning naming it.

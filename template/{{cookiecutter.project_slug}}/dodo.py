@@ -17,6 +17,7 @@ from pathlib import Path
 
 from settings import config
 
+# Which tasks `doit` runs on its own is set at the end of this file
 DOIT_CONFIG = {"backend": "sqlite3", "dep_file": "./.doit-db.sqlite"}
 
 
@@ -286,6 +287,7 @@ def task_run_notebooks():
                 *notebook_tasks[notebook]["file_dep"],
             ],
             "targets": [
+                OUTPUT_DIR / f"{notebook_name}.ipynb",
                 OUTPUT_DIR / f"{notebook_name}.html",
                 *notebook_tasks[notebook]["targets"],
             ],
@@ -323,6 +325,21 @@ def task_compile_latex_docs():
         "./reports/slides_simple_example.pdf",
     ]
 
+    if shutil.which("latexmk") is None:
+        # Without TeX, the rest of the project still builds
+        def say_latex_not_found():
+            print(
+                "latexmk was not found, so the reports in ./reports are not compiled. "
+                "Install TeX Live (https://tug.org/texlive/), then run `doit compile_latex_docs`.",
+                file=sys.stderr,
+            )
+
+        return {
+            "actions": [say_latex_not_found],
+            "targets": targets,
+            "file_dep": file_dep,
+        }
+
     return {
         "actions": [
             # My custom LaTeX templates
@@ -338,37 +355,6 @@ def task_compile_latex_docs():
         ],
         "targets": targets,
         "file_dep": file_dep,
-        "clean": True,
-    }
-{%- endif %}
-{%- if cookiecutter.include_chartbook and cookiecutter.include_jupyter_notebooks %}
-
-sphinx_targets = [
-    "./docs/index.html",
-]
-
-
-def task_build_chartbook_site():
-    """Compile Sphinx Docs"""
-    notebook_scripts = [
-        Path(notebook_tasks[notebook]["path"])
-        for notebook in notebook_tasks.keys()
-    ]
-    file_dep = [
-        "./README.md",
-        "./chartbook.toml",
-        *notebook_scripts,
-    ]
-
-    return {
-        "actions": [
-            "chartbook docs -f",
-        ],  # Use docs as build destination
-        "targets": sphinx_targets,
-        "file_dep": file_dep,
-        "task_dep": [
-            "run_notebooks",
-        ],
         "clean": True,
     }
 {%- endif %}
@@ -534,3 +520,13 @@ def task_run_pytest():
         "clean": True,
         "verbosity": 2,
     }
+
+
+## `doit` on its own (and so `chartbook build`) runs every task in this file
+## but the tests, which run with `doit run_pytest`. Keep this at the end, so
+## that a task you add above it is run too.
+DOIT_CONFIG["default_tasks"] = [
+    name.removeprefix("task_")
+    for name in list(globals())
+    if name.startswith("task_") and name != "task_run_pytest"
+]

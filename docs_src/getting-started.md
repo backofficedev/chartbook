@@ -16,17 +16,48 @@ One install, everything included: the site-building CLI, the plotting module, da
 chartbook init
 ```
 
-This prompts for a project name and author, then creates a working pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template): `chartbook.toml`, `README.md`, a `dodo.py` task runner, and `src/` scripts that pull data and build charts. Because the project is created with [cruft](https://cruft.github.io/cruft/), you can pull template improvements later with `cruft update`.
+It asks 19 questions, each with its default in parentheses; Enter takes the default. Two answers matter for a first project:
+
+- **Project name**: the site's title, say `Rates Study`.
+- **Folder name**, the second question: the project's folder, made from the name (`rates_study`). Press Enter to keep it. It must start with a lowercase letter and hold only lowercase letters, digits and `_`; anything else stops the command, with nothing created, and it says what to type next time.
+
+The other seventeen can stay as they are: a one-line description, your name and email, the Python version, how to install the dependencies (pip, uv, conda or pixi; pip is the default), and which examples to include. The defaults include an example notebook and the ChartBook site, and leave out LaTeX reports (they need TeX installed), R, Stata, a GitHub Actions workflow and the data sources (FRED, the Fed's yield curve and the OFR API download data; Bloomberg needs a Terminal and CRSP a WRDS account).
+
+It then creates the project from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template): `chartbook.toml`, `README.md`, a `dodo.py` task runner, scripts and a notebook in `src/`, and the project's own pages in `docs_src/site/`. It ends by printing the next steps, which the rest of this section walks through. Because the project is created with [cruft](https://cruft.github.io/cruft/), you can pull template improvements later with `cruft update`.
 
 ```console
-cd <your-project>
+cd rates_study
 chartbook docs
 chartbook browse
 ```
 
-You already have a documentation site.
+You already have a documentation site: the README as its front page, the project's own pages, and the example notebook. Nothing is built yet, so the notebook's page says "Not built yet", and so does `chartbook docs`:
 
-To start under version control as well, `chartbook init --git` makes the new project a git repository with its first commit, and `chartbook init --github` goes on to create a private GitHub repository for it and push (it needs the [GitHub CLI](https://cli.github.com), logged in). See {doc}`reference/cli`.
+```text
+Note: rates_study has built nothing it declares yet, so the site shows each as not built:
+  - notebook: _output/01_example_notebook_interactive.ipynb
+`chartbook build` runs its build script and renders the site again.
+```
+
+To build it, install the project's dependencies (with pip here; the project's README says how for uv, conda and pixi) and run `chartbook build`:
+
+```console
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+chartbook build -f
+chartbook browse
+```
+
+`chartbook build` runs the build script that `chartbook.toml` names, `[scripts] build = "doit"`. `doit` runs every task in `dodo.py` but the tests (`doit run_pytest` runs those): here it executes the notebook into `_output/`. Then `chartbook build` renders the site again, now with the notebook in it; `-f` replaces the site that is there.
+
+```console
+chartbook check
+```
+
+This checks `chartbook.toml` and the files it names against the default policy. Once built, a new project has one thing to fix: its `repo_url`, which a git remote fills in.
+
+To start under version control as well, `chartbook init --git` makes the new project a git repository with its first commit, and `chartbook init --github` goes on to create a private GitHub repository for it and push (it needs the [GitHub CLI](https://cli.github.com), logged in), which gives it its `repo_url`. See {doc}`reference/cli`.
 
 ## Or build one by hand
 

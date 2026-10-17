@@ -193,6 +193,15 @@ def validate_conf_py_values(manifest: dict, pipeline_theme: str) -> SiteConfig:
     return SiteConfig.from_manifest(manifest, pipeline_theme)
 
 
+#: Kinds of missing file that are things a pipeline *builds*: data, rendered
+#: charts, executed notebooks, and trained models with their scores. They
+#: are normally git-ignored, so on a fresh checkout that has not run the
+#: pipeline they are all absent.
+OUTPUT_FILE_TYPES = frozenset(
+    {"dataframe", "chart", "notebook", "model", "model_metrics"}
+)
+
+
 def validate_source_files(manifest: dict, base_dir) -> list:
     """Validate that all source files referenced in the manifest exist.
 
@@ -403,3 +412,37 @@ def validate_source_files(manifest: dict, base_dir) -> list:
             )
 
     return missing_files
+
+
+def built_nothing(manifest: dict, missing_files: list) -> bool:
+    """Whether the missing files are every output of one pipeline, and nothing else.
+
+    That is a pipeline that has not been built yet: a project just made by
+    ``chartbook init``, or a fresh clone, whose build makes its data,
+    charts, notebooks and models. A pipeline that has some of them and
+    lacks others has been built, and what it lacks is a mistake to report,
+    as is a missing write-up, note or README, which nothing builds.
+
+    :param manifest: The manifest dictionary from chartbook.toml.
+    :type manifest: dict
+    :param missing_files: What :func:`validate_source_files` found missing.
+    :type missing_files: list[MissingFile]
+    :rtype: bool
+    """
+    from chartbook.manifest import get_pipeline_manifest
+
+    pipelines = {missing.pipeline_id for missing in missing_files}
+    if len(pipelines) != 1 or any(m.file_type not in OUTPUT_FILE_TYPES for m in missing_files):
+        return False
+    pipeline_manifest = get_pipeline_manifest(manifest, pipelines.pop())
+    # Every path a build makes, as validate_source_files counts them
+    declared = 0
+    for section, keys in (
+        ("dataframes", ("path",)),
+        ("charts", ("path",)),
+        ("notebooks", ("path",)),
+        ("models", ("path", "metrics_path")),
+    ):
+        for entry in (pipeline_manifest.get(section) or {}).values():
+            declared += sum(1 for key in keys if (entry.get(key) or "").strip())
+    return len(missing_files) == declared

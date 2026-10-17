@@ -49,7 +49,8 @@ cruft create https://github.com/backofficedev/chartbook --directory template
 This creates your project and a `.cruft.json` file that tracks the template version, enabling future updates.
 
 You will be prompted for:
-- Project name and description
+- Project name, and the folder name, which is made from it (press Enter to keep it)
+- Description
 - Author information
 - Python version
 - Which optional features to include
@@ -125,8 +126,14 @@ conda create -n my_project python=3.12
 conda activate my_project
 pip install -r requirements.txt
 
-# Run all tasks
+# Run every task but the tests, then render the ChartBook site
+chartbook build -f
+
+# Or run every task but the tests, without the site
 doit
+
+# Run the tests
+doit run_pytest
 
 # List available tasks
 doit list

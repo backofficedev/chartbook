@@ -174,6 +174,8 @@ if not include_crsp_compustat:
 print("Project configuration complete!")
 print("\nNext steps:")
 print("  cd {{ cookiecutter.project_slug }}")
+if include_chartbook:
+    print("  chartbook docs       # its site already, with nothing built yet")
 
 if environment_manager == "pip":
     print("  python -m venv .venv")
@@ -181,12 +183,18 @@ if environment_manager == "pip":
     print("  pip install -r requirements.txt")
 elif environment_manager == "uv":
     print("  uv sync")
+    print("  source .venv/bin/activate  # Windows: .venv\\Scripts\\activate")
 elif environment_manager == "conda":
     print(
         "  conda env create -f environment.yml"
     )
     print("  conda activate {{ cookiecutter.project_slug }}")
 elif environment_manager == "pixi":
-    print("  pixi install")
+    print("  pixi shell")
 
-print("  doit")
+if include_chartbook:
+    print("  chartbook build -f   # runs doit, then renders the site again")
+    print("  chartbook browse     # opens the site")
+    print("  chartbook check      # what chartbook.toml still needs")
+else:
+    print("  doit")

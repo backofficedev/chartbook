@@ -169,6 +169,27 @@ class TestBuild:
         assert result.exit_code == 1
         assert "No chartbook.toml in" in result.output
 
+    def test_a_build_that_makes_nothing_is_an_error(self, pipeline_project, monkeypatch):
+        """`chartbook docs` shows a pipeline that has built nothing as not built yet.
+
+        `chartbook build` has just run the build, so there that is a build
+        that did not make what the manifest says it does.
+        """
+        _add_script(pipeline_project, "echo ran >> ran.log")
+        (pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet").unlink()
+        (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
+        monkeypatch.chdir(pipeline_project)
+
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        assert result.exit_code == 0, result.output
+        assert "has built nothing it declares yet" in result.output
+
+        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        assert result.exit_code == 1
+        assert (pipeline_project / "ran.log").exists()
+        assert "The build script has just run and did not make" in result.output
+        assert "--no-strict" not in result.output
+
 
 @posix
 class TestCalledFromItsOwnScript:
