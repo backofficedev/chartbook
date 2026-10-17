@@ -1511,6 +1511,31 @@ class TestAnOldNoteGivesWay:
         assert not older.exists() and len(default_store().roots()) == 1
 
 
+class TestAnOldNoteWhoseLockfileIsNotRead:
+    def test_keeps_what_it_recorded(self, drive, monkeypatch):
+        """This machine pins at s1; a run under CI with no name, at the same path, updates to s2; the drive is unplugged."""
+        work, machine, rates = drive
+        monkeypatch.delenv("CHARTBOOK_STORE")  # the default store, under ~/.chartbook
+        s1 = snapshot.make(rates, made_at=LONG_AGO).snapshot
+        s2 = _snapshot_again(rates, 4.2, made_at="2020-02-01T00:00:00.000000Z")
+        _snapshot_again(rates, 4.3)
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": s1.commit[:7]}})
+        assert lock.pin(project).problems == []
+        monkeypatch.setenv("CI", "true")
+        _forecast(project, {"acme/rates": {"commit": s2.commit[:7]}})
+        assert lock.update(project).problems == []
+        monkeypatch.delenv("CI")
+        assert sorted(r.machine == "" for r in default_store().roots()) == [False, True]
+        away = work / "a" / "away"
+        shutil.move(project, away)  # its drive unplugged
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        assert s2.made_at not in [t.made_at for t, _ in plan.snapshots_delete]
+        assert plan.forget_old == []
+        lock.run_gc(plan, default_store())
+        shutil.move(away, project)  # plugged back in
+        assert lock.verify(project).problems == []
+
+
 class TestARunnerWithNoName:
     """Under CI, with no CHARTBOOK_MACHINE_ID: a runner with a fresh home each run, or one whose store lasts."""
 
@@ -1620,23 +1645,33 @@ class TestADirectoryOfMixedNames:
         assert sorted(data.load("acme/rates:parts", format="pandas")["a"].to_list()) == [1, 2]
         assert sorted(data.sql("select a from {acme/rates:parts}").collect()["a"].to_list()) == [1, 2]
 
-    def test_a_file_that_is_no_table_and_not_said_to_be_fails_the_read(self, drive, monkeypatch):
-        """Better a read that fails than rows that go missing without a word."""
+    @pytest.mark.parametrize("other, body", [
+        ("notes.ini", b"[about]\n"),
+        ("schema.avsc", b'{"type": "record", "name": "parts", "fields": []}\n'),
+        ("plot.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 40),
+        ("metadata/snap-1.avro", b"Obj\x01" + b"\x00" * 40),
+        ("tiny", b"PA"),
+    ])
+    def test_a_file_that_does_not_end_as_parquet_is_left_out(self, drive, monkeypatch, other, body):
+        """By its last four bytes: DuckDB's read of the folder took only its parquet files, and so does this."""
         import polars as pl
 
         work, machine, rates = drive
 
         def writer(parts):
             pl.DataFrame({"a": [1]}).write_parquet(parts / "p0.parquet")
-            (parts / "notes.ini").write_text("[about]\n")
+            pl.DataFrame({"a": [2]}).write_parquet(parts / "000000_0")  # parquet by its trailer: read
+            (parts / other).parent.mkdir(parents=True, exist_ok=True)
+            (parts / other).write_bytes(body)
 
         _parts(rates, writer)
         snapshot.make(rates)
         forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
         assert lock.pin(forecast).problems == []
         monkeypatch.chdir(forecast)
-        with pytest.raises(Exception):
-            data.load("acme/rates:parts").collect()
+        assert sorted(data.load("acme/rates:parts").collect()["a"].to_list()) == [1, 2]
+        assert sorted(data.load("acme/rates:parts", format="pandas")["a"].to_list()) == [1, 2]
+        assert sorted(data.sql("select a from {acme/rates:parts}").collect()["a"].to_list()) == [1, 2]
 
 
 def _names_as_linux_tells_them(monkeypatch) -> None:

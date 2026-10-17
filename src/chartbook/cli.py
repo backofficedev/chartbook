@@ -2737,8 +2737,8 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     file under roots/, which you remove once no machine needs it. In your
     own store, under ~/.chartbook, a note from before notes named their
     machine is this machine's: its lockfile is read, and the note is
-    removed once this machine has a note of that lockfile, or with
-    --forget-missing once the lockfile is gone.
+    removed once this machine has a note of that lockfile and the lockfile
+    is read here, or with --forget-missing once the lockfile is gone.
 
     What would be removed is listed, and nothing is removed until you say
     yes. An object stored in the last hour is never removed: a pin puts
@@ -2782,7 +2782,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             # In this user's own store: a note from before notes named their machine, this machine's
             from chartbook.store import root_name
 
-            note += f"  (its note from before notes named their machine goes: {the_store}/roots/{root_name(lockfile)})"
+            note += f"  (its note under no machine name goes: {the_store}/roots/{root_name(lockfile)})"
         click.echo(f"  {_printable(lockfile)}{note}")
     from chartbook.store import this_host
 

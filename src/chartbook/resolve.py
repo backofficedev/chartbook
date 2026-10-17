@@ -117,12 +117,14 @@ class FileLocation(Location):
         path: Absolute path. For partitioned data it contains glob
             characters. The file need not exist: a path can be asked for
             before anything has written to it.
-        files: For a directory pinned from another pipeline, the files its
-            record lists, under *path*, but those that are plainly not
-            tables (a ``README.txt``, a ``schema.json``; :data:`NOT_TABLES`)
-            or are named as an engine's scan passes over (``.``, ``_``):
-            what a reader reads, and nothing else the folder may hold (a
-            Finder ``.DS_Store``, a sync service's copy). Empty otherwise.
+        files: For a directory pinned from another pipeline, its parquet
+            files its record lists, under *path*: each named ``.parquet``,
+            and each named otherwise that ends as parquet does (Hive's
+            ``000000_0``), but none that is plainly not a table (a
+            ``README.txt``; :data:`NOT_TABLES`) or named as an engine's
+            scan passes over (``.``, ``_``). What a reader reads, and
+            nothing else the folder may hold (a Finder ``.DS_Store``, a
+            sync service's copy). Empty otherwise.
     """
 
     kind: ClassVar[str] = "file"
@@ -865,9 +867,10 @@ def _held(store, record: dict) -> Location:
         # the folder; and, as an engine's scan of a folder does, none under a
         # name starting "." or "_" (Spark's _SUCCESS, Hadoop's .crc files),
         # nor one that is plainly not a table (a README.txt, a schema.json).
-        # Every other file is read, whatever its name ends in (Hive's
-        # 000000_0, a .pq): one that is no parquet fails the read, rather
-        # than its rows going missing
+        # A file named otherwise than .parquet is read if it ends as parquet
+        # does (Hive's 000000_0, a .pq), and passed over if not (a schema.avsc,
+        # a plot.png, an Iceberg snap-1.avro), as DuckDB's read of the folder
+        # took only its parquet: no table is left out, and no file breaks the read
         from chartbook.snapshot import files_read
         from chartbook.store import StoreError, on_disk, plain_parts
 
@@ -879,8 +882,11 @@ def _held(store, record: dict) -> Location:
                     f"{record.get('id')!r}: its record lists {relative!r}, which is not a plain path "
                     f"in its object. The record is not one a store wrote, and is not read."
                 )
-            if not any(part.startswith((".", "_")) for part in parts) and not parts[-1].lower().endswith(NOT_TABLES):
-                read.append(on_disk(held, parts))
+            if any(part.startswith((".", "_")) for part in parts) or parts[-1].lower().endswith(NOT_TABLES):
+                continue
+            file = on_disk(held, parts)
+            if parts[-1].lower().endswith(".parquet") or _ends_as_parquet(file):
+                read.append(file)
         return FileLocation(held, tuple(read))
     from chartbook.store import on_disk
 
@@ -894,6 +900,22 @@ def _held(store, record: dict) -> Location:
 NOT_TABLES = (
     ".txt", ".md", ".rst", ".json", ".yaml", ".yml", ".csv", ".tsv", ".xml", ".html", ".log", ".crc",
 )
+
+
+def _ends_as_parquet(file: Path) -> bool:
+    """Whether a file ends as a parquet file does, with ``PAR1``: four bytes are read.
+
+    One that cannot be read is taken as parquet, so that the read says why.
+    """
+    try:
+        with open(file, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            if f.tell() < 4:
+                return False
+            f.seek(-4, os.SEEK_END)
+            return f.read(4) == b"PAR1"
+    except OSError:
+        return True
 
 
 def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Location:

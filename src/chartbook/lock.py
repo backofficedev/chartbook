@@ -2599,7 +2599,8 @@ def plan_gc(
     opened (it may be a mount of another host). In this user's own store,
     under ``~/.chartbook``, an old note can only be this machine's: its
     lockfile is read alone, as before notes named their machine, and the
-    note is removed once this machine has a note of the lockfile, or, with
+    note is removed once this machine has a note of the lockfile and the
+    lockfile is read (until then, what it recorded is kept), or, with
     *forget_missing*, once the lockfile is gone.
 
     :param store: The store; this user's by default.
@@ -2665,7 +2666,15 @@ def plan_gc(
     for root in roots:
         old_and_mine = own_store and root.machine == "" and not root.copy
         if old_and_mine and root.lockfile in noted_here:
-            plan.forget_old.append(root.lockfile)
+            # Superseded by this machine's note only once its lockfile is
+            # read: while it cannot be (a drive unplugged), what the note
+            # recorded is kept, as a note only adds; with forget_missing, it
+            # is forgotten with the lockfile
+            local = _a_local_lockfile(root.lockfile)
+            if local and (read_too(root.lockfile) is not None or forget_missing):
+                plan.forget_old.append(root.lockfile)
+            else:
+                keep_noted(root, "a lockfile that cannot be found pins it", hashes_of_missing)
             continue
         if (root.machine != here or root.copy) and not old_and_mine:
             # Another machine's lockfile, or one noted before notes named
