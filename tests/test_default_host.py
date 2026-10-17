@@ -606,3 +606,90 @@ class TestWhatTheFifthReviewFound:
         _commit(repository, "Newer")
         report = lock.update(forecast)
         assert not report.problems and _entry(forecast)["via"] == "rev"
+
+
+
+def _model_repository(path: Path, model_id: str, version: str, label: bool, remote=None, snapshotted=True) -> Path:
+    """A pipeline with one model, in its own repository: built, labelled `champion` if asked, snapshotted if asked."""
+    (path / "_output").mkdir(parents=True)
+    manifest = {"project": {"id": model_id}, "models": {"m": {"path": "./_output/m.json"}}}
+    (path / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+    (path / "_output" / "m.json").write_text(version)
+    _git(path, "init", "--quiet", "-b", "main")
+    if remote:
+        _git(path, "remote", "add", "origin", remote)
+    (path / ".gitignore").write_text("chartbook.lock\n")
+    _commit(path, f"{model_id} {version}")
+    if not snapshotted:
+        return path
+    first = snapshot.make(path, made_at="2026-01-01T00:00:00.000000Z").snapshot
+    if label:
+        start = first.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
+        manifest["models"]["m"]["aliases"] = {"champion": start}
+        (path / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (path / "_output" / "m.json").write_text(version + "-later")
+        _commit(path, "Champion")
+        snapshot.make(path)
+    return path
+
+
+class TestWhatTheSixthReviewFound:
+    def test_an_id_changed_under_its_key_is_updated_not_refused(self, host):
+        _upstream(host, 4.0)
+        other = host / "host" / "acme" / "rates2"
+        (other / "_data").mkdir(parents=True)
+        (other / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "acme/rates2"}, "dataframes": {"treasury": {"path": "./_data/treasury.parquet", "docs": "d"}}}))
+        pl.DataFrame({"d": ["2024-01-01"], "r": [2.0]}).write_parquet(other / "_data" / "treasury.parquet")
+        _git(other, "init", "--quiet", "-b", "main")
+        _commit(other)
+        forecast = _forecast(host / "forecast", {"rates": {"id": "acme/rates"}})
+        lock.pin(forecast)
+        _forecast(forecast, {"rates": {"id": "acme/rates2"}})
+        report = lock.update(forecast)
+        assert not report.problems and _entry(forecast)["location"]["pipeline"] == "acme/rates2"
+
+    def test_a_refused_clone_keeps_a_store_pins_labels(self, host, monkeypatch, tmp_path):
+        _model_repository(host / "mallory-model", "acme/model", "v1", label=True)
+        _model_repository(host / "host" / "acme" / "model", "acme/model", "x1", label=False, snapshotted=False)
+        forecast = _forecast(host / "forecast", {"acme/model": {}})
+        lock.pin(forecast)
+        assert _entry(forecast)["via"] == "store"
+        labels = [a for a in lock.read_lock(forecast / lock.LOCK_FILE).assets if "@champion" in a]
+        assert labels
+        monkeypatch.setenv("CHARTBOOK_STORE", str(tmp_path / "another-machines-store"))
+        report = lock.update(forecast)
+        assert any(e.status == "unfetched" for e in report.events) and not report.git
+        assert [a for a in lock.read_lock(forecast / lock.LOCK_FILE).assets if "@champion" in a] == labels
+
+    def test_a_store_pin_with_no_first_commit_is_not_given_another_repository(self, host, monkeypatch, tmp_path):
+        import dataclasses
+
+        from chartbook.store import default_store
+
+        _upstream(host, 4.0)
+        taken = _mallory(host)
+        taken.path.unlink()
+        snapshot._write(dataclasses.replace(taken, first_commit=""), default_store())  # as from a shallow clone
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert "first_commit" not in _entry(forecast)["location"]
+        monkeypatch.setenv("CHARTBOOK_STORE", str(tmp_path / "another-machines-store"))
+        report = lock.update(forecast)
+        (event,) = [e for e in report.events if e.status == "unfetched"]
+        assert "does not have" in event.detail and "remove 'acme/rates' from chartbook.lock" in event.detail
+        assert _entry(forecast)["via"] == "store"
+
+    def test_a_git_hook_environment_never_reaches_the_users_repository(self, host, monkeypatch):
+        _upstream(host, 4.0)
+        user = host / "users-repository"
+        user.mkdir()
+        _git(user, "init", "--quiet", "-b", "main")
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        monkeypatch.setenv("GIT_DIR", str(user / ".git"))
+        monkeypatch.setenv("GIT_COMMON_DIR", str(user / ".git"))
+        monkeypatch.setenv("GIT_OBJECT_DIRECTORY", str(user / ".git" / "objects"))
+        lock.pin(forecast)
+        for name in ("GIT_DIR", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY"):
+            monkeypatch.delenv(name)
+        assert _git(user, "config", "--get", "core.bare").strip() == "false"
+        assert _entry(forecast)["via"] == "rev"

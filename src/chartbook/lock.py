@@ -69,6 +69,7 @@ from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
 
 from chartbook import hashing, snapshot
+from chartbook.gitcache import GIT_LOCATION_VARIABLES as _GIT_LOCATION_VARIABLES
 from chartbook.gitcache import GitCache, GitError, default_git_cache, local_url
 from chartbook.identity import derive_pipeline_id, repository_key, strip_url_credentials
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR
@@ -432,7 +433,11 @@ def clone_instead(
         return entry  # pinned from the store (or a folder, before): a pin keeps it there
     # The repository it was pinned from, by its first commit, whether or not
     # any bytes of it are pinned yet (one not built is still that repository's)
-    own_first = location.get("first_commit") if from_repository or (pinned and location.get("kind") == "store") else None
+    own_first = (
+        location.get("first_commit")
+        if from_repository or (pinned and location.get("kind") == "store" and location.get("pipeline") == pipeline)
+        else None
+    )
     if (may_move or not pinned_from_repository) and store_has_for(entry, snapshots, own_first, from_repository):
         return entry
     named = entry.get("_repository")
@@ -477,11 +482,19 @@ def _project_id_in(directory: Path) -> Optional[str]:
     return named if isinstance(named, str) and named else f"an id that is no name ({named!r:.40})"
 
 
-#: What git takes from the environment about which repository it is in
-_GIT_LOCATION_VARIABLES = frozenset({
-    "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY",
-    "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR", "GIT_NAMESPACE",
-})
+def _has_commit(git_cache: GitCache, url: str, commit: str) -> bool:
+    """Whether a repository's clone in the git cache has a commit."""
+    import subprocess
+
+    environment = {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARIABLES}
+    try:
+        result = subprocess.run(
+            ["git", f"--git-dir={git_cache.repo_path(url)}", "cat-file", "-e", f"{commit}^{{commit}}"],
+            capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
+        )
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return False
+    return result.returncode == 0
 
 
 def _first_commit_of(git_cache: GitCache, url: str, commit: str) -> str:
@@ -787,16 +800,32 @@ def _sync_now(
                     # Which repository it is, by its first commit: the one it was
                     # pinned from, in the store or its repository, unless the entry
                     # names the repository to take
-                    first = _first_commit_of(git_cache, local_url(entry["git"], project_dir), commit) if commit else ""
-                    recorded = None if entry.get("_repository") else (was or {}).get("location", {}).get("first_commit")
+                    url = local_url(entry["git"], project_dir)
+                    first = _first_commit_of(git_cache, url, commit) if commit else ""
+                    # What the pin recorded of its repository, when it was this same
+                    # pipeline and the entry does not name the repository to take
+                    pinned_at = (was or {}).get("location", {})
+                    same = pinned_at.get("pipeline") == entry["_from_id"] and not entry.get("_repository")
+                    recorded = pinned_at.get("first_commit") if same else None
+                    pinned_commit = pinned_at.get("commit") if same else None
+                    way_out = (
+                        f"To take it, name it with repository = \"...\" in its [dependencies] entry, or remove "
+                        f"{key!r} from chartbook.lock and run `chartbook update {key}`"
+                    )
                     if named and named != entry["_from_id"]:
                         said = named if named.startswith(("a [project]", "an id ")) else f"the ID {named}"
                         failure = f"{why}, and that repository's chartbook.toml gives {said}, not {entry['_from_id']}"
                     elif first and recorded and first != recorded:
                         failure = (
                             f"{why}, and that repository's history begins at {first[:7]}, not at {recorded[:7]} as the "
-                            f"one it was pinned from: another repository, or its history rewritten. To take it, name it "
-                            f"with repository = \"...\" in its [dependencies] entry"
+                            f"one it was pinned from: another repository, or its history rewritten. {way_out}"
+                        )
+                    elif not recorded and pinned_commit and not _has_commit(git_cache, url, pinned_commit):
+                        # Nothing of its first commit was recorded (a snapshot from a
+                        # shallow clone): the commit it was pinned at must be in this one
+                        failure = (
+                            f"{why}, and that repository does not have {pinned_commit[:7]}, the commit it was "
+                            f"pinned at: another repository. {way_out}"
                         )
                     elif first:
                         listed = {**listed, "location": {**listed["location"], "first_commit": first}}
@@ -804,6 +833,19 @@ def _sync_now(
                         directory = None
                         # Nothing of a refused clone is recorded: not its commit either
                         listed = was if was is not None else _dependency_entry(key, entry)
+            if directory is None and listed is was and (was or {}).get("location", {}).get("kind") == "store":
+                # Not got from its repository: the store pin stays as it was, labels and all
+                report.git.discard(key)
+                report.events.append(PinEvent("unfetched", key, detail=failure))
+                records = dict(had)
+                listed = {**was, "location": dict(was["location"])}
+                listed = {k: v for k, v in listed.items() if k != "pinned_hash"}
+                overall = pinned_hash(records.values())
+                if overall is not None:
+                    listed["pinned_hash"] = overall
+                after.dependencies.append(listed)
+                after.assets.update(records)
+                continue
             commit_was = (was or {}).get("location", {}).get("commit")
             commit_now = listed.get("location", {}).get("commit")
             commit_moved = bool(commit_was and commit_now and commit_was != commit_now)
@@ -845,7 +887,9 @@ def _sync_now(
             # repository the manifest names, or else the one it was first
             # pinned from
             pinned_from = (was or {}).get("location", {})
-            if pinned_from.get("kind") == "git" and pinned_from.get("pipeline") == entry["_store"]:
+            if pinned_from.get("pipeline") != entry["_store"]:
+                pinned_from = {}  # another pipeline then: nothing of its repository carries over
+            elif pinned_from.get("kind") == "git":
                 # Pinned from its repository: an update keeps to that repository's snapshots
                 pinned_from = {"first_commit": pinned_from.get("first_commit")} if pinned_from.get("first_commit") else {}
             elif not (pinned_from.get("kind") == "store" and pinned_from.get("commit")):
