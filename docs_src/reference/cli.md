@@ -866,7 +866,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | It is the newest of its pipeline, from its repository | The last build of `yield_curve` that was declared ready; a copy of the project that gives itself the same ID keeps its own newest |
 | It is the newest a branch or tag can pin from (not with `--aggressive`) | The last one on its `release` branch, or at its `v1.0` tag |
 | A label points at a model version in it (not with `--aggressive`) | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as its newest snapshot recorded |
-| Removing it would split its repository: it is the newest that names an address and first commit together that its kept snapshots need, or the newest that names its repository where the rest kept name none | The main checkout's last snapshot, which tells a shallow clone's and an agent's clone's snapshots are one repository |
+| It says which repository the kept snapshots are of: the newest that names an address and first commit together, where the kept ones would otherwise look like two repositories or one of them is from a clone with a path remote; or the newest that names its repository, where the rest kept name none | The main checkout's last snapshot, which tells a shallow clone's and an agent's clone's snapshots are one repository |
 | It was made in the last 7 days | `--keep-days` changes the number |
 | With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
 

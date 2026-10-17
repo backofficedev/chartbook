@@ -1779,7 +1779,7 @@ def _echo_pin_report(report):
                     f"  [dependencies] now says {event.detail}. It stays pinned "
                     f"where it was: `chartbook update {dependency}` follows it."
                 )
-            elif event.status == "passed_over":
+            elif event.status in ("passed_over", "unchecked"):
                 click.echo(f"  {event.detail}.")
 
         for event in assets:
@@ -2454,7 +2454,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
 
     A snapshot is kept if a lockfile pins it, if it is the newest of its
     pipeline from its repository or the newest a branch or tag can pin
-    from, if removing it would split its repository's snapshots in two, if a label points
+    from, if it says which repository the kept snapshots are of, if a label points
     at a model version in it (in that pipeline's chartbook.toml, or as its
     newest snapshot recorded), or if it was made in the last 7 days
     (--keep-days). Otherwise it may be removed, and what only it named

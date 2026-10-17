@@ -271,6 +271,8 @@ class PinEvent:
             dependency's own files, which is not pinned),
             ``passed_over`` (a dependency named by its ID: a newer snapshot
             of its ID was made in another repository, and not taken),
+            ``unchecked`` (one taken from a snapshot that names no
+            repository, so not checked against the one first pinned from),
             ``let_go`` (an update moved a ``git`` dependency to another
             commit, and this was built from the one before and is not built
             at the new one, so it is no longer pinned). For a
@@ -1013,6 +1015,11 @@ def _newest_in_store(
         or (first_commit if first_commit and ("first", first_commit) in known else "")
         or next((t.first_commit for t in accepted if t.first_commit), ""),
     }
+    if known and not snapshot.identity_keys(newest):
+        identity["unchecked"] = (
+            f"taken from a snapshot of {pipeline_id} that names no repository, made by a ChartBook that "
+            f"did not record one, so it could not be checked against the one it was first pinned from"
+        )
     newer = [t for t in mine if not made_there(t) and t.made_at > newest.made_at]
     if newer:
         identity["passed_over"] = (
@@ -1067,9 +1074,11 @@ def _sync_from_snapshots(
     identity: dict = {}
     if newest_of is not None:
         newest, why, identity = newest_of()
-        if identity.get("passed_over") and (may_move or not pinned):
+        if may_move or not pinned:
             # Said when the choice is made, not on every pin after it
-            report.events.append(PinEvent("passed_over", key, detail=identity["passed_over"]))
+            for status in ("passed_over", "unchecked"):
+                if identity.get(status):
+                    report.events.append(PinEvent(status, key, detail=identity[status]))
     else:
         try:
             newest, code = snapshot.newest_for(directory, store)

@@ -1364,48 +1364,72 @@ def plan_removals(
                 )
                 continue
             plan.keep.append((taken, why))
-    if keep_lineage:
-        _keep_lineage(plan, groups)
-    _keep_repositories_whole(plan, groups, now)
-    return plan
+    # What keeps a repository's snapshots one, and with --keep-lineage what
+    # those were made from, until neither keeps more
+    while True:
+        kept = len(plan.keep)
+        if keep_lineage:
+            _keep_lineage(plan, groups)
+        _keep_repositories_whole(plan, groups, now)
+        if len(plan.keep) == kept:
+            return plan
 
 
 def _keep_repositories_whole(plan: SnapshotPlan, groups: dict, now: datetime) -> None:
-    """Keep, of what the plan would remove, what tells a repository's snapshots are one.
+    """Keep, of what the plan would remove, what tells which repository the kept snapshots are of.
 
     Snapshots of an ID are one repository by a shared address or first
     commit (:func:`repository_groups`), and only a snapshot that names both
-    joins, say, a shallow clone's snapshots to those of a clone whose remote
-    is a path. Where removing snapshots would leave a repository's kept
-    snapshots looking like two, the newest that names each address and
-    first commit together is kept, and nothing more: an old address no
-    kept snapshot needs keeps nothing. Where the only snapshots kept of the
-    one repository there is name no repository (made by a ChartBook from
-    before), its newest that names it is kept, so that a pin that recorded
-    the repository still finds it.
+    says that an address and a first commit go together. So, for each
+    repository, of the snapshots that name both (the newest of each address
+    and first commit, one dated a little ahead only where no other names
+    them):
+
+    - all of them, where removing them would leave the kept snapshots
+      looking like two repositories;
+    - for each first commit a kept snapshot names with no address (a clone
+      whose remote is a path), the newest that names it with an address,
+      so that a dependency that names the repository's address still takes
+      that snapshot;
+    - all of them, where the only snapshots kept of the one repository there
+      is name no repository (made by a ChartBook from before); or, if none
+      names both, the newest that names the repository at all.
+
+    An address or first commit that no kept snapshot needs keeps nothing.
     """
     kept = {taken.path for taken, _ in plan.keep}
     removable = {taken.path: taken for taken, _ in plan.remove}
     rescued: dict = {}
+
+    def keep(taken, why: str) -> None:
+        if taken.path in removable and taken.path not in rescued:
+            rescued[taken.path] = (taken, why)
+
     for whole in groups.values():
         named, unnamed = repository_groups(whole)
         for group in named:
             held = [taken for taken in group if taken.path in kept]
+            holders: dict = {}
+            for taken in group:
+                if taken.repository and taken.first_commit:
+                    pair = (repository_key(taken.repository), taken.first_commit)
+                    if not made_in_the_future(taken, now) or pair not in holders:
+                        holders[pair] = taken
             if len(repository_groups(held)[0]) > 1:
-                holders: dict = {}
-                for taken in group:
-                    if taken.repository and taken.first_commit:
-                        pair = (repository_key(taken.repository), taken.first_commit)
-                        # The newest that is not dated ahead; one dated ahead only if there is none
-                        if not made_in_the_future(taken, now) or pair not in holders:
-                            holders[pair] = taken
                 for taken in holders.values():
-                    if taken.path in removable:
-                        rescued[taken.path] = (taken, "it names its repository's address and first commit together, which joins its snapshots")
+                    keep(taken, "it names its repository's address and first commit together, which joins its snapshots")
+            addressed = {taken.first_commit for taken in held if taken.repository and taken.first_commit}
+            for first in {taken.first_commit for taken in held if not taken.repository and taken.first_commit} - addressed:
+                naming = [taken for (_, commit), taken in holders.items() if commit == first]
+                if naming:
+                    keep(max(naming, key=lambda taken: taken.made_at), "it names the address of a kept snapshot's first commit")
             if not held and len(named) == 1 and any(taken.path in kept for taken in unnamed):
-                present = [taken for taken in group if not made_in_the_future(taken, now)] or group
-                if present[-1].path in removable:
-                    rescued[present[-1].path] = (present[-1], "it is the newest that names its repository")
+                if holders:
+                    for taken in holders.values():
+                        keep(taken, "it is the newest that names its repository")
+                else:
+                    present = [taken for taken in group if not made_in_the_future(taken, now)] or group
+                    keep(present[-1], "it is the newest that names its repository")
     if rescued:
         plan.remove = [(taken, why) for taken, why in plan.remove if taken.path not in rescued]
         plan.keep.extend(rescued.values())

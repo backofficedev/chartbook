@@ -799,6 +799,84 @@ class TestWhatTheFifthReviewFound:
         assert ahead in [t.made_at for t, _ in plan.keep]
 
 
+class TestWhatTheSixthReviewFound:
+    def _gone(self, work):
+        from chartbook.store import default_store
+
+        store = default_store()
+        for taken in snapshot.all_snapshots(store):
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n")
+        return store
+
+    def test_a_named_pin_on_a_clones_snapshot_keeps_what_names_its_address(self, tmp_path):
+        from datetime import datetime, timezone
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        _record(real, made_at="2026-09-01T00:00:00.000000Z")  # the main checkout
+        agent = "2026-10-01T00:00:00.000000Z"
+        _record(real, made_at=agent, repository="")  # an agent's clone, a path remote
+        forecast = _forecast(work / "forecast", {"acme/rates": {"repository": A}})
+        lock.pin(forecast)
+        assert _pinned(forecast)["snapshot"] == agent
+        store = self._gone(work)
+        plan = snapshot.plan_removals(store, {(real.commit, agent)}, set(), keep_days=7, now=datetime(2026, 10, 16, tzinfo=timezone.utc))
+        assert ("2026-09-01T00:00:00.000000Z", "it names the address of a kept snapshot's first commit") in [(t.made_at, w) for t, w in plan.keep]
+        for taken, _ in plan.remove:
+            taken.path.unlink()
+        assert not lock.update(forecast).problems
+
+    def test_where_only_unnamed_are_kept_every_address_and_first_commit_stays(self, tmp_path):
+        from datetime import datetime, timezone
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        _record(real, made_at="2026-09-01T00:00:00.000000Z")  # the main checkout
+        _record(real, made_at="2026-09-10T00:00:00.000000Z", repository="")  # an agent's clone
+        _record(real, made_at="2026-10-01T00:00:00.000000Z", repository="", first_commit="")  # an older ChartBook
+        store = self._gone(work)
+        plan = snapshot.plan_removals(store, set(), set(), keep_days=7, now=datetime(2026, 10, 16, tzinfo=timezone.utc))
+        assert ("2026-09-01T00:00:00.000000Z", "it is the newest that names its repository") in [(t.made_at, w) for t, w in plan.keep]
+        for taken, _ in plan.remove:
+            taken.path.unlink()
+        forecast = _forecast(work / "forecast", {"acme/rates": {"repository": A}})
+        assert not lock.pin(forecast).problems
+
+    def test_keep_lineage_covers_what_keeps_a_repository_whole(self, tmp_path):
+        from datetime import datetime, timezone
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        fred = ("f" * 40, "2026-08-01T00:00:00.000000Z")
+        _record(real, pipeline="acme/fred", commit=fred[0], made_at=fred[1])
+        made_from = [{"id": "acme/fred", "via": "store", "location": {"kind": "store", "pipeline": "acme/fred", "commit": fred[0]}, "snapshot": fred[1]}]
+        _record(real, made_at="2026-09-01T00:00:00.000000Z", inputs=made_from)  # the main checkout
+        _record(real, made_at="2026-10-01T00:00:00.000000Z", first_commit="")  # CI, pinned
+        _record(real, made_at="2026-10-15T00:00:00.000000Z", repository="")  # an agent's clone
+        _record(real, pipeline="acme/fred", commit=fred[0], made_at="2026-10-14T00:00:00.000000Z")  # fred's newest
+        store = self._gone(work)
+        plan = snapshot.plan_removals(
+            store, {(real.commit, "2026-10-01T00:00:00.000000Z")}, set(), keep_days=7, keep_lineage=True,
+            now=datetime(2026, 10, 16, tzinfo=timezone.utc),
+        )
+        assert fred in [(t.commit, t.made_at) for t, _ in plan.keep]
+
+    def test_a_pin_that_takes_an_unnamed_snapshot_says_so(self, tmp_path):
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        real.path.unlink()
+        later = _again(work / "real", 5.0, "Later")
+        later.path.unlink()
+        _record(later, repository="", first_commit="")
+        (event,) = [e for e in lock.update(forecast).events if e.status == "unchecked"]
+        assert "names no repository" in event.detail
+
+
 def dataclasses_replace_assets(taken, marker: str):
     """A copy of a snapshot holding another version of its model, as if built again."""
     import dataclasses
