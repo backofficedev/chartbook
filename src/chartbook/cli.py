@@ -1779,6 +1779,8 @@ def _echo_pin_report(report):
                     f"  [dependencies] now says {event.detail}. It stays pinned "
                     f"where it was: `chartbook update {dependency}` follows it."
                 )
+            elif event.status == "passed_over":
+                click.echo(f"  {event.detail}.")
 
         for event in assets:
             if event.status == "moved":

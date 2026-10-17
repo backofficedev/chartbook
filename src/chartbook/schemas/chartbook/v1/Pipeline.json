@@ -146,12 +146,12 @@
               },
               "repository": {
                 "type": "string",
-                "description": "For `kind: store`: the web address of the repository its snapshots are taken from, as [dependencies] names it or as the snapshot it was pinned from records it."
+                "description": "For `kind: store`, in chartbook.lock: the web address of the repository its snapshots are taken from, as the snapshot it was pinned from, or another of that repository's, records it."
               },
               "first_commit": {
                 "type": "string",
                 "pattern": "^[0-9a-f]{40}$",
-                "description": "For `kind: store`: the first commit of the repository it was pinned from. Later pins and updates keep to that repository."
+                "description": "For `kind: store`, in chartbook.lock: the first commit of the repository it was pinned from. Later pins and updates keep to that repository, by this or by its address."
               }
             }
           },

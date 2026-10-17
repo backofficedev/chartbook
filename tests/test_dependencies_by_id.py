@@ -445,13 +445,152 @@ class TestWhatTheSecondReviewFound:
         newest = dataclasses.replace(real, labels={"treasury": {"best": start}})
         # Another repository's record of the ID, holding a version with the same start
         other = dataclasses.replace(
-            real, repository="https://github.com/someone/rates", made_at="2026-01-01T00:00:00.000000Z",
+            real, repository="https://github.com/someone/rates", first_commit="f" * 40, made_at="2026-01-01T00:00:00.000000Z",
             assets={"treasury": {**real.assets["treasury"], "content_hash": held[:-1] + ("0" if held[-1] != "0" else "1")}},
         )
         from chartbook.store import default_store
 
         records, unresolved = snapshot.label_records(newest, "acme/rates", default_store(), found=[other, newest])
         assert unresolved == [] and list(records) == ["acme/rates:treasury@best"]
+
+
+def _again(repository: Path, value: float, message: str, made_at=None):
+    """Another commit of a repository `_another` made, snapshotted."""
+    _rates(repository / "rates", value)
+    (repository / "rates" / "notes.txt").write_text(f"{message}\n")
+    _commit(repository, message)
+    return snapshot.make(repository / "rates", made_at=made_at).snapshot
+
+
+class TestWhatTheThirdReviewFound:
+    def test_an_unreadable_record_does_not_stop_a_pin(self, elsewhere):
+        from chartbook.store import default_store
+
+        work, first, second = elsewhere
+        newer = default_store().root / "snapshots" / ("e" * 40) / "_root"
+        newer.mkdir(parents=True)
+        (newer / "20260101T000000.000000Z.json").write_text(json.dumps({"schema": "chartbook/snapshot/v9"}))
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        assert _pinned(forecast)["location"]["commit"] == second.commit
+
+    def test_one_with_no_first_commit_does_not_take_a_pin_from_a_repository_with_no_remote(self, elsewhere):
+        import dataclasses
+
+        from chartbook.store import default_store
+
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        other = _another(work, "shallow", 666.0, remote="https://github.com/someone-else/rates")
+        # As a shallow clone records it: an address, and no first commit
+        other.path.unlink()
+        snapshot._write(dataclasses.replace(other, first_commit=""), default_store())
+        report = lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == second.commit
+        assert _pinned(forecast)["location"]["first_commit"] == second.first_commit
+        assert any(e.status == "passed_over" and "someone-else/rates" in e.detail for e in report.events)
+
+    def test_a_rewritten_history_at_the_same_address_is_followed(self, tmp_path):
+        work = tmp_path.resolve()
+        _another(work, "real", 4.0, remote="https://github.com/acme/rates")
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        # The owner starts the history again, as filter-repo would
+        _git(work / "real", "checkout", "--quiet", "--orphan", "fresh")
+        rewritten = _again(work / "real", 5.0, "Fresh start")
+        assert rewritten.first_commit != _pinned(forecast)["location"]["first_commit"]
+        lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == rewritten.commit
+        assert _pinned(forecast)["location"]["first_commit"] == rewritten.first_commit
+
+    def test_a_label_survives_a_new_address(self, tmp_path):
+        from chartbook.identity import clear_git_remote_cache
+
+        work = tmp_path.resolve()
+        repository = work / "model"
+        folder = repository / "model"
+        (folder / "_output").mkdir(parents=True)
+        manifest = {"project": {"id": "acme/model"}, "models": {"m": {"path": "./_output/m.json"}}}
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (folder / "_output" / "m.json").write_text("v1")
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "remote", "add", "origin", "https://github.com/oldorg/model")
+        (repository / ".gitignore").write_text("_output/\nchartbook.lock\n")
+        _commit(repository)
+        v1 = snapshot.make(folder, made_at="2026-01-01T00:00:00.000000Z").snapshot
+        start = v1.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
+        _git(repository, "remote", "set-url", "origin", "https://github.com/neworg/model")
+        clear_git_remote_cache()
+        manifest["models"]["m"]["aliases"] = {"champion": start}
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (folder / "_output" / "m.json").write_text("v2")
+        _commit(repository, "Champion")
+        snapshot.make(folder)
+        forecast = _forecast(work / "forecast", {"acme/model": {}})
+        report = lock.pin(forecast)
+        assert [e.status for e in report.events if e.asset == "acme/model:model/m@champion"] == ["pinned"]
+
+    def test_a_clone_with_a_path_remote_is_its_repository(self, tmp_path):
+        work = tmp_path.resolve()
+        _another(work, "real", 4.0, remote="https://github.com/acme/rates")
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        _git(work, "clone", "--quiet", str(work / "real"), str(work / "agent"))
+        by_the_agent = _again(work / "agent", 6.0, "From an agent's clone")
+        assert by_the_agent.repository == "" and by_the_agent.first_commit
+        lock.update(forecast)
+        entry = _pinned(forecast)
+        assert entry["location"]["commit"] == by_the_agent.commit
+        assert entry["location"]["repository"] == "https://github.com/acme/rates"  # what its repository is known as
+
+    def test_the_main_checkout_makes_its_own_snapshot_of_a_commit_a_clone_snapshotted(self, tmp_path):
+        work = tmp_path.resolve()
+        _another(work, "real", 4.0, remote="https://github.com/acme/rates")
+        _git(work, "clone", "--quiet", str(work / "real"), str(work / "agent"))
+        by_the_agent = _again(work / "agent", 6.0, "Shared")
+        _git(work / "real", "pull", "--quiet", str(work / "agent"), "main")
+        _rates(work / "real" / "rates", 6.0)
+        report = snapshot.make(work / "real" / "rates")
+        assert report.made and report.snapshot.commit == by_the_agent.commit
+        assert report.snapshot.repository == "https://github.com/acme/rates"
+
+    def test_gc_keeps_within_each_repository(self, tmp_path):
+        from chartbook.store import default_store
+
+        work = tmp_path.resolve()
+        older = _another(work, "real", 4.0, remote="https://github.com/acme/rates", made_at="2026-01-01T00:00:00.000000Z")
+        newest = _again(work / "real", 4.5, "Second", made_at="2026-01-02T00:00:00.000000Z")
+        copy = _another(work, "copy", 9.0)  # newer, another repository with the same ID
+        for taken in (older, newest, copy):
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n")
+        plan = snapshot.plan_removals(default_store(), set(), set(), keep_days=7)
+        kept = {t.commit for t, why in plan.keep if why == "it is the newest of its pipeline"}
+        assert kept == {newest.commit, copy.commit}
+
+    def test_an_empty_repository_in_the_lockfile_is_none(self, tmp_path):
+        """As a hand edit or a merge might leave it."""
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote="https://github.com/acme/rates")
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        path = forecast / lock.LOCK_FILE
+        document = json.loads(path.read_text())
+        (pipeline,) = [record for record in document["records"] if record.get("kind") == "Pipeline"]
+        location = pipeline["dependencies"][0]["location"]
+        location["repository"] = ""
+        del location["first_commit"]
+        path.write_text(json.dumps(document))
+        newer = _again(work / "real", 5.0, "Newer")
+        lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == newer.commit != real.commit
+
+    def test_a_failed_first_pin_is_not_said_to_be_pinned_from_elsewhere(self, elsewhere):
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {"acme/rates": {"repository": "https://github.com/acme/rates-new"}})
+        lock.pin(forecast)
+        messages = [p.message for p in lock.verify(forecast).problems]
+        assert messages and not any("is pinned from" in m for m in messages)
 
 
 class TestTheManifestEdit:

@@ -700,11 +700,72 @@ def _first_commit(top: Path) -> str:
     return _first_commit_in(roots[-1]) if roots else ""
 
 
-def same_repository(first: "Snapshot", second: "Snapshot") -> bool:
-    """Whether two snapshots may have been made in one repository: by its address and its first commit, where both record one."""
-    if first.repository and second.repository and repository_key(first.repository) != repository_key(second.repository):
-        return False
-    return not (first.first_commit and second.first_commit and first.first_commit != second.first_commit)
+def identity_keys(taken: "Snapshot") -> set:
+    """What names the repository a snapshot was made in: its address and its first commit, those it records."""
+    keys = set()
+    if repository_key(taken.repository):
+        keys.add(("address", repository_key(taken.repository)))
+    if taken.first_commit:
+        keys.add(("first", taken.first_commit))
+    return keys
+
+
+def repository_groups(snapshots: list) -> tuple[list[list], list]:
+    """Snapshots of one pipeline ID, grouped by the repository each was made in.
+
+    Two snapshots are of one repository when they name one address or one
+    first commit, and so on through the rest: a repository whose remote
+    changed keeps its first commit, one whose history was rewritten keeps
+    its address, and a clone whose remote is a path on disk keeps its
+    first commit. A fork has its original's first commit and is taken as
+    one repository with it, as another branch would be.
+
+    :returns: The groups, each in the order given, and the snapshots that
+        name neither (made before snapshots recorded their repository).
+    """
+    parent: dict = {}
+
+    def root(key):
+        while parent.setdefault(key, key) != key:
+            parent[key] = parent[parent[key]]
+            key = parent[key]
+        return key
+
+    for taken in snapshots:
+        keys = sorted(identity_keys(taken))
+        for key in keys[1:]:
+            parent[root(key)] = root(keys[0])
+        if keys:
+            root(keys[0])
+    groups: dict = {}
+    unnamed = []
+    for taken in snapshots:
+        keys = sorted(identity_keys(taken))
+        if keys:
+            groups.setdefault(root(keys[0]), []).append(taken)
+        else:
+            unnamed.append(taken)
+    return list(groups.values()), unnamed
+
+
+def by_repository(snapshots: list) -> list[list]:
+    """Snapshots of one pipeline, a list for each repository; those that name none go with the one repository there is, if one.
+
+    For what keeps and resolves within a repository: ``store gc``'s newest
+    and labels, and the versions a label is looked up among. A snapshot
+    that names no repository was made before snapshots recorded one, and
+    is taken as the named repository's when there is only one.
+    """
+    groups, unnamed = repository_groups(snapshots)
+    if len(groups) == 1:
+        merged = set(map(id, groups[0] + unnamed))
+        return [[taken for taken in snapshots if id(taken) in merged]]
+    return groups + ([unnamed] if unnamed else [])
+
+
+def _same_identity(first: "Snapshot", second: "Snapshot") -> bool:
+    """Whether two snapshots record the same address and the same first commit."""
+    return repository_key(first.repository) == repository_key(second.repository) and first.first_commit == second.first_commit
 
 
 def find(store: Store, commit: str, subdirectory: str = "") -> list[Snapshot]:
@@ -1035,9 +1096,14 @@ def label_records(
     records: dict[str, dict] = {}
     unresolved: list[tuple[str, str, str, str]] = []
     where = f"{newest.pipeline!r}" + (f" at {newest.subdirectory}" if newest.subdirectory else "")
-    # The versions of the repository it was made in: another that gives
-    # itself the same ID cannot make one of its labels ambiguous
-    found = [taken for taken in (found if found is not None else all_snapshots(store)) if same_repository(taken, newest)]
+    if newest.labels:
+        # The versions of the repository it was made in: another that gives
+        # itself the same ID cannot make one of its labels ambiguous. A
+        # record that cannot be read is no version of it.
+        if found is None:
+            found, _ = readable_snapshots(store)
+        of_it = [taken for taken in found if taken.pipeline == newest.pipeline and taken.subdirectory == newest.subdirectory]
+        found = next((group for group in by_repository(of_it + [newest]) if any(t is newest for t in group)), [newest])
     for name, labels in sorted(newest.labels.items()):
         versions = None
         for label, start in sorted(labels.items()):
@@ -1245,9 +1311,10 @@ def plan_removals(
     groups: dict[tuple[str, str], list[Snapshot]] = {}
     for taken in all_snapshots(store):
         groups.setdefault((taken.pipeline, taken.subdirectory), []).append(taken)
-    for group in groups.values():
+    for group in [part for whole in groups.values() for part in by_repository(whole)]:
         # Not one dated after now: it would stay "the newest" while the real
-        # newest went unkept
+        # newest went unkept. Within one repository: another that gives
+        # itself the same ID takes nothing from this one's keep.
         present = [taken for taken in group if not made_in_the_future(taken, now)]
         newest = present[-1] if present else None
         labels = {} if aggressive else _labels_in(store, group, newest)
@@ -1760,7 +1827,7 @@ def make(
     documents, documents_skipped = document_paths(directory, raw)
     # Not one dated after now: it would stand for this commit for as long as its date says
     before = [taken for taken in find(store, code.commit, code.subdirectory) if not made_in_the_future(taken)]
-    if before and before[0].content() == snapshot.content():
+    if before and before[0].content() == snapshot.content() and _same_identity(before[0], snapshot):
         # The same bytes; made again only to say more than the one before:
         # its documents, that a run built them, or the commit's tags, since
         # a commit is often tagged after it is built

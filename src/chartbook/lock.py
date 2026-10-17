@@ -269,6 +269,8 @@ class PinEvent:
             ``dropped`` (no longer declared, so no longer pinned),
             ``outside`` (declared with a path that reaches outside the
             dependency's own files, which is not pinned),
+            ``passed_over`` (a dependency named by its ID: a newer snapshot
+            of its ID was made in another repository, and not taken),
             ``let_go`` (an update moved a ``git`` dependency to another
             commit, and this was built from the one before and is not built
             at the new one, so it is no longer pinned). For a
@@ -493,19 +495,17 @@ def _sync(
             # repository the manifest names, or else the one it was first
             # pinned from
             pinned_from = (was or {}).get("location", {})
-            pinned_from = pinned_from if pinned_from.get("kind") == "store" else {}
-            repository = entry.get("_repository") or pinned_from.get("repository")
-            # Its first commit, recorded at the first pin, holds while the
-            # manifest names no other repository than the one pinned from
-            first_commit = pinned_from.get("first_commit") if (
-                not entry.get("_repository")
-                or repository_key(entry["_repository"]) == repository_key(pinned_from.get("repository"))
-            ) else None
+            pinned_from = pinned_from if pinned_from.get("kind") == "store" and pinned_from.get("commit") else {}
+            named = bool(entry.get("_repository"))
+            # The repository the manifest names, by its address alone; or
+            # the one it was first pinned from, by address or first commit
+            repository = entry["_repository"] if named else (pinned_from.get("repository") or None)
+            first_commit = None if named else (pinned_from.get("first_commit") or None)
             records, listed = _sync_from_snapshots(
                 key, None, was, listed, had, may_move, store, report,
-                newest_of=lambda entry=entry, repository=repository, first_commit=first_commit: _newest_in_store(
+                newest_of=lambda entry=entry, repository=repository, first_commit=first_commit, named=named: _newest_in_store(
                     entry["_store"], entry.get("commit"), store, repository,
-                    found=snapshots_in_store(), first_commit=first_commit,
+                    found=snapshots_in_store(), first_commit=first_commit, named=named,
                 ),
             )
         elif from_folder:
@@ -768,7 +768,7 @@ def _declared_elsewhere(was: dict, now: dict) -> bool:
     # A dependency named by its ID records the repository its snapshot came
     # from; that is where the manifest says it is only when it names one.
     # Its first commit the manifest never names.
-    named = "repository" in now.get("location", {})
+    named = "repository" in now.get("location", {}) and bool(was.get("location", {}).get("commit"))
 
     def declared(entry: dict) -> dict:
         location = {
@@ -796,7 +796,8 @@ def _describe(location: dict) -> str:
     """Where a dependency is, in a few words, for a message."""
     if location.get("kind") == "store":
         at = f" at {location['at']}" if location.get("at") else ""
-        return f"{location.get('pipeline')}{at}, from the store"
+        made_in = f", made in {location['repository']}" if location.get("repository") else ""
+        return f"{location.get('pipeline')}{at}, from the store{made_in}"
     if location.get("kind") == "git":
         rev = f" at {location['rev']}" if location.get("rev") else ""
         return f"{location['url']}{rev}"
@@ -881,7 +882,8 @@ def _newest_in_store(
     repository: Optional[str] = None,
     found: Optional[list] = None,
     first_commit: Optional[str] = None,
-) -> tuple[Optional["snapshot.Snapshot"], str]:
+    named: bool = False,
+) -> tuple[Optional["snapshot.Snapshot"], str, dict]:
     """The newest snapshot of a pipeline in the store, by its ID; None, and why, if there is none to take.
 
     "Newest" is the one made last, by its owner's clock, on whatever branch;
@@ -889,82 +891,117 @@ def _newest_in_store(
     snapshot dated after now is never the newest.
 
     Two repositories can give themselves one ID by accident, a copy of a
-    project say, so the snapshots are kept to one repository, by its web
-    address and its first commit as each snapshot records them: the ones
-    the manifest names or the dependency was first pinned from
-    (*repository*, *first_commit*). A snapshot with no address is not
-    taken once an address is known; one with no first commit (made before
-    snapshots recorded it, or in a shallow clone) is judged by its address.
-    With nothing known yet, an ID that more than one repository claims is
-    not pinned until the manifest says which, and snapshots that name no
-    repository at all are left out when one repository is named. This
-    guards against an accident only: anyone who can write to a store can
-    write a record that claims any repository.
+    project say, so the snapshots are kept to one repository, as
+    :func:`chartbook.snapshot.repository_groups` groups them by address and
+    first commit:
+
+    - *named*: the manifest names *repository*. Only snapshots made at that
+      address are taken, and those with no address whose first commit is
+      one of theirs (a clone whose remote is a path). This is how one
+      repository is told from its fork.
+    - Otherwise *repository* and *first_commit* are what the dependency was
+      first pinned from, and its repository is the group either is in: it
+      may have moved, or had its history rewritten, and still be found.
+    - With neither, an ID that more than one repository claims is not
+      pinned until the manifest says which; snapshots that name no
+      repository at all are left out when one repository is named.
+
+    This guards against an accident only: anyone who can write to a store
+    can write a record that claims any repository.
+
+    :returns: The snapshot; why there is none; and what to record of its
+        repository (``repository``, ``first_commit``), with a note of any
+        newer snapshot of the ID that another repository made and that was
+        not taken (``passed_over``).
     """
     if found is None:
         found, _ = snapshot.readable_snapshots(store)
-    of_it = [t for t in found if t.pipeline == pipeline_id and (not at or t.commit.startswith(at))]
+    every = [t for t in found if t.pipeline == pipeline_id]
+    of_it = [t for t in every if not at or t.commit.startswith(at)]
     ahead = [t for t in of_it if snapshot.made_in_the_future(t)]
     mine = [t for t in of_it if t not in ahead]
     where = f" at a commit starting {at}" if at else ""
     dated = f"; {len(ahead)} dated after now are not taken" if ahead else ""
-    say_which = (
-        "Say which with repository = \"...\" in its [dependencies] entry, or name a commit of "
-        "it with commit = \"...\""
-    )
-    if repository is not None or first_commit:
-        wanted = repository_key(repository) if repository is not None else None
+    groups, _ = snapshot.repository_groups(every)
+    group_of = {id(t): index for index, group in enumerate(groups) for t in group}
+    keys_of = [set().union(*(snapshot.identity_keys(t) for t in group)) for group in groups]
+
+    if named:
+        wanted = repository_key(repository)
+        firsts = {t.first_commit for t in every if repository_key(t.repository) == wanted and t.first_commit}
 
         def made_there(taken) -> bool:
-            if wanted is not None and repository_key(taken.repository) != wanted:
-                return False
-            return not (first_commit and taken.first_commit and taken.first_commit != first_commit)
+            if taken.repository:
+                return repository_key(taken.repository) == wanted
+            return bool(taken.first_commit) and taken.first_commit in firsts
 
-        others = sorted({_made_in(t) for t in mine if not made_there(t)})
-        mine = [t for t in mine if made_there(t)]
-        if not mine:
-            there = repository or f"the repository whose first commit is {first_commit[:7]}"
-            claim = f"; snapshots from {', '.join(others)} claim its ID too, and are not taken" if others else ""
+        there = repository
+    elif repository or first_commit:
+        known = set()
+        if repository_key(repository):
+            known.add(("address", repository_key(repository)))
+        if first_commit:
+            known.add(("first", first_commit))
+        chosen = {index for index, keys in enumerate(keys_of) if keys & known}
+
+        def made_there(taken) -> bool:
+            return group_of.get(id(taken)) in chosen
+
+        there = f"the repository it was first pinned from ({repository or f'first commit {first_commit[:7]}'})"
+    else:
+        claiming = sorted({group_of[id(t)] for t in mine if id(t) in group_of})
+        if len(claiming) > 1:
+            shown = sorted({_made_in(max((t for t in mine if group_of.get(id(t)) == index), key=lambda t: t.made_at)) for index in claiming})
+            return None, (
+                f"snapshots from {len(claiming)} repositories claim the ID {pipeline_id}: {', '.join(shown)}. "
+                f"Say which with repository = \"...\" in its [dependencies] entry, or name a commit of "
+                f"it with commit = \"...\""
+            ), {}
+
+        def made_there(taken) -> bool:
+            return not claiming or group_of.get(id(taken)) == claiming[0]
+
+        there = None
+
+    taken = [t for t in mine if made_there(t)]
+    if not taken:
+        others = sorted({_made_in(t) for t in mine})
+        claim = f"; snapshots from {', '.join(others)} claim its ID too, and are not taken" if others and there else ""
+        if there:
             return None, (
                 f"the store at {store} has no snapshot of {pipeline_id}{where} made in {there}{claim}{dated}. "
                 f"If it has moved, say where with repository = \"...\" in its [dependencies] entry"
-            )
-    else:
-        # The repository each snapshot names: by its address, or for one
-        # with no remote by its first commit, which one with an address
-        # and the same first commit may give it
-        addressed: dict[str, set[str]] = {}
-        for taken in mine:
-            if taken.repository and taken.first_commit:
-                addressed.setdefault(taken.first_commit, set()).add(repository_key(taken.repository))
+            ), {}
+        return None, (
+            f"the store at {store} has no snapshot of {pipeline_id}{where}{dated}. Its owner makes one "
+            f"with `chartbook snapshot`; on another machine, the store must be the one theirs "
+            f"syncs with or shares ([store] url)"
+        ), {}
+    newest = max(taken, key=lambda t: t.made_at)
 
-        def which(taken) -> Optional[str]:
-            if taken.repository:
-                return repository_key(taken.repository)
-            if taken.first_commit:
-                known = addressed.get(taken.first_commit, set())
-                return next(iter(known)) if len(known) == 1 else f"first commit {taken.first_commit}"
-            return None
-
-        groups: dict[Optional[str], list] = {}
-        for taken in mine:
-            groups.setdefault(which(taken), []).append(taken)
-        named = [identity for identity in groups if identity is not None]
-        if len(named) > 1:
-            shown = sorted({_made_in(groups[identity][-1]) for identity in named})
-            return None, (
-                f"snapshots from {len(named)} repositories claim the ID {pipeline_id}: "
-                f"{', '.join(shown)}. {say_which}"
-            )
-        if named:
-            mine = groups[named[0]]
-    if mine:
-        return max(mine, key=lambda t: t.made_at), ""
-    return None, (
-        f"the store at {store} has no snapshot of {pipeline_id}{where}{dated}. Its owner makes one "
-        f"with `chartbook snapshot`; on another machine, the store must be the one theirs "
-        f"syncs with or shares ([store] url)"
-    )
+    # What to record of its repository: its own address and first commit,
+    # or, for one made in a shallow clone or a clone with no address, what
+    # its repository's other snapshots say, or what was known already
+    in_group = group_of.get(id(newest))
+    group = groups[in_group] if in_group is not None else [newest]
+    group_keys = keys_of[in_group] if in_group is not None else set()
+    latest = sorted(group, key=lambda t: t.made_at, reverse=True)
+    identity = {
+        "repository": newest.repository
+        or (repository if repository and ("address", repository_key(repository)) in group_keys else "")
+        or next((t.repository for t in latest if t.repository), ""),
+        "first_commit": newest.first_commit
+        or (first_commit if first_commit and ("first", first_commit) in group_keys else "")
+        or next((t.first_commit for t in latest if t.first_commit), ""),
+    }
+    newer = [t for t in mine if not made_there(t) and t.made_at > newest.made_at]
+    if newer:
+        identity["passed_over"] = (
+            f"{len(newer)} newer snapshot(s) of {pipeline_id}, from {', '.join(sorted({_made_in(t) for t in newer}))}, "
+            f"not taken: another repository's. If it is the one now, say so with repository = \"...\" in its "
+            f"[dependencies] entry, then `chartbook update`"
+        )
+    return newest, "", identity
 
 
 def _sync_from_snapshots(
@@ -1007,8 +1044,11 @@ def _sync_from_snapshots(
     locked_made = (was or {}).get("snapshot")
     why = ""
     code = None
+    identity: dict = {}
     if newest_of is not None:
-        newest, why = newest_of()
+        newest, why, identity = newest_of()
+        if identity.get("passed_over"):
+            report.events.append(PinEvent("passed_over", key, detail=identity["passed_over"]))
     else:
         try:
             newest, code = snapshot.newest_for(directory, store)
@@ -1192,10 +1232,9 @@ def _sync_from_snapshots(
     if location.get("kind") == "store":
         # The repository it came from, which later pins and updates keep to
         location.pop("repository", None)
-        if newest.repository:
-            location["repository"] = newest.repository
-        if newest.first_commit:
-            location["first_commit"] = newest.first_commit
+        for name in ("repository", "first_commit"):
+            if identity.get(name):
+                location[name] = identity[name]
     listed = {**listed, "location": location, "snapshot": newest.made_at}
     return records, listed
 
