@@ -443,8 +443,9 @@ class TestTrainedOnADependency:
         assert "[models.m]: trained_on:" in str(e.value)
         assert "ambiguous in [dependencies]" in str(e.value)
 
-    def test_declaring_is_not_pinning(self, two_pipelines):
-        """Its assets resolve to pinned copies, so there has to be a pin."""
+    def test_declaring_is_not_pinning(self, two_pipelines, monkeypatch):
+        """Its assets resolve to pinned copies, so there has to be a pin: in a batch run, one made before."""
+        monkeypatch.setenv("CHARTBOOK_BATCH", "1")
         downstream, _ = two_pipelines
         _depend(downstream, rates={"path": "../rates"})
         with pytest.raises(AssetNotPinnedError, match="Run `chartbook pin`") as e:

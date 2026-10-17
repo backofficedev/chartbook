@@ -228,7 +228,10 @@ def get_data_path(
     its own dataframes, and ``data.path("pipeline:name")`` for the pinned
     copy of a declared dependency's. This remains the way to find a
     dataframe through a catalog, from a notebook that belongs to no
-    pipeline, say. It gives the file in that pipeline's own directory.
+    pipeline, say. It gives the file in the pipeline's newest snapshot in
+    the store (in a pipeline that declares it, its pin); with no snapshot,
+    the file in the folder the catalog lists, with a
+    :class:`~chartbook.resolve.WorkingVersionWarning`.
 
     :param pipeline: The pipeline reference — a bare name
         (``"crsp_treasury"``, if unambiguous), a scoped ID
@@ -347,11 +350,22 @@ def load(
     >>> mine = data.load("term_premium")  # doctest: +SKIP
     >>> theirs = data.load("yield_curve:fed_yield_curve")  # doctest: +SKIP
 
-    The other pipeline must be declared in ``[dependencies]`` and pinned
-    with ``chartbook pin``. No catalog is involved.
+    The other pipeline is declared in ``[dependencies]`` and pinned with
+    ``chartbook pin``, or by the first read: one declared and not pinned
+    is pinned then, to its newest snapshot, and stderr says so. One not
+    declared is read from its newest snapshot with an
+    :class:`~chartbook.resolve.UnrecordedReadWarning`, and one with no
+    snapshot from its folder with a
+    :class:`~chartbook.resolve.WorkingVersionWarning`. Under
+    ``chartbook run``'s ``build`` (``CHARTBOOK_BATCH=1``) only a pin is
+    read. Outside any pipeline, the newest snapshot is read and nothing is
+    said.
 
-    **Through a catalog**, with a pipeline and a dataframe. This reads the
-    file in the other pipeline's own directory, as it is now:
+    **Through a catalog**, with a pipeline and a dataframe. This reads by
+    the same rules: its pin, in a pipeline that declares it; otherwise its
+    newest snapshot in the store; with no snapshot, the file in the folder
+    the catalog lists, as it is now, with a
+    :class:`~chartbook.resolve.WorkingVersionWarning`:
 
     >>> lf = data.load(pipeline="yield_curve", dataframe="repo_public",
     ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
@@ -384,12 +398,15 @@ def load(
     :rtype: pandas.DataFrame or polars.DataFrame or polars.LazyFrame
     :raises AssetNotDeclaredError: If the manifest declares no such dataframe.
     :raises DependencyNotDeclaredError: If a reference names a pipeline that
-        ``[dependencies]`` does not declare.
+        ``[dependencies]`` does not declare, in a batch run, or when it has
+        neither a snapshot nor a folder here.
     :raises AssetNotPinnedError: If another pipeline's dataframe has no
-        pinned copy in the store.
+        copy to read: no pin in a batch run, and otherwise no snapshot and
+        no folder here.
     :raises CatalogNotConfiguredError: If a catalog is needed and none is
-        configured.
-    :raises KeyError: If the pipeline or dataframe is not in the catalog.
+        configured, and the store has no snapshot of the pipeline.
+    :raises KeyError: If the pipeline or dataframe is in neither the store
+        nor the catalog.
     :raises TypeError: If the arguments are neither one reference nor a
         pipeline and a dataframe.
     :raises ValueError: If *format* is not one of the supported values, or if

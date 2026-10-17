@@ -4,8 +4,8 @@
 A design document, written 2026-10-16 for the maintainer to choose between options. Each decision
 shows what a data scientist would write and see under each option, and which one is recommended.
 Status: **decided by the maintainer on 2026-10-16: 1a, 2c, 3b, 4b, 5b (silent), 6b.** Built by
-2026-10-17: 6b (#81), and 1a's dependency by ID from the store, with `commit` (#84). Being built:
-2c, 3b, 4b and 5b. Not yet: `rev` and `[resolve] default_host`, which need the repository.
+2026-10-17: 6b (#81), 1a's dependency by ID from the store, with `commit` (#84), and 2c, 3b, 4b
+and 5b (#85). Not yet: `rev` and `[resolve] default_host`, which need the repository.
 ```
 
 ## The story this serves
@@ -315,7 +315,9 @@ of a working folder warns.
 2. A dependency by ID, pinned from the store (1a without `default_host`, which is 1c), with
    `commit` and `rev`, and `chartbook add`. *Built, #84 (2026-10-17), with `commit`; `rev` moves to
    step 4, since it asks the repository.*
-3. The interactive rules (2c, 3b, 4b, 5b) and the batch variable. *Being built (2026-10-17).*
+3. The interactive rules (2c, 3b, 4b, 5b) and the batch variable. *Built, #85 (2026-10-17). As
+   built, a reference by the pipeline's own ID is refused unless a dependency is known to be that
+   pipeline, and the batch variable is set for `build` only.*
 4. `[resolve] default_host`, and building from git when there is no snapshot.
 
 ## For the maintainer to choose

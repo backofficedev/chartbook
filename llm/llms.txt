@@ -41,7 +41,7 @@ chartbook check              # CI gate: missing metadata, broken paths, dependen
 # (a catalog's also links each version's own llms.txt); read it first to find your way around a site
 chartbook path <name>        # Print the path chartbook.toml declares for a dataframe
 chartbook path chart/<name>  # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
-chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy in the store
+chartbook path <pipeline>:<name>  # another pipeline's asset: the pinned copy in the store (a first read pins it)
 chartbook path model/<name>@<version>  # a version of a model: by the start of its hash, or by a label from [models.<name>.aliases]
 chartbook path <dep>:model/<name>@champion  # another pipeline's labelled version, as pinned in chartbook.lock (pin reads labels from the snapshot; update moves them)
 chartbook index diff BEFORE AFTER [--json] [--exit-code]  # what changed between two builds, from their index.json: data, pins, versions, labels, staleness

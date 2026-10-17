@@ -217,6 +217,10 @@ lf = data.load(pipeline="sales", dataframe="sales_data",
 # Get data file path
 path = data.get_data_path(pipeline="sales", dataframe="sales_data")
 
+# Each of these reads the pipeline's newest snapshot in the store first (its pin, in a
+# pipeline that declares it), and its folder only when it has none, with a
+# WorkingVersionWarning saying so.
+
 # Get documentation content as a string
 docs = data.get_docs(pipeline="sales", dataframe="sales_data")
 

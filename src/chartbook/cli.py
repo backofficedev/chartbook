@@ -1675,7 +1675,7 @@ def data_get_path(pipeline, dataframe, catalog):
         click.echo("", err=True)
         click.echo("Run 'chartbook config' to set a default catalog.", err=True)
         raise SystemExit(1)
-    except (KeyError, ValueError) as e:
+    except (LookupError, OSError, ValueError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1)
 

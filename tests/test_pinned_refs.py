@@ -230,7 +230,8 @@ class TestWhatIsMissing:
             data.path("acme/rate:treasury", project_dir=pinned)
 
     def test_the_catalog_is_asked_where_an_undeclared_pipeline_is(self, pinned, work, monkeypatch):
-        """The chain's second step makes the error useful; it grants no access."""
+        """The chain's second step makes the error useful; it grants no access in a batch run."""
+        monkeypatch.setenv("CHARTBOOK_BATCH", "1")
         catalog = create_catalog_project(work / "cat")
         monkeypatch.setattr(
             resolve_module, "get_default_catalog_path", lambda: catalog / "chartbook.toml"
@@ -241,7 +242,8 @@ class TestWhatIsMissing:
         assert "Your catalog has it, as 'pipeline_a'." in message
         assert '    "pipeline_a" = { path = "../cat/pipelines/pipeline_a" }' in message
 
-    def test_a_dependency_that_has_not_been_pinned(self, downstream, store):
+    def test_a_dependency_that_has_not_been_pinned(self, downstream, store, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_BATCH", "1")  # a batch run does not pin on first read
         with pytest.raises(AssetNotPinnedError) as e:
             data.path("rates:treasury", project_dir=downstream)
         assert e.value.reason == "no_lockfile" and e.value.asset == "acme/rates:treasury"
@@ -251,7 +253,8 @@ class TestWhatIsMissing:
         assert "not to that pipeline's working directory" in message
         assert not store.root.exists()
 
-    def test_a_dependency_added_since_the_last_pin(self, pinned, work, store):
+    def test_a_dependency_added_since_the_last_pin(self, pinned, work, store, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_BATCH", "1")
         _write_manifest(work / "macro", {"dataframes": {"gdp": {"path": "./gdp.parquet", "docs": "d"}}})
         _write_manifest(
             pinned,
@@ -382,6 +385,7 @@ class TestPathCommand:
         assert result.stdout.strip().endswith("curve.html")
 
     def test_not_pinned_is_an_error_with_nothing_on_stdout(self, downstream, store, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_BATCH", "1")
         monkeypatch.chdir(downstream)
         result = self._path("rates:treasury")
         assert result.exit_code == 1 and result.stdout == ""
