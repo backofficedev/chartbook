@@ -27,7 +27,7 @@ CONNECT_ARGUMENTS = {
     "access_token", "auth_type", "credentials_provider", "password", "username",
     "session_configuration", "http_headers", "catalog", "schema", "use_cloud_fetch",
     "user_agent_entry", "query_tags", "staging_allowed_local_path", "use_kernel",
-    "enable_telemetry",
+    "enable_telemetry", "experimental_oauth_persistence",
 }
 
 
@@ -74,6 +74,8 @@ class Warehouse:
         self.duck = duckdb.connect(":memory:")
         self.connections = []
         self.queries = []
+        #: As a connector may: an empty result with no columns, its schema not sent
+        self.empty_without_schema = False
 
     def table(self, identifier: str, sql: str) -> None:
         """Make a table, ``catalog.schema.name``, from a DuckDB ``select``."""
@@ -97,6 +99,8 @@ class Connection:
         if arguments.get("catalog"):
             target = arguments["catalog"] + ("." + arguments["schema"] if arguments.get("schema") else "")
             self.duck.execute(f"use {target}")
+        elif arguments.get("schema"):
+            self.duck.execute(f"use {arguments['schema']}")
 
     def cursor(self):
         if self.closed:
@@ -137,6 +141,8 @@ class Cursor:
     def fetchall_arrow(self):
         rest = self._table.slice(self._at)
         self._at = self._table.num_rows
+        if rest.num_rows == 0 and self.connection.warehouse.empty_without_schema:
+            return pa.table({})
         return rest
 
     def fetchmany_arrow(self, size):
@@ -161,14 +167,16 @@ class Cursor:
         self.close()
 
 
-def install(monkeypatch, warehouse: Warehouse):
-    """Make ``from databricks import sql`` give a connector that reaches *warehouse*."""
+def install(monkeypatch, warehouse: Warehouse, *others: Warehouse):
+    """Make ``from databricks import sql`` give a connector that reaches *warehouse*, and *others*, by host."""
+    by_host = {w.host: w for w in (warehouse, *others)}
 
     def connect(server_hostname, http_path, access_token=None, **kwargs):
         unknown = set(kwargs) - CONNECT_ARGUMENTS
         if unknown:
             raise TypeError(f"connect() got unexpected keyword arguments {sorted(unknown)}")
-        if server_hostname != warehouse.host or http_path != warehouse.http_path:
+        warehouse = by_host.get(server_hostname)
+        if warehouse is None or http_path != warehouse.http_path:
             raise RequestError(f"no warehouse at {server_hostname}{http_path}")
         if kwargs.get("auth_type") != "databricks-oauth" and access_token != warehouse.token:
             raise RequestError("Invalid access token")

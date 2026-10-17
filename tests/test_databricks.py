@@ -202,12 +202,75 @@ class TestWhereTheTokenGoes:
         monkeypatch.setenv("DATABRICKS_HTTP_PATH", HTTP_PATH)
         assert connection_for("warehouse", f"databricks://{HOST}").http_path == HTTP_PATH
 
-    def test_oauth_signs_in_through_the_browser(self, monkeypatch, warehouse):
-        monkeypatch.setenv("DATABRICKS_HOST", HOST)
+    def test_oauth_signs_in_through_the_browser_once_for_the_process(self, monkeypatch, warehouse):
+        monkeypatch.setenv("DATABRICKS_TOKEN", TOKEN)  # the machine's url says otherwise, and wins
+        monkeypatch.setenv("CHARTBOOK_SOURCE_WAREHOUSE_URL", f"databricks://{HOST}?auth=oauth")
+        DatabricksBackend(PUBLIC_URL, "warehouse").connect().close()
+        DatabricksBackend(PUBLIC_URL, "warehouse").connect().close()
+        first, second = warehouse.connections
+        assert first.arguments["auth_type"] == "databricks-oauth"
+        assert first.arguments["access_token"] is None
+        # One store of sign-ins for the process: the browser is asked once
+        assert first.arguments["experimental_oauth_persistence"] is second.arguments["experimental_oauth_persistence"]
+
+    def test_a_manifest_does_not_say_how_to_sign_in(self, tmp_path):
+        with pytest.raises(ValueError, match="the machine's to say: put auth=oauth in CHARTBOOK_SOURCE_<NAME>_URL"):
+            validate_sources({"warehouse": {"backend": "databricks", "url": PUBLIC_URL + "&auth=oauth"}}, tmp_path)
+
+    def test_a_record_saying_oauth_does_not_override_the_machines_token(self, signed_in, warehouse):
         DatabricksBackend(PUBLIC_URL + "&auth=oauth", "warehouse").connect().close()
         (connection,) = warehouse.connections
-        assert connection.arguments["auth_type"] == "databricks-oauth"
-        assert connection.arguments["access_token"] is None
+        assert connection.arguments["access_token"] == TOKEN
+        assert "auth_type" not in connection.arguments
+
+    @pytest.mark.parametrize(
+        "written", [HOST, f"https://{HOST}", f"https://{HOST}/", f"{HOST}:443", f"https://{HOST}/?o=123", HOST.upper() + "."]
+    )
+    def test_the_ways_a_workspaces_address_is_written(self, monkeypatch, written):
+        monkeypatch.setenv("DATABRICKS_HOST", written)
+        monkeypatch.setenv("DATABRICKS_TOKEN", TOKEN)
+        assert connection_for("warehouse", PUBLIC_URL).host == HOST
+
+    def test_a_host_that_is_not_one_is_said(self, monkeypatch):
+        monkeypatch.setenv("DATABRICKS_HOST", "https://exa mple.com")
+        monkeypatch.setenv("DATABRICKS_TOKEN", TOKEN)
+        with pytest.raises(BackendError, match="DATABRICKS_HOST is not a workspace's address"):
+            connection_for("warehouse", PUBLIC_URL)
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            f"databricks://dapiLEAKED0123@{HOST}?http_path={HTTP_PATH}",
+            f"databricks://token:dapiLEAKED0123@{HOST}?http_path={HTTP_PATH}",
+            f"databricks://evil.com\\@{HOST}?http_path={HTTP_PATH}",
+        ],
+    )
+    def test_a_manifest_url_naming_a_user_does_not_load_and_is_not_repeated(self, tmp_path, url):
+        with pytest.raises(ValueError) as error:
+            validate_sources({"warehouse": {"backend": "databricks", "url": url}}, tmp_path)
+        assert "user" in str(error.value)
+        assert "dapiLEAKED0123" not in str(error.value)
+
+    def test_a_machine_url_the_parser_refuses_is_not_repeated(self, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_SOURCE_WAREHOUSE_URL", f"databricks://token\uff1adapiSECRET123@{HOST}?http_path=/x")
+        with pytest.raises(BackendError) as error:
+            connection_for("warehouse", PUBLIC_URL)
+        assert "not a url ChartBook can read" in str(error.value)
+        assert "dapiSECRET123" not in str(error.value)
+
+    def test_the_connectors_error_never_carries_the_token(self, signed_in, monkeypatch):
+        def refuse(**arguments):
+            raise RuntimeError(f"refused {arguments['access_token']}")
+
+        sql = type(sys)("databricks.sql")
+        sql.connect = refuse
+        package = type(sys)("databricks")
+        package.sql = sql
+        monkeypatch.setitem(sys.modules, "databricks", package)
+        monkeypatch.setitem(sys.modules, "databricks.sql", sql)
+        with pytest.raises(BackendError) as error:
+            DatabricksBackend(PUBLIC_URL, "warehouse").connect()
+        assert TOKEN not in str(error.value) and "refused <token>" in str(error.value)
 
     def test_what_the_connector_is_given(self, signed_in, warehouse):
         DatabricksBackend(PUBLIC_URL, "warehouse").connect().close()
@@ -245,6 +308,19 @@ class TestTheDriver:
         with pytest.raises(BackendError, match="in a snowflake engine, and nothing here provides one"):
             open_backend("snowflake", "snowflake://acct", "wh")
 
+    def test_an_install_without_the_entry_point_is_told_to_reinstall(self, monkeypatch):
+        monkeypatch.setattr(backends, "backend_class", lambda name: None)
+        with pytest.raises(BackendError, match=r"reinstalling ChartBook \(pip install chartbook\[databricks\]\)"):
+            open_backend("databricks", PUBLIC_URL, "warehouse")
+
+    def test_a_build_of_files_from_a_store_gets_no_credentials(self, monkeypatch):
+        from chartbook.versions import _without_credentials
+
+        kept = _without_credentials(
+            {"DATABRICKS_TOKEN": "t", "DATABRICKS_HOST": "h", "CHARTBOOK_SOURCE_W_URL": "u", "PATH": "/bin", "CHARTBOOK_STORE": "s"}
+        )
+        assert kept == {"PATH": "/bin", "CHARTBOOK_STORE": "s"}
+
     def test_not_in_a_build_of_files_from_a_store(self, signed_in, warehouse, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_UNTRUSTED_SOURCE", "1")
         with pytest.raises(BackendError, match="not read in a build of files from a store"):
@@ -276,13 +352,47 @@ class TestReading:
         assert frame.collect()["y10"].to_list() == [4.3]
         assert "limit" not in warehouse.queries[-1]
 
-    def test_an_error_only_running_finds_is_a_backend_error(self, pipeline, signed_in, warehouse, monkeypatch):
+    def test_an_error_only_running_finds_carries_the_warehouses_message(self, pipeline, signed_in, warehouse, monkeypatch):
         frame = data.load("curve", project_dir=pipeline)
         warehouse.duck.execute("drop table workspace.rates.curve")
-        with pytest.raises(Exception) as error:
+        with pytest.raises(pl.exceptions.ComputeError) as error:
             frame.collect()
-        assert "curve" in str(error.value)
+        assert "Catalog Error" in str(error.value) and "curve" in str(error.value)
         assert warehouse.open() == []
+
+    def test_an_empty_result_without_its_schema_asks_for_a_row(self, pipeline, signed_in, warehouse):
+        warehouse.empty_without_schema = True
+        frame = data.load("curve", project_dir=pipeline)
+        assert frame.collect_schema().names() == ["d", "y02", "y10"]
+        assert frame.select("y10").collect()["y10"].to_list() == [4.0, 4.3, 4.1]
+        assert warehouse.queries[1].endswith(") limit 1")
+
+    def test_two_sources_are_two_engines_even_with_one_public_url(self, tmp_path, monkeypatch):
+        prod = Warehouse(host="prod.cloud.databricks.com", http_path=HTTP_PATH, token="p")
+        dev = Warehouse(host="dev.cloud.databricks.com", http_path=HTTP_PATH, token="d")
+        for found in (prod, dev):
+            found.table("workspace.rates.curve", "select 1 as a")
+        mocked_databricks.install(monkeypatch, prod, dev)
+        monkeypatch.setenv("CHARTBOOK_SOURCE_PROD_URL", f"databricks://token:p@{prod.host}?http_path={HTTP_PATH}")
+        monkeypatch.setenv("CHARTBOOK_SOURCE_DEV_URL", f"databricks://token:d@{dev.host}?http_path={HTTP_PATH}")
+        directory = tmp_path / "two"
+        directory.mkdir()
+        (directory / "chartbook.toml").write_text(
+            tomli_w.dumps(
+                {
+                    "project": {"id": "acme/two"},
+                    "sources": {"prod": {"backend": "databricks", "url": "databricks://"}, "dev": {"backend": "databricks", "url": "databricks://"}},
+                    "dataframes": {
+                        "a": {"source": "prod", "table": "workspace.rates.curve", "docs": "d"},
+                        "b": {"source": "dev", "table": "workspace.rates.curve", "docs": "d"},
+                    },
+                }
+            )
+        )
+        with pytest.raises(ValueError, match="names dataframes in 2 sources, dev, prod"):
+            data.sql("select * from {a} cross join {b}", project_dir=directory)
+        assert data.sql("select count(*) as n from {a}", project_dir=directory).collect()["n"].to_list() == [1]
+        assert prod.connections and not dev.connections
 
     def test_a_projection(self, pipeline, signed_in, warehouse):
         assert data.load("curve", project_dir=pipeline).select("y02").collect().columns == ["y02"]

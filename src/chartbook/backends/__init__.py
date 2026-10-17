@@ -104,7 +104,7 @@ def machine_source_url(name: str) -> Optional[str]:
     under ``[<name>]`` in ``~/.chartbook/sources.toml``.
 
     :param name: The source's name in ``[sources]``.
-    :raises BackendError: If ``sources.toml`` is there and cannot be read.
+    :raises chartbook.backends.BackendError: If ``sources.toml`` is there and cannot be read.
     """
     from_environment = os.environ.get(source_env_var(name))
     if from_environment:
@@ -280,7 +280,7 @@ def refuse_in_an_untrusted_build() -> None:
     can read any file of the machine, and a warehouse's URL could send this
     machine's credentials elsewhere.
 
-    :raises BackendError: In such a build.
+    :raises chartbook.backends.BackendError: In such a build.
     """
     from chartbook.config import untrusted_source
 
@@ -298,7 +298,9 @@ class Backend:
     source's public URL, as its location carries it, and the source's name,
     by which the machine's own URL and credentials are found; it connects
     only when asked. Every call that reaches the engine raises
-    :class:`BackendError` with the engine's own message when it fails.
+    :class:`BackendError` with the engine's own message when it fails; an
+    error found only when a lazy frame is collected comes as Polars'
+    ``ComputeError``, with the engine's message in it.
 
     ``reads_files`` says whether SQL run in it may name a file of this
     machine as :class:`ParquetBackend` writes one, ``read_parquet('…')``:
@@ -325,6 +327,14 @@ class Backend:
     def connect(self):
         """The engine's own connection, for :func:`chartbook.data.connect`."""
         raise NotImplementedError
+
+    def engine(self) -> tuple:
+        """What tells one engine from another: two locations with the same run in one query.
+
+        By default the backend, its URL and the source's name, since the
+        machine may give each source its own place to connect to.
+        """
+        return (self.name, self.url, self.source)
 
     def ref(self, location: "Location") -> str:
         """A table as a quoted identifier; a query as a sub-select: what stands for it in SQL here."""
@@ -399,6 +409,10 @@ class DuckDBBackend(Backend):
     def check_url(url: str) -> None:
         duckdb_path(url, ".")
 
+    def engine(self) -> tuple:
+        # A DuckDB file is its URL, whatever source names it
+        return (self.name, self.url)
+
     @classmethod
     def scratch(cls) -> "DuckDBBackend":
         """A fresh in-memory engine of its own, for SQL over files alone.
@@ -412,7 +426,7 @@ class DuckDBBackend(Backend):
     def connect(self):
         """The raw ``duckdb`` connection.
 
-        :raises BackendError: If the file is not there, or cannot be opened;
+        :raises chartbook.backends.BackendError: If the file is not there, or cannot be opened;
             or if this is a build of files from a store, whose manifest
             anyone who can write the store may have written: such a build
             runs no table and no query (a query can read any file of the
@@ -455,7 +469,7 @@ class DuckDBBackend(Backend):
         a value, is raised then with DuckDB's message: as Polars'
         ``ComputeError`` or as DuckDB's own exception, by Polars version.
 
-        :raises BackendError: If DuckDB refuses the query. The message is
+        :raises chartbook.backends.BackendError: If DuckDB refuses the query. The message is
             DuckDB's own; the SQL is the user's.
         """
         import duckdb
@@ -499,7 +513,7 @@ def backend_for(location: "Location"):
     """The backend that reads a location: parquet for a file, else the source's.
 
     :raises NotImplementedError: For a kind of location nothing here reads.
-    :raises BackendError: For a source whose backend nothing provides here,
+    :raises chartbook.backends.BackendError: For a source whose backend nothing provides here,
         as a location read from another pipeline's record may name.
     """
     if location.kind == "file":
@@ -515,7 +529,7 @@ def backend_for(location: "Location"):
 def open_backend(name: str, url: str, source: Optional[str] = None) -> Backend:
     """The backend a source names, made from its public URL and its name.
 
-    :raises BackendError: If nothing here provides it: a record from
+    :raises chartbook.backends.BackendError: If nothing here provides it: a record from
         another machine may name a backend this one has no plugin for.
     """
     try:
@@ -523,8 +537,13 @@ def open_backend(name: str, url: str, source: Optional[str] = None) -> Backend:
     except ValueError as error:
         raise BackendError(str(error)) from None
     if found is None:
+        reinstall = (
+            f" ChartBook brings it: an install made before it did lacks its entry point, and "
+            f"reinstalling ChartBook ({EXTRAS[name]}) adds it."
+            if name in EXTRAS else ""
+        )
         raise BackendError(
             f"The source {source!r} is in a {name} engine, and nothing here provides one. "
-            f"The backends are: {', '.join(backend_names())}."
+            f"The backends are: {', '.join(backend_names())}.{reinstall}"
         )
     return found(url, source)

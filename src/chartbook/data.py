@@ -614,31 +614,31 @@ def sql(
             "with no ChartBook reference in it, use data.connect(source).sql(...). "
             "A doubled brace, {{ or }}, is a literal one."
         )
-    engines: dict[tuple, str] = {}
+    engines: dict[tuple, object] = {}
     files = []
     locations = {}
     for text in dict.fromkeys(found):
         asset = _assets.parse(text.strip(), kind="dataframe")
         locations[text] = location = resolve(asset, start_dirs=start_dirs)
         if location.kind != "file":
-            engines[(location.backend, location.url)] = location.source
+            backend = open_backend(location.backend, location.url, location.source)
+            engines.setdefault(backend.engine(), backend)
         else:
             files.append(text.strip())
     if len(engines) > 1:
         raise ValueError(
             f"The query names dataframes in {len(engines)} sources, "
-            f"{', '.join(sorted(engines.values()))}. One source at a time: an "
-            f"engine runs SQL over its own tables, and files it can read."
+            f"{', '.join(sorted(str(e.source) for e in engines.values()))}. One source at a "
+            f"time: an engine runs SQL over its own tables, and files it can read."
         )
     if not engines:
         engine = DuckDBBackend.scratch()
     else:
-        ((backend, url), source), = engines.items()
-        engine = open_backend(backend, url, source)
+        (engine,) = engines.values()
         if files and not engine.reads_files:
             raise ValueError(
                 f"The query names {', '.join(files)}, a file of this machine, and dataframes in "
-                f"the source {source!r}, a {backend} engine, which reads its own tables only. "
+                f"the source {engine.source!r}, a {engine.name} engine, which reads its own tables only. "
                 f"Load them apart with data.load() and join the frames in Polars."
             )
     for text, location in locations.items():

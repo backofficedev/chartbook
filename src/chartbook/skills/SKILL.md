@@ -203,7 +203,7 @@ data.ref("my_data")        # the name to paste into SQL you run yourself
 data.connect("local")      # the raw connection to [sources.local]: read-only duckdb, or the Databricks connector's
 # A dataframe may live in a source instead of a file (then it has no path):
 #   [sources.local]            backend = "duckdb"   url = "duckdb:///./_data/x.duckdb"
-#   (or backend = "databricks", url = "databricks://<host>?http_path=...", token from DATABRICKS_TOKEN)
+#   (or backend = "databricks", url = "databricks://<host>?http_path=...", with DATABRICKS_HOST + DATABRICKS_TOKEN set)
 #   [dataframes.slopes]        source = "local"     query = "select ... from t"   # or table = "t"
 # A model's trained_on = ["fed_yield_curve:treasury_rates"] must name a declared
 # dependency; `chartbook check` verifies the dataframe exists there.
