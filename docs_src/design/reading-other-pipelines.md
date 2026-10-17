@@ -3,7 +3,8 @@
 ```{note}
 A design document, written 2026-10-16 for the maintainer to choose between options. Nothing here
 is built. Each decision shows what a data scientist would write and see under each option, and
-which one is recommended. Status: **proposed; waiting on the maintainer's choices.**
+which one is recommended. Status: **decided by the maintainer on 2026-10-16: 1a, 2c, 3b, 4b, 5b
+(silent), 6b.** Decision 6 is built; the rest is being built in the order below.
 ```
 
 ## The story this serves
@@ -118,7 +119,7 @@ Kept for two pipelines in one repository and for working on both at once, with a
 says what to write instead.
 
 **Recommended: 1a.** It is the identity already decided, it reads the store first, which is
-your use case, and with no default host it is 1c.
+your use case, and with no default host it is 1c. *Decided by the maintainer 2026-10-16: 1a.*
 
 ## Decision 2: what an unpinned dependency gives you
 
@@ -177,7 +178,8 @@ The one made last, by its owner's clock, across every branch. An entry narrows i
 "acme/rates" = { rev = "main" }         # the newest at or before main's commit (asks git)
 ```
 
-**Recommended: 2c,** with "newest" by time and `commit` or `rev` to narrow it.
+**Recommended: 2c,** with "newest" by time and `commit` or `rev` to narrow it. *Decided by the
+maintainer 2026-10-16: 2c.*
 
 ## Decision 3: a pipeline B has not declared
 
@@ -207,6 +209,7 @@ The load adds `"acme/yields" = {}` to B's `chartbook.toml`, pins it, and reads i
 
 **Recommended: 3b.** Exploring is quick, the warning says exactly what a batch run will refuse,
 and a manifest is never edited behind your back. `chartbook add` is new in every option.
+*Decided by the maintainer 2026-10-16: 3b.*
 
 ## Decision 4: no snapshot, but a working folder
 
@@ -230,7 +233,8 @@ UserWarning: acme/rates has no snapshot in the store: reading its WORKING versio
 ```
 
 **Recommended: 4b,** as you suggested. The hidden `--from-folder` option of `pin` and `update`
-becomes this, and a lockfile never records a working read.
+becomes this, and a lockfile never records a working read. *Decided by the maintainer 2026-10-16:
+4b.*
 
 ## Decision 5: outside any pipeline
 
@@ -256,6 +260,13 @@ snapshot, never a working folder without the 4b warning.
 
 You suggested 5a. **I lean 5b,** for browsing and for an assistant on the command line, since
 nothing here can be built or snapshotted, so there is no lineage to protect. Either is small.
+
+*Decided by the maintainer 2026-10-16: 5b, and silent.* With no `chartbook.toml`, a script is a
+one-off exploration: it loads the newest snapshot quietly, with no warning. Once a `chartbook.toml`
+exists, the stricter rules above apply, and they get noisier exactly when someone makes the work
+a proper pipeline. *Proposed with it, 2026-10-16:* a read of another pipeline's working folder
+(4b) still warns outside a pipeline, since that warning is about which data was read, not about
+lineage.
 
 ## Decision 6: what `chartbook snapshot` requires
 
@@ -285,13 +296,16 @@ was pinned does not stop it, since B cannot have read it.
 build see), `chartbook snapshot`, `chartbook pin --frozen` and CI. Everything else is interactive.
 With the recommended options:
 
-| `data.load` of another pipeline finds | In a notebook or script | In a batch run |
+| `data.load` of another pipeline finds | In a notebook or script in a pipeline | In a batch run |
 |---|---|---|
 | A pin | Reads it | Reads it |
 | A declared dependency, not pinned, with a snapshot | Pins the newest, says so (2c) | `run` pins it before the build, as it does today; `snapshot` refuses (6b) |
 | An undeclared pipeline | Reads the newest snapshot, warns (3b) | Refuses |
 | No snapshot, a working folder | Reads it, warns loudly (4b) | Refuses |
 | Nothing | Error | Error |
+
+Outside any pipeline (no `chartbook.toml`), a read takes the newest snapshot silently; only a read
+of a working folder warns.
 
 ## The order of work, if approved
 
@@ -303,9 +317,11 @@ With the recommended options:
 
 ## For the maintainer to choose
 
-1. How B names A: **1a** (recommended), 1b or 1c.
-2. An unpinned dependency: 2a, 2b or **2c** (recommended).
-3. An undeclared pipeline: 3a, **3b** (recommended) or 3c.
-4. No snapshot, a working folder: 4a or **4b** (recommended).
-5. Outside a pipeline: 5a (your suggestion) or 5b (my lean).
-6. What a snapshot requires: **6b**, *decided 2026-10-16*.
+All decided by the maintainer on 2026-10-16:
+
+1. How B names A: **1a**.
+2. An unpinned dependency: **2c**.
+3. An undeclared pipeline: **3b**.
+4. No snapshot, a working folder: **4b**.
+5. Outside a pipeline: **5b, silent** (a working-folder read still warns: proposed).
+6. What a snapshot requires: **6b** (built).
