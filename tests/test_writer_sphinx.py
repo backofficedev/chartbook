@@ -298,6 +298,57 @@ class TestThePipelinePage:
         notes = sorted(r for r in index["records"] if r["kind"] == "Note")
         assert notes and all(f"cb/{r['ref']['name']}.md" in page for r in notes)
 
+    def test_the_front_page_lists_what_the_pipeline_depends_on_and_its_pin(self, trained, monkeypatch):
+        """Found by a new user: a second pipeline's site never named the first. Its page
+        lists each dependency, as declared, with the snapshot the lockfile pins it to."""
+        from chartbook import lock, snapshot
+
+        rates, forecast = trained
+        unpinned = _built(forecast, monkeypatch)
+        page = SphinxWriter(unpinned, theme="pipeline", docs_src_dir=forecast / "_docs_src").pipeline_page("acme/forecast")
+        assert "- `rates` (path `../rates`): not pinned yet; `chartbook pin` pins it" in page
+
+        taken = snapshot.make(rates).snapshot
+        lock.pin(forecast)
+        index = _built(forecast, monkeypatch)
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=forecast / "_docs_src")
+        _same_pages(writer, index, forecast / "_docs", kinds=("Pipeline",))
+        page = writer.pipeline_page("acme/forecast")
+        made = f"{taken.made_at[:10]} {taken.made_at[11:16]} UTC"
+        assert "## Dependencies" in page
+        assert f"- `rates` (path `../rates`): pinned to the snapshot at commit `{taken.commit[:7]}`, made {made}" in page
+        assert page.index("## Dependencies") < page.index("## Pipeline Specs")
+        html = (forecast / "docs" / "index.html").read_text()
+        assert 'id="dependencies"' in html and f"<code class=\"docutils literal notranslate\"><span class=\"pre\">{taken.commit[:7]}</span></code>" in html
+
+    def test_in_a_catalog_a_dependency_links_the_snapshot_pinned_or_its_page(self, trained, monkeypatch):
+        import tomli_w
+
+        from chartbook import lock, snapshot
+
+        rates, forecast = trained
+        work = forecast.parent
+        (work / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "work", "name": "Work"}, "pipelines": {"acme/rates": {"path": "./rates"}, "forecast": {"path": "./forecast"}}})
+        )
+        # Not pinned: its page in the catalog
+        index = _built(work, monkeypatch)
+        page = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src").pipeline_page("forecast")
+        assert "- [`acme/rates`](acme--rates_README.md) (as `rates`, path `../rates`): not pinned yet" in page
+        assert (work / "docs" / "cb" / "pipelines" / "acme--rates_README.html").is_file()
+        # Pinned: its page in the snapshot pinned, which the catalog shows as a version
+        taken = snapshot.make(rates).snapshot
+        lock.pin(forecast)
+        index = _built(work, monkeypatch)
+        writer = SphinxWriter(index, theme="catalog", docs_src_dir=work / "_docs_src")
+        _same_pages(writer, index, work / "_docs", kinds=("Pipeline",))
+        page = writer.pipeline_page("forecast")
+        from chartbook.versions import site_path, version_name
+
+        root = site_path("acme/rates", version_name(taken.commit, taken.made_at))
+        assert f'- <a href="../../{root}/index.html">`acme/rates`</a> (as `rates`, path `../rates`): pinned to the snapshot at commit `{taken.commit[:7]}`' in page
+        assert "## Dependencies" not in writer.pipeline_page("acme/rates")
+
     def test_a_catalogs_readme_page_per_pipeline(self, catalog_project, monkeypatch):
         index = _built(catalog_project, monkeypatch)
         writer = SphinxWriter(index, theme="catalog", docs_src_dir=catalog_project / "_docs_src")
@@ -458,9 +509,9 @@ class TestTheChartPage:
         # The dataframe's record says when the engine file was written; the chart page says the same
         (dataframe,) = [r for r in index["records"] if r["id"] == "acme/rates:curve"]
         assert dataframe["location"]["modified_at"]
-        from chartbook.writers.sphinx import _as_local
+        from chartbook.writers.sphinx import _as_utc
 
-        assert _as_local(dataframe["location"]["modified_at"]).strftime("%Y-%m-%d") in page
+        assert _as_utc(dataframe["location"]["modified_at"]).strftime("%Y-%m-%d") in page
 
     def test_a_chart_whose_dataframe_is_not_declared_still_gets_a_page(self, pipeline_project, monkeypatch):
         index = _built(pipeline_project, monkeypatch)
@@ -469,6 +520,137 @@ class TestTheChartPage:
         writer = SphinxWriter(index, theme="pipeline", docs_src_dir=pipeline_project / "_docs_src")
         page = writer.chart_page(chart["id"])
         assert "Chart updated" in page and "Data updated" not in page
+
+
+@pytest.fixture
+def first_pipeline(tmp_path):
+    """A pipeline as a new user writes one from the docs: a dataframe, a chart of it, no optional field."""
+    from datetime import date
+
+    directory = tmp_path.resolve() / "first_pipeline"
+    (directory / "_data").mkdir(parents=True)
+    (directory / "_output").mkdir()
+    (directory / "README.md").write_text("# First\n\nText.\n")
+    (directory / "_output" / "rates_chart.html").write_text("<div id='rates'>chart</div>")
+    rows = {"date": [date(2024, 1, 1), date(2024, 2, 1), date(2024, 3, 1)], "rate": [3.5, 3.6, 3.8499999999999996]}
+    pl.DataFrame(rows).write_parquet(directory / "_data" / "rates.parquet")
+    (directory / "chartbook.toml").write_text(
+        tomli_w.dumps(
+            {
+                "project": {"id": "first_pipeline", "name": "First"},
+                "dataframes": {"rates": {"name": "Rates", "path": "./_data/rates.parquet", "docs": "Rates.", "date_col": "date"}},
+                "charts": {"rates_chart": {"name": "Rates chart", "dataframe": "rates", "path": "./_output/rates_chart.html", "docs": "A chart."}},
+            }
+        )
+    )
+    return directory
+
+
+class TestWhatANewUserFound:
+    """A site built from a pipeline written as the docs show, with nothing optional filled in."""
+
+    def test_no_empty_category_or_tag_when_nothing_has_one(self, first_pipeline, monkeypatch):
+        """ABlog read `category: ""` as a category named "", and so made
+        `cb/charts/index/category/.html` and an empty "(1)" entry in the sidebar."""
+        index = _built(first_pipeline, monkeypatch)
+        page = (first_pipeline / "_docs" / "cb" / "charts" / "first_pipeline.rates_chart.md").read_text()
+        front_matter = page.split("---")[1]
+        assert "date:" in front_matter and "category:" not in front_matter and "tags:" not in front_matter
+        site = first_pipeline / "docs"
+        assert not (site / "cb" / "charts" / "index" / "category" / ".html").exists()
+        assert not (site / "cb" / "charts" / "index" / "tag" / ".html").exists()
+        assert "category/.html" not in (site / "index.html").read_text()
+        assert "Sources:" not in page
+        assert index["records"]
+
+    def test_a_chart_with_a_category_still_has_one(self, pipeline_project, monkeypatch):
+        _built(pipeline_project, monkeypatch)
+        page = (pipeline_project / "_docs" / "cb" / "charts" / "test_pipeline.chart_0_0.md").read_text()
+        assert 'category: "Chart Tag"\n' in page and 'tags: "Test Source"\n' in page
+        assert (pipeline_project / "docs" / "cb" / "charts" / "index" / "category" / "chart-tag.html").is_file()
+
+    def test_fields_left_out_do_not_appear(self, first_pipeline, monkeypatch):
+        _built(first_pipeline, monkeypatch)
+        build = first_pipeline / "_docs"
+        chart = (build / "cb" / "charts" / "first_pipeline.rates_chart.md").read_text()
+        dataframe = (build / "cb" / "dataframes" / "first_pipeline" / "rates.md").read_text()
+        front = (build / "index.md").read_text()
+        for row in ("| Tags", "| Data Series Start Date", "| Data Frequency", "| Observation Period", "| Lag in Data Release",
+                    "| Data Release Timing", "| Seasonal Adjustment", "| Units"):  # fmt: skip
+            assert row not in chart, row
+        for row in ("| Sources", "| Providers", "| Provider Links", "| Tags", "| Access Types", "| How is data pulled?"):
+            assert row not in chart and row not in dataframe, row
+        for row in ("| Maintainer", "| Contributors", "| Repository", "| OS Compatibility"):
+            assert row not in front and row not in chart, row
+        # What is there still is
+        assert "| Chart ID               | rates_chart" in chart and "| HTML Chart" in chart
+        assert "| Data available up to (max)     | 2024-03-01 00:00:00" in dataframe
+        assert "| Linked Dataframes" in front and "| Date of Last Code Update" in front
+
+    def test_the_download_row_is_in_its_table_and_the_web_page_link_is_closed(self, first_pipeline, monkeypatch):
+        import tomli
+
+        manifest = tomli.loads((first_pipeline / "chartbook.toml").read_text())
+        manifest["project"]["enable_data_download"] = True
+        (first_pipeline / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        _built(first_pipeline, monkeypatch)
+        page = (first_pipeline / "_docs" / "cb" / "dataframes" / "first_pipeline" / "rates.md").read_text()
+        assert "`./_data/rates.parquet`                                                        |\n| Download Data as Parquet" in page
+        assert ">Pipeline Web Page</a> |" in page
+        html = (first_pipeline / "docs" / "cb" / "dataframes" / "first_pipeline" / "rates.html").read_text()
+        assert "<td><p>Download Data as Parquet</p></td>" in html or "<td>Download Data as Parquet</td>" in html
+
+    def test_fields_filled_in_still_appear(self, pipeline_project, monkeypatch):
+        _built(pipeline_project, monkeypatch)
+        page = (pipeline_project / "_docs" / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.md").read_text()
+        assert "| Sources                        | Test Source" in page
+        assert "| Providers                      | Test Provider" in page
+        assert "| Tags                           | Test Tag, Uppercase Tag" in page
+
+    def test_the_glimpse_shows_the_first_rows_rounded(self, first_pipeline, monkeypatch):
+        _built(first_pipeline, monkeypatch)
+        page = (first_pipeline / "_docs" / "cb" / "dataframes" / "first_pipeline" / "rates.md").read_text()
+        assert "$ date <date> 2024-01-01, 2024-02-01, 2024-03-01" in page
+        assert "$ rate  <f64> 3.5, 3.6, 3.85" in page
+        assert "3.8499999999999996" not in page
+        assert "Rows: 3" in page
+
+    def test_a_glimpse_of_f32_shows_its_digits_and_its_type(self):
+        from chartbook.utils import glimpse_text
+
+        long_name = "a_name_longer_than_polars_shows_in_a_glimpse_" * 2
+        sample = pl.DataFrame(
+            {"x": pl.Series([1.1, 2.5], dtype=pl.Float32), long_name: pl.Series([0.3, None], dtype=pl.Float32), "s": ["<f64>", "y"]}
+        )
+        lines = glimpse_text(sample).splitlines()
+        assert lines[2].startswith("$ x ") and lines[2].endswith("<f32> 1.1, 2.5")
+        assert lines[3].endswith("<f32> 0.3, null")
+        assert lines[4].endswith("<str> '<f64>', 'y'")
+
+    def test_the_dataframe_path_is_the_pipelines_own(self, first_pipeline, monkeypatch):
+        _built(first_pipeline, monkeypatch)
+        page = (first_pipeline / "_docs" / "cb" / "dataframes" / "first_pipeline" / "rates.md").read_text()
+        assert "| Dataframe Path                 | `./_data/rates.parquet`" in page
+        assert str(first_pipeline / "_data" / "rates.parquet") not in page
+
+    def test_a_linked_chart_is_named_by_its_address(self, first_pipeline, monkeypatch):
+        _built(first_pipeline, monkeypatch)
+        page = (first_pipeline / "_docs" / "cb" / "dataframes" / "first_pipeline" / "rates.md").read_text()
+        assert "- [first_pipeline:chart/rates_chart](../../charts/first_pipeline.rates_chart.md)" in page
+        html = (first_pipeline / "docs" / "cb" / "dataframes" / "first_pipeline" / "rates.html").read_text()
+        assert "first_pipeline:chart/rates_chart" in html
+
+    def test_every_time_on_the_front_page_is_in_utc_and_says_so(self, first_pipeline, monkeypatch):
+        import re
+
+        index = _built(first_pipeline, monkeypatch)
+        (pipeline,) = [r for r in index["records"] if r["kind"] == "Pipeline"]
+        changed = pipeline["code_changed_at"]  # UTC, as the index records every time
+        front = (first_pipeline / "_docs" / "index.md").read_text()
+        assert f"| Date of Last Code Update        | {changed[:10]} {changed[11:19]} UTC" in front
+        assert f'title="{changed[:10]} {changed[11:16]} UTC"' in front
+        html = (first_pipeline / "docs" / "index.html").read_text()
+        assert re.search(r"Last updated: \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (UTC|[+-]\d{4})", html)
 
 
 class TestTheDataframePage:

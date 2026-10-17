@@ -133,7 +133,10 @@ def load_policy(path: Union[str, Path]) -> dict:
 
 
 def check_required_fields(
-    manifest: dict, base_dir: Path, policy_label: str = "the active policy"
+    manifest: dict,
+    base_dir: Path,
+    policy_label: str = "the active policy",
+    warn_only: bool = False,
 ) -> list[Problem]:
     """Report every field the active policy requires that is missing or empty.
 
@@ -145,6 +148,9 @@ def check_required_fields(
 
     :param policy_label: How to name the policy in messages, so a reader of
         a CI log knows who required the field.
+    :param warn_only: If True, no policy was given and the lists are the
+        default recommended ones: each missing field is a warning, and no
+        problem is returned.
     """
     problems = []
     for row in build_diagnostics(manifest):
@@ -165,6 +171,16 @@ def check_required_fields(
                     f"required by {policy_label}, but missing or empty",
                 )
             )
+    if warn_only:
+        for problem in problems:
+            warnings.warn(
+                f"{display_path(problem.file, base_dir)}: [{problem.table}] "
+                f"{problem.field}: recommended by the default policy, but "
+                f"missing or empty",
+                UserWarning,
+                stacklevel=2,
+            )
+        return []
     return problems
 
 
@@ -748,6 +764,7 @@ def run_checks(
     today: Optional[date] = None,
     policy_label: str = "the active policy",
     skip_outputs: bool = False,
+    policy_given: bool = True,
 ) -> list[Problem]:
     """Run every check over a loaded manifest.
 
@@ -759,12 +776,17 @@ def run_checks(
     :param policy_label: How to name the policy in required-field messages.
     :param skip_outputs: If True, built files (data, charts, notebooks) need
         not exist; see :func:`check_paths`.
+    :param policy_given: False when no ``[policy]`` was given anywhere: the
+        default recommended fields are then warned about, not problems; see
+        :func:`check_required_fields`.
     :returns: Every problem found, sorted by file then table; empty for a
         healthy project.
     """
     base_dir = Path(base_dir).resolve()
     problems = [
-        *check_required_fields(manifest, base_dir, policy_label=policy_label),
+        *check_required_fields(
+            manifest, base_dir, policy_label=policy_label, warn_only=not policy_given
+        ),
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
         *check_dependencies(manifest, base_dir),
         *check_model_metrics(manifest, base_dir),

@@ -191,6 +191,20 @@ class TestCommand:
         assert "10 rows × 4 columns" in report
         assert "Found 1 declared dataframes, 1 with data on disk" in result.output
 
+    def test_an_output_dir_that_does_not_exist_is_made(self, pipeline_project, tmp_path):
+        """Found by a new user: `-o DIR` with no such DIR wrote the report as a file named DIR."""
+        out_dir = tmp_path / "reports" / "glimpses"
+        result = _run(pipeline_project, "-o", out_dir)
+        assert result.exit_code == 0, result.output
+        assert out_dir.is_dir()
+        assert "## dataframe_0" in (out_dir / "data_glimpses.md").read_text()
+
+    def test_help_shows_no_docstring_markup(self):
+        result = CliRunner().invoke(main, ["create-data-glimpses", "--help"])
+        assert result.exit_code == 0
+        assert ":param" not in result.output and ":type" not in result.output
+        assert "made if it does not exist" in " ".join(result.output.split())
+
     def test_needs_no_dodo_py(self, pipeline_project, tmp_path):
         """A project built with Snakemake, Make or plain scripts has no dodo.py."""
         assert not (pipeline_project / "dodo.py").exists()

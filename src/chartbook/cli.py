@@ -395,13 +395,6 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     Publishing copies files and does nothing else: no network, no registry.
     Sending a pipeline to a registry is a different act with a different
     verb, `chartbook push`, which is reserved and not yet implemented.
-
-    :param publish_dir: Directory where files will be published.
-    :type publish_dir: Path or str, optional
-    :param project_dir: Root directory of the project.
-    :type project_dir: Path or str
-    :param verbose: If True, enables verbose output.
-    :type verbose: bool
     """
     # Validate paths for shell/platform mismatches
     from chartbook.path_validation import detect_shell_environment, validate_cli_paths
@@ -506,9 +499,10 @@ def check(project_dir, within_days, policy_path, skip_outputs):
       to be, and training data they do not declare
     - dataframe licenses that are expired, or expire within --within days
 
-    Required fields come from a catalog's [policy.required], or from the
-    default recommended lists for a standalone pipeline. Pass --policy to
-    check a pipeline against the catalog it is published to.
+    Required fields come from the [policy] of the catalog or pipeline
+    checked, or from --policy, which checks a pipeline against the catalog
+    it is published to. With no policy anywhere, the default recommended
+    fields are reported as warnings and do not fail the check.
 
     Only metadata and paths are checked; no data file is opened.
 
@@ -525,7 +519,12 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     import warnings
 
     from chartbook.check import display_path, load_policy, run_checks
-    from chartbook.manifest import get_pipeline_ids, get_pipeline_manifest, load_manifest
+    from chartbook.manifest import (
+        _read_manifest_file,
+        get_pipeline_ids,
+        get_pipeline_manifest,
+        load_manifest,
+    )
 
     project_dir = resolve_project_dir(project_dir)
     manifest_path = project_dir / "chartbook.toml"
@@ -535,11 +534,17 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             manifest = load_manifest(base_dir=project_dir)
+        # A catalog's manifest always carries a resolved policy, so whether
+        # one was written down is read from the file itself
+        policy_given = "policy" in _read_manifest_file(project_dir)
         if policy_path is not None:
             manifest["policy"] = load_policy(policy_path)
             policy_label = f"the policy in {policy_path}"
+            policy_given = True
         elif manifest["project"]["type"] == "catalog":
             policy_label = "the catalog policy"
+        elif policy_given:
+            policy_label = "the pipeline's policy"
         else:
             policy_label = "the default policy"
     except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
@@ -555,6 +560,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
             within_days=within_days,
             policy_label=policy_label,
             skip_outputs=skip_outputs,
+            policy_given=policy_given,
         )
 
     for warning in [*caught, *unchecked]:
@@ -672,7 +678,8 @@ def path_command(ref, kind, project_dir):
     "-o",
     type=click.Path(),
     default=None,
-    help="Directory to save the output file (default: current directory)",
+    help="Directory to write data_glimpses.md in, made if it does not exist "
+    "(default: current directory)",
 )
 @click.option(
     "--size-threshold",
@@ -690,16 +697,8 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold, proje
     is built with doit, Snakemake, Make or plain scripts. Declared dataframes
     whose files do not exist yet are skipped.
 
-    :param no_samples: If True, exclude sample values sections from the report.
-    :type no_samples: bool
-    :param no_stats: If True, exclude numeric column statistics sections from the report.
-    :type no_stats: bool
-    :param output_dir: Directory to save the output file.
-    :type output_dir: str, optional
-    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
-    :type size_threshold: float
-    :param project_dir: Directory holding the project's chartbook.toml.
-    :type project_dir: str, optional
+    The report is data_glimpses.md in --output-dir, which is made if it does
+    not exist. An --output-dir ending in .md is the report's own path.
 
     Example usage:
         chartbook create-data-glimpses
@@ -1784,7 +1783,7 @@ def _echo_pin_report(report):
 
         for event in assets:
             if event.status == "moved":
-                click.echo(f"  {event.asset}\n    {event.old} -> {event.new}")
+                click.echo(f"  {event.asset}\n    {_short_hash(event.old)} -> {_short_hash(event.new)}")
             elif event.status == "not_built":
                 click.echo(f"  not built: {event.asset} ({event.detail})")
             elif event.status == "stale":
@@ -1796,7 +1795,7 @@ def _echo_pin_report(report):
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
-                click.echo(f"  lost: {event.asset} ({event.old}): {event.detail}")
+                click.echo(f"  lost: {event.asset} ({_short_hash(event.old)}): {event.detail}")
         if dependency in report.snapshots:
             taken = report.snapshots[dependency]
             made_in = f", which says it was made in {taken.repository}" if getattr(taken, "repository", "") else ""
@@ -1832,6 +1831,17 @@ def _echo_pin_report(report):
 def _when(made_at):
     """A snapshot's time as a person reads it: 2026-10-13 18:22 UTC."""
     return f"{made_at[:10]} {made_at[11:16]} UTC"
+
+
+def _short_hash(content_hash):
+    """A content hash as a person reads it in a line of output: its first twelve digits.
+
+    ``sha256:4b1f9a0c2e3d…``, as a provenance panel and ``index diff`` show
+    one. The lockfile keeps the whole hash.
+    """
+    if isinstance(content_hash, str) and len(content_hash) > 19:
+        return content_hash[:19] + "…"
+    return content_hash
 
 
 def _run_pin(project_dir, dependencies=None):
@@ -2717,7 +2727,7 @@ def config():
 
 @main.group()
 def install():
-    """Install bundled resources into the current project."""
+    """Install bundled resources: user-level by default, or into the current directory with --project."""
 
 
 VERSION_STAMP_NAME = ".chartbook-skill-version"
@@ -2752,12 +2762,6 @@ def install_skill(force, project):
     bundled skill, nothing is rewritten. Files from older skill layouts are
     removed so the installed copy exactly mirrors the bundled one, and the
     installing chartbook version is recorded alongside the skill files.
-
-    :param force: If True, overwrite existing files without prompting.
-    :type force: bool
-    :param project: If True, install into the current directory's .claude/
-        instead of the user-level skills directory.
-    :type project: bool
     """
     import importlib.resources
     import os

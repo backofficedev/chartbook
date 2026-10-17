@@ -60,6 +60,8 @@ cb/charts.md
 
 
 
+{% include "dependencies.md" %}
+
 ## Pipeline Specs
 {% include "pipeline_manifest.md" with context %}
 

@@ -163,6 +163,7 @@ class MkDocsWriter(SphinxWriter):
             models=self._pages("Model"),
             freshness=[fact for fact in [_freshness_of(pipeline)] if fact],
             version=_laid_out_version(pipeline),
+            dependencies=self._dependencies(pipeline, self.pipeline_page_path(pipeline)),
         )
 
     def _site_pages(self, pipeline: dict) -> list:

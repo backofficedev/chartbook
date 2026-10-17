@@ -329,12 +329,28 @@ class TestCheckCommand:
         assert result.exit_code == 0, result.output
         assert result.output.startswith("chartbook.toml: OK")
 
-    def test_missing_required_fields_exit_nonzero(self, pipeline_project):
+    def test_with_no_policy_recommended_fields_are_warnings(self, pipeline_project):
+        """A pipeline made as the docs show, with no [policy] anywhere, passes."""
+        result = _invoke("--project-dir", pipeline_project)
+        assert result.exit_code == 0, result.output
+        assert (
+            "warning: chartbook.toml: [project] repo_url: recommended by the "
+            "default policy, but missing or empty"
+        ) in result.stderr
+        assert "required by" not in result.output
+        assert "problem(s) found" not in result.output
+        assert "OK (1 pipeline(s)" in result.stdout
+
+    def test_pipeline_policy_makes_missing_fields_fail(self, pipeline_project):
+        def edit(config):
+            config["policy"] = {"required": {"project": ["repo_url"]}}
+
+        _edit_toml(pipeline_project, edit)
         result = _invoke("--project-dir", pipeline_project)
         assert result.exit_code == 1
-        assert "chartbook.toml: [project] repo_url: required by the default policy" in (
-            result.output
-        )
+        assert (
+            "chartbook.toml: [project] repo_url: required by the pipeline's policy"
+        ) in result.output
         assert "problem(s) found in 1 manifest(s)" in result.output
 
     def test_broken_path_exits_nonzero(self, pipeline_project, lenient_policy):
@@ -364,12 +380,32 @@ class TestCheckCommand:
         assert "inside the 60-day window" in result.output
 
     def test_catalog_checks_every_member(self, catalog_project):
+        def edit(config):
+            config["policy"] = {"required": {"project": ["repo_url"]}}
+
+        _edit_toml(catalog_project, edit)
         result = _invoke("--project-dir", catalog_project)
         assert result.exit_code == 1
         assert "required by the catalog policy" in result.output
         assert "pipeline_a/chartbook.toml: [project] repo_url" in result.output
         assert "pipeline_b/chartbook.toml: [project] repo_url" in result.output
         assert "in 2 manifest(s)" in result.output
+
+    def test_catalog_with_no_policy_only_warns(self, catalog_project):
+        """A member's own [policy] is ignored inside a catalog, so none is given."""
+
+        def edit(config):
+            config["policy"] = {"required": {"project": ["repo_url"]}}
+
+        _edit_toml(catalog_project / "pipelines" / "pipeline_a", edit)
+        result = _invoke("--project-dir", catalog_project)
+        assert result.exit_code == 0, result.output
+        assert "pipeline_a/chartbook.toml: [project] repo_url: recommended" in (
+            result.stderr
+        )
+        assert "pipeline_b/chartbook.toml: [project] repo_url: recommended" in (
+            result.stderr
+        )
 
     def test_catalog_passes_with_policy_it_satisfies(self, catalog_project):
         def edit(config):
@@ -466,9 +502,13 @@ class TestCheckCommand:
     def test_skip_outputs_still_checks_fields_and_licenses(self, pipeline_project):
         expired = date.today() - timedelta(days=3)
         _set_license_expiration(pipeline_project, expired.isoformat())
-        result = _invoke("--project-dir", pipeline_project, "--skip-outputs")
+        policy = pipeline_project.parent / "policy.toml"
+        policy.write_text('[policy.required]\nproject = ["repo_url"]\n')
+        result = _invoke(
+            "--project-dir", pipeline_project, "--policy", policy, "--skip-outputs"
+        )
         assert result.exit_code == 1
-        assert "[project] repo_url: required by the default policy" in result.output
+        assert f"[project] repo_url: required by the policy in {policy}" in result.output
         assert "license expired on" in result.output
 
     def test_skip_outputs_covers_notebooks_and_globs(self, tmp_path, lenient_policy):

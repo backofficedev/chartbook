@@ -4,7 +4,7 @@ pipeline's code last changed."""
 import os
 import shutil
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -224,11 +224,16 @@ class TestPagesUseTheCommitTime:
             keep_build_dirs=True,
         )
         front_page = (pipeline_project / "_docs" / "index.md").read_text()
+        # Said in UTC, as every time on the site is
+        in_utc = COMMIT_TIME.astimezone(timezone.utc)
         assert (
-            'Code updated <time class="cb-relative-time" datetime="2025-03-14T09:26:53'
+            'Code updated <time class="cb-relative-time" '
+            f'datetime="{in_utc.isoformat()}"' in front_page
+        )
+        assert (
+            f"| Date of Last Code Update        | {in_utc:%Y-%m-%d %H:%M:%S} UTC"
             in front_page
         )
-        assert "| Date of Last Code Update        | 2025-03-14 09:26:53" in front_page
         # Asset pages say nothing about the code, so a commit does not touch them
         page = (
             pipeline_project / "_docs" / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.md"

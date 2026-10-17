@@ -123,7 +123,7 @@ per record that has one, plus the catalog's own pages:
 | `Dataframe` | `cb/dataframes/{pipeline}/{name}.md`: the write-up, a glimpse of the first rows read from the data file, the manifest tables, the provenance panel |
 | `Chart` | `cb/charts/{pipeline}.{name}.md`: ABlog front matter (date, tags, category), the chart in an `<iframe>`, the write-up, the specs table |
 | `Model` | `cb/models/{pipeline}/{name}.md`: scores, versions, what it was trained on and whether it is out of date, files |
-| `Pipeline` | `index.md` (pipeline theme): the README's text with the tables of contents; or `cb/pipelines/{pipeline}_README.md` (catalog) |
+| `Pipeline` | `index.md` (pipeline theme): the README's text with the tables of contents; or `cb/pipelines/{pipeline}_README.md` (catalog). Either way, the pipelines it depends on, each with what `chartbook.lock` pins it to |
 | `Catalog` | `index.md`, `cb/dataframes.md`, `cb/models.md` (when some pipeline declares a model), `cb/pipelines.md`, `cb/diagnostics.md` |
 
 `{pipeline}` is the pipeline's ID with `/` replaced by `--` (`acme/yield_curve` becomes
@@ -173,6 +173,7 @@ the catalog's own pages. A project's `docs_src/_templates/` is not on the list.
 | `chart_entry_top.md`, `chart_entry_bottom.md` | A chart page's head (front matter, title, iframe) and foot (specs, manifests) |
 | `dataframe_manifest.md`, `pipeline_manifest.md`, `model_manifest.md` | The manifest tables |
 | `provenance.md` | The provenance panel: what an asset was made from, what uses it, pins and versions |
+| `dependencies.md` | The "Dependencies" section of a pipeline's page: each pipeline it reads from, as declared, and the snapshot or commit it is pinned to |
 | `index.md` | The front page's layout and tables of contents |
 
 The Sphinx configuration, `conf.py.j2`, comes from the packaged theme and is not overridable.

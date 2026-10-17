@@ -69,6 +69,8 @@ class TestThePages:
         model_page = next(text for path, text in pages.items() if path.startswith("cb/models/"))
         assert "## Provenance" in model_page
         assert "## Pipeline Specs" in front
+        # What the pipeline depends on, as the Sphinx front page lists it
+        assert "## Dependencies" in front and "- `rates` (path `../rates`): not pinned yet" in front
         model = next(r for r in index["records"] if r["kind"] == "Model")
         if model.get("versions"):
             header = model_page.index("| Version | Made |")

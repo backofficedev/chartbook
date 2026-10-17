@@ -107,8 +107,8 @@ def line(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    :param df: Data to plot.
-    :type df: DataFrame
+    :param df: Data to plot: a pandas DataFrame, or a polars DataFrame or LazyFrame (collected and converted to pandas).
+    :type df: pandas.DataFrame, polars.DataFrame or polars.LazyFrame
     :param x: Column name for x-axis.
     :type x: str
     :param y: Column name(s) for y-axis. Multiple columns create multiple series.
@@ -177,7 +177,7 @@ def line(
     ```
     """
     # Validation
-    validate_dataframe(df)
+    df = validate_dataframe(df)
     y_cols = _normalize_y(y)
     validate_columns_exist(df, [x] + y_cols)
 
@@ -249,8 +249,8 @@ def bar(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    :param df: Data to plot.
-    :type df: DataFrame
+    :param df: Data to plot: a pandas DataFrame, or a polars DataFrame or LazyFrame (collected and converted to pandas).
+    :type df: pandas.DataFrame, polars.DataFrame or polars.LazyFrame
     :param x: Column name for x-axis (categories).
     :type x: str
     :param y: Column name(s) for y-axis values.
@@ -288,7 +288,7 @@ def bar(
     :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
     :rtype: ChartResult
     """
-    validate_dataframe(df)
+    df = validate_dataframe(df)
     y_cols = _normalize_y(y)
     validate_columns_exist(df, [x] + y_cols)
 
@@ -357,8 +357,8 @@ def scatter(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    :param df: Data to plot.
-    :type df: DataFrame
+    :param df: Data to plot: a pandas DataFrame, or a polars DataFrame or LazyFrame (collected and converted to pandas).
+    :type df: pandas.DataFrame, polars.DataFrame or polars.LazyFrame
     :param x: Column name for x-axis.
     :type x: str
     :param y: Column name for y-axis.
@@ -398,7 +398,7 @@ def scatter(
     :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
     :rtype: ChartResult
     """
-    validate_dataframe(df)
+    df = validate_dataframe(df)
     cols_to_check = [x, y]
     if size:
         cols_to_check.append(size)
@@ -456,8 +456,8 @@ def pie(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    :param df: Data to plot.
-    :type df: DataFrame
+    :param df: Data to plot: a pandas DataFrame, or a polars DataFrame or LazyFrame (collected and converted to pandas).
+    :type df: pandas.DataFrame, polars.DataFrame or polars.LazyFrame
     :param names: Column name for category labels.
     :type names: str
     :param values: Column name for slice values.
@@ -473,7 +473,7 @@ def pie(
     :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
     :rtype: ChartResult
     """
-    validate_dataframe(df)
+    df = validate_dataframe(df)
     validate_columns_exist(df, [names, values])
 
     chart_config = ChartConfig(
@@ -528,8 +528,8 @@ def area(
     Returns a ChartResult with the figure. Call `.show()` to display inline,
     or `.save(chart_id)` to export to multiple formats.
 
-    :param df: Data to plot.
-    :type df: DataFrame
+    :param df: Data to plot: a pandas DataFrame, or a polars DataFrame or LazyFrame (collected and converted to pandas).
+    :type df: pandas.DataFrame, polars.DataFrame or polars.LazyFrame
     :param x: Column name for x-axis.
     :type x: str
     :param y: Column name(s) for y-axis values.
@@ -569,7 +569,7 @@ def area(
     :returns: Object with `.show()`, `.save(chart_id)`, `.figure`, `.mpl_figure`, `.mpl_axes`.
     :rtype: ChartResult
     """
-    validate_dataframe(df)
+    df = validate_dataframe(df)
     y_cols = _normalize_y(y)
     validate_columns_exist(df, [x] + y_cols)
 

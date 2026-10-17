@@ -172,3 +172,10 @@ def test_the_page_names_no_command_that_is_gone(page):
         group = main.commands.get(group_name)
         if isinstance(group, click.Group):
             assert sub in group.commands, f"`chartbook {group_name} {sub}` names a subcommand the CLI does not have"
+
+
+@pytest.mark.parametrize("words,command", COMMANDS, ids=IDS)
+def test_no_help_shows_docstring_markup(words, command):
+    """`--help` prints a command's docstring: a `:param` field list there is noise to a reader."""
+    for field in (":param", ":type", ":returns", ":raises"):
+        assert field not in (command.help or ""), f"`chartbook {' '.join(words)} --help` shows {field}"

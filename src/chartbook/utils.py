@@ -162,16 +162,22 @@ def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
             pass
 
 
-def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB):
+#: How many rows a dataframe's glimpse shows, from the top of the file
+GLIMPSE_ROWS = 5
+
+#: How many significant digits a float in a glimpse is shown to
+GLIMPSE_DIGITS = 6
+
+
+def get_dataframe_glimpse(filepath):
     """Get a simple glimpse of a dataframe showing columns and data types.
 
-    For files larger than size_threshold_mb, uses memory-efficient loading by only
-    collecting sampled data and correcting the row count in glimpse output.
+    Shows the first :data:`GLIMPSE_ROWS` rows, with floats rounded for
+    display (:func:`glimpse_text`). Only those rows are collected, whatever
+    the size of the file; the row count is the file's own.
 
     :param filepath: Path to the parquet or CSV file.
     :type filepath: str or Path
-    :param size_threshold_mb: File size threshold in MB above which to use memory-efficient loading.
-    :type size_threshold_mb: float
     :returns: The glimpse output as a string, or error message if file cannot be read.
     :rtype: str
     """
@@ -181,42 +187,51 @@ def get_dataframe_glimpse(filepath, size_threshold_mb=DEFAULT_SIZE_THRESHOLD_MB)
         if is_glob_pattern(str(filepath)):
             # Glob/hive-partitioned paths: use scan_parquet directly
             lf = pl.scan_parquet(filepath, hive_partitioning=True)
-            is_large_file = False
+        elif filepath.suffix.lower() == ".csv":
+            lf = pl.scan_csv(filepath)
+        elif filepath.suffix.lower() == ".parquet":
+            lf = pl.scan_parquet(filepath)
         else:
-            # Check file size to determine loading strategy
-            file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
-            is_large_file = file_size_mb > size_threshold_mb
-
-            # Load data lazily
-            if filepath.suffix.lower() == ".csv":
-                lf = pl.scan_csv(filepath)
-            elif filepath.suffix.lower() == ".parquet":
-                lf = pl.scan_parquet(filepath)
-            else:
-                return f"Unsupported file type: {filepath.suffix}"
+            return f"Unsupported file type: {filepath.suffix}"
 
         # Get actual row count efficiently (works for both small and large files)
         row_count_df = lf.select(pl.len().alias("count")).collect()
         actual_row_count = row_count_df["count"][0]
 
-        # For large files, use head() to avoid full scan; for small files, tail() is fine
-        if is_large_file:
-            sample_df = lf.head(1).collect()
-        else:
-            sample_df = lf.tail(1).collect()
-
-        # Capture the glimpse output
-        output = StringIO()
-        with redirect_stdout(output):
-            sample_df.glimpse()
-
-        glimpse_text = output.getvalue()
+        sample_df = lf.head(GLIMPSE_ROWS).collect()
 
         # Fix row count in glimpse to show actual total rows
-        return fix_glimpse_row_count(glimpse_text, actual_row_count)
+        return fix_glimpse_row_count(glimpse_text(sample_df), actual_row_count)
 
     except Exception as e:
         return f"Error reading file: {e!s}"
+
+
+def glimpse_text(sample: pl.DataFrame) -> str:
+    """Polars' glimpse of a few rows, as text, with floats rounded for a reader.
+
+    A float is shown to :data:`GLIMPSE_DIGITS` significant digits, so
+    ``3.8499999999999996`` reads ``3.85``. A ``f32`` column is widened to
+    show its digits as written (``1.1``, not ``1.100000023841858``), and is
+    still labelled ``<f32>``.
+    """
+    narrow = [name for name, dtype in sample.schema.items() if dtype == pl.Float32]
+    shown = sample.with_columns(pl.col(narrow).cast(pl.String).cast(pl.Float64)).with_columns(
+        pl.col(pl.Float64).round_sig_figs(GLIMPSE_DIGITS)
+    )
+    output = StringIO()
+    with redirect_stdout(output):
+        shown.glimpse()
+    # "Rows: …" and "Columns: …", then one line per column in order. A
+    # name is shown left-aligned and cut at 50 characters, so the type's
+    # label comes after it
+    lines = output.getvalue().split("\n")
+    for position, name in enumerate(sample.columns):
+        if name in narrow:
+            line = lines[2 + position]
+            at = line.find("<f64>", 2 + min(len(name), 49))
+            lines[2 + position] = line[:at] + "<f32>" + line[at + len("<f64>") :]
+    return "\n".join(lines)
 
 
 # Regex to match MathJax 2 script tags injected by Plotly's NotebookRenderer.

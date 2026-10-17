@@ -909,6 +909,8 @@ class TestARenderedProjectBuilds:
         result = CliRunner().invoke(
             main, ["check", "--skip-outputs", "--project-dir", str(project)]
         )
-        assert "1 problem(s) found in 1 manifest(s)." in result.output, result.output
-        assert "[project] repo_url: required by the default policy" in result.output
+        # With no [policy], a recommended field is a warning, not a failure
+        assert result.exit_code == 0, result.output
+        assert result.output.count("recommended by the default policy") == 1, result.output
+        assert "[project] repo_url: recommended by the default policy" in result.output
 

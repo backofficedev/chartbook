@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import importlib.resources
 import os
+import posixpath
+import re
 import string
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -196,6 +198,19 @@ def _one_line(text: object, longest: int = 200) -> str:
     return cut.rstrip(" .,;:") + "…"
 
 
+#: A git commit as a record names it, and the time a snapshot was made (UTC)
+_COMMIT = re.compile(r"[0-9a-f]{7,64}")
+_MADE_AT = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}")
+
+
+def _code(value: object) -> str:
+    """A record's value as inline code; as :func:`_as_text` when it has what would end the code or the table cell it is in."""
+    text = str(value)
+    if text and not any(c in text for c in "`|\\\r\n<>"):
+        return f"`{text}`"
+    return _as_text(text)
+
+
 def _link_text(text: str) -> str:
     """Text set into the assistant file, with a backslash before what would start a link, an autolink or code."""
     return "".join("\\" + c if c in "\\[]<>`" else c for c in text)
@@ -240,8 +255,8 @@ class SphinxWriter:
         scheme.
     :param docs_src_dir: The site's own `docs_src`, where a project may
         override a template.
-    :param size_threshold: Files over this many megabytes get a glimpse of
-        one row and no date range, as the generator does.
+    :param size_threshold: Files over this many megabytes get no date
+        range. The glimpse reads only the first rows, at any size.
     :param enable_data_download: Whether pages link to downloads.
     """
 
@@ -344,7 +359,7 @@ class SphinxWriter:
             freshness = [_freshness("Data updated", location.get("modified_at"))]
         else:
             resolved = location.get("resolved_path") or str(base_dir / location.get("path", ""))
-            glimpse = get_dataframe_glimpse(Path(resolved), size_threshold_mb=self.size_threshold)
+            glimpse = get_dataframe_glimpse(Path(resolved))
             try:
                 first, last = _most_recent_valid_datapoints(
                     Path(resolved), record.get("date_col", ""), size_threshold_mb=self.size_threshold
@@ -387,11 +402,10 @@ class SphinxWriter:
         location = record.get("location") or {}
         pipeline_manifest = self._pipeline_manifest(pipeline)
         chart_manifest = self._chart_manifest(record, dataframe)
-        chart_updated = _as_local(location.get("modified_at"))
-        if chart_updated is not None:
-            chart_date = chart_updated.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            chart_date = pipeline_manifest.get("source_last_modified_date")
+        # The chart listing's date, in UTC with no zone named: ABlog compares
+        # it with a time that has none
+        chart_updated = _as_utc(location.get("modified_at") or pipeline.get("code_changed_at"))
+        chart_date = chart_updated.strftime("%Y-%m-%d %H:%M:%S") if chart_updated is not None else None
         if dataframe is not None:
             dataframe_manifest = self._dataframe_manifest(dataframe, base_dir)
             data_updated = (dataframe.get("location") or {}).get("modified_at")
@@ -484,20 +498,26 @@ class SphinxWriter:
         from the pipeline's own site pages (`site_pages`; `index_toc.md`
         among them is read and merged in). In a catalog it is the pipeline's
         README page, with its repository and site named above the text.
+        Either way it lists the pipelines it depends on, with what each is
+        pinned to (:meth:`_dependencies`).
         """
         pipeline = self.records[pipeline_id]
         if (pipeline.get("location") or {}).get("kind") == "store":
             return self._from_the_store_page(pipeline)
         base_dir = Path(pipeline["location"]["value"])
         readme = self._readme_lines(pipeline, base_dir)
+        environment = self._environment(base_dir)
+        dependencies = self._dependencies(pipeline, self.pipeline_page_path(pipeline))
         if self.theme == "catalog":
             repo_url, site_url = pipeline.get("repo_url", ""), pipeline.get("site_url", "")
-            return f"# `{pipeline_id}` {pipeline.get('name', '')} \n\n " + (
+            page = f"# `{pipeline_id}` {pipeline.get('name', '')} \n\n " + (
                 f'Pipeline GitHub Repo <a href="{repo_url}">{repo_url}.</a>\n\n\n'
                 + f'Pipeline Web Page <a href="{site_url}">{site_url}.</a>\n\n\n'
                 + "".join(readme[2:])
             )
-        environment = self._environment(base_dir)
+            if dependencies:
+                page += "\n\n" + environment.get_template("dependencies.md").render(dependencies=dependencies)
+            return page
         own = [self.records[i] for i in pipeline.get("assets", []) if i in self.records]
         notebooks = sorted((r for r in own if r["kind"] == "Notebook"), key=_local_name)
         notes = sorted((r for r in own if r["kind"] == "Note"), key=_local_name)
@@ -527,6 +547,7 @@ class SphinxWriter:
             show_code_updated=True,
             freshness=[fact for fact in [_freshness("Code updated", pipeline.get("code_changed_at"))] if fact],
             version=_laid_out_version(pipeline),
+            dependencies=dependencies,
         )
 
     # --- the assistant file --------------------------------------------------
@@ -972,20 +993,11 @@ class SphinxWriter:
         an input links to its page in the snapshot's site. When that site
         could not be built, to the page there that says why.
         """
-        from chartbook.versions import site_path, version_name
-
-        if self.theme != "catalog" or not commit or not made_at:
-            return ""
         owner, _, local = input_id.rpartition(":")
-        entry = next(
-            (
-                e for e in (self.records.get(owner) or {}).get("snapshots") or []
-                if e.get("commit") == commit and e.get("made_at") == made_at
-            ),
-            None,
-        )
-        if entry is None:
+        found = self._version_site(owner, commit, made_at)
+        if found is None:
             return ""
+        root, entry = found
         kind, _, asset = local.rpartition("/")
         pages = {
             "": f"cb/dataframes/{_slug(owner)}/{asset}",
@@ -995,12 +1007,79 @@ class SphinxWriter:
         }
         if kind not in pages or not asset or any(c in asset for c in "#@"):
             return ""
-        try:
-            root = site_path(owner, version_name(commit, made_at))
-        except ValueError:
-            return ""
         page = f"{pages[kind]}.html" if entry.get("rendered", True) else "index.html"
         return "../" * from_path.count("/") + f"{root}/{page}"
+
+    def _version_site(self, owner: str, commit: Optional[str], made_at: Optional[str]) -> Optional[tuple]:
+        """Where one snapshot of a pipeline is in a catalog's site, and its entry in the pipeline's `snapshots`; None if the catalog does not show it."""
+        from chartbook.versions import site_path, version_name
+
+        if self.theme != "catalog" or not commit or not made_at:
+            return None
+        entry = next(
+            (
+                e for e in (self.records.get(owner) or {}).get("snapshots") or []
+                if e.get("commit") == commit and e.get("made_at") == made_at
+            ),
+            None,
+        )
+        if entry is None:
+            return None
+        try:
+            return site_path(owner, version_name(commit, made_at)), entry
+        except ValueError:
+            return None
+
+    def _dependencies(self, pipeline: dict, from_path: str) -> list:
+        """What a pipeline's page lists under "Dependencies": each pipeline it reads from, how it is declared, what it is pinned to.
+
+        All of it is the pipeline record's ``dependencies``, which the index
+        copies from ``[dependencies]`` and ``chartbook.lock``. A pin from a
+        snapshot is said as the snapshot's commit and when it was made; a
+        pin from a repository, as its commit. In a catalog that shows the
+        other pipeline, the entry links its page in the snapshot pinned, or
+        failing that its page here; a repository with a web address is
+        linked there. What a record says is set into the page as code when
+        it cannot end the code, and as text otherwise.
+        """
+        from chartbook.identity import web_link
+
+        entries = []
+        for dependency in pipeline.get("dependencies") or []:
+            if not isinstance(dependency, dict) or not isinstance(dependency.get("id"), str):
+                continue
+            location = dependency.get("location") or {}
+            rev = f", rev {_code(location['rev'])}" if location.get("rev") else ""
+            if location.get("kind") == "path":
+                declared = f"path {_code(location.get('path', ''))}"
+            elif location.get("kind") == "git" and location.get("url"):
+                declared = f"git {_code(location['url'])}{rev}"
+            elif location.get("kind") == "git":
+                declared = f"by its ID, from its repository{rev}"
+            else:
+                declared = f"by its ID, from the store{rev}"
+            if dependency.get("key"):
+                # The name its code reads it by, when that is not its ID here
+                declared = f"as {_code(dependency['key'])}, {declared}"
+            commit = location.get("commit") if _COMMIT.fullmatch(str(location.get("commit"))) else None
+            made = dependency.get("snapshot") if _MADE_AT.match(str(dependency.get("snapshot"))) else None
+            if commit and made:
+                pinned = f"pinned to the snapshot at commit `{commit[:7]}`, made {made[:10]} {made[11:16]} UTC"
+            elif commit:
+                pinned = f"pinned to commit `{commit[:7]}` of its repository"
+            else:
+                pinned = "not pinned yet; `chartbook pin` pins it"
+            entry = {"label": _code(dependency["id"]), "declared": declared, "pinned": pinned, "html_link": "", "link": ""}
+            other = self.records.get(dependency["id"]) or {}
+            found = self._version_site(dependency["id"], commit, dependency.get("snapshot"))
+            if found is not None:
+                entry["html_link"] = "../" * from_path.count("/") + f"{found[0]}/index.html"
+            elif other.get("kind") == "Pipeline" and other is not pipeline:
+                entry["link"] = posixpath.relpath(self.pipeline_page_path(other), posixpath.dirname(from_path) or ".")
+            elif web_link(location.get("url")):
+                entry["link"] = web_link(location["url"])
+            entries.append(entry)
+        return entries
 
     def _trained_on(self, record: dict, from_path: str = "") -> list:
         """What the page lists under "Trained On": a link to each input's page, or its name.
@@ -1139,8 +1218,8 @@ class SphinxWriter:
         }
         shown = {"project": project, "dataframes": dataframes, "from_the_store": _is_from_the_store(pipeline)}
         if pipeline.get("code_changed_at"):
-            moment = datetime.strptime(pipeline["code_changed_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-            shown["source_last_modified_date"] = moment.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+            # In UTC, and said so, as every time on the site is
+            shown["source_last_modified_date"] = _as_utc(pipeline["code_changed_at"]).strftime("%Y-%m-%d %H:%M:%S UTC")
         return shown
 
     def _write_up(self, record: dict, base_dir: Path, environment: jinja2.Environment) -> str:
@@ -1213,15 +1292,15 @@ def _local_name(record: dict) -> str:
     return record["ref"]["name"]
 
 
-def _as_local(modified_at: Optional[str]) -> Optional[datetime]:
-    """An index timestamp (UTC, to the second) as a local time, or None."""
+def _as_utc(modified_at: Optional[str]) -> Optional[datetime]:
+    """An index timestamp (UTC, to the second) as a time in UTC, or None."""
     if not modified_at:
         return None
-    return datetime.strptime(modified_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).astimezone()
+    return datetime.strptime(modified_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
 
 
 def _freshness(label: str, modified_at: Optional[str]):
-    moment = _as_local(modified_at)
+    moment = _as_utc(modified_at)
     return None if moment is None else freshness_fact(label, moment)
 
 
@@ -1234,17 +1313,21 @@ def freshness_fact(label: str, moment: Optional[datetime]) -> Optional[dict]:
     goes into a ``<time>`` element and ``chartbook-freshness.js`` turns it
     into relative wording when the page is read.
 
+    Every time on the site is in UTC and says so, whatever the zone of the
+    machine that built it: a naive *moment* is taken as that machine's
+    local time and converted.
+
     :returns: ``label``, ``iso`` (ISO 8601 with offset), ``title`` (hover
         text) and ``date`` (fallback text); None when *moment* is None.
     """
     if moment is None:
         return None
-    local = moment.astimezone()
+    utc = moment.astimezone(timezone.utc)
     return {
         "label": label,
-        "iso": local.isoformat(timespec="seconds"),
-        "title": local.strftime("%Y-%m-%d %H:%M %Z").strip(),
-        "date": local.strftime("%Y-%m-%d"),
+        "iso": utc.isoformat(timespec="seconds"),
+        "title": utc.strftime("%Y-%m-%d %H:%M UTC"),
+        "date": utc.strftime("%Y-%m-%d"),
     }
 
 
