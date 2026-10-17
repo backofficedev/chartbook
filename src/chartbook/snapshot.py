@@ -763,11 +763,6 @@ def by_repository(snapshots: list) -> list[list]:
     return groups + ([unnamed] if unnamed else [])
 
 
-def _same_identity(first: "Snapshot", second: "Snapshot") -> bool:
-    """Whether two snapshots record the same address and the same first commit."""
-    return repository_key(first.repository) == repository_key(second.repository) and first.first_commit == second.first_commit
-
-
 def find(store: Store, commit: str, subdirectory: str = "") -> list[Snapshot]:
     """The snapshots of one pipeline at one commit, newest first.
 
@@ -1103,7 +1098,11 @@ def label_records(
         if found is None:
             found, _ = readable_snapshots(store)
         of_it = [taken for taken in found if taken.pipeline == newest.pipeline and taken.subdirectory == newest.subdirectory]
-        found = next((group for group in by_repository(of_it + [newest]) if any(t is newest for t in group)), [newest])
+        named, unnamed = repository_groups(of_it + [newest])
+        if identity_keys(newest):
+            found = next(group for group in named if any(t is newest for t in group)) + unnamed
+        else:
+            found = (named[0] if len(named) == 1 else []) + unnamed
     for name, labels in sorted(newest.labels.items()):
         versions = None
         for label, start in sorted(labels.items()):
@@ -1311,14 +1310,29 @@ def plan_removals(
     groups: dict[tuple[str, str], list[Snapshot]] = {}
     for taken in all_snapshots(store):
         groups.setdefault((taken.pipeline, taken.subdirectory), []).append(taken)
-    for group in [part for whole in groups.values() for part in by_repository(whole)]:
-        # Not one dated after now: it would stay "the newest" while the real
-        # newest went unkept. Within one repository: another that gives
-        # itself the same ID takes nothing from this one's keep.
-        present = [taken for taken in group if not made_in_the_future(taken, now)]
-        newest = present[-1] if present else None
-        labels = {} if aggressive else _labels_in(store, group, newest)
-        pinnable = set() if aggressive else _pinnable(store, group, now)
+    planned = []
+    for whole in groups.values():
+        # Within one repository: another that gives itself the same ID takes
+        # nothing from this one's keep. A snapshot that names no repository,
+        # with more than one repository claiming the ID, may be any one's:
+        # what any of their labels points at in it is kept.
+        named, unnamed = repository_groups(whole)
+        parts = by_repository(whole) if len(named) <= 1 else named + ([unnamed] if unnamed else [])
+        of_whole = []
+        for part in parts:
+            # Not one dated after now: it would stay "the newest" while the
+            # real newest went unkept
+            present = [taken for taken in part if not made_in_the_future(taken, now)]
+            newest = present[-1] if present else None
+            labels = {} if aggressive else _labels_in(store, part, newest)
+            of_whole.append([part, newest, labels, set() if aggressive else _pinnable(store, part, now)])
+        if len(named) > 1 and unnamed:
+            for _, _, labels, _ in of_whole[:-1]:
+                for name, starts in labels.items():
+                    of_whole[-1][2].setdefault(name, set()).update(starts)
+        joining = _joining(whole, now)
+        planned.extend((part, newest, labels, pinnable, joining) for part, newest, labels, pinnable in of_whole)
+    for group, newest, labels, pinnable, joining in planned:
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
@@ -1335,6 +1349,8 @@ def plan_removals(
                 for start in starts
             ):
                 why = "a label points at a version in it"
+            elif taken.path in joining:
+                why = "it records its repository's address and first commit together"
             elif made_in_the_future(taken, now) and _ahead(taken, now) > keep_days * 86400:
                 plan.remove.append(
                     (taken, f"nothing pins it, and it is dated more than {keep_days:g} days after now, so it is not taken as made")
@@ -1354,6 +1370,24 @@ def plan_removals(
     if keep_lineage:
         _keep_lineage(plan, groups)
     return plan
+
+
+def _joining(snapshots: list, now: datetime) -> set:
+    """The snapshots that tell which repository the rest are of: the newest of each address and first commit recorded together.
+
+    A shallow clone's snapshots name an address and no first commit, and a
+    clone whose remote is a path names a first commit and no address; only
+    a snapshot that names both says they are one repository
+    (:func:`repository_groups`). Removing the last of those would split the
+    repository in two for every pin after.
+
+    :returns: Their records' paths.
+    """
+    newest: dict = {}
+    for taken in snapshots:
+        if taken.repository and taken.first_commit and not made_in_the_future(taken, now):
+            newest[(repository_key(taken.repository), taken.first_commit)] = taken
+    return {taken.path for taken in newest.values()}
 
 
 def _keep_lineage(plan: SnapshotPlan, groups: dict) -> None:
@@ -1827,15 +1861,19 @@ def make(
     documents, documents_skipped = document_paths(directory, raw)
     # Not one dated after now: it would stand for this commit for as long as its date says
     before = [taken for taken in find(store, code.commit, code.subdirectory) if not made_in_the_future(taken)]
-    if before and before[0].content() == snapshot.content() and _same_identity(before[0], snapshot):
+    # The newest record of this commit that says at least as much of its
+    # repository as this one would: a clone with a path remote, or a shallow
+    # one, reuses its main checkout's, and the main checkout makes its own once
+    same = next((taken for taken in before if identity_keys(snapshot) <= identity_keys(taken)), None)
+    if same is not None and same.content() == snapshot.content():
         # The same bytes; made again only to say more than the one before:
         # its documents, that a run built them, or the commit's tags, since
         # a commit is often tagged after it is built
-        if (before[0].documents is not None or not documents) and before[0].tags == snapshot.tags:
-            if before[0].built_by_run or not built_by_run:
+        if (same.documents is not None or not documents) and same.tags == snapshot.tags:
+            if same.built_by_run or not built_by_run:
                 store.note_origin(code.commit, record_name(code.subdirectory), str(code.top))
-                return SnapshotReport(before[0], False, not_built, skipped_labels=labels_skipped(raw))
-        elif before[0].built_by_run:
+                return SnapshotReport(same, False, not_built, skipped_labels=labels_skipped(raw))
+        elif same.built_by_run:
             # Made again for its documents alone: the bytes are still the ones a run built
             snapshot = dataclasses.replace(snapshot, built_with=dict(snapshot.built_with, run=True))
 

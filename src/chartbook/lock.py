@@ -507,6 +507,7 @@ def _sync(
                     entry["_store"], entry.get("commit"), store, repository,
                     found=snapshots_in_store(), first_commit=first_commit, named=named,
                 ),
+                found=snapshots_in_store,
             )
         elif from_folder:
             # What is in the folder this minute, whatever state it is in.
@@ -532,7 +533,8 @@ def _sync(
                 listed = {**was, "location": dict(was["location"])}
         else:
             records, listed = _sync_from_snapshots(
-                key, Path(entry["_resolved_path"]), was, listed, had, may_move, store, report
+                key, Path(entry["_resolved_path"]), was, listed, had, may_move, store, report,
+                found=snapshots_in_store,
             )
         listed = {k: v for k, v in listed.items() if k != "pinned_hash"}
         overall = pinned_hash(records.values())
@@ -872,7 +874,7 @@ def _made_in(taken: "snapshot.Snapshot") -> str:
         return taken.repository
     if taken.first_commit:
         return f"a repository with no remote whose first commit is {taken.first_commit[:7]}"
-    return "no repository it names"
+    return "a ChartBook that did not record its repository"
 
 
 def _newest_in_store(
@@ -903,8 +905,11 @@ def _newest_in_store(
       first pinned from, and its repository is the group either is in: it
       may have moved, or had its history rewritten, and still be found.
     - With neither, an ID that more than one repository claims is not
-      pinned until the manifest says which; snapshots that name no
-      repository at all are left out when one repository is named.
+      pinned until the manifest says which.
+
+    A snapshot that names no repository, made by a ChartBook from before
+    snapshots named one, is the repository's when only one claims the ID,
+    and is taken by no pin when more than one does.
 
     This guards against an accident only: anyone who can write to a store
     can write a record that claims any repository.
@@ -925,6 +930,16 @@ def _newest_in_store(
     groups, _ = snapshot.repository_groups(every)
     group_of = {id(t): index for index, group in enumerate(groups) for t in group}
     keys_of = [set().union(*(snapshot.identity_keys(t) for t in group)) for group in groups]
+    known = set()
+    if repository_key(repository):
+        known.add(("address", repository_key(repository)))
+    if first_commit and not named:
+        known.add(("first", first_commit))
+
+    def unnamed_of(index_matches) -> bool:
+        # One that names no repository was made by a ChartBook from before
+        # snapshots named one: it is the repository's when only one claims the ID
+        return len(groups) == 1 and index_matches(0)
 
     if named:
         wanted = repository_key(repository)
@@ -933,19 +948,18 @@ def _newest_in_store(
         def made_there(taken) -> bool:
             if taken.repository:
                 return repository_key(taken.repository) == wanted
-            return bool(taken.first_commit) and taken.first_commit in firsts
+            if taken.first_commit:
+                return taken.first_commit in firsts
+            return unnamed_of(lambda index: ("address", wanted) in keys_of[index])
 
         there = repository
-    elif repository or first_commit:
-        known = set()
-        if repository_key(repository):
-            known.add(("address", repository_key(repository)))
-        if first_commit:
-            known.add(("first", first_commit))
+    elif known:
         chosen = {index for index, keys in enumerate(keys_of) if keys & known}
 
         def made_there(taken) -> bool:
-            return group_of.get(id(taken)) in chosen
+            if id(taken) in group_of:
+                return group_of[id(taken)] in chosen
+            return unnamed_of(lambda index: index in chosen)
 
         there = f"the repository it was first pinned from ({repository or f'first commit {first_commit[:7]}'})"
     else:
@@ -959,7 +973,11 @@ def _newest_in_store(
             ), {}
 
         def made_there(taken) -> bool:
-            return not claiming or group_of.get(id(taken)) == claiming[0]
+            if not claiming:
+                return True
+            if id(taken) in group_of:
+                return group_of[id(taken)] == claiming[0]
+            return unnamed_of(lambda index: index == claiming[0])
 
         there = None
 
@@ -979,20 +997,18 @@ def _newest_in_store(
         ), {}
     newest = max(taken, key=lambda t: t.made_at)
 
-    # What to record of its repository: its own address and first commit,
-    # or, for one made in a shallow clone or a clone with no address, what
-    # its repository's other snapshots say, or what was known already
-    in_group = group_of.get(id(newest))
-    group = groups[in_group] if in_group is not None else [newest]
-    group_keys = keys_of[in_group] if in_group is not None else set()
-    latest = sorted(group, key=lambda t: t.made_at, reverse=True)
+    # What to record of its repository: its own address and first commit;
+    # for one made in a shallow clone or a clone with no address, what was
+    # known already, which is never lost, or what the snapshots it was
+    # taken with say
+    accepted = sorted((t for t in every if made_there(t)), key=lambda t: t.made_at, reverse=True)
     identity = {
         "repository": newest.repository
-        or (repository if repository and ("address", repository_key(repository)) in group_keys else "")
-        or next((t.repository for t in latest if t.repository), ""),
+        or (repository if ("address", repository_key(repository)) in known else "")
+        or next((t.repository for t in accepted if t.repository), ""),
         "first_commit": newest.first_commit
-        or (first_commit if first_commit and ("first", first_commit) in group_keys else "")
-        or next((t.first_commit for t in latest if t.first_commit), ""),
+        or (first_commit if first_commit and ("first", first_commit) in known else "")
+        or next((t.first_commit for t in accepted if t.first_commit), ""),
     }
     newer = [t for t in mine if not made_there(t) and t.made_at > newest.made_at]
     if newer:
@@ -1014,6 +1030,7 @@ def _sync_from_snapshots(
     store: Store,
     report: PinReport,
     newest_of=None,
+    found=None,
 ) -> tuple[dict[str, dict], dict]:
     """Work out a dependency's records from its snapshots: a ``path`` dependency's, or one named by its ID.
 
@@ -1047,7 +1064,8 @@ def _sync_from_snapshots(
     identity: dict = {}
     if newest_of is not None:
         newest, why, identity = newest_of()
-        if identity.get("passed_over"):
+        if identity.get("passed_over") and (may_move or not pinned):
+            # Said when the choice is made, not on every pin after it
             report.events.append(PinEvent("passed_over", key, detail=identity["passed_over"]))
     else:
         try:
@@ -1202,7 +1220,7 @@ def _sync_from_snapshots(
 
     # The labels the owner's manifest gave when the snapshot was made, each
     # pinned to the version it names
-    labelled, unresolved = snapshot.label_records(newest, key, store)
+    labelled, unresolved = snapshot.label_records(newest, key, store, found=found() if found and newest.labels else None)
     for asset_id, record in labelled.items():
         old = (had_labels.get(asset_id) or {}).get("content_hash")
         new = record["content_hash"]

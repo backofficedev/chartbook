@@ -593,6 +593,141 @@ class TestWhatTheThirdReviewFound:
         assert messages and not any("is pinned from" in m for m in messages)
 
 
+def _record(taken, **changes):
+    """A copy of a snapshot's record, written to the store as another clone or ChartBook would have."""
+    import dataclasses
+
+    from chartbook.store import default_store
+
+    snapshot._write(dataclasses.replace(taken, **changes), default_store())
+
+
+A = "https://github.com/acme/rates"
+
+
+class TestWhatTheFourthReviewFound:
+    def test_gc_keeps_what_joins_a_repository(self, tmp_path):
+        from datetime import datetime, timezone
+
+        from chartbook.store import default_store
+
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        _record(real, made_at="2026-09-01T00:00:00.000000Z")  # the main checkout: address and first commit
+        _record(real, made_at="2026-10-01T00:00:00.000000Z", first_commit="")  # a shallow CI clone
+        _record(real, made_at="2026-10-15T00:00:00.000000Z", repository="")  # an agent's clone, a path remote
+        store = default_store()
+        for taken in snapshot.all_snapshots(store):
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n")
+        ci = (real.commit, "2026-10-01T00:00:00.000000Z")
+        now = datetime(2026, 10, 16, tzinfo=timezone.utc)
+        plan = snapshot.plan_removals(store, {ci}, set(), keep_days=7, now=now)
+        assert ("2026-09-01T00:00:00.000000Z", "it records its repository's address and first commit together") in [
+            (t.made_at, why) for t, why in plan.keep
+        ]
+        for taken, _ in plan.remove:
+            taken.path.unlink()
+        groups, unnamed = snapshot.repository_groups(snapshot.all_snapshots(store))
+        assert len(groups) == 1 and unnamed == []
+
+    def test_a_pin_never_loses_the_address_it_was_matched_by(self, tmp_path):
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        # The main checkout's record goes; a shallow clone's and an agent's clone's are left
+        real.path.unlink()
+        _record(real, made_at="2026-10-01T00:00:00.000000Z", first_commit="")
+        _record(real, made_at="2099-01-01T00:00:00.000000Z", repository="")  # dated ahead: never taken
+        later = _again(work / "real", 5.0, "Later")
+        later.path.unlink()
+        _record(later, repository="")  # the agent's clone made it
+        lock.update(forecast)
+        assert _pinned(forecast)["location"] == {
+            "kind": "store", "pipeline": "acme/rates", "commit": later.commit, "repository": A, "first_commit": real.first_commit,
+        }
+        newest = _again(work / "real", 6.0, "Newest")
+        newest.path.unlink()
+        _record(newest, first_commit="")  # CI's shallow clone made the newest
+        lock.update(forecast)
+        assert _pinned(forecast)["location"]["commit"] == newest.commit
+
+    def test_two_clones_taking_turns_at_one_commit_make_two_records(self, tmp_path):
+        work = tmp_path.resolve()
+        real = _another(work, "real", 4.0, remote=A)
+        real.path.unlink()
+        _git(work, "clone", "--quiet", str(work / "real"), str(work / "agent"))
+        (work / "agent" / "rates" / "_data").mkdir()
+        shutil.copy(work / "real" / "rates" / "_data" / "treasury.parquet", work / "agent" / "rates" / "_data")
+        made = [snapshot.make(work / where / "rates").made for where in ("agent", "real") * 3]
+        assert made == [True, True, False, False, False, False]
+
+    def test_a_label_on_a_version_from_before_repositories_were_recorded(self, tmp_path):
+        from chartbook.store import default_store
+
+        work = tmp_path.resolve()
+        repository = work / "model"
+        folder = repository / "model"
+        (folder / "_output").mkdir(parents=True)
+        manifest = {"project": {"id": "acme/model"}, "models": {"m": {"path": "./_output/m.json"}}}
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (folder / "_output" / "m.json").write_text("v1")
+        _git(repository, "init", "--quiet", "-b", "main")
+        _git(repository, "remote", "add", "origin", "https://github.com/acme/model")
+        (repository / ".gitignore").write_text("_output/\nchartbook.lock\n")
+        _commit(repository)
+        v1 = snapshot.make(folder, made_at="2026-01-01T00:00:00.000000Z").snapshot
+        v1.path.unlink()
+        _record(v1, repository="", first_commit="")  # as an older ChartBook wrote it
+        start = v1.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
+        manifest["models"]["m"]["aliases"] = {"champion": start}
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        (folder / "_output" / "m.json").write_text("v2")
+        _commit(repository, "Champion")
+        v2 = snapshot.make(folder).snapshot
+        # Another repository claims the ID
+        _record(v2, repository="https://github.com/someone/model", first_commit="f" * 40, made_at="2026-02-01T00:00:00.000000Z", labels={})
+        forecast = _forecast(work / "forecast", {"acme/model": {"repository": "https://github.com/acme/model"}})
+        report = lock.pin(forecast)
+        assert [e.status for e in report.events if e.asset == "acme/model:model/m@champion"] == ["pinned"]
+        # gc keeps it, with a newer snapshot that names no repository either
+        (folder / "_output" / "m.json").write_text("v1b")
+        _record(dataclasses_replace_assets(v1, "v1b"), repository="", first_commit="", made_at="2026-01-02T00:00:00.000000Z")
+        store = default_store()
+        for taken in snapshot.all_snapshots(store):
+            (taken.path.parent / "origins").write_text(str(work / "gone") + "\n")
+        plan = snapshot.plan_removals(store, set(), set(), keep_days=7)
+        assert ("2026-01-01T00:00:00.000000Z", "a label points at a version in it") in [(t.made_at, w) for t, w in plan.keep]
+
+    def test_a_newer_snapshot_from_elsewhere_is_said_when_the_choice_is_made(self, tmp_path):
+        work = tmp_path.resolve()
+        _another(work, "real", 4.0, remote=A)
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        _another(work, "copy", 9.0, remote="https://github.com/someone/rates")
+        for _ in range(2):
+            assert not [e for e in lock.pin(forecast).events if e.status == "passed_over"]
+        (event,) = [e for e in lock.update(forecast).events if e.status == "passed_over"]
+        assert "someone/rates" in event.detail
+        assert lock._made_in(dataclasses_replace_identity()) == "a ChartBook that did not record its repository"
+
+
+def dataclasses_replace_assets(taken, marker: str):
+    """A copy of a snapshot holding another version of its model, as if built again."""
+    import dataclasses
+
+    record = dict(taken.assets["model/m"])
+    record["content_hash"] = "sha256:" + ("a" * 63) + marker[-1:].encode().hex()[:1]
+    return dataclasses.replace(taken, assets={**taken.assets, "model/m": record})
+
+
+def dataclasses_replace_identity():
+    from chartbook.snapshot import Snapshot
+
+    return Snapshot("acme/rates", "0" * 40, "", "2026-01-01T00:00:00.000000Z")
+
+
 class TestTheManifestEdit:
     def test_a_header_inside_a_string_is_not_written_into(self):
         from chartbook.manifest import with_dependency
