@@ -16,15 +16,18 @@ from the checkout and asks git for the commit at run time):
   `chartbook/built_from.txt` in the wheel. It is written to a temporary
   folder, never into the source tree, and force-included, which overrides any
   stray copy in the tree. A build from a checkout whose `template/` has
-  changes git has not committed records an empty file: no commit. Built from
-  an sdist, the sdist's own file is kept.
+  changes git has not committed (or for which `git status` fails) records an
+  empty file: no commit. Built from an sdist, the sdist's own file is kept,
+  with a warning if it records no commit. An sdist is told by its `PKG-INFO`
+  before git is asked, so one unpacked into a repository of its own is still
+  the sdist.
 - A folder that is neither a checkout git can read nor an sdist (git not
   installed, a folder git does not trust, a copy without `.git`) gets the
   template as it is on disk and an empty `built_from.txt` (no commit, and
   never a stray one), with a warning. With `CHARTBOOK_BUILD_REQUIRE_GIT=1`
   in the environment, as a release's build has (`doit hatch_build`), that
-  stops the build, and so does a `template/` with uncommitted changes: a
-  release always records its commit.
+  stops the build, and so do a `template/` with uncommitted changes and an
+  sdist that records no commit: a release always records its commit.
 
 The version is not touched.
 """
@@ -150,8 +153,8 @@ class CustomBuildHook(BuildHookInterface):
         commit = commit_of(root) if checkout else None
         if checkout and commit is None:
             self._stop_or_warn(
-                "template/ has changes git has not committed, so the package records no commit for it, "
-                "and a project chartbook init makes from it has no .cruft.json."
+                "template/ has changes git has not committed (or git could not say), so the package "
+                "records no commit for it, and a project chartbook init makes from it has no .cruft.json."
             )
         # Written aside, never into the tree; force-included, which overrides a stray copy there
         self._folder = Path(tempfile.mkdtemp(prefix="chartbook-build-"))
