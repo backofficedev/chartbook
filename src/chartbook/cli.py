@@ -563,7 +563,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     """
     import warnings
 
-    from chartbook.check import NOT_BUILT_YET, display_path, read_policy, run_checks
+    from chartbook.check import NOT_BUILT_YET, display_path, not_built_hint, read_policy, run_checks
     from chartbook.manifest import (
         _read_manifest_file,
         get_pipeline_ids,
@@ -623,11 +623,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
             f"\n{len(problems)} problem(s) found in {files} manifest(s).", err=True
         )
         if any(p.message.startswith(f"{NOT_BUILT_YET}:") for p in problems):
-            click.echo(
-                "Nothing is built yet: `chartbook build` builds it, and "
-                "`chartbook check --skip-outputs` checks the rest without it.",
-                err=True,
-            )
+            click.echo(not_built_hint(manifest), err=True)
         raise SystemExit(1)
 
     pipelines = [

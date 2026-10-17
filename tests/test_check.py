@@ -517,12 +517,43 @@ class TestCheckCommand:
         assert "[dataframes.dataframe_0] path: not built yet:" in without.output
         assert "[charts.chart_0_0] path: not built yet:" in without.output
         assert "file not found" not in without.output
-        assert "Nothing is built yet: `chartbook build` builds it" in without.output
-        assert "`chartbook check --skip-outputs` checks the rest" in without.output
+        # It has no build script, so `chartbook build` would build nothing
+        assert "Nothing is built yet: build its outputs (it has no build script" in without.output
+        assert "the same check with --skip-outputs checks the rest" in without.output
 
         result = _invoke(*args, "--skip-outputs")
         assert result.exit_code == 0, result.output
         assert "built outputs not checked" in result.output
+
+    def test_a_pipeline_with_a_build_script_that_has_built_nothing_is_told_to_run_it(
+        self, pipeline_project_with_notes, lenient_policy
+    ):
+        import shutil
+
+        project = pipeline_project_with_notes
+
+        def edit(config):
+            config.setdefault("scripts", {})["build"] = "doit"
+
+        _edit_toml(project, edit)
+        shutil.rmtree(project / "_data")
+        shutil.rmtree(project / "_output")
+        result = _invoke("--project-dir", project, "--policy", lenient_policy)
+        assert result.exit_code == 1
+        assert "Nothing is built yet: `chartbook build` builds it" in result.output
+
+    def test_a_catalog_is_told_a_file_is_not_found(self, catalog_project, lenient_policy):
+        """`chartbook docs` tells "not built yet" for a lone pipeline only; so does check."""
+        import shutil
+
+        # pipeline_a has built nothing, pipeline_b everything: "nothing is built" would be wrong
+        shutil.rmtree(catalog_project / "pipelines" / "pipeline_a" / "_data")
+        shutil.rmtree(catalog_project / "pipelines" / "pipeline_a" / "_output")
+        result = _invoke("--project-dir", catalog_project, "--policy", lenient_policy)
+        assert result.exit_code == 1, result.output
+        assert "file not found" in result.output
+        assert "not built yet" not in result.output
+        assert "Nothing is built yet" not in result.output
 
     def test_a_pipeline_built_in_part_lacks_a_file(self, pipeline_project, lenient_policy):
         """Built, and one output missing: that is a mistake, and no "nothing is built" hint."""

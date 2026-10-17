@@ -62,6 +62,20 @@ _FILE_TYPE_FIELDS = {
 NOT_BUILT_YET = "not built yet"
 
 
+def not_built_hint(manifest: dict) -> str:
+    """What to run when :func:`check_paths` found a lone pipeline that has built nothing yet.
+
+    `chartbook build` is named only when there is a build script for it to
+    run, as `chartbook docs` names it.
+    """
+    build = (
+        "`chartbook build` builds it"
+        if manifest["project"].get("build")
+        else "build its outputs (it has no build script for `chartbook build` to run)"
+    )
+    return f"Nothing is built yet: {build}, and the same check with --skip-outputs checks the rest without it."
+
+
 @dataclass(frozen=True)
 class Problem:
     """One finding, addressed by the file and field that needs editing.
@@ -216,9 +230,14 @@ def check_paths(
     """
     problems = []
     missing_files = validate_source_files(manifest, base_dir)
-    # A pipeline that has built nothing yet (a project just made, a fresh
-    # clone) lacks every output, which is not a mistake in its manifest
-    unbuilt = not skip_outputs and built_nothing(manifest, missing_files)
+    # A lone pipeline that has built nothing yet (a project just made, a
+    # fresh clone) lacks every output, which is not a mistake in its
+    # manifest; told as `chartbook docs` tells it
+    unbuilt = (
+        not skip_outputs
+        and manifest["project"].get("type") == "pipeline"
+        and built_nothing(manifest, missing_files)
+    )
     for missing in missing_files:
         if skip_outputs and missing.file_type in OUTPUT_FILE_TYPES:
             continue
