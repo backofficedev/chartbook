@@ -559,8 +559,10 @@ def run(
         records that the build ran in the same command.
     :param on_snapshot: Called with a pipeline's step and its
         :class:`chartbook.snapshot.SnapshotReport` after its snapshot is made.
-    :param frozen: Write nothing before the build: no pin, no fetch, no
-        lockfile, no store. Instead check that the lockfile is complete and
+    :param frozen: Write nothing before the build but, where the store can
+        be written, its note that this machine reads these pins
+        (:func:`chartbook.lock.note_this_machine`): no pin, no fetch, no
+        lockfile, no object. Instead check that the lockfile is complete and
         every pin is in the store (:func:`chartbook.lock.verify`), and
         refuse to build if not. A ``git`` dependency is not built either;
         its pins have to be there. For CI, and for a store one may only read.
@@ -574,7 +576,7 @@ def run(
     building = script == BUILD_SCRIPT
     if frozen and snapshot:
         raise RunError(
-            "--frozen writes nothing, and --snapshot writes a snapshot. One or the other."
+            "--frozen pins nothing and writes no object, and --snapshot writes a snapshot. One or the other."
         )
     if frozen and not building:
         raise RunError(
@@ -662,7 +664,7 @@ def run(
                 report.failed, report.exit_code = step, 1
                 report.reason = (
                     "its lockfile is not complete, or a pin is not in the store, "
-                    "and --frozen writes nothing"
+                    "and --frozen pins nothing"
                 )
                 break
         elif building and step.has_dependencies:

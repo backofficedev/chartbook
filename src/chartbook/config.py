@@ -282,7 +282,7 @@ def _folder_text(url: str) -> str:
         text = text[1:]  # file:///C:/x names the drive, not a root folder
     if text and not text.startswith("/") and os.name != "nt":
         raise ValueError(
-            f"The store {url!r} names a host; a file:// store is a folder on this machine, "
+            f"The store {shown_store_url(url)!r} names a host; a file:// store is a folder on this machine, "
             f"written file:///path. For a folder on a shared drive, mount it and give its path."
         )
     return text
@@ -388,37 +388,40 @@ def shown_store_url(url: str) -> str:
     """A store URL as it may be printed: with no user name or password in it, nor in a URL among its options.
 
     ``s3://b/p?endpoint=https://user:secret@minio.example.org`` is shown as
-    ``s3://b/p?endpoint=https://minio.example.org``. A password may hold a
-    ``/`` or a ``#`` (half of AWS's secret keys have a ``/``), so all up to
-    the last ``@`` before the ``?`` goes, and in an option, all up to its
-    last ``@``. A folder is as it is (its path may hold an ``@``: a Google
-    Drive folder names its account), unless it is written ``//user@host``.
+    ``s3://b/p?endpoint=https://minio.example.org``. A password may hold any
+    character (half of AWS's secret keys have a ``/``; others a ``?``, an
+    ``&``, a ``#``), so all up to the last ``@`` of the URL goes, and of each
+    option, its value read as written (``%40`` is an ``@``). The options
+    are what follows a ``?`` that a name and an ``=`` follow. A path with no
+    ``//host`` part is as it is: a folder's path may hold an ``@``, as a
+    Google Drive folder names its account.
     """
-    from urllib.parse import parse_qsl
+    from urllib.parse import unquote
 
-    def bare(text: str, scheme_only: bool = False) -> str:
-        if "@" not in text:
-            return text
-        match = re.match(r"^([A-Za-z][A-Za-z0-9+.-]*://|//)", text)
+    def bare(text: str) -> str:
+        text = unquote(text)
+        match = re.match(r"^\s*([A-Za-z][A-Za-z0-9+.-]*:)?//", text)
         if match:
-            return match.group(1) + text[match.end():].rpartition("@")[2]
-        return text if scheme_only else text.rpartition("@")[2]
+            return match.group(0).strip() + text[match.end():].rpartition("@")[2]
+        return text.rpartition("@")[2]
 
-    if store_kind(url) == "folder" and not url.strip().startswith("//"):
-        return url
-    head, sep, query = url.partition("?")
-    if not sep:
-        return bare(head, scheme_only=True)
-    shown = "&".join(f"{key}={bare(value)}" for key, value in parse_qsl(query, keep_blank_values=True))
-    return f"{bare(head, scheme_only=True)}?{shown}"
+    main, *rest = re.split(r"\?(?=[A-Za-z_][A-Za-z0-9_]*=)", url, maxsplit=1)
+    if re.match(r"^\s*([A-Za-z][A-Za-z0-9+.-]*:)?//", main):
+        main = bare(main)
+    if not rest:
+        return main
+    options = re.split(r"&(?=[A-Za-z_][A-Za-z0-9_]*=)", rest[0])
+    return f"{main}?" + "&".join(f"{key}={bare(value)}" for key, _, value in (o.partition("=") for o in options))
 
 
 def without_credentials(text: str) -> str:
     """A message with no user name or password of any URL in it: ``scheme://user:pass@`` becomes ``scheme://``.
 
-    For what an SDK says, which may echo an address it was given.
+    For what an SDK says, which may echo an address it was given. All up to
+    the last ``@`` of a line that has an address goes, since a password may
+    hold a space or a quote.
     """
-    return re.sub(r"([A-Za-z][A-Za-z0-9+.-]*://)[^\s'\"<>]*@", r"\1", text)
+    return re.sub(r"([A-Za-z][A-Za-z0-9+.-]*://)[^\n]*@", r"\1", text)
 
 
 def store_kind(url: str) -> str:
@@ -440,13 +443,13 @@ def folder_of_store_url(url: str) -> Path:
     kind = store_kind(url)
     if kind != "folder":
         raise ValueError(
-            f"The store {url!r} is a {kind}:// store, and this needs a folder: only a folder "
+            f"The store {shown_store_url(url)!r} is a {kind}:// store, and this needs a folder: only a folder "
             f"store is built in; another kind is a plugin, found by `chartbook.store.store_for_url()`."
         )
     try:
         return Path(os.path.abspath(Path(_folder_text(url)).expanduser()))
     except RuntimeError:
-        raise ValueError(f"The store {url!r} names a user this machine does not know.") from None
+        raise ValueError(f"The store {shown_store_url(url)!r} names a user this machine does not know.") from None
 
 
 def get_store_path() -> Path:
@@ -484,9 +487,9 @@ def get_machine_id(create: bool = True) -> str:
     not bring its name with it: that machine makes one of its own, kept in
     the same file. So does a cloned virtual machine or an image that had
     pinned, when its operating system made its identity anew; one that did
-    not is told apart only by its host name, when a note shows two hosts
-    under one name (:meth:`chartbook.store.FolderStore.add_root`), and one
-    with the same host name as well is not told apart at all. The cost is
+    not is told apart by the hardware address each note records, when a
+    note under the name shows another (:func:`chartbook.store.another_node`),
+    and one with no hardware address to give is not told apart. The cost is
     a note no machine forgets, never a pin. Where nothing can be kept, or
     there is no home folder, a name made from what the operating system
     calls the machine is used.
@@ -559,22 +562,39 @@ def renew_machine_id() -> str:
     """Give this machine a new name, when it shares one with another machine, and return it.
 
     A store finds two machines with one name when a note under the name, at
-    one lockfile's path, was written by another host: a cloned virtual
-    machine whose operating system kept its identity, with a copied home.
-    The cost is that this machine's notes under the old name are kept as
-    another machine's, never that a pin is lost.
+    one lockfile's path, was written by another machine, by its hardware
+    address (:func:`chartbook.store.another_node`): a cloned virtual machine
+    whose operating system kept its identity, with a copied home. The cost
+    is that this machine's notes under the old name are kept as another
+    machine's, never that a pin is lost. A name ``CHARTBOOK_MACHINE_ID``
+    gives is the user's, and is not changed.
+
+    :raises chartbook.store.MachineNameError: If no new name can be kept:
+        ``CHARTBOOK_MACHINE_ID`` names the machine, there is no home folder,
+        or its ``machine-id`` cannot be written. Then nothing is to be
+        written under the shared name either.
     """
     import uuid
 
+    from chartbook.store import MachineNameError
+
+    if os.environ.get(MACHINE_ENV_VAR, "").strip():
+        raise MachineNameError(
+            f"another machine writes notes under this machine's {MACHINE_ENV_VAR}; give each "
+            f"machine that lasts a name of its own"
+        )
     path, identity, unkept = _machine_file()
     made = uuid.uuid4().hex
     if path is None:
-        return unkept
+        raise MachineNameError("this machine shares its name with another, and has no home folder to keep one of its own in")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         _keep_machine(path, identity, made)
-    except OSError:
-        return get_machine_id()
+    except OSError as error:
+        raise MachineNameError(
+            f"this machine shares its name with another (a clone, it may be), and cannot keep one of its "
+            f"own in {path}: {error.strerror or error}"
+        ) from None
     _machine_names[(str(path), identity)] = _kept_machines(path).get(identity) or made
     return _machine_names[(str(path), identity)]
 
@@ -626,7 +646,7 @@ def _os_machine_identity() -> str:
     Linux image may have it, is none). A virtual machine cloned without
     making its identity anew (``/etc/machine-id``, or Windows without
     sysprep) has the identity of the one it was cloned from: two such
-    are told apart by their host names (:meth:`chartbook.store.FolderStore.add_root`).
+    are told apart by their hardware addresses (:func:`chartbook.store.another_node`).
     """
     import socket
     import subprocess

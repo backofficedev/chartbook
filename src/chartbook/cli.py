@@ -2596,15 +2596,17 @@ def store_info():
         get_system_settings_path,
         shown_store_url,
         store_kind,
+        without_credentials,
     )
 
     try:
         url, origin = get_store_setting()
-        # Never a user name or password, which a URL or its endpoint may carry
-        shown = str(folder_of_store_url(url)) if store_kind(url) == "folder" else shown_store_url(url)
+        folder = folder_of_store_url(url) if store_kind(url) == "folder" else None
+        # Never a user name or password, which a URL, its endpoint or a //host path may carry
+        shown = shown_store_url(str(folder) if folder is not None else url)
         cache = get_cache_path()
     except ValueError as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + without_credentials(str(e)), err=True)
         raise SystemExit(1)
     said_by = {
         "environment": f"set by {STORE_ENV_VAR}",
@@ -2612,7 +2614,7 @@ def store_info():
         "system": f"set by [store] url in {get_system_settings_path()}, the organization's settings",
         "default": f"the default: neither {STORE_ENV_VAR} nor a [store] url in a settings file says otherwise",
     }[origin]
-    if store_kind(url) == "folder" and not Path(shown).exists():
+    if folder is not None and not folder.exists():
         said_by += "; nothing is there yet"
     click.echo(f"Store: {shown}")
     click.echo(f"  {said_by}")
@@ -2803,8 +2805,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         "cannot be found" in why for _, why in plan.snapshots_kept
     ):
         click.echo(
-            "  A lockfile that cannot be found keeps every snapshot that holds "
-            "something it named. --forget-missing lets them go."
+            "  A lockfile that cannot be found keeps the snapshots its note recorded "
+            "(for a note from before notes did, the newest holding each object it "
+            "named). --forget-missing lets them go."
         )
 
     if not plan.delete and not plan.snapshots_delete:

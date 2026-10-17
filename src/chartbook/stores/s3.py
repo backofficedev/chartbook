@@ -69,11 +69,12 @@ from chartbook.store import (
     StoreUnreachableError,
     _FULL_COMMIT,
     _HEX,
-    _another_host,
+    another_node,
     _split_hash,
     _unreadable_note_remedy,
     is_record_name,
     is_root_name,
+    plain_parts as _plain_parts,
     read_root,
     root_document,
     root_name,
@@ -104,6 +105,11 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
 
     parts = urlsplit(url.strip())
     shown = shown_store_url(url)  # what an error says: no user name or password
+    if "#" in url:
+        raise ValueError(
+            f"The store {shown!r} has a '#' in it, which no bucket, prefix or option has. Credentials "
+            f"never go in the URL: the AWS SDK reads them from the environment or ~/.aws."
+        )
     if parts.scheme.lower() != "s3" or not parts.netloc:
         raise ValueError(f"The store {shown!r} is not an S3 URL: write s3://bucket/prefix.")
     bucket = parts.netloc
@@ -124,8 +130,10 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
     options = {}
     for key, value in parse_qsl(parts.query, keep_blank_values=True):
         if key not in URL_OPTIONS:
+            # The key is said only when it is a name: what follows a '?' in a password is no key
+            said = f" {key!r}" if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key) else ""
             raise ValueError(
-                f"The store {shown!r} has a query key {key!r} this store does not read; "
+                f"The store {shown!r} has a query key{said} this store does not read; "
                 f"the keys are: {', '.join(URL_OPTIONS)}."
             )
         if key == "endpoint" and "@" in value:
@@ -150,23 +158,6 @@ def _error_code(error: BaseException) -> str:
     match = _ERROR_CODE.search(str(error))
     return match.group(1) if match else ""
 
-
-
-def _plain_parts(relative: str) -> Optional[list[str]]:
-    """The parts of a key's path under a prefix, if it is a plain relative path; else None.
-
-    Plain: parts joined by single ``/``, none empty, ``.`` or ``..``, and no
-    NUL; on Windows, also no backslash or colon, which it reads as a
-    separator or a drive (elsewhere they are ordinary characters of a name,
-    and an object may have a file named with them). Anyone who can write to
-    the bucket chooses its keys, and a reader makes a file of each.
-    """
-    if not relative or "\0" in relative or (os.name == "nt" and any(c in relative for c in "\\:")):
-        return None
-    parts = relative.split("/")
-    if any(part in ("", ".", "..") for part in parts):
-        return None
-    return parts
 
 
 def _inside(folder: Path, relative: str) -> Path:
@@ -616,7 +607,7 @@ class S3Store(Store):
         self._check_layout(create=True)
         machine = this_machine()
         before = self._read_note(self._root_key(lockfile, machine))
-        if before is not None and _another_host(before):
+        if before is not None and another_node(before):
             # Two machines with one name: this one takes another (FolderStore.add_root)
             from chartbook.config import renew_machine_id
 

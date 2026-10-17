@@ -410,7 +410,7 @@ class TestFrozen:
         _ready(upstream)
         said = []
         report = run.run(reader, echo=_quiet, frozen=True, on_verify=lambda step, r: said.append(r))
-        assert report.failed is not None and "--frozen writes nothing" in report.reason
+        assert report.failed is not None and "--frozen pins nothing" in report.reason
         assert "does not exist" in said[0].problems[0].message
         assert not (reader / "_output").exists() and not (reader / lock.LOCK_FILE).exists()
         # Pinned, the frozen run goes ahead, and the upstream is left alone

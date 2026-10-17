@@ -140,12 +140,19 @@ class Lock:
         }
 
     def snapshots(self) -> set[tuple[str, str]]:
-        """The snapshots it pins, each ``(commit, made_at)``: what a note of it records for ``store gc``."""
+        """The snapshots it pins, each ``(commit, made_at)``: what a note of it records for ``store gc``.
+
+        Only a full commit names one: a commit cut short or in capitals (a
+        lockfile edited by hand) names no snapshot a store keeps.
+        """
+        from chartbook.store import _FULL_COMMIT
+
         return {
             (entry["location"]["commit"], entry["snapshot"])
             for entry in self.dependencies
             if isinstance(entry.get("location"), dict)
             and isinstance(entry["location"].get("commit"), str)
+            and _FULL_COMMIT.match(entry["location"]["commit"])
             and isinstance(entry.get("snapshot"), str)
         }
 
@@ -1160,15 +1167,18 @@ def _sync_now(
         else:
             store.remove_root(lock_path)
     except (OSError, StoreError) as error:
-        if not is_read_only(error):
+        from chartbook.store import MachineNameError
+
+        if not is_read_only(error) and not isinstance(error, MachineNameError):
             raise LockError(
                 f"{lock_path} was written, and the store's note of it for `gc` "
                 f"could not be: {error}. The pins are in the store and the lockfile "
                 f"names them; `chartbook pin` again, once the store can be written, "
                 f"leaves the note."
             ) from None
-        # A store that is read-only for this user: the pins are in it, the
-        # lockfile names them, and only the note for `gc` is missing
+        # A store that is read-only for this user, or a machine that shares
+        # its name with another and cannot keep one of its own: the pins are
+        # in the store, the lockfile names them, and only the note is missing
         report.unrooted = str(error)
     return report
 
@@ -1238,29 +1248,45 @@ class FrozenReport:
 
 
 def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool, str]:
-    """Make the store's note of a lockfile on this machine name what it pins, as well as what it named.
+    """Make the store's note of a lockfile on this machine name what it pins now, as a pin does.
 
     A machine that only reads (``--frozen``, a read through the lockfile)
     is kept this way: ``store gc`` on another machine keeps what a note
     records, and would otherwise know nothing of this one's pins. The note
-    gains what the lockfile pins, and loses nothing, and nothing is written
-    when it names all of it already.
+    is replaced with what the lockfile pins now, as ``pin`` and ``update``
+    replace it, so a reader's note follows its pulls; nothing is written
+    when it says that already. A note under this machine's name that
+    another machine wrote (:func:`chartbook.store.another_node`) never
+    says it: this machine writes its own, under a new name.
+
+    Under CI (the ``CI`` environment variable), with no
+    ``CHARTBOOK_MACHINE_ID``, nothing is written: a runner's pins are those
+    of the commit it builds, which its developer's machine pinned, and a
+    runner with a fresh home each time would leave a note each run.
 
     :returns: Whether the note was written now, and why it could not be
         (a store that is read-only for this user, say); empty if it could.
     """
+    from chartbook.config import MACHINE_ENV_VAR
+    from chartbook.store import another_node
+
+    if os.environ.get("CI", "").strip() and not os.environ.get(MACHINE_ENV_VAR, "").strip():
+        return False, ""
     hashes, snapshots = locked.hashes(), locked.snapshots()
     if not hashes:
         return False, ""
     try:
         before = store.root_of(lock_path)
-        if before is not None:
-            if hashes <= set(before.hashes) and before.snapshots is not None and snapshots <= set(before.snapshots):
-                return False, ""
-            hashes |= set(before.hashes)
-            snapshots |= set(before.snapshots or ())
+        if (
+            before is not None
+            and not another_node(before)
+            and set(before.hashes) == hashes
+            and before.snapshots is not None
+            and set(before.snapshots) == snapshots
+        ):
+            return False, ""
         store.add_root(lock_path, hashes, snapshots)
-    except (OSError, StoreError, ValueError) as error:
+    except Exception as error:  # noqa: BLE001 - a note is best effort, whatever the store raised
         return False, str(error)
     return True, ""
 
@@ -2575,7 +2601,7 @@ def plan_gc(
     hashes_of_missing: set[str] = set()
     hashes_elsewhere: set[str] = set()
     hashes_noted: set[str] = set()
-    from chartbook.store import this_machine
+    from chartbook.store import another_node, this_machine
 
     def read_too(lockfile: Path) -> Optional[Lock]:
         """Add what a lockfile here pins now to what is kept; the lockfile, or None if there is none."""
@@ -2605,9 +2631,10 @@ def plan_gc(
     # (after a pull, or a switch of branch) adds to that, never replaces it
     here = this_machine(create=False)  # a machine that has written no note has none of its own
     for root in store.roots():
-        if root.machine != here or root.copy:
-            # Another machine's lockfile, or one noted before notes named
-            # their machine, or a sync service's copy of a note: the path
+        if root.machine != here or root.copy or another_node(root):
+            # Another machine's lockfile (by its name, or under this one's
+            # name by its hardware address: a clone), or one noted before
+            # notes named their machine, or a sync service's copy of a note: the path
             # names a file on a machine that may not be this one. What the
             # note recorded is kept, and never taken as gone, even with
             # forget_missing, since only that machine can tell. A lockfile
@@ -2616,7 +2643,12 @@ def plan_gc(
             # machine's path is never opened (a mount of another host)
             plan.elsewhere.append(root)
             keep_noted(root, "a lockfile not read here, another machine's, pins it", hashes_elsewhere)
-            if root.machine in ("", here) and _a_local_lockfile(root.lockfile) and read_too(root.lockfile) is not None:
+            if (
+                root.machine in ("", here)
+                and not another_node(root)
+                and _a_local_lockfile(root.lockfile)
+                and read_too(root.lockfile) is not None
+            ):
                 plan.read_here.append(root.lockfile)
             continue
         # A root is written by whoever can write to the store, and names a

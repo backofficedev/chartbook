@@ -210,8 +210,7 @@ class Root:
             have a lockfile at the same path. Empty for a note from before
             notes named their machine, which may be any machine's.
         host: That machine's host name when the note was written, for a
-            person to read, and to tell two machines apart that came to
-            one name (a cloned virtual machine with a copied home).
+            person to read; nothing goes by it, as it may follow the network.
         note: The name of the note's file under ``roots/``, so that a
             person can find it; another name than the store gives a note
             is a sync service's copy of one (:attr:`copy`).
@@ -220,6 +219,11 @@ class Root:
             names it, which ``store gc`` keeps. None for a note from before
             notes recorded them: the snapshots holding its objects are kept
             then, the newest holding each.
+        node: The hardware address of the machine that wrote it
+            (:func:`this_node`), which tells two machines apart that came to
+            one name (a cloned virtual machine with a copied home); empty
+            where it had none to give, or for a note from before notes
+            recorded it.
     """
 
     lockfile: Path
@@ -228,6 +232,7 @@ class Root:
     host: str = field(default="", compare=False)
     note: str = field(default="", compare=False)
     snapshots: Optional[tuple[tuple[str, str], ...]] = field(default=None, compare=False)
+    node: str = field(default="", compare=False)
 
     @property
     def copy(self) -> bool:
@@ -419,10 +424,37 @@ def this_machine(create: bool = True) -> str:
 
 
 def this_host() -> str:
-    """This machine's host name, as a note records it."""
+    """This machine's host name, as a note records it, for a person to read."""
     import socket
 
     return socket.gethostname()
+
+
+def this_node() -> str:
+    """The hardware address of one of this machine's network interfaces, as twelve hex digits; empty if it has none to give.
+
+    What tells two machines apart that came to one name: a cloned virtual
+    machine gets a new address, where it may keep the operating system's
+    identity and its host name. An address that is not the hardware's is
+    none: Python's random stand-in (the multicast bit set), and a locally
+    administered one (a private Wi-Fi address that changes with the
+    network, or a placeholder).
+    """
+    import uuid
+
+    node = uuid.getnode()
+    if not node or (node >> 40) & 0b11:
+        return ""
+    return f"{node:012x}"
+
+
+class MachineNameError(StoreError):
+    """Raised when this machine shares its name with another, and cannot keep a new one.
+
+    Two machines with one name would write one note: so nothing is written,
+    and the other machine's note stays as it is. A pin reports it as a note
+    not left (``unrooted``); a read passes it over.
+    """
 
 
 def root_document(
@@ -433,8 +465,13 @@ def root_document(
         "lockfile": os.path.abspath(lockfile),
         "machine": machine,
         "host": this_host(),
+        "node": this_node(),
         "hashes": list(hashes),
-        "snapshots": [{"commit": commit, "made_at": made_at} for commit, made_at in sorted(set(snapshots))],
+        "snapshots": [
+            {"commit": commit, "made_at": made_at}
+            for commit, made_at in sorted(set(snapshots))
+            if isinstance(commit, str) and _FULL_COMMIT.match(commit) and isinstance(made_at, str)
+        ],
     }
 
 
@@ -444,15 +481,20 @@ def read_root(stored: dict, note: str = "") -> Root:
     :raises ValueError: If it is not a note a store writes, or a hash in it
         is not a content hash. So may ``KeyError`` and ``TypeError``.
     """
-    machine, host = stored.get("machine", ""), stored.get("host", "")
-    if not isinstance(machine, str) or not isinstance(host, str):
-        raise ValueError("its machine and host are not names")
+    machine, host, node = stored.get("machine", ""), stored.get("host", ""), stored.get("node", "")
+    if not isinstance(machine, str) or not isinstance(host, str) or not isinstance(node, str):
+        raise ValueError("its machine, host and node are not names")
     snapshots = None
-    if "snapshots" in stored:
-        snapshots = tuple(sorted({(entry["commit"], entry["made_at"]) for entry in stored["snapshots"]}))
-        if not all(_FULL_COMMIT.match(commit) and isinstance(made_at, str) for commit, made_at in snapshots):
-            raise ValueError("a snapshot it names is not a commit and a time")
-    root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host, note, snapshots)
+    if isinstance(stored.get("snapshots"), list):
+        # A pair that is not a full commit and a time (a lockfile edited by
+        # hand) is passed over: the note's objects are kept all the same
+        snapshots = tuple(sorted({
+            (entry["commit"], entry["made_at"])
+            for entry in stored["snapshots"]
+            if isinstance(entry, dict) and isinstance(entry.get("commit"), str)
+            and _FULL_COMMIT.match(entry["commit"]) and isinstance(entry.get("made_at"), str)
+        }))
+    root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host, note, snapshots, node)
     for content_hash in root.hashes:
         _split_hash(content_hash)
     return root
@@ -467,13 +509,15 @@ def _read_note(note: Path) -> Optional[Root]:
         return None
 
 
-def _another_host(note: Root) -> bool:
-    """Whether a note under this machine's name was written by another host: two machines with one name."""
-    from chartbook.config import MACHINE_ENV_VAR
+def another_node(note: Root) -> bool:
+    """Whether a note under this machine's name was written by another machine: two machines with one name.
 
-    if os.environ.get(MACHINE_ENV_VAR, "").strip():
-        return False  # a name the user gave: theirs to keep apart
-    return bool(note.host) and note.host != this_host()
+    Told by the hardware address (:func:`this_node`), never by the host
+    name, which may follow the network. Where either has none, it cannot
+    be told, and the note is taken as this machine's.
+    """
+    here = this_node()
+    return bool(note.node) and bool(here) and note.node != here
 
 
 def _unreadable_note_remedy(name: str) -> str:
@@ -485,6 +529,42 @@ def _unreadable_note_remedy(name: str) -> str:
         f"sync, or remove roots/{name} if it is a copy nobody needs; nothing is removed from the store "
         f"until it is read or gone"
     )
+
+
+def plain_parts(relative: str) -> Optional[list[str]]:
+    """The parts of a path inside an object, if it is a plain relative path; else None.
+
+    Plain: parts joined by single ``/``, none empty, ``.`` or ``..``, and no
+    NUL; on Windows, also no backslash or colon, which it reads as a
+    separator or a drive (elsewhere they are ordinary characters of a name,
+    and an object may have a file named with them, ``part-2024-01-01T00:00``).
+    A record or a key may come from anyone who can write to a store, and a
+    reader makes a path of each.
+    """
+    if not isinstance(relative, str) or not relative or "\0" in relative:
+        return None
+    if os.name == "nt" and any(c in relative for c in "\\:"):
+        return None
+    parts = relative.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return None
+    return parts
+
+
+#: The hash of the one file of an object, by its path, time and size, worked out once a process.
+_hashed_once: dict = {}
+
+
+def _hash_once(file: Path) -> Optional[str]:
+    """The content hash of a file, worked out once a process while it is unchanged; None if it cannot be read."""
+    try:
+        seen = file.stat()
+        key = (str(file), seen.st_mtime_ns, seen.st_size)
+        if key not in _hashed_once:
+            _hashed_once[key] = hashing.hash_file(file, hashing.HashCache()).content_hash
+        return _hashed_once[key]
+    except OSError:
+        return None
 
 
 def unsynced_part(
@@ -528,21 +608,20 @@ def unsynced_part(
             # The same bytes under other names, and this one on its way; or a
             # directory pinned before records listed its files, with one file
             # of the directory's size. Its hash tells which, in this rare case
-            if content_hash and present and len(same) == len(present):
-                try:
-                    named_so = hashing.hash_file(same[0], hashing.HashCache()).content_hash == content_hash
-                except OSError:
-                    named_so = False
-                if named_so:
-                    return f"does not have {relative} yet", True
+            if content_hash and present and len(same) == len(present) and _hash_once(same[0]) == content_hash:
+                return f"does not have {relative} yet", True
             files = None
     if files:
         listed = set()
         for relative, expected in sorted(files.items()):
-            parts = PurePosixPath(relative).parts
-            if not parts or PurePosixPath(relative).is_absolute() or ".." in parts:
-                continue  # no file of the object: a record that is not one a store wrote
-            listed.add(PurePosixPath(*parts).as_posix())
+            parts = plain_parts(relative)
+            if parts is None:
+                return (
+                    f"is named by a record that lists {relative!r}, which is not a plain path in it: "
+                    f"the record is not one a store wrote",
+                    False,
+                )
+            listed.add("/".join(parts))
             file = path.joinpath(*parts)
             if file.is_symlink():
                 continue
@@ -555,7 +634,12 @@ def unsynced_part(
             for file in present:
                 relative = file.relative_to(path).as_posix()
                 if relative not in listed:
-                    return f"holds {relative}, which its record does not list", False
+                    return (
+                        f"holds {relative}, which its record does not list (a sync service's copy, most "
+                        f"likely, which a reader of the folder would read as its own: remove that file "
+                        f"from the object's folder)",
+                        False,
+                    )
         return None
     if len(present) != len(held):
         return None  # a link among its files: not judged by size
@@ -690,10 +774,12 @@ class FolderStore(Store):
         self._layout_checked = False
 
     def __repr__(self) -> str:
-        return f"FolderStore({str(self.root)!r})"
+        return f"FolderStore({str(self)!r})"
 
     def __str__(self) -> str:
-        return str(self.root)
+        from chartbook.config import shown_store_url
+
+        return shown_store_url(str(self.root))  # a //host path may carry a password
 
     def snapshot_folder(self, commit: str, name: str) -> Path:
         """Where the records of one pipeline at one commit are kept."""
@@ -811,12 +897,12 @@ class FolderStore(Store):
         path = self.object_path(content_hash)
         if not path.is_dir():
             raise ObjectNotFoundError(
-                f"The store at {self.root} has no object {content_hash}."
+                f"The store at {self} has no object {content_hash}."
             )
         objects = Path(os.path.realpath(self.root / OBJECTS_DIR))
         if path.is_symlink() or not Path(os.path.realpath(path)).is_relative_to(objects):
             raise StoreError(
-                f"The object {content_hash} in the store at {self.root} is a link, or leads out of "
+                f"The object {content_hash} in the store at {self} is a link, or leads out of "
                 f"the store; it is not read. `chartbook store verify` checks a store."
             )
         return path
@@ -931,7 +1017,7 @@ class FolderStore(Store):
             raise StoreError(f"Cannot read {marker}: {error}") from None
         if schema != SCHEMA:
             raise StoreError(
-                f"The store at {self.root} has the layout {schema!r}, and this "
+                f"The store at {self} has the layout {schema!r}, and this "
                 f"version of ChartBook reads {SCHEMA!r}. Use a newer ChartBook, "
                 f"or point CHARTBOOK_STORE at another directory."
             )
@@ -1002,12 +1088,15 @@ class FolderStore(Store):
         same path from before notes named their machine is left as it is:
         it may be another machine's, and only a person can tell.
 
-        A note under this machine's name at this path that another host
-        wrote means two machines came to one name (a cloned virtual
-        machine, whose operating system kept the same identity, with a
-        copied home): this machine takes a name of its own, and leaves
-        that note be. A name ``CHARTBOOK_MACHINE_ID`` gives is the
-        user's to keep apart, and is kept.
+        A note under this machine's name at this path that another machine
+        wrote, by its hardware address (:func:`another_node`), means two
+        machines came to one name (a cloned virtual machine, whose
+        operating system kept the same identity, with a copied home): this
+        machine takes a name of its own, and leaves that note be.
+
+        :raises MachineNameError: If this machine needs a new name and
+            cannot keep one (a home folder it cannot write): nothing is
+            written, and the other machine's note stays.
 
         :param lockfile: The path of a ``chartbook.lock``.
         :param hashes: The content hashes it names.
@@ -1021,10 +1110,10 @@ class FolderStore(Store):
         machine = this_machine()
         note = self._root_file(lockfile, machine)
         before = _read_note(note)
-        if before is not None and _another_host(before):
+        if before is not None and another_node(before):
             from chartbook.config import renew_machine_id
 
-            machine = renew_machine_id()
+            machine = renew_machine_id()  # MachineNameError if it cannot be kept: nothing is overwritten
             note = self._root_file(lockfile, machine)
         note.parent.mkdir(parents=True, exist_ok=True)
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
@@ -1105,13 +1194,9 @@ class FolderStore(Store):
             return None
         what, waiting = wrong
         if not waiting:
-            return (
-                f"its object in the store at {self.root} {what} (a sync service's copy, most likely), "
-                f"which a reader would read as its own. Remove that file from the object's folder; "
-                f"`chartbook store verify` checks the rest"
-            )
+            return f"its object in the store at {self} {what}; `chartbook store verify` checks the rest"
         return (
-            f"its object in the store at {self.root} {what}: it is not fully synced yet. Wait for "
+            f"its object in the store at {self} {what}: it is not fully synced yet. Wait for "
             f"the sync to finish, and run this again (if it stays so, `chartbook store verify` says more)"
         )
 

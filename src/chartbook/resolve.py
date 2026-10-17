@@ -818,19 +818,20 @@ def _note_the_read(lock_path: Path, locked, store) -> None:
 
     A machine that only reads is kept this way: ``store gc`` on another
     machine keeps what a note records (:func:`chartbook.lock.note_this_machine`).
-    Silent, and skipped when the store cannot be written or the note
-    names it all already, so that a read does not write every time.
+    Silent, and skipped when the store cannot be written or the note says
+    it already, so that a read does not write every time. What was seen to
+    is what was read (the pins), not the file as it is a moment later,
+    which a pull may have changed.
     """
     from chartbook import lock
 
-    try:
-        seen = lock_path.stat()
-    except OSError:
-        return
-    key = (str(lock_path), seen.st_mtime_ns, seen.st_size, str(store))
+    key = (str(lock_path), str(store), frozenset(locked.hashes()), frozenset(locked.snapshots()))
     if key in _noted_reads:
         return
-    lock.note_this_machine(lock_path, locked, store)
+    try:
+        lock.note_this_machine(lock_path, locked, store)
+    except Exception:  # noqa: BLE001 - a read never fails for its note (a plugin store of another make, say)
+        return
     _noted_reads.add(key)
 
 
@@ -858,11 +859,23 @@ def _held(store, record: dict) -> Location:
         return FileLocation(held / tail)
     name = Path(declared_path).name
     if isinstance(record.get("files"), list):
-        # A directory, read as the files its record lists and nothing else in the folder
-        from chartbook.snapshot import files_read, safe_relative
+        # A directory, read as the files its record lists and nothing else in
+        # the folder; and, as an engine's scan of a folder does, none under a
+        # name starting "." or "_" (Spark's _SUCCESS, Hadoop's .crc files)
+        from chartbook.snapshot import files_read
+        from chartbook.store import StoreError, plain_parts
 
-        listed = [safe_relative(relative) for relative in sorted(files_read(record) or {})]
-        return FileLocation(held, tuple(held.joinpath(*plain.split("/")) for plain in listed if plain))
+        read = []
+        for relative in sorted(files_read(record) or {}):
+            parts = plain_parts(relative)
+            if parts is None:
+                raise StoreError(
+                    f"{record.get('id')!r}: its record lists {relative!r}, which is not a plain path "
+                    f"in its object. The record is not one a store wrote, and is not read."
+                )
+            if not any(part.startswith((".", "_")) for part in parts):
+                read.append(held.joinpath(*parts))
+        return FileLocation(held, tuple(read))
     if not (held / name).is_file():
         return FileLocation(held)  # a directory pinned before records listed its files: the folder
     return FileLocation(held / name)
