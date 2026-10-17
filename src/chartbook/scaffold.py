@@ -179,80 +179,151 @@ def _git(checkout: Path, *arguments: str) -> Optional[str]:
     return result.stdout if result.returncode == 0 else None
 
 
-def _source_checkout(template: Path, package_dir: Path) -> Optional[Path]:
-    """The git checkout a source template is in, if it is that checkout's own; None for a packaged one."""
-    if template.parent == package_dir:
+@dataclass(frozen=True)
+class TemplateSource:
+    """Where this ChartBook's template is, and what is known of the commit it is at.
+
+    ``checkout`` is the git checkout of ChartBook a source install runs
+    from, whose tracked files of ``template/`` are what is rendered; None
+    for a template that came in a package, or in an unpacked sdist, which
+    holds those files and no others. ``why`` says why no commit is known,
+    when none is.
+    """
+
+    template: Path
+    checkout: Optional[Path]
+    commit: Optional[str]
+    why: str = ""
+
+
+def _recorded(package_dir: Path) -> Optional[str]:
+    """The commit a build recorded beside the package's modules; None if none was, or it was empty."""
+    recorded = package_dir / BUILT_FROM
+    if not recorded.is_file():
         return None
-    checkout = template.parent
-    # The checkout's own repository, not one it happens to sit inside
-    top = _git(checkout, "rev-parse", "--show-toplevel")
-    if not top or Path(top.strip()).resolve() != checkout.resolve():
-        return None
-    return checkout
+    return recorded.read_text(encoding="utf-8").strip() or None
 
 
-def template_commit(package_dir: Optional[Path] = None) -> Optional[str]:
-    """The commit of ChartBook's repository that the template is at, or None if it is not known.
+def template_source(package_dir: Optional[Path] = None) -> TemplateSource:
+    """Where the template is (:func:`find_template`), and the commit of ChartBook's repository it is at.
 
-    A built package records it (``built_from.txt``, written at build time).
-    A source checkout is asked with git for its ``HEAD``, without the
-    environment's git location variables, as other reads of a repository
-    here are; a ``template/`` with changes git has not committed is at no
-    commit, and neither is a folder that is not a checkout of its own.
+    A built package records the commit (``built_from.txt``, written at build
+    time), as does an unpacked sdist, beside its modules. A source checkout
+    is asked with git for its ``HEAD``, without the environment's git
+    location variables, as other reads of a repository here are; a
+    ``template/`` with changes git has not committed to tracked files is at
+    no commit (a file git does not track is never rendered, and does not
+    count).
+
+    :raises ScaffoldError: For a source tree whose tracked files cannot be
+        told: one with a ``.git`` that git cannot read (git missing, or a
+        folder git does not trust), or one with neither a ``.git`` of its
+        own nor the ``PKG-INFO`` of an sdist (a copy of a checkout, which may
+        hold an ``.env`` that was never meant to be rendered).
     """
     package_dir = Path(package_dir) if package_dir is not None else _package_dir()
     template = find_template(package_dir)
     if template.parent == package_dir:
-        recorded = package_dir / BUILT_FROM
-        if recorded.is_file():
-            return recorded.read_text(encoding="utf-8").strip() or None
-        return None
-    checkout = _source_checkout(template, package_dir)
-    if checkout is None:
-        return None
-    changed = _git(checkout, "status", "--porcelain", "--", TEMPLATE_DIRECTORY)
-    if changed is None or changed.strip():
-        return None
-    return (_git(checkout, "rev-parse", "HEAD") or "").strip() or None
+        commit = _recorded(package_dir)
+        return TemplateSource(template, None, commit, "" if commit else "this ChartBook was built without recording it")
+    root = template.parent
+    if not (root / ".git").exists():
+        if (root / "PKG-INFO").is_file():
+            commit = _recorded(package_dir)
+            return TemplateSource(
+                template, None, commit, "" if commit else "the sdist this ChartBook was installed from did not record it"
+            )
+        raise ScaffoldError(
+            f"{root} has neither a .git nor the PKG-INFO of an sdist, so ChartBook cannot tell which files of "
+            f"its template/ git tracks, and it renders only those. Render from a git checkout of ChartBook, "
+            f"or install ChartBook from PyPI or from a wheel."
+        )
+    top = _git(root, "rev-parse", "--show-toplevel")
+    if not top or Path(top.strip()).resolve() != root.resolve():
+        raise ScaffoldError(
+            f"To render the template from the source checkout {root}, ChartBook asks git which of its files "
+            f"git tracks, which are all it renders, and git cannot read the checkout. Install git; or, if git "
+            f"does not trust the folder, run `git config --global --add safe.directory {root}`."
+        )
+    changed = _git(root, "status", "--porcelain", "--untracked-files=no", "--", TEMPLATE_DIRECTORY)
+    if changed is None:
+        return TemplateSource(template, root, None, "git could not say whether its template/ has changes")
+    if changed.strip():
+        return TemplateSource(template, root, None, "its template/ has changes git has not committed")
+    head = (_git(root, "rev-parse", "HEAD") or "").strip()
+    return TemplateSource(template, root, head or None, "" if head else "the checkout it runs from has no commit")
+
+
+def template_commit(package_dir: Optional[Path] = None) -> Optional[str]:
+    """The commit of ChartBook's repository that the template is at, or None if it is not known (:func:`template_source`)."""
+    return template_source(package_dir).commit
+
+
+def _is_template_repository(url: str) -> bool:
+    """Whether a remote's URL is :data:`TEMPLATE_REPOSITORY`, in whichever form git was given it."""
+    from chartbook.identity import remote_to_web_url
+
+    return remote_to_web_url(url).lower() == TEMPLATE_REPOSITORY.lower()
 
 
 def commit_is_pushed(commit: str, package_dir: Optional[Path] = None) -> Optional[bool]:
-    """Whether a source checkout has *commit* on a remote-tracking branch: True, False, or None if it cannot tell.
+    """Whether *commit* is on GitHub, as far as the source checkout knows: True, False, or None if it cannot tell.
 
     ``cruft update`` clones the template from GitHub, so the commit that
-    ``.cruft.json`` names must be there. A built package cannot tell.
+    ``.cruft.json`` names must be there. It counts as there when a branch of
+    a remote that is :data:`TEMPLATE_REPOSITORY` (a fork's is not), or a
+    tag (a clone of one release has only that), holds it. A built package
+    cannot tell.
     """
-    package_dir = Path(package_dir) if package_dir is not None else _package_dir()
-    checkout = _source_checkout(find_template(package_dir), package_dir)
+    import re
+
+    checkout = template_source(package_dir).checkout
     if checkout is None:
         return None
-    branches = _git(checkout, "branch", "--remotes", "--contains", commit)
-    if branches is None:
+    configured = _git(checkout, "config", "--get-regexp", r"^remote\..*\.url$") or ""
+    remotes = [
+        found.group(1)
+        for line in configured.splitlines()
+        if (found := re.match(r"remote\.(.+)\.url\s+(\S+)$", line.strip())) and _is_template_repository(found.group(2))
+    ]
+    places = [f"refs/remotes/{name}/" for name in remotes] + ["refs/tags/"]
+    holding = _git(checkout, "for-each-ref", "--contains", commit, "--format=%(refname)", *places)
+    if holding is None:
         return None
-    return bool(branches.strip())
+    return bool(holding.strip())
 
 
 @contextlib.contextmanager
-def _template_to_render(template: Path, package_dir: Path) -> Iterator[Path]:
+def _template_to_render(source: TemplateSource) -> Iterator[Path]:
     """The template as a package ships it: in a source checkout, only the files git tracks.
 
     A wheel built from the checkout carries those files and no others
     (``hatch_build.py``), so a source install renders the same set: a
     git-ignored ``.env`` or ``.ipynb_checkpoints/`` in ``template/`` is not
     rendered, while a change to a tracked file is, at its content on disk.
+
+    :raises ScaffoldError: If git cannot list them, or lists one that is not
+        on disk (a sparse checkout, a file deleted and not committed).
     """
-    checkout = _source_checkout(template, package_dir)
-    listed = _git(checkout, "ls-files", "-z", "--", TEMPLATE_DIRECTORY) if checkout is not None else None
-    if not listed:
-        yield template
+    checkout = source.checkout
+    if checkout is None:
+        yield source.template
         return
+    listed = _git(checkout, "ls-files", "-z", "--", TEMPLATE_DIRECTORY)
+    if listed is None:
+        raise ScaffoldError(f"git could not list the files of {source.template}, which are what is rendered.")
+    names = [name for name in listed.split("\0") if name]
+    missing = [name for name in names if not (checkout / name).is_file()]
+    if missing:
+        raise ScaffoldError(
+            f"git tracks files of {source.template} that are not on disk (a sparse checkout, or a file deleted "
+            f"and not committed), so the template would be rendered without them: {', '.join(missing[:5])}"
+        )
     with tempfile.TemporaryDirectory(prefix="chartbook-template-") as scratch:
-        for name in listed.split("\0"):
-            source = checkout / name
-            if name and source.is_file():
-                target = Path(scratch) / name
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source, target)
+        for name in names:
+            target = Path(scratch) / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(checkout / name, target)
         yield Path(scratch) / TEMPLATE_DIRECTORY
 
 
@@ -276,13 +347,27 @@ class Rendered:
     """A project :func:`render` made.
 
     Its folder; the template commit its ``.cruft.json`` names, None when it
-    has none; and whether that commit is on a remote branch of the checkout
-    ChartBook runs from (None when that cannot be told).
+    has none, and then ``why``; whether that commit is on GitHub as far as
+    the checkout ChartBook runs from knows (None when that cannot be told);
+    and the answers to the template's questions, which ``cruft link`` takes.
     """
 
     project_dir: Path
     commit: Optional[str]
     pushed: Optional[bool] = None
+    why: str = ""
+    answers: Optional[dict] = None
+
+    def link_command(self, commit: str = "<commit>") -> str:
+        """The `cruft link` that gives the project a ``.cruft.json`` once the commit is known, with its answers."""
+        import shlex
+
+        command = [
+            "cruft", "link", TEMPLATE_REPOSITORY, "--directory", TEMPLATE_DIRECTORY,
+            "--checkout", commit, "--no-input", "--extra-context", json.dumps(self.answers or {}),
+        ]
+        # The placeholder stays as it is, for the reader to replace
+        return " ".join(part if part == "<commit>" else shlex.quote(part) for part in command)
 
 
 def render(
@@ -301,44 +386,69 @@ def render(
     writes it, when the template's commit is known; with none, there is no
     commit for ``cruft update`` to start from, and no file.
 
+    :raises ScaffoldError: If the template cannot be rendered from where it
+        is (:func:`template_source`), or the project's folder is there
+        already (:class:`ProjectExistsError`).
     :raises cookiecutter.exceptions.CookiecutterException: If cookiecutter
-        refuses, as when a hook stops it (the template's own hooks print why)
-        or the project's folder is there already.
+        refuses otherwise, as when a hook stops it (the template's own hooks
+        print why).
     """
     from cookiecutter.config import get_user_config
+    from cookiecutter.exceptions import OutputDirExistsException
     from cookiecutter.generate import generate_context, generate_files
     from cookiecutter.prompt import prompt_for_config
 
     package_dir = Path(package_dir) if package_dir is not None else _package_dir()
-    template = find_template(package_dir)
-    commit = template_commit(package_dir)
-    with _template_to_render(template, package_dir) as source:
-        context = generate_context(
-            context_file=str(source / "cookiecutter.json"),
-            default_context=get_user_config()["default_context"],
-            extra_context=answers or {},
-        )
-        context["cookiecutter"] = prompt_for_config(context, no_input)
-        # What cruft adds, so that the context is the one `cruft create` would record
-        context["cookiecutter"]["_template"] = TEMPLATE_REPOSITORY
-        context["cookiecutter"]["_commit"] = commit
-        # A hook that stops it is said by the hook, and by chartbook init
-        # after it; cookiecutter's log of it would add a traceback
-        quiet = logging.NullHandler()
-        logging.getLogger("cookiecutter").addHandler(quiet)
-        try:
-            project_dir = Path(
-                generate_files(
-                    repo_dir=str(source), context=context, overwrite_if_exists=False, output_dir=str(output_dir)
-                )
+    source = template_source(package_dir)
+    commit = source.commit
+    # A hook that stops it is said by the hook, and by chartbook init after
+    # it; cookiecutter's log of it would add a traceback, printed by Python's
+    # last-resort handler or by whatever handles the root logger
+    logger = logging.getLogger("cookiecutter")
+    quiet, propagated = logging.NullHandler(), logger.propagate
+    logger.addHandler(quiet)
+    logger.propagate = False
+    try:
+        with _template_to_render(source) as template:
+            context = generate_context(
+                context_file=str(template / "cookiecutter.json"),
+                default_context=get_user_config()["default_context"],
+                extra_context=answers or {},
             )
-        finally:
-            logging.getLogger("cookiecutter").removeHandler(quiet)
+            context["cookiecutter"] = prompt_for_config(context, no_input)
+            # The answers, as `cruft link` takes them again: its private variables are the template's
+            given = {key: value for key, value in context["cookiecutter"].items() if not key.startswith("_")}
+            # What cruft adds, so that the context is the one `cruft create` would record
+            context["cookiecutter"]["_template"] = TEMPLATE_REPOSITORY
+            context["cookiecutter"]["_commit"] = commit
+            try:
+                project_dir = Path(
+                    generate_files(
+                        repo_dir=str(template), context=context, overwrite_if_exists=False, output_dir=str(output_dir)
+                    )
+                )
+            except OutputDirExistsException:
+                folder = Path(output_dir) / str(context["cookiecutter"].get("project_slug", ""))
+                raise ProjectExistsError(folder) from None
+    finally:
+        logger.removeHandler(quiet)
+        logger.propagate = propagated
     _make_writable(project_dir)
     if commit is None:
-        return Rendered(project_dir, None)
+        return Rendered(project_dir, None, why=source.why, answers=given)
     write_cruft_file(project_dir, context, commit)
-    return Rendered(project_dir, commit, commit_is_pushed(commit, package_dir))
+    return Rendered(project_dir, commit, commit_is_pushed(commit, package_dir), answers=given)
+
+
+class ProjectExistsError(ScaffoldError):
+    """The folder the project would be rendered into is there already; nothing was changed."""
+
+    def __init__(self, folder: Path):
+        self.folder = Path(folder)
+        super().__init__(
+            f"{self.folder} is there already, so nothing was changed. Run `chartbook init` again and give "
+            f"another folder name at the second question, or move that folder."
+        )
 
 
 def write_cruft_file(project_dir: Path, context: dict, commit: str) -> Path:

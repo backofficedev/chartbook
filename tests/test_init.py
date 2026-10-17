@@ -55,14 +55,20 @@ class FakeTools:
         return f"/usr/bin/{name}" if name in self.installed else None
 
     def render_template(self, output_dir, **kwargs):
-        from cookiecutter.exceptions import FailedHookException, OutputDirExistsException
+        from cookiecutter.exceptions import FailedHookException
 
         if (Path(output_dir) / self.project_name).exists():
-            raise OutputDirExistsException(f'Error: "{Path(output_dir) / self.project_name}" directory already exists')
+            raise scaffold.ProjectExistsError(Path(output_dir) / self.project_name)
         result = self.run(["render"], cwd=output_dir)
         if result.returncode != 0:
             raise FailedHookException("Hook script failed (exit status: 1)")
-        return scaffold.Rendered(Path(output_dir) / self.project_name, self.commit, self.pushed)
+        return scaffold.Rendered(
+            Path(output_dir) / self.project_name,
+            self.commit,
+            self.pushed,
+            why="" if self.commit else "this ChartBook was built without recording it",
+            answers={"project_name": "Rates' Study", "project_slug": self.project_name},
+        )
 
     def run(self, command, cwd=None, **kwargs):
         cwd = Path(cwd) if cwd is not None else self.cwd
@@ -173,18 +179,30 @@ class TestPlainInit:
         result = _init()
         assert result.exit_code == 0, result.output
         said = " ".join(result.output.split())
+        # Why, as it is: not a guess between two causes
+        assert "its template is at (this ChartBook was built without recording it)" in said
         assert "so my_data_science_project has no .cruft.json" in said
-        assert (
-            "cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit>"
-            in said
-        )
+        # With the answers given here, so none is retyped, or typed differently
+        (command,) = [line.strip() for line in result.output.splitlines() if line.strip().startswith("cruft link")]
+        import json
+        import shlex
+
+        words = shlex.split(command.replace("<commit>", "abc123"))
+        assert words[:9] == [
+            "cruft", "link", "https://github.com/backofficedev/chartbook", "--directory", "template",
+            "--checkout", "abc123", "--no-input", "--extra-context",
+        ]
+        assert json.loads(words[9]) == {"project_name": "Rates' Study", "project_slug": "my_data_science_project"}
 
     def test_a_commit_on_no_remote_branch_is_said(self, tools):
         tools.pushed = False
         result = _init()
         assert result.exit_code == 0, result.output
         said = " ".join(result.output.split())
-        assert f"the template's commit, {COMMIT[:12]}, is on no remote branch" in said
+        assert (
+            f"the template's commit, {COMMIT[:12]}, is on no branch of a remote that is "
+            f"https://github.com/backofficedev/chartbook, and in no tag" in said
+        )
         assert "may not be on GitHub" in said
 
     def test_a_folder_that_is_there_already_is_said_as_that(self, tools):
@@ -484,6 +502,20 @@ def test_real_remote_gives_the_pipeline_its_scope(tmp_path, real_git):
 REPOSITORY = Path(__file__).parent.parent
 
 
+def _at_commit(monkeypatch, commit):
+    """This ChartBook's template, as it is, said to be at *commit* (None: no commit known)."""
+    import dataclasses
+
+    real = scaffold.template_source
+    monkeypatch.setattr(
+        scaffold,
+        "template_source",
+        lambda package_dir=None: dataclasses.replace(
+            real(package_dir), commit=commit, why="" if commit else "it was not recorded"
+        ),
+    )
+
+
 def _template_copy(destination: Path) -> Path:
     """A copy of this repository's template at *destination*."""
     shutil.copytree(REPOSITORY / "template", destination)
@@ -508,8 +540,36 @@ class TestTheTemplateThatCameWithIt:
         package.mkdir(parents=True)
         _template_copy(tmp_path / "checkout" / "template")
         assert scaffold.find_template(package) == tmp_path / "checkout" / "template"
-        # Not a git checkout: the commit is not known
-        assert scaffold.template_commit(package) is None
+
+    def test_a_copy_of_a_checkout_without_git_is_not_rendered_from(self, tmp_path):
+        """With no git, which files are tracked cannot be told, and a raw `template/` may hold an ignored `.env`."""
+        package = tmp_path / "copy" / "src" / "chartbook"
+        package.mkdir(parents=True)
+        _template_copy(tmp_path / "copy" / "template")
+        with pytest.raises(scaffold.ScaffoldError, match="neither a .git nor the PKG-INFO of an sdist"):
+            scaffold.render(tmp_path, no_input=True, package_dir=package)
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["copy"]
+
+    def test_an_unpacked_sdist_is_rendered_from_with_the_commit_it_carries(self, tmp_path):
+        """An sdist holds the tracked files and no others, and `src/chartbook/built_from.txt`."""
+        root = tmp_path / "chartbook-0.2.0"
+        package = root / "src" / "chartbook"
+        package.mkdir(parents=True)
+        _template_copy(root / "template")
+        (root / "PKG-INFO").write_text("Metadata-Version: 2.4\nName: chartbook\n")
+        (package / scaffold.BUILT_FROM).write_text(COMMIT + "\n")
+        assert scaffold.template_commit(package) == COMMIT
+        (package / scaffold.BUILT_FROM).unlink()
+        source = scaffold.template_source(package)
+        assert source.commit is None and "did not record it" in source.why
+
+    @needs_git
+    def test_a_checkout_git_cannot_read_is_not_rendered_from(self, tmp_path, real_git, monkeypatch):
+        """The note used to blame the build for a commit missing because git could not run."""
+        package = _committed_checkout(tmp_path)
+        monkeypatch.setenv("PATH", str(tmp_path / "no-git-here"))
+        with pytest.raises(scaffold.ScaffoldError, match="safe.directory"):
+            scaffold.template_source(package)
 
     def test_a_template_beside_an_installed_package_is_not_taken(self, tmp_path):
         """Only `src/` makes a folder a source checkout."""
@@ -543,7 +603,9 @@ class TestTheTemplateThatCameWithIt:
         _git(outer, "init", "--quiet")
         _git(outer, "add", "README.md")
         _git(outer, "commit", "--quiet", "-m", "Theirs")
-        assert scaffold.template_commit(package) is None
+        # Neither its own checkout nor an sdist: which files are the template's cannot be told
+        with pytest.raises(scaffold.ScaffoldError):
+            scaffold.template_commit(package)
 
     def test_init_renders_it_with_no_network(self, tmp_path, monkeypatch):
         """Pressing Enter at every question: the template is read from this package, and nothing is cloned."""
@@ -557,7 +619,7 @@ class TestTheTemplateThatCameWithIt:
 
         monkeypatch.setattr(git.Repo, "clone_from", no_network)
         monkeypatch.setattr(socket.socket, "connect", no_network)
-        monkeypatch.setattr(scaffold, "template_commit", lambda package_dir=None: COMMIT)
+        _at_commit(monkeypatch, COMMIT)
         monkeypatch.chdir(tmp_path)
         result = CliRunner().invoke(main, ["init"], input="\n" * 30)
         assert result.exit_code == 0, result.output
@@ -596,7 +658,7 @@ class TestTheTemplateThatCameWithIt:
         _git(upstream, "add", "-A")
         _git(upstream, "commit", "--quiet", "-m", "Template")
         head = _git(upstream, "rev-parse", "HEAD").strip()
-        monkeypatch.setattr(scaffold, "template_commit", lambda package_dir=None: head)
+        _at_commit(monkeypatch, head)
         out = tmp_path / "projects"
         out.mkdir()
         project = scaffold.render(out, no_input=True).project_dir
@@ -608,7 +670,7 @@ class TestTheTemplateThatCameWithIt:
 
     def test_with_no_commit_known_there_is_no_cruft_file(self, tmp_path, monkeypatch):
         """`"commit": null` was up to date for `cruft check`, and `cruft update` did nothing."""
-        monkeypatch.setattr(scaffold, "template_commit", lambda package_dir=None: None)
+        _at_commit(monkeypatch, None)
         rendered = scaffold.render(tmp_path, no_input=True)
         assert rendered.commit is None
         assert (rendered.project_dir / "chartbook.toml").is_file()
@@ -681,24 +743,73 @@ class TestTheTemplateThatCameWithIt:
     @needs_git
     def test_a_template_with_uncommitted_changes_is_at_no_commit(self, tmp_path, real_git):
         package = _committed_checkout(tmp_path)
-        assert scaffold.template_commit(package) is not None
+        head = scaffold.template_commit(package)
+        assert head is not None
+        # A file git does not track is never rendered, and does not count
+        (tmp_path / "checkout" / "template" / "notes.txt").write_text("mine\n")
+        assert scaffold.template_commit(package) == head
         (tmp_path / "checkout" / "template" / "cookiecutter.json").write_text("{}\n")
         assert scaffold.template_commit(package) is None
+        assert "changes git has not committed" in scaffold.template_source(package).why
 
     @needs_git
     def test_whether_the_commit_is_on_a_remote_branch(self, tmp_path, real_git):
-        """`cruft update` clones the template from GitHub: a commit only on this machine is not there."""
+        """`cruft update` clones the template from GitHub: a commit only on this machine, or a fork, is not there.
+
+        Only a remote that is the template's repository counts (a fork's
+        does not), and a tag does (a `--depth 1 --branch v1` clone has only
+        that).
+        """
         package = _committed_checkout(tmp_path)
         checkout = tmp_path / "checkout"
         head = scaffold.template_commit(package)
         assert scaffold.commit_is_pushed(head, package) is False
-        _git(checkout, "update-ref", "refs/remotes/origin/main", head)
+        _git(checkout, "remote", "add", "fork", "https://github.com/someone/chartbook.git")
+        _git(checkout, "update-ref", "refs/remotes/fork/main", head)
+        assert scaffold.commit_is_pushed(head, package) is False
+        _git(checkout, "tag", "v0.0.1", head)
+        assert scaffold.commit_is_pushed(head, package) is True
+        _git(checkout, "tag", "-d", "v0.0.1")
+        _git(checkout, "remote", "add", "upstream", "git@github.com:backofficedev/chartbook.git")
+        _git(checkout, "update-ref", "refs/remotes/upstream/main", head)
         assert scaffold.commit_is_pushed(head, package) is True
         # A packaged template cannot tell
         packaged = tmp_path / "site-packages" / "chartbook"
         packaged.mkdir(parents=True)
         _template_copy(packaged / "template")
         assert scaffold.commit_is_pushed(head, packaged) is None
+
+
+class TestRenderingSaysWhatWentWrong:
+    def test_a_folder_there_already_is_named_from_the_answer(self, tmp_path, monkeypatch):
+        """Not parsed from cookiecutter's message: the folder is the output folder and the slug."""
+        (tmp_path / "rates_study").mkdir()
+        with pytest.raises(scaffold.ProjectExistsError) as raised:
+            scaffold.render(tmp_path, no_input=True, answers={"project_name": "Rates Study"})
+        assert raised.value.folder == tmp_path / "rates_study"
+        assert list((tmp_path / "rates_study").iterdir()) == []
+
+    def test_cookiecutters_log_of_a_stopped_hook_reaches_no_handler(self, tmp_path, caplog):
+        """A NullHandler hid the traceback only while nothing handled the root logger; pytest's caplog does."""
+        import logging
+
+        from cookiecutter.exceptions import FailedHookException
+
+        with caplog.at_level(logging.DEBUG):
+            with pytest.raises(FailedHookException):
+                scaffold.render(tmp_path, no_input=True, answers={"project_name": "Rates Study", "project_slug": "Rates Study"})
+        assert not [record for record in caplog.records if record.name.startswith("cookiecutter")]
+        assert logging.getLogger("cookiecutter").propagate is True
+
+    @needs_git
+    def test_a_tracked_file_missing_from_disk_stops_it(self, tmp_path, real_git):
+        """A sparse checkout, or a file deleted and not committed: the template would be rendered without it."""
+        package = _committed_checkout(tmp_path)
+        (tmp_path / "checkout" / "template" / "hooks" / "post_gen_project.py").unlink()
+        out = tmp_path / "projects"
+        out.mkdir()
+        with pytest.raises(scaffold.ScaffoldError, match="not on disk"):
+            scaffold.render(out, no_input=True, package_dir=package)
 
 
 def _committed_checkout(tmp_path: Path) -> Path:

@@ -151,20 +151,36 @@ def _checkout(folder: Path) -> str:
     return _git(folder, "rev-parse", "HEAD").strip()
 
 
+class _App:
+    """Stands in for hatchling's app, which a hook warns through."""
+
+    def __init__(self):
+        self.warnings = []
+
+    def display_warning(self, message):
+        self.warnings.append(message)
+
+
 def _hook_for(hook_module, root, target_name):
     class Hook(hook_module.CustomBuildHook):
         def __init__(self):
-            self.root, self.target_name = str(root), target_name
+            self.root, self.target_name, self.app = str(root), target_name, _App()
 
     return Hook()
 
 
 def _run(hook_module, root, target_name, version="standard"):
-    """Run the hook's initialize; return the hook and its build data."""
+    """Run the hook's initialize, and not its finalize; return the hook and its build data."""
     build_data = {"force_include": {}}
     built = _hook_for(hook_module, root, target_name)
     built.initialize(version, build_data)
     return built, build_data
+
+
+def _recorded(build_data, target):
+    """What the build puts in as built_from.txt at *target*, read from where the hook wrote it."""
+    (source,) = [source for source, shipped in build_data["force_include"].items() if shipped == target]
+    return Path(source).read_text()
 
 
 @needs_git
@@ -174,7 +190,7 @@ def test_a_build_ships_the_template_files_git_tracks(hook, tmp_path):
     _checkout(root)
     for target, inside in (("wheel", "chartbook/template"), ("sdist", "template")):
         built, build_data = _run(hook, root, target)
-        shipped = sorted(build_data["force_include"].values())
+        shipped = sorted(path for path in build_data["force_include"].values() if path.startswith(inside))
         assert shipped == [
             f"{inside}/cookiecutter.json",
             f"{inside}/{{{{cookiecutter.project_slug}}}}/.gitignore",
@@ -184,78 +200,108 @@ def test_a_build_ships_the_template_files_git_tracks(hook, tmp_path):
     # An editable install renders template/ from the checkout: the hook adds nothing
     _, build_data = _run(hook, root, "wheel", version="editable")
     assert build_data["force_include"] == {}
-    assert not (root / "src" / "chartbook" / "built_from.txt").exists()
 
 
 @needs_git
-def test_the_commit_goes_where_a_wheel_built_from_the_sdist_finds_it(hook, tmp_path):
-    """`uv build` made an sdist with `chartbook/built_from.txt` at its root, and a wheel from it had none."""
+def test_the_commit_is_written_aside_and_never_into_the_tree(hook, tmp_path):
+    """A file written into src/chartbook stayed behind when finalize did not run (Ctrl-C, an error,
+    `--hooks-only`), a `git add -A` committed it, and every later build shipped a stale commit."""
     root = tmp_path / "checkout"
     head = _checkout(root)
-    recorded = root / "src" / "chartbook" / "built_from.txt"
+    for target, shipped in (("sdist", "src/chartbook/built_from.txt"), ("wheel", "chartbook/built_from.txt")):
+        built, build_data = _run(hook, root, target)
+        assert _recorded(build_data, shipped).strip() == head
+        # finalize not run, and the tree is as it was
+        assert _git(root, "status", "--porcelain", "--untracked-files=all") == ""
+    # Two builds at once each have their own
+    first, first_data = _run(hook, root, "wheel")
+    second, second_data = _run(hook, root, "wheel")
+    first.finalize("standard", first_data, "")
+    assert _recorded(second_data, "chartbook/built_from.txt").strip() == head
 
-    # The sdist: the file is in the source tree, under src/chartbook, for the build
+
+@needs_git
+def test_a_stray_copy_in_the_tree_is_overridden(hook, tmp_path):
+    """The force-included file takes the path; one left in src/chartbook does not ship in its place."""
+    root = tmp_path / "checkout"
+    head = _checkout(root)
+    (root / "src" / "chartbook" / "built_from.txt").write_text("0" * 40 + "\n")
+    built, build_data = _run(hook, root, "wheel")
+    assert _recorded(build_data, "chartbook/built_from.txt").strip() == head
+    built.finalize("standard", build_data, "")
+
+
+@needs_git
+def test_a_wheel_built_from_the_sdist_ships_the_sdists_commit(hook, tmp_path):
+    """The sdist carries src/chartbook/built_from.txt; built from it, which is no checkout, the wheel ships it as it is."""
+    root = tmp_path / "checkout"
+    head = _checkout(root)
     built, build_data = _run(hook, root, "sdist")
-    assert recorded.read_text().strip() == head
-    assert str(recorded) not in build_data["force_include"]
-    # ...laid out as the sdist is
     unpacked = tmp_path / "chartbook-0.2.0"
     shutil.copytree(root / "src", unpacked / "src")
     for source, shipped in build_data["force_include"].items():
         (unpacked / shipped).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, unpacked / shipped)
     built.finalize("standard", build_data, "")
-    assert not recorded.exists()
-
-    # The wheel, from the unpacked sdist, which is no checkout: its file is kept, and its template shipped
-    built, build_data = _run(hook, unpacked, "wheel")
     assert (unpacked / "src" / "chartbook" / "built_from.txt").read_text().strip() == head
+
+    built, build_data = _run(hook, unpacked, "wheel")
+    # Its own file goes in with the package; the hook adds only the sdist's template
     assert sorted(build_data["force_include"].values()) == [
         "chartbook/template/cookiecutter.json",
         "chartbook/template/{{cookiecutter.project_slug}}/.gitignore",
         "chartbook/template/{{cookiecutter.project_slug}}/README.md",
     ]
-    built.finalize("standard", build_data, "")
-    assert (unpacked / "src" / "chartbook" / "built_from.txt").is_file()
-
-    # A packager who makes the unpacked sdist a repository of their own: the file is theirs to keep
-    _git(unpacked, "init", "--quiet")
-    _git(unpacked, "add", "-A")
-    _git(unpacked, "commit", "--quiet", "-m", "Packaging")
-    built, build_data = _run(hook, unpacked, "wheel")
     assert (unpacked / "src" / "chartbook" / "built_from.txt").read_text().strip() == head
-    built.finalize("standard", build_data, "")
-    assert (unpacked / "src" / "chartbook" / "built_from.txt").is_file()
-
-
-@needs_git
-def test_a_leftover_from_an_earlier_build_of_the_checkout_is_replaced(hook, tmp_path):
-    root = tmp_path / "checkout"
-    head = _checkout(root)
-    recorded = root / "src" / "chartbook" / "built_from.txt"
-    recorded.write_text("0" * 40 + "\n")
-    built, build_data = _run(hook, root, "wheel")
-    assert recorded.read_text().strip() == head
     built.finalize("standard", build_data, "")
 
 
 @needs_git
 def test_a_template_with_uncommitted_changes_is_recorded_at_no_commit(hook, tmp_path):
     root = tmp_path / "checkout"
-    _checkout(root)
+    head = _checkout(root)
+    # A file git does not track is never shipped, and does not count
+    (root / "template" / "notes.txt").write_text("mine\n")
+    built, build_data = _run(hook, root, "wheel")
+    assert _recorded(build_data, "chartbook/built_from.txt").strip() == head
+    built.finalize("standard", build_data, "")
     (root / "template" / "cookiecutter.json").write_text("{}\n")
     built, build_data = _run(hook, root, "wheel")
-    assert not (root / "src" / "chartbook" / "built_from.txt").exists()
+    assert _recorded(build_data, "chartbook/built_from.txt").strip() == ""
+    assert any("changes git has not committed" in warning for warning in built.app.warnings)
     built.finalize("standard", build_data, "")
 
 
-def test_a_git_folder_git_cannot_read_stops_the_build(hook, tmp_path):
-    """"Dubious ownership", a broken checkout: a build of a checkout never records nothing without saying so."""
+@needs_git
+def test_a_tracked_file_missing_from_disk_stops_the_build(hook, tmp_path, monkeypatch):
+    """A sparse checkout, a file deleted and not committed, or git failing to list: the template would be short."""
+    root = tmp_path / "checkout"
+    _checkout(root)
+    (root / "template" / "{{cookiecutter.project_slug}}" / "README.md").unlink()
+    with pytest.raises(RuntimeError, match="not on disk"):
+        _run(hook, root, "wheel")
+    real = hook.git
+    monkeypatch.setattr(hook, "git", lambda folder, *arguments: None if "ls-files" in arguments else real(folder, *arguments))
+    with pytest.raises(RuntimeError, match="could not list"):
+        _run(hook, root, "wheel")
+
+
+def test_a_git_folder_git_cannot_read_warns_or_with_the_variable_stops(hook, tmp_path, monkeypatch):
+    """`pip install .` in an image without git, a folder git does not trust: a warning that says the ways
+    out, unless the build says it must record the commit, as a release's does."""
     root = tmp_path / "checkout"
     (root / "src" / "chartbook").mkdir(parents=True)
     (root / "template").mkdir()
+    (root / "template" / "cookiecutter.json").write_text("{}\n")
     (root / ".git").mkdir()
-    with pytest.raises(RuntimeError, match="has a .git, and git cannot read it"):
+    monkeypatch.delenv(hook.REQUIRE_GIT, raising=False)
+    built, build_data = _run(hook, root, "wheel")
+    (warning,) = built.app.warnings
+    assert "has a .git, and git cannot read it" in warning
+    assert "Install git" in warning and "safe.directory" in warning and "without .git" in warning
+    assert list(build_data["force_include"].values()) == ["chartbook/template/cookiecutter.json"]
+    monkeypatch.setenv(hook.REQUIRE_GIT, "1")
+    with pytest.raises(RuntimeError, match="CHARTBOOK_BUILD_REQUIRE_GIT=1 makes this an error"):
         _run(hook, root, "wheel")
 
 
@@ -263,4 +309,5 @@ def test_the_hook_and_init_name_the_file_alike(hook):
     from chartbook import scaffold
 
     assert hook.BUILT_FROM == scaffold.BUILT_FROM
+
 

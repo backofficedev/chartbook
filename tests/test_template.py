@@ -1009,7 +1009,18 @@ def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, t
         "from doit import task_params\n"
         "from more_tasks import task_lint\n"
         'task_owner = "the data team"\n'
-        'task_later = functools.partial(print, "later")\n\n\n'
+        'task_later = functools.partial(print, "later")\n'
+        # doit also takes a bound method named task_..., and anything with create_doit_tasks
+        "class _Checks:\n"
+        "    def task_style(self):\n"
+        '        return {"actions": ["true"]}\n'
+        "task_style = _Checks().task_style\n"
+        "class _Report:\n"
+        "    def create_doit_tasks(self):\n"
+        '        return {"actions": ["true"]}\n'
+        "report = _Report()\n"
+        # The class has create_doit_tasks too, which doit would call unbound
+        "del _Report\n\n\n"
     )
     dodo.write_text(text[:block] + others + text[block:])
     listed = subprocess.run(["doit", "list"], cwd=project, capture_output=True, text=True)
@@ -1024,7 +1035,7 @@ def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, t
     assert loaded.returncode == 0, loaded.stderr
     defaults = set(json.loads(loaded.stdout))
     assert defaults <= tasks, sorted(defaults - tasks)
-    assert "lint" in tasks
+    assert {"lint", "style", "report"} <= tasks
     assert defaults == tasks - {"run_pytest"}
 
 

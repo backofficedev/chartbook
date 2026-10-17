@@ -2777,10 +2777,11 @@ def init(use_git, use_github, public):
 
     The template is the one that came with this ChartBook (the `template/`
     folder of ChartBook's repository, which the package carries), so the
-    two always match, and rendering it needs no network. The new project's
-    `.cruft.json` names the template on GitHub and the commit this
-    ChartBook was built from, so `cruft update` there brings in later
-    changes to it.
+    two always match, and rendering it needs no network. When the commit
+    the template is at is known, the new project's `.cruft.json` names the
+    template on GitHub and that commit, so `cruft update` there brings in
+    later changes to it; when it is not, there is no `.cruft.json`, and the
+    command prints the `cruft link` that makes one.
 
     With --git, the new project is also made a git repository with one
     commit. With --github, a GitHub repository is then created for it under
@@ -2835,21 +2836,15 @@ def init(use_git, use_github, public):
             )
 
     # The template that came with this ChartBook, rendered here: no network
-    from cookiecutter.exceptions import CookiecutterException, OutputDirExistsException
+    from cookiecutter.exceptions import CookiecutterException
 
     try:
         rendered = scaffold.render(cwd)
     except KeyboardInterrupt:
         raise SystemExit(130)
     except scaffold.ScaffoldError as e:
+        # A source checkout git cannot read, or a project folder there already
         fail(e)
-    except OutputDirExistsException as e:
-        # cookiecutter's message is 'Error: "<folder>" directory already exists'
-        folder = str(e).split('"')[1] if str(e).count('"') >= 2 else "the project's folder"
-        fail(
-            f"{folder} is there already, so nothing was changed. Run `chartbook init` again "
-            f"and give another folder name at the second question, or move that folder."
-        )
     except CookiecutterException as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         # The template's own message is above; its advice is said again
@@ -2866,19 +2861,19 @@ def init(use_git, use_github, public):
         # A .cruft.json naming no commit is one cruft takes for up to date, and never updates
         click.echo(
             f"Note: this ChartBook cannot name the commit of {scaffold.TEMPLATE_REPOSITORY} its "
-            f"template is at (none was recorded when it was built, or its template/ has changes "
-            f"git has not committed), so {project_dir.name} has no {scaffold.CRUFT_MARKER}, and "
-            f"cruft cannot update it yet. Once you know the commit, run this in {project_dir.name}, "
-            f"which asks the template's questions again:\n"
-            f"    cruft link {scaffold.TEMPLATE_REPOSITORY} --directory {scaffold.TEMPLATE_DIRECTORY} "
-            f"--checkout <commit>",
+            f"template is at ({rendered.why}), so {project_dir.name} has no {scaffold.CRUFT_MARKER}, "
+            f"and cruft cannot update it yet. Once you know the commit, run this in "
+            f"{project_dir.name}, with the commit in place of <commit>; it gives cruft the answers "
+            f"you gave here:\n"
+            f"    {rendered.link_command()}",
             err=True,
         )
     elif rendered.pushed is False:
         click.echo(
-            f"Note: the template's commit, {rendered.commit[:12]}, is on no remote branch of the "
-            f"checkout this ChartBook runs from, so it may not be on GitHub, where `cruft update` "
-            f"looks for it. Push it before you run `cruft update`.",
+            f"Note: the template's commit, {rendered.commit[:12]}, is on no branch of a remote that is "
+            f"{scaffold.TEMPLATE_REPOSITORY}, and in no tag, of the checkout this ChartBook runs from, "
+            f"so it may not be on GitHub, where `cruft update` looks for it. Push it before you run "
+            f"`cruft update`.",
             err=True,
         )
 

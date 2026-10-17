@@ -530,18 +530,23 @@ def task_run_pytest():
 ## defined above it, as the file is read, so a task added below it is not
 ## in the list: plain `doit` and `chartbook build` do not run it, and what
 ## it makes is not built. A task is what doit takes for one: a function whose
-## name starts with `task_`, defined here or imported, except doit's own
-## `task_params` decorator.
+## name starts with `task_` (or a method), defined here or imported, or
+## anything with a `create_doit_tasks`; but not doit's own `task_params`.
 try:
     from doit import task_params as _doit_task_params
 except ImportError:
     _doit_task_params = None
 
-DOIT_CONFIG["default_tasks"] = [
-    name.removeprefix("task_")
-    for name, value in list(globals().items())
-    if name.startswith("task_")
-    and inspect.isfunction(value)
-    and value is not _doit_task_params
-    and name != "task_run_pytest"
-]
+
+def _doit_tasks(namespace):
+    """The names of the tasks doit finds in this file, by its own rule."""
+    for name, value in list(namespace.items()):
+        if value is _doit_task_params:
+            continue
+        if name.startswith("task_") and (inspect.isfunction(value) or inspect.ismethod(value)):
+            yield name.removeprefix("task_")
+        elif hasattr(value, "create_doit_tasks"):
+            yield getattr(value.create_doit_tasks, "basename", name)
+
+
+DOIT_CONFIG["default_tasks"] = [name for name in _doit_tasks(globals()) if name != "run_pytest"]
