@@ -90,7 +90,7 @@ With no `[policy]` section, a built-in recommended-field list drives the diagnos
 
 ### Enforcing it in CI
 
-`chartbook check` is the gate. It exits nonzero when a required field is missing, a declared path points at nothing, or a dataframe's `license_expiration` has passed or is within 30 days — naming the manifest and field each time.
+`chartbook check` is the gate. It exits nonzero when a field a policy requires is missing, a declared path points at nothing, or a dataframe's `license_expiration` has passed or is within 30 days, naming the manifest and field each time.
 
 ```console
 chartbook check                        # in a catalog: every member, against its [policy]
@@ -99,7 +99,7 @@ chartbook check --within 90            # widen the license window
 chartbook check --skip-outputs         # in CI, without building the data first
 ```
 
-A pipeline with no `--policy` is checked against the built-in recommended list. Details: {doc}`../reference/cli`.
+A pipeline is checked against its own `[policy]` when it has one. When no policy is given anywhere (none in the pipeline, none in the catalog it is checked in, and no `--policy`, or a `--policy` file with no `[policy]` table), the built-in recommended list is advice: each missing field is a `warning:` line and the check does not fail on it. A dataframe or chart with no write-up fails it all the same, since the format requires one. Details: {doc}`../reference/cli`.
 
 ## Loading data
 

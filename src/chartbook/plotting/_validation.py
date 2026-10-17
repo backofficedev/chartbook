@@ -22,6 +22,18 @@ def validate_dataframe(df) -> "pd.DataFrame":
     if type(df).__module__.split(".")[0] == "polars":
         import polars as pl
 
+        if isinstance(df, (pl.LazyFrame, pl.DataFrame)):
+            # What pandas would make of these the backends cannot draw: an
+            # unordered Categorical for a category or an enum, a Decimal
+            # object that does not add to a float
+            schema = df.collect_schema() if isinstance(df, pl.LazyFrame) else df.schema
+            df = df.with_columns(
+                [
+                    pl.col(name).cast(pl.String if dtype.base_type() in (pl.Categorical, pl.Enum) else pl.Float64)
+                    for name, dtype in schema.items()
+                    if dtype.base_type() in (pl.Categorical, pl.Enum, pl.Decimal)
+                ]
+            )
         if isinstance(df, pl.LazyFrame):
             df = df.collect()
         if isinstance(df, pl.DataFrame):

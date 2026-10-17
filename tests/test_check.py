@@ -229,6 +229,17 @@ class TestCheckRequiredFields:
         (problem,) = check_required_fields(manifest, pipeline_project)
         assert problem.field == "docs_path or docs"
 
+    def test_a_missing_write_up_is_a_problem_with_no_policy_too(self, pipeline_project):
+        """Found by a reviewer: with no policy, a blank write-up became a recommendation,
+        though the format requires exactly one of docs_path and docs."""
+        manifest = load_manifest(pipeline_project)
+        manifest["dataframes"]["dataframe_0"]["docs_path"] = "  "
+        with pytest.warns(UserWarning, match="recommended by the default policy"):
+            problems = check_required_fields(manifest, pipeline_project, warn_only=True)
+        (problem,) = problems
+        assert (problem.table, problem.field) == ("dataframes.dataframe_0", "docs_path or docs")
+        assert problem.message == "required by the format, but missing or empty"
+
     def test_catalog_policy_points_at_each_member_manifest(self, catalog_project):
         def edit(config):
             config["policy"] = {
@@ -266,6 +277,13 @@ def load_policy_dict():
 class TestLoadPolicy:
     def test_reads_policy_table_from_a_file(self, lenient_policy):
         assert load_policy(lenient_policy) == load_policy_dict()
+
+    def test_read_policy_says_whether_the_file_has_one(self, lenient_policy, catalog_project):
+        from chartbook.check import read_policy
+
+        assert read_policy(lenient_policy) == (load_policy_dict(), True)
+        defaults, given = read_policy(catalog_project)
+        assert given is False and defaults == load_policy(catalog_project)
 
     def test_accepts_a_directory(self, catalog_project):
         policy = load_policy(catalog_project)
@@ -390,6 +408,14 @@ class TestCheckCommand:
         assert "pipeline_a/chartbook.toml: [project] repo_url" in result.output
         assert "pipeline_b/chartbook.toml: [project] repo_url" in result.output
         assert "in 2 manifest(s)" in result.output
+
+    def test_policy_of_a_catalog_that_sets_none_only_warns(self, pipeline_project, catalog_project):
+        """Found by a reviewer: `--policy ../catalog`, the documented way for a member to
+        check itself, failed on the default fields when the catalog sets no policy."""
+        result = _invoke("--project-dir", pipeline_project, "--policy", catalog_project)
+        assert result.exit_code == 0, result.output
+        assert "[project] repo_url: recommended by the default policy" in result.stderr
+        assert "required by" not in result.output
 
     def test_catalog_with_no_policy_only_warns(self, catalog_project):
         """A member's own [policy] is ignored inside a catalog, so none is given."""

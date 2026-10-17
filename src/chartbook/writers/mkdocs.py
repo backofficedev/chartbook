@@ -25,7 +25,7 @@ the Sphinx pages use holds.
 from __future__ import annotations
 
 import importlib.resources
-from datetime import date
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -117,7 +117,7 @@ class MkDocsWriter(SphinxWriter):
                 manifest={"project": {"name": catalog.get("name", "")}},
                 model_file_list=self._pages("Model"),
                 readme_text="",
-                today=date.today().isoformat(),
+                today=_built_at(),
                 has_versions=self._has_versions(),
             )
         if page_path == "cb/dataframes.md":
@@ -154,7 +154,7 @@ class MkDocsWriter(SphinxWriter):
             dot_or_dotdot="cb",
             show_code_updated=True,
             readme_text="".join(readme[2:]),
-            today=date.today().isoformat(),
+            today=_built_at(),
             site_pages=self._site_pages(pipeline),
             notebooks=notebooks,
             notes=notes,
@@ -287,6 +287,11 @@ def _freshness_of(pipeline: dict) -> Optional[dict]:
     from chartbook.writers.sphinx import _freshness
 
     return _freshness("Code updated", pipeline.get("code_changed_at"))
+
+
+def _built_at() -> str:
+    """The front page's "Last updated": now, in UTC and said so, as every time on the site is."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
 
 def is_installed() -> bool:

@@ -61,3 +61,42 @@ def test_an_empty_polars_frame_is_refused():
 def test_anything_else_is_refused_by_name():
     with pytest.raises(DataValidationError, match="pandas or polars DataFrame, got dict"):
         chartbook.plotting.line(ROWS, x="date", y="rate")
+
+
+@pytest.mark.parametrize("kind", ["polars", "lazy"])
+def test_a_category_and_an_enum_are_drawn_as_text(kind):
+    """Found by a reviewer: pandas made these unordered Categoricals, which the
+    backends refused ("Categorical is not ordered")."""
+    names = ["a", "b", "c"]
+    frame = pl.DataFrame(
+        {
+            "cat": pl.Series(names, dtype=pl.Categorical),
+            "enum": pl.Series(names, dtype=pl.Enum(names)),
+            "rate": ROWS["rate"],
+            "spread": ROWS["spread"],
+        }
+    )
+    df = frame.lazy() if kind == "lazy" else frame
+    for x in ("cat", "enum"):
+        result = chartbook.plotting.line(df, x=x, y="rate")
+        assert list(result.figure.data[0].x) == names
+        chartbook.plotting.bar(df, x=x, y="rate")
+        chartbook.plotting.scatter(df, x=x, y="rate")
+        chartbook.plotting.area(df, x=x, y=["rate", "spread"])
+        chartbook.plotting.dual(df, x=x, left_y="rate", right_y="spread")
+
+
+def test_a_decimal_column_is_drawn_as_a_float():
+    """Found by a reviewer: pandas kept a Decimal as an object, and an area chart
+    failed adding it to a float."""
+    from decimal import Decimal
+
+    df = pl.DataFrame(
+        {
+            "date": ROWS["date"],
+            "rate": pl.Series([Decimal("3.50"), Decimal("3.60"), Decimal("3.85")], dtype=pl.Decimal(10, 2)),
+            "spread": ROWS["spread"],
+        }
+    )
+    result = chartbook.plotting.area(df, x="date", y=["rate", "spread"])
+    assert list(result.figure.data[0].y) == [3.5, 3.6, 3.85]

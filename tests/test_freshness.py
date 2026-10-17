@@ -125,9 +125,9 @@ class TestGeneratedPages:
         assert "Date of Last Code Update" not in page
         # Shown before the chart itself, not in the tables at the bottom
         assert page.index('class="cb-freshness"') < page.index("## Chart")
-        # In chart listings, a chart is dated by when it was itself written, in UTC
-        in_utc = chart_moment.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-        assert page.startswith(f'---\ndate: "{in_utc}"')
+        # In chart listings, a chart is dated by when it was itself written, in
+        # the local time ABlog compares it with
+        assert page.startswith('---\ndate: "2024-04-01 08:30:00"')
 
     def test_asset_pages_do_not_change_when_only_the_code_does(
         self, pipeline_project, tmp_path

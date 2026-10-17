@@ -66,7 +66,7 @@ def run_build_markdown(
     :type _docs_dir: Path
     :param docs_src_dir: Directory containing documentation source files.
     :type docs_src_dir: Path
-    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :param size_threshold: File size in MB above which a dataframe page does not read the file for its date range.
     :type size_threshold: float
     :param skip_pipelines: Set of pipeline IDs to skip due to missing files.
     :type skip_pipelines: set[str] | None
@@ -298,7 +298,7 @@ def generate_docs(
     :type temp_docs_src_dir: Path
     :param should_remove_existing: If True, removes existing output directory after successful generation.
     :type should_remove_existing: bool
-    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :param size_threshold: File size in MB above which a dataframe page does not read the file for its date range.
     :type size_threshold: float
     :param strict: If True (default), error and exit when source files are missing.
         When False, affected pipelines are skipped with warnings.

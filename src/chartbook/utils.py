@@ -165,8 +165,11 @@ def copy_according_to_plan(publish_plan, mkdir=False, verbose: bool = False):
 #: How many rows a dataframe's glimpse shows, from the top of the file
 GLIMPSE_ROWS = 5
 
-#: How many significant digits a float in a glimpse is shown to
-GLIMPSE_DIGITS = 6
+#: How many significant digits a float in a glimpse is shown to: as many as
+#: a float holds for certain, so that whole numbers (a date written as
+#: 20240115.0, an ID) and the smallest and largest values show as they are,
+#: and only the noise of binary fractions (3.8499999999999996) is cut
+GLIMPSE_DIGITS = 15
 
 
 def get_dataframe_glimpse(filepath):
@@ -211,27 +214,42 @@ def glimpse_text(sample: pl.DataFrame) -> str:
     """Polars' glimpse of a few rows, as text, with floats rounded for a reader.
 
     A float is shown to :data:`GLIMPSE_DIGITS` significant digits, so
-    ``3.8499999999999996`` reads ``3.85``. A ``f32`` column is widened to
-    show its digits as written (``1.1``, not ``1.100000023841858``), and is
-    still labelled ``<f32>``.
+    ``3.8499999999999996`` reads ``3.85``; the rounding is Python's own
+    formatting, which is exact at any magnitude. A ``f32`` column is widened
+    to show its digits as written (``1.1``, not ``1.100000023841858``), and
+    is still labelled ``<f32>``.
     """
-    narrow = [name for name, dtype in sample.schema.items() if dtype == pl.Float32]
-    shown = sample.with_columns(pl.col(narrow).cast(pl.String).cast(pl.Float64)).with_columns(
-        pl.col(pl.Float64).round_sig_figs(GLIMPSE_DIGITS)
+    narrow = {name for name, dtype in sample.schema.items() if dtype == pl.Float32}
+    shown = sample.with_columns(pl.col(sorted(narrow)).cast(pl.String).cast(pl.Float64))
+    shown = shown.with_columns(
+        [
+            pl.Series(name, [_for_display(value) for value in shown[name].to_list()], dtype=pl.Float64)
+            for name, dtype in shown.schema.items()
+            if dtype == pl.Float64
+        ]
     )
     output = StringIO()
     with redirect_stdout(output):
         shown.glimpse()
-    # "Rows: …" and "Columns: …", then one line per column in order. A
-    # name is shown left-aligned and cut at 50 characters, so the type's
-    # label comes after it
+    # "Rows: …" and "Columns: …", then one line per column in order. A name
+    # is shown left-aligned and cut at 50 characters, so the type's label
+    # comes after it. A name with a line break in it breaks that count; the
+    # labels are then left as they are
     lines = output.getvalue().split("\n")
+    if any("\n" in name or "\r" in name for name in sample.columns) or len(lines) < sample.width + 2:
+        return "\n".join(lines)
     for position, name in enumerate(sample.columns):
         if name in narrow:
             line = lines[2 + position]
             at = line.find("<f64>", 2 + min(len(name), 49))
-            lines[2 + position] = line[:at] + "<f32>" + line[at + len("<f64>") :]
+            if at >= 0:
+                lines[2 + position] = line[:at] + "<f32>" + line[at + len("<f64>") :]
     return "\n".join(lines)
+
+
+def _for_display(value):
+    """A float rounded to :data:`GLIMPSE_DIGITS` significant digits, or None."""
+    return None if value is None else float(f"{value:.{GLIMPSE_DIGITS}g}")
 
 
 # Regex to match MathJax 2 script tags injected by Plotly's NotebookRenderer.

@@ -203,10 +203,23 @@ _COMMIT = re.compile(r"[0-9a-f]{7,64}")
 _MADE_AT = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}")
 
 
+#: The longest value set into a page as code; a longer one is cut, with an ellipsis
+_LONGEST_CODE = 200
+
+
 def _code(value: object) -> str:
-    """A record's value as inline code; as :func:`_as_text` when it has what would end the code or the table cell it is in."""
-    text = str(value)
-    if text and not any(c in text for c in "`|\\\r\n<>"):
+    """A record's value as inline code; as :func:`_as_text` when it has what would end the code or the table cell it is in.
+
+    Either way it is one line of what can be seen (:func:`chartbook.identity.plain_line`):
+    no control or direction-changing character, and at most :data:`_LONGEST_CODE`
+    characters.
+    """
+    from chartbook.identity import plain_line
+
+    text = plain_line(str(value), _LONGEST_CODE + 1)
+    if len(text) > _LONGEST_CODE:
+        text = text[: _LONGEST_CODE - 1] + "…"
+    if text and not any(c in text for c in "`|\\<>"):
         return f"`{text}`"
     return _as_text(text)
 
@@ -402,10 +415,13 @@ class SphinxWriter:
         location = record.get("location") or {}
         pipeline_manifest = self._pipeline_manifest(pipeline)
         chart_manifest = self._chart_manifest(record, dataframe)
-        # The chart listing's date, in UTC with no zone named: ABlog compares
-        # it with a time that has none
+        # The chart listing's date is the one time on the site in the build
+        # machine's local time, with no zone named: ABlog publishes a post
+        # dated before its next local midnight, and keeps any later one as a
+        # draft, out of every listing. A chart written in the evening west of
+        # UTC is dated tomorrow in UTC
         chart_updated = _as_utc(location.get("modified_at") or pipeline.get("code_changed_at"))
-        chart_date = chart_updated.strftime("%Y-%m-%d %H:%M:%S") if chart_updated is not None else None
+        chart_date = chart_updated.astimezone().strftime("%Y-%m-%d %H:%M:%S") if chart_updated is not None else None
         if dataframe is not None:
             dataframe_manifest = self._dataframe_manifest(dataframe, base_dir)
             data_updated = (dataframe.get("location") or {}).get("modified_at")
@@ -516,7 +532,7 @@ class SphinxWriter:
                 + "".join(readme[2:])
             )
             if dependencies:
-                page += "\n\n" + environment.get_template("dependencies.md").render(dependencies=dependencies)
+                page += "\n\n" + environment.get_template("pipeline_dependencies.md").render(dependencies=dependencies)
             return page
         own = [self.records[i] for i in pipeline.get("assets", []) if i in self.records]
         notebooks = sorted((r for r in own if r["kind"] == "Notebook"), key=_local_name)
@@ -1276,6 +1292,7 @@ def _sandboxed(paths: list) -> jinja2.Environment:
 
     environment = SandboxedEnvironment(loader=jinja2.FileSystemLoader([str(p) for p in paths]))
     environment.filters["yaml_escape"] = yaml_escape
+    environment.filters["code"] = _code
     return environment
 
 

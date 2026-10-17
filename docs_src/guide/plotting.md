@@ -62,7 +62,7 @@ rates = data.load("treasury_rates")
 chartbook.plotting.line(rates, x="date", y="rate", title="Rates").save("rates_chart")
 ```
 
-The whole frame is collected, so filter or select in polars first if it is large.
+The whole frame is collected, so filter or select in polars first if it is large. A polars category or enum column is drawn as text, and a decimal column as a float.
 
 ## ChartResult Object
 

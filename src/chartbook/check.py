@@ -16,7 +16,7 @@ from __future__ import annotations
 import functools
 import os
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -24,7 +24,7 @@ from typing import Any, Optional, Union
 import tomli
 
 from chartbook.conf_validation import validate_source_files
-from chartbook.diagnostics import build_diagnostics
+from chartbook.diagnostics import DOCS_FIELDS, build_diagnostics
 from chartbook.identity import strip_url_credentials
 from chartbook.manifest import (
     _read_manifest_file,
@@ -122,6 +122,22 @@ def load_policy(path: Union[str, Path]) -> dict:
     :raises FileNotFoundError: If there is no such file.
     :raises ValueError: If the file is not valid TOML or its policy is invalid.
     """
+    return read_policy(path)[0]
+
+
+def read_policy(path: Union[str, Path]) -> tuple[dict, bool]:
+    """Read the resolved ``[policy]`` of a file, and whether it has one.
+
+    A file with no ``[policy]`` table resolves to the default lists, as
+    :func:`load_policy` gives them; the second value says it had none, so
+    that ``chartbook check --policy`` on a catalog that sets no policy
+    gives none.
+
+    :param path: A catalog ``chartbook.toml`` or the directory holding one.
+    :returns: The policy, and True if the file has a ``[policy]`` table.
+    :raises FileNotFoundError: If there is no such file.
+    :raises ValueError: If the file is not valid TOML or its policy is invalid.
+    """
     path = Path(path)
     if path.is_dir():
         path = path / "chartbook.toml"
@@ -129,7 +145,7 @@ def load_policy(path: Union[str, Path]) -> dict:
         raise FileNotFoundError(f"No policy file found at {path}")
     with open(path, "rb") as f:
         raw = tomli.load(f)
-    return _resolve_policy(raw, source=str(path))
+    return _resolve_policy(raw, source=str(path)), "policy" in raw
 
 
 def check_required_fields(
@@ -149,9 +165,11 @@ def check_required_fields(
     :param policy_label: How to name the policy in messages, so a reader of
         a CI log knows who required the field.
     :param warn_only: If True, no policy was given and the lists are the
-        default recommended ones: each missing field is a warning, and no
-        problem is returned.
+        default recommended ones: each missing field is a warning, not a
+        problem. A missing write-up stays a problem: the format itself
+        requires one for each dataframe and chart, whatever the policy.
     """
+    write_up = " or ".join(DOCS_FIELDS)  # as the diagnostics row names it
     problems = []
     for row in build_diagnostics(manifest):
         if row.metadata_complete:
@@ -172,7 +190,13 @@ def check_required_fields(
                 )
             )
     if warn_only:
+        kept = []
         for problem in problems:
+            if problem.field == write_up:
+                kept.append(
+                    replace(problem, message="required by the format, but missing or empty")
+                )
+                continue
             warnings.warn(
                 f"{display_path(problem.file, base_dir)}: [{problem.table}] "
                 f"{problem.field}: recommended by the default policy, but "
@@ -180,7 +204,7 @@ def check_required_fields(
                 UserWarning,
                 stacklevel=2,
             )
-        return []
+        return kept
     return problems
 
 

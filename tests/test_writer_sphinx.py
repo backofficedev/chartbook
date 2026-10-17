@@ -321,6 +321,17 @@ class TestThePipelinePage:
         html = (forecast / "docs" / "index.html").read_text()
         assert 'id="dependencies"' in html and f"<code class=\"docutils literal notranslate\"><span class=\"pre\">{taken.commit[:7]}</span></code>" in html
 
+    def test_a_dependencies_file_of_the_pipelines_own_is_not_a_template(self, trained, monkeypatch):
+        """Found by a reviewer: the template was `dependencies.md`, and the pipeline's own
+        root is searched first, so a DEPENDENCIES.md there (any case, on macOS and Windows)
+        was rendered onto the front page in its place."""
+        _, forecast = trained
+        (forecast / "dependencies.md").write_text("# Our own notes on dependencies\n")
+        index = _built(forecast, monkeypatch)
+        page = SphinxWriter(index, theme="pipeline", docs_src_dir=forecast / "_docs_src").pipeline_page("acme/forecast")
+        assert "Our own notes on dependencies" not in page
+        assert "## Dependencies" in page and "- `rates` (path `../rates`)" in page
+
     def test_in_a_catalog_a_dependency_links_the_snapshot_pinned_or_its_page(self, trained, monkeypatch):
         import tomli_w
 
@@ -523,6 +534,25 @@ class TestTheChartPage:
 
 
 @pytest.fixture
+def west_of_utc():
+    """The machine's local time 18 hours behind UTC, as late in a day in Chicago puts UTC in the next one."""
+    import os
+    import time
+
+    before = os.environ.get("TZ")
+    os.environ["TZ"] = "FAKE+18"
+    time.tzset()
+    try:
+        yield
+    finally:
+        if before is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = before
+        time.tzset()
+
+
+@pytest.fixture
 def first_pipeline(tmp_path):
     """A pipeline as a new user writes one from the docs: a dataframe, a chart of it, no optional field."""
     from datetime import date
@@ -562,6 +592,17 @@ class TestWhatANewUserFound:
         assert "category/.html" not in (site / "index.html").read_text()
         assert "Sources:" not in page
         assert index["records"]
+
+    def test_a_chart_built_late_in_the_day_west_of_utc_is_listed(self, pipeline_project, west_of_utc, monkeypatch):
+        """Found by a reviewer: dated in UTC, a chart written in the evening in Chicago was
+        "tomorrow" to ABlog, which compares with the next local midnight, and so a draft,
+        missing from the chart listings. The listing's date is the local time."""
+        _built(pipeline_project, monkeypatch)
+        site = pipeline_project / "docs"
+        page = "test_pipeline.chart_0_0.html"
+        assert page in (site / "cb" / "charts.html").read_text()
+        assert page in (site / "index.html").read_text()
+        assert page not in (site / "cb" / "charts" / "index" / "drafts.html").read_text()
 
     def test_a_chart_with_a_category_still_has_one(self, pipeline_project, monkeypatch):
         _built(pipeline_project, monkeypatch)
@@ -627,11 +668,45 @@ class TestWhatANewUserFound:
         assert lines[3].endswith("<f32> 0.3, null")
         assert lines[4].endswith("<str> '<f64>', 'y'")
 
+    def test_a_glimpse_rounds_only_the_noise(self):
+        """Found by a reviewer: six digits made a date written as 20240115.0 read
+        20240100.0, and an ID 1318605.0 read 1318610.0."""
+        from chartbook.utils import glimpse_text
+
+        sample = pl.DataFrame({"v": [3.8499999999999996, 0.1 + 0.2, 20240115.0, 1318605.0, 7e22, 1e-300]})
+        assert glimpse_text(sample).splitlines()[2] == "$ v <f64> 3.85, 0.3, 20240115.0, 1318605.0, 7e+22, 1e-300"
+
+    def test_a_glimpse_with_a_line_break_in_a_column_name(self):
+        """Found by a reviewer: the f32 label was put back by line number, which a name
+        with a line break in it moves; the labels are then left as polars gives them."""
+        from chartbook.utils import glimpse_text
+
+        sample = pl.DataFrame({"two\nlines": pl.Series([1.1], dtype=pl.Float32), "after": pl.Series([2.5], dtype=pl.Float32)})
+        lines = glimpse_text(sample).splitlines()
+        assert "$ two" in lines and "1.1" in lines[3] and "2.5" in lines[4]
+
     def test_the_dataframe_path_is_the_pipelines_own(self, first_pipeline, monkeypatch):
         _built(first_pipeline, monkeypatch)
         page = (first_pipeline / "_docs" / "cb" / "dataframes" / "first_pipeline" / "rates.md").read_text()
         assert "| Dataframe Path                 | `./_data/rates.parquet`" in page
         assert str(first_pipeline / "_data" / "rates.parquet") not in page
+
+    def test_a_path_or_a_name_cannot_break_the_page(self, first_pipeline, monkeypatch):
+        """Found by a reviewer: the path was set in backticks unchecked, so a `|` or a
+        backtick broke the table; and a value set in as code kept control and
+        direction-changing characters, at any length."""
+        from chartbook.writers.sphinx import _code
+
+        assert _code("../rates") == "`../rates`"
+        assert _code("a‮b\x07c") == "`a b c`"
+        assert len(_code("x" * 500)) == 202 and _code("x" * 500).endswith("…`")
+        assert "|" not in _code("a|b") and "`" not in _code("a`b")
+        index = _built(first_pipeline, monkeypatch)
+        (record,) = [r for r in index["records"] if r["id"] == "first_pipeline:rates"]
+        record["location"]["path"] = "./_data/a|b`c.parquet"
+        page = SphinxWriter(index, theme="pipeline", docs_src_dir=first_pipeline / "_docs_src").dataframe_page(record["id"])
+        (row,) = [line for line in page.splitlines() if line.startswith("| Dataframe Path")]
+        assert row.count("|") == 3 and "`" not in row
 
     def test_a_linked_chart_is_named_by_its_address(self, first_pipeline, monkeypatch):
         _built(first_pipeline, monkeypatch)

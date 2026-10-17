@@ -199,6 +199,15 @@ class TestCommand:
         assert out_dir.is_dir()
         assert "## dataframe_0" in (out_dir / "data_glimpses.md").read_text()
 
+    def test_an_output_dir_that_is_a_file_is_said_plainly(self, pipeline_project, tmp_path):
+        """Found by a reviewer: an existing file not ending in .md got a FileExistsError."""
+        taken = tmp_path / "notes.txt"
+        taken.write_text("mine\n")
+        result = _run(pipeline_project, "-o", taken)
+        assert result.exit_code == 1
+        assert f"Error: {taken} is a file. Give a directory to write data_glimpses.md in" in result.output
+        assert taken.read_text() == "mine\n"
+
     def test_help_shows_no_docstring_markup(self):
         result = CliRunner().invoke(main, ["create-data-glimpses", "--help"])
         assert result.exit_code == 0

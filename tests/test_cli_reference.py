@@ -179,3 +179,12 @@ def test_no_help_shows_docstring_markup(words, command):
     """`--help` prints a command's docstring: a `:param` field list there is noise to a reader."""
     for field in (":param", ":type", ":returns", ":raises"):
         assert field not in (command.help or ""), f"`chartbook {' '.join(words)} --help` shows {field}"
+
+
+def test_the_size_threshold_says_what_it_governs(page):
+    """Found by a reviewer: `docs --help` still said "memory-efficient loading" after
+    the glimpse stopped depending on the size; the page and the help now say the same."""
+    (option,) = [p for p in main.commands["docs"].params if "--size-threshold" in getattr(p, "opts", [])]
+    assert "date range" in option.help and "memory-efficient" not in option.help
+    (row,) = [line for line in page.splitlines() if line.startswith("| `--size-threshold FLOAT`")]
+    assert "date range" in row

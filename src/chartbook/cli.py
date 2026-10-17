@@ -94,7 +94,7 @@ def _site_options(command):
             "--size-threshold",
             type=float,
             default=50,
-            help="File size threshold in MB above which to use memory-efficient loading (default: 50)",
+            help="File size in MB above which a dataframe page does not read the file for its date range; the glimpse reads only the first rows at any size (default: 50)",
         ),
         click.option(
             "--strict/--no-strict",
@@ -218,7 +218,7 @@ def _render_site(
     :param temp_docs_src_dir: Temporary directory for documentation source files.
     :param keep_build_dirs: If True, keeps temporary build directory after generation.
     :param force_write: If True, overwrites existing output directory.
-    :param size_threshold: File size threshold in MB above which to use memory-efficient loading.
+    :param size_threshold: File size in MB above which a dataframe page does not read the file for its date range.
     :param strict: If True, error and exit on missing source files.
     :param strip_mathjax2: If True, strip Plotly's MathJax 2 scripts from notebook outputs.
     :param incremental: If True, keep the build directory and redo only what changed.
@@ -518,7 +518,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     """
     import warnings
 
-    from chartbook.check import display_path, load_policy, run_checks
+    from chartbook.check import display_path, read_policy, run_checks
     from chartbook.manifest import (
         _read_manifest_file,
         get_pipeline_ids,
@@ -538,9 +538,10 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         # one was written down is read from the file itself
         policy_given = "policy" in _read_manifest_file(project_dir)
         if policy_path is not None:
-            manifest["policy"] = load_policy(policy_path)
+            # A catalog that sets no policy gives none: its default lists
+            # are recommendations, as they are everywhere else
+            manifest["policy"], policy_given = read_policy(policy_path)
             policy_label = f"the policy in {policy_path}"
-            policy_given = True
         elif manifest["project"]["type"] == "catalog":
             policy_label = "the catalog policy"
         elif policy_given:
@@ -717,7 +718,7 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold, proje
             size_threshold=size_threshold,
             project_dir=resolve_project_dir(project_dir),
         )
-    except FileNotFoundError as e:
+    except (FileNotFoundError, NotADirectoryError) as e:
         click.echo(f"Error: {e}", err=True)
         import sys
 
