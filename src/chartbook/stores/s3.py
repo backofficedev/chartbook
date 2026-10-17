@@ -69,7 +69,6 @@ from chartbook.store import (
     StoreUnreachableError,
     _FULL_COMMIT,
     _HEX,
-    another_node,
     _split_hash,
     _unreadable_note_remedy,
     is_record_name,
@@ -98,13 +97,21 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
 
     :raises ValueError: If the URL has no bucket, a bucket name S3 would
         not take, a prefix segment that is ``.`` or ``..`` or empty, a
-        query key that is not one of :data:`URL_OPTIONS`, or an endpoint
-        with a user name or password in it. The message never shows those.
+        query key that is not one of :data:`URL_OPTIONS`, or an ``@``
+        anywhere, as a user name in it or in its endpoint has (refused
+        before the options are read, as a password may hold what would end
+        one). The message never shows a user name, a password or an
+        option's value.
     """
     from chartbook.config import shown_store_url
 
     parts = urlsplit(url.strip())
     shown = shown_store_url(url)  # what an error says: no user name or password
+    if "@" in url:
+        raise ValueError(
+            f"The store {shown!r} has an '@' in it, which no bucket, prefix or option has. Credentials "
+            f"never go in the URL, nor in its endpoint: the AWS SDK reads them from the environment or ~/.aws."
+        )
     if "#" in url:
         raise ValueError(
             f"The store {shown!r} has a '#' in it, which no bucket, prefix or option has. Credentials "
@@ -113,7 +120,7 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
     if parts.scheme.lower() != "s3" or not parts.netloc:
         raise ValueError(f"The store {shown!r} is not an S3 URL: write s3://bucket/prefix.")
     bucket = parts.netloc
-    if "@" in url.partition("?")[0] or "@" in bucket or ":" in bucket:
+    if ":" in bucket:
         raise ValueError(
             f"The store {shown!r} carries more than a bucket name before the first slash. "
             f"Credentials never go in the URL (the AWS SDK reads them from the environment "
@@ -135,11 +142,6 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
             raise ValueError(
                 f"The store {shown!r} has a query key{said} this store does not read; "
                 f"the keys are: {', '.join(URL_OPTIONS)}."
-            )
-        if key == "endpoint" and "@" in value:
-            raise ValueError(
-                f"The store {shown!r} has an endpoint with a user name in it. Credentials never go "
-                f"in the URL: the AWS SDK reads them from the environment or ~/.aws."
             )
         options[key] = value
     return bucket, prefix, options
@@ -606,12 +608,6 @@ class S3Store(Store):
             _split_hash(content_hash)
         self._check_layout(create=True)
         machine = this_machine()
-        before = self._read_note(self._root_key(lockfile, machine))
-        if before is not None and another_node(before):
-            # Two machines with one name: this one takes another (FolderStore.add_root)
-            from chartbook.config import renew_machine_id
-
-            machine = renew_machine_id()
         document = root_document(lockfile, hashes, snapshots, machine)
         self._write(self._root_key(lockfile, machine), (json.dumps(document, indent=1) + "\n").encode())
 
@@ -625,8 +621,8 @@ class S3Store(Store):
     def root_of(self, lockfile: Union[str, Path]) -> Optional[Root]:
         return self._read_note(self._root_key(lockfile, this_machine(create=False)))
 
-    def remove_root(self, lockfile: Union[str, Path]) -> bool:
-        key = self._root_key(lockfile, this_machine(create=False))
+    def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
+        key = self._root_key(lockfile, this_machine(create=False) if machine is None else machine)
         if not self._exists(key):
             return False
         self._delete_keys([key])

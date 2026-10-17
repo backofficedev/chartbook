@@ -77,6 +77,19 @@ def _object_file(taken: snapshot.Snapshot) -> Path:
     return held
 
 
+def _forget_whole() -> None:
+    """This process forgets the objects it found whole: a test changes one after, as no store does."""
+    from chartbook import store as store_module
+
+    store_module._found_whole.clear()
+
+
+def _cut(held: Path, data: bytes) -> None:
+    """Write part of an object's file, as a sync in progress leaves it."""
+    held.write_bytes(data)
+    _forget_whole()
+
+
 def _pinned_commit(forecast: Path) -> str:
     (entry,) = lock.read_lock(forecast).dependencies
     return entry["location"]["commit"]
@@ -96,7 +109,7 @@ class TestAFileThereBeforeAllOfItsBytes:
         machine("b")
         held = _object_file(second)
         whole = held.read_bytes()
-        held.write_bytes(whole[: len(whole) // 2])  # as a sync in progress leaves it
+        _cut(held, whole[: len(whole) // 2])  # as a sync in progress leaves it
         return forecast, first, second, held, whole
 
     def test_update_does_not_move_to_it_and_says_to_wait(self, half):
@@ -114,7 +127,7 @@ class TestAFileThereBeforeAllOfItsBytes:
         forecast, first, second, held, whole = half
         held.write_bytes(whole)
         lock.update(forecast)
-        held.write_bytes(whole[:100])  # the same pin, read on a machine whose sync is behind
+        _cut(held, whole[:100])  # the same pin, read on a machine whose sync is behind
         (problem,) = lock.verify(forecast).problems
         assert "not fully synced yet" in problem.message
         assert {e.status for e in lock.pin(forecast).problems} == {"unsynced"}
@@ -141,7 +154,7 @@ class TestAFileThereBeforeAllOfItsBytes:
         assert frozen.exit_code == 0  # still pinned to the first snapshot, which is whole
         held.write_bytes(whole)
         lock.update(forecast)
-        held.write_bytes(whole[:10])
+        _cut(held, whole[:10])
         frozen = CliRunner().invoke(main, ["pin", "--frozen", "--project-dir", str(forecast)])
         assert frozen.exit_code == 1 and "not fully synced yet" in frozen.output
 
@@ -154,7 +167,7 @@ class TestAFileThereBeforeAllOfItsBytes:
         (tmp_path / "copy.parquet").write_bytes(whole)
         default_store().put(tmp_path / "copy.parquet")
         assert (held.parent / "copy.parquet").is_file()
-        held.write_bytes(b"")  # the name this pin reads, made and not filled yet
+        _cut(held, b"")  # the name this pin reads, made and not filled yet
         (problem,) = lock.verify(forecast).problems
         assert "has 0 bytes of treasury.parquet where its record says" in problem.message
 
@@ -162,7 +175,7 @@ class TestAFileThereBeforeAllOfItsBytes:
         forecast, first, second, held, whole = half
         held.write_bytes(whole)
         lock.update(forecast)
-        held.write_bytes(whole[:10])
+        _cut(held, whole[:10])
         (problem,) = lock.update(forecast).problems
         assert problem.status == "unsynced" and "nothing was moved" not in problem.detail
         result = CliRunner().invoke(main, ["update", "--project-dir", str(forecast)])
@@ -528,7 +541,7 @@ class TestStoreInfo:
     def test_no_user_name_or_password_is_printed(self, monkeypatch):
         monkeypatch.setenv("CHARTBOOK_STORE", "s3://bucket/p?endpoint=https://user:s3cr3t@minio.example.org")
         result = CliRunner().invoke(main, ["store", "info"])
-        assert "Store: s3://bucket/p?endpoint=https://minio.example.org" in result.output and "s3cr3t" not in result.output
+        assert "Store: s3://bucket/p?endpoint=…" in result.output and "s3cr3t" not in result.output
         monkeypatch.setenv("CHARTBOOK_STORE", "https://user:tok@example.org/store")
         result = CliRunner().invoke(main, ["store", "info"])
         assert "Store: https://example.org/store" in result.output and "tok@" not in result.output
@@ -537,7 +550,7 @@ class TestStoreInfo:
         pytest.importorskip("boto3")
         from chartbook.stores.s3 import _parse_url
 
-        with pytest.raises(ValueError, match="has an endpoint with a user name in it") as raised:
+        with pytest.raises(ValueError, match="has an '@' in it") as raised:
             _parse_url("s3://bucket/p?endpoint=https://user:s3cr3t@minio.example.org")
         assert "s3cr3t" not in str(raised.value)
         with pytest.raises(ValueError, match="Credentials never go in the URL") as raised:
@@ -591,7 +604,7 @@ class TestAPathDependencyOnAnotherMachine:
         (record,) = [r for r in lock.read_lock(cloned).assets.values() if r.get("content_hash")]
         held = default_store().get(record["content_hash"]) / "treasury.parquet"
         os.chmod(held, stat.S_IRUSR | stat.S_IWUSR)
-        held.write_bytes(b"PAR1")  # not synced to this machine yet
+        _cut(held, b"PAR1")  # not synced to this machine yet
         (problem,) = check_dependencies(load_manifest(cloned), cloned)
         assert "the store does not have all that the lockfile pins of it" in problem.message
         default_store().delete(record["content_hash"])
@@ -697,6 +710,7 @@ class TestAFileADirectorysRecordDoesNotList:
         held = default_store().get(taken.assets["parts"]["content_hash"])
         os.chmod(held, stat.S_IRWXU)
         shutil.copy(held / "part-0.parquet", held / "part-0 (1).parquet")
+        _forget_whole()
         (problem,) = lock.verify(forecast).problems
         assert "holds part-0 (1).parquet, which its record does not list" in problem.message
         monkeypatch.chdir(forecast)
@@ -777,35 +791,20 @@ class TestAMachineThatOnlyReads:
 
 
 class TestACloneThatKeptItsIdentity:
-    def test_two_hosts_under_one_name_are_told_apart(self, drive, monkeypatch):
-        """A cloned virtual machine: the home copied, and the operating system's identity cloned too."""
+    def test_one_that_kept_its_identity_has_the_same_name(self, drive, monkeypatch):
+        """A cloned virtual machine with a copied home and the operating system's identity cloned too: one
+        name, not told apart, as the docs say; each lasting machine needs its own identity or CHARTBOOK_MACHINE_ID."""
         from chartbook.config import get_machine_id
 
         work, machine, rates = drive
-        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
-        _snapshot_again(rates, 4.2)
-        project = work / "projects" / "forecast"
         on_a = get_machine_id()
         machine("b")
-        monkeypatch.setattr(config, "_os_machine_identity", lambda: "test:a")  # the clone kept its machine-id
+        monkeypatch.setattr(config, "_os_machine_identity", lambda: "test:a")
         (work / "home-b" / ".chartbook").mkdir(parents=True)
         shutil.copy(work / "home-a" / ".chartbook" / "machine-id", work / "home-b" / ".chartbook" / "machine-id")
         assert get_machine_id() == on_a
-        _forecast(project, {"acme/rates": {"commit": old.commit[:7]}})
-        assert lock.pin(project).problems == []
-        on_b = (project / lock.LOCK_FILE).read_bytes()
-        machine("a")
-        _forecast(project, {"acme/rates": {}})
-        (project / lock.LOCK_FILE).unlink()
-        assert lock.pin(project).problems == []  # finds machine-b's note under its name, and takes another
-        store = default_store()
-        assert len(store.roots()) == 2 and get_machine_id() != on_a
-        lock.run_gc(lock.plan_gc(store, recent_seconds=0, keep_days=0), store)
-        machine("b")
-        monkeypatch.setattr(config, "_os_machine_identity", lambda: "test:a")
-        (project / lock.LOCK_FILE).write_bytes(on_b)
-        _forecast(project, {"acme/rates": {"commit": old.commit[:7]}})
-        assert lock.verify(project).problems == []
+        monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "machine-b")
+        assert get_machine_id() == "machine-b"
 
     def test_an_identity_that_is_none_is_not_taken(self):
         assert not config._an_identity("uninitialized")
@@ -1251,80 +1250,6 @@ class TestOneMachineWhoseHostNameMoves:
         assert s1.made_at in [t.made_at for t, _ in plan.snapshots_delete]
 
 
-class TestAClonesNotes:
-    """A cloned virtual machine: the home copied, the operating system's identity kept, a new hardware address."""
-
-    def _clone(self, work, machine, monkeypatch):
-        machine("b")
-        monkeypatch.setattr(config, "_os_machine_identity", lambda: "test:a")
-        (work / "home-b" / ".chartbook").mkdir(parents=True, exist_ok=True)
-        shutil.copy(work / "home-a" / ".chartbook" / "machine-id", work / "home-b" / ".chartbook" / "machine-id")
-
-    def test_a_read_on_the_clone_is_never_covered_by_the_originals_note(self, drive, monkeypatch):
-        from chartbook import resolve
-
-        work, machine, rates = drive
-        snapshot.make(rates, made_at=LONG_AGO)
-        project = work / "projects" / "forecast"
-        _forecast(project, {"acme/rates": {}})
-        assert lock.pin(project).problems == []  # the original
-        first = (project / lock.LOCK_FILE).read_bytes()
-        self._clone(work, machine, monkeypatch)
-        resolve._noted_reads.clear()
-        monkeypatch.chdir(project)
-        data.load("acme/rates:treasury").collect()  # the clone reads the same lockfile at the same path
-        assert len(default_store().roots()) == 2
-        machine("a")
-        _snapshot_again(rates, 4.2)
-        assert lock.update(project).problems == []
-        lock.run_gc(lock.plan_gc(default_store(), recent_seconds=0, keep_days=0), default_store())
-        self._clone(work, machine, monkeypatch)
-        (project / lock.LOCK_FILE).write_bytes(first)
-        assert lock.verify(project).problems == []
-
-    def test_a_note_of_the_clones_own_path_is_never_forgotten_or_read_by_the_original(self, drive, monkeypatch):
-        work, machine, rates = drive
-        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
-        _snapshot_again(rates, 4.2)
-        assert lock.pin(_forecast(work / "a" / "forecast", {"acme/rates": {}})).problems == []
-        self._clone(work, machine, monkeypatch)
-        only = _forecast(work / "clone-only" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
-        assert lock.pin(only).problems == []
-        machine("a")
-        shutil.move(work / "clone-only", work / "hidden")  # the original has no such folder
-        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0, forget_missing=True)
-        assert plan.forget == [] and [r.lockfile for r in plan.elsewhere] == [only / lock.LOCK_FILE]
-        lock.run_gc(plan, default_store())
-        shutil.move(work / "hidden", work / "clone-only")
-        self._clone(work, machine, monkeypatch)
-        assert lock.verify(only).problems == []
-
-    def test_a_clone_that_cannot_keep_a_name_writes_no_note(self, drive, monkeypatch):
-        work, machine, rates = drive
-        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
-        _snapshot_again(rates, 4.2)
-        project = work / "projects" / "forecast"
-        _forecast(project, {"acme/rates": {"commit": old.commit[:7]}})
-        assert lock.pin(project).problems == []
-        on_a = (project / lock.LOCK_FILE).read_bytes()
-        self._clone(work, machine, monkeypatch)
-        home = work / "home-b" / ".chartbook"
-        os.chmod(home, stat.S_IRUSR | stat.S_IXUSR)  # a home it cannot write
-        try:
-            _forecast(project, {"acme/rates": {}})
-            (project / lock.LOCK_FILE).unlink()
-            report = lock.pin(project)
-            assert report.problems == [] and "cannot keep one of its own" in report.unrooted
-            assert sorted(r.host for r in default_store().roots()) == ["machine-a.local"]
-        finally:
-            os.chmod(home, stat.S_IRWXU)
-        machine("a")
-        lock.run_gc(lock.plan_gc(default_store(), recent_seconds=0, keep_days=0), default_store())
-        (project / lock.LOCK_FILE).write_bytes(on_a)
-        _forecast(project, {"acme/rates": {"commit": old.commit[:7]}})
-        assert lock.verify(project).problems == []
-
-
 class TestNoPasswordInWhatIsPrinted:
     @pytest.mark.parametrize("url, secret", [
         ("//u:pw0rd@host/share", "pw0rd"),
@@ -1346,3 +1271,166 @@ class TestNoPasswordInWhatIsPrinted:
 
         with pytest.raises(ValueError, match="has a '#' in it"):
             _parse_url("s3://bucket/p?endpoint=https://minio.example.org#x")
+
+
+class TestOneMachineWhoseHardwareAddressMoves:
+    """Linux picks the first interface with an address (wired, then Wi-Fi); WSL2's changes on a restart; a dock's."""
+
+    def test_its_notes_stay_its_own_and_gc_reads_its_lockfile(self, drive, monkeypatch):
+        from chartbook.config import get_machine_id
+
+        work, machine, rates = drive
+        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
+        assert lock.pin(project).problems == []
+        at_old = (project / lock.LOCK_FILE).read_bytes()
+        _snapshot_again(rates, 4.2)
+        _forecast(project, {"acme/rates": {}})
+        assert lock.update(project).problems == []
+        name = get_machine_id()
+        monkeypatch.setattr(uuid, "getnode", lambda: 0x0C00000000FF)  # the next process sees another interface
+        _forecast(project, {"acme/rates": {"commit": old.commit[:7]}})
+        (project / lock.LOCK_FILE).write_bytes(at_old)  # git checkout of the older commit, no pin
+        monkeypatch.chdir(project)
+        data.load("acme/rates:treasury").collect()  # a read on it
+        assert get_machine_id() == name  # the machine is never renamed
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        assert plan.elsewhere == [] and plan.lockfiles == [(project / lock.LOCK_FILE, True)]
+        assert old.made_at not in [t.made_at for t, _ in plan.snapshots_delete]
+        (note,) = default_store().roots()
+        assert note.host == "machine-a.local" and note.node == "0c00000000ff"  # for a person to read
+
+
+class TestRunnersThatShareAName:
+    def test_replace_their_note(self, drive, monkeypatch):
+        """Each run a fresh runner, with a hardware address of its own, builds a newer commit of the project."""
+        work, machine, rates = drive
+        snapshot.make(rates)
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(project).problems == []
+        checkout = work / "runner" / "forecast"
+        for run in range(3):
+            machine("a")
+            monkeypatch.delenv("CI", raising=False)
+            monkeypatch.delenv("CHARTBOOK_MACHINE_ID", raising=False)
+            taken = _snapshot_again(rates, 5.0 + run)
+            assert lock.update(project).problems == []  # the developer moves to it
+            machine(f"ci{run}")  # a fresh runner
+            monkeypatch.setenv("CI", "true")
+            monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "ci-runners")
+            shutil.rmtree(checkout, ignore_errors=True)
+            shutil.copytree(project, checkout)
+            assert lock.verify(checkout, note=True).problems == []
+        notes = [r for r in default_store().roots() if r.lockfile == checkout / lock.LOCK_FILE]
+        assert len(notes) == 1 and notes[0].machine == "ci-runners"
+        assert [made_at for _, made_at in notes[0].snapshots] == [taken.made_at]  # the last run's
+
+    def test_a_note_not_written_is_said_for_what_it_is(self, drive):
+        work, machine, rates = drive
+        snapshot.make(rates)
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        roots = default_store().root / "roots"
+        roots.mkdir(parents=True, exist_ok=True)
+        roots.chmod(0o555)
+        try:
+            result = CliRunner().invoke(main, ["pin", "--project-dir", str(project)])
+        finally:
+            roots.chmod(0o755)
+        assert "The store's note of this lockfile, for `store gc`, could not be written" in result.output
+        assert "read-only for you, so its note" not in result.output
+
+
+class TestAnOldNoteInThisUsersOwnStore:
+    """After the upgrade: notes from before notes named their machine, in the store under ~/.chartbook."""
+
+    @pytest.fixture
+    def own(self, drive, monkeypatch):
+        work, machine, rates = drive
+        monkeypatch.delenv("CHARTBOOK_STORE")  # the default store, under ~/.chartbook
+        assert str(default_store().root).startswith(str(config.get_global_config_dir()))
+        return work, machine, rates
+
+    def _old_note(self, project: Path) -> Path:
+        from chartbook.store import root_name
+
+        store = default_store()
+        (note,) = (store.root / "roots").glob("*.json")
+        stored = json.loads(note.read_text())
+        note.unlink()
+        older = store.root / "roots" / root_name(project / lock.LOCK_FILE)
+        older.write_text(json.dumps({"lockfile": stored["lockfile"], "hashes": stored["hashes"]}))
+        return older
+
+    def test_is_this_machines_and_forgotten_when_its_lockfile_is_gone(self, own):
+        work, machine, rates = own
+        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
+        _snapshot_again(rates, 4.2)
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
+        assert lock.pin(project).problems == []
+        older = self._old_note(project)
+        assert lock.plan_gc(default_store()).lockfiles == [(project / lock.LOCK_FILE, True)]
+        shutil.rmtree(project)  # the project is deleted
+        plan = lock.plan_gc(default_store(), forget_missing=True, recent_seconds=0, keep_days=0)
+        assert plan.elsewhere == [] and plan.forget_old == [project / lock.LOCK_FILE]
+        assert old.made_at in [t.made_at for t, _ in plan.snapshots_delete]
+        lock.run_gc(plan, default_store())
+        assert not older.exists()
+
+    def test_elsewhere_it_is_kept_with_care(self, drive):
+        """In a store a team shares, it may be any machine's."""
+        work, machine, rates = drive
+        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
+        _snapshot_again(rates, 4.2)
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
+        assert lock.pin(project).problems == []
+        self._old_note(project)
+        shutil.rmtree(project)
+        plan = lock.plan_gc(default_store(), forget_missing=True, recent_seconds=0, keep_days=0)
+        assert [r.machine for r in plan.elsewhere] == [""] and plan.forget_old == []
+        assert old.made_at not in [t.made_at for t, _ in plan.snapshots_delete]
+
+
+class TestAStoreAtAPathWithAPassword:
+    def test_no_command_prints_it(self, drive, monkeypatch):
+        work, machine, rates = drive
+        snapshot.make(rates)
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(project).problems == []
+        _git(rates, "commit", "--allow-empty", "--quiet", "-m", "Again")
+        monkeypatch.setenv("CHARTBOOK_STORE", "//alice:s3cr3tpw@fileserver/share/store")
+        for args in (
+            ["pin", "--project-dir", str(project)],
+            ["pin", "--frozen", "--project-dir", str(project)],
+            ["update", "--project-dir", str(project)],
+            ["snapshot", "--project-dir", str(rates)],
+            ["store", "info"],
+            ["store", "gc", "--dry-run"],
+        ):
+            result = CliRunner().invoke(main, args)
+            assert "s3cr3tpw" not in result.output, (args, result.output)
+
+    def test_an_endpoint_password_that_holds_an_option(self, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_STORE", "s3://b/p?endpoint=https://u:S3CRET?pw&x=1@minio.example.org")
+        for args in (["store", "info"], ["store", "gc", "--dry-run"]):
+            result = CliRunner().invoke(main, args)
+            assert "S3CRET" not in result.output and "pw&x" not in result.output, (args, result.output)
+
+
+class TestAReadOnOneMachine:
+    def test_an_object_found_whole_is_not_looked_at_again(self, drive, monkeypatch):
+        from chartbook import store as store_module
+
+        work, machine, rates = drive
+        snapshot.make(rates)
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(project).problems == []
+        monkeypatch.chdir(project)
+        data.load("acme/rates:treasury").collect()
+
+        def looked(*args, **kwargs):
+            raise AssertionError("an object found whole was looked at again")
+
+        monkeypatch.setattr(store_module, "unsynced_part", looked)
+        monkeypatch.setattr(uuid, "getnode", looked)  # nor is the hardware address asked on a read
+        for _ in range(3):
+            assert data.load("acme/rates:treasury").collect()["r"].to_list() == [4.1]

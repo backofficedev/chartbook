@@ -387,12 +387,13 @@ def get_store_setting() -> tuple[str, str]:
 def shown_store_url(url: str) -> str:
     """A store URL as it may be printed: with no user name or password in it, nor in a URL among its options.
 
-    ``s3://b/p?endpoint=https://user:secret@minio.example.org`` is shown as
-    ``s3://b/p?endpoint=https://minio.example.org``. A password may hold any
-    character (half of AWS's secret keys have a ``/``; others a ``?``, an
-    ``&``, a ``#``), so all up to the last ``@`` of the URL goes, and of each
-    option, its value read as written (``%40`` is an ``@``). The options
-    are what follows a ``?`` that a name and an ``=`` follow. A path with no
+    ``s3://user:secret@b/p?endpoint=https://u:pw@minio.example.org`` is
+    shown as ``s3://b/p?endpoint=…``. A password may hold any character
+    (half of AWS's secret keys have a ``/``; others a ``?``, an ``&``, a
+    ``#``), so all up to the last ``@`` of the URL goes, read as written
+    (``%40`` is an ``@``), and no option's value is shown at all, since a
+    password in one may hold what would end it. The options are what
+    follows a ``?`` that a name and an ``=`` follow. A path with no
     ``//host`` part is as it is: a folder's path may hold an ``@``, as a
     Google Drive folder names its account.
     """
@@ -411,17 +412,18 @@ def shown_store_url(url: str) -> str:
     if not rest:
         return main
     options = re.split(r"&(?=[A-Za-z_][A-Za-z0-9_]*=)", rest[0])
-    return f"{main}?" + "&".join(f"{key}={bare(value)}" for key, _, value in (o.partition("=") for o in options))
+    return f"{main}?" + "&".join(f"{key}=…" for key, _, _ in (o.partition("=") for o in options))
 
 
 def without_credentials(text: str) -> str:
-    """A message with no user name or password of any URL in it: ``scheme://user:pass@`` becomes ``scheme://``.
+    """A message with no user name or password of any URL or ``//host`` path in it: ``scheme://user:pass@`` becomes ``scheme://``.
 
-    For what an SDK says, which may echo an address it was given. All up to
-    the last ``@`` of a line that has an address goes, since a password may
-    hold a space or a quote.
+    For what an SDK or the system says, which may echo an address or a path
+    it was given: an ``OSError`` names its file, and a store at
+    ``//user:pass@host/share`` is one. All up to the last ``@`` of a line
+    that has an address goes, since a password may hold a space or a quote.
     """
-    return re.sub(r"([A-Za-z][A-Za-z0-9+.-]*://)[^\n]*@", r"\1", text)
+    return re.sub(r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//)[^\n]*@", r"\1", text)
 
 
 def store_kind(url: str) -> str:
@@ -486,13 +488,14 @@ def get_machine_id(create: bool = True) -> str:
     a backup, shared by several computers, kept by a sync service) does
     not bring its name with it: that machine makes one of its own, kept in
     the same file. So does a cloned virtual machine or an image that had
-    pinned, when its operating system made its identity anew; one that did
-    not is told apart by the hardware address each note records, when a
-    note under the name shows another (:func:`chartbook.store.another_node`),
-    and one with no hardware address to give is not told apart. The cost is
-    a note no machine forgets, never a pin. Where nothing can be kept, or
-    there is no home folder, a name made from what the operating system
-    calls the machine is used.
+    pinned, when its operating system made its identity anew. One that did
+    not (``/etc/machine-id`` cloned, Windows without sysprep), with a copied
+    home, has the same name as the machine it was cloned from, and the two
+    are not told apart: each lasting machine needs an identity of its own,
+    or a ``CHARTBOOK_MACHINE_ID`` of its own. Nothing else (the host name,
+    a hardware address) tells machines apart, as one machine's may change.
+    Where nothing can be kept, or there is no home folder, a name made from
+    what the operating system calls the machine is used.
 
     ``CHARTBOOK_MACHINE_ID`` names it instead: for machines that come and
     go with a fresh home folder each time (CI runners, containers), so
@@ -558,47 +561,6 @@ def get_machine_id(create: bool = True) -> str:
 _machine_names: dict = {}
 
 
-def renew_machine_id() -> str:
-    """Give this machine a new name, when it shares one with another machine, and return it.
-
-    A store finds two machines with one name when a note under the name, at
-    one lockfile's path, was written by another machine, by its hardware
-    address (:func:`chartbook.store.another_node`): a cloned virtual machine
-    whose operating system kept its identity, with a copied home. The cost
-    is that this machine's notes under the old name are kept as another
-    machine's, never that a pin is lost. A name ``CHARTBOOK_MACHINE_ID``
-    gives is the user's, and is not changed.
-
-    :raises chartbook.store.MachineNameError: If no new name can be kept:
-        ``CHARTBOOK_MACHINE_ID`` names the machine, there is no home folder,
-        or its ``machine-id`` cannot be written. Then nothing is to be
-        written under the shared name either.
-    """
-    import uuid
-
-    from chartbook.store import MachineNameError
-
-    if os.environ.get(MACHINE_ENV_VAR, "").strip():
-        raise MachineNameError(
-            f"another machine writes notes under this machine's {MACHINE_ENV_VAR}; give each "
-            f"machine that lasts a name of its own"
-        )
-    path, identity, unkept = _machine_file()
-    made = uuid.uuid4().hex
-    if path is None:
-        raise MachineNameError("this machine shares its name with another, and has no home folder to keep one of its own in")
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        _keep_machine(path, identity, made)
-    except OSError as error:
-        raise MachineNameError(
-            f"this machine shares its name with another (a clone, it may be), and cannot keep one of its "
-            f"own in {path}: {error.strerror or error}"
-        ) from None
-    _machine_names[(str(path), identity)] = _kept_machines(path).get(identity) or made
-    return _machine_names[(str(path), identity)]
-
-
 def _machine_file() -> tuple:
     """The ``machine-id`` file (None with no home folder), this machine's identity in it, and the name used where none can be kept."""
     import hashlib
@@ -645,8 +607,8 @@ def _os_machine_identity() -> str:
     host's name where none of these gives one (``uninitialized``, as a
     Linux image may have it, is none). A virtual machine cloned without
     making its identity anew (``/etc/machine-id``, or Windows without
-    sysprep) has the identity of the one it was cloned from: two such
-    are told apart by their hardware addresses (:func:`chartbook.store.another_node`).
+    sysprep) has the identity of the one it was cloned from, and is not
+    told apart from it.
     """
     import socket
     import subprocess

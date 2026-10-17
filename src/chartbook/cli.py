@@ -323,7 +323,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
         raise click.UsageError("--watch-interval only applies with --watch.")
 
     def report(error):
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(error), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
 
     if not watch:
         try:
@@ -596,7 +596,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         else:
             policy_label = "the default policy"
     except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
     # The checks warn about what they could not look at
@@ -704,7 +704,7 @@ def path_command(ref, kind, project_dir):
             ref, kind=kind, project_dir=project_dir or Path.cwd()
         )
     except (LookupError, FileNotFoundError, ValueError, TypeError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     # Nothing but the path on stdout: this output gets captured
     click.echo(str(asset_path))
@@ -812,7 +812,7 @@ def _load_catalog_for_cli(catalog_path=None):
     try:
         manifest = load_manifest(base_dir=named.parent)
     except (ValueError, FileNotFoundError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     return manifest, resolved
 
@@ -860,7 +860,7 @@ def index_diff(before, after, as_json, exit_code):
     try:
         found = indexdiff.diff(indexdiff.read_index(before), indexdiff.read_index(after))
     except (OSError, ValueError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(2)
     if as_json:
         click.echo(json.dumps(found.to_dict(), indent=2, default=str))
@@ -1779,7 +1779,7 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
     try:
         incremental = load_manifest(project_dir)["project"].get("writer", "sphinx") != "mkdocs"
     except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     if not incremental and watch:
         click.echo(
@@ -2058,8 +2058,8 @@ def _run_pin(project_dir, dependencies=None):
     _echo_pin_report(report)
     if report.unrooted:
         click.echo(
-            f"The store is read-only for you, so its note of this lockfile could not "
-            f"be updated, and its `store gc` goes by the note it has ({report.unrooted})."
+            f"The store's note of this lockfile, for `store gc`, could not be written "
+            f"({report.unrooted}); `store gc` goes by the note it has."
         )
     if report.problems:
         click.echo(
@@ -2143,31 +2143,39 @@ def pin(project_dir, frozen):
     _run_pin(project_dir)
 
 
+def _said(error) -> str:
+    """An error as it may be printed: with no password that a path or URL in it carried (``//user:pw@host``)."""
+    from chartbook.config import without_credentials
+
+    return without_credentials(str(error))
+
+
 def _explain_os_error(error):
     """An OSError as a sentence: what a read-only store means, else the error."""
     from chartbook import lock
     from chartbook.store import ReadOnlyStoreError, default_store
 
     if isinstance(error, ReadOnlyStoreError):
-        return (
+        return _said(
             f"{error} This had to write it: a git dependency's first pin and a "
             f"snapshot both put files into the store. Do it where the store can be written; or, "
             f"if the store already has what the lockfile names, use --frozen."
         )
     if isinstance(error, OSError) and lock.is_read_only(error):
         try:
-            root = str(default_store())
+            the_store = default_store()
+            root = str(getattr(the_store, "root", ""))
         except Exception:  # pragma: no cover - the store path is unreadable
-            root = ""
+            the_store, root = None, ""
         if root and str(getattr(error, "filename", "") or "").startswith(root):
-            return (
-                f"The store at {root} is read-only for you, and this had to write "
+            return _said(
+                f"The store at {the_store} is read-only for you, and this had to write "
                 f"it: a git dependency's first pin and a snapshot "
                 f"both put files into the store. Do it where the store can be "
                 f"written; or, if the store already has what the lockfile names, "
                 f"use --frozen. ({error})"
             )
-    return str(error)
+    return _said(error)
 
 
 def _run_frozen(project_dir):
@@ -2476,7 +2484,7 @@ def _has_script(project_dir, script):
     try:
         steps = runner.plan(project_dir, git=False)
     except (runner.RunError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     return any(script in step.scripts for step in steps if step.source == "asked")
 
@@ -2643,7 +2651,7 @@ def store_verify():
         total = len(list(the_store.hashes()))
         problems = the_store.verify()
     except (StoreError, ValueError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
     for problem in problems:
@@ -2750,7 +2758,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         the_store = default_store()
         plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage, aggressive=aggressive)
     except (StoreError, lock.LockError, ValueError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
 
@@ -2914,7 +2922,7 @@ def init(use_git, use_github, public):
     cwd = Path.cwd()
 
     def fail(error):
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(error), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
         raise SystemExit(1)
 
     if use_git:

@@ -220,10 +220,9 @@ class Root:
             notes recorded them: the snapshots holding its objects are kept
             then, the newest holding each.
         node: The hardware address of the machine that wrote it
-            (:func:`this_node`), which tells two machines apart that came to
-            one name (a cloned virtual machine with a copied home); empty
-            where it had none to give, or for a note from before notes
-            recorded it.
+            (:func:`this_node`), for a person to read; nothing goes by it.
+            Empty where it had none to give, or for a note from before
+            notes recorded it.
     """
 
     lockfile: Path
@@ -433,12 +432,11 @@ def this_host() -> str:
 def this_node() -> str:
     """The hardware address of one of this machine's network interfaces, as twelve hex digits; empty if it has none to give.
 
-    What tells two machines apart that came to one name: a cloned virtual
-    machine gets a new address, where it may keep the operating system's
-    identity and its host name. An address that is not the hardware's is
-    none: Python's random stand-in (the multicast bit set), and a locally
-    administered one (a private Wi-Fi address that changes with the
-    network, or a placeholder).
+    For a person to read in a note, beside the host name: nothing goes by
+    it, since one machine's may change (another interface, a dock, a
+    restart). Asked only when a note is written. An address that is not
+    the hardware's is none: Python's random stand-in (the multicast bit
+    set), and a locally administered one.
     """
     import uuid
 
@@ -446,15 +444,6 @@ def this_node() -> str:
     if not node or (node >> 40) & 0b11:
         return ""
     return f"{node:012x}"
-
-
-class MachineNameError(StoreError):
-    """Raised when this machine shares its name with another, and cannot keep a new one.
-
-    Two machines with one name would write one note: so nothing is written,
-    and the other machine's note stays as it is. A pin reports it as a note
-    not left (``unrooted``); a read passes it over.
-    """
 
 
 def root_document(
@@ -509,17 +498,6 @@ def _read_note(note: Path) -> Optional[Root]:
         return None
 
 
-def another_node(note: Root) -> bool:
-    """Whether a note under this machine's name was written by another machine: two machines with one name.
-
-    Told by the hardware address (:func:`this_node`), never by the host
-    name, which may follow the network. Where either has none, it cannot
-    be told, and the note is taken as this machine's.
-    """
-    here = this_node()
-    return bool(note.node) and bool(here) and note.node != here
-
-
 def _unreadable_note_remedy(name: str) -> str:
     """What to do about a file under ``roots/`` that cannot be read."""
     if is_root_name(name):
@@ -550,6 +528,9 @@ def plain_parts(relative: str) -> Optional[list[str]]:
         return None
     return parts
 
+
+#: The objects found whole as a record has them, in this process: an object does not change.
+_found_whole: set = set()
 
 #: The hash of the one file of an object, by its path, time and size, worked out once a process.
 _hashed_once: dict = {}
@@ -717,8 +698,8 @@ class Store(abc.ABC):
         """Note that a lockfile names these objects, and pins these snapshots, so that they are kept."""
 
     @abc.abstractmethod
-    def remove_root(self, lockfile: Union[str, Path]) -> bool:
-        """Forget a lockfile; True if the store had a note of it."""
+    def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
+        """Forget a lockfile on this machine (or, with ``machine=""``, its note from before notes named their machine); True if the store had a note of it."""
 
     @abc.abstractmethod
     def roots(self) -> list["Root"]:
@@ -1088,15 +1069,10 @@ class FolderStore(Store):
         same path from before notes named their machine is left as it is:
         it may be another machine's, and only a person can tell.
 
-        A note under this machine's name at this path that another machine
-        wrote, by its hardware address (:func:`another_node`), means two
-        machines came to one name (a cloned virtual machine, whose
-        operating system kept the same identity, with a copied home): this
-        machine takes a name of its own, and leaves that note be.
-
-        :raises MachineNameError: If this machine needs a new name and
-            cannot keep one (a home folder it cannot write): nothing is
-            written, and the other machine's note stays.
+        Machines are told apart by name only
+        (:func:`chartbook.config.get_machine_id`): two that share one (a
+        clone that kept its operating system's identity, with a copied
+        home) write one note per path.
 
         :param lockfile: The path of a ``chartbook.lock``.
         :param hashes: The content hashes it names.
@@ -1109,12 +1085,6 @@ class FolderStore(Store):
         self._check_layout(create=True)
         machine = this_machine()
         note = self._root_file(lockfile, machine)
-        before = _read_note(note)
-        if before is not None and another_node(before):
-            from chartbook.config import renew_machine_id
-
-            machine = renew_machine_id()  # MachineNameError if it cannot be kept: nothing is overwritten
-            note = self._root_file(lockfile, machine)
         note.parent.mkdir(parents=True, exist_ok=True)
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
         try:
@@ -1134,12 +1104,14 @@ class FolderStore(Store):
         """This machine's note of a lockfile, if the store has one it can read."""
         return _read_note(self._root_file(lockfile, this_machine(create=False)))
 
-    def remove_root(self, lockfile: Union[str, Path]) -> bool:
+    def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
         """Forget a lockfile on this machine. Its objects are then kept by nothing.
 
+        :param machine: ``""`` for the note from before notes named their
+            machine; this machine's by default.
         :returns: True if the store had a note of it.
         """
-        note = self._root_file(lockfile, this_machine(create=False))
+        note = self._root_file(lockfile, this_machine(create=False) if machine is None else machine)
         if not note.is_file():
             return False
         note.unlink()
@@ -1186,11 +1158,17 @@ class FolderStore(Store):
         """
         if not isinstance(size_bytes, int) or isinstance(size_bytes, bool):
             return None
+        # An object is named by its content and does not change: one found
+        # whole as a record has it is not looked at again in this process
+        seen = (str(self.root), content_hash, size_bytes, tuple(sorted((files or {}).items())), every)
+        if seen in _found_whole:
+            return None
         path = self.object_path(content_hash)
         if not path.is_dir() or path.is_symlink():
             return None  # not there at all, which `has` says; or a link, which `get` refuses
         wrong = unsynced_part(path, size_bytes, files, every, content_hash)
         if wrong is None:
+            _found_whole.add(seen)
             return None
         what, waiting = wrong
         if not waiting:
