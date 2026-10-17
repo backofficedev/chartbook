@@ -470,7 +470,7 @@ class TestOnePersonsTwoMachines:
         plan = lock.plan_gc(store, forget_missing=True, recent_seconds=0, keep_days=0)
         assert old.made_at not in [taken.made_at for taken, _ in plan.snapshots_delete]
         result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
-        assert f"(noted before notes named their machine, so perhaps another machine's: what it recorded at its last pin is kept; the lockfile here at that path is read as well; note {store.root}/roots/{older.name})" in result.output
+        assert f"(noted under no machine name (before notes named their machine, or by a CI runner with none), so perhaps another machine's: what it recorded at its last pin is kept; the lockfile here at that path is read as well; note {store.root}/roots/{older.name})" in result.output
 
     def test_gc_says_whose_it_is(self, drive, monkeypatch):
         import socket
@@ -1146,7 +1146,8 @@ class TestAReadersNote:
         plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
         assert len(plan.snapshots_kept) == 1 and s1.made_at in [t.made_at for t, _ in plan.snapshots_delete]
 
-    def test_ci_leaves_none(self, drive, monkeypatch):
+    def test_ci_notes_the_path_alone(self, drive, monkeypatch):
+        """With no name of its own, a runner's note is under its checkout's path alone, which the next run's replaces."""
         work, machine, rates = drive
         snapshot.make(rates)
         project = _forecast(work / "a" / "forecast", {"acme/rates": {}})
@@ -1156,12 +1157,14 @@ class TestAReadersNote:
         ci = work / "runner" / "forecast"
         shutil.copytree(project, ci)
         report = lock.verify(ci, note=True)
-        assert report.problems == [] and not report.noted and report.unrooted == ""
+        assert report.problems == [] and report.noted and report.unrooted == ""
         monkeypatch.chdir(ci)
         data.load("acme/rates:treasury").collect()
-        assert [r.lockfile for r in default_store().roots()] == [project / lock.LOCK_FILE]
-        monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "the-runner")  # a name for it: then it leaves its note
+        notes = {(r.lockfile, r.machine) for r in default_store().roots()}
+        assert (ci / lock.LOCK_FILE, "") in notes and len(notes) == 2
+        monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "the-runner")  # a name for it: then its note is under that
         assert lock.verify(ci, note=True).noted
+        assert (ci / lock.LOCK_FILE, "the-runner") in {(r.lockfile, r.machine) for r in default_store().roots()}
 
     def test_a_pull_between_the_read_and_the_note_is_noted_as_read(self, drive, monkeypatch):
         """What is noted is what was read: a later version of the lockfile is not taken as noted."""
@@ -1509,23 +1512,58 @@ class TestAnOldNoteGivesWay:
 
 
 class TestARunnerWithNoName:
-    def test_a_pin_or_an_update_leaves_no_note(self, drive, monkeypatch):
-        """Under CI, with no CHARTBOOK_MACHINE_ID: a runner with a fresh home would leave a note under a new name each run."""
-        work, machine, rates = drive
-        snapshot.make(rates)
-        machine("ci")
-        monkeypatch.setenv("CI", "true")
-        project = _forecast(work / "runner" / "forecast", {"acme/rates": {}})
-        assert lock.pin(project).problems == []
+    """Under CI, with no CHARTBOOK_MACHINE_ID: a runner with a fresh home each run, or one whose store lasts."""
+
+    @staticmethod
+    def _runs(work, machine, rates, monkeypatch, count: int) -> tuple:
+        """A developer pins an older snapshot of acme/rates; runners pin a checkout of it, each with a fresh home."""
+        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
         _snapshot_again(rates, 4.2)
-        assert lock.update(project).problems == []
-        assert default_store().roots() == []
+        project = _forecast(work / "a" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
+        assert lock.pin(project).problems == []
+        default_store().remove_root(project / lock.LOCK_FILE)  # only the runner's notes, below
+        checkout = work / "runner" / "forecast"
+        monkeypatch.setenv("CI", "true")
+        for run in range(count):
+            machine(f"ci{run}")
+            shutil.rmtree(checkout, ignore_errors=True)
+            shutil.copytree(project, checkout)
+            assert lock.pin(checkout).problems == []
+        return old, checkout
+
+    def test_its_notes_name_the_path_alone_and_replace_each_other(self, drive, monkeypatch):
+        work, machine, rates = drive
+        old, checkout = self._runs(work, machine, rates, monkeypatch, 3)
+        notes = default_store().roots()
+        assert [(r.lockfile, r.machine) for r in notes] == [(checkout / lock.LOCK_FILE, "")]
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)  # a store the workflow keeps
+        assert old.made_at not in [t.made_at for t, _ in plan.snapshots_delete]
+
+    def test_gc_on_a_runner_whose_store_lasts_keeps_what_its_checkout_pins(self, drive, monkeypatch):
+        """A self-hosted runner, with its home and the store in it kept: gc there reads its own checkout's lockfile."""
+        work, machine, rates = drive
+        monkeypatch.delenv("CHARTBOOK_STORE")  # the default store, under ~/.chartbook
+        monkeypatch.setattr(config, "_os_machine_identity", lambda: "test:runner")
+        monkeypatch.setenv("HOME", str(work / "home-runner"))
+        monkeypatch.setenv("USERPROFILE", str(work / "home-runner"))
+        old = snapshot.make(rates, made_at=LONG_AGO).snapshot
+        _snapshot_again(rates, 4.2)
+        checkout = _forecast(work / "runner" / "forecast", {"acme/rates": {"commit": old.commit[:7]}})
+        monkeypatch.setenv("CI", "true")
+        for _ in range(2):
+            assert lock.pin(checkout).problems == []  # the next run's pin replaces the note: never removes it
+        assert [(r.lockfile, r.machine) for r in default_store().roots()] == [(checkout / lock.LOCK_FILE, "")]
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        assert plan.lockfiles == [(checkout / lock.LOCK_FILE, True)] and plan.forget_old == []
+        assert old.made_at not in [t.made_at for t, _ in plan.snapshots_delete]
+        lock.run_gc(plan, default_store())
+        assert lock.verify(checkout).problems == []
 
 
 class TestADirectoryWithFilesThatAreNotTables:
     @pytest.mark.parametrize("side", ["README.txt", "schema.json"])
-    def test_only_its_parquet_files_are_read(self, drive, monkeypatch, side):
-        """As DuckDB reads a folder, and as every engine read the folder before records listed its files."""
+    def test_files_that_are_plainly_not_tables_are_not_read(self, drive, monkeypatch, side):
+        """As DuckDB read the folder before records listed its files."""
         import polars as pl
 
         work, machine, rates = drive
@@ -1561,16 +1599,96 @@ class TestADirectoryWithFilesThatAreNotTables:
         assert sorted(data.load("acme/rates:parts").collect()["a"].to_list()) == [1, 2]
 
 
+class TestADirectoryOfMixedNames:
+    @pytest.mark.parametrize("second", ["part-1", "p1.pq", "000000_0"])
+    def test_every_file_that_may_be_a_table_is_read(self, drive, monkeypatch, second):
+        """Hive writes 000000_0, others a .pq: beside a .parquet, none of their rows may go missing."""
+        import polars as pl
+
+        work, machine, rates = drive
+
+        def writer(parts):
+            pl.DataFrame({"a": [1]}).write_parquet(parts / "p0.parquet")
+            pl.DataFrame({"a": [2]}).write_parquet(parts / second)
+
+        _parts(rates, writer)
+        snapshot.make(rates)
+        forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(forecast).problems == []
+        monkeypatch.chdir(forecast)
+        assert sorted(data.load("acme/rates:parts").collect()["a"].to_list()) == [1, 2]
+        assert sorted(data.load("acme/rates:parts", format="pandas")["a"].to_list()) == [1, 2]
+        assert sorted(data.sql("select a from {acme/rates:parts}").collect()["a"].to_list()) == [1, 2]
+
+    def test_a_file_that_is_no_table_and_not_said_to_be_fails_the_read(self, drive, monkeypatch):
+        """Better a read that fails than rows that go missing without a word."""
+        import polars as pl
+
+        work, machine, rates = drive
+
+        def writer(parts):
+            pl.DataFrame({"a": [1]}).write_parquet(parts / "p0.parquet")
+            (parts / "notes.ini").write_text("[about]\n")
+
+        _parts(rates, writer)
+        snapshot.make(rates)
+        forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        assert lock.pin(forecast).problems == []
+        monkeypatch.chdir(forecast)
+        with pytest.raises(Exception):
+            data.load("acme/rates:parts").collect()
+
+
+def _names_as_linux_tells_them(monkeypatch) -> None:
+    """Make this machine's disk tell Unicode's two forms of a name apart, as Linux's does; macOS's APFS does not."""
+    import pathlib
+
+    def listed(path) -> bool:
+        # Each name of the path that is not ASCII, in the form its folder lists it
+        for here in (path, *path.parents):
+            if here.name and not here.name.isascii():
+                try:
+                    if here.name not in os.listdir(here.parent):
+                        return False
+                except OSError:
+                    return False
+        return True
+
+    for name in ("exists", "is_file", "is_dir"):
+        told = getattr(pathlib.Path, name)
+        monkeypatch.setattr(pathlib.Path, name, lambda self, *args, _told=told, **kwargs: listed(self) and _told(self, *args, **kwargs))
+
+
 class TestWhatIsNotASyncServicesCopy:
-    def test_a_name_in_unicodes_other_form(self, tmp_path):
+    def test_a_name_in_unicodes_other_form(self, tmp_path, monkeypatch):
         """A sync between macOS and Linux may write a listed name decomposed: the same file, never one to remove."""
         import unicodedata
+
+        from chartbook.store import on_disk
 
         held = tmp_path / "object"
         (held / unicodedata.normalize("NFD", "city=Zürich")).mkdir(parents=True)
         (held / unicodedata.normalize("NFD", "city=Zürich") / "part-0.parquet").write_bytes(b"x" * 10)
         files = {unicodedata.normalize("NFC", "city=Zürich") + "/part-0.parquet": 10}
+        _names_as_linux_tells_them(monkeypatch)
+        found = on_disk(held, [unicodedata.normalize("NFC", "city=Zürich"), "part-0.parquet"])
+        assert found.parent.name == unicodedata.normalize("NFD", "city=Zürich") and found.is_file()
         assert unsynced_part(held, 10, files, every=True) is None
+
+    def test_the_one_file_of_an_asset_in_unicodes_other_form(self, tmp_path, monkeypatch):
+        """Not taken for a file still on its way when the disk has it under the other form."""
+        import unicodedata
+
+        from chartbook import store as store_module
+
+        held = tmp_path / "object"
+        held.mkdir()
+        decomposed = held / unicodedata.normalize("NFD", "Zürich.parquet")
+        decomposed.write_bytes(b"x" * 10)
+        content_hash = store_module._hash_once(decomposed)
+        _names_as_linux_tells_them(monkeypatch)
+        files = {unicodedata.normalize("NFC", "Zürich.parquet"): 10}
+        assert unsynced_part(held, 10, files, content_hash=content_hash) is None
 
     def test_a_dot_file_a_sync_service_writes(self, tmp_path):
         """Syncthing's temporary file, beside a file on its way: no reader reads a name starting '.'."""

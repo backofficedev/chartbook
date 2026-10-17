@@ -117,11 +117,12 @@ class FileLocation(Location):
         path: Absolute path. For partitioned data it contains glob
             characters. The file need not exist: a path can be asked for
             before anything has written to it.
-        files: For a directory pinned from another pipeline, the parquet
-            files its record lists (every file it lists, where none ends in
-            ``.parquet``), under *path*: what a reader reads, and nothing
-            else the folder may hold (a Finder ``.DS_Store``, a sync
-            service's copy, a ``README.txt``). Empty otherwise.
+        files: For a directory pinned from another pipeline, the files its
+            record lists, under *path*, but those that are plainly not
+            tables (a ``README.txt``, a ``schema.json``; :data:`NOT_TABLES`)
+            or are named as an engine's scan passes over (``.``, ``_``):
+            what a reader reads, and nothing else the folder may hold (a
+            Finder ``.DS_Store``, a sync service's copy). Empty otherwise.
     """
 
     kind: ClassVar[str] = "file"
@@ -863,9 +864,10 @@ def _held(store, record: dict) -> Location:
         # A directory, read as the files its record lists and nothing else in
         # the folder; and, as an engine's scan of a folder does, none under a
         # name starting "." or "_" (Spark's _SUCCESS, Hadoop's .crc files),
-        # and only its parquet files, as DuckDB reads a folder (a README.txt
-        # or a schema.json beside them is no table). A folder of parquet
-        # files with no such ending is read whole, as Polars and pandas read it
+        # nor one that is plainly not a table (a README.txt, a schema.json).
+        # Every other file is read, whatever its name ends in (Hive's
+        # 000000_0, a .pq): one that is no parquet fails the read, rather
+        # than its rows going missing
         from chartbook.snapshot import files_read
         from chartbook.store import StoreError, on_disk, plain_parts
 
@@ -877,13 +879,21 @@ def _held(store, record: dict) -> Location:
                     f"{record.get('id')!r}: its record lists {relative!r}, which is not a plain path "
                     f"in its object. The record is not one a store wrote, and is not read."
                 )
-            if not any(part.startswith((".", "_")) for part in parts):
+            if not any(part.startswith((".", "_")) for part in parts) and not parts[-1].lower().endswith(NOT_TABLES):
                 read.append(on_disk(held, parts))
-        parquet = [file for file in read if file.name.lower().endswith(".parquet")]
-        return FileLocation(held, tuple(parquet or read))
-    if not (held / name).is_file():
+        return FileLocation(held, tuple(read))
+    from chartbook.store import on_disk
+
+    own = on_disk(held, [name])  # as the disk names it, in either of Unicode's forms
+    if not own.is_file():
         return FileLocation(held)  # a directory pinned before records listed its files: the folder
-    return FileLocation(held / name)
+    return FileLocation(own)
+
+
+#: The endings of a file in a directory that is plainly not one of its tables, which a read of it passes over.
+NOT_TABLES = (
+    ".txt", ".md", ".rst", ".json", ".yaml", ".yml", ".csv", ".tsv", ".xml", ".html", ".log", ".crc",
+)
 
 
 def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Location:

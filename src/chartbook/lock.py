@@ -1161,13 +1161,12 @@ def _sync_now(
     if lock_path.exists() or (dependencies and (only is None or after.assets)):
         report.written = write_lock(after, lock_path)
     hashes = after.hashes()
+    noted_as = _noted_as()
     try:
-        if _no_note_here():
-            pass
-        elif hashes:
-            store.add_root(lock_path, hashes, after.snapshots())
+        if hashes:
+            store.add_root(lock_path, hashes, after.snapshots(), machine=noted_as)
         else:
-            store.remove_root(lock_path)
+            store.remove_root(lock_path, machine=noted_as)
     except (OSError, StoreError) as error:
         from chartbook.config import without_credentials
 
@@ -1250,17 +1249,22 @@ class FrozenReport:
     unrooted: str = ""
 
 
-def _no_note_here() -> bool:
-    """Whether this machine writes no note of a lockfile: under CI (the ``CI`` environment variable), with no ``CHARTBOOK_MACHINE_ID``.
+def _noted_as() -> Optional[str]:
+    """The name this machine's notes of its lockfiles go under: None for its own, or ``""``, the path alone, under CI with no ``CHARTBOOK_MACHINE_ID``.
 
-    A runner's pins are those of the commit it builds, which its
-    developer's machine noted, and a runner with a fresh home each time
-    would leave a note under a new name each run, which no machine could
-    forget. Runners given one ``CHARTBOOK_MACHINE_ID`` replace their note.
+    A runner with a fresh home each run would have a new name each run,
+    and leave a note under each, which no machine could forget. Under the
+    path alone, as notes were named before they named machines, each run
+    at the same checkout path replaces the last one's note; and ``store
+    gc`` on a runner whose store lasts reads its lockfile, so that what its
+    own checkout pins is kept. Runners given one ``CHARTBOOK_MACHINE_ID``
+    replace their note under that name.
     """
     from chartbook.config import MACHINE_ENV_VAR
 
-    return bool(os.environ.get("CI", "").strip()) and not os.environ.get(MACHINE_ENV_VAR, "").strip()
+    if os.environ.get("CI", "").strip() and not os.environ.get(MACHINE_ENV_VAR, "").strip():
+        return ""
+    return None
 
 
 def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool, str]:
@@ -1273,21 +1277,20 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
     replace it, so a reader's note follows its pulls; nothing is written
     when it says that already.
 
-    Under CI with no ``CHARTBOOK_MACHINE_ID``, nothing is written
-    (:func:`_no_note_here`), as by a pin.
+    Under CI with no ``CHARTBOOK_MACHINE_ID``, the note names the path
+    alone (:func:`_noted_as`), as a pin's does.
 
     :returns: Whether the note was written now, and why it could not be
         (a store that is read-only for this user, say); empty if it could.
     """
     from chartbook.config import without_credentials
 
-    if _no_note_here():
-        return False, ""
     hashes, snapshots = locked.hashes(), locked.snapshots()
     if not hashes:
         return False, ""
+    noted_as = _noted_as()
     try:
-        before = store.root_of(lock_path)
+        before = store.root_of(lock_path, machine=noted_as)
         if (
             before is not None
             and set(before.hashes) == hashes
@@ -1295,7 +1298,7 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
             and set(before.snapshots) == snapshots
         ):
             return False, ""
-        store.add_root(lock_path, hashes, snapshots)
+        store.add_root(lock_path, hashes, snapshots, machine=noted_as)
     except Exception as error:  # noqa: BLE001 - a note is best effort, whatever the store raised
         return False, without_credentials(str(error))
     return True, ""

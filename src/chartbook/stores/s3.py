@@ -600,13 +600,17 @@ class S3Store(Store):
         return self._key(ROOTS_DIR, root_name(lockfile, this_machine() if machine is None else machine))
 
     def add_root(
-        self, lockfile: Union[str, Path], hashes: Iterable[str], snapshots: Iterable[tuple[str, str]] = ()
+        self,
+        lockfile: Union[str, Path],
+        hashes: Iterable[str],
+        snapshots: Iterable[tuple[str, str]] = (),
+        machine: Optional[str] = None,
     ) -> None:
         hashes = sorted(set(hashes))
         for content_hash in hashes:
             _split_hash(content_hash)
         self._check_layout(create=True)
-        machine = this_machine()
+        machine = this_machine() if machine is None else machine
         document = root_document(lockfile, hashes, snapshots, machine)
         self._write(self._root_key(lockfile, machine), (json.dumps(document, indent=1) + "\n").encode())
 
@@ -617,8 +621,8 @@ class S3Store(Store):
         except (ValueError, KeyError, TypeError):
             return None
 
-    def root_of(self, lockfile: Union[str, Path]) -> Optional[Root]:
-        return self._read_note(self._root_key(lockfile, this_machine(create=False)))
+    def root_of(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> Optional[Root]:
+        return self._read_note(self._root_key(lockfile, this_machine(create=False) if machine is None else machine))
 
     def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
         key = self._root_key(lockfile, this_machine(create=False) if machine is None else machine)

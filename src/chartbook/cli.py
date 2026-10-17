@@ -2793,7 +2793,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         if root.copy:
             whose = "a sync service's copy of a note"
         elif not root.machine:
-            whose = "noted before notes named their machine, so perhaps another machine's"
+            whose = "noted under no machine name (before notes named their machine, or by a CI runner with none), so perhaps another machine's"
         elif root.host and root.host == here:
             # Not this machine's name now: an earlier one of its own, or another machine of the same host name
             whose = f"noted by {host} under another machine name than this one's now"

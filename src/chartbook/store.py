@@ -609,7 +609,7 @@ def unsynced_part(
     present = [file for file in held if not file.is_symlink()]
     if files and len(files) == 1 and not every:
         ((relative, expected),) = files.items()
-        own = path.joinpath(*PurePosixPath(relative).parts)
+        own = on_disk(path, list(PurePosixPath(relative).parts))
         if not own.is_file() and not own.is_symlink():
             same = [file for file in present if file.parent == path and size_of(file) == expected]
             # The same bytes under other names, and this one on its way; or a
@@ -724,9 +724,13 @@ class Store(abc.ABC):
 
     @abc.abstractmethod
     def add_root(
-        self, lockfile: Union[str, Path], hashes: Iterable[str], snapshots: Iterable[tuple[str, str]] = ()
+        self,
+        lockfile: Union[str, Path],
+        hashes: Iterable[str],
+        snapshots: Iterable[tuple[str, str]] = (),
+        machine: Optional[str] = None,
     ) -> None:
-        """Note that a lockfile names these objects, and pins these snapshots, so that they are kept."""
+        """Note that a lockfile names these objects, and pins these snapshots, so that they are kept: under this machine's name, or *machine* (``""`` names the path alone)."""
 
     @abc.abstractmethod
     def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
@@ -736,9 +740,9 @@ class Store(abc.ABC):
     def roots(self) -> list["Root"]:
         """Every lockfile the store has a note of."""
 
-    def root_of(self, lockfile: Union[str, Path]) -> Optional["Root"]:
-        """This machine's note of a lockfile, if the store has one."""
-        here = this_machine(create=False)
+    def root_of(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> Optional["Root"]:
+        """This machine's note of a lockfile (or *machine*'s), if the store has one."""
+        here = this_machine(create=False) if machine is None else machine
         path = Path(os.path.abspath(lockfile))
         return next((r for r in self.roots() if r.lockfile == path and r.machine == here and not r.copy), None)
 
@@ -1091,7 +1095,11 @@ class FolderStore(Store):
         return False
 
     def add_root(
-        self, lockfile: Union[str, Path], hashes: Iterable[str], snapshots: Iterable[tuple[str, str]] = ()
+        self,
+        lockfile: Union[str, Path],
+        hashes: Iterable[str],
+        snapshots: Iterable[tuple[str, str]] = (),
+        machine: Optional[str] = None,
     ) -> None:
         """Note that a lockfile on this machine names these objects, and pins these snapshots, so that they are kept.
 
@@ -1110,13 +1118,17 @@ class FolderStore(Store):
         :param lockfile: The path of a ``chartbook.lock``.
         :param hashes: The content hashes it names.
         :param snapshots: The snapshots it pins, each ``(commit, made_at)``.
+        :param machine: The name to note it under: this machine's by
+            default; ``""`` for the path alone, as notes were named before
+            they named machines (a CI runner with no name of its own),
+            which no note under a name then takes the place of.
         :raises ValueError: If one of *hashes* is not a content hash.
         """
         hashes = sorted(set(hashes))
         for content_hash in hashes:
             _split_hash(content_hash)
         self._check_layout(create=True)
-        machine = this_machine()
+        machine = this_machine() if machine is None else machine
         note = self._root_file(lockfile, machine)
         note.parent.mkdir(parents=True, exist_ok=True)
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
@@ -1132,7 +1144,7 @@ class FolderStore(Store):
             except OSError:
                 pass
             raise
-        if self.is_users_own():
+        if machine and self.is_users_own():
             self._remove_old_note(lockfile)
 
     def is_users_own(self) -> bool:
@@ -1159,9 +1171,9 @@ class FolderStore(Store):
             return False  # left for `store gc`, which removes it once this machine has a note of the lockfile
         return True
 
-    def root_of(self, lockfile: Union[str, Path]) -> Optional[Root]:
-        """This machine's note of a lockfile, if the store has one it can read."""
-        return _read_note(self._root_file(lockfile, this_machine(create=False)))
+    def root_of(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> Optional[Root]:
+        """This machine's note of a lockfile (or *machine*'s), if the store has one it can read."""
+        return _read_note(self._root_file(lockfile, this_machine(create=False) if machine is None else machine))
 
     def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
         """Forget a lockfile on this machine. Its objects are then kept by nothing.
