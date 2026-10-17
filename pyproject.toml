@@ -143,17 +143,13 @@ packages = ["src/chartbook"]
 [tool.hatch.build.targets.wheel.sources]
 src = ""
 
-# The project template `chartbook init` renders comes with the package, so
-# the two always match (chartbook.scaffold.find_template)
-[tool.hatch.build.targets.wheel.force-include]
-"template" = "chartbook/template"
-
-# ...and with the sdist, so that a wheel built from it has it too
-[tool.hatch.build.targets.sdist.force-include]
-"template" = "template"
-
-# hatch_build.py: records the commit a wheel or sdist is built from, in
-# chartbook/built_from.txt, for the .cruft.json `chartbook init` writes
+# hatch_build.py: the project template `chartbook init` renders comes with
+# the package, so the two always match (chartbook.scaffold.find_template):
+# the files git tracks in template/, as chartbook/template in the wheel and
+# template/ in the sdist. And the commit it is at, in
+# chartbook/built_from.txt, for the .cruft.json `chartbook init` writes. Not
+# a force-include here, which would ship whatever is in template/, ignored
+# files too, and copy it into site-packages for an editable install.
 [tool.hatch.build.hooks.custom]
 
 [tool.hatch.envs.hatch-test]

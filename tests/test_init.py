@@ -41,6 +41,8 @@ class FakeTools:
         self.project_name = "my_data_science_project"
         # The commit the template came from, as this ChartBook knows it
         self.commit = COMMIT
+        # Whether that commit is on a remote branch of the checkout, if that can be told
+        self.pushed = True
         self.remote_url = None
         # The repository the working directory is inside, if any
         self.outer_repo = None
@@ -53,12 +55,14 @@ class FakeTools:
         return f"/usr/bin/{name}" if name in self.installed else None
 
     def render_template(self, output_dir, **kwargs):
-        from cookiecutter.exceptions import FailedHookException
+        from cookiecutter.exceptions import FailedHookException, OutputDirExistsException
 
+        if (Path(output_dir) / self.project_name).exists():
+            raise OutputDirExistsException(f'Error: "{Path(output_dir) / self.project_name}" directory already exists')
         result = self.run(["render"], cwd=output_dir)
         if result.returncode != 0:
             raise FailedHookException("Hook script failed (exit status: 1)")
-        return scaffold.Rendered(Path(output_dir) / self.project_name, self.commit)
+        return scaffold.Rendered(Path(output_dir) / self.project_name, self.commit, self.pushed)
 
     def run(self, command, cwd=None, **kwargs):
         cwd = Path(cwd) if cwd is not None else self.cwd
@@ -163,13 +167,34 @@ class TestPlainInit:
         # ...and it is the one this ChartBook, run from its source, renders
         assert scaffold.find_template() == template.resolve()
 
-    def test_with_no_commit_known_it_says_what_cruft_update_needs(self, tools):
+    def test_with_no_commit_known_it_says_how_to_link_the_project_later(self, tools):
+        """A .cruft.json naming no commit is up to date for `cruft check`, and `cruft update` does nothing."""
         tools.commit = None
         result = _init()
         assert result.exit_code == 0, result.output
         said = " ".join(result.output.split())
-        assert "my_data_science_project/.cruft.json has none, and `cruft update` needs one" in said
-        assert 'Set "commit" in it to that commit' in said
+        assert "so my_data_science_project has no .cruft.json" in said
+        assert (
+            "cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit>"
+            in said
+        )
+
+    def test_a_commit_on_no_remote_branch_is_said(self, tools):
+        tools.pushed = False
+        result = _init()
+        assert result.exit_code == 0, result.output
+        said = " ".join(result.output.split())
+        assert f"the template's commit, {COMMIT[:12]}, is on no remote branch" in said
+        assert "may not be on GitHub" in said
+
+    def test_a_folder_that_is_there_already_is_said_as_that(self, tools):
+        (tools.cwd / tools.project_name).mkdir()
+        result = _init()
+        assert result.exit_code == 1
+        said = " ".join(result.output.split())
+        assert f"{tools.cwd / tools.project_name} is there already, so nothing was changed" in said
+        assert "Error: Error" not in said
+        assert "If the folder name was refused" not in said
 
     def test_git_and_github_are_off_by_default(self, tools):
         _init()
@@ -542,7 +567,8 @@ class TestTheTemplateThatCameWithIt:
         assert state["template"] == "https://github.com/backofficedev/chartbook"
         assert state["directory"] == "template"
         assert state["commit"] == COMMIT
-        assert state["checkout"] is None and state["skip"] == []
+        # cruft create writes no `skip`; with one, cruft update adds the project's skips to it on every run
+        assert state["checkout"] is None and "skip" not in state
         answers = state["context"]["cookiecutter"]
         assert answers["project_slug"] == "my_data_science_project"
         assert answers["_template"] == "https://github.com/backofficedev/chartbook" and answers["_commit"] == COMMIT
@@ -579,3 +605,109 @@ class TestTheTemplateThatCameWithIt:
         state["template"] = str(upstream)
         cruft_file.write_text(json.dumps(state))
         assert cruft.check(project) is True
+
+    def test_with_no_commit_known_there_is_no_cruft_file(self, tmp_path, monkeypatch):
+        """`"commit": null` was up to date for `cruft check`, and `cruft update` did nothing."""
+        monkeypatch.setattr(scaffold, "template_commit", lambda package_dir=None: None)
+        rendered = scaffold.render(tmp_path, no_input=True)
+        assert rendered.commit is None
+        assert (rendered.project_dir / "chartbook.toml").is_file()
+        assert not (rendered.project_dir / ".cruft.json").exists()
+
+    def test_a_template_installed_read_only_makes_a_project_its_owner_can_write(self, tmp_path):
+        """cookiecutter copies the template's modes: a Nix store or a locked tree made a read-only project."""
+        import os
+        import stat
+
+        package = tmp_path / "site-packages" / "chartbook"
+        package.mkdir(parents=True)
+        template = _template_copy(package / "template")
+        for path in [*template.rglob("*"), template]:
+            path.chmod(path.stat().st_mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+        try:
+            out = tmp_path / "projects"
+            out.mkdir()
+            project = scaffold.render(out, no_input=True, package_dir=package).project_dir
+        finally:
+            for path in [template, *template.rglob("*")]:
+                path.chmod(path.stat().st_mode | stat.S_IWUSR)
+        rendered = [project, *project.rglob("*")]
+        assert rendered and all(os.access(path, os.W_OK) for path in rendered if not path.is_symlink())
+
+    def test_a_refused_folder_name_prints_no_traceback(self, tmp_path):
+        """The template says why, and `chartbook init` what to do; cookiecutter's log of it added a traceback.
+
+        In a process of its own, as `chartbook init` is: pytest's own log
+        handler would take the record here.
+        """
+        import sys
+
+        code = (
+            "import sys\n"
+            "from pathlib import Path\n"
+            "from cookiecutter.exceptions import FailedHookException\n"
+            "from chartbook import scaffold\n"
+            "try:\n"
+            "    scaffold.render(Path(sys.argv[1]), no_input=True, "
+            "answers={'project_name': 'Rates Study', 'project_slug': 'Rates Study'})\n"
+            "except FailedHookException:\n"
+            "    print('refused')\n"
+        )
+        result = subprocess.run([sys.executable, "-c", code, str(tmp_path)], capture_output=True, text=True)
+        assert "refused" in result.stdout, result.stderr
+        assert "cannot be the project's folder name" in result.stdout
+        assert "Traceback" not in result.stderr + result.stdout
+
+    @needs_git
+    def test_a_source_checkout_renders_only_what_git_tracks(self, tmp_path, real_git):
+        """A wheel built from the checkout ships those files and no others, so a source install renders the same."""
+        package = _committed_checkout(tmp_path)
+        slug_folder = tmp_path / "checkout" / "template" / "{{cookiecutter.project_slug}}"
+        (slug_folder / ".env").write_text("FRED_API_KEY=a-real-key-of-the-template-author\n")
+        (slug_folder / ".ipynb_checkpoints").mkdir()
+        (slug_folder / ".ipynb_checkpoints" / "scratch.ipynb").write_text("{}")
+        # A change to a tracked file is rendered, at its content on disk
+        readme = slug_folder / "README.md"
+        readme.write_text(readme.read_text() + "\nAn uncommitted line.\n")
+        out = tmp_path / "projects"
+        out.mkdir()
+        rendered = scaffold.render(out, no_input=True, package_dir=package)
+        assert not (rendered.project_dir / ".env").exists()
+        assert not (rendered.project_dir / ".ipynb_checkpoints").exists()
+        assert "An uncommitted line." in (rendered.project_dir / "README.md").read_text()
+        # ...and then the template is at no commit
+        assert rendered.commit is None and not (rendered.project_dir / ".cruft.json").exists()
+
+    @needs_git
+    def test_a_template_with_uncommitted_changes_is_at_no_commit(self, tmp_path, real_git):
+        package = _committed_checkout(tmp_path)
+        assert scaffold.template_commit(package) is not None
+        (tmp_path / "checkout" / "template" / "cookiecutter.json").write_text("{}\n")
+        assert scaffold.template_commit(package) is None
+
+    @needs_git
+    def test_whether_the_commit_is_on_a_remote_branch(self, tmp_path, real_git):
+        """`cruft update` clones the template from GitHub: a commit only on this machine is not there."""
+        package = _committed_checkout(tmp_path)
+        checkout = tmp_path / "checkout"
+        head = scaffold.template_commit(package)
+        assert scaffold.commit_is_pushed(head, package) is False
+        _git(checkout, "update-ref", "refs/remotes/origin/main", head)
+        assert scaffold.commit_is_pushed(head, package) is True
+        # A packaged template cannot tell
+        packaged = tmp_path / "site-packages" / "chartbook"
+        packaged.mkdir(parents=True)
+        _template_copy(packaged / "template")
+        assert scaffold.commit_is_pushed(head, packaged) is None
+
+
+def _committed_checkout(tmp_path: Path) -> Path:
+    """A source checkout of a package with this repository's template, all committed; its package folder."""
+    checkout = tmp_path / "checkout"
+    package = checkout / "src" / "chartbook"
+    package.mkdir(parents=True)
+    _template_copy(checkout / "template")
+    _git(checkout, "init", "--quiet")
+    _git(checkout, "add", "-A")
+    _git(checkout, "commit", "--quiet", "-m", "Template")
+    return package

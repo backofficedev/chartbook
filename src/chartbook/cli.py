@@ -2802,7 +2802,7 @@ def init(use_git, use_github, public):
         click.echo("Error: cookiecutter is not installed.", err=True)
         click.echo("", err=True)
         click.echo(
-            "cookiecutter ships with chartbook (through cruft), so this usually means a broken or"
+            "cookiecutter ships with chartbook, so this usually means a broken or"
             " partial installation. Reinstall with:", err=True
         )
         click.echo("    pip install --force-reinstall chartbook", err=True)
@@ -2835,7 +2835,7 @@ def init(use_git, use_github, public):
             )
 
     # The template that came with this ChartBook, rendered here: no network
-    from cookiecutter.exceptions import CookiecutterException
+    from cookiecutter.exceptions import CookiecutterException, OutputDirExistsException
 
     try:
         rendered = scaffold.render(cwd)
@@ -2843,6 +2843,13 @@ def init(use_git, use_github, public):
         raise SystemExit(130)
     except scaffold.ScaffoldError as e:
         fail(e)
+    except OutputDirExistsException as e:
+        # cookiecutter's message is 'Error: "<folder>" directory already exists'
+        folder = str(e).split('"')[1] if str(e).count('"') >= 2 else "the project's folder"
+        fail(
+            f"{folder} is there already, so nothing was changed. Run `chartbook init` again "
+            f"and give another folder name at the second question, or move that folder."
+        )
     except CookiecutterException as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
         # The template's own message is above; its advice is said again
@@ -2856,11 +2863,22 @@ def init(use_git, use_github, public):
         raise SystemExit(1)
     project_dir = rendered.project_dir
     if rendered.commit is None:
+        # A .cruft.json naming no commit is one cruft takes for up to date, and never updates
         click.echo(
-            f"Note: this ChartBook does not know the commit of {scaffold.TEMPLATE_REPOSITORY} it was "
-            f"built from, so {project_dir.name}/{scaffold.CRUFT_MARKER} has none, and `cruft update` "
-            f"needs one. Set \"commit\" in it to that commit, the one your ChartBook's version was "
-            f"released from, before you run `cruft update`.",
+            f"Note: this ChartBook cannot name the commit of {scaffold.TEMPLATE_REPOSITORY} its "
+            f"template is at (none was recorded when it was built, or its template/ has changes "
+            f"git has not committed), so {project_dir.name} has no {scaffold.CRUFT_MARKER}, and "
+            f"cruft cannot update it yet. Once you know the commit, run this in {project_dir.name}, "
+            f"which asks the template's questions again:\n"
+            f"    cruft link {scaffold.TEMPLATE_REPOSITORY} --directory {scaffold.TEMPLATE_DIRECTORY} "
+            f"--checkout <commit>",
+            err=True,
+        )
+    elif rendered.pushed is False:
+        click.echo(
+            f"Note: the template's commit, {rendered.commit[:12]}, is on no remote branch of the "
+            f"checkout this ChartBook runs from, so it may not be on GitHub, where `cruft update` "
+            f"looks for it. Push it before you run `cruft update`.",
             err=True,
         )
 

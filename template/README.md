@@ -47,12 +47,19 @@ chartbook init
 ```
 
 `chartbook init` renders the copy of this template that came with your ChartBook, with no network,
-and writes a `.cruft.json` that tracks the template's version on GitHub, enabling future updates. The
-project's environment files ask for your ChartBook's version or later (the template's private variable
-`_chartbook_version`).
+and writes a `.cruft.json` that tracks the template's version on GitHub, enabling future updates (when
+it knows the commit the template is at; otherwise it says how to link the project with `cruft link`).
+The project's environment files ask for the template's private variable `_chartbook_version` or later,
+which is the version of the ChartBook it came with: a test keeps `cookiecutter.json`'s value equal to
+`chartbook.__about__.__version__`, so a release changes both.
 
-Rendered with cruft instead, it comes from GitHub's main branch, and `_chartbook_version` keeps its
-default in `cookiecutter.json`:
+The step that installs ChartBook from GitHub, in the next steps `chartbook init` prints and in the
+project's README, is shown when `_chartbook_version` is `0.2.0`: the template is in no release yet, so a
+ChartBook that calls itself 0.2.0 and has it is the one on GitHub, ahead of the 0.2.0 on PyPI. That stays
+right only while the version on the main branch is not one PyPI has: a release must bump both the version
+and this default, and the maintainer may also choose `.devN` versions between releases.
+
+Rendered with cruft instead, it comes from GitHub's main branch:
 
 ```bash
 cruft create https://github.com/backofficedev/chartbook --directory template
@@ -83,6 +90,10 @@ cruft update
 
 You can also add `cruft check` to your CI pipeline to ensure projects stay synchronized.
 
+`cruft update` also moves the project's ChartBook floor (`chartbook>=` in its environment files) to the
+template's version: cruft does not carry a private variable such as `_chartbook_version` forward, and
+takes the template's own.
+
 ### Example Usage
 
 ```bash
@@ -92,10 +103,8 @@ cruft create https://github.com/backofficedev/chartbook --directory template
 # Generate with custom options
 cruft create https://github.com/backofficedev/chartbook --directory template \
   --no-input \
-  -f \
-  project_name="My Analysis" \
-  include_latex_reports=y \
-  include_fred=y
+  --overwrite-if-exists \
+  --extra-context '{"project_name": "My Analysis", "include_latex_reports": "y", "include_fred": "y"}'
 ```
 
 ## Project Structure
@@ -164,18 +173,21 @@ git clone https://github.com/backofficedev/chartbook
 cd chartbook
 
 # Generate a project from the local template to a specific output directory
-cruft create . --directory template -o ./tmp/
+cruft create . --directory template --output-dir ./tmp/
 
 # Or with no prompts (use defaults)
-cruft create . --directory template --no-input -o ./tmp/
+cruft create . --directory template --no-input --output-dir ./tmp/
 
 # Overwrite existing project with same name
-cruft create . --directory template --no-input -o ./tmp/ --overwrite-if-exists
+cruft create . --directory template --no-input --output-dir ./tmp/ --overwrite-if-exists
 ```
 
 cruft reads the template from git, so it renders what is **committed**. To try
 an uncommitted change, use cookiecutter, which reads the folder as it is:
-`cookiecutter template -o ./tmp/`.
+`cookiecutter template -o ./tmp/`. `chartbook init`, run from this checkout,
+renders the files git tracks in `template/` at their content on disk: an
+uncommitted change to one of them is rendered, and then the project has no
+`.cruft.json`, since the template is at no commit.
 
 If you have an existing project that was created with cookiecutter, you can link it to the template:
 
@@ -210,34 +222,20 @@ skipped when what it needs (`latexmk` and `pdflatex`) is not installed.
 
 ```bash
 # Test minimal project (all features disabled)
-cruft create . --directory template --no-input -o ./tmp/ \
-  project_name="Minimal Test" \
-  include_latex_reports=n \
-  include_jupyter_notebooks=n \
-  include_r_scripts=n \
-  include_stata_scripts=n \
-  include_chartbook=n \
-  include_github_actions=n \
-  include_fred=n \
-  include_ofr_api=n \
-  include_bloomberg=n \
-  include_crsp_stock=n \
-  include_crsp_compustat=n
+cruft create . --directory template --no-input --output-dir ./tmp/ --extra-context '{
+  "project_name": "Minimal Test",
+  "include_latex_reports": "n", "include_jupyter_notebooks": "n", "include_r_scripts": "n",
+  "include_stata_scripts": "n", "include_chartbook": "n", "include_github_actions": "n",
+  "include_fred": "n", "include_ofr_api": "n", "include_bloomberg": "n",
+  "include_crsp_stock": "n", "include_crsp_compustat": "n"}'
 
-# Test full project (all features enabled)
-cruft create . --directory template --no-input -o ./tmp/ \
-  project_name="Full Test" \
-  include_latex_reports=y \
-  include_jupyter_notebooks=y \
-  include_r_scripts=y \
-  include_stata_scripts=y \
-  include_chartbook=y \
-  include_github_actions=y \
-  include_fred=y \
-  include_ofr_api=y \
-  include_bloomberg=y \
-  include_crsp_stock=y \
-  include_crsp_compustat=y
+# Test full project (all features enabled; R needs conda or pixi)
+cruft create . --directory template --no-input --output-dir ./tmp/ --extra-context '{
+  "project_name": "Full Test", "environment_manager": "conda",
+  "include_latex_reports": "y", "include_jupyter_notebooks": "y", "include_r_scripts": "y",
+  "include_stata_scripts": "y", "include_chartbook": "y", "include_github_actions": "y",
+  "include_fred": "y", "include_ofr_api": "y", "include_bloomberg": "y",
+  "include_crsp_stock": "y", "include_crsp_compustat": "y"}'
 
 # Verify generated project works
 cd ./tmp/minimal_test  # or ./tmp/full_test

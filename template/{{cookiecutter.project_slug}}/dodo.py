@@ -529,14 +529,19 @@ def task_run_pytest():
 ## This block must stay the last thing in the file. It lists the tasks
 ## defined above it, as the file is read, so a task added below it is not
 ## in the list: plain `doit` and `chartbook build` do not run it, and what
-## it makes is not built. A task is a function defined in this file whose
-## name starts with `task_`; anything else of that name, such as doit's own
-## `task_params` imported here, is not one.
+## it makes is not built. A task is what doit takes for one: a function whose
+## name starts with `task_`, defined here or imported, except doit's own
+## `task_params` decorator.
+try:
+    from doit import task_params as _doit_task_params
+except ImportError:
+    _doit_task_params = None
+
 DOIT_CONFIG["default_tasks"] = [
     name.removeprefix("task_")
     for name, value in list(globals().items())
     if name.startswith("task_")
     and inspect.isfunction(value)
-    and value.__module__ == __name__
+    and value is not _doit_task_params
     and name != "task_run_pytest"
 ]

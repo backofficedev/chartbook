@@ -989,15 +989,17 @@ def test_doit_alone_runs_every_task_but_the_tests(template_dir, temp_dir, contex
 
 
 def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, temp_dir):
-    """Only a task function of this file is a default task: doit's rule, not `callable()`.
+    """The default tasks are what doit takes for tasks: functions named `task_…`, but `task_params`.
 
     Anything else named `task_…` (a value, doit's own `task_params`
     decorator imported as its documentation shows, a partial) listed as a
-    default task stopped every plain `doit` with "Invalid parameter". And
-    the list is made when the file is read, so a task added after it is not
+    default task stopped every plain `doit` with "Invalid parameter"; a task
+    imported from a helper module, which doit runs, was left out. And the
+    list is made when the file is read, so a task added after it is not
     run: the block says so.
     """
     project = Path(generate_project(template_dir, temp_dir, WITH_CHARTBOOK))
+    (project / "src" / "more_tasks.py").write_text('def task_lint():\n    return {"actions": ["true"]}\n')
     dodo = project / "dodo.py"
     text = dodo.read_text()
     block = text.index("## `doit` on its own")
@@ -1005,6 +1007,7 @@ def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, t
     others = (
         "import functools\n"
         "from doit import task_params\n"
+        "from more_tasks import task_lint\n"
         'task_owner = "the data team"\n'
         'task_later = functools.partial(print, "later")\n\n\n'
     )
@@ -1021,6 +1024,7 @@ def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, t
     assert loaded.returncode == 0, loaded.stderr
     defaults = set(json.loads(loaded.stdout))
     assert defaults <= tasks, sorted(defaults - tasks)
+    assert "lint" in tasks
     assert defaults == tasks - {"run_pytest"}
 
 
@@ -1120,17 +1124,17 @@ class TestTheQuestions:
         assert "chartbook" not in steps
 
     @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
-    def test_the_floor_is_whatever_version_renders_it(self, temp_dir, manager, monkeypatch, capfd):
-        """Not the template's default: a ChartBook of another version asks for that one.
+    def test_the_floor_is_the_templates_version(self, temp_dir, manager, capfd):
+        """`render` used to put ChartBook's version over the template's: cruft, which does not carry a
+        private variable forward, then took the template's at `cruft update`, and the two disagreed.
 
         And the step that installs ChartBook from GitHub is only for a
-        ChartBook calling itself 0.2.0, which the 0.2.0 on PyPI is not.
+        template of version 0.2.0, which the 0.2.0 on PyPI does not have.
         """
         from chartbook import scaffold
 
-        monkeypatch.setattr("chartbook.__about__.__version__", "9.8.7")
-        project = scaffold.render(temp_dir, no_input=True, answers={**WITH_CHARTBOOK, "environment_manager": manager})
-        project = project.project_dir
+        answers = {**WITH_CHARTBOOK, "environment_manager": manager, "_chartbook_version": "9.8.7"}
+        project = scaffold.render(temp_dir, no_input=True, answers=answers).project_dir
         floors = {
             "pip": [("requirements.txt", "chartbook>=9.8.7")],
             "conda": [("requirements.txt", "chartbook>=9.8.7"), ("environment.yml", "- chartbook>=9.8.7")],
@@ -1142,9 +1146,17 @@ class TestTheQuestions:
         assert "git+https://github.com/backofficedev/chartbook" not in (project / "README.md").read_text()
         assert "git+https://github.com/backofficedev/chartbook" not in capfd.readouterr().out
 
+    def test_the_template_is_of_the_version_of_the_chartbook_it_comes_with(self, template_dir):
+        """So the floor is the rendering ChartBook's, and `cruft update` moves it to the template's: a
+        release bumps both."""
+        from chartbook.__about__ import __version__
+
+        questions = json.loads((template_dir / "cookiecutter.json").read_text())
+        assert questions["_chartbook_version"] == __version__
+
     @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
     def test_it_asks_for_the_chartbook_that_renders_it(self, template_dir, temp_dir, manager):
-        """The project asks for the ChartBook that rendered it, or later: `chartbook init` passes its version.
+        """The project asks for the ChartBook that rendered it, or later: the template's version is its.
 
         `chartbook>=0.1.0` let in versions older than the newest release,
         and a fixed floor goes out of date with each one. And no file may
