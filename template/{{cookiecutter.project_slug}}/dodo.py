@@ -11,6 +11,7 @@ import sys
 
 sys.path.insert(1, "./src/")
 
+import inspect
 import shutil
 from os import environ
 from pathlib import Path
@@ -528,9 +529,14 @@ def task_run_pytest():
 ## This block must stay the last thing in the file. It lists the tasks
 ## defined above it, as the file is read, so a task added below it is not
 ## in the list: plain `doit` and `chartbook build` do not run it, and what
-## it makes is not built.
+## it makes is not built. A task is a function defined in this file whose
+## name starts with `task_`; anything else of that name, such as doit's own
+## `task_params` imported here, is not one.
 DOIT_CONFIG["default_tasks"] = [
     name.removeprefix("task_")
     for name, value in list(globals().items())
-    if name.startswith("task_") and callable(value) and name != "task_run_pytest"
+    if name.startswith("task_")
+    and inspect.isfunction(value)
+    and value.__module__ == __name__
+    and name != "task_run_pytest"
 ]

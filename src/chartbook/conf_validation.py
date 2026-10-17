@@ -245,15 +245,15 @@ def validate_source_files(manifest: dict, base_dir) -> list:
                 from chartbook.utils import is_glob_pattern
 
                 if is_glob_pattern(parquet_path):
-                    import glob as glob_module
+                    from chartbook.hashing import find_files
 
                     full_pattern = str(
                         (pipeline_base_dir / parquet_path).as_posix()
                     )
-                    matching_files = glob_module.glob(
-                        full_pattern, recursive=True
-                    )
-                    if not matching_files:
+                    # The files the index hashes and a site shows: a glob
+                    # that matches only folders has none
+                    found = find_files(full_pattern)
+                    if found is None or not found.files:
                         missing_files.append(
                             MissingFile(
                                 file_path=Path(full_pattern),

@@ -131,6 +131,12 @@ class TestDocsBeforeAnythingIsBuilt:
         assert "--no-strict" not in result.output
         assert not (unbuilt / "docs").exists()
 
+    def test_the_help_says_what_strict_typed_does(self):
+        """The warning says "With --strict, this is an error"; the help said only "(default)"."""
+        said = " ".join(CliRunner().invoke(main, ["docs", "--help"]).output.split())
+        assert "a lone pipeline that has built nothing yet, which is rendered with a warning" in said
+        assert "typed explicitly, --strict fails on that too" in said
+
     def test_no_strict_renders_it_too(self, unbuilt):
         result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--no-strict"])
         assert result.exit_code == 0, result.output

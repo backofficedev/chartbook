@@ -746,7 +746,9 @@ class TestNotBuiltYet:
         assert "Not built yet" in dataframe
         assert "Error reading file" not in dataframe
         # No dates to give, rather than "None"
-        assert "None" not in re.search(r"Data available up to \(min\)(.*?)\n", dataframe).group(1)
+        for which in ("min", "max"):
+            label = f"Data available up to ({which})"
+            assert "None" not in dataframe[dataframe.index(label) + len(label):][:80]
         # A model says so in its provenance panel
         model = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "models" / "test_pipeline" / "forecast.html").read_text())
         assert re.search(r"Content\s+not built", model)
@@ -854,16 +856,80 @@ class TestNotBuiltYet:
         assert "--no-strict" not in err
 
     @pytest.mark.skipif(os.name == "nt" or getattr(os, "geteuid", lambda: 1)() == 0, reason="needs a file its owner cannot read")
-    def test_an_output_that_is_there_and_unreadable_is_not_not_built(self, pipeline_project, monkeypatch):
-        """It has no hash, as a file that is not there has none, but it is there: copying it fails, and says why."""
+    @pytest.mark.parametrize(
+        "unreadable", ["_output/charts/chart_0_0.html", "_data/test_pipeline/dataframe_0.parquet"]
+    )
+    def test_an_output_that_is_there_and_unreadable_is_an_error(self, pipeline_project, monkeypatch, capsys, unreadable):
+        """It has no hash, as a file that is not there has none, but it is there: the build stops and names it.
+
+        A dataframe's page used to say "Error reading file" with exit 0, and
+        its provenance panel "not built".
+        """
         monkeypatch.chdir(pipeline_project)
-        chart = pipeline_project / "_output" / "charts" / "chart_0_0.html"
-        chart.chmod(0)
+        output = pipeline_project / unreadable
+        output.chmod(0)
         try:
-            with pytest.raises(OSError):
+            with pytest.raises(SystemExit) as excinfo:
                 generate_docs(output_dir=pipeline_project / "docs", project_dir=pipeline_project)
         finally:
-            chart.chmod(0o644)
+            output.chmod(0o644)
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "These files are there and could not be read:" in err
+        assert unreadable in err
+        assert not (pipeline_project / "docs").exists()
+
+    def test_with_downloads_only_a_file_the_build_copies_is_linked(self, pipeline_project, monkeypatch):
+        """A folder of parts or a glob has no one file to download: the row linked to nothing."""
+        import tomli
+        import tomli_w
+
+        parts = pipeline_project / "_data" / "test_pipeline" / "dataframe_0.parquet"
+        frame = parts.read_bytes()
+        parts.unlink()
+        parts.mkdir()
+        (parts / "part-0.parquet").write_bytes(frame)
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["project"]["enable_data_download"] = True
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        monkeypatch.chdir(pipeline_project)
+        output_dir = pipeline_project / "docs"
+        generate_docs(output_dir=output_dir, project_dir=pipeline_project)
+        page = (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text()
+        assert "Download Data as Parquet" not in page
+        assert "Download Data as Parquet" not in (output_dir / "cb" / "charts" / "test_pipeline.chart_0_0.html").read_text()
+
+    def test_a_date_that_cannot_be_read_is_not_shown_as_none(self, pipeline_project, monkeypatch):
+        import tomli
+        import tomli_w
+
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["dataframes"]["dataframe_0"]["date_col"] = "no_such_column"
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        monkeypatch.chdir(pipeline_project)
+        output_dir = pipeline_project / "docs"
+        generate_docs(output_dir=output_dir, project_dir=pipeline_project)
+        page = re.sub(r"<[^>]+>", "", (output_dir / "cb" / "dataframes" / "test_pipeline" / "dataframe_0.html").read_text())
+        for which in ("min", "max"):
+            label = f"Data available up to ({which})"
+            assert "None" not in page[page.index(label) + len(label):][:80]
+
+    def test_a_glob_that_matches_only_folders_is_missing(self, pipeline_project, monkeypatch, capsys):
+        """The index finds no files in it, so neither may the check: it was "not built", exit 0, even with --strict."""
+        import tomli
+        import tomli_w
+
+        (pipeline_project / "_data" / "test_pipeline" / "parts" / "a.parquet").mkdir(parents=True)
+        toml_path = pipeline_project / "chartbook.toml"
+        config = tomli.loads(toml_path.read_text())
+        config["dataframes"]["dataframe_0"]["path"] = "_data/test_pipeline/parts/*.parquet"
+        toml_path.write_bytes(tomli_w.dumps(config).encode())
+        monkeypatch.chdir(pipeline_project)
+        with pytest.raises(SystemExit):
+            generate_docs(output_dir=pipeline_project / "docs", project_dir=pipeline_project, strict=True)
+        assert "parts/*.parquet" in capsys.readouterr().err
 
     def test_a_missing_write_up_is_still_an_error(self, unbuilt, capsys):
         """Nothing builds a write-up."""

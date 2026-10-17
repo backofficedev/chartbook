@@ -13,13 +13,14 @@ One install, everything included: the site-building CLI, the plotting module, da
 ## Scaffold a project
 
 ````{note}
-`chartbook init` renders the project template from the main branch of ChartBook's GitHub repository, which is ahead of the newest release, 0.2.0: that release does not read the `[scripts]` table the template's `chartbook.toml` has, and has no `chartbook docs`. Until the next release, a project made this way needs ChartBook installed from GitHub, both where you run `chartbook init` and in the project's own environment:
+Until the next release, install ChartBook from GitHub for what follows. `chartbook init` renders the project template from the main branch of ChartBook's GitHub repository, and the newest release, 0.2.0, cannot build what it makes: it does not read the `[scripts]` table of the template's `chartbook.toml`, and has no `chartbook docs`. The main branch calls itself 0.2.0 too, so pip keeps a 0.2.0 it has installed already unless it is told to replace it:
 
 ```console
-pip install "chartbook @ git+https://github.com/backofficedev/chartbook"
+pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"
+pipx install --force "chartbook @ git+https://github.com/backofficedev/chartbook"   # if you use pipx
 ```
 
-`chartbook --version` says 0.2.0 for both; `chartbook docs --help` works only in the one from GitHub.
+Do the same in the project's own environment, after its requirements, as below. `chartbook --version` says 0.2.0 for both; `chartbook docs --help` works only in the one from GitHub.
 ````
 
 ```console
@@ -56,7 +57,7 @@ To build it, install the project's dependencies (with pip here; the project's RE
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-pip install "chartbook @ git+https://github.com/backofficedev/chartbook"   # until the next release
+pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"   # until the next release
 chartbook build -f
 chartbook browse
 ```

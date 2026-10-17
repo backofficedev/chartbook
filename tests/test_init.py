@@ -159,9 +159,10 @@ class TestPlainInit:
         tools.render = False
         result = _init(*flags)
         assert result.exit_code == 1
+        # Enter is not always the answer: "2024 Rates" makes `2024_rates`, refused too
         assert result.output.strip().splitlines()[-1] == (
-            "If the folder name was refused, run `chartbook init` again and press "
-            "Enter at the second question."
+            "If the folder name was refused, run `chartbook init` again and, at the second "
+            "question, press Enter, or type a name of lowercase letters, digits and `_`."
         )
 
     def test_visibility_without_github_is_a_usage_error(self, tools):

@@ -99,7 +99,9 @@ def _site_options(command):
         click.option(
             "--strict/--no-strict",
             default=True,
-            help="Fail on missing source files (default). In a catalog, --no-strict skips the pipelines that have them instead.",
+            help="Fail on missing source files (default), except in a lone pipeline that has built nothing yet, "
+            "which is rendered with a warning; typed explicitly, --strict fails on that too. In a catalog, "
+            "--no-strict skips the pipelines that have missing files instead.",
         ),
         click.option(
             "--strip-mathjax2/--no-strip-mathjax2",
@@ -138,9 +140,10 @@ def docs(**site):
 
     This renders the site and writes index.json beside it. It does not
     build the project's data: `chartbook run` does that, and
-    `chartbook build` does both. A pipeline that has built none of its
-    data, charts, notebooks and models yet, as a new project has not, is
-    rendered with each shown as not built.
+    `chartbook build` does both. A lone pipeline that has built none of
+    its data, charts, notebooks and models yet, as a new project has not,
+    is rendered with a warning and each shown as not built; with --strict
+    typed, and in a catalog, that is an error.
 
     By default every render starts from nothing. With --incremental the
     intermediate build directory (--docs-build-dir) is kept, pipelines whose
@@ -2832,10 +2835,11 @@ def init(use_git, use_github, public):
 
     def not_rendered(code):
         # The template's own message is above cruft's traceback, a hundred
-        # lines up; its advice is said again where it is seen
+        # lines up; its advice is said again where it is seen. The name
+        # made from the project's name may be refused too ("2024 Rates")
         click.echo(
-            "If the folder name was refused, run `chartbook init` again and press "
-            "Enter at the second question.",
+            "If the folder name was refused, run `chartbook init` again and, at the second "
+            "question, press Enter, or type a name of lowercase letters, digits and `_`.",
             err=True,
         )
         raise SystemExit(code)

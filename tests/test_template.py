@@ -989,18 +989,29 @@ def test_doit_alone_runs_every_task_but_the_tests(template_dir, temp_dir, contex
 
 
 def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, temp_dir):
-    """A module-level value named `task_…` that is not a function is not a task.
+    """Only a task function of this file is a default task: doit's rule, not `callable()`.
 
-    Listed as a default task, it stopped every plain `doit` with "Invalid
-    parameter". And the list is made when the file is read, so a task added
-    after it is not run: the block says so.
+    Anything else named `task_…` (a value, doit's own `task_params`
+    decorator imported as its documentation shows, a partial) listed as a
+    default task stopped every plain `doit` with "Invalid parameter". And
+    the list is made when the file is read, so a task added after it is not
+    run: the block says so.
     """
     project = Path(generate_project(template_dir, temp_dir, WITH_CHARTBOOK))
     dodo = project / "dodo.py"
     text = dodo.read_text()
     block = text.index("## `doit` on its own")
     assert "must stay the last thing in the file" in text[block:]
-    dodo.write_text(text[:block] + 'task_owner = "the data team"\n\n\n' + text[block:])
+    others = (
+        "import functools\n"
+        "from doit import task_params\n"
+        'task_owner = "the data team"\n'
+        'task_later = functools.partial(print, "later")\n\n\n'
+    )
+    dodo.write_text(text[:block] + others + text[block:])
+    listed = subprocess.run(["doit", "list"], cwd=project, capture_output=True, text=True)
+    assert listed.returncode == 0, listed.stderr
+    tasks = {line.split()[0] for line in listed.stdout.splitlines() if line.strip()}
     loaded = subprocess.run(
         [sys.executable, "-c", "import json, runpy; print(json.dumps(runpy.run_path('dodo.py')['DOIT_CONFIG']['default_tasks']))"],
         cwd=project,
@@ -1008,7 +1019,9 @@ def test_default_tasks_are_only_tasks_and_say_why_they_come_last(template_dir, t
         text=True,
     )
     assert loaded.returncode == 0, loaded.stderr
-    assert "owner" not in json.loads(loaded.stdout)
+    defaults = set(json.loads(loaded.stdout))
+    assert defaults <= tasks, sorted(defaults - tasks)
+    assert defaults == tasks - {"run_pytest"}
 
 
 class TestTheQuestions:
@@ -1071,8 +1084,34 @@ class TestTheQuestions:
         """`chartbook init` renders the template from GitHub's main branch, which 0.2.0 cannot build."""
         project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": manager}))
         readme = (project / "README.md").read_text()
-        assert '"chartbook @ git+https://github.com/backofficedev/chartbook"' in readme
+        # GitHub's main says 0.2.0 too, so pip must be told to replace the 0.2.0 the requirements installed
+        install = {
+            "pip": "pip install --force-reinstall",
+            "conda": "pip install --force-reinstall",
+            "uv": "uv add",
+            "pixi": "pixi add --pypi",
+        }[manager]
+        assert f'{install} "chartbook @ git+https://github.com/backofficedev/chartbook"' in readme
         assert readme.index("git+https://github.com/backofficedev/chartbook") < readme.index("chartbook build -f")
+
+    @pytest.mark.parametrize(
+        "manager, install, installed",
+        [
+            ("pip", 'pip install --force-reinstall "chartbook @ git+', "pip install -r requirements.txt"),
+            ("conda", 'pip install --force-reinstall "chartbook @ git+', "conda activate"),
+            ("uv", 'uv add "chartbook @ git+', "uv sync"),
+            ("pixi", 'pixi add --pypi "chartbook @ git+', "Next steps:"),
+        ],
+    )
+    def test_next_steps_replace_chartbook_with_the_one_from_github(
+        self, template_dir, temp_dir, capfd, manager, install, installed
+    ):
+        """GitHub's main says 0.2.0 too: a plain `pip install` after the requirements' 0.2.0 does nothing."""
+        generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": manager})
+        said = capfd.readouterr().out
+        steps = said[said.index("Next steps:"):]
+        assert install in steps
+        assert steps.index(installed) < steps.index(install) < steps.index("chartbook build -f")
 
     def test_without_chartbook_the_next_step_is_doit(self, template_dir, temp_dir, capfd):
         generate_project(template_dir, temp_dir, MINIMAL_CONTEXT)

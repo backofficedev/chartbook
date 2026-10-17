@@ -177,19 +177,33 @@ print("  cd {{ cookiecutter.project_slug }}")
 if include_chartbook:
     print("  chartbook docs       # its site already, with nothing built yet")
 
+# Until the next ChartBook release: this template is from GitHub's main
+# branch, which 0.2.0 from PyPI cannot build, and main calls itself 0.2.0
+# too, so pip has to be told to replace the one it installed
+FROM_GITHUB = '"chartbook @ git+https://github.com/backofficedev/chartbook"'
+UNTIL_RELEASED = "  # until the next ChartBook release"
+
 if environment_manager == "pip":
     print("  python -m venv .venv")
     print("  source .venv/bin/activate  # Windows: .venv\\Scripts\\activate")
     print("  pip install -r requirements.txt")
+    if include_chartbook:
+        print(f"  pip install --force-reinstall {FROM_GITHUB}{UNTIL_RELEASED}")
 elif environment_manager == "uv":
     print("  uv sync")
+    if include_chartbook:
+        print(f"  uv add {FROM_GITHUB}{UNTIL_RELEASED}")
     print("  source .venv/bin/activate  # Windows: .venv\\Scripts\\activate")
 elif environment_manager == "conda":
     print(
         "  conda env create -f environment.yml"
     )
     print("  conda activate {{ cookiecutter.project_slug }}")
+    if include_chartbook:
+        print(f"  pip install --force-reinstall {FROM_GITHUB}{UNTIL_RELEASED}")
 elif environment_manager == "pixi":
+    if include_chartbook:
+        print(f"  pixi add --pypi {FROM_GITHUB}{UNTIL_RELEASED}")
     print("  pixi shell")
 
 if include_chartbook:

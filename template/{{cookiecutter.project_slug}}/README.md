@@ -56,9 +56,9 @@ pixi install
 **Until the next ChartBook release**, install ChartBook from GitHub in this environment too. This project
 was made by `chartbook init` from the template on the main branch of ChartBook's GitHub repository, which is
 ahead of the newest release, 0.2.0: that release does not read the `[scripts]` table of `chartbook.toml`, and
-has no `chartbook docs`.
+has no `chartbook docs`. The main branch calls itself 0.2.0 too, so the 0.2.0 installed above has to be replaced:
 ```bash
-{% if cookiecutter.environment_manager == "uv" %}uv pip install "chartbook @ git+https://github.com/backofficedev/chartbook"{% elif cookiecutter.environment_manager == "pixi" %}pixi add --pypi "chartbook @ git+https://github.com/backofficedev/chartbook"{% else %}pip install "chartbook @ git+https://github.com/backofficedev/chartbook"{% endif %}
+{% if cookiecutter.environment_manager == "uv" %}uv add "chartbook @ git+https://github.com/backofficedev/chartbook"{% elif cookiecutter.environment_manager == "pixi" %}pixi add --pypi "chartbook @ git+https://github.com/backofficedev/chartbook"{% else %}pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"{% endif %}
 ```
 `chartbook --version` says 0.2.0 for both; `chartbook docs --help` works only in the one from GitHub.
 {% endif %}

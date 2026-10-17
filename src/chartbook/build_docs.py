@@ -280,8 +280,14 @@ def _missing_files_hint(manifest: dict, missing_files: list, after_build: bool) 
     A catalog takes the error's own hint, which offers --no-strict. A lone
     pipeline has nothing left to build once it is skipped, so its hint never
     does: a missing output is made by the build script, unless that has
-    just run.
+    just run. A version laid out from the store is as it was made: nothing
+    is to be built or edited there, and the hint says only that.
     """
+    from chartbook.config import untrusted_source
+
+    if untrusted_source():
+        # Its last line is what a catalog's link to the version says
+        return ["This version's snapshot does not hold them."]
     if manifest["project"]["type"] != "pipeline":
         return None
     hint = ["Ensure these files exist or update the paths in chartbook.toml."]
@@ -304,8 +310,14 @@ def _missing_files_hint(manifest: dict, missing_files: list, after_build: bool) 
 
 
 def _say_not_built_yet(manifest: dict, missing_files: list, project_dir: Path) -> None:
-    """Say that the pipeline has built nothing yet, what the site shows instead, and what builds it."""
+    """Say that the pipeline has built nothing yet, what the site shows instead, and what builds it.
+
+    In a version laid out from the store, what is missing was not built in
+    that version, and there is nothing to advise.
+    """
     import click
+
+    from chartbook.config import untrusted_source
 
     root = Path(project_dir).resolve()
 
@@ -315,17 +327,56 @@ def _say_not_built_yet(manifest: dict, missing_files: list, project_dir: Path) -
         except ValueError:
             return str(path)
 
+    listed = [f"  - {missing.file_type}: {shown(missing.file_path)}" for missing in missing_files]
+    if untrusted_source():
+        click.echo(
+            "\n".join(
+                [f"{missing_files[0].pipeline_id}: not built in this version, so the site shows each as not built:"]
+                + listed
+            ),
+            err=True,
+        )
+        return
     lines = [
         click.style("Warning: ", fg="yellow", bold=True)
         + f"{missing_files[0].pipeline_id} has built nothing it declares yet, so the site shows each as not built:"
     ]
-    lines += [f"  - {missing.file_type}: {shown(missing.file_path)}" for missing in missing_files]
+    lines += listed
     if manifest["project"].get("build"):
         lines.append("`chartbook build` runs its build script and renders the site again.")
     else:
         lines.append("Build them, then run `chartbook docs` again.")
     lines.append("With --strict, this is an error.")
     click.echo("\n".join(lines), err=True)
+
+
+def _refuse_unreadable(built: dict) -> None:
+    """Stop on a declared output that is there and could not be read.
+
+    The index has no hash for it, as for one that is not built, and warned
+    when it tried. It is not "not built": the site would say so of a file
+    that is there, so the build stops and names it.
+    """
+    from chartbook.sitefiles import not_built
+
+    unreadable = [
+        record
+        for record in built.get("records", [])
+        if record.get("kind") in ("Dataframe", "Chart", "Notebook", "Model")
+        and (record.get("location") or {}).get("kind") == "file"
+        and (record.get("location") or {}).get("resolved_path")
+        and "content_hash" not in record
+        and not not_built(record)
+    ]
+    if not unreadable:
+        return
+    import click
+
+    lines = [click.style("Error: ", fg="red", bold=True) + "These files are there and could not be read:"]
+    lines += [f"  - {record['id']}: {record['location']['resolved_path']}" for record in unreadable]
+    lines.append("Make them readable, or rebuild them.")
+    click.echo("\n".join(lines), err=True)
+    raise SystemExit(1)
 
 
 def generate_docs(
@@ -394,6 +445,8 @@ def generate_docs(
     pipeline_theme = manifest["project"]["type"]
 
     # Validate that all source files exist
+    from chartbook.config import untrusted_source
+
     missing_files = validate_source_files(manifest, project_dir)
     skip_pipelines: set[str] = set()
     if (
@@ -401,7 +454,12 @@ def generate_docs(
         and pipeline_theme == "pipeline"
         and strict is not True
         and not after_build
-        and built_nothing(manifest, missing_files)
+        and (
+            built_nothing(manifest, missing_files)
+            # A version laid out from the store holds what it built: the
+            # rest was not built in that version, which is no mistake
+            or (untrusted_source() and all(m.file_type in OUTPUT_FILE_TYPES for m in missing_files))
+        )
     ):
         # Not built yet, as a new project or a fresh clone is: the site is
         # rendered all the same, with each output shown as not built
@@ -486,6 +544,7 @@ def generate_docs(
         _docs_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
         built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        _refuse_unreadable(built)
         rendered = _write_sphinx_project(
             manifest=manifest,
             project_dir=project_dir,
@@ -616,6 +675,7 @@ def _generate_docs_mkdocs(
         pages_dir.mkdir(parents=True, exist_ok=True)
         cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
         built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+        _refuse_unreadable(built)
         _retrieve_correct_docs_src_dir(temp_docs_src_dir, manifest, project_dir, pipeline_theme)
         _check_policy(manifest, generate_metadata_diagnostics(manifest=manifest, docs_build_dir=pages_dir, skip_pipelines=skip_pipelines))
         rendered = _render_versions(manifest, built)
@@ -883,6 +943,7 @@ def _generate_docs_incremental(
     # depends on what those panels would say as well as on its own files
     cache = hashing.HashCache(_docs_dir / hashing.CACHE_FILE)
     built = index.build_index(manifest, cache=cache, skip_pipelines=skip_pipelines)
+    _refuse_unreadable(built)
     rendered = _render_versions(manifest, built)
     records = {record["id"]: record for record in built["records"]}
     salts = {

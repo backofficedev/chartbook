@@ -761,6 +761,31 @@ def _elsewhere_with(tmp_path, asset_name: str = "", **project) -> "snapshot.Snap
     return taken
 
 
+def test_a_version_that_did_not_build_an_asset_has_a_site_that_says_so(tmp_path):
+    """A snapshot holds what its build made; what it did not make was not built in that version.
+
+    `chartbook docs` there used to stop on it as built in part, and the
+    catalog's link to the version said the error's last line, advice to run
+    `chartbook build` or to edit chartbook.toml, which are no use for a
+    past version.
+    """
+    from tests.fixtures import create_pipeline_project
+
+    repository = tmp_path.resolve() / "elsewhere"
+    folder = create_pipeline_project(repository / "pipeline_c", pipeline_id="pipeline_c", pipeline_name="Pipeline C")
+    (folder / "_output" / "charts" / "chart_0_0.html").unlink()
+    _git(repository, "init", "--quiet", "-b", "main")
+    _commit(repository)
+    taken = snapshot.make(folder).snapshot
+    rendered = versions.render(taken)
+    assert rendered.built, rendered.why
+    chart = rendered.folder / "_static" / "pipeline_c" / "chart_0_0.html"
+    assert "Not built in this version" in chart.read_text()
+    pages = "".join(p.read_text(errors="replace") for p in rendered.folder.rglob("*.html"))
+    assert "chartbook build" not in pages
+    assert "update the paths" not in pages
+
+
 def _show_from_the_store(root: Path, pipeline_id: str = "pipeline_c", **settings) -> None:
     manifest = tomli.loads((root / "chartbook.toml").read_text())
     manifest["pipelines"][pipeline_id] = {}

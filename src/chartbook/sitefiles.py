@@ -93,9 +93,22 @@ def copy_plan(
             plan.append((Path(source), root / "cb" / "notebooks" / slug / Path(source).name))
         elif kind == "Note":
             plan.append((Path(source), root / "cb" / f"{name}.md"))
-        elif enable_data_download and not is_glob_pattern(source) and not Path(source).is_dir():
+        elif enable_data_download and downloadable(record):
             plan.append((Path(source), root / "cb" / "download_dataframe" / slug / f"{name}.parquet"))
     return plan
+
+
+def downloadable(record: dict) -> bool:
+    """Whether a dataframe is one file the build copies for download: its page links it only then.
+
+    A table, a query, a folder of parts and a glob have no one file to
+    offer, and one not built has none yet.
+    """
+    location = record.get("location") or {}
+    source = location.get("resolved_path")
+    if location.get("kind") != "file" or not source or not_built(record):
+        return False
+    return not is_glob_pattern(source) and not Path(source).is_dir()
 
 
 def copy_files(plan: Iterable[tuple[Path, Path]]) -> None:
