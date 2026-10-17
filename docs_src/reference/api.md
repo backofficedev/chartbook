@@ -32,6 +32,7 @@ chartbook
 ../apidocs/chartbook/chartbook.snapshot
 ../apidocs/chartbook/chartbook.versions
 ../apidocs/chartbook/chartbook.lock
+../apidocs/chartbook/chartbook.lineage
 ../apidocs/chartbook/chartbook.gitcache
 ../apidocs/chartbook/chartbook.run
 ../apidocs/chartbook/chartbook.build_docs

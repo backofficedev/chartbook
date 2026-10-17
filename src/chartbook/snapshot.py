@@ -153,7 +153,8 @@ class Snapshot:
             ``chart/curve_today``). One with a ``content_hash`` was built.
         path: The record's file, if it has been written.
         built_with: A note of the conditions it was made under: whether the
-            build ran in the same command (``run``), and the versions of
+            build ran in the same command (``run``), how its lineage was
+            checked (``lineage``: ``pins`` or ``deep``), and the versions of
             ChartBook and Python and the platform. It explains a
             difference; no hash covers it.
         inputs: What the pipeline itself was pinned to when the snapshot
@@ -931,7 +932,7 @@ def labels_skipped(raw: dict) -> list[tuple[str, str]]:
 
 
 def versions_of_pipeline(
-    store: Store, pipeline: str, subdirectory: str, name: str
+    store: Store, pipeline: str, subdirectory: str, name: str, found: Optional[list] = None
 ) -> list[tuple[str, "Snapshot"]]:
     """The versions of one asset of a pipeline, from the store alone.
 
@@ -940,11 +941,13 @@ def versions_of_pipeline(
     the pipeline gives itself. For a pipeline that depends on another: it
     never reads the other's folder.
 
+    :param found: The store's snapshots, read already; read from the
+        store when not given.
     :returns: Each content hash with the first snapshot that held it,
         oldest first.
     """
     seen: dict[str, Snapshot] = {}
-    for taken in all_snapshots(store):
+    for taken in found if found is not None else all_snapshots(store):
         if taken.pipeline != pipeline or taken.subdirectory != subdirectory:
             continue
         content_hash = (taken.assets.get(name) or {}).get("content_hash")
@@ -954,7 +957,7 @@ def versions_of_pipeline(
 
 
 def label_records(
-    newest: "Snapshot", key: str, store: Store
+    newest: "Snapshot", key: str, store: Store, found: Optional[list] = None
 ) -> tuple[dict[str, dict], list[tuple[str, str, str]]]:
     """The lockfile records for the labels a snapshot carries, resolved to bytes.
 
@@ -967,6 +970,8 @@ def label_records(
     :param newest: The snapshot being pinned from, whose ``labels`` say
         what the owner's manifest said when it was made.
     :param key: The dependency's key in ``[dependencies]``.
+    :param found: The store's snapshots, read already (see
+        :func:`versions_of_pipeline`).
     :returns: The records, by ID; and the labels that could not be
         resolved, as ``(model, label, start, why)``: no snapshot of the
         pipeline in the store names such a version, two versions share
@@ -979,7 +984,7 @@ def label_records(
         versions = None
         for label, start in sorted(labels.items()):
             if versions is None:
-                versions = versions_of_pipeline(store, newest.pipeline, newest.subdirectory, name)
+                versions = versions_of_pipeline(store, newest.pipeline, newest.subdirectory, name, found)
             named = [
                 (content_hash, taken)
                 for content_hash, taken in versions
@@ -1109,6 +1114,7 @@ def plan_removals(
     hashes_of_missing: set[str] = frozenset(),
     keep_days: float = KEEP_DAYS,
     now: Optional[datetime] = None,
+    keep_lineage: bool = False,
 ) -> SnapshotPlan:
     """Say which snapshots may be removed. Nothing is removed.
 
@@ -1122,7 +1128,13 @@ def plan_removals(
     4. a label points at a model version it holds: in the pipeline's
        manifest, read from the folder the snapshots were made from, or as
        recorded in the newest snapshot of the pipeline (:func:`labels_of`);
-    5. it was made in the last *keep_days* days.
+    5. it was made in the last *keep_days* days;
+    6. with *keep_lineage*: a snapshot kept for any of these reasons was
+       made from it, or from a label pointing into it, and so on up, so
+       that a kept snapshot's lineage stays whole (:func:`_keep_lineage`).
+       Without it, which is the default, a store keeps what work needs now
+       and lets old lineage go; ``chartbook lineage`` then says a snapshot
+       upstream is not in the store.
 
     Otherwise it may be removed. What it names and nothing else names is
     then removed with it, by :func:`chartbook.lock.plan_gc`.
@@ -1166,7 +1178,61 @@ def plan_removals(
                 )
                 continue
             plan.keep.append((taken, why))
+    if keep_lineage:
+        _keep_lineage(plan, groups)
     return plan
+
+
+def _keep_lineage(plan: SnapshotPlan, groups: dict) -> None:
+    """Keep what a kept snapshot's lineage needs, as far up as it goes.
+
+    A snapshot records the snapshots it was made from (``inputs``), and
+    ``chartbook lineage`` walks to them and checks them by hash. So each of
+    those is kept too, and what it was made from, and so on. What a kept
+    snapshot was made from includes the versions the labels of each of its
+    inputs named, since a pin of a snapshot pins its labels: the snapshots
+    holding those versions are kept as well. A label on a snapshot no kept
+    snapshot was made from keeps nothing beyond the newest snapshot's, as
+    before, so taking a label away still releases its version.
+    """
+    removable = {id(taken): (taken, why) for taken, why in plan.remove}
+    by_moment: dict[tuple[str, str], list] = {}
+    for group in groups.values():
+        for taken in group:
+            by_moment.setdefault((taken.commit, taken.made_at), []).append(taken)
+    def holding_labelled(upstream) -> list:
+        """The snapshots of its pipeline holding the versions a snapshot's labels name."""
+        found = []
+        labels = upstream.labels if isinstance(upstream.labels, dict) else {}
+        for name, named in labels.items():
+            for start in (named.values() if isinstance(named, dict) else []):
+                start = str(start).split(":", 1)[-1]
+                if len(start) < 12:
+                    continue
+                for other in groups.get((upstream.pipeline, upstream.subdirectory), []):
+                    held = (other.assets.get(name) or {}).get("content_hash")
+                    if isinstance(held, str) and held.split(":", 1)[-1].startswith(start):
+                        found.append(other)
+        return found
+
+    queue = [taken for taken, _ in plan.keep]
+    while queue and removable:
+        taken = queue.pop()
+        rescued = []
+        for entry in taken.inputs if isinstance(taken.inputs, list) else []:
+            location = entry.get("location") if isinstance(entry, dict) else None
+            if isinstance(location, dict) and isinstance(location.get("commit"), str) and isinstance(entry.get("snapshot"), str):
+                for upstream in by_moment.get((location["commit"], entry["snapshot"]), []):
+                    rescued.append((upstream, "a snapshot that is kept was made from it"))
+                    # What was pinned from it held its labels' versions too
+                    for holder in holding_labelled(upstream):
+                        rescued.append((holder, "a snapshot that is kept was made from a label pointing at a version in it"))
+        for upstream, why in rescued:
+            if id(upstream) in removable:
+                del removable[id(upstream)]
+                plan.keep.append((upstream, why))
+                queue.append(upstream)
+    plan.remove = [(taken, why) for taken, why in plan.remove if id(taken) in removable]
 
 
 def remove(store: Store, taken: Snapshot) -> bool:
@@ -1369,12 +1435,18 @@ def check_within(directory: Union[str, Path], pipeline: str) -> None:
             )
 
 
-def _built_with(run: bool) -> dict:
-    """The conditions a snapshot is being made under, as far as they are recorded."""
+def _built_with(run: bool, lineage: str = "pins") -> dict:
+    """The conditions a snapshot is being made under, as far as they are recorded.
+
+    ``lineage`` says how its lineage was checked: ``pins`` (its own pins
+    account for every dependency, which every snapshot now needs) or
+    ``deep`` (every snapshot upstream was walked and checked too).
+    """
     from chartbook import __version__
 
     return {
         "run": run,
+        "lineage": lineage,
         "chartbook": __version__,
         "python": platform.python_version(),
         "platform": platform.platform(),
@@ -1444,6 +1516,7 @@ def make(
     made_at: Optional[str] = None,
     built_by_run: bool = False,
     ignoring: tuple = (),
+    deep: bool = False,
 ) -> SnapshotReport:
     """Make a snapshot of a pipeline: what it has built, at the commit it is on.
 
@@ -1463,6 +1536,9 @@ def make(
         making this snapshot (``chartbook run --snapshot``).
     :param ignoring: File names that may be uncommitted; see
         :func:`uncommitted`.
+    :param deep: Also refuse if any snapshot upstream has a gap in its own
+        lineage (:func:`chartbook.lineage.walk`), not only this pipeline's
+        pins.
     :returns: The snapshot, and whether it is new.
     :raises SnapshotError: If the folder holds no pipeline, is not in git,
         has anything uncommitted, or has built nothing.
@@ -1473,6 +1549,17 @@ def make(
 
     store = store if store is not None else default_store()
     require_lineage(directory, pipeline, store)
+    if deep:
+        from chartbook.lineage import walk
+
+        upstream = [(node, gap) for node, gap in walk(directory, store).gaps() if node.kind != "working"]
+        if upstream:
+            shown = "\n".join(f"  {node.label}: {gap}" for node, gap in upstream[:10])
+            more = f"\n  and {len(upstream) - 10} more" if len(upstream) > 10 else ""
+            raise SnapshotError(
+                f"{pipeline} cannot have a snapshot with --deep: a snapshot upstream has a gap in its "
+                f"own lineage.\n{shown}{more}\n`chartbook lineage` shows the whole graph."
+            )
     raw = _read_manifest_file(directory)
     assets: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []
@@ -1533,7 +1620,7 @@ def make(
         code.subdirectory,
         made_at or _now(),
         assets,
-        built_with=_built_with(built_by_run),
+        built_with=_built_with(built_by_run, "deep" if deep else "pins"),
         inputs=_inputs(directory),
         labels=labels_of(raw),
     )

@@ -362,6 +362,7 @@ class TestBuiltWith:
         taken = snapshot.make(maker).snapshot
         assert taken.built_with == {
             "run": False,
+            "lineage": "pins",
             "chartbook": chartbook.__version__,
             "python": platform.python_version(),
             "platform": platform.platform(),
