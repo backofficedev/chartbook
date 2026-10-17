@@ -693,3 +693,66 @@ class TestWhatTheSixthReviewFound:
             monkeypatch.delenv(name)
         assert _git(user, "config", "--get", "core.bare").strip() == "false"
         assert _entry(forecast)["via"] == "rev"
+
+
+
+class TestWhatTheSeventhReviewFound:
+    def test_an_id_changed_with_nothing_to_take_keeps_the_old_listing_whole(self, host):
+        repository = _upstream(host, 4.0)
+        snapshot.make(repository)
+        forecast = _forecast(host / "forecast", {"rates": {"id": "acme/rates"}})
+        lock.pin(forecast)
+        before = _entry(forecast)
+        _set_host(host, "")
+        _forecast(forecast, {"rates": {"id": "acme/rates2"}})
+        lock.update(forecast)
+        assert _entry(forecast)["location"] == before["location"]  # not acme/rates2 at acme/rates's commit
+
+    def test_a_store_pin_kept_whole_offline_is_no_trouble_and_its_losses_are_said(self, host, monkeypatch, tmp_path):
+        repository = _upstream(host, 4.0)
+        snapshot.make(repository)
+        forecast = _forecast(host / "forecast", {"rates": {"id": "acme/rates"}})
+        lock.pin(forecast)
+        _forecast(forecast, {"rates": {"git": str(host / "no-such-repository")}})
+        report = lock.pin(forecast)
+        assert not report.problems and any(e.status == "kept" for e in report.events)
+        monkeypatch.setenv("CHARTBOOK_STORE", str(tmp_path / "an-empty-store"))
+        report = lock.pin(forecast)
+        assert any(e.status == "lost" for e in report.events)
+
+    def test_a_pinned_commit_on_no_branch_is_asked_for_by_its_hash(self, host, monkeypatch, tmp_path):
+        import dataclasses
+
+        from chartbook.store import default_store
+
+        repository = _upstream(host, 4.0)
+        _git(repository, "checkout", "--quiet", "-b", "side")
+        pl.DataFrame({"d": ["2024-01-01"], "r": [5.0]}).write_parquet(repository / "_data" / "treasury.parquet")
+        _commit(repository, "On a side branch")
+        taken = snapshot.make(repository).snapshot
+        taken.path.unlink()
+        snapshot._write(dataclasses.replace(taken, first_commit=""), default_store())  # as from a shallow clone
+        _git(repository, "checkout", "--quiet", "main")
+        _git(repository, "branch", "--quiet", "-D", "side")  # the commit is on no branch now
+        forecast = _forecast(host / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        monkeypatch.setenv("CHARTBOOK_STORE", str(tmp_path / "another-machines-store"))
+        report = lock.update(forecast)
+        refused = [e for e in report.events if e.status == "unfetched"]
+        assert not refused or "on any branch or tag or by its hash" in refused[0].detail
+
+    def test_a_git_dependencys_build_does_not_see_a_hooks_repository(self, host, monkeypatch):
+        from chartbook import run
+
+        user = host / "users-repository"
+        user.mkdir()
+        _git(user, "init", "--quiet", "-b", "main")
+        marker = host / "what-the-build-saw"
+        script = f"{sys.executable} -c \"import os; open(r'{marker}', 'w').write(os.environ.get('GIT_DIR', 'none'))\""
+        _upstream(host, 4.0, scripts={"build": script})
+        forecast = _forecast(host / "forecast", {"acme/rates": {}}, scripts={"build": f"{sys.executable} -c \"pass\""})
+        monkeypatch.setenv("GIT_DIR", str(user / ".git"))
+        report = run.run(forecast, echo=lambda *a, **k: None)
+        monkeypatch.delenv("GIT_DIR")
+        assert report.failed is None, report.reason
+        assert marker.read_text() == "none"

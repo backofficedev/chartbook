@@ -437,7 +437,7 @@ def plan(
     return order
 
 
-def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
+def execute(script: str, directory: Path, name: Optional[str] = None, foreign: bool = False) -> int:
     """Run one script in a directory, and return its exit code.
 
     The script is handed to a shell whole, so a value of several lines is
@@ -450,6 +450,9 @@ def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
 
     :param name: The script's name in ``[scripts]``. With it, the script
         is told which pipeline and which script it is (:func:`running`).
+    :param foreign: Whether the directory is a git dependency's working
+        copy, the cache's: then git in the script is not told of any other
+        repository the environment names (a git hook's ``GIT_DIR``).
     :returns: The script's exit code. One that a signal stopped gives 128
         plus the signal's number, as a shell reports it.
     """
@@ -461,6 +464,12 @@ def execute(script: str, directory: Path, name: Optional[str] = None) -> int:
         except (AttributeError, OSError, ValueError):
             pass
     environment = dict(os.environ)
+    if foreign:
+        # A git dependency's working copy, which is the cache's: git in its
+        # build must find that copy, never the repository a git hook says
+        from chartbook.gitcache import GIT_LOCATION_VARIABLES
+
+        environment = {k: v for k, v in environment.items() if k not in GIT_LOCATION_VARIABLES}
     if name == BUILD_SCRIPT:
         # A build is a batch run: a read of another pipeline that nothing
         # would record is refused there, not warned about
@@ -676,7 +685,7 @@ def run(
 
         where = "" if step.directory == here else f"    in {step.directory}"
         echo(f"{step.id}: {script}{where}")
-        code = execute(command, step.directory, script)
+        code = execute(command, step.directory, script, foreign=step.source == "git")
         if code != 0:
             report.failed, report.exit_code = step, code
             report.reason = f"its {script!r} script exited with {code}"

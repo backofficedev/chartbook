@@ -482,19 +482,35 @@ def _project_id_in(directory: Path) -> Optional[str]:
     return named if isinstance(named, str) and named else f"an id that is no name ({named!r:.40})"
 
 
-def _has_commit(git_cache: GitCache, url: str, commit: str) -> bool:
-    """Whether a repository's clone in the git cache has a commit."""
+def _has_commit(git_cache: GitCache, url: str, commit: str, fetch: bool = False) -> bool:
+    """Whether a repository's clone in the git cache has a commit; with *fetch*, after asking the repository for it by its hash.
+
+    The cache fetches branches and tags, so a commit on none of them (a
+    branch since deleted, a pull request's merge) is asked for by itself.
+    """
     import subprocess
 
     environment = {k: v for k, v in os.environ.items() if k not in _GIT_LOCATION_VARIABLES}
-    try:
-        result = subprocess.run(
-            ["git", f"--git-dir={git_cache.repo_path(url)}", "cat-file", "-e", f"{commit}^{{commit}}"],
-            capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
-        )
-    except (OSError, subprocess.SubprocessError, ValueError):
+
+    def present() -> bool:
+        try:
+            result = subprocess.run(
+                ["git", f"--git-dir={git_cache.repo_path(url)}", "cat-file", "-e", f"{commit}^{{commit}}"],
+                capture_output=True, text=True, timeout=60, env={**environment, "GIT_OPTIONAL_LOCKS": "0"},
+            )
+        except (OSError, subprocess.SubprocessError, ValueError):
+            return False
+        return result.returncode == 0
+
+    if present():
+        return True
+    if not fetch:
         return False
-    return result.returncode == 0
+    try:
+        git_cache._git(f"--git-dir={git_cache.repo_path(url)}", "fetch", "--quiet", url, commit, url=url)
+    except (GitError, ValueError, OSError):
+        return False
+    return present()
 
 
 def _first_commit_of(git_cache: GitCache, url: str, commit: str) -> str:
@@ -820,12 +836,13 @@ def _sync_now(
                             f"{why}, and that repository's history begins at {first[:7]}, not at {recorded[:7]} as the "
                             f"one it was pinned from: another repository, or its history rewritten. {way_out}"
                         )
-                    elif not recorded and pinned_commit and not _has_commit(git_cache, url, pinned_commit):
+                    elif not recorded and pinned_commit and not _has_commit(git_cache, url, pinned_commit, fetch=True):
                         # Nothing of its first commit was recorded (a snapshot from a
                         # shallow clone): the commit it was pinned at must be in this one
                         failure = (
                             f"{why}, and that repository does not have {pinned_commit[:7]}, the commit it was "
-                            f"pinned at: another repository. {way_out}"
+                            f"pinned at, on any branch or tag or by its hash: another repository, or that commit "
+                            f"gone from it. {way_out}"
                         )
                     elif first:
                         listed = {**listed, "location": {**listed["location"], "first_commit": first}}
@@ -836,7 +853,11 @@ def _sync_now(
             if directory is None and listed is was and (was or {}).get("location", {}).get("kind") == "store":
                 # Not got from its repository: the store pin stays as it was, labels and all
                 report.git.discard(key)
-                report.events.append(PinEvent("unfetched", key, detail=failure))
+                lost = any(r.get("content_hash") and not store.has(r["content_hash"]) for r in had.values())
+                if may_move or not any(r.get("content_hash") for r in had.values()) or lost:
+                    report.events.append(PinEvent("unfetched", key, detail=failure))
+                for asset_id, record in sorted(had.items()):
+                    _report_kept(record, key, store, report)
                 records = dict(had)
                 listed = {**was, "location": dict(was["location"])}
                 listed = {k: v for k, v in listed.items() if k != "pinned_hash"}
@@ -1506,9 +1527,13 @@ def _sync_from_snapshots(
 
     def as_it_was() -> dict:
         """The listing, still naming the snapshot the pins came from, and the repository it came from."""
-        if (was or {}).get("location", {}).get("kind") == "git":
-            # Pinned from its repository: it says so still, not a store pin at its commit
-            return {**was, "location": dict(was["location"])}
+        was_location = (was or {}).get("location", {})
+        if was_location.get("kind") == "git" or (
+            was_location.get("pipeline") and was_location.get("pipeline") != listed.get("location", {}).get("pipeline")
+        ):
+            # Pinned from its repository, or as another pipeline: it says so
+            # still, not the pipeline asked for now at the old commit
+            return {**was, "location": dict(was_location)}
         kept = dict(listed)
         if locked_commit:
             kept["location"] = {**listed["location"], "commit": locked_commit}
