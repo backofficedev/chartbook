@@ -83,7 +83,7 @@ class TestManifest:
             ({"local": {"backend": "duckdb"}}, "needs 'url'"),
             ({"local": {"url": "duckdb:///x"}}, "needs 'backend'"),
             ({"local": {"backend": "duckdb", "url": "duckdb:///x", "password": "x"}}, "has 'password'"),
-            ({"wh": {"backend": "snowflake", "url": "snowflake://acct/db"}}, "backend 'snowflake' is not built"),
+            ({"wh": {"backend": "snowflake", "url": "snowflake://acct/db"}}, "backend 'snowflake' is not one ChartBook knows"),
             ({"local": {"backend": "duckdb", "url": "postgresql://h/db"}}, "does not begin with duckdb://"),
             ({"local": {"backend": "duckdb", "url": "duckdb://user:pw@h/db"}}, "carries a user name or a password"),
         ],

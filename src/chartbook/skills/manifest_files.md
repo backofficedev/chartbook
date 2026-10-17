@@ -165,7 +165,7 @@ A dataframe is in one place: a file (`path`), or a table or query in a source.
 
 ```toml
 [sources.local]
-backend = "duckdb"                          # the only backend built; others are refused
+backend = "duckdb"                          # or "databricks"; others are refused
 url = "duckdb:///./_data/local.duckdb"      # public part only; NEVER credentials
 
 [dataframes.curve]
@@ -184,6 +184,13 @@ query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
   then `~/.chartbook/sources.toml`, then the manifest URL. Connections are read-only and
   opened afresh per load; a `:memory:` source is one writable connection for the process.
   A DuckDB url is the file alone: no host, user or `?options`.
+- `backend = "databricks"` (needs `pip install chartbook[databricks]`) is a SQL warehouse:
+  `url = "databricks://<host>?http_path=<path>&catalog=<c>&schema=<s>"`, every part optional.
+  The machine signs in with `DATABRICKS_HOST` + `DATABRICKS_TOKEN` (or the machine URL
+  `databricks://token:<t>@<host>?http_path=…`, or `auth=oauth`). A token goes only to the host
+  the machine names: a manifest host that differs stops the read. Rows come when the lazy frame
+  is collected. A query in a warehouse cannot name a file of the pipeline. Another pipeline
+  cannot pin a warehouse table yet.
 - ChartBook never parses or rewrites SQL. The index records `location` kind
   `table`/`query` with a `definition_hash` instead of a `content_hash`.
 - A catalog cannot have `[sources]`.

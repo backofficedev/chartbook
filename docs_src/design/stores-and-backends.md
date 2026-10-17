@@ -4,7 +4,7 @@
 A design document, written 2026-10-16 after cross-pipeline dependencies were made to work on one
 machine ({doc}`overview`, step 4, and PR 65). It plans how ChartBook keeps the same experience for
 the person using it, from a laptop with nothing installed to an organization's own storage and
-warehouses. Status: **the settings layers, the store interface and the S3 store are built (2026-10-16); the backend interface and the first warehouse adapter are proposed.**
+warehouses. Status: **the settings layers, the store interface and the S3 store are built (2026-10-16); the backend interface and reading from Databricks, the first warehouse, are built (2026-10-17); pins in a warehouse are proposed.**
 The decisions the maintainer has taken are marked *decided*; the rest is *proposed*.
 ```
 
@@ -157,11 +157,23 @@ formalized from what DuckDB does today, and the first warehouse adapter shapes t
    of several files appear whole or not at all; a snapshot interrupted mid-upload leaves a
    partial object that readers refuse by name, and making the snapshot again completes it.
 4. The backend interface formalized from DuckDB; the first warehouse adapter with version pins.
+   *Built 2026-10-17, all but the pins:* `chartbook.backends` is a package; `Backend` is the
+   interface (`ref`, `sql`, `scan`, `describe`, `span`, `connect`, `check_url`, and `reads_files`
+   for whether a query there may name a file); a backend other than DuckDB is found by its name in
+   the entry-point group `chartbook.backends`; `chartbook.backends.databricks.DatabricksBackend`
+   reads a Databricks SQL warehouse through the Databricks SQL connector, behind
+   `chartbook[databricks]`, with a lazy frame that asks for the columns at once and the rows when
+   collected. One rule was added that this page did not foresee: a warehouse's credentials are sent
+   only to the host the machine names (its URL for the source, or `DATABRICKS_HOST`), and a host a
+   manifest or a record names is a check against it, never used in its place, since anyone who
+   can write a manifest or a shared store could otherwise send this machine's token to their own
+   server. A snapshot records a warehouse table without a copy until the pins are built.
 
 ## What this does not decide
 
 Which warehouse comes first, Snowflake or Databricks; the first one shapes the backend
-interface. Whether a warehouse pin should be a version where the engine offers one and a copy
+interface. *Decided by the maintainer 2026-10-17: Databricks, which has a free edition that does
+not expire to test with.* Whether a warehouse pin should be a version where the engine offers one and a copy
 only where it does not, which is the recommendation here. How a database used as a *store*
 lays out objects and snapshots inside it. Each is marked where it arises, and each waits for the
 maintainer.

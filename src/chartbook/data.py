@@ -582,9 +582,10 @@ def sql(
     the SQL runs in one engine: the source that the tables and queries in it
     live in, or a fresh in-memory DuckDB of its own when it names only
     files. ChartBook never parses or rewrites the SQL; what is between the
-    braces is a reference, and everything else is yours, in DuckDB's
+    braces is a reference, and everything else is yours, in that engine's
     dialect. A literal brace, as in DuckDB's ``{'a': 1}`` struct syntax or
-    inside a string, is written twice: ``{{'a': 1}}``.
+    inside a string, is written twice: ``{{'a': 1}}``. A warehouse reads
+    its own tables only, so a query run in one names no file.
 
     A dataframe of another pipeline, ``{fed_yield_curve:treasury_rates}``,
     is the pinned copy, as everywhere else.
@@ -595,12 +596,13 @@ def sql(
         only running can find, such as a cast that fails on one value, is
         raised then with DuckDB's message in it, as Polars' ``ComputeError``
         or as DuckDB's own exception, by Polars version.
-    :raises ValueError: If the query has no reference in it, or names
-        dataframes of two different sources.
+    :raises ValueError: If the query has no reference in it, names
+        dataframes of two different sources, or names a file alongside a
+        source whose engine cannot read one.
     :raises chartbook.backends.BackendError: If the engine refuses the SQL
         as it binds it: a name it does not know, or SQL it cannot parse.
     """
-    from chartbook.backends import DuckDBBackend, backend_for
+    from chartbook.backends import DuckDBBackend, backend_for, open_backend
 
     start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     query = query.replace("{{", _LITERAL_OPEN).replace("}}", _LITERAL_CLOSE)
@@ -612,27 +614,38 @@ def sql(
             "with no ChartBook reference in it, use data.connect(source).sql(...). "
             "A doubled brace, {{ or }}, is a literal one."
         )
-    engines: dict[str, str] = {}
-    substitutions = {}
+    engines: dict[tuple, str] = {}
+    files = []
+    locations = {}
     for text in dict.fromkeys(found):
         asset = _assets.parse(text.strip(), kind="dataframe")
-        location = resolve(asset, start_dirs=start_dirs)
-        substitutions[text] = backend_for(location).ref(location)
+        locations[text] = location = resolve(asset, start_dirs=start_dirs)
         if location.kind != "file":
-            engines[location.url] = location.source
+            engines[(location.backend, location.url)] = location.source
+        else:
+            files.append(text.strip())
     if len(engines) > 1:
         raise ValueError(
             f"The query names dataframes in {len(engines)} sources, "
             f"{', '.join(sorted(engines.values()))}. One source at a time: an "
             f"engine runs SQL over its own tables, and files it can read."
         )
-    for text, replacement in substitutions.items():
+    if not engines:
+        engine = DuckDBBackend.scratch()
+    else:
+        ((backend, url), source), = engines.items()
+        engine = open_backend(backend, url, source)
+        if files and not engine.reads_files:
+            raise ValueError(
+                f"The query names {', '.join(files)}, a file of this machine, and dataframes in "
+                f"the source {source!r}, a {backend} engine, which reads its own tables only. "
+                f"Load them apart with data.load() and join the frames in Polars."
+            )
+    for text, location in locations.items():
+        replacement = backend_for(location).ref(location) if location.kind == "file" else engine.ref(location)
         query = query.replace("{" + text + "}", replacement)
     query = query.replace(_LITERAL_OPEN, "{").replace(_LITERAL_CLOSE, "}")
-    if not engines:
-        return DuckDBBackend.scratch().sql(query)
-    (url,) = engines
-    return DuckDBBackend(url).sql(query)
+    return engine.sql(query)
 
 
 def connect(
@@ -649,16 +662,17 @@ def connect(
     afresh for each call; close it when you are done, or let it go. For a
     ``:memory:`` source it is the one connection that source is, for the
     life of the process, and it is writable: such a source holds what you
-    put in it, and nothing else. Anything ChartBook does not expose is
-    reachable here, and the SQL you run with it is between you and the
-    engine.
+    put in it, and nothing else. For a Databricks source it is a connection
+    of the Databricks SQL connector, signed in as this machine says; close
+    it when you are done. Anything ChartBook does not expose is reachable
+    here, and the SQL you run with it is between you and the engine.
 
     :param source: The source's name in ``[sources]``.
     :param project_dir: Where to look for the pipeline, as for :func:`path`.
     :raises LookupError: If the manifest declares no such source.
     :raises chartbook.backends.BackendError: If it cannot be opened.
     """
-    from chartbook.backends import DuckDBBackend
+    from chartbook.backends import open_backend
     from chartbook.manifest import validate_sources
     from chartbook.resolve import MANIFEST_NAME, _read_raw_manifest, find_manifest_dir
 
@@ -671,5 +685,5 @@ def connect(
             f"No source named {source!r} in {manifest_dir / MANIFEST_NAME}. Its "
             f"sources are: {declared}."
         )
-    return DuckDBBackend(sources[source]["_resolved_url"]).connect()
+    return open_backend(sources[source]["backend"], sources[source]["_resolved_url"], source).connect()
 

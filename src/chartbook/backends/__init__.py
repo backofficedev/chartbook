@@ -17,14 +17,17 @@ ChartBook never parses, plans or rewrites SQL. It knows where a name lives
 and which dialect lives there, and it substitutes identifiers. The SQL is
 the user's (:func:`chartbook.data.sql`).
 
-Two backends are built in. ``parquet`` is what a file-backed dataframe has
+Three backends are built. ``parquet`` is what a file-backed dataframe has
 always been: it reads the file, and in SQL it is ``read_parquet('…')``.
 ``duckdb`` is the local engine: a file, or ``:memory:``, that holds tables
 and runs any SQL that mentions them, and reads parquet files too, so a
-query can join a table of one source with a file of this pipeline. Other
-engines (Snowflake, Databricks, Postgres) are not built; a manifest that
-names one is refused, so that the message can say so. The asset graph's
-rule holds: no plugin seam before a third implementation exists.
+query can join a table of one source with a file of this pipeline.
+``databricks`` is a SQL warehouse (:mod:`chartbook.backends.databricks`),
+whose driver ``pip install chartbook[databricks]`` installs. A source's
+backend is found by its name: ``duckdb`` here, any other in the entry-point
+group ``chartbook.backends``, as a kind of store is in ``chartbook.stores``.
+What a backend does for ChartBook is :class:`Backend`. A manifest that
+names a backend nothing provides is refused, so that the message can say so.
 
 **Credentials never enter a manifest.** A source's ``url`` is the public
 part. The machine supplies the rest (:func:`source_url`): an environment
@@ -32,7 +35,9 @@ variable ``CHARTBOOK_SOURCE_<NAME>_URL`` holding a complete URL, then a
 ``url`` for the source in ``~/.chartbook/sources.toml``, then the manifest's
 URL alone, which is all a DuckDB file needs. A manifest URL that carries a
 user name or a password is refused when the manifest loads, and so is a
-machine URL for a different engine than the manifest's backend.
+machine URL for a different engine than the manifest's backend. A
+warehouse's backend may take its credentials from the engine's own
+environment variables too, and sends them only to a host the machine names.
 
 **No writes.** A connection to a DuckDB file is opened read-only.
 ChartBook never creates, loads or alters a table; ``table`` and ``query``
@@ -50,10 +55,11 @@ the file in the same process.
 
 from __future__ import annotations
 
+import functools
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, ClassVar, Optional, Union
 from urllib.parse import urlsplit
 
 import tomli
@@ -64,8 +70,12 @@ from chartbook.identity import strip_url_credentials
 if TYPE_CHECKING:  # pragma: no cover
     from chartbook.resolve import FileLocation, Location
 
-#: The backends that are built. A manifest naming another is refused.
-BACKENDS = ("duckdb",)
+#: The entry-point group a backend is found in by its name: an entry named
+#: as ``[sources.x] backend`` says, whose value is a :class:`Backend` class.
+BACKEND_PLUGIN_GROUP = "chartbook.backends"
+
+#: What installs the driver of each backend ChartBook brings, for a message.
+EXTRAS = {"databricks": "pip install chartbook[databricks]"}
 
 #: Where a machine keeps what a manifest may not: ``[<source>] url = "…"``.
 SOURCES_FILE = "sources.toml"
@@ -87,15 +97,14 @@ def source_env_var(name: str) -> str:
     return SOURCE_ENV_PREFIX + re.sub(r"[^A-Za-z0-9]", "_", name).upper() + "_URL"
 
 
-def source_url(name: str, manifest_url: str) -> str:
-    """The URL a source is opened with, credentials and all.
+def machine_source_url(name: str) -> Optional[str]:
+    """The URL this machine gives a source, credentials and all; None if it gives none.
 
-    In order: the environment variable :func:`source_env_var` gives;
-    ``url`` under ``[<name>]`` in ``~/.chartbook/sources.toml``; the
-    manifest's own URL, which is enough for a DuckDB file.
+    The environment variable :func:`source_env_var` names, then ``url``
+    under ``[<name>]`` in ``~/.chartbook/sources.toml``.
 
     :param name: The source's name in ``[sources]``.
-    :param manifest_url: Its ``url`` as the manifest has it.
+    :raises BackendError: If ``sources.toml`` is there and cannot be read.
     """
     from_environment = os.environ.get(source_env_var(name))
     if from_environment:
@@ -110,20 +119,64 @@ def source_url(name: str, manifest_url: str) -> str:
         raise BackendError(f"Cannot read {settings}: {error}") from None
     if isinstance(table, dict) and isinstance(table.get("url"), str):
         return table["url"]
-    return manifest_url
+    return None
+
+
+def source_url(name: str, manifest_url: str) -> str:
+    """The URL a source is opened with, credentials and all.
+
+    In order: the environment variable :func:`source_env_var` gives;
+    ``url`` under ``[<name>]`` in ``~/.chartbook/sources.toml``; the
+    manifest's own URL, which is enough for a DuckDB file.
+
+    :param name: The source's name in ``[sources]``.
+    :param manifest_url: Its ``url`` as the manifest has it.
+    """
+    return machine_source_url(name) or manifest_url
+
+
+def backend_names() -> list[str]:
+    """Every backend a source may name here: ``duckdb``, and each one a plugin provides."""
+    from importlib.metadata import entry_points
+
+    return sorted({"duckdb"} | {entry.name for entry in entry_points(group=BACKEND_PLUGIN_GROUP)})
+
+
+@functools.lru_cache(maxsize=None)
+def backend_class(name: str) -> Optional[type]:
+    """The :class:`Backend` class a source's ``backend`` names; None if nothing provides it.
+
+    ``duckdb`` is built in. Another name is looked up once per process in the
+    entry-point group ``chartbook.backends``; the first entry with the name
+    wins. A plugin whose driver is not installed still loads: the driver is
+    imported when the backend connects, and the message then names the extra.
+
+    :raises ValueError: If the plugin is there and cannot be loaded, naming it.
+    """
+    from importlib.metadata import entry_points
+
+    if name == "duckdb":
+        return DuckDBBackend
+    for entry in entry_points(group=BACKEND_PLUGIN_GROUP):
+        if entry.name == name:
+            try:
+                return entry.load()
+            except Exception as error:  # noqa: BLE001 - whatever the plugin's import raised
+                raise ValueError(f"The backend plugin {entry.value!r} for {name!r} cannot be loaded: {error}") from None
+    return None
 
 
 def check_backend(name: str, where: str) -> None:
-    """Refuse a backend that is not built, and say which are.
+    """Refuse a backend nothing provides, and say which there are.
 
     :param where: The manifest table, for the message.
     """
-    if name not in BACKENDS:
+    if backend_class(name) is None:
         raise ValueError(
-            f"{where}: backend {name!r} is not built. The backends are: "
-            f"{', '.join(BACKENDS)}. Other engines arrive as plugins later; a "
-            f"manifest that names one is refused until then, so that nothing "
-            f"guesses."
+            f"{where}: backend {name!r} is not one ChartBook knows. The backends are: "
+            f"{', '.join(backend_names())}. Another engine is a plugin, a package with "
+            f"a {BACKEND_PLUGIN_GROUP!r} entry point named for it; a manifest that names "
+            f"one nothing provides is refused, so that nothing guesses."
         )
 
 
@@ -135,8 +188,9 @@ def scheme_of(url: str) -> str:
 def check_url(url: str, backend: str, where: str) -> None:
     """Refuse a source URL that carries credentials or the wrong scheme.
 
-    For a DuckDB URL, also one with a host, a user, connection options or
-    a fragment: ``duckdb:///<file>`` and nothing else.
+    Then what the backend itself refuses (:meth:`Backend.check_url`): for a
+    DuckDB URL, one with a host, a user, connection options or a fragment,
+    ``duckdb:///<file>`` and nothing else.
     """
     if strip_url_credentials(url) != url:
         raise ValueError(
@@ -149,11 +203,10 @@ def check_url(url: str, backend: str, where: str) -> None:
             f"{where}: the url {url!r} does not begin with {backend}://, which is "
             f"what a {backend} source takes."
         )
-    if backend == "duckdb":
-        try:
-            duckdb_path(url, ".")
-        except ValueError as error:
-            raise ValueError(f"{where}: {error}") from None
+    try:
+        backend_class(backend).check_url(url)
+    except ValueError as error:
+        raise ValueError(f"{where}: {error}") from None
 
 
 def duckdb_path(url: str, manifest_dir: Union[str, Path]) -> str:
@@ -189,14 +242,17 @@ def duckdb_path(url: str, manifest_dir: Union[str, Path]) -> str:
     return os.path.normpath(Path(manifest_dir) / rest) if not rest.startswith("/") else rest
 
 
-def quote_identifier(identifier: str) -> str:
+def quote_identifier(identifier: str, quote: str = '"') -> str:
     """Quote a one-to-three-part identifier for DuckDB: ``"a"."b"."c"``.
+
+    With a backtick for *quote*, as Databricks quotes one, each part is
+    between backticks instead, and a backtick inside it is doubled.
 
     A part is quoted with double quotes, and a double quote inside it is
     doubled. What is between the dots is the user's; nothing is guessed.
     """
     parts = identifier.split(".")
-    return ".".join('"' + part.replace('"', '""') + '"' for part in parts)
+    return ".".join(quote + part.replace(quote, quote * 2) + quote for part in parts)
 
 
 def quote_literal(text: str) -> str:
@@ -215,6 +271,84 @@ def subselect(sql: str) -> str:
     while text.endswith(";"):
         text = text[:-1].rstrip()
     return f"(\n{text}\n)"
+
+
+def refuse_in_an_untrusted_build() -> None:
+    """Refuse to reach an engine in a build of files from a store.
+
+    Anyone who can write the store may have written its manifest: a query
+    can read any file of the machine, and a warehouse's URL could send this
+    machine's credentials elsewhere.
+
+    :raises BackendError: In such a build.
+    """
+    from chartbook.config import untrusted_source
+
+    if untrusted_source():
+        raise BackendError(
+            "A table or a query is not read in a build of files from a store; the snapshot "
+            "holds its rows as parquet."
+        )
+
+
+class Backend:
+    """An engine behind a source: what ChartBook asks of one.
+
+    ``name`` is what ``[sources.x] backend`` says. A backend is made from a
+    source's public URL, as its location carries it, and the source's name,
+    by which the machine's own URL and credentials are found; it connects
+    only when asked. Every call that reaches the engine raises
+    :class:`BackendError` with the engine's own message when it fails.
+
+    ``reads_files`` says whether SQL run in it may name a file of this
+    machine as :class:`ParquetBackend` writes one, ``read_parquet('…')``:
+    so whether :func:`chartbook.data.sql` may join this engine's tables
+    with a pipeline's files in one query.
+    """
+
+    name: ClassVar[str]
+    reads_files: ClassVar[bool] = False
+
+    def __init__(self, url: str, source: Optional[str] = None):
+        self.url = url
+        self.source = source
+
+    @staticmethod
+    def check_url(url: str) -> None:
+        """Refuse a manifest URL this backend cannot open, with what to write instead.
+
+        Credentials and the scheme are checked before this (:func:`check_url`).
+
+        :raises ValueError: Saying what is wrong with it.
+        """
+
+    def connect(self):
+        """The engine's own connection, for :func:`chartbook.data.connect`."""
+        raise NotImplementedError
+
+    def ref(self, location: "Location") -> str:
+        """A table as a quoted identifier; a query as a sub-select: what stands for it in SQL here."""
+        raise NotImplementedError
+
+    def sql(self, query: str):
+        """Run SQL in this engine and return a Polars LazyFrame.
+
+        The engine binds the query here, so a name it does not know is
+        refused at once; collecting the frame runs it.
+        """
+        raise NotImplementedError
+
+    def scan(self, location: "Location"):
+        """A table or a query, as a Polars LazyFrame."""
+        return self.sql(f"select * from {self.ref(location)}")
+
+    def describe(self, location: "Location") -> tuple[list[dict], int]:
+        """A dataframe's columns, with the engine's type names, and its row count."""
+        raise NotImplementedError
+
+    def span(self, location: "Location", column: str) -> tuple:
+        """The first and last date in one column, read as timestamps; a value that is not one is left out."""
+        raise NotImplementedError
 
 
 class ParquetBackend:
@@ -243,7 +377,7 @@ class ParquetBackend:
         return pl.scan_parquet(location.path, hive_partitioning=True)
 
 
-class DuckDBBackend:
+class DuckDBBackend(Backend):
     """A DuckDB file, opened read-only for each use, or an in-memory engine.
 
     A file is opened afresh by every :meth:`connect`, so nothing in the
@@ -254,11 +388,16 @@ class DuckDBBackend:
     """
 
     name = "duckdb"
+    reads_files = True
     _memory: dict = {}
 
-    def __init__(self, url: str, connection=None):
-        self.url = url
+    def __init__(self, url: str, source: Optional[str] = None, connection=None):
+        super().__init__(url, source)
         self._connection = connection
+
+    @staticmethod
+    def check_url(url: str) -> None:
+        duckdb_path(url, ".")
 
     @classmethod
     def scratch(cls) -> "DuckDBBackend":
@@ -281,13 +420,7 @@ class DuckDBBackend:
         """
         import duckdb
 
-        from chartbook.config import untrusted_source
-
-        if untrusted_source():
-            raise BackendError(
-                "A table or a query is not read in a build of files from a store; the snapshot "
-                "holds its rows as parquet."
-            )
+        refuse_in_an_untrusted_build()
         if self._connection is not None:
             return self._connection
         path = duckdb_path(self.url, Path.cwd())
@@ -305,8 +438,7 @@ class DuckDBBackend:
         except duckdb.Error as error:
             raise BackendError(f"Cannot open {path}: {error}") from None
 
-    @staticmethod
-    def ref(location: "Location") -> str:
+    def ref(self, location: "Location") -> str:
         """A table as a quoted identifier; a query as a sub-select."""
         if location.kind == "table":
             return quote_identifier(location.identifier)
@@ -332,9 +464,6 @@ class DuckDBBackend:
             return self.connect().sql(query).pl(lazy=True)
         except duckdb.Error as error:
             raise BackendError(str(error)) from None
-
-    def scan(self, location: "Location"):
-        return self.sql(f"select * from {self.ref(location)}")
 
     def describe(self, location: "Location") -> tuple[list[dict], int]:
         """A dataframe's columns, with DuckDB's type names, and its row count."""
@@ -370,12 +499,32 @@ def backend_for(location: "Location"):
     """The backend that reads a location: parquet for a file, else the source's.
 
     :raises NotImplementedError: For a kind of location nothing here reads.
+    :raises BackendError: For a source whose backend nothing provides here,
+        as a location read from another pipeline's record may name.
     """
     if location.kind == "file":
         return ParquetBackend()
     if location.kind in ("table", "query"):
-        return DuckDBBackend(location.url)
+        return open_backend(location.backend, location.url, location.source)
     raise NotImplementedError(
         f"A {location.kind}-backed dataframe cannot be read: no backend reads "
         f"that kind of location."
     )
+
+
+def open_backend(name: str, url: str, source: Optional[str] = None) -> Backend:
+    """The backend a source names, made from its public URL and its name.
+
+    :raises BackendError: If nothing here provides it: a record from
+        another machine may name a backend this one has no plugin for.
+    """
+    try:
+        found = backend_class(name)
+    except ValueError as error:
+        raise BackendError(str(error)) from None
+    if found is None:
+        raise BackendError(
+            f"The source {source!r} is in a {name} engine, and nothing here provides one. "
+            f"The backends are: {', '.join(backend_names())}."
+        )
+    return found(url, source)

@@ -12,23 +12,31 @@ def _project():
         return tomli.load(f)["project"]
 
 
-def test_the_extras_are_the_contributor_one_a_store_and_a_site_tool():
+def test_the_extras_are_the_contributor_one_a_store_a_warehouse_and_a_site_tool():
     """The no-op [all], [data], [plotting] and [sphinx] aliases are retired.
 
     What remains is contributor tooling, a kind of store that needs a cloud
-    library the base install does not bring, and a second site tool; each
-    extra holds those libraries and nothing of the package itself, and
-    Sphinx stays a base dependency.
+    library the base install does not bring, a warehouse's driver, and a
+    second site tool; each extra holds those libraries and nothing of the
+    package itself, and Sphinx stays a base dependency.
     """
     extras = _project()["optional-dependencies"]
-    assert set(extras) == {"dev", "s3", "mkdocs"}
+    assert set(extras) == {"dev", "s3", "databricks", "mkdocs"}
     assert [r.split(">")[0] for r in extras["s3"]] == ["boto3"]
+    assert [r.split(">")[0] for r in extras["databricks"]] == ["databricks-sql-connector[pyarrow]"]
     assert [r.split(">")[0] for r in extras["mkdocs"]] == ["mkdocs", "mkdocs-material", "mkdocs-jupyter"]
 
 
 def test_a_kind_of_store_is_an_entry_point():
     """A store is found by the scheme of its URL; the S3 store is registered under `s3`."""
     assert _project()["entry-points"]["chartbook.stores"] == {"s3": "chartbook.stores.s3:S3Store"}
+
+
+def test_a_backend_is_an_entry_point():
+    """A source's backend is found by its name; Databricks is registered under `databricks`."""
+    assert _project()["entry-points"]["chartbook.backends"] == {
+        "databricks": "chartbook.backends.databricks:DatabricksBackend"
+    }
 
 
 def test_everything_is_a_base_dependency():
