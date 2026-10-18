@@ -22,7 +22,7 @@ from chartbook import index, lock, run, snapshot
 from chartbook.cli import main
 from chartbook.gitcache import GitCache, forget_built, is_built, mark_built
 from chartbook.manifest import load_manifest, read_scripts
-from chartbook.run import RunError, Step, execute, plan
+from chartbook.run import _STOP_ON_FAILURE, RunError, Step, _batch_script, execute, plan
 from chartbook.store import default_store
 
 posix = pytest.mark.skipif(os.name == "nt", reason="the scripts here are POSIX shell")
@@ -297,6 +297,57 @@ class TestExecute:
             [sys.executable, "-c", program], cwd=work, capture_output=True, text=True
         )
         assert result.stdout.split() == ["before", "during", "after"], result.stderr
+
+
+class TestBatchScript:
+    """On Windows a script of several lines goes in a batch file, and cmd runs a batch
+    file to its end whatever each line returns, with the last line's exit code.
+    Found by a reviewer: a failed pull followed by a render that worked reported
+    success, where `bash -e` stops at the first failure. The file is made by a
+    pure function, so this checks it on any OS; Windows itself was not run here."""
+
+    def test_each_command_is_followed_by_a_stop_on_failure(self):
+        text = _batch_script("python pull.py\npython render.py\n")
+        assert text.splitlines() == ["@echo off", "python pull.py", _STOP_ON_FAILURE, "python render.py", _STOP_ON_FAILURE]
+        assert text.endswith("\n")
+
+    def test_the_stop_exits_with_the_failing_lines_own_code(self):
+        assert _STOP_ON_FAILURE == "if %errorlevel% neq 0 exit /b %errorlevel%"
+
+    def test_blank_lines_and_comments_run_nothing_so_are_not_checked(self):
+        text = _batch_script("\nrem fetch, then render\n:: or so\nREM\n  \npython pull.py\n")
+        assert text.splitlines() == [
+            "@echo off", "", "rem fetch, then render", ":: or so", "REM", "  ", "python pull.py", _STOP_ON_FAILURE,
+        ]
+
+    def test_a_line_continued_with_a_caret_is_checked_where_it_ends(self):
+        text = _batch_script("python x.py ^\n  --flag\ndir\n")
+        assert text.splitlines() == ["@echo off", "python x.py ^", "  --flag", _STOP_ON_FAILURE, "dir", _STOP_ON_FAILURE]
+
+    def test_a_name_that_merely_starts_with_rem_is_a_command(self):
+        text = _batch_script("remove.exe\n")
+        assert text.splitlines() == ["@echo off", "remove.exe", _STOP_ON_FAILURE]
+
+    def test_execute_hands_cmd_that_file_on_windows(self, monkeypatch, work):
+        """Stands in for Windows: `os.name` says nt, and a fake cmd reads the file it was given."""
+        import subprocess as subprocesses
+
+        given = {}
+
+        def fake_run(arguments, **options):
+            given["arguments"] = arguments
+            with open(arguments[-1]) as f:  # not Path: with os.name patched, Path() makes a WindowsPath
+                given["text"] = f.read()
+            given["cwd"] = options["cwd"]
+            return subprocesses.CompletedProcess(arguments, 7)
+
+        monkeypatch.setattr(os, "name", "nt")
+        monkeypatch.setattr(run.subprocess, "run", fake_run)
+        assert execute("python pull.py\npython render.py\n", work) == 7
+        assert given["arguments"][:3] == ["cmd", "/d", "/c"] and given["arguments"][3].endswith(".cmd")
+        assert given["text"] == _batch_script("python pull.py\npython render.py\n")
+        assert given["cwd"] == work
+        assert not os.path.exists(given["arguments"][3])  # the file is removed after the run
 
 
 @posix

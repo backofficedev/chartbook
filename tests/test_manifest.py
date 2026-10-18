@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -628,3 +629,151 @@ class TestCatalogMembers:
 
         manifest = load_manifest(catalog)
         assert list(manifest["pipelines"]) == ["alpha"]
+
+
+class TestWhatTheReleaseReviewFound:
+    """Found by the review before 0.3.0: a field of the wrong type was read as
+    something else (a string as its letters), or fell over later with a
+    traceback. Nothing is guessed: the error names the file, the table and
+    the key, and says what to write."""
+
+    @staticmethod
+    def _pipeline(tmp_path, project=None, **tables) -> Path:
+        folder = tmp_path / "p"
+        folder.mkdir(exist_ok=True)
+        (folder / "chartbook.toml").write_text(tomli_w.dumps({"project": {"id": "p", **(project or {})}, **tables}))
+        return folder
+
+    def test_a_docs_path_that_is_not_a_string_is_named(self, tmp_path):
+        """`chartbook check` and `chartbook docs` died on `.strip()` of the integer."""
+        folder = self._pipeline(tmp_path, dataframes={"x": {"path": "./x.parquet", "docs_path": 5}})
+        with pytest.raises(ValueError) as e:
+            load_manifest(folder)
+        assert str(e.value) == (
+            f"{folder / 'chartbook.toml'}: [dataframes.x]: docs_path = 5 is an integer, and docs_path is a string. "
+            'Write docs_path = "./docs_src/dataframes/x.md".'
+        )
+
+    @pytest.mark.parametrize(
+        "table, entry, said",
+        [
+            ("notebooks", {"path": 5}, "[notebooks.x]: path = 5 is an integer, and path is a string. Write path = \"./_output/x.ipynb\"."),
+            ("charts", {"path": True, "docs": "d", "dataframe": "d"}, "[charts.x]: path = True is a boolean, and path is a string. Write path = \"./_output/x.html\"."),
+            ("dataframes", {"path": "./x.parquet", "docs": "d", "excel_path": [1]}, "[dataframes.x]: excel_path = [1] is an array, and excel_path is a string. Write excel_path = \"./_output/x.xlsx\"."),
+            ("charts", {"path": "./x.html", "docs": 7, "dataframe": "d"}, "[charts.x]: docs = 7 is an integer, and docs is a string."),
+            ("models", {"path": "./m.json", "docs": 7}, "[models.x]: docs = 7 is an integer, and docs is a string."),
+        ],
+    )
+    def test_every_path_field_and_the_write_up_is_a_string(self, tmp_path, table, entry, said):
+        folder = self._pipeline(tmp_path, **{table: {"x": entry}})
+        with pytest.raises(ValueError, match=re.escape(said)) as e:
+            load_manifest(folder)
+        assert str(e.value).startswith(str(folder / "chartbook.toml"))
+
+    def test_an_entry_that_is_not_a_table_is_said(self, tmp_path):
+        folder = self._pipeline(tmp_path, dataframes={"x": "./x.parquet"})
+        with pytest.raises(ValueError, match=re.escape("[dataframes.x] must be a table of the dataframe's fields, e.g. [dataframes.x] with a path = \"...\" under it; it is a string.")):
+            load_manifest(folder)
+        folder = self._pipeline(tmp_path, charts=5)
+        with pytest.raises(ValueError, match=re.escape("[charts] must be a table of tables, one per chart, e.g. [charts.<name>] with a path = \"...\" under it; it is an integer.")):
+            load_manifest(folder)
+
+    def test_a_note_needs_a_path(self, tmp_path):
+        """`[notes.x]` with no path was a raw KeyError('path'), which `check` printed as `Error: 'path'`."""
+        folder = self._pipeline(tmp_path, notes={"x": {"name": "Methods"}})
+        with pytest.raises(ValueError) as e:
+            load_manifest(folder)
+        assert str(e.value) == (
+            f"{folder / 'chartbook.toml'}: [notes.x] has no 'path'. Say where the note's markdown file is: "
+            'path = "./docs_src/x.md".'
+        )
+        folder = self._pipeline(tmp_path, notes={"x": {"path": 5}})
+        with pytest.raises(ValueError, match=re.escape("[notes.x]: path = 5 is an integer, and path is a string. Write path = \"./docs_src/x.md\".")):
+            load_manifest(folder)
+
+    @pytest.mark.parametrize(
+        "value, said",
+        [
+            ("description", "project = 'description' is a string, and project is a list of strings. Write project = [\"description\"]."),
+            (5, "project = 5 is an integer, and project is a list of strings. Write project = [\"name\", \"description\"]."),
+            ({"a": 1}, "project = {'a': 1} is a table, and project is a list of strings. Write project = [\"name\", \"description\"]."),
+            (["name", 1], "project = ['name', 1] is an array with an item that is not a string, and project is a list of strings."),
+        ],
+    )
+    def test_a_policy_list_is_a_list_of_field_names(self, tmp_path, value, said):
+        """`project = "description"` was list()-ed into the required fields d, e, s, c, r, i, p, t, o, n."""
+        folder = self._pipeline(tmp_path, policy={"required": {"project": value}})
+        with pytest.raises(ValueError, match=re.escape(f"{folder / 'chartbook.toml'}: [policy.required]: {said}")):
+            load_manifest(folder)
+
+    @pytest.mark.parametrize(
+        "tables, said",
+        [
+            ({"project": {"contributors": "Alice Smith"}}, "[project]: contributors = 'Alice Smith' is a string, and contributors is a list of strings. Write contributors = [\"Alice Smith\"]."),
+            ({"project": {"os_compatibility": "Linux"}}, "[project]: os_compatibility = 'Linux' is a string, and os_compatibility is a list of strings. Write os_compatibility = [\"Linux\"]."),
+            ({"dataframes": {"x": {"path": "./x.parquet", "docs": "d", "tags": "rates"}}}, "[dataframes.x]: tags = 'rates' is a string, and tags is a list of strings. Write tags = [\"rates\"]."),
+            ({"dataframes": {"x": {"path": "./x.parquet", "docs": "d", "sources": "FRED"}}}, "[dataframes.x]: sources = 'FRED' is a string, and sources is a list of strings. Write sources = [\"FRED\"]."),
+            ({"dataframes": {"x": {"path": "./x.parquet", "docs": "d", "providers": 5}}}, "[dataframes.x]: providers = 5 is an integer, and providers is a list of strings. Write providers = [\"Federal Reserve Board\"]."),
+            ({"dataframes": {"x": {"path": "./x.parquet", "docs": "d", "provider_links": [1]}}}, "[dataframes.x]: provider_links = [1] is an array with an item that is not a string"),
+            ({"charts": {"x": {"path": "./x.html", "docs": "d", "dataframe": "d", "tags": "Rates"}}}, "[charts.x]: tags = 'Rates' is a string"),
+            ({"models": {"x": {"path": "./m.json", "tags": "ml"}}}, "[models.x]: tags = 'ml' is a string"),
+        ],
+    )
+    def test_a_list_field_written_as_a_string_is_refused_not_read_as_its_letters(self, tmp_path, tables, said):
+        """`contributors = "Alice Smith"` made the maintainer "A"; `tags = "rates"` the tags R, A, T, E, S."""
+        folder = self._pipeline(tmp_path, **tables)
+        with pytest.raises(ValueError, match=re.escape(said)) as e:
+            load_manifest(folder)
+        assert str(e.value).startswith(str(folder / "chartbook.toml"))
+
+    def test_the_list_forms_still_load(self, tmp_path):
+        folder = self._pipeline(
+            tmp_path,
+            project={"contributors": ["Alice Smith", "Bob"], "os_compatibility": ["Linux"]},
+            dataframes={"x": {"path": "./x.parquet", "docs": "d", "tags": ["rates"], "sources": ["FRED"]}},
+        )
+        manifest = load_manifest(folder)
+        assert manifest["project"]["maintainer"] == "Alice Smith"
+        assert manifest["project"]["os_compatibility"] == ["Linux"]
+        assert manifest["dataframes"]["x"]["tags"] == ["Rates"]
+
+    @pytest.mark.parametrize(
+        "project, said",
+        [
+            ({"readme": 5}, "[project]: readme = 5 is an integer, and readme is a string. Write readme = \"./README.md\"."),
+            ({"logo": 5}, "[project]: logo = 5 is an integer, and logo is a string. Write logo = \"./docs_src/logo.png\"."),
+            ({"favicon": True}, "[project]: favicon = True is a boolean, and favicon is a string."),
+            ({"site_dir": ["docs"]}, "[project]: site_dir = ['docs'] is an array, and site_dir is a string. Write site_dir = \"./docs_src/site/\"."),
+            ({"build": 5}, "[project]: build = 5 is an integer, and build is a string. Write build = \"doit\"."),
+            ({"enable_data_download": "yes"}, "[project]: enable_data_download = 'yes' is a string, and enable_data_download is true or false. Write enable_data_download = true."),
+        ],
+    )
+    def test_a_project_field_of_the_wrong_type_is_named(self, tmp_path, project, said):
+        folder = self._pipeline(tmp_path, project=project)
+        with pytest.raises(ValueError, match=re.escape(f"{folder / 'chartbook.toml'}: {said}")):
+            load_manifest(folder)
+
+    def test_a_syntax_error_names_the_file(self, tmp_path):
+        """A catalog reads several manifests, and `Illegal character` alone said whose."""
+        folder = tmp_path / "p"
+        folder.mkdir()
+        (folder / "chartbook.toml").write_text("this = [not toml\n")
+        with pytest.raises(ValueError, match=re.escape(f"{folder / 'chartbook.toml'} is not valid TOML: ")):
+            load_manifest(folder)
+        with pytest.raises(ValueError, match="is not valid TOML"):
+            validate_manifest_file(folder)
+        catalog = tmp_path / "catalog"
+        catalog.mkdir()
+        (catalog / "chartbook.toml").write_text('[pipelines]\nbroken = { path = "../p" }\n')
+        with pytest.raises(ValueError, match=re.escape(f"{folder / 'chartbook.toml'} is not valid TOML: ")):
+            load_manifest(catalog)
+        (catalog / "chartbook.toml").write_text('[pipelines]\nmembers = ["../p"]\n')
+        with pytest.raises(ValueError, match=re.escape(f"catalog member {folder / 'chartbook.toml'} is not valid TOML: ")):
+            load_manifest(catalog)
+
+    def test_a_catalog_key_that_is_not_an_id_names_the_file_and_the_table(self, tmp_path):
+        catalog = tmp_path / "catalog"
+        catalog.mkdir()
+        (catalog / "chartbook.toml").write_text('[pipelines]\n"acme/rates@v1" = { path = "../p" }\n')
+        with pytest.raises(ValueError, match=re.escape(f"{catalog / 'chartbook.toml'}: [pipelines] 'acme/rates@v1': Invalid pipeline id 'acme/rates@v1'")):
+            load_manifest(catalog)

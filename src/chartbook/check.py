@@ -27,6 +27,7 @@ from chartbook.conf_validation import OUTPUT_FILE_TYPES, built_nothing, validate
 from chartbook.diagnostics import DOCS_FIELDS, build_diagnostics
 from chartbook.identity import strip_url_credentials
 from chartbook.manifest import (
+    _parse_toml_file,
     _read_manifest_file,
     _resolve_policy,
     get_pipeline_dirs,
@@ -153,8 +154,7 @@ def read_policy(path: Union[str, Path]) -> tuple[dict, bool]:
         path = path / "chartbook.toml"
     if not path.is_file():
         raise FileNotFoundError(f"No policy file found at {path}")
-    with open(path, "rb") as f:
-        raw = tomli.load(f)
+    raw = _parse_toml_file(path)  # a syntax error names the file
     return _resolve_policy(raw, source=str(path)), "policy" in raw
 
 
@@ -339,10 +339,8 @@ def _pipeline_at(directory: Path) -> Optional[str]:
     try:
         raw = _read_manifest_file(directory)
         project_type = resolve_project_type(raw, source=str(toml_file))
-    except tomli.TOMLDecodeError as error:
-        return f"cannot read {toml_file}: {error}"
     except (ValueError, OSError) as error:
-        return str(error)  # these name the file themselves
+        return str(error)  # these name the file themselves, a syntax error included
     if project_type != "pipeline":
         return (
             f"{directory} is a catalog, not a pipeline; depend on the "

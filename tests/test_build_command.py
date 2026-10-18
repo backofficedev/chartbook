@@ -334,3 +334,21 @@ class TestCalledFromItsOwnScript:
         assert result.exit_code == 1 and "run itself without end" in result.output
         assert not (pipeline_project / "chartbook.lock").exists()
 
+
+def test_docs_with_no_manifest_is_a_clean_error(tmp_path, monkeypatch):
+    """Found by a reviewer: `chartbook docs` in a folder with no chartbook.toml raised a
+    ValueError traceback, where `chartbook build` says `Error: No chartbook.toml in …`."""
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+    assert result.exit_code == 1
+    assert f"Error: No chartbook.toml in {Path.cwd()}." in result.output
+    assert "Traceback" not in result.output and "ValueError" not in result.output
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert not (tmp_path / "docs").exists()
+
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    result = CliRunner().invoke(main, ["docs", str(tmp_path / "site"), "--project-dir", str(elsewhere), "-f"])
+    assert result.exit_code == 1
+    assert f"Error: No chartbook.toml in {elsewhere.resolve()}." in result.output
+

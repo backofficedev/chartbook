@@ -678,7 +678,7 @@ class TestCheck:
         (rates / "chartbook.toml").write_text("[project\n")
         _depend(downstream, rates={"path": "../rates"})
         (problem,) = self._problems(downstream)
-        assert problem.message.startswith(f"cannot read {rates / 'chartbook.toml'}")
+        assert problem.message.startswith(f"{rates / 'chartbook.toml'} is not valid TOML: ")
 
     def test_an_old_format_manifest_says_so_once(self, two_pipelines):
         downstream, rates = two_pipelines

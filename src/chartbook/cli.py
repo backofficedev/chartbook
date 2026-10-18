@@ -258,6 +258,13 @@ def _render_site(
     # Check for Sphinx dependencies
     _check_sphinx_installed()
 
+    # The project, before anything is asked or written: with no manifest
+    # there is nothing to render, as `chartbook build` says it
+    project_dir = resolve_project_dir(project_dir)
+    if not (project_dir / "chartbook.toml").is_file():
+        click.echo(click.style("Error: ", fg="red", bold=True) + f"No chartbook.toml in {project_dir}.", err=True)
+        raise SystemExit(1)
+
     # Convert output_dir to Path
     output_dir = Path(output_dir).resolve()
 
@@ -276,13 +283,6 @@ def _render_site(
         ):
             raise SystemExit(0)
         force_write = True
-
-    # If project_dir not provided, use current directory
-    project_dir = resolve_project_dir(project_dir)
-    # Check for config file and create if needed
-    config_path = project_dir / "chartbook.toml"
-    if not config_path.exists():
-        raise ValueError(f"Could not find chartbook.toml at {config_path}")
 
     # Store whether we need to remove existing directory after successful generation
     should_remove_existing = output_dir.exists() and force_write
@@ -2607,15 +2607,25 @@ def store_info():
         without_credentials,
     )
 
+    from chartbook.store import store_for_url
+
     try:
         url, origin = get_store_setting()
-        folder = folder_of_store_url(url) if store_kind(url) == "folder" else None
+        kind = store_kind(url)
+        folder = folder_of_store_url(url) if kind == "folder" else None
         # Never a user name or password, which a URL, its endpoint or a //host path may carry
         shown = shown_store_url(str(folder) if folder is not None else url)
         cache = get_cache_path()
     except ValueError as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + without_credentials(str(e)), err=True)
         raise SystemExit(1)
+    # The store of that kind, as the first pin or read would make it: a bucket
+    # needs its library, and this is where to hear that it is missing, not then
+    try:
+        store_for_url(url)
+        not_usable = None
+    except ValueError as e:
+        not_usable = e
     said_by = {
         "environment": f"set by {STORE_ENV_VAR}",
         "user": f"set by [store] url in {get_global_settings_path()}, your settings",
@@ -2624,8 +2634,12 @@ def store_info():
     }[origin]
     if folder is not None and not folder.exists():
         said_by += "; nothing is there yet"
+    what = {"folder": "a folder", "s3": "an S3 bucket"}.get(kind, f"a {kind}:// store")
     click.echo(f"Store: {shown}")
-    click.echo(f"  {said_by}")
+    click.echo(f"  {what}, {said_by}")
+    if not_usable is not None:
+        click.echo(click.style("Error: ", fg="red", bold=True) + without_credentials(str(not_usable)), err=True)
+        raise SystemExit(1)
     click.echo(f"Cache: {shown_store_url(str(cache))}")
     click.echo("  where what is read from a remote store is kept on this machine")
 

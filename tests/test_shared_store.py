@@ -561,6 +561,47 @@ class TestStoreInfo:
         result = CliRunner().invoke(main, ["store", "--help"])
         assert "local folder" not in result.output and "info" in result.output
 
+    def test_it_names_the_kind_of_store(self, drive):
+        work, machine, rates = drive
+        result = CliRunner().invoke(main, ["store", "info"])
+        assert result.exit_code == 0
+        assert "\n  a folder, set by CHARTBOOK_STORE" in result.output
+
+    def test_a_bucket_on_a_machine_without_boto3_is_told_so_here(self, monkeypatch):
+        """Found by a reviewer: `store info` printed the bucket and exited 0, and the
+        `pip install chartbook[s3]` error came only at the first pin or read."""
+        import sys
+
+        monkeypatch.setenv("CHARTBOOK_STORE", "s3://bkt/p")
+        monkeypatch.setitem(sys.modules, "boto3", None)
+        result = CliRunner().invoke(main, ["store", "info"])
+        assert result.exit_code == 1
+        assert "Store: s3://bkt/p" in result.output and "an S3 bucket, set by CHARTBOOK_STORE" in result.output
+        assert "needs boto3, which is not installed: pip install chartbook[s3]" in result.output
+        assert "Cache:" not in result.output and "Traceback" not in result.output
+
+    def test_a_bucket_with_its_library_is_a_store_the_machine_can_use(self, monkeypatch):
+        pytest.importorskip("botocore")
+        import sys
+
+        class FakeBoto3:
+            @staticmethod
+            def client(service, **arguments):
+                return object()
+
+        monkeypatch.setenv("CHARTBOOK_STORE", "s3://bkt/p")
+        monkeypatch.setitem(sys.modules, "boto3", FakeBoto3)
+        result = CliRunner().invoke(main, ["store", "info"])
+        assert result.exit_code == 0, result.output
+        assert "an S3 bucket, set by CHARTBOOK_STORE" in result.output and "Cache:" in result.output
+
+    def test_a_kind_nothing_provides_is_said(self, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_STORE", "gs://bkt/p")
+        result = CliRunner().invoke(main, ["store", "info"])
+        assert result.exit_code == 1
+        assert "Store: gs://bkt/p" in result.output and "a gs:// store, set by CHARTBOOK_STORE" in result.output
+        assert "nothing provides one" in result.output
+
 
 class TestAPathDependencyOnAnotherMachine:
     @pytest.fixture

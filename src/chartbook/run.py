@@ -452,7 +452,9 @@ def execute(script: str, directory: Path, name: Optional[str] = None, foreign: b
 
     The shell is ``bash`` where there is one, because that is what an
     ``module load`` or a ``conda activate`` expects, and ``sh`` otherwise.
-    On Windows it is ``cmd``.
+    On Windows it is ``cmd``: one line is run as it is, and several go in
+    a batch file that stops at the first line that fails, with its exit
+    code (:func:`_batch_script`).
 
     :param name: The script's name in ``[scripts]``. With it, the script
         is told which pipeline and which script it is (:func:`running`).
@@ -504,7 +506,7 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
         handle, name = tempfile.mkstemp(suffix=".cmd", text=True)
         try:
             with os.fdopen(handle, "w") as f:
-                f.write("@echo off\n" + script + "\n")
+                f.write(_batch_script(script))
             return subprocess.run(
                 ["cmd", "/d", "/c", name], cwd=directory, env=environment
             ).returncode
@@ -514,6 +516,40 @@ def _execute(script: str, directory: Path, environment: dict) -> int:
     return subprocess.run(
         [shell, "-e", "-c", script], cwd=directory, env=environment
     ).returncode
+
+
+#: Stops a batch file where the line before it failed, with that line's exit code.
+_STOP_ON_FAILURE = "if %errorlevel% neq 0 exit /b %errorlevel%"
+
+
+def _batch_script(script: str) -> str:
+    """A script of several lines as a batch file that stops at the first line that fails.
+
+    ``cmd`` runs a batch file to its end whatever each line returns, and the
+    file's exit code is its last line's, where ``bash -e`` stops at the first
+    failure. So each command line is followed by a line that exits with the
+    last exit code when it is not zero. A blank line, a ``rem`` or ``::``
+    comment, and a line continued with a ``^`` at its end get no such line,
+    since they run nothing of their own. ``@echo off`` comes first, so the
+    lines are not echoed as they run, as a shell does not echo them.
+
+    A block in parentheses (``if ... (`` over several lines) is read by cmd
+    as one command, with ``%errorlevel%`` expanded once, before the block
+    runs; so a failure inside it is caught at the line after the block, not
+    inside it.
+
+    :param script: The script, as the manifest gives it.
+    :returns: The text of the batch file.
+    """
+    lines = ["@echo off"]
+    for line in script.splitlines():
+        lines.append(line)
+        stripped = line.strip()
+        is_comment = stripped.startswith("::") or stripped.lower() == "rem" or stripped.lower().startswith("rem ")
+        if not stripped or is_comment or stripped.endswith("^"):
+            continue
+        lines.append(_STOP_ON_FAILURE)
+    return "\n".join(lines) + "\n"
 
 
 def run(

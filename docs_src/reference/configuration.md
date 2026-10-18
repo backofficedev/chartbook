@@ -57,6 +57,8 @@ Every field is optional. Types and defaults:
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool the pages are written for. MkDocs needs `pip install chartbook[mkdocs]`; the build says so when it is missing | `"sphinx"` |
 
+Each field has the one type the table gives, and a value of another type does not load: the error names the file, the table and the key, says what the value is, and shows the form to write. Nothing is guessed. A list is written in brackets even with one item: `contributors = "Alice Smith"` is refused, not read as a list of one (it would otherwise be read letter by letter); write `contributors = ["Alice Smith"]`. The same holds in every table below: `path`, every `*_path` and `docs` are strings, and `tags`, `sources`, `providers` and `provider_links` are lists of strings.
+
 Unknown keys in `[project]` produce a warning naming the closest known key, so typos don't silently become dead metadata.
 
 A fully populated pipeline:
@@ -194,7 +196,7 @@ charts     = ["units", "frequency"]
 models     = ["name", "trained_on", "docs"]
 ```
 
-Without a `[policy]` section, chartbook's default recommended-field lists apply, warn-only. A kind you leave out of `[policy.required]` keeps its default list. In a list, `docs` means "a write-up", and is satisfied by either `docs` or `docs_path`. In the `project` list, `build` means the build script: `[scripts] build`, or `[project] build`, the old place, which is still read. A missing one is named `[scripts] build`.
+Without a `[policy]` section, chartbook's default recommended-field lists apply, warn-only. A kind you leave out of `[policy.required]` keeps its default list. Each list is a list of field names, in brackets; `project = "description"` is refused, not read as one name (nor as its letters), and the error shows the form to write. In a list, `docs` means "a write-up", and is satisfied by either `docs` or `docs_path`. In the `project` list, `build` means the build script: `[scripts] build`, or `[project] build`, the old place, which is still read. A missing one is named `[scripts] build`.
 
 A pipeline may have a `[policy]` section of its own. It says what that pipeline holds itself to when it is checked or built by itself. Inside a catalog, the catalog's policy applies and the pipeline's is ignored: whoever gathers the pipelines together decides what they must say.
 
@@ -377,6 +379,8 @@ publishable = true
 [notes.methodology]
 path = "./docs_src/methodology.md"
 ```
+
+`path` is required: the markdown file the note's page is made from. A note without one does not load, and the error says what to write.
 
 ## `[models]` — Trained Models
 
@@ -601,7 +605,7 @@ python src/pull_wrds.py
 | A name is letters, digits, `.`, `_` and `-`, since you type it after `chartbook run` | `build`, `fetch.wrds` |
 | A script is one string, and may not be empty | `build = "doit"` |
 | A script of several lines is **one** script: what one line sets up, the next can use | `fetch`, above |
-| It is run in the pipeline's own directory, and stops at the first command that fails | |
+| It is run in the pipeline's own directory, and stops at the first command that fails, with that command's exit code. By `bash` (or `sh`), and on Windows by `cmd`, where several lines go in a batch file that stops the same way | |
 
 **`build` is the one name with a meaning.** It is the script that makes this pipeline's data current. It is what `chartbook run` runs when you name no script, and what it runs, once, in a `git` dependency that is not built yet. It is shown on the pipeline's page, and written to `index.json` with the others.
 
@@ -642,6 +646,8 @@ Per-user settings live in `~/.chartbook/settings.toml`, managed by the `chartboo
 [catalog]
 path = "/absolute/path/to/catalog/chartbook.toml"
 ```
+
+A relative `path` is relative to the settings file's own folder, as `[store] url`, `[git] path` and `[cache] path` are, never to the folder a command is run from; `~` is your home. The organization's settings file (below) may name a catalog the same way, read where the user's file names none.
 
 When a default catalog is configured (or `~/.chartbook/chartbook.toml` exists), `data.load()` and `data.get_data_path()` work without an explicit `catalog_path` argument:
 
@@ -713,6 +719,8 @@ default_host = "github.com"          # acme/rates is https://github.com/acme/rat
 chartbook validates the manifest when running commands. Common errors:
 
 - Both or neither of `docs_path` / `docs` provided
+- A field of another type than its own: a `path`, `docs_path` or `docs` that is not a string; `tags`, `contributors`, `sources`, `providers`, `provider_links` or `os_compatibility` written as a bare string rather than a list; a `[policy.required]` list that is not a list of names; a `[notes.<id>]` with no `path`. The error names the file, the table and the key, and shows what to write
+- A file that is not valid TOML, named, a catalog member's included
 - A chart's `dataframe` key referencing a missing dataframe
 - Explicit `type` contradicting the file's structure
 - Referenced files that don't exist (run `chartbook check`, or `chartbook docs`)
