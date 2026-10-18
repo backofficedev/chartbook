@@ -448,7 +448,19 @@ def files_read(record: dict) -> Optional[dict]:
     declared = location.get("path")
     if not isinstance(declared, str) or not isinstance(size, int) or is_glob_pattern(declared):
         return None
-    return {Path(declared).name: size}
+    name = declared_name(declared)
+    return {name: size} if name else None
+
+
+def declared_name(declared: str) -> Optional[str]:
+    """The name of the file a declared path names: its last part, with ``/`` and ``\\`` both separating parts.
+
+    A record may have been written on Windows, where the manifest's path is
+    ``_output\\m.json``; the object holds ``m.json`` on every system, and so
+    does :func:`safe_relative` read the path. None for a path of no name.
+    """
+    parts = [part for part in re.split(r"[\\/]+", declared.strip()) if part not in ("", ".")]
+    return parts[-1] if parts else None
 
 
 def not_whole(store: Store, record: dict) -> Optional[str]:
@@ -706,6 +718,18 @@ def read(path: Union[str, Path]) -> Snapshot:
     try:
         with open(path, encoding="utf-8") as f:
             document = json.load(f)
+    except (OSError, ValueError) as error:
+        # Not JSON, or not readable: in a store a sync service keeps, a file
+        # there before its bytes, most likely
+        from chartbook.store import unreadable_detail
+
+        raise SnapshotError(
+            f"Cannot read the snapshot {path}: {unreadable_detail(path, error)}. A sync that has not finished is the "
+            f"likeliest cause (a file there before its bytes): run this again once it has finished. If it stays "
+            f"unreadable, remove the file; it is the record of one snapshot, and the store then has that snapshot "
+            f"no more"
+        ) from None
+    try:
         if document.get("schema") != SCHEMA:
             raise ValueError(
                 f"its schema is {document.get('schema')!r}, and this version of "
@@ -1330,6 +1354,7 @@ def plan_removals(
     hashes_elsewhere: set[str] = frozenset(),
     hashes_noted: set[str] = frozenset(),
     noted: Optional[dict] = None,
+    labelled: Optional[dict] = None,
 ) -> SnapshotPlan:
     """Say which snapshots may be removed. Nothing is removed.
 
@@ -1341,6 +1366,11 @@ def plan_removals(
        names it (*noted*); or, for a note from before notes named their
        snapshots, it is the newest snapshot holding one of the objects the
        note names;
+    2b. a lockfile, or a note of one, pins a model version by its label
+       (``rates:model/m@champion``), and this is the newest snapshot of that
+       pipeline holding the version (*labelled*): a label resolves to a
+       version an older snapshot holds, which the pinned moment alone
+       would not keep, and a dependant's next snapshot needs it;
     3. it is the newest snapshot of its pipeline, or the newest that a
        branch or a tag of the repository it came from can pin from;
     4. a label points at a model version it holds: in the pipeline's
@@ -1377,6 +1407,12 @@ def plan_removals(
     :param noted: The snapshots notes record, ``(commit, made_at)``, each
         with why it is kept. The three sets of objects above are for notes
         that record no snapshots.
+    :param labelled: The model versions lockfiles and notes pin by label,
+        each ``(commit, made_at, name, content_hash)`` as
+        :meth:`chartbook.lock.Lock.labelled` gives them, with why each is
+        kept. The version is looked for among the snapshots of the pipeline
+        the moment names; among every pipeline's where the moment names
+        none the store has.
     :raises SnapshotError: If a record cannot be read.
     """
     now = now if now is not None else datetime.now(timezone.utc)
@@ -1421,12 +1457,15 @@ def plan_removals(
     by_elsewhere = newest_holding(set(hashes_elsewhere))
     by_noted = newest_holding(set(hashes_noted))
     noted = noted or {}
+    by_label = _holding_labelled(every, labelled or {})
     for group, newest, labels, pinnable in planned:
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
             elif (taken.commit, taken.made_at) in noted:
                 why = noted[(taken.commit, taken.made_at)]
+            elif id(taken) in by_label:
+                why = by_label[id(taken)]
             elif id(taken) in by_missing:
                 why = "a lockfile that cannot be found named what it holds"
             elif id(taken) in by_elsewhere:
@@ -1469,6 +1508,36 @@ def plan_removals(
         _keep_repositories_whole(plan, groups, now)
         if len(plan.keep) == kept:
             return plan
+
+
+def _holding_labelled(every: list, labelled: dict) -> dict[int, str]:
+    """The snapshots that keep the versions lockfiles pin by label: for each, the newest holding it, with why.
+
+    *every* is every snapshot in the store, oldest first. A version is
+    looked for among the snapshots of the pipeline (and folder in its
+    repository) that the pinned moment names, as a dependant's lineage check
+    does (:func:`lineage_gaps`); where the store has no snapshot at that
+    moment, or the pin names none, among them all. The newest holding it is
+    kept, as the newest holding an old note's object is: one is enough, and
+    an object that never changes would otherwise keep every snapshot.
+    """
+    kept: dict[int, str] = {}
+    if not labelled:
+        return kept
+    at_moment: dict[tuple[str, str], set] = {}
+    for taken in every:
+        at_moment.setdefault((taken.commit, taken.made_at), set()).add((taken.pipeline, taken.subdirectory))
+    for (commit, made_at, name, content_hash), why in sorted(labelled.items()):
+        of_pipeline = at_moment.get((commit, made_at))
+        holder = None
+        for taken in every:
+            if of_pipeline and (taken.pipeline, taken.subdirectory) not in of_pipeline:
+                continue
+            if taken.content().get(name) == content_hash:
+                holder = taken
+        if holder is not None:
+            kept.setdefault(id(holder), why)
+    return kept
 
 
 def _keep_repositories_whole(plan: SnapshotPlan, groups: dict, now: datetime) -> None:

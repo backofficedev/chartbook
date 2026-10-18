@@ -30,8 +30,13 @@ and says what was refused. Writing needs ``s3:PutObject``, and ``store gc``
 One thing the folder store does that this one cannot: make an object
 appear whole or not at all. Files are uploaded one by one, so a snapshot
 interrupted while uploading an object of several files leaves a partial
-one, which ``has()`` reports and ``get()`` refuses, naming the cause;
-making the snapshot again uploads what is missing and completes it.
+one, which ``has()`` reports (a listing cannot tell). What tells is the
+record: :meth:`S3Store.incomplete` compares the keys under the object and
+their sizes with the files and sizes the record gives, as the folder
+store compares a synced folder's files, so ``pin``, ``update``,
+``pin --frozen`` and a read all say the object is not fully uploaded yet;
+``get()`` refuses one whose files do not hash to its name. Making the
+snapshot again uploads what is missing and completes it.
 """
 
 from __future__ import annotations
@@ -42,6 +47,7 @@ import os
 import re
 import stat
 import time
+import unicodedata
 import uuid
 from pathlib import Path
 from typing import Iterable, Iterator, Optional, Union
@@ -69,6 +75,8 @@ from chartbook.store import (
     StoreUnreachableError,
     _FULL_COMMIT,
     _HEX,
+    _found_whole,
+    _hash_once,
     _split_hash,
     _unreadable_note_remedy,
     is_record_name,
@@ -431,6 +439,131 @@ class S3Store(Store):
         self._check_layout()
         return bool(self._object_files(content_hash))
 
+    def incomplete(
+        self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
+    ) -> Optional[str]:
+        """Why an object is not whole as its record has it, by the keys under it and their sizes; None if it is.
+
+        Files are uploaded one at a time, so a snapshot interrupted while
+        uploading an object of several files leaves some of its keys
+        missing, and one being made now has them arriving. The sizes the
+        listing gives are compared with the record's, as the folder store
+        compares a synced folder's files (:func:`chartbook.store.unsynced_part`);
+        one listing request, and nothing is downloaded. Offline, an object
+        this machine downloaded and checked before is whole.
+        """
+        if not isinstance(size_bytes, int) or isinstance(size_bytes, bool):
+            return None
+        # An object is named by its content and does not change: one found
+        # whole as a record has it is not looked at again in this process
+        seen = (self.url, content_hash, size_bytes, tuple(sorted((files or {}).items())), every)
+        if seen in _found_whole:
+            return None
+        try:
+            self._check_layout()
+            remote = {relative: entry["Size"] for relative, entry in self._object_files(content_hash).items()}
+        except StoreUnreachableError:
+            if self._is_verified(content_hash):
+                return None
+            raise
+        if not remote:
+            return None  # not there at all, which `has` says
+        wrong = self._not_uploaded(content_hash, remote, size_bytes, files, every)
+        if wrong is None:
+            _found_whole.add(seen)
+            return None
+        what, waiting = wrong
+        if not waiting:
+            return f"its object in {self} {what}; `chartbook store verify` checks the rest"
+        return (
+            f"its object in {self} {what}: it is not fully uploaded yet. An object of several files is "
+            f"uploaded one file at a time: if a snapshot of it is being made now, wait for it to finish and run "
+            f"this again; a snapshot interrupted while uploading leaves it so, and making the snapshot again "
+            f"completes it (if it stays so, `chartbook store verify` says more)"
+        )
+
+    def _not_uploaded(
+        self, content_hash: str, remote: dict[str, int], size_bytes: int, files: Optional[dict], every: bool
+    ) -> Optional[tuple[str, bool]]:
+        """What of an object's keys is not as its record gives it, in a few words; None when nothing is.
+
+        *remote* is each key under the object, by its path in it, with its
+        size. The rules are :func:`chartbook.store.unsynced_part`'s: the one
+        file of an asset that is a file, under its own name (the object may
+        hold the same bytes under other names, which other pins added); each
+        file of a directory, and *every* key then listed; without *files*,
+        the sizes summed. Names are compared in Unicode's one form, as a
+        folder store synced into the bucket may carry the other.
+
+        One difference from a folder: a key is written whole or not at all,
+        so a key of another size than the record gives holds other bytes
+        (written over, or the record is not of this object), which no
+        upload mends; and a sum short of the record's is keys still to come,
+        where one over it is a key the record does not list.
+
+        :returns: What is wrong, and whether an upload that has not finished
+            would explain it.
+        """
+        by_name = {unicodedata.normalize("NFC", relative): size for relative, size in remote.items()}
+        if files and len(files) == 1 and not every:
+            ((relative, expected),) = files.items()
+            if unicodedata.normalize("NFC", relative) not in by_name:
+                top = {name: size for name, size in by_name.items() if "/" not in name}
+                # The same bytes under other names (every key at the top, of the
+                # size the record gives), and this one on its way; where there is
+                # one other name only, the cached copy, if there is one, tells it
+                # from a directory pinned before records listed its files
+                same = top and len(top) == len(by_name) and all(size == expected for size in top.values())
+                if same and (len(top) > 1 or self._cached_hashes_to(content_hash, next(iter(remote)))):
+                    return f"does not have {relative} yet", True
+                files = None
+        if files:
+            listed = set()
+            for relative, expected in sorted(files.items()):
+                parts = _plain_parts(relative)
+                if parts is None:
+                    return (
+                        f"is named by a record that lists {relative!r}, which is not a plain path in it: "
+                        f"the record is not one a store wrote",
+                        False,
+                    )
+                name = unicodedata.normalize("NFC", "/".join(parts))
+                listed.add(name)
+                size = by_name.get(name)
+                if size is None:
+                    return f"does not have {relative} yet", True
+                if size != expected:
+                    return (
+                        f"has {size:,} bytes of {relative} where its record says {expected:,} (the key was written "
+                        f"over, or the record is not of this object)",
+                        False,
+                    )
+            if every:
+                for name in sorted(by_name):
+                    # A name starting "." no reader reads, as in a folder
+                    if any(part.startswith(".") for part in name.split("/")):
+                        continue
+                    if name not in listed:
+                        return (
+                            f"holds {name}, which its record does not list (a sync service's copy that a sync of "
+                            f"a folder store brought, or a key put there by hand, which a reader of the folder "
+                            f"would read as its own: remove it from the bucket)",
+                            False,
+                        )
+            return None
+        total = sum(remote.values())
+        if total != size_bytes:
+            return f"has {total:,} bytes where its record says {size_bytes:,}", total < size_bytes
+        return None
+
+    def _cached_hashes_to(self, content_hash: str, relative: str) -> bool:
+        """Whether this machine's cached copy of a key of an object hashes to the object's name: the same bytes under another name."""
+        parts = _plain_parts(relative)
+        if parts is None:
+            return False
+        cached = self._cache.object_path(content_hash).joinpath(*parts)
+        return cached.is_file() and _hash_once(cached) == content_hash
+
     def _bring(self, content_hash: str, remote: dict[str, dict], into: Path, again: bool) -> Optional[str]:
         """Download an object's files into a folder and say what is wrong with it, if anything.
 
@@ -605,13 +738,14 @@ class S3Store(Store):
         hashes: Iterable[str],
         snapshots: Iterable[tuple[str, str]] = (),
         machine: Optional[str] = None,
+        labelled: Iterable[tuple[str, str, str, str]] = (),
     ) -> None:
         hashes = sorted(set(hashes))
         for content_hash in hashes:
             _split_hash(content_hash)
         self._check_layout(create=True)
         machine = this_machine() if machine is None else machine
-        document = root_document(lockfile, hashes, snapshots, machine)
+        document = root_document(lockfile, hashes, snapshots, machine, labelled)
         self._write(self._root_key(lockfile, machine), (json.dumps(document, indent=1) + "\n").encode())
 
     def _read_note(self, key: str) -> Optional[Root]:
@@ -643,8 +777,9 @@ class S3Store(Store):
                 # A copy of a note, as a folder store a sync service kept brings, is read too
                 found.append(read_root(json.loads(body.decode("utf-8")) if body is not None else {}, name))
             except (ValueError, KeyError, TypeError) as error:
+                detail = "the file is empty" if body == b"" else str(error)
                 raise StoreError(
-                    f"Cannot read {self}/{entry['Key']}: {error}.{_unreadable_note_remedy(name)}"
+                    f"Cannot read {self}/{entry['Key']}: {detail}.{_unreadable_note_remedy(name)}"
                 ) from None
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 

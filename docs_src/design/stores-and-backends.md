@@ -156,6 +156,12 @@ formalized from what DuckDB does today, and the first warehouse adapter shapes t
    the bucket as into a folder. One thing a bucket cannot do that a folder does: make an object
    of several files appear whole or not at all; a snapshot interrupted mid-upload leaves a
    partial object that readers refuse by name, and making the snapshot again completes it.
+   *Amended 2026-10-18, after a review found `pin`, `update` and `--frozen` taking such an
+   object as whole:* the S3 store tells a partial object as the folder store tells a half-synced
+   one, by the listing against the record's files and sizes (`S3Store.incomplete`, one listing
+   request), so the three say it is not fully uploaded yet and `update` does not move to it; a
+   read through a lockfile asks `get()` before it asks whether the object is whole, so it meets
+   the store's refusal by name, which says the same.
 4. The backend interface formalized from DuckDB; the first warehouse adapter with version pins.
    *Built 2026-10-17, all but the pins:* `chartbook.backends` is a package; `Backend` is the
    interface (`ref`, `sql`, `scan`, `describe`, `span`, `connect`, `check_url`, and `reads_files`

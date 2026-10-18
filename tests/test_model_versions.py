@@ -644,8 +644,11 @@ class TestAnotherPipelinesVersion:
             models.path(f"forecast:m@{first}", project_dir=serve)
         assert "`chartbook update forecast` pins it from a snapshot" in str(e.value)
 
-    def test_a_labelled_version_survives_gc_clearing_the_snapshot_that_made_it(self, forecast):
-        """The lockfile's root keeps the bytes; the exact hash finds them through the label."""
+    def test_a_labelled_version_pinned_keeps_the_snapshot_that_holds_it(self, forecast):
+        """The lockfile pins the version by label, so gc keeps a snapshot holding it, as it keeps
+        the snapshot the lockfile pins by moment. Found by a reviewer: gc kept the bytes (the
+        lockfile's root names them) and removed the only snapshot holding them, after which
+        `serve` could not make a snapshot, its lineage having a gap."""
         from chartbook import lock
 
         first, _ = _labelled(forecast)
@@ -659,10 +662,15 @@ class TestAnotherPipelinesVersion:
         snapshot.make(forecast)
         store = default_store()
         plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
-        removed = [t for t, _ in plan.snapshots_delete]
-        assert any(t.assets["model/m"]["content_hash"].split(":", 1)[1].startswith(first) for t in removed)
+
+        def holds_first(taken) -> bool:
+            return taken.assets["model/m"]["content_hash"].split(":", 1)[1].startswith(first)
+
+        assert [why for t, why in plan.snapshots_kept if holds_first(t)] == ["a lockfile pins a labelled version in it"]
+        assert not any(holds_first(t) for t, _ in plan.snapshots_delete)
         assert not any(h.split(":", 1)[1].startswith(first) for h, _ in plan.delete)
         lock.run_gc(plan, store)
+        assert snapshot.lineage_gaps(serve, store) == []
         assert models.path("forecast:m@champion", project_dir=serve).read_bytes() == b"weights-1"
         assert models.path(f"forecast:m@{first}", project_dir=serve).read_bytes() == b"weights-1"
 
@@ -882,3 +890,113 @@ class TestCommands:
         rows = [line for line in text.splitlines() if line.startswith(f"| `{second}`")]
         assert rows and "`champion`" in rows[0] and "0.21" in rows[0]
         assert text.index(f"| `{second}`") < text.index(f"| `{first}`")  # newest first
+
+
+class TestALabelPinnedKeepsItsSnapshot:
+    """A reviewer's repro. ``maker`` labels v1 champion and snapshots (S1), then builds v2 with
+    champion still v1 (S2); ``user`` pins S2 by its moment, so ``acme/maker:model/m@champion``
+    is v1, which S1 alone holds; ``maker`` moves champion to v2 (S3). After ``--keep-days``, gc
+    kept S2 and S3 and removed S1, and ``user`` could not make a snapshot: ``lineage_gaps`` said
+    its lockfile was changed by hand. A lockfile that pins a version by label now keeps a
+    snapshot holding it, as a pin by moment keeps its snapshot; so does a note of the lockfile.
+    """
+
+    @pytest.fixture
+    def pinned(self, tmp_path):
+        import hashlib
+
+        from chartbook import lock
+
+        work = tmp_path.resolve()
+        maker, user = work / "maker", work / "user"
+        maker.mkdir()
+        user.mkdir()
+        (maker / "_output").mkdir()
+        v1, v2 = b"model-v1", b"model-v2"
+
+        def manifest(champion: str, note: str) -> None:
+            (maker / "chartbook.toml").write_text(tomli_w.dumps({
+                "project": {"id": "acme/maker"},
+                "models": {"m": {"path": "./_output/m.json", "docs": "d", "aliases": {"champion": champion}}},
+            }))
+            (maker / "NOTE.md").write_text(note)
+
+        def version(data: bytes) -> str:
+            return hashlib.sha256(data).hexdigest()[:12]
+
+        (maker / "_output" / "m.json").write_bytes(v1)
+        manifest(version(v1), "one")
+        _commit(work)
+        first = snapshot.make(maker).snapshot
+        (maker / "_output" / "m.json").write_bytes(v2)
+        manifest(version(v1), "two")
+        _commit(work)
+        second = snapshot.make(maker).snapshot
+        (user / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/user"}, "dependencies": {"acme/maker": {"path": "../maker"}}})
+        )
+        _commit(work)
+        assert lock.pin(user).problems == []
+        locked = lock.read_lock(user)
+        champion = locked.assets["acme/maker:model/m@champion"]["content_hash"]
+        assert locked.snapshots() == {(second.commit, second.made_at)}
+        assert champion == first.assets["model/m"]["content_hash"] != second.assets["model/m"]["content_hash"]
+        assert locked.labelled() == {(second.commit, second.made_at, "model/m", champion)}
+        manifest(version(v2), "three")
+        _commit(work)
+        third = snapshot.make(maker).snapshot
+        return user, first, second, third, champion
+
+    def test_gc_keeps_the_snapshot_the_label_was_resolved_from(self, pinned):
+        from chartbook import lock
+
+        user, first, second, third, champion = pinned
+        store = default_store()
+        plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
+        kept = {taken.made_at: why for taken, why in plan.snapshots_kept}
+        assert kept[first.made_at] == "a lockfile pins a labelled version in it"
+        assert kept[second.made_at] == "a lockfile pins it"
+        assert kept[third.made_at] == "it is the newest of its pipeline"
+        assert plan.snapshots_delete == [] and champion not in {h for h, _ in plan.delete}
+        lock.run_gc(plan, store)
+        assert snapshot.lineage_gaps(user, store) == []
+        assert lock.verify(user, store).problems == []
+        assert models.path("acme/maker:m@champion", project_dir=user).read_bytes() == b"model-v1"
+        # A lockfile's pin is not a name: --aggressive keeps it too
+        aggressive = lock.plan_gc(store, recent_seconds=0, keep_days=0, aggressive=True)
+        assert first.made_at in {taken.made_at for taken, _ in aggressive.snapshots_kept}
+
+    def test_the_note_of_the_lockfile_keeps_it_too(self, pinned):
+        """The lockfile cannot be found (its drive unplugged), or is another machine's: its note records the version."""
+        import shutil
+
+        from chartbook import lock
+
+        user, first, second, third, champion = pinned
+        store = default_store()
+        (note,) = store.roots()
+        assert note.labelled == ((second.commit, second.made_at, "model/m", champion),)
+        shutil.move(user, user.with_name("unplugged"))
+        plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
+        kept = {taken.made_at: why for taken, why in plan.snapshots_kept}
+        assert kept[first.made_at] == "a lockfile that cannot be found pins a labelled version in it"
+        assert kept[second.made_at] == "a lockfile that cannot be found pins it"
+        # Another machine's note of the same lockfile, which is never read here
+        store.remove_root(user / lock.LOCK_FILE)
+        store.add_root(user / lock.LOCK_FILE, note.hashes, note.snapshots, machine="machine-b", labelled=note.labelled)
+        plan = lock.plan_gc(store, recent_seconds=0, keep_days=0, forget_missing=True)
+        kept = {taken.made_at: why for taken, why in plan.snapshots_kept}
+        assert kept[first.made_at] == "a lockfile not read here, another machine's, pins a labelled version in it"
+        assert plan.snapshots_delete == []
+
+    def test_a_pin_that_names_no_snapshot_still_keeps_one_holding_the_version(self, pinned):
+        """With no moment to go by, the version is looked for among every pipeline's snapshots."""
+        from chartbook import lock
+
+        user, first, second, third, champion = pinned
+        name_no_snapshot(user, "acme/maker")
+        locked = lock.read_lock(user)
+        assert locked.labelled() == {("", "", "model/m", champion)}
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        kept = {taken.made_at: why for taken, why in plan.snapshots_kept}
+        assert kept[first.made_at] == "a lockfile pins a labelled version in it"

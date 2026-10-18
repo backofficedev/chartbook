@@ -64,6 +64,9 @@ class TestObjects:
         assert not store.has("sha256:" + "0" * 64)
         with pytest.raises(store_module.ObjectNotFoundError):
             store.get("sha256:" + "0" * 64)
+        # Gone since it was listed (another gc at the same time, a put replacing it): the same error
+        with pytest.raises(store_module.ObjectNotFoundError, match="has no object sha256:0000"):
+            store.age_of("sha256:" + "0" * 64)
 
 
 class TestRoots:
@@ -75,6 +78,19 @@ class TestRoots:
         assert root.lockfile == lockfile and root.hashes == (stored.content_hash,)
         assert store.remove_root(lockfile) is True and store.roots() == []
         assert store.remove_root(lockfile) is False
+
+    def test_a_lockfile_pins_versions_by_label(self, store, a_file, tmp_path):
+        """A note records the model versions its lockfile pins by label, each with the moment it was pinned from."""
+        stored = store.put(a_file)
+        lockfile = tmp_path / "chartbook.lock"
+        moment = (COMMIT, "2026-10-16T00:00:00.000000Z")
+        labelled = {(*moment, "model/m", stored.content_hash), ("", "", "model/n", stored.content_hash)}
+        store.add_root(lockfile, [stored.content_hash], [moment], labelled=labelled)
+        (root,) = store.roots()
+        assert root.snapshots == (moment,) and set(root.labelled) == labelled
+        assert store.root_of(lockfile).labelled == root.labelled
+        store.add_root(lockfile, [stored.content_hash])
+        assert store.roots()[0].labelled == ()
 
 
 class TestSnapshotRecords:
