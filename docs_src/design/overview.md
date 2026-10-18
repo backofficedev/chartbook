@@ -90,10 +90,10 @@ Decided by the maintainer, 2026-10-12.
 
 - **The asset graph is one change, not a release per step.** The steps under "What to build
   next" do not each get a minor version. Do not bump the version in a pull request.
-- **0.2.0 is the working state** while that change is under way. What lands goes under
-  "Unreleased" in the changelog.
-- **When all of it is finished it is wrapped up, probably as 0.3.0.** When, and whether that is
-  the number, is the maintainer's call.
+- **0.2.0 is the release.** The asset graph, the store, the versioned catalog and the review
+  before the release ship together as 0.2.0, the first release since 0.1.1 (decided 2026-10-18;
+  the 0.2.0 prepared on 2026-10-12 was never published). Until it is published, what lands goes
+  under "Unreleased" in the changelog.
 - **1.0 is a long way off**, on purpose: there is room for many more changes before any promise
   of stability. Nothing here should be planned as "the last thing before 1.0".
 

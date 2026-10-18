@@ -153,7 +153,7 @@ CHARTBOOK_BUILD_REQUIRE_GIT=1 hatch build
 
 Without that variable, a build that cannot record the commit warns and goes on: a folder whose `.git` git cannot read (git not installed, or a folder git does not trust) or a copy with neither a `.git` nor an sdist's `PKG-INFO` ships `template/` as it is on disk and an empty `built_from.txt`, and a `template/` with changes git has not committed, or an sdist that records no commit, ships with no commit. With it, each of these stops the build.
 
-A release also bumps the template's `_chartbook_version` in `template/cookiecutter.json` with the version in `src/chartbook/__about__.py` (a test keeps them equal). The step that installs ChartBook from GitHub, in a new project's next steps and README, is shown for a template of version 0.2.0, so it goes away by itself with the next release.
+A release also bumps the template's `_chartbook_version` in `template/cookiecutter.json` with the version in `src/chartbook/__about__.py` (a test keeps them equal).
 
 ## Questions?
 

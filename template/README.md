@@ -53,12 +53,6 @@ The project's environment files ask for the template's private variable `_chartb
 which is the version of the ChartBook it came with: a test keeps `cookiecutter.json`'s value equal to
 `chartbook.__about__.__version__`, so a release changes both.
 
-The step that installs ChartBook from GitHub, in the next steps `chartbook init` prints and in the
-project's README, is shown when `_chartbook_version` is `0.2.0`: the template is in no release yet, so a
-ChartBook that calls itself 0.2.0 and has it is the one on GitHub, ahead of the 0.2.0 on PyPI. That stays
-right only while the version on the main branch is not one PyPI has: a release must bump both the version
-and this default, and the maintainer may also choose `.devN` versions between releases.
-
 Rendered with cruft instead, it comes from GitHub's main branch:
 
 ```bash

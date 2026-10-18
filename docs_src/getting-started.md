@@ -12,17 +12,6 @@ One install, everything included: the site-building CLI, the plotting module, da
 
 ## Scaffold a project
 
-````{note}
-Until the next release, install ChartBook from GitHub for what follows: what this page describes is there, and the newest release, 0.2.0, has none of it (it has no `chartbook docs`, and its `chartbook init` makes a different project). The ChartBook on GitHub calls itself 0.2.0 too, so pip keeps a 0.2.0 it has installed already unless it is told to replace it:
-
-```console
-pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"
-pipx install --force "chartbook @ git+https://github.com/backofficedev/chartbook"   # if you use pipx
-```
-
-The project's own environment installs ChartBook from PyPI, so do the same there, after its requirements, as below. `chartbook --version` says 0.2.0 for both; `chartbook docs --help` works only in the one from GitHub.
-````
-
 ```console
 chartbook init
 ```
@@ -57,7 +46,6 @@ To build it, install the project's dependencies (with pip here; the project's RE
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"   # until the next release
 chartbook build -f
 chartbook browse
 ```
