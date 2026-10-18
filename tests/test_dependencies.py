@@ -712,8 +712,14 @@ class TestCheck:
         with pytest.warns(UserWarning, match="not pinned") as caught:
             assert check_dependencies(manifest, downstream) == []
         (warning,) = caught
-        assert str(warning.message).startswith(f'{downstream / "chartbook.toml"}: [dependencies."acme/rates"] path: not pinned.')
-        assert "`chartbook pin` pins its newest snapshot, and so does `chartbook run` (the build)" in str(warning.message)
+        assert str(warning.message).startswith(f'{downstream / "chartbook.toml"}: [dependencies."acme/rates"] path: not pinned yet.')
+        # Found by a new user's walkthrough: it said nothing of it could be read until it was
+        # pinned, while the first read of it pins it
+        assert "can be read" not in str(warning.message)
+        assert (
+            "`chartbook pin` pins its newest snapshot, as the first read of it does, and so does "
+            "`chartbook run` (the build)" in str(warning.message)
+        )
 
     def test_a_pinned_dependency_is_not_warned_about(self, two_pipelines):
         downstream, rates = two_pipelines
@@ -865,7 +871,7 @@ class TestCheckCommand:
         _depend(downstream, acme__rates={"path": "../rates"})
         result = self._check(downstream, monkeypatch)
         assert result.exit_code == 0, result.output
-        assert 'warning: ' in result.output and '[dependencies."acme/rates"] path: not pinned.' in result.output
+        assert 'warning: ' in result.output and '[dependencies."acme/rates"] path: not pinned yet.' in result.output
         pin_from_snapshots(downstream)
         result = self._check(downstream, monkeypatch)
         assert result.exit_code == 0 and "not pinned" not in result.output

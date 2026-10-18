@@ -67,7 +67,7 @@ These lists come from the catalog's `[policy.required]` section in
 `chartbook.toml` (or chartbook's defaults when no policy is set).
 
 ### Pipeline Fields ({{ pipeline_field_count }} required)
-{% for field in required_fields.project %}- `{{ field }}`
+{% for field in required_fields.project %}- `{{ field }}`{% if field == "build" %}: the build script, `[scripts] build` (or `[project] build`, the old place){% endif %}
 {% endfor %}
 
 ### Dataframe Fields ({{ dataframe_field_count }} required)

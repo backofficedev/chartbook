@@ -158,6 +158,13 @@ def read_policy(path: Union[str, Path]) -> tuple[dict, bool]:
     return _resolve_policy(raw, source=str(path)), "policy" in raw
 
 
+#: Fields of a pipeline's project that a manifest writes in another table,
+#: with the table a missing one is said to go in. The build script is
+#: ``[scripts] build``; ``[project] build``, the old place, is still read as
+#: the same thing, so either satisfies a policy's ``project = ["build"]``.
+PROJECT_FIELDS_WRITTEN_IN = {"build": "scripts"}
+
+
 def check_required_fields(
     manifest: dict,
     base_dir: Path,
@@ -178,6 +185,9 @@ def check_required_fields(
         default recommended ones: each missing field is a warning, not a
         problem. A missing write-up stays a problem: the format itself
         requires one for each dataframe and chart, whatever the policy.
+
+    A missing build script is said to belong in ``[scripts] build``
+    (:data:`PROJECT_FIELDS_WRITTEN_IN`), where a manifest writes it now.
     """
     write_up = " or ".join(DOCS_FIELDS)  # as the diagnostics row names it
     problems = []
@@ -194,7 +204,7 @@ def check_required_fields(
             problems.append(
                 Problem(
                     toml_file,
-                    table,
+                    PROJECT_FIELDS_WRITTEN_IN.get(field, table) if table == "project" else table,
                     field,
                     f"required by {policy_label}, but missing or empty",
                 )
@@ -514,10 +524,11 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     pipelines must be that pipeline. One ID that means two directories in
     one build is reported, naming both.
 
-    A ``path`` dependency that is there but has no pin in ``chartbook.lock``
-    draws a warning too: nothing of it can be read until it is pinned, and
-    ``chartbook pin`` (or ``chartbook run``) pins it. That is a warning and
-    not a problem because a fresh clone is in that state on purpose, and
+    A dependency named by its ID, or a ``path`` dependency that is there,
+    with no pin in ``chartbook.lock`` draws a warning too: it is not pinned
+    yet, and ``chartbook pin`` (or ``chartbook run``) pins its newest
+    snapshot, as the first read of it does. That is a warning and not a
+    problem because a fresh clone is in that state on purpose, and
     ``--frozen`` is the gate that fails on it.
     """
     problems = []
@@ -540,11 +551,11 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
                     continue
                 if pinned is not None and key not in pinned:
                     warnings.warn(
-                        f"{toml_file}: [{table}] not pinned. Nothing of {key!r} can be read until "
-                        f"it is; `chartbook pin` pins the newest snapshot of {location.pipeline} "
-                        f"in the store (at or before its rev, if it names one; with none and a "
-                        f"[resolve] default_host set, its repository there), and so does "
-                        f"`chartbook run` (the build).",
+                        f"{toml_file}: [{table}] not pinned yet. `chartbook pin` pins the newest "
+                        f"snapshot of {location.pipeline} in the store, as the first read of it does, "
+                        f"and so does `chartbook run` (the build). With a rev, `pin` takes the newest "
+                        f"at or before it; with no snapshot and a [resolve] default_host set, its "
+                        f"repository there.",
                         UserWarning,
                         stacklevel=2,
                     )
@@ -615,9 +626,8 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
                 )
             if pinned is not None and key not in pinned:
                 warnings.warn(
-                    f"{toml_file}: [{table}] path: not pinned. Nothing of {key!r} can be read "
-                    f"until it is; `chartbook pin` pins its newest snapshot, and so does "
-                    f"`chartbook run` (the build).",
+                    f"{toml_file}: [{table}] path: not pinned yet. `chartbook pin` pins its newest "
+                    f"snapshot, as the first read of it does, and so does `chartbook run` (the build).",
                     UserWarning,
                     stacklevel=2,
                 )
