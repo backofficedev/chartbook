@@ -395,6 +395,10 @@ class ParquetBackend:
         from chartbook.utils import is_glob_pattern
 
         text = str(location.path)
+        if location.files:
+            # A directory pinned from another pipeline: the files its record lists
+            listed = ", ".join(quote_literal(str(file)) for file in location.files)
+            return f"read_parquet([{listed}], hive_partitioning = true)"
         if is_glob_pattern(text):
             return f"read_parquet({quote_literal(text)}, hive_partitioning = true)"
         return f"read_parquet({quote_literal(text)})"
@@ -403,7 +407,7 @@ class ParquetBackend:
     def scan(location: "FileLocation"):
         import polars as pl
 
-        return pl.scan_parquet(location.path, hive_partitioning=True)
+        return pl.scan_parquet([str(file) for file in location.files] or location.path, hive_partitioning=True)
 
 
 class DuckDBBackend(Backend):

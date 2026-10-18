@@ -177,7 +177,7 @@ The CI gate. Exits `0` on a healthy project and `1` when it finds any of:
 
 - **a missing required field** — a field the policy requires that is absent or empty (with no policy given, the recommended fields are only warnings; see below);
 - **a broken path** — a `path`, `docs_path`, `readme`, `logo` or `favicon` pointing at a file that does not exist (or a glob matching nothing);
-- **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare;
+- **a dependency that cannot be found** — an entry of {ref}`[dependencies] <dependencies>` whose `path` is not a directory with a pipeline's `chartbook.toml` in it, or a model's `trained_on` naming a dataframe that the other pipeline does not declare. A `path` whose folder is not on this machine, and that `chartbook.lock` pins with every pin in the store, is a warning instead (another machine's folder: the pipeline builds here with `run --frozen`), and either way the message gives the entry that names it by its ID;
 - **an expiring license** — a dataframe whose `license_expiration` has passed, or falls within `--within` days.
 
 Each finding is one line naming the manifest, the table and the field, so a CI log is enough to fix it:
@@ -517,7 +517,7 @@ Things to know:
 
 - **`chartbook snapshot` does not run the build.** `chartbook run --snapshot` does.
 - **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). {ref}`chartbook store gc <chartbook-store-gc>` clears old ones: those nothing pins, that are not the newest of their pipeline, that no label points into, and that are over 7 days old.
-- **It is found by commit.** So it is found by a pipeline that depends on this folder, and by one that depends on the same repository by URL, on this machine. It is not shared between machines.
+- **It is found by commit, or by the pipeline's ID.** A pipeline that depends on this folder, or on the same repository by URL, finds it by the commit; one that names this pipeline by its ID (`"ftsfr/fed_yield_curve" = {}`) finds it by the ID. It is in the store, so another machine that shares the store ({ref}`a store a team shares <chartbook-store>`) finds it the same ways once the store has synced, and by the ID with no folder of this pipeline there at all.
 
 (chartbook-pin)=
 ## chartbook add
@@ -596,7 +596,18 @@ An asset that the pinned snapshot had not built and the newer one has is still l
 
 **Its labels are pinned too.** A snapshot records the labels the pipeline's `[models.x.aliases]` gave when it was made, and `pin` writes each as a record of its own, `ftsfr/fed_yield_curve:model/term_premium_ar1@champion`, with the hash of the version it names. `forecasting:model/x@champion` then resolves to those bytes until `chartbook update`, which follows the owner's labels: a label moved shows as `moved`, one taken away as `dropped`, and one the owner has moved since you pinned is reported by `pin` as changed upstream. A label whose version the store cannot supply (no snapshot names it, or its bytes are gone) is pinned without bytes, as a `not built` asset is, with the reason, and `--frozen` reports it. Labels come only from snapshots. A `git` dependency has no versions and no labels pinned, and a dependency that becomes one lets its labels go (`let go`).
 
-`pin` exits `1` when something could not be pinned: a dependency with no snapshot, a repository that cannot be fetched, or a pin whose bytes are not in the store.
+`pin` exits `1` when something could not be pinned: a dependency with no snapshot, a repository that cannot be fetched, or a pin whose bytes are not in the store, or not all there yet. The size on disk of each file a pin reads is compared with the size its record gives (no byte is read), so a file that a sync service has only half delivered is said, not read:
+
+```console
+$ chartbook update
+acme/rates: 1 already pinned, 1 not fully synced
+  not fully synced: acme/rates:treasury: nothing was moved to the snapshot at 9c1d2e3, which names it: its object in the store at /Users/x/Google Drive/chartbook-store has 4,096 bytes of treasury.parquet where its record says 18,640: it is not fully synced yet. Wait for the sync to finish, and run this again (if it stays so, `chartbook store verify` says more)
+chartbook.lock is unchanged.
+
+1 thing(s) could not be pinned.
+```
+
+`pin --frozen` and a read (`data.load`, `data.path`) say the same of a pin whose object is not whole. An object that is not in the store at all is `lost`, and in a store that machines share through a synced folder the likeliest cause is a sync that has not finished, on this machine or on the one that put it there: the message says what to do on each side.
 
 **A `git` dependency** is fetched first, into `~/.chartbook/git/`, and pinned from ChartBook's own clean copy of the commit:
 
@@ -623,7 +634,7 @@ To see a change in a pipeline you depend on and are changing too, declare it rea
 
 In a notebook, or a script you run yourself, `data.load()` reads a dependency that has no snapshot yet from its working folder, with a `WorkingVersionWarning`, and records nothing in the lockfile. A build does not: `chartbook run` sets `CHARTBOOK_BATCH=1` for `build`, and there that read is an error.
 
-**`--frozen`: say, and write nothing.** For CI, and for anyone whose store is read-only. `chartbook pin --frozen` pins nothing, fetches nothing and writes nothing, not the lockfile, not the store. It reads `[dependencies]`, `chartbook.lock` and the store, and exits `1` unless the pipeline can be built from its lockfile alone: every dependency pinned, from where the manifest says it is; every asset built when it was pinned; every pin in the store.
+**`--frozen`: say, and write nothing but a note.** For CI, and for anyone whose store is read-only. `chartbook pin --frozen` pins nothing, fetches nothing and does not write the lockfile or any object. It reads `[dependencies]`, `chartbook.lock` and the store, and exits `1` unless the pipeline can be built from its lockfile alone: every dependency pinned, from where the manifest says it is; every asset built when it was pinned; every pin in the store. The one thing it may write is the store's note that this machine reads these pins, replaced with what the lockfile pins now as `pin` would write it, where the store can be written and the note says otherwise (under CI with no `CHARTBOOK_MACHINE_ID`, the note names the lockfile's path alone, as `pin`'s does there), so that `store gc` on another machine keeps them (see {ref}`store gc <chartbook-store-gc>`); it then says `Nothing written but the store's note that this machine reads these pins`, and says so when the note could not be written. A read through the lockfile (`data.load`) leaves the same note, silently.
 
 ```console
 $ chartbook pin --frozen
@@ -809,7 +820,7 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 
 A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`.
 
-**`--frozen`.** Pin nothing and write nothing before the build: not the lockfile, not the store, and no `git` dependency is fetched or built. The build runs only if `chartbook pin --frozen` would pass; otherwise nothing runs and the problems are listed. `--frozen` and `--snapshot` are one or the other.
+**`--frozen`.** Pin nothing and write nothing before the build but the store's note that this machine reads these pins (as `chartbook pin --frozen` does): not the lockfile, no object, and no `git` dependency is fetched or built. The build runs only if `chartbook pin --frozen` would pass; otherwise nothing runs and the problems are listed. `--frozen` and `--snapshot` are one or the other.
 
 ```console
 $ chartbook run --frozen
@@ -845,9 +856,10 @@ A changed record is described in a reviewer's words: *data changed* (a content o
 
 **Two things that look like changes and are not.** A chart file that Plotly writes without a fixed `div_id` has a fresh id in it on every render, so its hash moves with nothing changed; pass `div_id=` to `write_html` (the examples and the template do; ChartBook's own plotting helpers always do). An executed notebook's HTML carries ids and times from the run, and moves on every render; read *rendered differently* on a notebook as the run, not the data. And a model's `versions`, `trained_with` and `stale_inputs` are read from the store of the machine that built the index, so two indexes from two machines differ in them for no change.
 
+(chartbook-store)=
 ## chartbook store
 
-The store is a folder of files kept under the hash of what is in them. It is where `chartbook pin` keeps its copies of other pipelines' data.
+The store keeps files under the hash of what is in them. It is a folder on this machine, a folder machines share (on a shared disk, or synced by a service such as Google Drive), or a bucket. It is where `chartbook snapshot` puts what a pipeline built, and where `chartbook pin` finds it.
 
 It is at `~/.chartbook/store/`. To put it somewhere else, set `CHARTBOOK_STORE`, or add this to `~/.chartbook/settings.toml`, or to the organization's settings file (`/etc/chartbook/settings.toml`, or the file `CHARTBOOK_SYSTEM_SETTINGS` names), which every user on the machine shares and the user's file overrides:
 
@@ -856,7 +868,27 @@ It is at `~/.chartbook/store/`. To put it somewhere else, set `CHARTBOOK_STORE`,
 url = "/a/bigger/disk/chartbook-store"
 ```
 
-**A store a team shares.** Point every machine's `[store] url` (or `CHARTBOOK_STORE`) at one folder on a shared disk or in a synced folder ({doc}`configuration` says what to know about a sync service), or at one bucket (`s3://bucket/prefix`, with `pip install chartbook[s3]`; see {doc}`configuration`), and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `roots/` writable for everyone (for a bucket, `s3:PutObject` on `<prefix>/roots/*`) and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin and `chartbook snapshot` both put files in. `--frozen` writes nothing at all, and is what CI should run. `store gc` is the owner's to run, from the machine the snapshots were made on, and without `--forget-missing`: a label another machine gave is known here only through the snapshots that recorded it, and another machine's lockfile is one that cannot be found from here.
+`chartbook store info` says which one this machine uses, and what set it.
+
+**A store a team shares.** Point every machine's `[store] url` (or `CHARTBOOK_STORE`) at one folder on a shared disk or in a synced folder ({doc}`configuration` says what to know about a sync service), or at one bucket (`s3://bucket/prefix`, with `pip install chartbook[s3]`; see {doc}`configuration`), and a snapshot made on one machine is there for all of them: a colleague, or CI, runs `chartbook pin` and gets the bytes the lockfile names, with no build of their own. A dependency named by its ID (`"acme/rates" = {}`) is pinned and updated from the store alone, with no folder of it on that machine. A snapshot is always the store's own bytes (a copy-on-write clone or a copy, never a link to a file on someone's machine), so this works across machines. The folder may be read-only for everyone but its owner: pinning a `path` dependency from a snapshot writes nothing in the store but the note for `store gc`, and `pin` says when it could not leave it. Make `roots/` writable for everyone (for a bucket, `s3:PutObject` on `<prefix>/roots/*`) and the notes get through. What does have to write the store says so and stops: a `git` dependency's first pin and `chartbook snapshot` both put files in. `--frozen` writes nothing but, where it can, this machine's note for `store gc`, and is what CI should run (under CI with no `CHARTBOOK_MACHINE_ID`, every note names the lockfile's path alone, so each run at the same checkout path replaces the last one's). Each machine's notes are its own (they name the machine, from `~/.chartbook/machine-id`, as well as the lockfile's path, since two machines can have a project at the same path), and `store gc` keeps what another machine's lockfiles recorded at their last pin. It is best run by the store's owner, from the machine the snapshots were made on: a label another machine gave is known here only through the snapshots that recorded it.
+
+### store info
+
+```console
+chartbook store info
+```
+
+Say which store this machine uses, what set it, and where the cache is. Run it on each machine that is to share a store, to see that they name the same folder.
+
+```console
+$ chartbook store info
+Store: /Users/x/Google Drive/chartbook-store
+  set by [store] url in /Users/x/.chartbook/settings.toml, your settings
+Cache: /Users/x/.chartbook/cache
+  where what is read from a remote store is kept on this machine
+```
+
+What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it.
 
 ### store verify
 
@@ -896,7 +928,7 @@ chartbook store gc [--dry-run] [--yes] [--forget-missing] [--keep-days DAYS] [--
 
 Remove from the store what nothing needs any more: old snapshots, and the objects that only they, or a pin that has since moved, named.
 
-The store is shared by all your projects. Two things keep what is in it. Every `chartbook pin` and `chartbook update` notes its lockfile in the store, and `gc` keeps whatever any of those lockfiles names. And every {ref}`snapshot <chartbook-snapshot>` keeps what it names, for as long as the snapshot is kept.
+The store is shared by all your projects. Two things keep what is in it. Every `chartbook pin` and `chartbook update`, and, where the store can be written, every `--frozen` and every read through a lockfile, notes its lockfile in the store with what it pins (its objects and its snapshots), and `gc` keeps whatever those notes and lockfiles name. And every {ref}`snapshot <chartbook-snapshot>` keeps what it names, for as long as the snapshot is kept.
 
 **Which snapshots are kept.** A snapshot is kept if any of these holds:
 
@@ -932,21 +964,24 @@ Remove them? [y/N]:
 |--------|--------|
 | `--dry-run` | List each snapshot and object that would be removed, with sizes, and remove nothing |
 | `--yes`, `-y` | Do not ask |
-| `--forget-missing` | Stop keeping the pins of a lockfile that cannot be found. On a store a team shares, every other machine's lockfile is one |
+| `--forget-missing` | Stop keeping the pins of a lockfile on this machine that cannot be found. Another machine's lockfiles are never forgotten from here |
 | `--keep-days DAYS` | Keep an unpinned snapshot that is not the newest of its pipeline for this long. Default 7 |
 | `--keep-lineage` | Also keep every snapshot a kept snapshot was made from, as far up as it goes, so that `chartbook lineage` finds them all. By default a store keeps what work needs now and lets old lineage go |
 | `--aggressive` | Let names keep nothing: no snapshot is kept for a git tag or branch, or for a model label. What a lockfile pins, the newest of each pipeline, what keeps a repository's snapshots one, and the last `--keep-days` days are still kept; `--keep-days 0` leaves only the first three |
 
-Five things it is careful about:
+What it is careful about:
 
 - **It looks again when you say yes.** The list is made before the question, and a `chartbook pin` can land while you decide. Whatever became pinned in between is kept, and the command says so.
 - **A snapshot's branches are read from the folder it was made from; its labels from there and from the snapshots themselves.** The store notes that folder beside each pipeline's snapshots, and each snapshot records the labels its manifest had when it was made. If the folder is gone (a deleted project, a throwaway checkout, another machine's), the labels the newest snapshot recorded still count, so a label given on one machine keeps its version on another once a snapshot follows it, and a label taken away releases it once a snapshot follows that; nothing is known about branches, and the other rules apply.
 - **A lockfile it cannot find still keeps its pins.** The project may be on a drive that is not plugged in. The store remembers what that lockfile named when it was last pinned, and keeps it until you pass `--forget-missing`.
+- **Another machine's lockfile keeps what it recorded at its last pin.** In a store that machines share, each note names the machine its lockfile is on, and records the objects and the snapshots the lockfile pinned. Each `chartbook pin` and `chartbook update`, and each `--frozen` and read through the lockfile, replaces that machine's note for that lockfile with what the lockfile pins then (a `--frozen` or a read writes nothing when the note says that already). A lockfile at the same path here is another file, so `gc` keeps what the note recorded and does not open that path. It lists the note as `(on another machine, <its host name>: what it recorded at its last pin is kept; note <store>/roots/<file>)`. `--forget-missing` does not forget it: only that machine can tell that its lockfile is gone, and its own `gc --forget-missing` does. A machine that only reads leaves its note this way where the store can be written; on a store it may only read, `--frozen` says its note could not be written, and `gc` on another machine does not know what it reads. Under CI (the `CI` environment variable set, and no `CHARTBOOK_MACHINE_ID`), `pin`, `update`, `run`, `--frozen` and a read write their note under the lockfile's path alone, with no machine name, as notes were written before they named machines: a runner with a fresh home each run would otherwise have a new name, and leave a note under each. So each run at the same checkout path replaces the last one's note, and `gc` on a runner whose store lasts reads its lockfile and keeps what it pins.
+- **Which machine is which.** A machine is named by a random name made once and kept in `~/.chartbook/machine-id`, beside what the operating system calls the machine (`/etc/machine-id`, `MachineGuid`, the hardware's UUID; the host name where there is none), so a home folder copied to another machine (by a migration, a restored backup, or a sync service) gets a name of its own there. Machines are told apart by that identity, or by `CHARTBOOK_MACHINE_ID`, and by nothing else: a note records the host name and a hardware address for you to read, and nothing goes by them, since one machine's may change. So a clone that kept the operating system's identity (a virtual machine cloned without a new `/etc/machine-id`, or Windows without sysprep; an image with one baked in), with a copied home, is not told apart from the machine it was cloned from: the two share a name and one note per path. Each machine that lasts needs an identity of its own, or a `CHARTBOOK_MACHINE_ID` of its own. Never copy `machine-id` between machines, and never keep `~/.chartbook` itself in a synced folder. `CHARTBOOK_MACHINE_ID` also names a machine that comes and goes with a fresh home folder (a CI runner that pins, a container): give each run the same one, and check its project out at the same path, so that each run's note replaces the last one's rather than piling up.
+- **Old notes and copies.** In your own store, under `~/.chartbook` (the default one), a note from before notes named their machine can only be this machine's. Its lockfile is read alone, as it was before notes named their machine, and what the note recorded keeps nothing more. The next `chartbook pin`, `chartbook update`, `--frozen` or read through that lockfile writes this machine's note and removes the old one; `gc` removes an old note once this machine has a note of the same lockfile and that lockfile is read here (while it cannot be found, a drive unplugged, what the old note recorded is kept), or, with `--forget-missing`, once the lockfile is gone, and names its file under `roots/` on the lockfile's line. A CI runner with no `CHARTBOOK_MACHINE_ID` writes its notes this way, under the path alone, and its own pins and reads replace such a note rather than remove it. In any other store, such a note, and a sync service's copy of a note (`<name> (1).json`) in any store, may be any machine's: what they recorded is kept, and nothing removes them for you, since nothing can tell whose they are. A note from before notes recorded snapshots keeps, of the snapshots holding each object it names, the newest. A copy that cannot be read (half synced) stops `gc`, which names it. To let go of a machine that is no longer used, or of an old note or a copy, remove its file from `roots/` in the store; `gc` names each file, and each is JSON naming its `lockfile`, `machine` and `host`.
 - **Only a lockfile on this machine is read.** The store's note for each lockfile is written by whoever can write to the store, so `gc` reads only an absolute path named `chartbook.lock` that is not a network path. Any other (a project on a network drive among them) is not read: the pins its note records are kept, `--forget-missing` included, and `gc` says it did not read it.
 - **An object stored in the last hour is never removed.** A pin puts files in the store before it writes the lockfile that names them. So the run that removes a snapshot's record may leave its objects for the next run.
 - **If a lockfile or a snapshot's record cannot be read, nothing is removed.** `gc` stops and says which.
 
-A lockfile is read as it is now. If you check out an older commit and run `gc` without pinning, the pins of the commit you left are not named by anything and can be removed; run `chartbook pin` after switching back.
+A note only ever adds to what is kept. A lockfile on this machine is read as it is now, and what its note recorded at its last pin (the objects, and the snapshots) is kept as well: check out an older commit and run `gc` without pinning, and the pins of the commit you left are kept, by the note, until the next `chartbook pin`, `chartbook update`, `--frozen` or read writes it again (a read, or `--frozen`, on the older commit writes it too, with that commit's pins). A note from before notes named their machine, in your own store, is read as it was then: its lockfile alone.
 
 ## chartbook config
 

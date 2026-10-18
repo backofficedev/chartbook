@@ -16,6 +16,7 @@ keeps their own choices for everything else::
     ├── chartbook.toml       # the global catalog (optional)
     ├── settings.toml        # the user's settings
     ├── sources.toml         # the machine's urls and credentials for [sources]
+    ├── machine-id           # what names this machine in a store's notes of lockfiles
     ├── store/               # the store, unless settings say otherwise
     ├── cache/               # what was read from a remote store
     └── git/                 # clones of git dependencies
@@ -30,6 +31,8 @@ names the default catalog. Which store a machine uses is never a fact
 about a pipeline, so none of this is in a ``chartbook.toml``.
 """
 
+import functools
+import json
 import os
 import re
 import warnings
@@ -279,7 +282,7 @@ def _folder_text(url: str) -> str:
         text = text[1:]  # file:///C:/x names the drive, not a root folder
     if text and not text.startswith("/") and os.name != "nt":
         raise ValueError(
-            f"The store {url!r} names a host; a file:// store is a folder on this machine, "
+            f"The store {shown_store_url(url)!r} names a host; a file:// store is a folder on this machine, "
             f"written file:///path. For a folder on a shared drive, mount it and give its path."
         )
     return text
@@ -355,13 +358,81 @@ def get_store_url() -> str:
     :raises ValueError: If the user's settings file is faulty; a fault in
         the organization's file is a warning, and that file is ignored.
     """
+    return get_store_setting()[0]
+
+
+def get_store_setting() -> tuple[str, str]:
+    """Where the store is (:func:`get_store_url`), and which layer said so.
+
+    :returns: The URL, and where it came from: ``"environment"``
+        (``CHARTBOOK_STORE``), ``"user"`` (``[store] url`` in the user's
+        settings file), ``"system"`` (in the organization's), or
+        ``"default"``.
+    :raises ValueError: If the user's settings file is faulty.
+    """
     from_environment = os.environ.get(STORE_ENV_VAR, "").strip()
     if from_environment:
-        return from_environment
+        return from_environment, "environment"
     configured = read_settings().get("store")
     if configured is not None:
-        return configured["url"]
-    return str(get_global_config_dir() / "store")
+        # The user's own file, if it sets the store; the organization's
+        # otherwise. Read again only to say which: what it warns of was said
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            user = _normalized(read_global_settings(), get_global_settings_path()).get("store")
+        return configured["url"], "user" if user is not None else "system"
+    return str(get_global_config_dir() / "store"), "default"
+
+
+def shown_store_url(url: str) -> str:
+    """A store URL as it may be printed: with no user name or password in it, nor in a URL among its options.
+
+    ``s3://user:secret@b/p?endpoint=https://u:pw@minio.example.org`` is
+    shown as ``s3://b/p?endpoint=…``. A password may hold any character
+    (half of AWS's secret keys have a ``/``; others a ``?``, an ``&``, a
+    ``#``), so all up to the last ``@`` of the URL goes, read as written
+    (``%40`` is an ``@``), and no option's value is shown at all, since a
+    password in one may hold what would end it. The options are what
+    follows a ``?`` that a name and an ``=`` follow. A path with no
+    ``//host`` part (two backslashes on Windows) is as it is: a folder's path
+    may hold an ``@``, as a Google Drive folder names its account.
+    """
+    from urllib.parse import unquote
+
+    def bare(text: str) -> str:
+        text = unquote(text)
+        match = re.match(_ADDRESS, text)
+        if match:
+            return match.group(0).strip() + text[match.end():].rpartition("@")[2]
+        return text.rpartition("@")[2]
+
+    main, *rest = re.split(r"\?(?=[A-Za-z_][A-Za-z0-9_]*=)", url, maxsplit=1)
+    if re.match(_ADDRESS, main):
+        main = bare(main)
+    if not rest:
+        return main
+    options = re.split(r"&(?=[A-Za-z_][A-Za-z0-9_]*=)", rest[0])
+    return f"{main}?" + "&".join(f"{key}=…" for key, _, _ in (o.partition("=") for o in options))
+
+
+def without_credentials(text: str) -> str:
+    """A message with no user name or password of any URL or ``//host`` path in it: ``scheme://user:pass@`` becomes ``scheme://``.
+
+    For what an SDK or the system says, which may echo an address or a path
+    it was given: an ``OSError`` names its file, and a store at
+    ``//user:pass@host/share`` is one, as is the path Windows makes of it,
+    which begins with two backslashes (four, in a message that quotes it). All up to the last ``@`` of a line that has an address
+    goes, since a password may hold a space or a quote.
+    """
+    return re.sub(_ADDRESS_IN_TEXT, r"\1", text)
+
+
+#: Where a URL, or a path to another host, begins: ``scheme://``, ``//``, or Windows' two backslashes.
+_ADDRESS = r"^\s*(?:(?:[A-Za-z][A-Za-z0-9+.-]*:)?//|\\\\)"
+
+#: The same in a message, up to the last ``@`` of its line. Two backslashes
+#: (four, quoted) only where a path begins: those after ``C:`` begin none
+_ADDRESS_IN_TEXT = r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//|(?<![^\s'\"(=])\\\\(?:\\\\)?)[^\n]*@"
 
 
 def store_kind(url: str) -> str:
@@ -383,13 +454,13 @@ def folder_of_store_url(url: str) -> Path:
     kind = store_kind(url)
     if kind != "folder":
         raise ValueError(
-            f"The store {url!r} is a {kind}:// store, and this needs a folder: only a folder "
+            f"The store {shown_store_url(url)!r} is a {kind}:// store, and this needs a folder: only a folder "
             f"store is built in; another kind is a plugin, found by `chartbook.store.store_for_url()`."
         )
     try:
         return Path(os.path.abspath(Path(_folder_text(url)).expanduser()))
     except RuntimeError:
-        raise ValueError(f"The store {url!r} names a user this machine does not know.") from None
+        raise ValueError(f"The store {shown_store_url(url)!r} names a user this machine does not know.") from None
 
 
 def get_store_path() -> Path:
@@ -404,6 +475,189 @@ def get_store_path() -> Path:
         built, or ``[store]`` is malformed.
     """
     return folder_of_store_url(get_store_url())
+
+
+#: The file under ``~/.chartbook`` that names this machine to the stores it uses.
+MACHINE_FILE = "machine-id"
+#: The environment variable that names this machine instead, for one that comes and goes.
+MACHINE_ENV_VAR = "CHARTBOOK_MACHINE_ID"
+
+
+def get_machine_id(create: bool = True) -> str:
+    """The name this machine goes by in a store's notes of its lockfiles.
+
+    A store keeps a note of each lockfile whose pins it keeps, and a path
+    names a file on one machine only: one person's two machines can each
+    have a lockfile at the same path. So a note names its machine too.
+
+    The name is made at random the first time a note is written, and kept
+    in ``~/.chartbook/machine-id`` beside what the operating system calls
+    the machine (:func:`_os_machine_identity`, as a hash). A home folder
+    that comes to another machine (copied by a migration or restored from
+    a backup, shared by several computers, kept by a sync service) does
+    not bring its name with it: that machine makes one of its own, kept in
+    the same file. So does a cloned virtual machine or an image that had
+    pinned, when its operating system made its identity anew. One that did
+    not (``/etc/machine-id`` cloned, Windows without sysprep), with a copied
+    home, has the same name as the machine it was cloned from, and the two
+    are not told apart: each lasting machine needs an identity of its own,
+    or a ``CHARTBOOK_MACHINE_ID`` of its own. Nothing else (the host name,
+    a hardware address) tells machines apart, as one machine's may change.
+    Where nothing can be kept, or there is no home folder, a name made from
+    what the operating system calls the machine is used.
+
+    ``CHARTBOOK_MACHINE_ID`` names it instead: for machines that come and
+    go with a fresh home folder each time (CI runners, containers), so
+    that each one's notes replace the last one's rather than pile up. Two
+    machines that last must never be given one name: each would read the
+    other's lockfiles as its own.
+
+    :param create: Whether to make the name if there is none yet. Without
+        it, the name used where nothing can be kept is given, which only a
+        machine that could not keep a name of its own wrote notes under.
+    """
+    import uuid
+
+    named = os.environ.get(MACHINE_ENV_VAR, "").strip()
+    if named:
+        return named
+    path, identity, unkept = _machine_file()
+    if path is None:
+        return unkept  # no home folder to keep a name in
+    # Worked out once a process: the name of a note's file and the name in it are one
+    if (str(path), identity) in _machine_names:
+        return _machine_names[(str(path), identity)]
+    found = _kept_machines(path).get(identity)
+    if found is not None:
+        _machine_names[(str(path), identity)] = found
+        return found
+    if not create:
+        return unkept
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
+        try:
+            if not path.exists():
+                temporary.write_text(json.dumps({"machines": {identity: uuid.uuid4().hex}}) + "\n", encoding="utf-8")
+                try:
+                    # The first of two made at once is the one: a link is not made over a file
+                    os.link(temporary, path)
+                except FileExistsError:
+                    pass
+                except OSError:
+                    # A disk with no links: made only where there is none, so the first still wins
+                    try:
+                        with open(path, "x", encoding="utf-8") as f:
+                            f.write(temporary.read_text(encoding="utf-8"))
+                    except FileExistsError:
+                        pass
+            if identity not in _kept_machines(path):
+                # A home this machine came to with another's name in it: one of its own beside it
+                _keep_machine(path, identity, uuid.uuid4().hex)
+        finally:
+            if temporary.exists():
+                temporary.unlink()
+    except OSError:
+        pass
+    found = _kept_machines(path).get(identity)
+    if found is None:
+        return unkept
+    _machine_names[(str(path), identity)] = found
+    return found
+
+
+#: The name this machine goes by, by its ``machine-id`` file and its identity, once worked out in this process.
+_machine_names: dict = {}
+
+
+def _machine_file() -> tuple:
+    """The ``machine-id`` file (None with no home folder), this machine's identity in it, and the name used where none can be kept."""
+    import hashlib
+    import uuid
+
+    identity = hashlib.sha256(_os_machine_identity().encode("utf-8")).hexdigest()[:32]
+    unkept = uuid.uuid5(uuid.NAMESPACE_URL, f"chartbook-machine:{identity}").hex
+    try:
+        return get_global_config_dir() / MACHINE_FILE, identity, unkept
+    except (RuntimeError, KeyError, OSError):
+        return None, identity, unkept
+
+
+def _kept_machines(path: Path) -> dict:
+    """The names a ``machine-id`` file keeps, by machine identity; empty if it cannot be read."""
+    try:
+        machines = json.loads(path.read_text(encoding="utf-8")).get("machines")
+    except (OSError, ValueError, AttributeError):
+        return {}
+    if not isinstance(machines, dict):
+        return {}
+    return {k: v for k, v in machines.items() if isinstance(v, str) and re.fullmatch(r"[0-9a-f]{32}", v)}
+
+
+def _keep_machine(path: Path, identity: str, name: str) -> None:
+    """Keep a name for one machine identity in a ``machine-id`` file, whole or not at all."""
+    import uuid
+
+    temporary = path.with_name(f"{MACHINE_FILE}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary.write_text(json.dumps({"machines": {**_kept_machines(path), identity: name}}, indent=1) + "\n", encoding="utf-8")
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+@functools.lru_cache(maxsize=None)
+def _os_machine_identity() -> str:
+    """What the operating system calls this machine, asked once a process.
+
+    The hardware's UUID on macOS (``ioreg``), ``/etc/machine-id`` (or
+    D-Bus's) on Linux, ``MachineGuid`` in the registry on Windows; the
+    host's name where none of these gives one (``uninitialized``, as a
+    Linux image may have it, is none). A virtual machine cloned without
+    making its identity anew (``/etc/machine-id``, or Windows without
+    sysprep) has the identity of the one it was cloned from, and is not
+    told apart from it.
+    """
+    import socket
+    import subprocess
+    import sys
+
+    try:
+        if sys.platform == "darwin":
+            # By its full path: cron's PATH does not have /usr/sbin
+            found = subprocess.run(
+                ["/usr/sbin/ioreg", "-rd1", "-c", "IOPlatformExpertDevice"], capture_output=True, text=True, timeout=10
+            ).stdout
+            match = re.search(r'"IOPlatformUUID"\s*=\s*"([0-9A-Fa-f-]+)"', found)
+            if match and _an_identity(match.group(1)):
+                return f"darwin:{match.group(1).lower()}"
+        elif os.name == "nt":
+            import winreg
+
+            access = winreg.KEY_READ | getattr(winreg, "KEY_WOW64_64KEY", 0)
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Cryptography", 0, access) as key:
+                guid = str(winreg.QueryValueEx(key, "MachineGuid")[0])
+            if _an_identity(guid):
+                return f"windows:{guid.lower()}"
+        else:
+            for candidate in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
+                try:
+                    text = Path(candidate).read_text(encoding="utf-8").strip()
+                except OSError:
+                    continue
+                # Not "uninitialized", as systemd leaves it before a first boot, nor anything else not one
+                if re.fullmatch(r"[0-9a-f]{32}", text) and _an_identity(text):
+                    return f"linux:{text}"
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    return f"host:{socket.gethostname()}"
+
+
+def _an_identity(text: str) -> bool:
+    """Whether what the operating system gave is a machine's identity: hex digits (and dashes), not all zeros."""
+    digits = text.replace("-", "")
+    return len(digits) >= 32 and bool(re.fullmatch(r"[0-9A-Fa-f]+", digits)) and set(digits) != {"0"}
 
 
 def get_default_host() -> str:

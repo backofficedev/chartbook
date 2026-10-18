@@ -644,9 +644,10 @@ class TestCheck:
         assert problem.file == downstream / "chartbook.toml"
         assert problem.table == 'dependencies."acme/rates"'
         assert problem.field == "path"
-        assert problem.message == (
-            f"directory not found: {downstream.parent / 'not_cloned_yet'}"
+        assert problem.message.startswith(
+            f"directory not found: {downstream.parent / 'not_cloned_yet'}. Nothing of it is pinned from there"
         )
+        assert problem.message.endswith('named by its ID, and read from a store this machine shares with the one it is on: "acme/rates" = {} in [dependencies]')
         assert problem.format(relative_to=downstream) == (
             f'chartbook.toml: [dependencies."acme/rates"] path: {problem.message}'
         )

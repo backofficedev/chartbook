@@ -124,6 +124,14 @@ class SnapshotError(Exception):
     """Raised when a snapshot cannot be made, or a pipeline has none to find."""
 
 
+class StoreNotReadyError(SnapshotError):
+    """Raised when the store does not have all of a snapshot's objects yet, or not all of their bytes.
+
+    In a store a sync service keeps, the sync may not have finished: trying
+    again later may succeed, so what fails for this is not kept as failed.
+    """
+
+
 def schema_path() -> Path:
     """The JSON Schema file for a snapshot record's envelope."""
     return SCHEMAS_DIR / "snapshot" / "v1.json"
@@ -411,6 +419,50 @@ def _has_order_by(connection, sql: str) -> Optional[bool]:
 def materialized_name(record: dict) -> str:
     """The file a table or query is written out as, inside its store object: ``<name>.parquet``."""
     return f"{record['ref']['name']}.parquet"
+
+
+def files_read(record: dict) -> Optional[dict]:
+    """The files a reader opens of an asset's object, by their path in it, each with its size, as the record gives them.
+
+    One file for an asset that is a file (under the name of its declared
+    path, or ``<name>.parquet`` for a table or query written out), each
+    file for a directory. None for a glob, whose record lists no files, or
+    a record with no sizes: the object's files are then summed
+    (:meth:`chartbook.store.Store.incomplete`).
+    """
+    size = record.get("size_bytes")
+    location = record.get("location") or {}
+    try:
+        if location.get("kind") in ("table", "query"):
+            return {materialized_name(record): size} if isinstance(size, int) else None
+    except (KeyError, TypeError):
+        return None
+    listed = record.get("files")
+    if isinstance(listed, list):
+        found = {
+            entry["path"]: entry["size_bytes"]
+            for entry in listed
+            if isinstance(entry, dict) and isinstance(entry.get("path"), str) and isinstance(entry.get("size_bytes"), int)
+        }
+        return found or None
+    declared = location.get("path")
+    if not isinstance(declared, str) or not isinstance(size, int) or is_glob_pattern(declared):
+        return None
+    return {Path(declared).name: size}
+
+
+def not_whole(store: Store, record: dict) -> Optional[str]:
+    """Why the store's object of a record with a hash is not whole as the record has it; None if it is, or that cannot be told.
+
+    By the names and sizes of the files a reader opens (:func:`files_read`),
+    and, for a directory, that it holds no file its record does not list.
+    Nothing is read (:meth:`chartbook.store.Store.incomplete`).
+    """
+    if not record.get("content_hash"):
+        return None
+    files = files_read(record)
+    every = files is not None and isinstance(record.get("files"), list)
+    return store.incomplete(record["content_hash"], record.get("size_bytes"), files, every)
 
 
 def materialize_in_source(
@@ -1275,14 +1327,20 @@ def plan_removals(
     now: Optional[datetime] = None,
     keep_lineage: bool = False,
     aggressive: bool = False,
+    hashes_elsewhere: set[str] = frozenset(),
+    hashes_noted: set[str] = frozenset(),
+    noted: Optional[dict] = None,
 ) -> SnapshotPlan:
     """Say which snapshots may be removed. Nothing is removed.
 
     A snapshot is kept if, in this order:
 
     1. a lockfile pins it (its commit and time are named by a dependency);
-    2. a lockfile that cannot be found named one of its objects when it was
-       last pinned;
+    2. a note of a lockfile pins it: one that cannot be found, one on
+       another machine, or one read here whose note, from its last pin,
+       names it (*noted*); or, for a note from before notes named their
+       snapshots, it is the newest snapshot holding one of the objects the
+       note names;
     3. it is the newest snapshot of its pipeline, or the newest that a
        branch or a tag of the repository it came from can pin from;
     4. a label points at a model version it holds: in the pipeline's
@@ -1310,6 +1368,15 @@ def plan_removals(
         pin.
     :param hashes_of_missing: The objects named by lockfiles that cannot be
         found and are not to be forgotten.
+    :param hashes_elsewhere: The objects named by lockfiles on other
+        machines, which are not read here, and by notes from before notes
+        named their machine, or copies of notes.
+    :param hashes_noted: The objects the notes of lockfiles that were read
+        recorded at their last pin, which the lockfile may no longer name
+        (after a pull, or a switch of branch): a note only adds.
+    :param noted: The snapshots notes record, ``(commit, made_at)``, each
+        with why it is kept. The three sets of objects above are for notes
+        that record no snapshots.
     :raises SnapshotError: If a record cannot be read.
     """
     now = now if now is not None else datetime.now(timezone.utc)
@@ -1338,12 +1405,34 @@ def plan_removals(
                 for name, starts in labels.items():
                     of_whole[-1][2].setdefault(name, set()).update(starts)
         planned.extend(of_whole)
+    # A note that names no snapshots (from before notes recorded them) keeps,
+    # of the snapshots holding each object it names, the newest: an object
+    # that never changes would otherwise keep every snapshot there is
+    every = sorted((taken for group, _, _, _ in planned for taken in group), key=lambda t: (t.made_at, _count(t.path)))
+
+    def newest_holding(hashes: set) -> set:
+        holder: dict = {}
+        for taken in every:
+            for content_hash in taken.hashes() & hashes:
+                holder[content_hash] = taken
+        return {id(taken) for taken in holder.values()}
+
+    by_missing = newest_holding(set(hashes_of_missing))
+    by_elsewhere = newest_holding(set(hashes_elsewhere))
+    by_noted = newest_holding(set(hashes_noted))
+    noted = noted or {}
     for group, newest, labels, pinnable in planned:
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
-            elif taken.hashes() & set(hashes_of_missing):
+            elif (taken.commit, taken.made_at) in noted:
+                why = noted[(taken.commit, taken.made_at)]
+            elif id(taken) in by_missing:
                 why = "a lockfile that cannot be found named what it holds"
+            elif id(taken) in by_elsewhere:
+                why = "a lockfile not read here, another machine's, named what it holds"
+            elif id(taken) in by_noted:
+                why = "a lockfile's note, from its last pin, names what it holds"
             elif taken is newest:
                 why = "it is the newest of its pipeline"
             elif taken.path in pinnable:
@@ -2291,12 +2380,14 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     the manifest names its database, so it is left out and said. A record
     is read from a store that may be shared, so every path in it is judged
     by its text (:func:`safe_relative`), no link in an object is followed,
-    and nothing is written until every object it names is there.
+    and nothing is written until every object it names is there, whole as
+    its record has it (:func:`not_whole`).
 
     :param into: A folder that does not exist yet or is empty.
+    :raises StoreNotReadyError: If an object it names is not in the store,
+        or not whole: a sync that has not finished, perhaps.
     :raises SnapshotError: If the snapshot carries no documents (it was made
-        before snapshots did), an object it names is not in the store, or
-        *into* is a file or has something in it.
+        before snapshots did), or *into* is a file or has something in it.
     """
     import shutil
 
@@ -2321,10 +2412,24 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     except ValueError as error:  # a hash that is not one: a record written to mislead
         raise SnapshotError(f"The snapshot of {taken.pipeline} names an object that is not a hash: {error}") from None
     if missing:
-        raise SnapshotError(
+        raise (StoreNotReadyError if all(isinstance(h, str) for h in missing) else SnapshotError)(
             f"The store {store} does not have {len(missing)} object(s) the snapshot of {taken.pipeline} at "
-            f"{taken.commit[:7]} names, {missing[0]} first; `chartbook store verify` says more."
+            f"{taken.commit[:7]} names, {missing[0]} first; in a store a sync service keeps, the sync may "
+            f"not have finished. `chartbook store verify` says more."
         )
+    # Each object whole as its record has it: a site built from a file a
+    # sync has half delivered would be wrong, and kept
+    for record in [taken.documents, *taken.assets.values()]:
+        declared = (record.get("location") or {}).get("path")
+        if record is not taken.documents and safe_relative(declared) is None:
+            continue  # not laid out at all, and said so below
+        if record.get("content_hash") in named:
+            unsynced = not_whole(store, record)
+            if unsynced:
+                raise StoreNotReadyError(
+                    f"The snapshot of {taken.pipeline} at {taken.commit[:7]} names {record['content_hash']}, "
+                    f"and {unsynced}."
+                )
     folder.mkdir(parents=True, exist_ok=True)
     report = Materialized(folder.resolve())
 

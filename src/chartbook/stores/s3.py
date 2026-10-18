@@ -37,7 +37,6 @@ making the snapshot again uploads what is missing and completes it.
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import json
 import os
 import re
@@ -71,6 +70,13 @@ from chartbook.store import (
     _FULL_COMMIT,
     _HEX,
     _split_hash,
+    _unreadable_note_remedy,
+    is_record_name,
+    plain_parts as _plain_parts,
+    read_root,
+    root_document,
+    root_name,
+    this_machine,
     what_is_wrong,
 )
 
@@ -89,32 +95,51 @@ def _parse_url(url: str) -> tuple[str, str, dict[str, str]]:
     """``s3://bucket/prefix?endpoint=…`` into its bucket, prefix and options.
 
     :raises ValueError: If the URL has no bucket, a bucket name S3 would
-        not take, a prefix segment that is ``.`` or ``..`` or empty, or a
-        query key that is not one of :data:`URL_OPTIONS`.
+        not take, a prefix segment that is ``.`` or ``..`` or empty, a
+        query key that is not one of :data:`URL_OPTIONS`, or an ``@``
+        anywhere, as a user name in it or in its endpoint has (refused
+        before the options are read, as a password may hold what would end
+        one). The message never shows a user name, a password or an
+        option's value.
     """
+    from chartbook.config import shown_store_url
+
     parts = urlsplit(url.strip())
-    if parts.scheme.lower() != "s3" or not parts.netloc:
-        raise ValueError(f"The store {url!r} is not an S3 URL: write s3://bucket/prefix.")
-    bucket = parts.netloc
-    if "@" in bucket or ":" in bucket:
+    shown = shown_store_url(url)  # what an error says: no user name or password
+    if "@" in url:
         raise ValueError(
-            f"The store {url!r} carries more than a bucket name before the first slash. "
+            f"The store {shown!r} has an '@' in it, which no bucket, prefix or option has. Credentials "
+            f"never go in the URL, nor in its endpoint: the AWS SDK reads them from the environment or ~/.aws."
+        )
+    if "#" in url:
+        raise ValueError(
+            f"The store {shown!r} has a '#' in it, which no bucket, prefix or option has. Credentials "
+            f"never go in the URL: the AWS SDK reads them from the environment or ~/.aws."
+        )
+    if parts.scheme.lower() != "s3" or not parts.netloc:
+        raise ValueError(f"The store {shown!r} is not an S3 URL: write s3://bucket/prefix.")
+    bucket = parts.netloc
+    if ":" in bucket:
+        raise ValueError(
+            f"The store {shown!r} carries more than a bucket name before the first slash. "
             f"Credentials never go in the URL (the AWS SDK reads them from the environment "
             f"or ~/.aws); another service is named with ?endpoint=https://…"
         )
     if not _BUCKET.match(bucket) or ".." in bucket:
-        raise ValueError(f"The store {url!r} names a bucket S3 would not: {bucket!r}.")
+        raise ValueError(f"The store {shown!r} names a bucket S3 would not: {bucket!r}.")
     prefix = parts.path.strip("/")
     if prefix and any(segment in ("", ".", "..") for segment in prefix.split("/")):
         raise ValueError(
-            f"The store {url!r} has a prefix with an empty, '.' or '..' segment; "
+            f"The store {shown!r} has a prefix with an empty, '.' or '..' segment; "
             f"write s3://bucket/a/b."
         )
     options = {}
     for key, value in parse_qsl(parts.query, keep_blank_values=True):
         if key not in URL_OPTIONS:
+            # The key is said only when it is a name: what follows a '?' in a password is no key
+            said = f" {key!r}" if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key) else ""
             raise ValueError(
-                f"The store {url!r} has a query key {key!r} this store does not read; "
+                f"The store {shown!r} has a query key{said} this store does not read; "
                 f"the keys are: {', '.join(URL_OPTIONS)}."
             )
         options[key] = value
@@ -134,23 +159,6 @@ def _error_code(error: BaseException) -> str:
     match = _ERROR_CODE.search(str(error))
     return match.group(1) if match else ""
 
-
-
-def _plain_parts(relative: str) -> Optional[list[str]]:
-    """The parts of a key's path under a prefix, if it is a plain relative path; else None.
-
-    Plain: parts joined by single ``/``, none empty, ``.`` or ``..``, and no
-    NUL; on Windows, also no backslash or colon, which it reads as a
-    separator or a drive (elsewhere they are ordinary characters of a name,
-    and an object may have a file named with them). Anyone who can write to
-    the bucket chooses its keys, and a reader makes a file of each.
-    """
-    if not relative or "\0" in relative or (os.name == "nt" and any(c in relative for c in "\\:")):
-        return None
-    parts = relative.split("/")
-    if any(part in ("", ".", "..") for part in parts):
-        return None
-    return parts
 
 
 def _inside(folder: Path, relative: str) -> Path:
@@ -242,6 +250,8 @@ class S3Store(Store):
         import boto3.exceptions
         import botocore.exceptions
 
+        from chartbook.config import without_credentials
+
         try:
             yield
         except (botocore.exceptions.ClientError, boto3.exceptions.Boto3Error) as error:
@@ -254,10 +264,11 @@ class S3Store(Store):
                 ) from None
             if code == "NoSuchBucket":
                 raise StoreError(f"The store {self} is in a bucket that does not exist.") from None
-            raise StoreError(f"The store {self} could not {what}: {error}") from None
+            # What the SDK says may echo the endpoint it was given
+            raise StoreError(f"The store {self} could not {what}: {without_credentials(str(error))}") from None
         except botocore.exceptions.BotoCoreError as error:
             raise StoreUnreachableError(
-                f"The store {self} cannot be reached to {what}: {error}"
+                f"The store {self} cannot be reached to {what}: {without_credentials(str(error))}"
             ) from None
 
     def _list(self, prefix: str, delimiter: Optional[str] = None) -> Iterator[dict]:
@@ -585,20 +596,36 @@ class S3Store(Store):
 
     # -- roots ------------------------------------------------------------
 
-    def _root_key(self, lockfile: Union[str, Path]) -> str:
-        digest = hashlib.sha256(os.path.abspath(lockfile).encode("utf-8")).hexdigest()
-        return self._key(ROOTS_DIR, f"{digest[:32]}.json")
+    def _root_key(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> str:
+        return self._key(ROOTS_DIR, root_name(lockfile, this_machine() if machine is None else machine))
 
-    def add_root(self, lockfile: Union[str, Path], hashes: Iterable[str]) -> None:
+    def add_root(
+        self,
+        lockfile: Union[str, Path],
+        hashes: Iterable[str],
+        snapshots: Iterable[tuple[str, str]] = (),
+        machine: Optional[str] = None,
+    ) -> None:
         hashes = sorted(set(hashes))
         for content_hash in hashes:
             _split_hash(content_hash)
         self._check_layout(create=True)
-        document = {"lockfile": os.path.abspath(lockfile), "hashes": hashes}
-        self._write(self._root_key(lockfile), (json.dumps(document, indent=1) + "\n").encode())
+        machine = this_machine() if machine is None else machine
+        document = root_document(lockfile, hashes, snapshots, machine)
+        self._write(self._root_key(lockfile, machine), (json.dumps(document, indent=1) + "\n").encode())
 
-    def remove_root(self, lockfile: Union[str, Path]) -> bool:
-        key = self._root_key(lockfile)
+    def _read_note(self, key: str) -> Optional[Root]:
+        body = self._read(key)
+        try:
+            return read_root(json.loads(body.decode("utf-8")), key.rpartition("/")[2]) if body is not None else None
+        except (ValueError, KeyError, TypeError):
+            return None
+
+    def root_of(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> Optional[Root]:
+        return self._read_note(self._root_key(lockfile, this_machine(create=False) if machine is None else machine))
+
+    def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
+        key = self._root_key(lockfile, this_machine(create=False) if machine is None else machine)
         if not self._exists(key):
             return False
         self._delete_keys([key])
@@ -608,18 +635,18 @@ class S3Store(Store):
         self._check_layout()
         found = []
         for entry in self._list(self._key(ROOTS_DIR) + "/"):
-            if not entry["Key"].endswith(".json"):
+            name = entry["Key"].rpartition("/")[2]
+            if not name.endswith(".json"):
                 continue
             body = self._read(entry["Key"])
             try:
-                stored = json.loads(body.decode("utf-8")) if body is not None else {}
-                root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]))
-                for content_hash in root.hashes:
-                    _split_hash(content_hash)
+                # A copy of a note, as a folder store a sync service kept brings, is read too
+                found.append(read_root(json.loads(body.decode("utf-8")) if body is not None else {}, name))
             except (ValueError, KeyError, TypeError) as error:
-                raise StoreError(f"Cannot read {self}/{entry['Key']}: {error}") from None
-            found.append(root)
-        return sorted(found, key=lambda root: str(root.lockfile))
+                raise StoreError(
+                    f"Cannot read {self}/{entry['Key']}: {error}.{_unreadable_note_remedy(name)}"
+                ) from None
+        return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 
     # -- snapshot records ---------------------------------------------------
 
@@ -643,7 +670,7 @@ class S3Store(Store):
         for entry in self._list(prefix):
             rest = _plain_parts(entry["Key"][len(prefix):])
             # A key that is not a plain path is no record this store wrote
-            if rest is not None and len(rest) == depth and rest[-1].endswith(".json"):
+            if rest is not None and len(rest) == depth and is_record_name(rest[-1]):
                 remote[entry["Key"]] = entry
         local_folder = self._local(prefix.rstrip("/"))
         wanted = set()
@@ -724,7 +751,7 @@ class S3Store(Store):
         was_there = self._exists(key)
         if was_there:
             self._delete_keys([key])
-            if not any(entry["Key"].endswith(".json") for entry in self._list(folder)):
+            if not any(is_record_name(entry["Key"].rpartition("/")[2]) for entry in self._list(folder)):
                 self._delete_keys([folder + ORIGINS_FILE])
         if path.is_file():
             os.chmod(path, _WRITABLE)

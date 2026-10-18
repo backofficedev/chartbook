@@ -117,11 +117,20 @@ class FileLocation(Location):
         path: Absolute path. For partitioned data it contains glob
             characters. The file need not exist: a path can be asked for
             before anything has written to it.
+        files: For a directory pinned from another pipeline, its parquet
+            files its record lists, under *path*: each named ``.parquet``,
+            and each named otherwise that begins or ends as parquet does (Hive's
+            ``000000_0``), but none that is plainly not a table (a
+            ``README.txt``; :data:`NOT_TABLES`) or named as an engine's
+            scan passes over (``.``, ``_``). What a reader reads, and
+            nothing else the folder may hold (a Finder ``.DS_Store``, a
+            sync service's copy). Empty otherwise.
     """
 
     kind: ClassVar[str] = "file"
 
     path: Path
+    files: tuple = dataclasses.field(default=(), compare=False)
 
 
 @dataclass(frozen=True)
@@ -794,20 +803,54 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             asset_id,
             "not_in_store",
             f"{asset_id!r} is pinned at {content_hash}, and the store at "
-            f"{store} does not have it. Run `chartbook pin` in "
-            f"{manifest_dir}: it puts it back if it can, and says what to do "
-            f"if it cannot.",
+            f"{store} does not have it. In a store shared through a synced folder, "
+            f"the likeliest cause is a sync that has not finished: wait for it, and "
+            f"read again. Otherwise run `chartbook pin` in {manifest_dir}: it puts it "
+            f"back if it can, and says what to do if it cannot.",
         )
 
+    _note_the_read(manifest_dir / "chartbook.lock", locked, store)
     return _held(store, record)
+
+
+#: The lockfiles whose note a read has seen to in this process, each as it was then.
+_noted_reads: set = set()
+
+
+def _note_the_read(lock_path: Path, locked, store) -> None:
+    """See that the store's note of a lockfile on this machine names what it pins, once a process.
+
+    A machine that only reads is kept this way: ``store gc`` on another
+    machine keeps what a note records (:func:`chartbook.lock.note_this_machine`).
+    Silent, and skipped when the store cannot be written or the note says
+    it already, so that a read does not write every time. What was seen to
+    is what was read (the pins), not the file as it is a moment later,
+    which a pull may have changed.
+    """
+    from chartbook import lock
+
+    key = (str(lock_path), str(store), frozenset(locked.hashes()), frozenset(locked.snapshots()))
+    if key in _noted_reads:
+        return
+    try:
+        lock.note_this_machine(lock_path, locked, store)
+    except Exception:  # noqa: BLE001 - a read never fails for its note (a plugin store of another make, say)
+        return
+    _noted_reads.add(key)
 
 
 def _held(store, record: dict) -> Location:
     """Where the store holds an asset, given its record with a content hash."""
     from chartbook import hashing
+    from chartbook.snapshot import not_whole
     from chartbook.utils import is_glob_pattern
 
     held = store.get(record["content_hash"])
+    # The names and sizes the record gives, against the files': a store in a
+    # synced folder can have a file before the whole of it. Nothing is read
+    unsynced = not_whole(store, record)
+    if unsynced:
+        raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
         from chartbook.snapshot import materialized_name
@@ -819,9 +862,69 @@ def _held(store, record: dict) -> Location:
         tail = Path(declared_path).relative_to(hashing.glob_root(declared_path))
         return FileLocation(held / tail)
     name = Path(declared_path).name
-    if "files" in record or not (held / name).is_file():
-        return FileLocation(held)  # a directory: the object is the directory
-    return FileLocation(held / name)
+    if isinstance(record.get("files"), list):
+        # A directory, read as the files its record lists and nothing else in
+        # the folder; and, as an engine's scan of a folder does, none under a
+        # name starting "." or "_" (Spark's _SUCCESS, Hadoop's .crc files),
+        # nor one that is plainly not a table (a README.txt, a schema.json).
+        # A file named otherwise than .parquet is read if it begins or ends as
+        # parquet does (Hive's 000000_0, a .pq), and passed over if not (a
+        # schema.avsc, a plot.png, an Iceberg snap-1.avro), as DuckDB's read of
+        # the folder took only its parquet: no table is left out, not even one
+        # half written, and no file breaks the read
+        from chartbook.snapshot import files_read
+        from chartbook.store import StoreError, on_disk, plain_parts
+
+        read = []
+        for relative in sorted(files_read(record) or {}):
+            parts = plain_parts(relative)
+            if parts is None:
+                raise StoreError(
+                    f"{record.get('id')!r}: its record lists {relative!r}, which is not a plain path "
+                    f"in its object. The record is not one a store wrote, and is not read."
+                )
+            if any(part.startswith((".", "_")) for part in parts) or parts[-1].lower().endswith(NOT_TABLES):
+                continue
+            file = on_disk(held, parts)
+            if parts[-1].lower().endswith(".parquet") or _is_parquet(file):
+                read.append(file)
+        return FileLocation(held, tuple(read))
+    from chartbook.store import on_disk
+
+    own = on_disk(held, [name])  # as the disk names it, in either of Unicode's forms
+    if not own.is_file():
+        return FileLocation(held)  # a directory pinned before records listed its files: the folder
+    return FileLocation(own)
+
+
+#: The endings of a file in a directory that is plainly not one of its tables, which a read of it passes over.
+NOT_TABLES = (
+    ".txt", ".md", ".rst", ".json", ".yaml", ".yml", ".csv", ".tsv", ".xml", ".html", ".log", ".crc",
+)
+
+
+def _is_parquet(file: Path) -> bool:
+    """Whether a file begins or ends as a parquet file does, with ``PAR1``: eight bytes are read.
+
+    A parquet file has the mark at both ends. Either is enough, so that one
+    whose writer has begun and not finished (a copy that sets its size
+    first and fills it in after) is read, and the read says it is broken,
+    rather than its rows going missing; so is one that begins with four zero
+    bytes, which no file that is plainly something else does, as a copy of
+    that kind leaves before its first bytes come. One that cannot be read is
+    taken as parquet, so that the read says why.
+    """
+    try:
+        with open(file, "rb") as f:
+            if f.read(4) in (b"PAR1", b"\0\0\0\0"):
+                return True
+            f.seek(0, os.SEEK_END)
+            if f.tell() < 4:
+                return False
+            f.seek(-4, os.SEEK_END)
+            return f.read(4) == b"PAR1"
+    except OSError:
+        return True
 
 
 def _resolve_version(asset: AssetRef, manifest_dir: Path, entry: dict) -> Location:
@@ -1812,6 +1915,14 @@ def _read_in_a_pipeline(asset: AssetRef, manifest_dir: Path, working) -> Locatio
                 return _resolve_pinned(asset, manifest_dir)
             except AssetNotPinnedError as error:
                 no_snapshot = [e for e in report.problems if e.dependency == dependency.id and e.status == "no_snapshot"]
+                # Its newest snapshot is in the store, and not all of it yet: a store in a synced folder
+                not_whole = [e for e in report.problems if e.dependency == dependency.id and e.status in ("unsynced", "lost")]
+                if error.reason == "no_lockfile" and not_whole:
+                    reason = "not_synced" if not_whole[0].status == "unsynced" else "not_in_store"
+                    raise AssetNotPinnedError(
+                        not_pinned.asset, reason,
+                        f"{not_pinned.asset!r} cannot be pinned yet: {not_whole[0].asset}: {not_whole[0].detail}.",
+                    ) from None
                 if error.reason != "no_lockfile" or not no_snapshot:
                     raise
                 kind, why = "no_snapshot", no_snapshot[0].detail or "it has no snapshot"

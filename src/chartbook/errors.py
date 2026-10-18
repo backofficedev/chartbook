@@ -307,7 +307,8 @@ class AssetNotPinnedError(LookupError):
     Attributes:
         asset: The asset's ID, as the lockfile would have it.
         reason: What is missing: ``"no_lockfile"``, ``"not_in_lockfile"``,
-            ``"not_built"`` or ``"not_in_store"``.
+            ``"not_built"``, ``"not_in_store"``, or ``"not_synced"`` (the
+            store has the object, and not all of its bytes yet).
     """
 
     def __init__(self, asset: str, reason: str, message: str):

@@ -323,7 +323,7 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
         raise click.UsageError("--watch-interval only applies with --watch.")
 
     def report(error):
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(error), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
 
     if not watch:
         try:
@@ -596,7 +596,7 @@ def check(project_dir, within_days, policy_path, skip_outputs):
         else:
             policy_label = "the default policy"
     except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
     # The checks warn about what they could not look at
@@ -704,7 +704,7 @@ def path_command(ref, kind, project_dir):
             ref, kind=kind, project_dir=project_dir or Path.cwd()
         )
     except (LookupError, FileNotFoundError, ValueError, TypeError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     # Nothing but the path on stdout: this output gets captured
     click.echo(str(asset_path))
@@ -812,7 +812,7 @@ def _load_catalog_for_cli(catalog_path=None):
     try:
         manifest = load_manifest(base_dir=named.parent)
     except (ValueError, FileNotFoundError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     return manifest, resolved
 
@@ -860,7 +860,7 @@ def index_diff(before, after, as_json, exit_code):
     try:
         found = indexdiff.diff(indexdiff.read_index(before), indexdiff.read_index(after))
     except (OSError, ValueError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(2)
     if as_json:
         click.echo(json.dumps(found.to_dict(), indent=2, default=str))
@@ -1779,7 +1779,7 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
     try:
         incremental = load_manifest(project_dir)["project"].get("writer", "sphinx") != "mkdocs"
     except (ValueError, FileNotFoundError, TypeError, KeyError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     if not incremental and watch:
         click.echo(
@@ -1952,6 +1952,7 @@ def _echo_pin_report(report):
             "let_go": "let go",
             "dropped": "no longer declared",
             "lost": "lost",
+            "unsynced": "not fully synced",
         }
         summary = ", ".join(
             f"{counts[status]} {words[status]}" for status in words if status in counts
@@ -1988,7 +1989,10 @@ def _echo_pin_report(report):
             elif event.status == "dropped":
                 click.echo(f"  no longer declared: {event.asset}")
             elif event.status == "lost":
-                click.echo(f"  lost: {event.asset} ({_short_hash(event.old)}): {event.detail}")
+                pinned_at = f" ({_short_hash(event.old)})" if event.old else ""
+                click.echo(f"  lost: {event.asset}{pinned_at}: {event.detail}")
+            elif event.status == "unsynced":
+                click.echo(f"  not fully synced: {event.asset}: {event.detail}")
         if dependency in report.snapshots:
             taken = report.snapshots[dependency]
             made_in = f", which says it was made in {taken.repository}" if getattr(taken, "repository", "") else ""
@@ -2054,8 +2058,8 @@ def _run_pin(project_dir, dependencies=None):
     _echo_pin_report(report)
     if report.unrooted:
         click.echo(
-            f"The store is read-only for you, so its note of this lockfile could not "
-            f"be updated, and its `store gc` goes by the note it has ({report.unrooted})."
+            f"The store's note of this lockfile, for `store gc`, could not be written "
+            f"({report.unrooted}); `store gc` goes by the note it has."
         )
     if report.problems:
         click.echo(
@@ -2070,10 +2074,18 @@ def _echo_frozen_report(step, report):
     if not report.problems and not report.dependencies:
         click.echo(f"{who}no dependencies to check. Nothing written.")
         return
+    if report.unrooted:
+        # Only the note for gc: the pins are as they were
+        click.echo(
+            f"{who}the store's note that this machine reads these pins could not be written "
+            f"({report.unrooted}): `store gc` on another machine does not know of them.",
+            err=True,
+        )
+    written = "Nothing written but the store's note that this machine reads these pins." if report.noted else "Nothing written."
     if not report.problems:
         click.echo(
             f"{who}{report.pins} pin(s) of {report.dependencies} dependenc"
-            f"{'y' if report.dependencies == 1 else 'ies'}, all in the store. Nothing written."
+            f"{'y' if report.dependencies == 1 else 'ies'}, all in the store. {written}"
         )
         return
     for problem in report.problems:
@@ -2081,7 +2093,7 @@ def _echo_frozen_report(step, report):
         click.echo(f"{who}{where + ': ' if where else ''}{problem.message}", err=True)
     click.echo(
         f"{who}{len(report.problems)} problem(s): the pipeline cannot be built from its "
-        f"lockfile alone. Nothing written.",
+        f"lockfile alone. {written}",
         err=True,
     )
 
@@ -2091,7 +2103,7 @@ def _echo_frozen_report(step, report):
 @click.option(
     "--frozen",
     is_flag=True,
-    help="Write nothing: say whether the lockfile is complete and every pin is in the store",
+    help="Write nothing but the store's note for gc: say whether the lockfile is complete and every pin is in the store",
 )
 def pin(project_dir, frozen):
     """Freeze what this pipeline depends on.
@@ -2112,10 +2124,12 @@ def pin(project_dir, frozen):
     A dependency that is a git repository is fetched, and pinned from a
     clean copy of the commit.
 
-    --frozen pins nothing and writes nothing: not the lockfile, not the
-    store. It says whether the pipeline can be built from its lockfile
-    alone, every dependency pinned and every pin in the store, and exits
-    1 if not. For CI, and for a store you may only read.
+    --frozen pins nothing and writes nothing but, where the store can be
+    written, its note that this machine reads these pins, so that `store
+    gc` on another machine keeps them: not the lockfile, no object. It says
+    whether the pipeline can be built from its lockfile alone, every
+    dependency pinned and every pin in the store, and exits 1 if not. For
+    CI, and for a store you may only read.
 
     \b
     Examples:
@@ -2129,31 +2143,39 @@ def pin(project_dir, frozen):
     _run_pin(project_dir)
 
 
+def _said(error) -> str:
+    """An error as it may be printed: with no password that a path or URL in it carried (``//user:pw@host``)."""
+    from chartbook.config import without_credentials
+
+    return without_credentials(str(error))
+
+
 def _explain_os_error(error):
     """An OSError as a sentence: what a read-only store means, else the error."""
     from chartbook import lock
     from chartbook.store import ReadOnlyStoreError, default_store
 
     if isinstance(error, ReadOnlyStoreError):
-        return (
+        return _said(
             f"{error} This had to write it: a git dependency's first pin and a "
             f"snapshot both put files into the store. Do it where the store can be written; or, "
             f"if the store already has what the lockfile names, use --frozen."
         )
     if isinstance(error, OSError) and lock.is_read_only(error):
         try:
-            root = str(default_store())
+            the_store = default_store()
+            root = str(getattr(the_store, "root", ""))
         except Exception:  # pragma: no cover - the store path is unreadable
-            root = ""
+            the_store, root = None, ""
         if root and str(getattr(error, "filename", "") or "").startswith(root):
-            return (
-                f"The store at {root} is read-only for you, and this had to write "
+            return _said(
+                f"The store at {the_store} is read-only for you, and this had to write "
                 f"it: a git dependency's first pin and a snapshot "
                 f"both put files into the store. Do it where the store can be "
                 f"written; or, if the store already has what the lockfile names, "
                 f"use --frozen. ({error})"
             )
-    return str(error)
+    return _said(error)
 
 
 def _run_frozen(project_dir):
@@ -2162,7 +2184,7 @@ def _run_frozen(project_dir):
     from chartbook.store import StoreError
 
     try:
-        report = lock.verify(resolve_project_dir(project_dir))
+        report = lock.verify(resolve_project_dir(project_dir), note=True)
     except (lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
         raise SystemExit(1)
@@ -2399,7 +2421,7 @@ def lineage_command(project_dir, check, rehash, as_json):
 @click.option(
     "--frozen",
     is_flag=True,
-    help="Pin nothing and write nothing before the build; refuse unless every pin is in the store",
+    help="Pin nothing and write nothing before the build but the store's note for gc; refuse unless every pin is in the store",
 )
 def run_command(script, project_dir, force, make_snapshot, frozen):
     """Run a script in this pipeline: `build`, unless another is named.
@@ -2439,8 +2461,9 @@ def run_command(script, project_dir, force, make_snapshot, frozen):
         chartbook run --snapshot
         chartbook run --frozen
 
-    --frozen pins nothing and writes nothing before the build: not the
-    lockfile, not the store, and no git dependency is fetched or built.
+    --frozen pins nothing and writes nothing before the build but, where
+    the store can be written, its note that this machine reads these pins:
+    not the lockfile, no object, and no git dependency is fetched or built.
     The build runs only if the lockfile is complete and every pin is in
     the store (`chartbook pin --frozen` says the same without building).
     For CI, and for a store you may only read.
@@ -2461,7 +2484,7 @@ def _has_script(project_dir, script):
     try:
         steps = runner.plan(project_dir, git=False)
     except (runner.RunError, ValueError, OSError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     return any(script in step.scripts for step in steps if step.source == "asked")
 
@@ -2546,14 +2569,65 @@ def _run_script(project_dir, script, force=False, snapshot=False, frozen=False):
 
 @main.group()
 def store():
-    """Look after the store: the local folder of pinned files.
+    """Look after the store: where pinned files and snapshots are kept.
 
-    The store keeps files under the hash of what is in them. It is at
-    ~/.chartbook/store unless CHARTBOOK_STORE, or [store] url in
-    ~/.chartbook/settings.toml or in the organization's settings file
-    (/etc/chartbook/settings.toml, or what CHARTBOOK_SYSTEM_SETTINGS names), says
-    otherwise.
+    The store keeps files under the hash of what is in them. It is a folder
+    on this machine, or one machines share (on a shared disk, or synced by
+    a service such as Google Drive), or a bucket. It is ~/.chartbook/store
+    unless CHARTBOOK_STORE, or [store] url in ~/.chartbook/settings.toml or
+    in the organization's settings file (/etc/chartbook/settings.toml, or
+    what CHARTBOOK_SYSTEM_SETTINGS names), says otherwise. `chartbook store
+    info` says which it is.
     """
+
+
+@store.command("info")
+def store_info():
+    """Say which store this machine uses, and what set it.
+
+    The store is a setting of the machine, read in layers: CHARTBOOK_STORE,
+    then [store] url in your settings file, then in the organization's,
+    then the default. On a machine that is to share a store with another,
+    this is what to check first.
+
+    \b
+    Examples:
+        chartbook store info
+        CHARTBOOK_STORE=/shared/store chartbook store info
+    """
+    from chartbook.config import (
+        STORE_ENV_VAR,
+        folder_of_store_url,
+        get_cache_path,
+        get_global_settings_path,
+        get_store_setting,
+        get_system_settings_path,
+        shown_store_url,
+        store_kind,
+        without_credentials,
+    )
+
+    try:
+        url, origin = get_store_setting()
+        folder = folder_of_store_url(url) if store_kind(url) == "folder" else None
+        # Never a user name or password, which a URL, its endpoint or a //host path may carry
+        shown = shown_store_url(str(folder) if folder is not None else url)
+        cache = get_cache_path()
+    except ValueError as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + without_credentials(str(e)), err=True)
+        raise SystemExit(1)
+    said_by = {
+        "environment": f"set by {STORE_ENV_VAR}",
+        "user": f"set by [store] url in {get_global_settings_path()}, your settings",
+        "system": f"set by [store] url in {get_system_settings_path()}, the organization's settings",
+        "default": f"the default: neither {STORE_ENV_VAR} nor a [store] url in a settings file says otherwise",
+    }[origin]
+    if folder is not None and not folder.exists():
+        said_by += "; nothing is there yet"
+    click.echo(f"Store: {shown}")
+    click.echo(f"  {said_by}")
+    click.echo(f"Cache: {shown_store_url(str(cache))}")
+    click.echo("  where what is read from a remote store is kept on this machine")
 
 
 @store.command("verify")
@@ -2577,7 +2651,7 @@ def store_verify():
         total = len(list(the_store.hashes()))
         problems = the_store.verify()
     except (StoreError, ValueError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
 
     for problem in problems:
@@ -2590,6 +2664,11 @@ def store_verify():
         )
         raise SystemExit(1)
     click.echo(f"{the_store}: OK ({total} object(s))")
+
+
+def _printable(text) -> str:
+    """Text a store holds, as it may be printed: a control character (a line break, an escape) is a ``?``."""
+    return "".join("?" if ord(c) < 32 or 127 <= ord(c) < 160 else c for c in str(text))
 
 
 def _format_bytes(size):
@@ -2607,7 +2686,7 @@ def _format_bytes(size):
 @click.option(
     "--forget-missing",
     is_flag=True,
-    help="Stop keeping the pins of a lockfile that cannot be found (on a store a team shares, that is every other machine's)",
+    help="Stop keeping the pins of a lockfile on this machine that cannot be found (another machine's are never forgotten from here)",
 )
 @click.option(
     "--keep-days",
@@ -2649,9 +2728,17 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
-    --forget-missing to let those go. On a store a team shares, every other
-    machine's lockfile is one that cannot be found from here, so there the
-    store's owner runs gc without it.
+    --forget-missing to let those go. A note only ever adds to what is kept:
+    what a lockfile's note recorded at its last pin is kept even when the
+    lockfile here says otherwise now. A note of a lockfile on another
+    machine, which a store in a shared or synced folder has, is kept with
+    --forget-missing or without, as is a note from before notes named their
+    machine and a sync service's copy of a note; each is listed with its
+    file under roots/, which you remove once no machine needs it. In your
+    own store, under ~/.chartbook, a note from before notes named their
+    machine is this machine's: its lockfile is read, and the note is
+    removed once this machine has a note of that lockfile and the lockfile
+    is read here, or with --forget-missing once the lockfile is gone.
 
     What would be removed is listed, and nothing is removed until you say
     yes. An object stored in the last hour is never removed: a pin puts
@@ -2675,12 +2762,12 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         the_store = default_store()
         plan = lock.plan_gc(the_store, forget_missing=forget_missing, keep_days=days, keep_lineage=keep_lineage, aggressive=aggressive)
     except (StoreError, lock.LockError, ValueError) as e:
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(e), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
 
     # A kept snapshot keeps objects too, which no lockfile may name
-    named_by = f"{len(plan.lockfiles)} lockfile(s)" + (" or a kept snapshot" if plan.snapshots_kept else "")
+    named_by = f"{len(plan.lockfiles) + len(plan.elsewhere)} lockfile(s)" + (" or a kept snapshot" if plan.snapshots_kept else "")
     click.echo(f"Kept: {plan.kept} object(s), named by {named_by}")
     for lockfile, found in plan.lockfiles:
         if found:
@@ -2691,7 +2778,32 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             note = "  (not found; forgotten)"
         else:
             note = "  (not found; its pins are kept)"
-        click.echo(f"  {lockfile}{note}")
+        if lockfile in plan.forget_old:
+            # In this user's own store: a note from before notes named their machine, this machine's
+            from chartbook.store import root_name
+
+            note += f"  (its note under no machine name goes: {the_store}/roots/{root_name(lockfile)})"
+        click.echo(f"  {_printable(lockfile)}{note}")
+    from chartbook.store import this_host
+
+    here = this_host()
+    for root in plan.elsewhere:
+        # A note is written by whoever can write to the store: what it says is printed, never obeyed
+        host = _printable(root.host)
+        if root.copy:
+            whose = "a sync service's copy of a note"
+        elif not root.machine:
+            whose = "noted under no machine name (before notes named their machine, or by a CI runner with none), so perhaps another machine's"
+        elif root.host and root.host == here:
+            # Not this machine's name now: an earlier one of its own, or another machine of the same host name
+            whose = f"noted by {host} under another machine name than this one's now"
+        else:
+            whose = f"on another machine, {host}" if root.host else "on another machine"
+        read = "; the lockfile here at that path is read as well" if root.lockfile in plan.read_here else ""
+        click.echo(
+            f"  {_printable(root.lockfile)}  ({whose}: what it recorded at its last pin is kept{read}; "
+            f"note {the_store}/roots/{_printable(root.note)})"
+        )
     if plan.snapshots_kept:
         reasons = {}
         for _, why in plan.snapshots_kept:
@@ -2710,9 +2822,9 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         "cannot be found" in why for _, why in plan.snapshots_kept
     ):
         click.echo(
-            "  A lockfile that cannot be found keeps every snapshot that holds "
-            "something it named. --forget-missing lets them go; on a store a team "
-            "shares, that includes what other machines pin."
+            "  A lockfile that cannot be found keeps the snapshots its note recorded "
+            "(for a note from before notes did, the newest holding each object it "
+            "named). --forget-missing lets them go."
         )
 
     if not plan.delete and not plan.snapshots_delete:
@@ -2819,7 +2931,7 @@ def init(use_git, use_github, public):
     cwd = Path.cwd()
 
     def fail(error):
-        click.echo(click.style("Error: ", fg="red", bold=True) + str(error), err=True)
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
         raise SystemExit(1)
 
     if use_git:

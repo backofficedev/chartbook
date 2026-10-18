@@ -74,11 +74,29 @@ def _statuses(report, dependency=None) -> dict:
     }
 
 
-def _age(store: Store, seconds: float = 2 * lock.RECENT_SECONDS) -> None:
-    """Make every object in a store look as if it was stored a while ago."""
+def _age(store: Store, monkeypatch, seconds: float = 2 * lock.RECENT_SECONDS) -> None:
+    """Make every object in a store look as if it was stored a while ago.
+
+    A store goes by when an object came to this machine as well as by its
+    time (:meth:`chartbook.store.FolderStore.age_of`), and when it came
+    cannot be set back: so for these objects, as long as nothing touches
+    them again (storing one again does), their time alone is their age.
+    """
     then = time.time() - seconds
+    aged = {}
     for content_hash in store.hashes():
-        os.utime(store.object_path(content_hash), (then, then))
+        held = store.object_path(content_hash)
+        os.utime(held, (then, then))
+        aged[str(held)] = held.stat().st_mtime_ns
+    told = FolderStore.age_of
+
+    def age_of(self, content_hash, now=None):
+        held = self.object_path(content_hash)
+        if aged.get(str(held)) == held.stat().st_mtime_ns:
+            return (time.time() if now is None else now) - held.stat().st_mtime
+        return told(self, content_hash, now)
+
+    monkeypatch.setattr(FolderStore, "age_of", age_of)
 
 
 @pytest.fixture
@@ -442,7 +460,7 @@ class TestPin:
             store.delete(content_hash)
         # `pin` reads nothing of the other pipeline's folder to put them back from
         lost = lock.pin(downstream, store).problems
-        assert {p.status for p in lost} == {"lost"} and "A snapshot puts it there" in lost[0].detail
+        assert {p.status for p in lost} == {"lost"} and "a snapshot puts it there" in lost[0].detail
 
         report = pin_from_snapshots(downstream, store)  # its owner makes the snapshot again
         assert _statuses(report)["treasury"] == "kept"
@@ -460,7 +478,8 @@ class TestPin:
         (problem,) = report.problems
         assert problem.status == "lost" and problem.asset == "acme/rates:treasury"
         assert problem.old == HELLO
-        assert "it is not in the store. A snapshot puts it there: `chartbook update`" in problem.detail
+        assert "it is not in the store at " in problem.detail and "a sync that has not finished" in problem.detail
+        assert "Otherwise a snapshot puts it there: `chartbook update`" in problem.detail
         # The pin is not quietly moved to what the newest snapshot has
         assert (downstream / LOCK_FILE).read_bytes() == before
 
@@ -861,10 +880,10 @@ class TestGc:
     """
 
     @pytest.fixture
-    def moved(self, downstream, rates, store):
+    def moved(self, downstream, rates, store, monkeypatch):
         """A store with one object that an update left behind, an hour old."""
         _pin_then_update(downstream, rates, lambda: lock.pin(downstream, store), lambda: lock.update(downstream, store=store))
-        _age(store)
+        _age(store, monkeypatch)
         return store
 
     def test_what_no_lockfile_names_can_go(self, moved, downstream):
@@ -894,7 +913,7 @@ class TestGc:
         moved.put(rates / "_data" / "old.parquet")
         assert lock.plan_gc(moved).recent == [HELLO]
 
-    def test_another_projects_pins_are_kept(self, moved, downstream, rates, work):
+    def test_another_projects_pins_are_kept(self, moved, downstream, rates, work, monkeypatch):
         """The store is shared. Clearing it out from one project spares the rest."""
         other = work / "other"
         old_rates = rates.with_name("old_rates")
@@ -903,7 +922,7 @@ class TestGc:
         _commit_everything(old_rates)
         _depend(other, old={"git": "../old_rates"})
         lock.pin(other, moved)
-        _age(moved)
+        _age(moved, monkeypatch)
 
         plan = lock.plan_gc(moved)
         assert [found for _, found in plan.lockfiles] == [True, True]
@@ -927,12 +946,16 @@ class TestGc:
         assert lock.run_gc(plan, moved) == (0, 4)
         assert list(moved.hashes()) == [] and moved.roots() == []
 
-    def test_a_lockfile_is_read_as_it_is_now(self, moved, downstream):
-        """Checked out at another commit, say, and not pinned again since."""
+    def test_a_lockfile_is_read_as_it_is_now_and_its_note_still_keeps(self, moved, downstream):
+        """Checked out at another commit, say, and not pinned again since: what the lockfile
+        names now is kept, and so is what its note recorded at the last pin. A note only adds."""
         locked = lock.read_lock(downstream)
+        by_year = locked.assets["acme/rates:by_year"]["content_hash"]
         del locked.assets["acme/rates:by_year"]
         lock.write_lock(locked, downstream / LOCK_FILE)
-        assert len(lock.plan_gc(moved).delete) == 2
+        assert by_year not in {h for h, _ in lock.plan_gc(moved).delete}
+        moved.add_root(downstream / LOCK_FILE, locked.hashes())  # the next pin's note
+        assert by_year in {h for h, _ in lock.plan_gc(moved).delete}
 
     def test_a_lockfile_that_cannot_be_read_stops_it(self, moved, downstream):
         (downstream / LOCK_FILE).write_text("not json")
@@ -940,10 +963,10 @@ class TestGc:
             lock.plan_gc(moved)
         assert moved.has(HELLO)
 
-    def test_a_store_nobody_has_pinned_into(self, store, work):
+    def test_a_store_nobody_has_pinned_into(self, store, work, monkeypatch):
         (work / "f").write_bytes(b"hello")
         store.put(work / "f")
-        _age(store)
+        _age(store, monkeypatch)
         plan = lock.plan_gc(store)
         assert plan.lockfiles == [] and plan.delete == [(HELLO, 5)]
         assert lock.plan_gc(FolderStore(work / "no_store")).delete == []
@@ -1037,10 +1060,10 @@ class TestCommands:
         assert (downstream / LOCK_FILE).is_file()
 
     @pytest.fixture
-    def garbage(self, here, downstream, rates):
+    def garbage(self, here, downstream, rates, monkeypatch):
         """A store with one object that an update left behind, an hour old."""
         _pin_then_update(downstream, rates, lambda: self._run("pin"), lambda: self._run("update"))
-        _age(here)
+        _age(here, monkeypatch)
         return here
 
     def test_gc_dry_run_removes_nothing(self, garbage, downstream):

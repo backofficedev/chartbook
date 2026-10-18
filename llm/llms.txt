@@ -58,10 +58,11 @@ chartbook snapshot           # The second half alone: this pipeline's built asse
 chartbook lineage            # Every snapshot upstream, walked through the pins and checked by hash; --check exits 1 on a gap, --rehash re-hashes the bytes, --json; `chartbook snapshot --deep` refuses on an upstream gap
 chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}) and pin its newest snapshot from the store, no folder or clone; --as NAME, --commit C
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
-chartbook pin --frozen       # Write nothing; exit 1 unless the lockfile is complete and every pin is in the store (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3])
+chartbook pin --frozen       # Write nothing but the store's note for gc; exit 1 unless the lockfile is complete and every pin is in the store (CI, read-only shared store: a folder, or s3://bucket/prefix with chartbook[s3])
 chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
 chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on
-chartbook run --frozen       # Pin nothing, fetch nothing, write nothing; build only if every pin is in the store
+chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store
+chartbook store info         # Which store this machine uses, what set it, and the cache folder
 chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
 chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 7; --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets tags, branches and labels keep nothing)
 chartbook config             # Configure default catalog path

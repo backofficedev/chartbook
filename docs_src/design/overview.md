@@ -136,7 +136,7 @@ named scripts, `chartbook run` and snapshots, which came after it.
 | Declared dependencies | `manifest.py` (`validate_dependencies`), `resolve.py` (`locate_pipeline`), `check.py` (`check_dependencies`) | `[dependencies]`, with `path` or `git`. One resolution chain. In the index, and checked |
 | The store | `store.py`, `config.py` (`get_store_path`), `chartbook store verify` | Objects named by content hash, behind `has`, `get`, `put`, `delete`. Four kinds of link |
 | Snapshots | `snapshot.py`, `chartbook snapshot` | What one commit of a pipeline built, in the store. Made on purpose by its owner, with everything committed. The only thing of a pipeline that another reads. Since 2026-10-16 it holds the version's own index and documents, and `materialize()` lays a version out from the store alone ({doc}`versioned-catalog`) |
-| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: the commit, and a content hash for every asset, of every dependency. A folder is pinned from a snapshot, a repository from a clean copy. `pin` never moves a pin; `update` does. `pin --frozen` and `run --frozen` write nothing and say whether every pin can be had |
+| Pinning | `lock.py`, `chartbook pin`, `chartbook update`, `chartbook store gc` | `chartbook.lock`: the commit, and a content hash for every asset, of every dependency. A folder is pinned from a snapshot, a repository from a clean copy. `pin` never moves a pin; `update` does. `pin --frozen` and `run --frozen` write no lockfile and no object (only, where the store can be written, this machine's note for `store gc`, since 2026-10-17) and say whether every pin can be had |
 | Loading a dataframe through a catalog | `data.py` | `data.load(pipeline=…, dataframe=…)`. The older, two-argument form. It enters the resolution chain at the catalog and does not read `[dependencies]` |
 | Scratch directory | `data.scratch()` | `<pipeline>/_data/_scratch/` |
 | Freshness lines on pages | `writers/sphinx.py`, `chartbook-freshness.js` | "Data updated 2 days ago", computed in the browser |
@@ -1512,8 +1512,9 @@ folder says nothing.
 - *A shallow clone cannot see snapshots beyond its depth*, and the message blames the owner.
 - *`chartbook init` renders whatever is on `main`*, not the installed version; needs tags.
 - *No timeouts on git calls.* Prompts are off; a GUI credential helper could still block.
-- *A lockfile that cannot be found keeps every snapshot that shares one object with it*, for
-  as long as it is missing. Conservative; the command now points at `--forget-missing`.
+- *A lockfile that cannot be found keeps the snapshots its note recorded*, for as long as it
+  is missing (since 2026-10-17; a note from before keeps the newest snapshot holding each of
+  its objects). The command points at `--forget-missing`.
 - *Store names made before the hashing change are not found again.* Nothing is released.
 
 #### 4e: loading one column. Decided against
@@ -1649,7 +1650,10 @@ dependency in the manifest is in the lockfile, and the other way round; a depend
 from where the manifest now says it is (`_declared_elsewhere`); each has something pinned; each
 asset has a content hash, that is, was built when it was pinned; and the store has every hash.
 It opens no repository and uses no network. `run --frozen` skips the pin and the building of
-`git` dependencies, runs `verify()` in their place, and refuses to build on a problem.
+`git` dependencies, runs `verify()` in their place, and refuses to build on a problem. Since
+2026-10-17 it leaves, where the store can be written and not under CI, this machine's note of
+the lockfile for `store gc`, so that a machine that only reads keeps what it reads; it writes
+no lockfile and no object.
 
 **Proposed: decided here, not by the maintainer.**
 

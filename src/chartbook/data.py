@@ -483,6 +483,10 @@ def load(
         )
     file_path = location.path
     _is_glob = is_glob_pattern(file_path)
+    # A directory pinned from another pipeline: the files its record lists, and
+    # nothing else its folder holds (a Finder .DS_Store, a sync service's copy)
+    listed = [str(file) for file in location.files]
+    source = listed or file_path
 
     if format == "pandas":
         if _is_glob:
@@ -491,13 +495,19 @@ def load(
                 "(LazyFrame). Use data.load(..., format='polars') and call .collect() "
                 "to materialize, then .to_pandas() if needed."
             )
+        if listed:
+            import pyarrow.dataset as ds
+
+            # As pandas reads a folder: hive partitions as categories
+            partitioning = ds.HivePartitioning.discover(infer_dictionary=True)
+            return ds.dataset(listed, format="parquet", partitioning=partitioning, partition_base_dir=str(file_path)).to_table().to_pandas()
         import pandas as pd
 
         return pd.read_parquet(file_path)
     elif format == "polars":
         import polars as pl
 
-        return pl.scan_parquet(file_path, hive_partitioning=True)
+        return pl.scan_parquet(source, hive_partitioning=True)
     elif format == "polars_eager":
         if _is_glob:
             raise ValueError(
@@ -507,7 +517,7 @@ def load(
             )
         import polars as pl
 
-        return pl.read_parquet(file_path, hive_partitioning=True)
+        return pl.read_parquet(source, hive_partitioning=True)
     elif format == "polars-lazyframe":
         import warnings
 
@@ -519,7 +529,7 @@ def load(
             DeprecationWarning,
             stacklevel=2,
         )
-        return pl.scan_parquet(file_path, hive_partitioning=True)
+        return pl.scan_parquet(source, hive_partitioning=True)
     else:
         raise ValueError(
             f"Invalid format: {format!r}. Must be 'polars', 'polars_eager', "
