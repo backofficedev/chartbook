@@ -22,16 +22,16 @@ transformation of the one before:
 |---|---|---|
 | **repository** | A pipeline's folder in git: its manifest, its code, its write-ups and the data it builds. For a catalog, several of these. The **source**: when anything disagrees with the repository, the repository is right | People |
 | **index** | One JSON file, `index.json`, describing everything a site contains: every pipeline and asset by ID, where each is, its content hash, what it was made from and at which hashes, what pins what. The record of what was true when the build ran | `chartbook docs` (and `chartbook build`, which runs the build first). Never `chartbook run` |
-| **pages** | The files a site tool reads: Markdown for Sphinx or MkDocs, JSX for Next.js. Text, never data | A **writer**: one per site tool, reading the index and the write-ups it points at |
-| **site** | HTML | The site tool, by its name: Sphinx today; others later |
+| **pages** | The files a site tool reads: Markdown for Sphinx or MkDocs. Text, never data | A **writer**: one per site tool, reading the index and the write-ups it points at |
+| **site** | HTML | The site tool, by its name: Sphinx by default, or MkDocs when `[project] writer = "mkdocs"` |
 
 Two roles, named by what each does and not by what it produces:
 
-- A **writer** turns the index into pages for one site tool. ChartBook's writers are its own;
-  the Sphinx writer is the first, and MkDocs and Next.js writers are on the roadmap, reading the
-  same index.
-- A **site tool** turns pages into a site: Sphinx, MkDocs, Next.js. ChartBook writes none of these
-  and calls each by its name.
+- A **writer** turns the index into pages for one site tool. ChartBook's writers are its own:
+  `chartbook.writers.sphinx` and `chartbook.writers.mkdocs`, reading the same index.
+  `[project] writer` chooses one; `sphinx` is the default.
+- A **site tool** turns pages into a site: Sphinx or MkDocs. ChartBook writes neither and calls
+  each by its name.
 
 ## The four documents
 
@@ -70,10 +70,11 @@ from the other.
 
 A snapshot *holds* the index of its version: the pipeline's own index at that commit, with the
 write-ups and the other files a writer needs, so that the description of the data is preserved
-with the data and a site can be built for any version from the store alone. The plan is for a
-catalog to show every version of every pipeline this way, its index assembled from such version
-indexes plus the comparisons only a site can make; that part is not built yet. The reasoning and
-the plan are in {doc}`../design/versioned-catalog`.
+with the data and a site can be built for any version from the store alone. A catalog shows every
+version of every pipeline this way: each snapshot's site is built from the store, under
+`versions/`, and the catalog's Versions page lists them. The catalog's own index describes the
+working versions, each pipeline's record listing its snapshots, with the comparisons only a site
+can make ({doc}`catalogs-and-data`). The reasoning is in {doc}`../design/versioned-catalog`.
 
 ## The rest of the words
 
@@ -92,9 +93,9 @@ the plan are in {doc}`../design/versioned-catalog`.
 | **front door** | A Python module that hands out one kind of asset: `chartbook.data` for dataframes, `chartbook.models` for models, `chartbook.assets` for any kind |
 | **location** | Where an asset physically is: a file, or a table or query in a source |
 | **record** | One entry in the index, a lockfile or a snapshot. Each has a `kind` (`Dataframe`, `Chart`, …) and a `version` |
-| **store** | A folder of files named by their hash: `~/.chartbook/store`, or one a team shares. Holds snapshots and the pinned copies pipelines read |
+| **store** | A folder of files named by their hash: `~/.chartbook/store`, or one a team shares (a shared or synced folder, or an S3 bucket). Holds snapshots and the pinned copies pipelines read |
 | **object** | One asset in the store: a directory named by the asset's content hash, holding its files under their own names |
-| **dependency** | Another pipeline this one reads from, declared in `[dependencies]`: a name, and where to find it (`path` or `git`) |
+| **dependency** | Another pipeline this one reads from, declared in `[dependencies]`: its ID, and where to find it: the store alone (`"acme/rates" = {}`), a folder (`path`) or a repository (`git`) |
 | **pin** | To freeze which snapshot of a dependency a pipeline reads; also the record of it in the lockfile. `chartbook pin` makes pins and never moves one; `chartbook update` moves them |
 | **version** | A model's bytes as a snapshot first held them, named by the first twelve digits of their hash (more, if two would otherwise share a name); `[models.x.aliases]` gives labels such as `champion` |
 | **source / backend** | A named database connection in a manifest / the engine behind it. DuckDB is the engine that is built |

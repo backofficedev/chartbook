@@ -1,6 +1,6 @@
 # Documenting a Pipeline
 
-A pipeline is a project that produces artifacts — parquet files, chart HTML, notebooks. ChartBook doesn't run the pipeline; you build the artifacts however you like (`doit`, `make`, plain scripts) and `chartbook.toml` describes what they are, where they live, and how they fit together. `chartbook docs` then renders that description into a website.
+A pipeline is a project that produces artifacts — parquet files, chart HTML, notebooks. ChartBook is not the tool that builds them; you build the artifacts however you like (`doit`, `make`, plain scripts), and `chartbook.toml` describes what they are, where they live, how they fit together, and the command that builds them. `chartbook docs` then renders that description into a website, and `chartbook run` runs the command.
 
 This page covers the describing. For the field-by-field reference, see {doc}`../reference/configuration`.
 
@@ -33,13 +33,15 @@ Every `[project]` field is optional with sensible defaults (`name` defaults to t
 name = "Yield Curve"
 description = "Zero-coupon yield curve estimates and repo rates"
 maintainer = "Jane Doe"
+
+[scripts]
 build = """
 conda activate myenv
 doit
 """
 ```
 
-`build` records how to regenerate the artifacts. It has shell-script semantics — a multi-line value is one script, so environment activation carries into later lines. It's displayed on the pipeline's page (and reserved for a future `chartbook run`).
+`build`, under `[scripts]`, is the command that builds the artifacts. It has shell-script semantics — a multi-line value is one script, so environment activation carries into later lines. It is shown on the pipeline's page, and it is run: `chartbook run` runs it in the pipeline's directory, and `chartbook build` runs it and then renders the site, which `chartbook docs` does alone. Make it the command that builds the pipeline, not a note about the environment. `build` under `[project]`, the old place, is still read and means the same thing; give it in one place. See {ref}`[scripts] <scripts>` in the reference and {ref}`chartbook run <chartbook-run>`.
 
 ## Charts
 

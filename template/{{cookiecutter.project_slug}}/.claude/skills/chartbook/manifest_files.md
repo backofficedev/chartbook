@@ -58,6 +58,7 @@ All keys are optional:
 | `build` | string (multi-line allowed); the same as `[scripts] build` | `""` |
 | `site_dir` | string (path) | `"./docs_src/site/"` when that directory exists, else disabled |
 | `enable_data_download` | bool | `false` |
+| `writer` | `"sphinx"` or `"mkdocs"`: the site tool (MkDocs needs `pip install chartbook[mkdocs]`) | `"sphinx"` |
 
 ### Scripts
 
@@ -200,8 +201,14 @@ query = "select Date, SVENY10 - SVENY02 as slope from fed_yield_curve"
 
 `[dependencies]` names the other pipelines a pipeline reads from. The key is a
 pipeline ID (`name` or `scope/name`; quote a key that has a `/`). The value is a
-table with `path` (a directory holding that pipeline's `chartbook.toml`) or `git`
-(a repository URL, optionally with `rev`), never both.
+table that says where to get it. Empty, `"acme/rates" = {}`, names the pipeline
+by its ID alone: it is pinned from its newest snapshot in the store, with no
+folder of it here and no clone (`chartbook add acme/rates` writes the line; `id`
+gives the full ID when the key is a shorter name, `commit` takes the newest
+snapshot at that commit, `rev` a branch or tag of its repository, `repository`
+says which repository when more than one claims the ID). `path` is a directory
+holding that pipeline's `chartbook.toml`, for two pipelines in one repository.
+`git` is a repository URL, optionally with `rev`. Never `path` and `git` both.
 
 - `chartbook check` reports a `path` that is missing, has no `chartbook.toml`, is
   a catalog, or is the pipeline itself, and a model whose `trained_on` names a
@@ -360,13 +367,14 @@ exclude = ["../my_repos/scratch_*"]  # optional
 
 ### Catalog Policy
 
-The format itself is permissive; **requiredness is catalog policy**. A catalog
-may declare which fields its member pipelines must fill in:
+The format itself is permissive; **requiredness is policy**. A catalog may
+declare which fields its member pipelines must fill in, and a lone pipeline may
+declare what it holds itself to:
 
 ```toml
 [policy]
 mode = "warn"          # "warn" (default): report in the diagnostics page
-                       # "strict": fail the catalog build
+                       # "strict": fail the build
 
 [policy.required]
 project    = ["description", "maintainer", "repo_url"]
@@ -377,15 +385,21 @@ notebooks  = ["description"]
 
 - With no `[policy]` section, a default warn-only policy of recommended fields
   applies, reported on the diagnostics page.
-- Policy is enforced only when the **catalog** builds. A pipeline built
-  standalone is always permissive.
+- A pipeline may have a `[policy]` of its own: it applies when the pipeline is
+  checked or built by itself. Inside a catalog, the catalog's policy applies and
+  the pipeline's is ignored.
+- `mode = "strict"` fails the build, a catalog's or a lone pipeline's, on a
+  missing required field. `chartbook check` exits nonzero on one whatever the
+  mode; with no policy anywhere it reports the recommended fields as warnings
+  and exits 0.
 
 ## Required Fields
 
 The v2 format makes everything optional except one rule: **each chart and each
 dataframe must have exactly one of `docs_path` or `docs`** (external markdown
 file vs. inline markdown string — mutually exclusive). Any further
-requiredness comes from the catalog's `[policy]` section, not the format.
+requiredness comes from a `[policy]` section, the catalog's or a lone pipeline's
+own, not the format.
 
 Practical notes:
 
