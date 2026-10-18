@@ -185,6 +185,11 @@ def build(**site):
     from chartbook.manifest import BUILD_SCRIPT
 
     project_dir = resolve_project_dir(site["project_dir"])
+    if _is_catalog_folder(project_dir):
+        # Every member's script would run before the render refused the
+        # catalog: the render's gate comes first. A pipeline's own run is
+        # gated in `run.run` before its render.
+        _require_trust_to_render(project_dir)
     after_build = False
     if runner.running(project_dir, BUILD_SCRIPT):
         click.echo(
@@ -347,8 +352,8 @@ def _require_trust_to_render(project_dir) -> bool:
             if trust_of(project_dir) is None:
                 click.echo(
                     click.style("Warning: ", fg="yellow", bold=True)
-                    + f"{project_dir} is not a pipeline you trust, so the site is rendered as one from a store "
-                    f"is: no query is run, and no template or file from outside the folder is read. If it is "
+                    + f"{project_dir} is not a pipeline you trust, so it is read as files from a store are: "
+                    f"no query is run, and no template or file from outside the folder is read. If it is "
                     f"yours to run, `chartbook trust` {here} trusts it; `chartbook trust --render` trusts it "
                     f"to render only.",
                     err=True,
@@ -366,6 +371,8 @@ def _require_trust_to_render(project_dir) -> bool:
         if trust_of(project_dir) is None:
             untrusted.append(f"  {project_dir} (the catalog's own folder)")
         for pipeline_id, directory in members.items():
+            if not (directory / "chartbook.toml").is_file():
+                continue  # nothing to trust or read there; the build says the entry names no pipeline
             if trust_of(directory) is None:
                 untrusted.append(f"  {directory} ({pipeline_id})")
     except ValueError as error:
@@ -379,6 +386,17 @@ def _require_trust_to_render(project_dir) -> bool:
             f"folder trusts that one."
         )
     return False
+
+
+def _is_catalog_folder(project_dir) -> bool:
+    """Whether the manifest in *project_dir* is a catalog's; False when there is none or it cannot be read."""
+    from chartbook.manifest import _read_manifest_file, resolve_project_type
+
+    try:
+        raw = _read_manifest_file(project_dir)
+        return resolve_project_type(raw, source=str(project_dir / "chartbook.toml")) == "catalog"
+    except (ValueError, FileNotFoundError):
+        return False
 
 
 @contextlib.contextmanager
@@ -535,19 +553,27 @@ def publish(publish_dir: Path | str | None, project_dir: Path | str, verbose: bo
     from chartbook.publish import publish_pipeline
 
     project_dir = resolve_project_dir(project_dir)
-    manifest = load_manifest(base_dir=project_dir)
-    pipeline_id = manifest["project"]["id"]
+    # Publishing copies the files the manifest names: in a folder the user
+    # has not trusted, as a build of files from a store, nothing outside it
+    untrusted = _require_trust_to_render(project_dir)
+    try:
+        with _untrusted_mode(untrusted):
+            manifest = load_manifest(base_dir=project_dir)
+            pipeline_id = manifest["project"]["id"]
 
-    if publish_dir is None:
-        BASE_DIR = Path(".").resolve()
-        publish_dir = BASE_DIR / Path("./_output/to_be_published")
-    else:
-        publish_dir = Path(publish_dir) / pipeline_id
+            if publish_dir is None:
+                BASE_DIR = Path(".").resolve()
+                publish_dir = BASE_DIR / Path("./_output/to_be_published")
+            else:
+                publish_dir = Path(publish_dir) / pipeline_id
 
-    # if publish_dir is a relative path, convert it to an absolute path relative to the project directory
-    if not publish_dir.is_absolute():
-        publish_dir = project_dir / Path(publish_dir)
-    publish_pipeline(publish_dir=publish_dir, base_dir=project_dir, verbose=verbose)
+            # if publish_dir is a relative path, convert it to an absolute path relative to the project directory
+            if not publish_dir.is_absolute():
+                publish_dir = project_dir / Path(publish_dir)
+            publish_pipeline(publish_dir=publish_dir, base_dir=project_dir, verbose=verbose)
+    except (ValueError, FileNotFoundError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
 
 
 @main.command(hidden=True)
@@ -898,14 +924,19 @@ def create_data_glimpses(no_samples, no_stats, output_dir, size_threshold, proje
     """
     from chartbook.create_data_glimpses import main as create_data_glimpses_main
 
+    project_dir = resolve_project_dir(project_dir)
+    # The report reads the files the manifest names: in a folder the user
+    # has not trusted, as a build of files from a store, nothing outside it
+    untrusted = _require_trust_to_render(project_dir)
     try:
-        create_data_glimpses_main(
-            output_dir=output_dir,
-            no_samples=no_samples,
-            no_stats=no_stats,
-            size_threshold=size_threshold,
-            project_dir=resolve_project_dir(project_dir),
-        )
+        with _untrusted_mode(untrusted):
+            create_data_glimpses_main(
+                output_dir=output_dir,
+                no_samples=no_samples,
+                no_stats=no_stats,
+                size_threshold=size_threshold,
+                project_dir=project_dir,
+            )
     except (FileNotFoundError, NotADirectoryError) as e:
         click.echo(f"Error: {e}", err=True)
         import sys
@@ -1462,6 +1493,9 @@ def catalog_init(title):
 
     catalog_path = create_global_catalog(title=title)
     click.echo(f"Created global catalog: {catalog_path}")
+    # You made it: its folder is trusted to run, as a project `chartbook init` makes is
+    if _record_trust_or_say(catalog_path.parent, "run"):
+        click.echo(f"Trusted: {catalog_path.parent} (chartbook trust --list)")
     click.echo("")
     click.echo("Next steps:")
     click.echo("  chartbook catalog add /path/to/pipeline   # add a pipeline")
@@ -1739,6 +1773,12 @@ def catalog_add(paths, catalog_path, yes):
             raw_catalog["pipelines"][key] = {"path": rel_path}
             click.echo(f"  Added '{key}': {name} ({rel_path}){enabled}")
         added += 1
+        # Adding a folder to your own catalog asks for it to be rendered
+        # there: trusted to render, unless it is trusted already. To run
+        # stays yours to say (`chartbook build` in a catalog runs every
+        # member's script)
+        if _trust_to_render_if_untrusted(d, key):
+            click.echo(f"  Trusted to render: {d} (chartbook trust --list; `chartbook trust` there to run)")
 
     # Write back
     with open(catalog_toml, "wb") as f:
@@ -1904,6 +1944,10 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
     click.echo(f"Building catalog from: {catalog_path}")
     click.echo(f"Output directory: {output_dir}")
 
+    # As `chartbook docs` in the catalog's folder: every folder it reads must
+    # be trusted. Before --clean, so that a refused build leaves the kept tree
+    _require_trust_to_render(project_dir)
+
     if clean:
         from chartbook.incremental import looks_like_build_tree
 
@@ -1911,9 +1955,6 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
             import shutil
 
             shutil.rmtree(_docs_dir)
-
-    # As `chartbook docs` in the catalog's folder: every folder it reads must be trusted
-    _require_trust_to_render(project_dir)
 
     # A site built with MkDocs is built whole: the kept build directory is Sphinx's
     from chartbook.manifest import load_manifest
@@ -3214,19 +3255,54 @@ def _trust_new_project(project_dir, repository=None) -> bool:
 
     :returns: Whether the record was written.
     """
-    from chartbook.config import record_trust
     from chartbook.identity import derive_pipeline_id
 
+    return _record_trust_or_say(
+        project_dir, "run", id=derive_pipeline_id(_project_table(project_dir), project_dir), repository=repository
+    )
+
+
+def _record_trust_or_say(folder, level, id=None, repository=None) -> bool:
+    """Record a folder the user made or added as trusted, or say in one line why that could not be done and go on.
+
+    For `init`, `catalog init` and `catalog add`: the command's own work
+    is done, and a record that cannot be written (no home folder) is not a
+    reason to undo it.
+
+    :returns: Whether the record was written.
+    """
+    from chartbook.config import record_trust
+
     try:
-        record_trust(project_dir, "run", id=derive_pipeline_id(_project_table(project_dir), project_dir), repository=repository)
+        record_trust(folder, level, id=id, repository=repository)
     except (OSError, RuntimeError, ValueError) as error:
         click.echo(
-            f"Note: the new project could not be recorded as trusted ({_said(error)}), so a build of it runs "
-            f"as one from a store does until `chartbook trust` in its folder records it.",
+            f"Note: {folder} could not be recorded as trusted ({_said(error)}), so a build of it runs "
+            f"as one from a store does until `chartbook trust` in that folder records it.",
             err=True,
         )
         return False
     return True
+
+
+def _trust_to_render_if_untrusted(folder, pipeline_id) -> bool:
+    """Record a folder `catalog add` is adding as trusted to render, unless it is trusted already.
+
+    A folder already trusted, to render or to run, keeps its level: a
+    record at `render` would take `run` away from a project the user made.
+
+    :returns: Whether a record was written.
+    """
+    from chartbook.config import trust_of
+    from chartbook.identity import get_git_remote_url, repository_key
+
+    try:
+        if trust_of(folder) is not None:
+            return False
+    except ValueError as error:
+        click.echo(f"Note: {_said(error)} The folder's trust was left as it is.", err=True)
+        return False
+    return _record_trust_or_say(folder, "render", id=pipeline_id, repository=repository_key(get_git_remote_url(folder)) or None)
 
 
 @main.command()
@@ -3395,6 +3471,17 @@ def trust(path, render_only, repository, members, list_, forget):
             fail(f"No chartbook.toml in {folder}. --members is for a catalog's folder.")
         except ValueError as error:
             fail(f"{error} --members is for a catalog's folder; `chartbook trust` trusts a pipeline's.")
+        # A folder with no pipeline in it is not recorded: whatever was put
+        # there later would be trusted. Nothing is recorded until every
+        # member can be, as `chartbook trust /nowhere` records nothing
+        missing = [(pipeline_id, d) for pipeline_id, d in member_dirs.items() if not (d / "chartbook.toml").is_file()]
+        if missing:
+            fail(
+                "these members of the catalog have no chartbook.toml where the catalog says they are, so nothing "
+                "was recorded (a folder trusted now would trust whatever is put there later):\n"
+                + "\n".join(f"  {d} ({pipeline_id})" for pipeline_id, d in missing)
+                + "\nFix or remove their entries in the catalog's chartbook.toml, and run this again."
+            )
         try:
             config.record_trust(folder, level, id=None, repository=repository_key(get_git_remote_url(folder)) or None)
             click.echo(f"{verb[level]}: {folder} (the catalog's folder)")

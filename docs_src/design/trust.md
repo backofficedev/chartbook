@@ -56,14 +56,20 @@ every pipeline under it, and `chartbook trust ~` would trust them all; the comma
 folder has no `chartbook.toml`. A repository's trust covers any folder whose `origin` remote names it
 (`chartbook.identity.repository_key`), wherever it is cloned.
 
-Two things are trusted without a record. A project `chartbook init` makes is recorded at `run` as
-it is made: you made it. And under `CI` (the environment variable, as the store's notes already use
-it), the checkout is trusted at `run`: the top of the git repository the working directory is in,
-or the working directory itself. A runner builds its own checkout, and a pull request from a fork
-runs its code in CI whatever ChartBook does. `CHARTBOOK_TRUST=all` trusts every folder at `run`
-(the test suite runs so; a container that is nothing but your own code may); it is the one value
-the variable takes, and another is said once, and ignored. A build of files from a store
-(`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says.
+Three commands record trust without being asked to. A project `chartbook init` makes is recorded
+at `run` as it is made: you made it. A catalog `chartbook catalog init` makes has its folder
+recorded at `run`, for the same reason. A folder `chartbook catalog add` adds is recorded at
+`render`, unless it is trusted already: adding a folder to your own catalog is asking for it to be
+rendered there, and `run` stays yours to say, since `chartbook build` in a catalog runs every
+member's script. Each says so in one line.
+
+Two things are trusted without a record. Under `CI` (the environment variable, as the store's notes
+already use it), the checkout is trusted at `run`: the top of the git repository the working
+directory is in, or the working directory itself. A runner builds its own checkout, and a pull
+request from a fork runs its code in CI whatever ChartBook does. `CHARTBOOK_TRUST=all` trusts every
+folder at `run` (the test suite runs so; a container that is nothing but your own code may); it is
+the one value the variable takes, and another is said once, and ignored. A build of files from a
+store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says.
 
 A `git` dependency is built in ChartBook's own copy of its commit, by its own build script: naming
 it in `[dependencies]` is the trust for that, as installing a package is for its code, and the
@@ -93,12 +99,17 @@ since = "2026-10-18T22:14:05Z"
 ```
 
 A folder's level is the highest of every entry that covers it. The file is read as settings are:
-one that cannot be read stops the command, naming the file; an entry of another shape is passed
+one that cannot be read stops the command, naming the file; an entry of another shape (a relative
+`path` among them, which would name another folder from each folder a command is run in) is passed
 over with a warning naming the file and the entry (TOML gives no line for a table), and a write
-keeps it as it was. The `id` and `repository` of a `[[pipeline]]` entry are notes for you; a
-stranger's manifest claiming your `[project] id` gains nothing, since the entry is matched by
-path. A `[[repository]]` entry is matched by the folder's `origin` remote, which you set when you
-cloned.
+keeps it as it was. A `pipeline` or `repository` key that is a table rather than an array is passed
+over the same way, and a write refuses to rewrite the file rather than drop it. `since` is written
+as a string, ISO 8601 with `Z`; one written as a TOML date-time is read. The `id` and `repository`
+of a `[[pipeline]]` entry are notes for you; a stranger's manifest claiming your `[project] id`
+gains nothing, since the entry is matched by path. A `[[repository]]` entry is matched by the
+folder's `origin` remote, which you set when you cloned; a folder you did not clone yourself (an
+archive unpacked with its `.git/` inside) may name any repository in its `.git/config`, so trust a
+repository only for clones you made, and trust such a folder by its path.
 
 ## Where the gate is
 
@@ -117,18 +128,29 @@ cloned.
   every folder whose script would run must be trusted at `run`, else `RunError` with the list and the
   command. The check is made once the order of the run is known, so a `git` dependency may be
   fetched into ChartBook's own cache before an untrusted pipeline is refused; nothing of either
-  runs. `catalog build` as `docs`.
+  runs. `chartbook build` in a catalog applies the render's gate first, before any member's script
+  runs. `catalog build` as `docs`, before `--clean`, so that a refused build leaves the kept tree.
+- `chartbook create-data-glimpses` and `chartbook publish` read and copy the files the manifest
+  names, so they take the render's gate and run their work in the same untrusted mode: in a folder
+  with no trust, a path outside the folder is refused as the manifest loads, and no query is run.
 - `chartbook check` reads and executes nothing, and is not gated; it says the folder's level in its
   last line when the level is not `run` (for a catalog, the lowest among its own folder and its
   member folders here).
-- `chartbook init` records the new project at `run` and says so in one line; when the record cannot
-  be written (no home folder), it says so and goes on.
+- `chartbook init` records the new project at `run` and says so in one line; `catalog init` records
+  the catalog's folder at `run`, and `catalog add` each folder added at `render` unless it is
+  trusted already. When the record cannot be written (no home folder), each says so and goes on.
+- A catalog's member folder with no `chartbook.toml` is passed over by the gate (the build says the
+  entry names no pipeline, as before), and `chartbook trust --members` records nothing while there
+  is one, naming it: a folder trusted before anything is there would trust whatever is put there.
 
 ## Not doing, and later
 
 - No prompt. A command refuses and prints the command that trusts; nothing asks a question, so a
   script's behaviour is the same as a person's.
 - No trust by `[project] id`, since a manifest can say any ID.
+- Telling a clone you made from a folder that arrived with a `.git/config` naming a repository you
+  trust: `origin` is taken at its word. The record says to trust a repository only for clones you
+  made.
 - Rendering untrusted members of a catalog the store way, beside trusted ones, when the untrusted
   mode is no longer the process's.
 - Trust carried in a shared store's notes, or by an organization's settings file. A machine's trust

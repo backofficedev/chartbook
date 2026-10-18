@@ -278,6 +278,55 @@ class TestTheRecord:
         assert raw["pipeline"][0] == {"path": 5, "level": "run"}
         assert raw["pipeline"][1]["path"] == str(work.resolve())
 
+    def test_a_relative_path_is_passed_over(self, work, monkeypatch):
+        """Found by a review: resolved against the working directory, `path = "work"` trusted a different folder from each folder a command ran in."""
+        path = config.get_trust_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(tomli_w.dumps({"pipeline": [{"path": "work", "level": "run"}]}))
+        (work / "work" / "sub").mkdir(parents=True)
+        monkeypatch.chdir(work)
+        with pytest.warns(UserWarning, match=r"entry 1 .* has a relative path, .* write the folder's full path"):
+            assert config.read_trust() == []
+        with pytest.warns(UserWarning):
+            assert config.trust_of(work / "work" / "sub") is None
+        # A write keeps it, and records the folder by its full path beside it
+        config.record_trust(work / "work", "run")
+        raw = tomli.loads(path.read_text())
+        assert [entry["path"] for entry in raw["pipeline"]] == ["work", str((work / "work").resolve())]
+
+    def test_since_is_read_from_a_toml_date_time_as_the_string_it_is_written_as(self, work):
+        path = config.get_trust_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            f'[[pipeline]]\npath = "{work}"\nlevel = "run"\nsince = 2026-10-18T22:14:05Z\n\n'
+            f'[[repository]]\nurl = "https://github.com/acme/rates"\nlevel = "run"\nsince = 2026-10-18T17:14:05-05:00\n'
+        )
+        first, second = config.read_trust()
+        assert first["since"] == "2026-10-18T22:14:05Z"
+        assert second["since"] == "2026-10-18T22:14:05Z"
+        # What is written is a string; the entries kept are kept as they were
+        config.record_trust(work / "other", "run")
+        assert re.search(r'since = "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ"', path.read_text())
+        assert sum(entry["since"] == "2026-10-18T22:14:05Z" for entry in config.read_trust()) == 2
+
+    def test_a_table_where_an_array_should_be_is_never_dropped_by_a_write(self, work, monkeypatch):
+        """Found by a review: `[pipeline]` was warned about, and then dropped by the next write."""
+        path = config.get_trust_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        written = f'[pipeline]\npath = "{work}"\nlevel = "run"\n'
+        path.write_text(written)
+        with pytest.warns(UserWarning, match=r"\[\[pipeline\]\] is not an array of tables"):
+            assert config.read_trust() == []
+        with pytest.raises(ValueError, match=r"trust\.toml: \[pipeline\] is a table, not an array of tables, and writing the file would drop it"):
+            config.record_trust(work / "other", "run")
+        with pytest.raises(ValueError, match="fix it or remove it"):
+            config.forget_trust(path=work)
+        assert path.read_text() == written
+        monkeypatch.chdir(work)
+        result = _trust()
+        assert result.exit_code == 1
+        assert result.output.startswith("Error: ") and "is a table, not an array of tables" in result.output
+
     def test_a_record_that_cannot_be_written_is_an_os_error(self, work, monkeypatch):
         blocker = work / "blocker"
         blocker.write_text("a file where a folder should be")
@@ -378,6 +427,19 @@ class TestTheCommand:
         # A member shown from the store has no folder here, and is not in the record
         assert "acme/nowhere" not in catalog_member_dirs(root)
         assert {e["id"] for e in config.read_trust()} == {None, "pipeline_a", "pipeline_b"}
+
+    def test_members_records_nothing_while_a_member_has_no_manifest(self, work, monkeypatch):
+        """Found by a review: a member whose folder is not there yet was recorded, and so would be whatever was cloned there later."""
+        root = _sibling_catalog(work, "pipeline_a")
+        _edit_manifest(root, lambda m: m["pipelines"].__setitem__("pipeline_c", {"path": "../pipeline_c"}))
+        (work / "pipeline_c").mkdir()  # a folder with no chartbook.toml; a missing folder is the same
+        monkeypatch.chdir(root)
+        result = _trust("--members")
+        assert result.exit_code == 1, result.output
+        assert "these members of the catalog have no chartbook.toml where the catalog says they are, so nothing was recorded" in result.output
+        assert f"  {(work / 'pipeline_c').resolve()} (pipeline_c)" in result.output
+        assert "Fix or remove their entries" in result.output
+        assert config.read_trust() == []
 
     def test_members_to_render_only(self, work, monkeypatch):
         root = create_catalog_project(work / "cat", pipeline_ids=["pipeline_a"])
@@ -507,7 +569,7 @@ class TestDocsOfAnUntrustedPipeline:
         result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert "Warning: " in result.output
-        assert f"{leaky_project} is not a pipeline you trust, so the site is rendered as one from a store is" in result.output
+        assert f"{leaky_project} is not a pipeline you trust, so it is read as files from a store are" in result.output
         assert "`chartbook trust` here trusts it; `chartbook trust --render` trusts it to render only." in result.output
         assert (leaky_project / "docs" / "index.html").is_file()
         pages = _pages(leaky_project / "docs")
@@ -547,6 +609,46 @@ class TestDocsOfAnUntrustedPipeline:
         assert result.exit_code == 0, result.output
         copied = [p for p in (pipeline_project / "docs").rglob("*") if p.is_file() and b"TRUST-TEST-LOGO-BYTES" in p.read_bytes()]
         assert copied, "the logo the manifest names was not copied into the site"
+
+    @pytest.fixture
+    def reaching_project(self, pipeline_project, tmp_path):
+        """A pipeline whose manifest names a data file outside its folder."""
+        secret = tmp_path / "secret.csv"
+        secret.write_text("user,password\nadmin,HUNTER2_LEAKED_SECRET\n")
+        # Relative, as a monorepo's shared file would be named (an absolute path outside is refused the same way)
+        _edit_manifest(pipeline_project, lambda m: m["dataframes"].__setitem__("leak", {"path": "../secret.csv", "docs": "d"}))
+        return pipeline_project
+
+    def test_create_data_glimpses_reads_nothing_outside_an_untrusted_folder(self, reaching_project, tmp_path, monkeypatch):
+        """Found by a review: the report wrote the rows of a file the manifest named anywhere on the machine."""
+        out = tmp_path / "glimpses"
+        arguments = ["create-data-glimpses", "--project-dir", str(reaching_project), "-o", str(out)]
+        result = CliRunner().invoke(main, arguments)
+        assert result.exit_code == 1, result.output
+        assert "is not a pipeline you trust" in result.output
+        assert "[dataframes.leak] path" in result.output and "is not a plain path inside the pipeline's folder" in result.output
+        assert not out.exists() or "HUNTER2_LEAKED_SECRET" not in _pages(out)
+
+        config.record_trust(reaching_project, "render")
+        result = CliRunner().invoke(main, arguments)
+        assert result.exit_code == 0, result.output
+        assert "HUNTER2_LEAKED_SECRET" in (out / "data_glimpses.md").read_text()
+
+    def test_publish_copies_nothing_from_outside_an_untrusted_folder(self, reaching_project, tmp_path):
+        """Found by a review: `publish` copied the files the manifest named from anywhere."""
+        published = tmp_path / "published"
+        arguments = ["publish", "--project-dir", str(reaching_project), "--publish-dir", str(published)]
+        result = CliRunner().invoke(main, arguments)
+        assert result.exit_code == 1, result.output
+        assert "is not a pipeline you trust" in result.output
+        assert result.output.count("Error: ") == 1 and "[dataframes.leak] path" in result.output
+        assert isinstance(result.exception, SystemExit)
+        assert not published.exists() or "HUNTER2_LEAKED_SECRET" not in _pages(published)
+
+        config.record_trust(reaching_project, "render")
+        result = CliRunner().invoke(main, arguments)
+        assert result.exit_code == 0, result.output
+        assert (published / "test_pipeline" / "chartbook.toml").is_file()
 
     @posix
     def test_build_with_no_script_renders_it_the_same_way(self, leaky_project, monkeypatch):
@@ -626,6 +728,17 @@ class TestBuildAndRun:
         assert report.failed is None
         assert sorted(_order(work)) == ["a", "b"]
 
+    def test_build_in_a_catalog_refuses_before_any_members_script_runs(self, work, monkeypatch):
+        """Found by a review: every member's script ran, and then the render refused the catalog's folder."""
+        _pipeline(work / "a", {"build": LOG})
+        _catalog(work, "a")
+        config.record_trust(work / "a", "run")  # and not the catalog's own folder
+        monkeypatch.chdir(work)
+        result = CliRunner().invoke(main, ["build", "./docs", "-f"])
+        assert result.exit_code == 1, result.output
+        assert f"  {work} (the catalog's own folder)" in result.output
+        assert _order(work) == []
+
     def test_a_git_dependency_is_trusted_by_being_declared(self, work, monkeypatch):
         """Only the pipeline that names it must be trusted to run."""
         from tests.test_run import _commit, _with_data
@@ -690,6 +803,18 @@ class TestDocsOfACatalog:
         assert f"  {root.resolve()} (the catalog's own folder)" in result.output
         assert "pipeline_a" not in result.output.split("these are not trusted:")[1].split("`chartbook trust")[0]
 
+    def test_a_member_whose_folder_has_no_manifest_is_the_builds_error_to_say(self, work, monkeypatch):
+        """Found by a review: the gate called such a member "not trusted", where the build says the entry names no pipeline."""
+        root = _sibling_catalog(work, "pipeline_a")
+        _edit_manifest(root, lambda m: m["pipelines"].__setitem__("pipeline_c", {"path": "../pipeline_c"}))
+        config.record_trust(root, "render")
+        config.record_trust(work / "pipeline_a", "render")
+        monkeypatch.chdir(root)
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        assert result.exit_code == 1, result.output
+        assert "these are not trusted" not in result.output
+        assert "No chartbook.toml" in result.output and "pipeline_c" in result.output
+
     def test_catalog_build_is_gated_as_docs_is(self, work, monkeypatch):
         root = create_catalog_project(work / "cat", pipeline_ids=["pipeline_a"])
         monkeypatch.setattr("chartbook.cli._default_catalog_path", lambda: root / "chartbook.toml")
@@ -699,6 +824,63 @@ class TestDocsOfACatalog:
         assert "Error: a catalog's site is built only from folders you trust, and these are not trusted:" in result.output
         assert f"`chartbook trust --members` in {root} trusts" in result.output
         assert not (root / "docs").exists()
+
+    def test_catalog_build_clean_refused_leaves_the_kept_tree(self, work, monkeypatch):
+        """Found by a review: --clean threw the kept build tree away before the gate refused."""
+        from chartbook.incremental import looks_like_build_tree
+
+        root = _sibling_catalog(work, "pipeline_a")
+        monkeypatch.setattr("chartbook.cli._default_catalog_path", lambda: root / "chartbook.toml")
+        monkeypatch.chdir(root)
+        assert CliRunner().invoke(main, ["trust", "--members", "--render"]).exit_code == 0
+        result = CliRunner().invoke(main, ["catalog", "build", "-f"])
+        assert result.exit_code == 0, result.output
+        assert looks_like_build_tree(root / "_docs")
+        config.forget_trust(path=work / "pipeline_a")
+        result = CliRunner().invoke(main, ["catalog", "build", "-f", "--clean"])
+        assert result.exit_code == 1, result.output
+        assert "these are not trusted" in result.output
+        assert looks_like_build_tree(root / "_docs")
+
+
+class TestCatalogInitAndAdd:
+    """A catalog you make is yours to run; a folder you add to it is asked to be rendered there."""
+
+    def test_init_records_the_catalogs_folder_to_run(self, work, monkeypatch):
+        monkeypatch.chdir(work)
+        result = CliRunner().invoke(main, ["catalog", "init", "--title", "Mine"])
+        assert result.exit_code == 0, result.output
+        folder = config.get_global_config_dir()
+        assert f"Trusted: {folder} (chartbook trust --list)" in result.output
+        assert config.trust_of(folder) == "run"
+        (entry,) = config.read_trust()
+        assert entry["path"] == str(folder.resolve()) and entry["id"] is None
+
+    def test_add_records_the_folder_to_render_unless_it_is_trusted_already(self, work, monkeypatch):
+        monkeypatch.chdir(work)
+        assert CliRunner().invoke(main, ["catalog", "init", "--title", "Mine"]).exit_code == 0
+        new = create_pipeline_project(work / "new_one", pipeline_id="new_one")
+        mine = create_pipeline_project(work / "mine", pipeline_id="mine")
+        config.record_trust(mine, "run")  # as `chartbook init` left it
+        result = CliRunner().invoke(main, ["catalog", "add", str(new), str(mine), "-y"])
+        assert result.exit_code == 0, result.output
+        assert f"  Trusted to render: {new.resolve()} (chartbook trust --list; `chartbook trust` there to run)" in result.output
+        assert f"Trusted to render: {mine.resolve()}" not in result.output
+        assert config.trust_of(new) == "render"
+        assert config.trust_of(mine) == "run"
+        by_path = {entry["path"]: entry for entry in config.read_trust()}
+        assert by_path[str(new.resolve())]["id"] == "new_one"
+
+    def test_add_goes_on_when_the_record_cannot_be_written(self, work, monkeypatch):
+        monkeypatch.chdir(work)
+        assert CliRunner().invoke(main, ["catalog", "init", "--title", "Mine"]).exit_code == 0
+        new = create_pipeline_project(work / "new_one", pipeline_id="new_one")
+        trust_path = config.get_trust_path()
+        trust_path.write_text("not = toml =\n")
+        result = CliRunner().invoke(main, ["catalog", "add", str(new)])
+        assert result.exit_code == 0, result.output
+        assert "Added 'new_one'" in result.output
+        assert "Note: " in result.output and "trust.toml" in result.output
 
 
 class TestCheck:
@@ -774,7 +956,7 @@ class TestInit:
         monkeypatch.setattr(config, "get_global_config_dir", lambda: blocker / ".chartbook")
         result = CliRunner().invoke(main, ["init"])
         assert result.exit_code == 0, result.output
-        assert "Note: the new project could not be recorded as trusted (" in result.output
-        assert "until `chartbook trust` in its folder records it." in result.output
+        assert f"Note: {rendered} could not be recorded as trusted (" in result.output
+        assert "until `chartbook trust` in that folder records it." in result.output
         assert "Trusted: this folder" not in result.output
         assert rendered.is_dir()

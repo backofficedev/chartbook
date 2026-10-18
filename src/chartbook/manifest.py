@@ -1891,7 +1891,10 @@ def catalog_member_dirs(base_dir) -> dict:
     What a build of the catalog would read from this machine, before it
     reads any of it: no member's manifest is loaded, and nothing of a
     member runs. A pipeline the catalog shows from the store (an entry
-    with no ``path``) has no folder here and is not listed.
+    with no ``path``) has no folder here and is not listed. An explicit
+    entry's folder is listed as the entry names it, whether or not a
+    chartbook.toml is there yet: the caller says what to do about one
+    that is not.
 
     :param base_dir: The catalog's folder.
     :raises FileNotFoundError: If there is no chartbook.toml there.

@@ -741,7 +741,7 @@ def read_trust() -> list:
                 continue
             if kind == "pipeline":
                 try:
-                    resolved = str(Path(value.strip()).expanduser().resolve())
+                    expanded = Path(value.strip()).expanduser()
                 except (RuntimeError, OSError):
                     warnings.warn(
                         f"{path}: [[pipeline]] entry {position} ({_shown_entry(entry)}) names a folder this "
@@ -749,6 +749,17 @@ def read_trust() -> list:
                         stacklevel=2,
                     )
                     continue
+                if not expanded.is_absolute():
+                    # Resolved against the working directory, it would name a
+                    # different folder from each folder a command is run in
+                    warnings.warn(
+                        f"{path}: [[pipeline]] entry {position} ({_shown_entry(entry)}) has a relative path, "
+                        f"which would name another folder from each folder a command is run in, and is passed "
+                        f"over: write the folder's full path.",
+                        stacklevel=2,
+                    )
+                    continue
+                resolved = str(expanded.resolve())
                 entries.append(
                     {
                         "kind": "pipeline",
@@ -779,9 +790,17 @@ def _shown_entry(entry: object) -> str:
 
 
 def _since_text(value: object) -> Optional[str]:
-    """A ``since`` as written: a string, or a TOML date made one; None when absent."""
+    """A ``since`` as it is written, ``2026-10-18T22:14:05Z``: a string as it is, a TOML date-time (one written unquoted) made one; None when absent."""
+    from datetime import date, datetime, timezone
+
     if value is None:
         return None
+    if isinstance(value, datetime):
+        if value.tzinfo is not None:
+            value = value.astimezone(timezone.utc)
+        return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(value, date):
+        return value.isoformat()
     return value if isinstance(value, str) else str(value)
 
 
@@ -800,11 +819,13 @@ def trust_of(folder) -> Optional[str]:
 
     - a build of files from a store (``CHARTBOOK_UNTRUSTED_SOURCE=1``,
       :func:`untrusted_source`) is never trusted, whatever the record says;
-    - ``CHARTBOOK_TRUST=all`` trusts every folder at ``run``;
-    - under ``CI`` (the environment variable, set to anything) with no
-      ``CHARTBOOK_TRUST``, the checkout is trusted at ``run``: a folder in
-      the git repository the working directory is in, or in the working
-      directory itself when it is in none.
+    - ``CHARTBOOK_TRUST=all`` trusts every folder at ``run``; the variable
+      takes no other value, and another is warned about once and ignored,
+      so what follows applies under it as under no value at all;
+    - under ``CI`` (the environment variable, set to anything), the
+      checkout is trusted at ``run``: a folder in the git repository the
+      working directory is in, or in the working directory itself when it
+      is in none.
 
     What each level allows is in ``docs_src/design/trust.md``.
 
@@ -872,7 +893,7 @@ def record_trust(path, level: str, id: Optional[str] = None, repository: Optiona
     if level not in TRUST_LEVELS:
         raise ValueError(f"{level!r} is not a level of trust; the levels are {' and '.join(TRUST_LEVELS)}.")
     resolved = str(Path(path).resolve())
-    raw = _read_toml(get_trust_path(), "the trust record")
+    raw = _raw_for_write(get_trust_path())
     kept = [entry for entry in _raw_entries(raw, "pipeline") if not _records_folder(entry, resolved)]
     entry: dict = {"path": resolved, "level": level}
     if id:
@@ -905,7 +926,7 @@ def record_repository_trust(url: str, level: str) -> Path:
         raise ValueError(
             f"{url!r} names no repository: a repository is https://host/owner/name or git@host:owner/name."
         )
-    raw = _read_toml(get_trust_path(), "the trust record")
+    raw = _raw_for_write(get_trust_path())
     kept = [entry for entry in _raw_entries(raw, "repository") if not _records_repository(entry, key)]
     raw["repository"] = [*kept, {"url": key, "level": level, "since": _now_text()}]
     return _write_trust(raw)
@@ -926,7 +947,7 @@ def forget_trust(path=None, url: Optional[str] = None) -> int:
     trust_path = get_trust_path()
     if not trust_path.is_file():
         return 0
-    raw = _read_toml(trust_path, "the trust record")
+    raw = _raw_for_write(trust_path)
     removed = 0
     if path is not None:
         resolved = str(Path(path).resolve())
@@ -943,6 +964,24 @@ def forget_trust(path=None, url: Optional[str] = None) -> int:
     return removed
 
 
+def _raw_for_write(path: Path) -> dict:
+    """The trust record as read, for a write that keeps everything it does not change.
+
+    :raises ValueError: If the file cannot be read, or its ``pipeline`` or
+        ``repository`` key is not an array of tables: a write would drop
+        it, and nothing in the file is dropped without being asked.
+    """
+    raw = _read_toml(path, "the trust record")
+    for kind in ("pipeline", "repository"):
+        if kind in raw and not isinstance(raw[kind], list):
+            raise ValueError(
+                f"{path}: [{kind}] is a table, not an array of tables, and writing the file would drop it. "
+                f'Each entry is written as [[{kind}]] on a line of its own, then {"path" if kind == "pipeline" else "url"} = "…" '
+                f'and level = "run" or "render"; fix it or remove it, and run this again.'
+            )
+    return raw
+
+
 def _raw_entries(raw: dict, kind: str) -> list:
     """The ``[[kind]]`` entries of the file as read, whatever their shape, so that a write keeps them."""
     listed = raw.get(kind)
@@ -950,11 +989,12 @@ def _raw_entries(raw: dict, kind: str) -> list:
 
 
 def _records_folder(entry: object, resolved: str) -> bool:
-    """Whether a raw ``[[pipeline]]`` entry is of the folder *resolved* names."""
+    """Whether a raw ``[[pipeline]]`` entry is of the folder *resolved* names; a relative path is of none."""
     if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
         return False
     try:
-        return str(Path(entry["path"].strip()).expanduser().resolve()) == resolved
+        written = Path(entry["path"].strip()).expanduser()
+        return written.is_absolute() and str(written.resolve()) == resolved
     except (RuntimeError, OSError):
         return False
 

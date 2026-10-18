@@ -270,9 +270,13 @@ Pipelines (each covers the folders inside it):
   run     /work/rates  (ftsfr/rates, https://github.com/ftsfr/rates)  since 2026-10-18T22:14:05Z
 ```
 
-**The record** is `~/.chartbook/trust.toml`, this user's ({doc}`configuration`): `[[pipeline]]` entries with a resolved `path`, a `level`, and the pipeline's `id` and `repository` as notes for you (nothing goes by them: an entry is matched by its path, so a stranger's manifest claiming your ID gains nothing), and `[[repository]]` entries with a `url`, matched by the folder's `origin` remote, which you set when you cloned. It is written whole or not at all. One that cannot be read stops the command, naming the file; an entry of another shape is passed over with a warning naming it.
+**The record** is `~/.chartbook/trust.toml`, this user's ({doc}`configuration`): `[[pipeline]]` entries with a resolved `path`, a `level`, and the pipeline's `id` and `repository` as notes for you (nothing goes by them: an entry is matched by its path, so a stranger's manifest claiming your ID gains nothing), and `[[repository]]` entries with a `url`, matched by the folder's `origin` remote, which you set when you cloned. Trust a repository only for clones you made yourself: a folder that arrived with a `.git/` inside may name any repository in its `.git/config`, and is trusted by its path. The file is written whole or not at all. One that cannot be read stops the command, naming the file; an entry of another shape (a relative `path` is one) is passed over with a warning naming it, and a `pipeline` or `repository` key that is a table rather than an array stops a write, which would otherwise drop it.
+
+**Recorded for you.** A project `chartbook init` makes is recorded at `run`, and so is the folder of a catalog `chartbook catalog init` makes: you made them. A folder `chartbook catalog add` adds is recorded at `render`, unless it is trusted already: adding it to your catalog asks for it to be rendered there, and `run` stays yours to say, since `chartbook build` in a catalog runs every member's script. Each says so in one line, and goes on when the record cannot be written.
 
 **Without a record.** Under `CI` (the environment variable, set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none; a runner builds its own checkout. `CHARTBOOK_TRUST=all` trusts every folder to run, for a container that is nothing but your own code (the test suite runs so); it is the one value the variable takes, and another is said once and ignored. A build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says. A `git` dependency is built in ChartBook's own copy of its commit: naming it in `[dependencies]` is the trust for that, and the pipeline that names it must itself be trusted to run.
+
+`chartbook docs`, `chartbook build`, `chartbook run`, `chartbook catalog build`, `chartbook create-data-glimpses` and `chartbook publish` take the gate; `chartbook check` does not, and says the level. In a catalog, `--members` records nothing while a member's folder has no `chartbook.toml` where the catalog says it is, and names it: a folder trusted before anything is there would trust whatever is put there later.
 
 No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is {doc}`../design/trust`.
 
@@ -352,6 +356,8 @@ Copy the pipeline's publishable *source* files — README, `chartbook.toml`, par
 chartbook publish [--publish-dir PATH] [--project-dir PATH] [-v]
 ```
 
+It copies the files the manifest names, so in a folder you have not trusted it reads as a build of files from a store does: a manifest that names a file outside the folder stops it, naming the entry, and the command says how to trust the folder ({ref}`chartbook trust <chartbook-trust>`).
+
 ```{note}
 `publish` copies files into a directory and does nothing else — no network, no registry. Sending a pipeline to a registry is a different act and will get a different verb, **`chartbook push`**. That name is reserved: the command exists only to say it is not yet supported, and `publish` will not grow a second meaning.
 ```
@@ -362,7 +368,7 @@ Manage a catalog — by default the global one at `~/.chartbook/chartbook.toml` 
 
 ### catalog init
 
-Create the global catalog with an empty `[pipelines]` section.
+Create the global catalog with an empty `[pipelines]` section. Its folder is recorded as trusted to run ({ref}`chartbook trust <chartbook-trust>`): you made it.
 
 ```console
 chartbook catalog init [--title TITLE]
@@ -378,6 +384,8 @@ chartbook catalog add PATHS... [--catalog PATH] [-y]
 chartbook catalog add ../crsp_treasury      # one pipeline
 chartbook catalog add ../repos/* -y         # glob, no confirmation prompt
 ```
+
+Each folder added is recorded as trusted to render, unless it is trusted already ({ref}`chartbook trust <chartbook-trust>`): adding it to your catalog asks for it to be rendered there. To run stays yours to say, `chartbook trust` in the folder or `chartbook trust --members` in the catalog's, since `chartbook build` in a catalog runs every member's script.
 
 ### catalog disable / enable
 
@@ -455,6 +463,8 @@ chartbook create-data-glimpses [--no-samples] [--no-stats] [-o DIR] [--size-thre
 The manifest is the only source of the list. Nothing about how the project is built is consulted, so a pipeline built with doit, Snakemake, Make or plain scripts gets the same report, and a data file the manifest does not declare is not included. Partitioned dataframes (a glob `path`) are summarized as one dataset. Declared dataframes whose files do not exist yet are skipped with a note. Run in a catalog, the report covers every member pipeline.
 
 `-o DIR` (`--output-dir`) is the directory the report is written in, as `DIR/data_glimpses.md`; it is made if it does not exist. A path ending in `.md` is taken as the report's own path; anything else already there that is not a directory, a file or a broken link, is refused, as it is neither. Without `-o`, the report is `data_glimpses.md` in the current directory.
+
+The report reads the files the manifest names, so in a folder you have not trusted it reads as a build of files from a store does: a manifest that names a file outside the folder stops it, naming the entry, no query is run, and the command says how to trust the folder ({ref}`chartbook trust <chartbook-trust>`).
 
 (chartbook-snapshot)=
 ## chartbook snapshot
