@@ -181,6 +181,9 @@ def directory_tables(directory) -> list:
     is plainly not a table (a ``README.txt``, a ``schema.json``;
     :data:`chartbook.resolve.NOT_TABLES`), and of the rest each named
     ``.parquet`` or that begins or ends as parquet does (Hive's ``000000_0``).
+    Judged from the folder's files on disk; a folder pinned from a store is
+    read as the files its record lists, and its object is checked whole
+    against that list before it is laid out, so the two agree there.
 
     :param directory: The folder.
     :type directory: str or Path

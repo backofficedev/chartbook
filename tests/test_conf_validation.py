@@ -162,6 +162,17 @@ class TestSiteConfig:
         assert "one line" in str(exc_info.value)
         assert toml_key in exc_info.value.hint and "line break" in exc_info.value.hint
 
+    @pytest.mark.parametrize("field, toml_key", [("author", "project.maintainer"), ("copyright", "project.copyright")])
+    @pytest.mark.parametrize("value", ["\n", " \n ", "\r\n"])
+    def test_a_value_that_is_only_a_line_break_is_refused_where_blank_is_allowed(self, field, toml_key, value):
+        """Found by a reviewer of the fix: the blank check ran first, and a value that was only a
+        line break passed as blank, into conf.py, where it still ended the string early."""
+        values = {"title": "Test", "author": "Test", "copyright": "2024", field: value}
+        with pytest.raises(ValidationError) as exc_info:
+            SiteConfig(sphinx_theme="pydata_sphinx_theme", **values)
+        assert exc_info.value.field_name == toml_key
+        assert "one line" in str(exc_info.value)
+
     def test_a_valid_title_renders_a_conf_py_that_compiles(self):
         """The other side of the rule: what passes the check is a Python string Sphinx can read."""
         import importlib.resources

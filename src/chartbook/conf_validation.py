@@ -111,12 +111,9 @@ class SiteConfig:
                 hint=f"Shorten the value to {self.MAX_TEXT_LENGTH} characters or less.",
             )
 
-        # Empty strings pass validation (if allowed)
-        if not value.strip():
-            return
-
         # The value is rendered into a one-line Python string in conf.py: a
-        # line break would end it early, and Sphinx would stop on the file
+        # line break would end it early, and Sphinx would stop on the file.
+        # Before the blank check: a value that is only a line break is blank
         if "\n" in value or "\r" in value:
             raise ValidationError(
                 message="Field must be one line",
@@ -127,6 +124,10 @@ class SiteConfig:
                     "Remove the line break."
                 ),
             )
+
+        # Empty strings pass validation (if allowed)
+        if not value.strip():
+            return
 
         if not self.SAFE_TEXT_PATTERN.match(value):
             raise ValidationError(

@@ -133,9 +133,10 @@ never collide with it.
 
 The writer's one rule is **the index and the files it names, nothing else.** A write-up is read
 at the path its record gives, and inserted as text, not as a template. A dataframe's first rows
-come from the file (or the database) its record locates; a folder is read by its parquet parts,
-the files `data.load` would open (none under a name starting `.` or `_`, no `README.txt` or
-`schema.json`), and a folder with no part yet says so in a sentence. "Data updated" is the record's
+come from the file (or the database) its record locates; a folder is shown by its parquet parts,
+chosen as a read of a folder pinned from a store chooses them (none under a name starting `.` or `_`,
+no `README.txt` or `schema.json`), and a folder with no part yet says so in a sentence; `data.load` of a
+pipeline's own folder hands the whole folder to polars, which refuses one that mixes file types. "Data updated" is the record's
 `modified_at`; a model's scores are the record's `metrics`; the diagnostics page is a comparison
 the writer makes between each record's declared fields and the policy the `Catalog` record
 carries. Nothing is looked up in a manifest or a folder.
