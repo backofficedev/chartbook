@@ -278,39 +278,52 @@ def quote_literal(text: str) -> str:
     return "'" + text.replace("'", "''") + "'"
 
 
-def _ends_in(sql: str) -> tuple:
-    """What the end of some SQL is inside of, and where that began.
+#: A string quoted in dollars opens with ``$$`` or ``$tag$``, and closes with the same.
+_DOLLAR_QUOTE = re.compile(r"\$([A-Za-z_][A-Za-z0-9_]*)?\$")
 
-    The text is read once, as an engine reads it: ``'…'`` is a string,
-    ``"…"`` a quoted identifier, ``--`` a comment to the end of its line,
-    ``/* … */`` a comment to its close. A ``;`` or a ``--`` inside any of
-    them is part of it.
+
+def _ends_in(sql: str) -> tuple:
+    """What the end of some SQL is inside of, and where a line comment there began.
+
+    The text is read once, as DuckDB and Databricks read it: ``'…'`` is a
+    string, in which a backslash is literal (DuckDB's rule; Databricks
+    escapes with one, which at worst leaves the end inside a string here);
+    ``E'…'`` a string with backslash escapes; ``$$…$$`` or ``$tag$…$tag$``
+    a string quoted in dollars; ``"…"`` or ``\`…\``` a quoted identifier;
+    ``--`` a comment to the end of its line; ``/* … */`` a comment to its
+    close. A ``;`` or a ``--`` inside any of them is part of it.
 
     :returns: ``"code"``, ``"string"``, ``"identifier"``, ``"line_comment"``
         or ``"block_comment"``; and, for a line comment, the index of its
         ``--`` (None otherwise).
     """
-    state, began = "code", None
+    state, began, closer, escapes = "code", None, "", False
     i = 0
     while i < len(sql):
         c = sql[i]
         if state == "code":
             if c == "'":
-                state = "string"
-            elif c == '"':
-                state = "identifier"
+                state, closer, escapes = "string", "'", False
+            elif c in "eE" and sql.startswith("'", i + 1) and not (i and (sql[i - 1].isalnum() or sql[i - 1] == "_")):
+                state, closer, escapes = "string", "'", True
+                i += 1  # onto the opening quote
+            elif c == "$" and _DOLLAR_QUOTE.match(sql, i):
+                state, closer, escapes = "string", _DOLLAR_QUOTE.match(sql, i).group(0), False
+                i += len(closer) - 1
+            elif c in "\"`":
+                state, closer, escapes = "identifier", c, False
             elif sql.startswith("--", i):
                 state, began = "line_comment", i
                 i += 1
             elif sql.startswith("/*", i):
                 state = "block_comment"
                 i += 1
-        elif state == "string":
-            if c == "'":
-                state = "code"  # a doubled '' closes and reopens, which comes to the same
-        elif state == "identifier":
-            if c == '"':
-                state = "code"
+        elif state in ("string", "identifier"):
+            if escapes and c == "\\":
+                i += 1  # the character it escapes, whatever it is
+            elif sql.startswith(closer, i):
+                state = "code"  # a doubled quote closes and reopens, which comes to the same
+                i += len(closer) - 1
         elif state == "line_comment":
             if c == "\n":
                 state, began = "code", None
@@ -324,23 +337,25 @@ def _ends_in(sql: str) -> tuple:
 def subselect(sql: str) -> str:
     """A query as a table expression: ``(…)`` on its own lines.
 
-    A ``--`` comment that ends the text and a semicolon that ends it are
-    dropped, each as many times as one is left at the end, and the
-    parenthesis closes on a new line, so that a query that ends with
-    ``;``, with a comment, or with both (``select … from t; -- note``)
-    still stands where a table would. A ``;`` or a ``--`` inside a string
-    or a quoted identifier is part of it, and stays; so does anything the
-    engine would refuse, such as a string left open.
+    Two things are dropped from the end of the text, each as many times as
+    one is left there, so that a query that ends with ``;``, with a ``--``
+    comment, or with both (``select … from t; -- note``) still stands where
+    a table would: a semicolon that is the last character; and a ``--``
+    comment that runs to the end, when its ``--`` is outside every string
+    (``'…'``, ``E'…'``, ``$$…$$``), quoted identifier (``"…"``, ``\`…\```)
+    and block comment, as :func:`_ends_in` reads them. Nothing else
+    changes: a ``;`` or a ``--`` inside quotes stays, and a comment after a
+    quote the scanner takes as left open stays too, which the engine reads
+    as the comment it is. The parenthesis closes on a new line.
     """
     text = sql.strip()
     while True:
-        state, began = _ends_in(text)
-        if state == "line_comment":
-            text = text[:began].rstrip()
-        elif state == "code" and text.endswith(";"):
+        while text.endswith(";"):
             text = text[:-1].rstrip()
-        else:
+        state, began = _ends_in(text)
+        if state != "line_comment":
             break
+        text = text[:began].rstrip()
     return f"(\n{text}\n)"
 
 

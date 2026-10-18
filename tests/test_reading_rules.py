@@ -987,7 +987,9 @@ class TestWhatTheReleaseReviewFound:
         work, forecast, taken = together
         script = self._script(
             forecast,
+            "from pathlib import Path\n"
             "by_catalog_form = data.load(pipeline='acme/rates', dataframe='treasury').collect()['r'].to_list()\n"
+            "pinned_by_it = (Path(__file__).resolve().parents[1] / 'chartbook.lock').is_file()\n"
             "path = data.get_data_path('acme/rates', 'treasury')\n"
             "by_reference = data.load('acme/rates:treasury').collect()['r'].to_list()\n",
         )
@@ -996,6 +998,7 @@ class TestWhatTheReleaseReviewFound:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             result = runpy.run_path(str(script))
+        assert result["pinned_by_it"], "the catalog form itself pinned, before the reference form ran"
         assert result["by_catalog_form"] == result["by_reference"] == [4.0]
         said = capsys.readouterr().err
         assert said.count("acme/rates: pinned to its newest snapshot") == 1  # the first read pinned; the others read the pin
@@ -1054,6 +1057,35 @@ class TestWhatTheReleaseReviewFound:
         monkeypatch.delenv("CHARTBOOK_BATCH")
         assert _value("acme/rates:treasury") == [4.2]  # interactively, the same read is the quiet one
 
+    def test_the_command_is_in_the_working_directorys_pipeline_not_the_packages(self, together, monkeypatch, tmp_path):
+        """`chartbook data get-path` calls from cli.py, so the calling file is the package's own: a manifest above
+        the installed package (a monorepo's root, a venv inside a pipeline) must never be the pipeline the command is in."""
+        from click.testing import CliRunner
+
+        from chartbook import cli as cli_module
+        from chartbook.cli import main
+
+        work, forecast, taken = together
+        monorepo = tmp_path.resolve() / "monorepo"
+        (monorepo / ".venv" / "lib" / "chartbook").mkdir(parents=True)
+        (monorepo / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"x": {"path": "./_data/x.parquet", "docs": "d"}}})
+        )
+        monkeypatch.setattr(cli_module, "__file__", str(monorepo / ".venv" / "lib" / "chartbook" / "cli.py"))
+        monkeypatch.chdir(forecast)
+        monkeypatch.setenv("CHARTBOOK_BATCH", "1")
+        command = ["data", "get-path", "--pipeline", "acme/rates", "--dataframe", "treasury"]
+        result = CliRunner().invoke(main, command)
+        assert result.exit_code == 1, result.output
+        assert "is not pinned" in result.output and f"Run `chartbook pin` in {forecast}" in result.output
+        assert "acme/other" not in result.output
+        monkeypatch.delenv("CHARTBOOK_BATCH")
+        result = CliRunner().invoke(main, command)
+        assert result.exit_code == 0, result.output
+        assert (forecast / lock.LOCK_FILE).is_file()  # pinned on the first read, as a script of forecast's would be
+        store = Path(os.environ["CHARTBOOK_STORE"]).resolve()
+        assert any(Path(line).resolve().is_relative_to(store) for line in result.output.splitlines() if line.strip())
+
 
 class TestANameInAnotherCase:
     """An ID is case-sensitive: a reference in another case is told the ID, and never matched to it."""
@@ -1086,6 +1118,17 @@ class TestANameInAnotherCase:
         message = str(raised.value)
         assert "Did you mean 'rates'?" in message and "read it as 'rates:treasury'" in message
         assert '"RATES" = { path = "../RATES" }' not in message
+
+    def test_a_dependency_under_another_key_in_another_case_names_the_key(self, together, monkeypatch):
+        work, forecast, taken = together
+        _forecast(forecast, {"rates": {"path": "../rates"}})  # acme/rates, by the folder's own chartbook.toml
+        monkeypatch.chdir(forecast)
+        with pytest.raises(DependencyNotDeclaredError) as raised:
+            data.load("Acme/Rates:treasury")
+        message = str(raised.value)
+        assert "Did you mean 'acme/rates'?" in message
+        assert "It is declared as 'rates': read it as 'rates:treasury' or 'acme/rates:treasury'." in message
+        assert "= { path =" not in message  # not told to declare it a second time
 
     def test_a_pipeline_the_store_has_in_another_case_is_suggested(self, elsewhere, monkeypatch):
         work, first, second = elsewhere

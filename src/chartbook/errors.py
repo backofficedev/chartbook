@@ -7,7 +7,7 @@ that produce readable, actionable error messages for CLI users.
 import difflib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Mapping, Optional
 
 import click
 
@@ -269,21 +269,26 @@ class DependencyNotDeclaredError(LookupError):
         manifest_path: Path,
         declared: list[str],
         found_at: Optional[tuple[str, str]] = None,
-        known: Iterable[str] = (),
+        known: Mapping[str, Optional[str]] = {},
     ):
         """
         :param found_at: Where the catalog says the pipeline is, as its key
             there and its folder relative to the manifest's, if it does.
-        :param known: Pipeline IDs known here besides the declared keys:
-            the IDs the dependencies are known to have, those the lockfile
-            pins, those the store has snapshots of. Only to suggest from.
+        :param known: Pipeline IDs known here besides the declared keys,
+            each with the key of the declared dependency it is the ID of
+            (``rates = { id = "acme/rates" }``, a folder's own ID), or None
+            for one the lockfile pins or the store has a snapshot of. Only
+            to suggest from.
         """
         self.reference = reference
         self.pipeline = pipeline
         self.manifest_path = manifest_path
         self.declared = list(declared)
 
+        known = dict(known)
         other = in_another_case([*self.declared, *known], pipeline)
+        declared_as = other if other in self.declared else known.get(other) if other else None
+        rest = reference[len(pipeline):] if reference.startswith(pipeline) else ""
         if found_at:
             key, where = found_at
         else:
@@ -301,8 +306,10 @@ class DependencyNotDeclaredError(LookupError):
             lines.append("An ID is case-sensitive, and a scope derived from a remote is in lowercase.")
         if found_at:
             lines.append(f"Your catalog has it, as {key!r}.")
-        if other and other in self.declared and reference.startswith(pipeline):
-            lines.append(f"It is declared: read it as {other + reference[len(pipeline):]!r}.")
+        if other and declared_as == other:
+            lines.append(f"It is declared: read it as {other + rest!r}.")
+        elif declared_as:
+            lines.append(f"It is declared as {declared_as!r}: read it as {declared_as + rest!r} or {other + rest!r}.")
         else:
             lines += [
                 "",

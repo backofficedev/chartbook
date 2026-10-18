@@ -669,31 +669,34 @@ def _catalog_hint(pipeline: str, manifest_dir: Path) -> Optional[tuple[str, str]
         return None
 
 
-def _known_ids(manifest_dir: Path, dependencies: dict) -> list[str]:
+def _known_ids(manifest_dir: Path, dependencies: dict) -> dict:
     """The pipeline IDs known here besides the keys of ``[dependencies]``, to make an error more useful.
 
-    The IDs the dependencies are known to have (``rates = { id = "acme/rates" }``,
-    a folder's own ID), those the lockfile pins, and those the store has
-    snapshots of. A suggestion is never worth failing for, so whatever
-    cannot be read is left out.
+    Each with the key of the declared dependency it is the ID of
+    (``rates = { id = "acme/rates" }``, a folder's own ID), or None for one
+    the lockfile pins or the store has a snapshot of. A suggestion is never
+    worth failing for, so whatever cannot be read is left out.
     """
     from chartbook.store import default_store
 
-    known: set = set()
+    known: dict = {}
     try:
-        known.update(own for own in _dependency_ids(manifest_dir, dependencies).values() if own)
+        known.update(dict.fromkeys((taken.pipeline for taken in _snapshots_in(default_store())), None))
     except Exception:  # noqa: BLE001 - a hint is never worth failing for
         pass
     try:
         locked = _read_lock(manifest_dir)
-        known.update(e["id"] for e in (locked.dependencies if locked else []) if isinstance(e.get("id"), str))
+        for entry in locked.dependencies if locked else []:
+            for named in (entry.get("id"), (entry.get("location") or {}).get("pipeline")):
+                if isinstance(named, str):
+                    known.setdefault(named, None)
     except Exception:  # noqa: BLE001
         pass
     try:
-        known.update(taken.pipeline for taken in _snapshots_in(default_store()))
+        known.update((own, key) for key, own in _dependency_ids(manifest_dir, dependencies).items() if own)
     except Exception:  # noqa: BLE001
         pass
-    return sorted(known)
+    return known
 
 
 def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
