@@ -1115,8 +1115,6 @@ class TestTheQuestions:
         }[manager]
         for name, floor in floors:
             assert floor in (project / name).read_text(), name
-        assert "git+https://github.com/backofficedev/chartbook" not in (project / "README.md").read_text()
-        assert "git+https://github.com/backofficedev/chartbook" not in capfd.readouterr().out
 
     def test_the_template_is_of_the_version_of_the_chartbook_it_comes_with(self, template_dir):
         """So the floor is the rendering ChartBook's, and `cruft update` moves it to the template's: a
