@@ -41,7 +41,7 @@ doit
 """
 ```
 
-`build`, under `[scripts]`, is the command that builds the artifacts. It has shell-script semantics — a multi-line value is one script, so environment activation carries into later lines. It is shown on the pipeline's page, and it is run: `chartbook run` runs it in the pipeline's directory, and `chartbook build` runs it and then renders the site, which `chartbook docs` does alone. Make it the command that builds the pipeline, not a note about the environment. `build` under `[project]`, the old place, is still read and means the same thing; give it in one place. See {ref}`[scripts] <scripts>` in the reference and {ref}`chartbook run <chartbook-run>`.
+`build`, under `[scripts]`, is the command that builds the artifacts. It has shell-script semantics — a multi-line value is one script, so environment activation carries into later lines (on Windows it is a batch file, where a line that runs another batch file, such as `conda activate`, must begin with `call`, or nothing after it runs). It is shown on the pipeline's page, and it is run: `chartbook run` runs it in the pipeline's directory, and `chartbook build` runs it and then renders the site, which `chartbook docs` does alone. Make it the command that builds the pipeline, not a note about the environment. `build` under `[project]`, the old place, is still read and means the same thing; give it in one place. See {ref}`[scripts] <scripts>` in the reference and {ref}`chartbook run <chartbook-run>`.
 
 ## Charts
 
