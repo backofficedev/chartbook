@@ -35,6 +35,18 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
     # subprocess, with the real home, must not make one there. A test of
     # two machines clears it
     monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "a-test-machine")
+    # No git housekeeping in the background: `git commit` may start `gc
+    # --auto` or maintenance detached, which goes on writing under
+    # .git/objects after the command returns, and a test that then removes
+    # the repository (shutil.rmtree) races it: "No such file or directory:
+    # 'fb'" on CI, once in many runs. These are git's own environment
+    # settings, read before any config file, so every git a test or a
+    # command it runs starts has them
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "2")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "gc.auto")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "0")
+    monkeypatch.setenv("GIT_CONFIG_KEY_1", "maintenance.auto")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_1", "false")
     # Nor does the user's own ~/.chartbook (their catalog and settings) reach
     # a test; a test that moves HOME gets the one under it
     from pathlib import Path
