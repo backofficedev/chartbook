@@ -763,3 +763,55 @@ class TestScratch:
             data.path("intermediate", project_dir=project)
         manifest = load_manifest(project)
         assert pipeline_fingerprint(manifest["project"]["id"], manifest) == before
+
+
+class TestAHeldObjectIsReadInsideItself:
+    """A record's path is laid onto the store's object; one that would reach outside it is refused (resolve._held).
+
+    A record may come from anyone who can write to a store, by hand or from
+    a lockfile edited by hand; a snapshot's records are refused when the
+    snapshot is read (tests/test_snapshot.py), and a lockfile's here.
+    """
+
+    @staticmethod
+    def _object(tmp_path, files):
+        from chartbook.store import FolderStore
+
+        folder = tmp_path / "asset"
+        for name, text in files.items():
+            (folder / name).parent.mkdir(parents=True, exist_ok=True)
+            (folder / name).write_text(text)
+        store = FolderStore(tmp_path / "store")
+        return store, store.put(folder)
+
+    @staticmethod
+    def _record(stored, location, **more):
+        return {
+            "id": "acme/evil:x",
+            "ref": {"scope": "acme", "pipeline": "evil", "kind": "dataframe", "name": "x"},
+            "location": location,
+            "content_hash": stored.content_hash,
+            **more,
+        }
+
+    def test_a_glob_that_climbs_after_its_wildcard_is_refused(self, tmp_path):
+        from chartbook.store import StoreError
+
+        store, stored = self._object(tmp_path, {"sub/part-1.parquet": "x"})
+        record = self._record(stored, {"kind": "file", "path": "_data/*/../../../outside/*.parquet"})
+        with pytest.raises(StoreError, match=r"acme/evil:x.*not plain after its wildcard"):
+            resolve_module._held(store, record)
+
+    def test_a_plain_glob_is_laid_onto_the_object(self, tmp_path):
+        store, stored = self._object(tmp_path, {"sub/part-1.parquet": "x"})
+        location = resolve_module._held(store, self._record(stored, {"kind": "file", "path": "../_data/*/part-*.parquet"}))
+        assert Path(location.path) == Path(stored.path) / "*" / "part-*.parquet"
+
+    def test_a_directory_whose_listed_files_are_no_tables_is_said(self, tmp_path):
+        from chartbook.store import StoreError
+
+        store, stored = self._object(tmp_path, {"README.txt": "hello", "schema.json": "{}"})
+        files = [{"path": "README.txt", "size_bytes": 5}, {"path": "schema.json", "size_bytes": 2}]
+        record = self._record(stored, {"kind": "file", "path": "_data/parts"}, files=files, size_bytes=7)
+        with pytest.raises(StoreError, match=r"lists 2 file\(s\), and none is a table a read takes \(README.txt, schema.json\)"):
+            resolve_module._held(store, record)

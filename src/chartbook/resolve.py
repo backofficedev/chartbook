@@ -858,9 +858,21 @@ def _held(store, record: dict) -> Location:
         return FileLocation(held / materialized_name(record))
     declared_path = record["location"]["path"]
     if is_glob_pattern(declared_path):
-        # The files are laid out from the glob's fixed prefix
+        # The files are laid out from the glob's fixed prefix. What follows
+        # the prefix must be plain: a record may come from anyone who can
+        # write to a store, and a `..` after the wildcard would reach outside
+        # the object (chartbook.snapshot.improper_path refuses such a record
+        # when a snapshot is read; a lockfile is checked here)
+        from chartbook.store import StoreError, plain_parts
+
         tail = Path(declared_path).relative_to(hashing.glob_root(declared_path))
-        return FileLocation(held / tail)
+        parts = plain_parts(tail.as_posix())
+        if parts is None:
+            raise StoreError(
+                f"{record.get('id')!r}: its record's path, {declared_path!r}, is not plain after its "
+                f"wildcard. The record is not one a store wrote, and is not read."
+            )
+        return FileLocation(held.joinpath(*parts))
     name = Path(declared_path).name
     if isinstance(record.get("files"), list):
         # A directory, read as the files its record lists and nothing else in
@@ -888,6 +900,17 @@ def _held(store, record: dict) -> Location:
             file = on_disk(held, parts)
             if parts[-1].lower().endswith(".parquet") or _is_parquet(file):
                 read.append(file)
+        if not read and (record.get("ref") or {}).get("kind") == "dataframe":
+            # Nothing listed is a table. Said, rather than read as a folder
+            # with no list, which would take whatever the folder holds. A
+            # model's folder holds no table, and is read as the folder
+            listed = sorted(files_read(record) or {})
+            shown = ", ".join(listed[:5]) + (", …" if len(listed) > 5 else "")
+            raise StoreError(
+                f"{record.get('id')!r}: its record lists {len(listed)} file(s), and none is a table a read "
+                f"takes ({shown or 'none'}). There is nothing to read: its owner's snapshot holds no table "
+                f"under that path."
+            )
         return FileLocation(held, tuple(read))
     from chartbook.store import on_disk
 

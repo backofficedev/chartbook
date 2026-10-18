@@ -97,7 +97,7 @@ from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, declared_files
-from chartbook.store import Store, StoreError, default_store
+from chartbook.store import Store, StoreError, default_store, plain_parts
 from chartbook.utils import is_glob_pattern
 
 #: The version of a snapshot record's envelope.
@@ -451,6 +451,34 @@ def files_read(record: dict) -> Optional[dict]:
     return {Path(declared).name: size}
 
 
+def improper_path(record: dict) -> Optional[str]:
+    """Why a reader of this record would reach outside its object, or None.
+
+    A reader lays a glob's tail after its fixed prefix, and a directory's
+    listed files, onto the object the store holds
+    (``chartbook.resolve._held``). A record may come from anyone who can
+    write to a store, so each must be a plain relative path: no ``..``, no
+    absolute part (:func:`chartbook.store.plain_parts`). A file's record is
+    read by its name alone, and a table's or a query's by the asset's name,
+    so neither can reach outside.
+    """
+    location = record.get("location") or {}
+    if not isinstance(location, dict) or location.get("kind") in ("table", "query"):
+        return None
+    declared = location.get("path")
+    if isinstance(declared, str) and is_glob_pattern(declared):
+        tail = Path(declared).relative_to(hashing.glob_root(declared))
+        if plain_parts(tail.as_posix()) is None:
+            return f"has the path {declared!r}, which is not plain after its wildcard"
+    listed = record.get("files")
+    if isinstance(listed, list):
+        for entry in listed:
+            name = entry.get("path") if isinstance(entry, dict) else None
+            if isinstance(name, str) and plain_parts(name) is None:
+                return f"lists the file {name!r}, which is not a plain path in its object"
+    return None
+
+
 def not_whole(store: Store, record: dict) -> Optional[str]:
     """Why the store's object of a record with a hash is not whole as the record has it; None if it is, or that cannot be told.
 
@@ -722,6 +750,10 @@ def read(path: Union[str, Path]) -> Snapshot:
         subdirectory = code.get("subdirectory", "")
         if subdirectory and safe_relative(subdirectory) != subdirectory:
             raise ValueError(f"its subdirectory, {subdirectory!r}, is not a plain path")
+        for record in document["records"]:
+            why = improper_path(record)
+            if why:
+                raise ValueError(f"its record for {record.get('id')!r} {why}")
         assets = {local_name(record): record for record in document["records"]}
         return Snapshot(
             pipeline=document["root"],
