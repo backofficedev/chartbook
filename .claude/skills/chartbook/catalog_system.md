@@ -8,8 +8,13 @@ How to set up, manage, browse, and load data from ChartBook catalogs.
 
 ```
 ~/.chartbook/
-├── settings.toml        # User settings (catalog path override)
+├── settings.toml        # User settings: [catalog] path, [store] url, [git] path, [cache] path, [resolve] default_host
 ├── chartbook.toml       # Default global catalog
+├── sources.toml         # This machine's urls and credentials for a pipeline's [sources]
+├── machine-id           # What names this machine in a store's notes of lockfiles (or CHARTBOOK_MACHINE_ID)
+├── store/               # The store: snapshots and pinned copies, by content hash ([store] url or CHARTBOOK_STORE moves it)
+├── cache/               # What was read from a remote store, and each version's built site ([cache] path, CHARTBOOK_CACHE)
+├── git/                 # Clones of git dependencies ([git] path, CHARTBOOK_GIT_CACHE)
 ├── artifacts/           # Auxiliary files (e.g. cached data)
 ├── docs/                # Rendered catalog HTML (from `catalog build`)
 ├── _docs/               # Temp Sphinx build dir (auto-cleaned)
@@ -132,7 +137,7 @@ The `chartbook.toml` format itself makes nearly all fields optional; a catalog c
 ```toml
 [policy]
 mode = "warn"          # "warn" (default): report on the diagnostics page
-                       # "strict": fail the catalog build on missing fields
+                       # "strict": fail the build on missing fields
 
 [policy.required]
 project    = ["description", "maintainer", "repo_url"]
@@ -140,7 +145,7 @@ dataframes = ["date_col", "pull_method"]
 charts     = ["units", "frequency"]
 ```
 
-Without a `[policy]` section, a default warn-only list of recommended fields is reported on the diagnostics page. Policy is enforced only during catalog builds — standalone pipeline builds are always permissive.
+Without a `[policy]` section, a default warn-only list of recommended fields is reported on the diagnostics page. A pipeline may have a `[policy]` of its own, which applies when it is checked or built by itself; inside a catalog, the catalog's policy applies and the pipeline's is ignored. With `mode = "strict"`, the build (a catalog's or a lone pipeline's) fails on a missing required field. `chartbook check` fails on one whatever the mode, and with no policy anywhere it only warns.
 
 ### Build Catalog Documentation
 

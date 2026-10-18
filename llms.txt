@@ -48,6 +48,7 @@ docs_path = data.get_docs_path(pipeline="markets", dataframe="market_data")
 chartbook init               # Scaffold a new pipeline project
 chartbook docs              # Render the HTML documentation (was `chartbook build`)
 chartbook build -f          # Run the project's build script, then render the documentation
+chartbook run               # Run [scripts] build alone (pins dependencies first); `chartbook run <name>` runs another script
 chartbook docs -f           # Force overwrite existing docs
 chartbook browse             # Open the generated site
 chartbook publish            # Stage publishable files to a directory
@@ -112,17 +113,22 @@ name = "My Pipeline"                 # Default: directory name (doubles as site 
 description = "Description"
 maintainer = "Your Name"             # Also rendered as site author
 contributors = ["Name1", "Name2"]
-repo_url = "https://..."             # Default: "" (empty); the git remote seeds the id's scope, not this field
+repo_url = "https://..."             # Default: the git remote `origin`, as a web address; "" if there is none. With no `id`, the ID is derived from it
 readme = "./README.md"               # Default
 copyright = "2026"                   # Default: current year
 logo = "./assets/logo.png"           # Default: bundled asset
 favicon = "./assets/icon.png"        # Default: bundled asset
 os_compatibility = ["Windows", "Linux"]
+site_dir = "./docs_src/site/"        # Default when that directory exists
+enable_data_download = false         # Default; true links a dataframe that is one built file for download
+writer = "sphinx"                    # Default; "mkdocs" builds the site with MkDocs (pip install chartbook[mkdocs])
+# id = "myorg/my_pipeline"           # Scoped ID (default: derived from repo_url or the git remote, and the folder)
+# build = "doit"                     # The old place for [scripts] build, still read
+
+[scripts]
 build = """
 doit
-"""                                  # Shell-script semantics (multi-line = one script)
-site_dir = "./docs_src/site/"        # Default when that directory exists
-# id = "myorg/my_pipeline"           # Scoped ID (default: derived from git remote + dirname)
+"""                                  # Shell-script semantics (multi-line = one script); `chartbook run` executes it
 ```
 
 ### [charts.chart_id] - Chart Definitions

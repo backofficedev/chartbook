@@ -84,8 +84,13 @@ For detailed catalog management commands, browsing, and data access workflows, s
 
 ```
 ~/.chartbook/
-├── settings.toml        # User settings (catalog path override, etc.)
+├── settings.toml        # User settings: [catalog] path, [store] url, [git] path, [cache] path, [resolve] default_host
 ├── chartbook.toml       # Default global catalog
+├── sources.toml         # This machine's urls and credentials for a pipeline's [sources]
+├── machine-id           # What names this machine in a store's notes of lockfiles (or CHARTBOOK_MACHINE_ID)
+├── store/               # The store: snapshots and pinned copies, by content hash ([store] url or CHARTBOOK_STORE moves it)
+├── cache/               # What was read from a remote store, and each version's built site ([cache] path, CHARTBOOK_CACHE)
+├── git/                 # Clones of git dependencies ([git] path, CHARTBOOK_GIT_CACHE)
 ├── artifacts/           # Auxiliary files (e.g. cached data)
 ├── docs/                # Rendered catalog HTML (from `catalog build`)
 ├── _docs/               # Temp Sphinx build dir (auto-cleaned)
@@ -102,13 +107,17 @@ For detailed catalog management commands, browsing, and data access workflows, s
 
 Projects use `chartbook.toml` with these sections (all `[project]` keys are optional — an empty file is a valid pipeline manifest):
 
-- `[project]`: All project metadata — name, description, maintainer, contributors, repo_url, copyright, logo/favicon, os_compatibility, build (shell script string), `site_dir` (custom site pages, defaults to `./docs_src/site/` when it exists), `enable_data_download`, `writer` (`"sphinx"` by default; `"mkdocs"` builds the site with MkDocs, `pip install chartbook[mkdocs]`)
+- `[project]`: All project metadata — name, description, maintainer, contributors, repo_url, copyright, logo/favicon, os_compatibility, `site_dir` (custom site pages, defaults to `./docs_src/site/` when it exists), `enable_data_download`, `writer` (`"sphinx"` by default; `"mkdocs"` builds the site with MkDocs, `pip install chartbook[mkdocs]`). `build` here is the old place for `[scripts] build`, still read
+- `[scripts]`: Named commands, one string each; `build` is what `chartbook run` and `chartbook build` run
+- `[models]`: Trained models (`path`, `trained_on`, `metrics_path`, a write-up), with `[models.<id>.aliases]` for labelled versions
+- `[dependencies]`: Other pipelines this one reads from, by ID: `"acme/rates" = {}` (its snapshots in the store), `{ path = "../x" }` (a folder, for two pipelines in one repository) or `{ git = "…" }` (a repository)
+- `[sources]`: Named database connections (DuckDB; Databricks, experimental) that a dataframe's `table` or `query` is read from
 - `[charts]`: Chart definitions with metadata
 - `[dataframes]`: Data source definitions with governance info
 - `[notebooks]`: Jupyter notebook references
 - `[notes]`: Additional documentation
 - `[pipelines]`: Pipeline registry (catalogs only, scoped keys like `"ftsfr/crsp_treasury"`)
-- `[policy]`: Required-field policy (catalogs only)
+- `[policy]`: Required-field policy. A catalog's holds its pipelines to it; a lone pipeline's own holds it when it is checked or built by itself
 
 Project type is inferred: a `[pipelines]` table means catalog, otherwise pipeline. An explicit `type = "pipeline"`/`"catalog"` in `[project]` is allowed; contradictions with the file structure are errors. There is no format version key.
 

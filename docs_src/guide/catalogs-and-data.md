@@ -86,7 +86,7 @@ dataframes = ["date_col", "pull_method"]
 charts     = ["units", "frequency"]
 ```
 
-With no `[policy]` section, a built-in recommended-field list drives the diagnostics page, warn-only. A build enforces policy only for a catalog; a pipeline built standalone is always permissive.
+With no `[policy]` section, a built-in recommended-field list drives the diagnostics page, warn-only. A pipeline may have a `[policy]` of its own, which it is held to when it is checked or built by itself; inside a catalog, the catalog's policy applies and the pipeline's is ignored. `mode = "strict"` fails the build, a catalog's or a lone pipeline's, on a missing required field.
 
 ### Enforcing it in CI
 
