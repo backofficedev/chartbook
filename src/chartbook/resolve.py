@@ -873,12 +873,14 @@ def _held(store, record: dict) -> Location:
     from chartbook.snapshot import not_whole
     from chartbook.utils import is_glob_pattern
 
-    held = store.get(record["content_hash"])
     # The names and sizes the record gives, against the files': a store in a
-    # synced folder can have a file before the whole of it. Nothing is read
+    # synced folder can have a file before the whole of it, and a bucket a
+    # key before all of an object's. Nothing is read, and this comes before
+    # the object is fetched, which for a bucket would copy and check it
     unsynced = not_whole(store, record)
     if unsynced:
         raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
+    held = store.get(record["content_hash"])
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
         from chartbook.snapshot import materialized_name
