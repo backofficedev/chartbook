@@ -169,13 +169,11 @@ def task_build_examples():
 def task_hatch_build():
     """Build the package with hatch for publishing.
 
-    A release must record the commit its template is at (`hatch_build.py`):
-    CHARTBOOK_BUILD_REQUIRE_GIT=1 stops the build where it could not.
+    The build records the commit the template is at (`hatch_build.py`), and
+    stops where it cannot: build from a clean checkout, with git at hand.
     """
-    from doit.action import CmdAction
-
     return {
-        "actions": [CmdAction("hatch build", env={**os.environ, "CHARTBOOK_BUILD_REQUIRE_GIT": "1"})],
+        "actions": ["hatch build"],
         "task_dep": ["build_examples"],
         "verbosity": 2,
     }

@@ -145,8 +145,6 @@ def hook(monkeypatch):
     """The build hook's module, with git insulated from the developer's own configuration."""
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
-    # A contributor may have the release's setting exported; each test that wants it sets it
-    monkeypatch.delenv("CHARTBOOK_BUILD_REQUIRE_GIT", raising=False)
     for role in ("AUTHOR", "COMMITTER"):
         monkeypatch.setenv(f"GIT_{role}_NAME", "Test Author")
         monkeypatch.setenv(f"GIT_{role}_EMAIL", "test@example.com")
@@ -292,21 +290,16 @@ def _sdist(folder, commit):
 
 
 @pytest.mark.parametrize("commit", ["", None])
-def test_a_release_build_stops_on_an_sdist_that_records_no_commit(hook, tmp_path, monkeypatch, commit):
-    """An sdist built without the setting, then a wheel built from it with the setting: no commit, so it stops."""
+def test_a_build_stops_on_an_sdist_that_records_no_commit(hook, tmp_path, commit):
+    """An sdist that records no commit (one made by hand, or by an older hook) builds no wheel: it says so."""
     root = _sdist(tmp_path / "chartbook-0.2.0", commit)
-    built, build_data = _run(hook, root, "wheel")
-    (warning,) = built.app.warnings
-    assert "an sdist that records no commit" in warning
-    monkeypatch.setenv(hook.REQUIRE_GIT, "1")
-    with pytest.raises(RuntimeError, match="an sdist that records no commit"):
+    with pytest.raises(RuntimeError, match="an sdist that records no commit.*Build the sdist from a git checkout"):
         _run(hook, root, "wheel")
 
 
-def test_a_release_build_from_an_sdist_with_its_commit_goes_on(hook, tmp_path, monkeypatch):
+def test_a_build_from_an_sdist_with_its_commit_goes_on(hook, tmp_path):
     """The path `uv build` and `python -m build` take for a release: the sdist, then a wheel from it."""
     root = _sdist(tmp_path / "chartbook-0.2.0", "a" * 40)
-    monkeypatch.setenv(hook.REQUIRE_GIT, "1")
     built, build_data = _run(hook, root, "wheel")
     assert built.app.warnings == []
     assert sorted(build_data["force_include"].values()) == ["chartbook/template/cookiecutter.json"]
@@ -334,19 +327,17 @@ def test_a_template_git_cannot_say_is_clean_records_no_commit(hook, tmp_path, mo
 
 
 @needs_git
-def test_a_template_with_uncommitted_changes_is_recorded_at_no_commit(hook, tmp_path):
+def test_a_template_with_uncommitted_changes_stops_the_build(hook, tmp_path):
+    """The commit must say what ships. An untracked file is never shipped, so it does not count."""
     root = tmp_path / "checkout"
     head = _checkout(root)
-    # A file git does not track is never shipped, and does not count
     (root / "template" / "notes.txt").write_text("mine\n")
     built, build_data = _run(hook, root, "wheel")
     assert _recorded(build_data, "chartbook/built_from.txt").strip() == head
     built.finalize("standard", build_data, "")
     (root / "template" / "cookiecutter.json").write_text("{}\n")
-    built, build_data = _run(hook, root, "wheel")
-    assert _recorded(build_data, "chartbook/built_from.txt").strip() == ""
-    assert any("changes git has not committed" in warning for warning in built.app.warnings)
-    built.finalize("standard", build_data, "")
+    with pytest.raises(RuntimeError, match="changes git has not committed.*Commit them"):
+        _run(hook, root, "wheel")
 
 
 @needs_git
@@ -363,63 +354,40 @@ def test_a_tracked_file_missing_from_disk_stops_the_build(hook, tmp_path, monkey
         _run(hook, root, "wheel")
 
 
-def test_a_git_folder_git_cannot_read_warns_or_with_the_variable_stops(hook, tmp_path, monkeypatch):
-    """`pip install .` in an image without git, a folder git does not trust: a warning that says the ways
-    out, unless the build says it must record the commit, as a release's does."""
+def test_a_git_folder_git_cannot_read_stops_the_build_and_says_the_ways_out(hook, tmp_path):
+    """`pip install .` in an image without git, or a folder git does not trust."""
     root = tmp_path / "checkout"
     (root / "src" / "chartbook").mkdir(parents=True)
     (root / "template").mkdir()
     (root / "template" / "cookiecutter.json").write_text("{}\n")
     (root / ".git").mkdir()
-    monkeypatch.delenv(hook.REQUIRE_GIT, raising=False)
-    built, build_data = _run(hook, root, "wheel")
-    (warning,) = built.app.warnings
-    assert "has a .git, and git cannot read it" in warning
-    assert "Install git" in warning and "safe.directory" in warning and "from an sdist" in warning
-    assert sorted(build_data["force_include"].values()) == ["chartbook/built_from.txt", "chartbook/template/cookiecutter.json"]
-    assert _recorded(build_data, "chartbook/built_from.txt").strip() == ""
-    monkeypatch.setenv(hook.REQUIRE_GIT, "1")
-    with pytest.raises(RuntimeError, match="CHARTBOOK_BUILD_REQUIRE_GIT=1 makes this an error"):
+    with pytest.raises(RuntimeError, match="has a .git, and git cannot read it") as raised:
         _run(hook, root, "wheel")
+    said = str(raised.value)
+    assert "Install git" in said and "safe.directory" in said and "from an sdist" in said
 
 
-def test_a_copy_that_is_neither_a_checkout_nor_an_sdist_ships_no_stray_commit(hook, tmp_path, monkeypatch):
-    """A Docker build whose .dockerignore leaves out .git: no commit, and a stray file in the tree never ships
-    as if it were one; a release's build stops."""
+def test_a_copy_that_is_neither_a_checkout_nor_an_sdist_stops_the_build(hook, tmp_path):
+    """A source zip, or a Docker build whose .dockerignore leaves out .git: no commit can be told, and a stray
+    built_from.txt in the tree never ships as if it were one."""
     root = tmp_path / "copy"
     (root / "src" / "chartbook").mkdir(parents=True)
     (root / "src" / "chartbook" / "built_from.txt").write_text("0" * 40 + "\n")
     (root / "template").mkdir()
     (root / "template" / "cookiecutter.json").write_text("{}\n")
-    monkeypatch.delenv(hook.REQUIRE_GIT, raising=False)
-    built, build_data = _run(hook, root, "wheel")
-    (warning,) = built.app.warnings
-    assert "neither a git checkout nor an sdist" in warning
-    assert _recorded(build_data, "chartbook/built_from.txt").strip() == ""
-    monkeypatch.setenv(hook.REQUIRE_GIT, "1")
-    with pytest.raises(RuntimeError, match="neither a git checkout nor an sdist"):
+    with pytest.raises(RuntimeError, match="neither a git checkout nor an sdist.*clone of the repository.*PyPI"):
         _run(hook, root, "wheel")
 
 
-@needs_git
-def test_a_release_build_stops_on_a_template_with_uncommitted_changes(hook, tmp_path, monkeypatch):
-    root = tmp_path / "checkout"
-    _checkout(root)
-    (root / "template" / "cookiecutter.json").write_text('{"project_slug": "y"}\n')
-    monkeypatch.setenv(hook.REQUIRE_GIT, "1")
-    with pytest.raises(RuntimeError, match="changes git has not committed.*CHARTBOOK_BUILD_REQUIRE_GIT=1"):
-        _run(hook, root, "wheel")
-
-
-def test_the_release_build_task_requires_the_commit():
-    """`doit hatch_build` is how a release is built: it sets the variable that makes a missing commit stop it."""
+def test_the_release_build_task_is_a_plain_hatch_build():
+    """`doit hatch_build` is `hatch build`: the hook itself stops a build that cannot record its commit, so
+    there is no setting to remember (the maintainer asked why there was one; there is not)."""
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("chartbook_dodo", PYPROJECT.parent / "dodo.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    (action,) = module.task_hatch_build()["actions"]
-    assert action.pkwargs["env"]["CHARTBOOK_BUILD_REQUIRE_GIT"] == "1"
+    assert module.task_hatch_build()["actions"] == ["hatch build"]
 
 
 def test_the_hook_and_init_name_the_file_alike(hook):

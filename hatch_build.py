@@ -21,13 +21,15 @@ from the checkout and asks git for the commit at run time):
   with a warning if it records no commit. An sdist is told by its `PKG-INFO`
   before git is asked, so one unpacked into a repository of its own is still
   the sdist.
-- A folder that is neither a checkout git can read nor an sdist (git not
-  installed, a folder git does not trust, a copy without `.git`) gets the
-  template as it is on disk and an empty `built_from.txt` (no commit, and
-  never a stray one), with a warning. With `CHARTBOOK_BUILD_REQUIRE_GIT=1`
-  in the environment, as a release's build has (`doit hatch_build`), that
-  stops the build, and so do a `template/` with uncommitted changes and an
-  sdist that records no commit: a release always records its commit.
+- A build that cannot record the commit stops, saying what to do: a folder
+  whose `.git` git cannot read (git not installed, a folder git does not
+  trust), a copy with neither a `.git` nor an sdist's `PKG-INFO` (a source
+  zip, a Docker context without `.git`), a `template/` with changes git has
+  not committed, or an sdist that records no commit. So a wheel or an sdist
+  always says which commit its template is at, and never ships a stray
+  `built_from.txt` from the tree. Only these builds are affected: an
+  editable install skips the hook, and `pip install` of the wheel on PyPI
+  runs no build at all.
 
 The version is not touched.
 """
@@ -45,10 +47,6 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 #: The file the package carries the commit in, beside its modules
 BUILT_FROM = "built_from.txt"
-
-#: Set to 1 for a build that must record the commit (a release's): what
-#: would otherwise build with a warning and no commit stops it instead
-REQUIRE_GIT = "CHARTBOOK_BUILD_REQUIRE_GIT"
 
 #: Where the environment can tell git to look; a build looks at its own folder
 GIT_LOCATION_VARIABLES = frozenset({
@@ -123,19 +121,17 @@ class CustomBuildHook(BuildHookInterface):
         checkout = not sdist and is_checkout(root)
         if not checkout and not sdist:
             if (root / ".git").exists():
-                message = (
-                    f"{root} has a .git, and git cannot read it, so the package carries template/ as it is "
-                    f"on disk, ignored files and all, and no commit for it. Install git; or, if git does not "
-                    f"trust the folder, run `git config --global --add safe.directory {root}`; or build from "
-                    f"an sdist."
+                raise RuntimeError(
+                    f"{root} has a .git, and git cannot read it, so the build cannot tell which files of "
+                    f"template/ to ship, nor the commit they are at. Install git; or, if git does not trust "
+                    f"the folder, run `git config --global --add safe.directory {root}`; or build from an "
+                    f"sdist, which carries both."
                 )
-            else:
-                message = (
-                    f"{root} is neither a git checkout nor an sdist, so the package carries template/ as it "
-                    f"is on disk, ignored files and all, and no commit for it. Build from a git checkout, or "
-                    f"from an sdist."
-                )
-            self._stop_or_warn(message)
+            raise RuntimeError(
+                f"{root} is neither a git checkout nor an sdist, so the build cannot tell which files of "
+                f"template/ to ship, nor the commit they are at. Build from a clone of the repository or "
+                f"from an sdist, or install the release from PyPI."
+            )
 
         inside = "chartbook/template" if self.target_name == "wheel" else "template"
         for name in template_files(root, checkout):
@@ -145,21 +141,21 @@ class CustomBuildHook(BuildHookInterface):
             # The sdist's own file ships as any file of the package does
             shipped = root / "src" / "chartbook" / BUILT_FROM
             if not (shipped.is_file() and shipped.read_text(encoding="utf-8").strip()):
-                self._stop_or_warn(
-                    f"{root} is an sdist that records no commit for its template/, so the package records "
-                    f"none, and a project chartbook init makes from it has no .cruft.json."
+                raise RuntimeError(
+                    f"{root} is an sdist that records no commit for its template/, so a project chartbook "
+                    f"init makes from it would have no .cruft.json. Build the sdist from a git checkout."
                 )
             return
-        commit = commit_of(root) if checkout else None
-        if checkout and commit is None:
-            self._stop_or_warn(
-                "template/ has changes git has not committed (or git could not say), so the package "
-                "records no commit for it, and a project chartbook init makes from it has no .cruft.json."
+        commit = commit_of(root)
+        if commit is None:
+            raise RuntimeError(
+                "template/ has changes git has not committed (or git could not say), so the build cannot "
+                "record the commit that says what ships. Commit them, or set them aside, and build again."
             )
         # Written aside, never into the tree; force-included, which overrides a stray copy there
         self._folder = Path(tempfile.mkdtemp(prefix="chartbook-build-"))
         written = self._folder / BUILT_FROM
-        written.write_text((commit or "") + "\n", encoding="utf-8")
+        written.write_text(commit + "\n", encoding="utf-8")
         target = "chartbook" if self.target_name == "wheel" else "src/chartbook"
         build_data["force_include"][str(written)] = f"{target}/{BUILT_FROM}"
 
@@ -168,13 +164,3 @@ class CustomBuildHook(BuildHookInterface):
         if folder is not None:
             shutil.rmtree(folder, ignore_errors=True)
 
-    def _stop_or_warn(self, message):
-        """Stop the build with *message* when it must record the commit; else warn."""
-        if os.environ.get(REQUIRE_GIT, "").strip() == "1":
-            raise RuntimeError(f"{message} ({REQUIRE_GIT}=1 makes this an error.)")
-        self._warn(message)
-
-    def _warn(self, message):
-        app = getattr(self, "app", None)
-        if app is not None:
-            app.display_warning(message)

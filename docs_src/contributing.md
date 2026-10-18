@@ -145,13 +145,13 @@ hatch run docs:build
 
 ## Building a release
 
-The project template goes into the wheel and the sdist by `hatch_build.py`: the files git tracks in `template/`, and the commit they are at, which `chartbook init` writes into a new project's `.cruft.json`. Build a release from a clean checkout, with git at hand, and with `CHARTBOOK_BUILD_REQUIRE_GIT=1` in the environment, which `doit hatch_build` sets:
+The project template goes into the wheel and the sdist by `hatch_build.py`: the files git tracks in `template/`, and the commit they are at, which `chartbook init` writes into a new project's `.cruft.json`. Build a release from a clean checkout, with git at hand:
 
 ```bash
-CHARTBOOK_BUILD_REQUIRE_GIT=1 hatch build
+hatch build        # or: doit hatch_build
 ```
 
-Without that variable, a build that cannot record the commit warns and goes on: a folder whose `.git` git cannot read (git not installed, or a folder git does not trust) or a copy with neither a `.git` nor an sdist's `PKG-INFO` ships `template/` as it is on disk and an empty `built_from.txt`, and a `template/` with changes git has not committed, or an sdist that records no commit, ships with no commit. With it, each of these stops the build.
+A build that cannot record the commit stops and says what to do: a folder whose `.git` git cannot read (git not installed, or a folder git does not trust), a copy with neither a `.git` nor an sdist's `PKG-INFO` (a source zip), a `template/` with changes git has not committed, or an sdist that records no commit. An editable install skips the hook, and `pip install chartbook` from PyPI runs no build, so only a build of the package itself meets this.
 
 A release also bumps the template's `_chartbook_version` in `template/cookiecutter.json` with the version in `src/chartbook/__about__.py` (a test keeps them equal).
 
