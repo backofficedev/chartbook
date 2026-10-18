@@ -513,8 +513,9 @@ class TestDocsOfAnUntrustedPipeline:
         pages = _pages(leaky_project / "docs")
         assert "HUNTER2_LEAKED_SECRET" not in pages
         assert "not read in a build of files from a store, nor of a folder you have not trusted" in pages
-        # The mode is the process's, set before anything was read
-        assert os.environ.get(config.UNTRUSTED_ENV_VAR) == "1"
+        # The mode was the render's: set before anything was read, and gone after, so a later
+        # render in this process (a test's, a library's) is not untrusted by accident
+        assert os.environ.get(config.UNTRUSTED_ENV_VAR) is None
 
     def test_a_trusted_pipeline_runs_its_query_with_no_warning(self, leaky_project, monkeypatch):
         config.record_trust(leaky_project, "render")

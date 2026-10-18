@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import warnings
 from pathlib import Path
 
@@ -266,7 +267,7 @@ def _render_site(
         raise SystemExit(1)
     # Before anything of the project is read: a folder the user has not
     # trusted is rendered as a build of files from a store is
-    _require_trust_to_render(project_dir)
+    untrusted = _require_trust_to_render(project_dir)
 
     # Convert output_dir to Path
     output_dir = Path(output_dir).resolve()
@@ -290,44 +291,44 @@ def _render_site(
     # Store whether we need to remove existing directory after successful generation
     should_remove_existing = output_dir.exists() and force_write
 
-    _run_docs_build(
-        project_dir,
-        incremental=incremental,
-        watch=watch,
-        watch_interval=watch_interval,
-        output_dir=output_dir,
-        project_dir=project_dir,
-        publish_dir=publish_dir,
-        _docs_dir=docs_build_dir,
-        temp_docs_src_dir=temp_docs_src_dir,
-        keep_build_dirs=keep_build_dirs,
-        should_remove_existing=should_remove_existing,
-        size_threshold=size_threshold,
-        strict=strict,
-        strip_mathjax2=strip_mathjax2,
-        after_build=after_build,
-    )
+    with _untrusted_mode(untrusted):
+        _run_docs_build(
+            project_dir,
+            incremental=incremental,
+            watch=watch,
+            watch_interval=watch_interval,
+            output_dir=output_dir,
+            project_dir=project_dir,
+            publish_dir=publish_dir,
+            _docs_dir=docs_build_dir,
+            temp_docs_src_dir=temp_docs_src_dir,
+            keep_build_dirs=keep_build_dirs,
+            should_remove_existing=should_remove_existing,
+            size_threshold=size_threshold,
+            strict=strict,
+            strip_mathjax2=strip_mathjax2,
+            after_build=after_build,
+        )
     if not watch:
         click.echo(f"Successfully generated documentation in {output_dir}")
 
 
-def _require_trust_to_render(project_dir):
-    """Set how a site is rendered by how far the user trusts its folder (``docs_src/design/trust.md``).
+def _require_trust_to_render(project_dir) -> bool:
+    """Whether a site is rendered as one from a store is, by how far the user trusts its folder (``docs_src/design/trust.md``).
 
     A pipeline folder with no trust is rendered as a build of files from a
-    store is: this process sets ``CHARTBOOK_UNTRUSTED_SOURCE=1`` for
-    itself, before anything of the folder is read, and says why. A
-    catalog's own folder and every member folder on this machine must be
-    trusted at least to render, since the untrusted mode is the process's
-    and cannot be one member's; one that is not is an error that lists
-    them, and nothing is built.
+    store is (:func:`_untrusted_mode` sets ``CHARTBOOK_UNTRUSTED_SOURCE=1``
+    for the render, before anything of the folder is read), and the user
+    is told why. A catalog's own folder and every member folder on this
+    machine must be trusted at least to render, since the untrusted mode
+    is the process's and cannot be one member's; one that is not is an
+    error that lists them, and nothing is built.
 
+    :returns: True to render as a build of files from a store.
     :raises SystemExit: For a catalog with a folder that is not trusted,
         or a trust record that cannot be read.
     """
-    import os
-
-    from chartbook.config import UNTRUSTED_ENV_VAR, trust_of
+    from chartbook.config import trust_of
     from chartbook.manifest import _read_manifest_file, catalog_member_dirs, resolve_project_type
 
     def fail(message):
@@ -339,12 +340,11 @@ def _require_trust_to_render(project_dir):
         is_catalog = resolve_project_type(raw, source=str(project_dir / "chartbook.toml")) == "catalog"
     except (ValueError, FileNotFoundError):
         # A manifest that cannot be read is the build's error to say
-        return
+        return False
     here = "here" if project_dir.resolve() == Path.cwd().resolve() else f"in {project_dir}"
     try:
         if not is_catalog:
             if trust_of(project_dir) is None:
-                os.environ[UNTRUSTED_ENV_VAR] = "1"
                 click.echo(
                     click.style("Warning: ", fg="yellow", bold=True)
                     + f"{project_dir} is not a pipeline you trust, so the site is rendered as one from a store "
@@ -353,14 +353,15 @@ def _require_trust_to_render(project_dir):
                     f"to render only.",
                     err=True,
                 )
-            return
+                return True
+            return False
         try:
             # The build reads the same entries next, and says what it warns of
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 members = catalog_member_dirs(project_dir)
         except (ValueError, FileNotFoundError, TypeError, KeyError):
-            return  # the build says what is wrong with the catalog
+            return False  # the build says what is wrong with the catalog
         untrusted = []
         if trust_of(project_dir) is None:
             untrusted.append(f"  {project_dir} (the catalog's own folder)")
@@ -377,6 +378,34 @@ def _require_trust_to_render(project_dir):
             f"this machine (`chartbook trust --members --render` to render only); `chartbook trust` in one "
             f"folder trusts that one."
         )
+    return False
+
+
+@contextlib.contextmanager
+def _untrusted_mode(untrusted: bool):
+    """``CHARTBOOK_UNTRUSTED_SOURCE=1`` for the render of a folder the user has not trusted, and only for it.
+
+    The mode is read from the environment wherever a build decides what it
+    may read or run (:func:`chartbook.config.untrusted_source`), so it is
+    set there; and it is put back after, since the process may be a test's,
+    or a library's, that renders again.
+    """
+    import os
+
+    from chartbook.config import UNTRUSTED_ENV_VAR
+
+    if not untrusted:
+        yield
+        return
+    before = os.environ.get(UNTRUSTED_ENV_VAR)
+    os.environ[UNTRUSTED_ENV_VAR] = "1"
+    try:
+        yield
+    finally:
+        if before is None:
+            os.environ.pop(UNTRUSTED_ENV_VAR, None)
+        else:
+            os.environ[UNTRUSTED_ENV_VAR] = before
 
 
 def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kwargs):
