@@ -22,7 +22,7 @@ The entries below are newest first, each written as its piece landed. Where a la
 - A dataframe, chart, notebook or note key must match `[A-Za-z0-9._-]+`, since it becomes part of an address; a key such as `"10y spread"` stops the manifest from loading.
 - `chartbook build` and `chartbook run` execute `[project] build`, which 0.2.0 only showed. In that build, a read of another pipeline that is not in `[dependencies]`, or that has no snapshot, is an error, where 0.2.0 read it through the catalog: declare it (`chartbook add`), and have its owner run `chartbook snapshot`.
 - `chartbook check` with no policy anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, and no `--policy`) now reports missing recommended fields as `warning:` lines and exits 0, where 0.2.0's `check` failed on them. CI that relied on that failure gives the pipeline a `[policy]`, or passes `--policy` with a file that has one.
-- `data.load(pipeline=…, dataframe=…)` and `data.get_data_path` now read the pipeline's newest snapshot in the store first, and its own folder only when it has no snapshot, with a `WorkingVersionWarning`, where 0.2.0 read the pipeline's file through the catalog.
+- `data.load(pipeline=…, dataframe=…)` and `data.get_data_path` now read the store first: the pipeline's pin where the caller's `[dependencies]` declare it, else its newest snapshot, and its own folder only when it has no snapshot, with a `WorkingVersionWarning` (an error in a build run by `chartbook build` or `chartbook run`), where 0.2.0 read the pipeline's file through the catalog.
 - ChartBook needs polars 1.20 or later (was 1.9), and now duckdb 1.4 or later and cookiecutter 2.2 or later.
 
 **What later entries changed in earlier ones:**
