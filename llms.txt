@@ -49,6 +49,7 @@ chartbook init               # Scaffold a new pipeline project
 chartbook docs              # Render the HTML documentation (was `chartbook build`)
 chartbook build -f          # Run the project's build script, then render the documentation
 chartbook run               # Run [scripts] build alone (pins dependencies first); `chartbook run <name>` runs another script
+chartbook trust             # Say a pipeline's folder is yours to build; until then `docs` renders it as a store build and `build`/`run` refuse (--render, --members, --repository, --list, --forget)
 chartbook docs -f           # Force overwrite existing docs
 chartbook browse             # Open the generated site
 chartbook publish            # Stage publishable files to a directory
@@ -70,6 +71,8 @@ path = "/absolute/path/to/catalog/chartbook.toml"
 ```
 
 Set via `chartbook config` command. When configured, `data.load()` works without explicit `catalog_path`.
+
+`~/.chartbook/trust.toml` records the pipelines (folders, each covering the folders inside it) and repositories (by `origin` remote) this user trusts a build of, at `render` or `run`; written by `chartbook trust` and `chartbook init`. Under `CI` the checkout is trusted; `CHARTBOOK_TRUST=all` trusts every folder.
 
 ## Project Types
 

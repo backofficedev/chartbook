@@ -29,6 +29,13 @@ Understanding this is useful when a build fails (the exact Markdown Sphinx saw i
 when a value on a page looks wrong (the index says what the build recorded), and when you want to
 change how a page looks (templates can be overridden).
 
+One thing comes before the three steps: whose folder this is. A build reads the files the manifest
+names, runs a dataframe's `query` for its first rows, and (`chartbook build`) runs the build
+script, so a folder you did not make is built as a version from a store is until you say it is
+yours to build: no query run, nothing read from outside the folder, no script run, and a warning
+that says so. `chartbook trust` in the folder says it; a project `chartbook init` made is trusted
+already. See {ref}`chartbook trust <chartbook-trust>`.
+
 ## 1. Resolve: the index
 
 The index is built first, before any page, so that every page is a reader of it and says what it

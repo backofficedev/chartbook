@@ -11,6 +11,7 @@ How to set up, manage, browse, and load data from ChartBook catalogs.
 ├── settings.toml        # User settings: [catalog] path, [store] url, [git] path, [cache] path, [resolve] default_host
 ├── chartbook.toml       # Default global catalog
 ├── sources.toml         # This machine's urls and credentials for a pipeline's [sources]
+├── trust.toml           # Pipelines and repositories this user trusts a build of (chartbook trust); CI trusts the checkout, CHARTBOOK_TRUST=all every folder
 ├── machine-id           # What names this machine in a store's notes of lockfiles (or CHARTBOOK_MACHINE_ID)
 ├── store/               # The store: snapshots and pinned copies, by content hash ([store] url or CHARTBOOK_STORE moves it)
 ├── cache/               # What was read from a remote store, and each version's built site ([cache] path, CHARTBOOK_CACHE)

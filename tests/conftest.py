@@ -30,6 +30,12 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
     monkeypatch.setenv("CHARTBOOK_SYSTEM_SETTINGS", str(scratch / "system-settings.toml"))
     # A test is interactive unless it says otherwise, even under `chartbook run`
     monkeypatch.delenv("CHARTBOOK_BATCH", raising=False)
+    # Every folder a test builds is trusted to run, as the user's own would
+    # be once trusted, and CI's own `CI=true` does not reach a test: the
+    # tests of trust itself (tests/test_trust.py) clear the first and set
+    # the second themselves
+    monkeypatch.setenv("CHARTBOOK_TRUST", "all")
+    monkeypatch.delenv("CI", raising=False)
     # The name of the machine in a store's notes, which is otherwise made
     # once and kept under the home folder: a `chartbook` a test runs in a
     # subprocess, with the real home, must not make one there. A test of

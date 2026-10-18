@@ -1262,7 +1262,9 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
         if safe_relative(value) is None or escapes(base_dir / value, base_dir) is not None:
             raise ValueError(
                 f"{source}: {where} = {value!r} is not a plain path inside the pipeline's folder, "
-                f"and a build of files from a store reads nothing outside the folder it was laid out in."
+                f"and a build of files that are not your own (from a store, or a folder you have not "
+                f"trusted) reads nothing outside the folder. `chartbook trust` in a folder trusts the "
+                f"pipeline there."
             )
 
 
@@ -1836,6 +1838,80 @@ def _check_pipelines_entry(pipeline_id: str, entry: object, source: str) -> dict
     return dict(entry)
 
 
+def _catalog_entries(raw_manifest: dict, base_dir, source: str) -> dict:
+    """A catalog's ``[pipelines]`` entries, explicit and discovered, with the disabled ones dropped.
+
+    Each is a table with a ``path`` (None for a pipeline the catalog shows
+    from the store), by pipeline ID. No member's manifest is loaded here:
+    a discovered member's is parsed for its ID, and that is all.
+
+    :raises ValueError: On a malformed entry or reserved key, or a member
+        that cannot be found, with what to do.
+    """
+    pipelines_raw = raw_manifest.get("pipelines") or {}
+    members = pipelines_raw.get("members")
+    exclude = pipelines_raw.get("exclude", [])
+    disabled_ids = pipelines_raw.get("disabled", [])
+    if members is not None:
+        members = _require_string_list(members, "members", source)
+    exclude = _require_string_list(exclude, "exclude", source)
+    disabled_ids = _require_string_list(disabled_ids, "disabled", source)
+
+    # Explicit entries; a plain string value is shorthand for {path = ...}
+    entries = {}
+    for pipeline_id, entry in pipelines_raw.items():
+        if pipeline_id in RESERVED_PIPELINES_KEYS:
+            continue
+        try:
+            validate_pipeline_id(pipeline_id)
+        except ValueError as error:
+            # Keeps "reserved, not yet supported" distinct from "invalid"
+            raise type(error)(f"{source}: [pipelines] {pipeline_id!r}: {error}") from None
+        if isinstance(entry, str):
+            entry = {"path": entry}
+        entries[pipeline_id] = _check_pipelines_entry(pipeline_id, entry, source)
+
+    # Auto-discovered members join the explicit entries, and fill in one
+    # that names a pipeline with no folder (keeping whether it is disabled)
+    if members is not None:
+        found = _discover_member_pipelines(members, exclude, entries, base_dir, source)
+        for member_id, member_entry in found.items():
+            entries[member_id] = {**entries.get(member_id, {}), **member_entry}
+
+    # Drop disabled pipelines: per-entry flags first, then the ID list
+    for pipeline_id in [k for k, v in entries.items() if v.get("disabled", False)]:
+        del entries[pipeline_id]
+    _apply_disabled_list(entries, disabled_ids, source)
+    return entries
+
+
+def catalog_member_dirs(base_dir) -> dict:
+    """The folder of each pipeline of a catalog that is on this machine, by its ID, from the catalog's manifest alone.
+
+    What a build of the catalog would read from this machine, before it
+    reads any of it: no member's manifest is loaded, and nothing of a
+    member runs. A pipeline the catalog shows from the store (an entry
+    with no ``path``) has no folder here and is not listed.
+
+    :param base_dir: The catalog's folder.
+    :raises FileNotFoundError: If there is no chartbook.toml there.
+    :raises ValueError: If the manifest is not a catalog's, or cannot be read.
+    """
+    base_dir = Path(base_dir)
+    raw_manifest = _read_manifest_file(base_dir)
+    source = str(base_dir / "chartbook.toml")
+    if resolve_project_type(raw_manifest, source=source) != "catalog":
+        raise ValueError(f"{source} is a pipeline's manifest, not a catalog's: it has no [pipelines].")
+    found = {}
+    for pipeline_id, entry in _catalog_entries(raw_manifest, base_dir, source).items():
+        if entry.get("path") is None:
+            continue
+        found[pipeline_id] = catalog_entry_dir(
+            base_dir, resolve_platform_path(entry["path"]), where=f"{source}: [pipelines.\"{pipeline_id}\"]"
+        )
+    return found
+
+
 def _load_catalog_manifest(raw_manifest):
     """Process a raw catalog manifest, loading each registered pipeline.
 
@@ -1873,40 +1949,7 @@ def _load_catalog_manifest(raw_manifest):
             f"sources its own dataframes live in."
         )
 
-    pipelines_raw = manifest.get("pipelines") or {}
-    members = pipelines_raw.get("members")
-    exclude = pipelines_raw.get("exclude", [])
-    disabled_ids = pipelines_raw.get("disabled", [])
-    if members is not None:
-        members = _require_string_list(members, "members", source)
-    exclude = _require_string_list(exclude, "exclude", source)
-    disabled_ids = _require_string_list(disabled_ids, "disabled", source)
-
-    # Explicit entries; a plain string value is shorthand for {path = ...}
-    entries = {}
-    for pipeline_id, entry in pipelines_raw.items():
-        if pipeline_id in RESERVED_PIPELINES_KEYS:
-            continue
-        try:
-            validate_pipeline_id(pipeline_id)
-        except ValueError as error:
-            # Keeps "reserved, not yet supported" distinct from "invalid"
-            raise type(error)(f"{source}: [pipelines] {pipeline_id!r}: {error}") from None
-        if isinstance(entry, str):
-            entry = {"path": entry}
-        entries[pipeline_id] = _check_pipelines_entry(pipeline_id, entry, source)
-
-    # Auto-discovered members join the explicit entries, and fill in one
-    # that names a pipeline with no folder (keeping whether it is disabled)
-    if members is not None:
-        found = _discover_member_pipelines(members, exclude, entries, base_dir, source)
-        for member_id, member_entry in found.items():
-            entries[member_id] = {**entries.get(member_id, {}), **member_entry}
-
-    # Drop disabled pipelines: per-entry flags first, then the ID list
-    for pipeline_id in [k for k, v in entries.items() if v.get("disabled", False)]:
-        del entries[pipeline_id]
-    _apply_disabled_list(entries, disabled_ids, source)
+    entries = _catalog_entries(raw_manifest, base_dir, source)
 
     manifest["pipelines"] = {}
     # A pipeline with no folder here: the catalog shows its snapshots in the store

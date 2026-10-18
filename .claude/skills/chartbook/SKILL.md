@@ -39,6 +39,9 @@ chartbook browse            # Open project docs in default browser
 # around a built site or catalog, read its llms.txt first
 chartbook check             # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
+chartbook trust             # Say this folder's pipeline is yours to build. Until then `docs` renders it as a store build (no query run, nothing read from outside the folder, a warning) and `build`/`run` REFUSE to run its script. A project `chartbook init` made is trusted already; CI trusts its checkout; CHARTBOOK_TRUST=all trusts every folder
+chartbook trust --render    # ...to render only: queries run and files it names are read, no build script
+chartbook trust --members   # In a catalog: the catalog's folder and each member folder here (a catalog builds only when all are trusted). --repository: this folder's origin repository, every clone of it. --list shows the record (~/.chartbook/trust.toml); --forget removes
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
 chartbook path chart/<name> # ...for a chart (also notebook/<name>, note/<name>, model/<name>)
 chartbook path model/<name>@<version>  # a version of a model, in the store: by the start of its hash (@7f3a9c2e41b0) or by a label (@champion)
@@ -87,6 +90,7 @@ For detailed catalog management commands, browsing, and data access workflows, s
 ├── settings.toml        # User settings: [catalog] path, [store] url, [git] path, [cache] path, [resolve] default_host
 ├── chartbook.toml       # Default global catalog
 ├── sources.toml         # This machine's urls and credentials for a pipeline's [sources]
+├── trust.toml           # Pipelines and repositories this user trusts a build of (chartbook trust); CI trusts the checkout, CHARTBOOK_TRUST=all every folder
 ├── machine-id           # What names this machine in a store's notes of lockfiles (or CHARTBOOK_MACHINE_ID)
 ├── store/               # The store: snapshots and pinned copies, by content hash ([store] url or CHARTBOOK_STORE moves it)
 ├── cache/               # What was read from a remote store, and each version's built site ([cache] path, CHARTBOOK_CACHE)

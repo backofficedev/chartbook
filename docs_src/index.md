@@ -158,5 +158,6 @@ design/models
 design/data-access
 design/stores-and-backends
 design/versioned-catalog
+design/trust
 design/reading-other-pipelines
 ```
