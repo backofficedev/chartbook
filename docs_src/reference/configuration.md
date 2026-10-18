@@ -59,6 +59,8 @@ Every field is optional. Types and defaults:
 
 Unknown keys in `[project]` produce a warning naming the closest known key, so typos don't silently become dead metadata.
 
+`name`, `maintainer` and `copyright` are written into the site's Sphinx configuration, so each is one line of letters, digits, spaces, accented letters and the punctuation `-_.,!?&:'`, at most 200 characters. `chartbook docs` refuses anything else, a line break or a quotation mark included, and names the field.
+
 A fully populated pipeline:
 
 ```toml

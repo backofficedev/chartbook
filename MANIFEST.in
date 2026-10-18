@@ -1,4 +1,0 @@
-include src/chartbook/branding/*
-include src/chartbook/templates/*
-include src/chartbook/skills/*
-include src/chartbook/docs_src/**/*

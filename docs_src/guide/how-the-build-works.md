@@ -120,7 +120,7 @@ per record that has one, plus the catalog's own pages:
 
 | Record | Page |
 |---|---|
-| `Dataframe` | `cb/dataframes/{pipeline}/{name}.md`: the write-up, a glimpse of the first rows read from the data file, the manifest tables, the provenance panel |
+| `Dataframe` | `cb/dataframes/{pipeline}/{name}.md`: the write-up, a glimpse of the first rows read from the data file (for a folder of parts, from its parquet files), the manifest tables, the provenance panel |
 | `Chart` | `cb/charts/{pipeline}.{name}.md`: ABlog front matter (date, and tags and category when there are any), the chart in an `<iframe>`, the write-up, the specs table |
 | `Model` | `cb/models/{pipeline}/{name}.md`: scores, versions, what it was trained on and whether it is out of date, files |
 | `Pipeline` | `index.md` (pipeline theme): the README's text with the tables of contents; or `cb/pipelines/{pipeline}_README.md` (catalog). Either way, the pipelines it depends on, each with what `chartbook.lock` pins it to |
@@ -133,7 +133,9 @@ never collide with it.
 
 The writer's one rule is **the index and the files it names, nothing else.** A write-up is read
 at the path its record gives, and inserted as text, not as a template. A dataframe's first rows
-come from the file (or the database) its record locates. "Data updated" is the record's
+come from the file (or the database) its record locates; a folder is read by its parquet parts,
+the files `data.load` would open (none under a name starting `.` or `_`, no `README.txt` or
+`schema.json`), and a folder with no part yet says so in a sentence. "Data updated" is the record's
 `modified_at`; a model's scores are the record's `metrics`; the diagnostics page is a comparison
 the writer makes between each record's declared fields and the policy the `Catalog` record
 carries. Nothing is looked up in a manifest or a folder.
@@ -195,7 +197,10 @@ what they use.
 ## 3. Build: Sphinx
 
 `conf.py.j2` is rendered with the project's `name`, `maintainer` and `copyright`, and the theme
-that goes with the project type, into `_docs/conf.py`. Then ChartBook runs
+that goes with the project type, into `_docs/conf.py`. Each of the three is written into a
+Python string there, so it is checked first to be one line of plain text (letters, digits,
+spaces, accented letters and `-_.,!?&:'`, at most 200 characters); the build refuses anything
+else and names the field. Then ChartBook runs
 
 ```console
 python -m sphinx -M html _docs _docs/_build
@@ -295,7 +300,8 @@ _docs/
 - **A value on a page is wrong.** Find the asset's record in `_docs/index.json`. If the record is
   right, the template is; if the record is wrong, the manifest or the file is.
 - **A dataframe page shows an error instead of a glimpse.** The file the record locates is
-  missing or not parquet, or the database could not be opened; the page says which.
+  missing or not parquet, the folder it names holds no parquet part yet, or the database could
+  not be opened; the page says which.
 - **A template override has no effect.** It must be in the root of the pipeline whose pages it
   should change, under the template's own name. Compare with `_docs_src/_templates/`.
 - **Sphinx errors.** They name paths inside `_docs/`; `--keep-build-dirs` lets you open them.

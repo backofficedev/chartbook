@@ -171,14 +171,47 @@ GLIMPSE_ROWS = 5
 GLIMPSE_DIGITS = 15
 
 
+def directory_tables(directory) -> list:
+    """The files a reader opens when a dataframe's path is a folder: its parquet parts, sorted.
+
+    The rule is the one a directory pinned from another pipeline is read by
+    (``chartbook.resolve._held``): of the files the index counts
+    (:func:`chartbook.hashing.directory_files`), none under a name starting
+    ``.`` or ``_`` (Spark's ``_SUCCESS``, Hadoop's ``.crc`` files), none that
+    is plainly not a table (a ``README.txt``, a ``schema.json``;
+    :data:`chartbook.resolve.NOT_TABLES`), and of the rest each named
+    ``.parquet`` or that begins or ends as parquet does (Hive's ``000000_0``).
+
+    :param directory: The folder.
+    :type directory: str or Path
+    :returns: The files, absolute as *directory* is, in name order.
+    :rtype: list[Path]
+    """
+    from chartbook import hashing
+    from chartbook.resolve import NOT_TABLES, _is_parquet
+
+    directory = Path(directory)
+    tables = []
+    for file in sorted(hashing.directory_files(directory)):
+        parts = file.relative_to(directory).parts
+        if any(part.startswith((".", "_")) for part in parts) or parts[-1].lower().endswith(NOT_TABLES):
+            continue
+        if parts[-1].lower().endswith(".parquet") or _is_parquet(file):
+            tables.append(file)
+    return tables
+
+
 def get_dataframe_glimpse(filepath):
     """Get a simple glimpse of a dataframe showing columns and data types.
 
     Shows the first :data:`GLIMPSE_ROWS` rows, with floats rounded for
     display (:func:`glimpse_text`). Only those rows are collected, whatever
-    the size of the file; the row count is the file's own.
+    the size of the file; the row count is the file's own. A folder is read
+    as a reader of it reads it, by its parquet parts
+    (:func:`directory_tables`); one with no part yet is said in a sentence.
 
-    :param filepath: Path to the parquet or CSV file.
+    :param filepath: Path to the parquet or CSV file, a glob of parquet
+        files, or a folder of parquet parts.
     :type filepath: str or Path
     :returns: The glimpse output as a string, or error message if file cannot be read.
     :rtype: str
@@ -189,6 +222,13 @@ def get_dataframe_glimpse(filepath):
         if is_glob_pattern(str(filepath)):
             # Glob/hive-partitioned paths: use scan_parquet directly
             lf = pl.scan_parquet(filepath, hive_partitioning=True)
+        elif filepath.is_dir():
+            tables = directory_tables(filepath)
+            if not tables:
+                # The folder by its name: the page says where it is, and a
+                # machine's path belongs on no page
+                return f"No parquet file in {filepath.name}/: a folder is shown by its parquet parts, and this one has none yet."
+            lf = pl.scan_parquet(tables, hive_partitioning=True)
         elif filepath.suffix.lower() == ".csv":
             lf = pl.scan_csv(filepath)
         elif filepath.suffix.lower() == ".parquet":

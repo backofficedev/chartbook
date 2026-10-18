@@ -146,6 +146,33 @@ class TestSiteConfig:
             )
         assert "invalid characters" in str(exc_info.value)
 
+    @pytest.mark.parametrize(
+        ("field", "toml_key"),
+        [("title", "project.name"), ("author", "project.maintainer"), ("copyright", "project.copyright")],
+    )
+    @pytest.mark.parametrize("value", ["Two\nlines", "Two\r\nlines", "Trailing\n", "\rLeading"])
+    def test_a_line_break_is_refused_naming_the_field(self, field, toml_key, value):
+        """Found by a reviewer: the safe-text pattern's `\\s` let a line break through, and
+        the value, rendered into a one-line Python string in conf.py, left it unterminated:
+        sphinx-build stopped with a SyntaxError. A line break is refused up front, by field."""
+        values = {"title": "Test", "author": "Test", "copyright": "2024", field: value}
+        with pytest.raises(ValidationError) as exc_info:
+            SiteConfig(sphinx_theme="pydata_sphinx_theme", **values)
+        assert exc_info.value.field_name == toml_key
+        assert "one line" in str(exc_info.value)
+        assert toml_key in exc_info.value.hint and "line break" in exc_info.value.hint
+
+    def test_a_valid_title_renders_a_conf_py_that_compiles(self):
+        """The other side of the rule: what passes the check is a Python string Sphinx can read."""
+        import importlib.resources
+
+        import jinja2
+
+        config = SiteConfig(title="Rates: 2024's curve, daily!", author="A. Smith", copyright="2026", sphinx_theme="sphinx_book_theme")
+        theme = Path(str(importlib.resources.files("chartbook"))) / "docs_src_pipeline"
+        conf = jinja2.Environment(loader=jinja2.FileSystemLoader(str(theme))).get_template("conf.py.j2").render(site_config=config)
+        compile(conf, "conf.py", "exec")
+
     def test_invalid_theme_blocked(self):
         """Test that invalid themes are blocked."""
         with pytest.raises(ValidationError) as exc_info:

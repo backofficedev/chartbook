@@ -101,7 +101,13 @@ def validate_datetime_column(df: "pd.DataFrame", column: str) -> None:
 
 
 def validate_chart_id(chart_id: str) -> None:
-    """Validate chart_id is a valid identifier."""
+    """Validate chart_id names the saved files well: ``<chart_id>.html``, ``<chart_id>_wide.pdf`` and so on.
+
+    Refused: an empty id; a character no filename may hold on every
+    platform; ``.`` and ``..``, which are not names; and a leading ``-`` or
+    ``.``, which would make a file read as an option or hidden. Anything
+    else is a name as written.
+    """
     if not chart_id:
         raise DataValidationError(
             column=None,
@@ -115,6 +121,25 @@ def validate_chart_id(chart_id: str) -> None:
         raise DataValidationError(
             column=None,
             message=f"chart_id contains invalid characters: {found_invalid}",
+        )
+
+    if chart_id in (".", ".."):
+        raise DataValidationError(
+            column=None,
+            message=(
+                f"chart_id {chart_id!r} is not a name: the saved files are named "
+                f"<chart_id>.html, <chart_id>.png and so on, so '.' and '..' are refused"
+            ),
+        )
+
+    if chart_id[0] in "-.":
+        raise DataValidationError(
+            column=None,
+            message=(
+                f"chart_id {chart_id!r} starts with {chart_id[0]!r}: a chart id may not start with "
+                f"'-' or '.', since it names the saved files (<chart_id>.html, <chart_id>_wide.pdf) "
+                f"and one so named is read as an option or hidden"
+            ),
         )
 
 

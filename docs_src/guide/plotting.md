@@ -21,6 +21,8 @@ When saving, the module generates **5 output files** for each chart:
 | `{chart_id}.pdf` | PDF (8×6") | Publication (LaTeX) |
 | `{chart_id}_wide.pdf` | PDF (12×6") | Publication wide |
 
+`chart_id` names those files, so it is a filename on every platform: none of `/ \ : < > " | ? *`, not `.` or `..`, and not starting with `-` or `.` (which would make a file read as an option, or hidden). `.save()` refuses one that breaks a rule and says which; `gdp_growth`, `curve-today` and `q1.2024` are all fine.
+
 ## Quick Start
 
 ```python

@@ -150,6 +150,19 @@ class TestReports:
         assert "### Sample Values" not in report
         assert "### Numeric Column Statistics" not in report
 
+    def test_the_report_is_stamped_in_utc_and_says_so(self, pipeline_project):
+        """Found by a reviewer: the header was stamped with the machine's local time, unlabelled,
+        where every time on the site is in UTC and says so."""
+        from datetime import datetime, timezone
+
+        before = datetime.now(timezone.utc).replace(microsecond=0)
+        report = create_txt_report(find_declared_dataframes(load_manifest(pipeline_project)))
+        after = datetime.now(timezone.utc)
+        (stamp,) = [line for line in report.splitlines() if line.startswith("Generated: ")]
+        assert stamp.endswith(" UTC"), stamp
+        generated = datetime.strptime(stamp, "Generated: %Y-%m-%d %H:%M:%S UTC").replace(tzinfo=timezone.utc)
+        assert before <= generated <= after
+
     def test_catalog_sections_are_qualified_by_pipeline(self, catalog_project):
         """Two pipelines may both declare ``dataframe_0``; headings must not clash."""
         declared = find_declared_dataframes(load_manifest(catalog_project))

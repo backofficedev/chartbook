@@ -54,6 +54,8 @@ class SiteConfig:
     # Allows: alphanumeric, spaces, common punctuation for names/titles,
     #         and Latin-1 accented characters (U+00C0 to U+00FF)
     # Disallows: quotes, backslashes, semicolons, parentheses, brackets, etc.
+    # \s takes in a line break, which ends the Python string the value is
+    # rendered into: _validate_text_field refuses one before this is asked.
     SAFE_TEXT_PATTERN: ClassVar[re.Pattern] = re.compile(
         r"^[a-zA-Z0-9\s\-_.,!?&:'\u00C0-\u00FF]+$"
     )
@@ -112,6 +114,19 @@ class SiteConfig:
         # Empty strings pass validation (if allowed)
         if not value.strip():
             return
+
+        # The value is rendered into a one-line Python string in conf.py: a
+        # line break would end it early, and Sphinx would stop on the file
+        if "\n" in value or "\r" in value:
+            raise ValidationError(
+                message="Field must be one line",
+                field_name=toml_key,
+                invalid_value=value,
+                hint=(
+                    f"{toml_key} is written into the site's configuration as one line. "
+                    "Remove the line break."
+                ),
+            )
 
         if not self.SAFE_TEXT_PATTERN.match(value):
             raise ValidationError(
