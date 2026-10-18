@@ -125,12 +125,40 @@ class FileLocation(Location):
             scan passes over (``.``, ``_``). What a reader reads, and
             nothing else the folder may hold (a Finder ``.DS_Store``, a
             sync service's copy). Empty otherwise.
+        listed: The files the record lists, by their path in the object,
+            whether or not they are read. Empty when the record lists none
+            (a file, a glob, a directory pinned before records listed files).
+            A directory whose listed files are all passed over (a folder of
+            CSVs) has *listed* and no *files*: ``data.path()`` gives the
+            folder, and a read of it as parquet is refused
+            (:func:`nothing_to_read`).
     """
 
     kind: ClassVar[str] = "file"
 
     path: Path
     files: tuple = dataclasses.field(default=(), compare=False)
+    listed: tuple = dataclasses.field(default=(), compare=False)
+
+
+def nothing_to_read(location: "Location") -> Optional[str]:
+    """Why a parquet read of *location* has nothing to open, or None.
+
+    A directory pinned from another pipeline is read as the tables its
+    record lists (:class:`FileLocation`); when it lists files and none is
+    a table a read takes, the folder is not handed to the engine, which
+    would read whatever it holds (a half-written ``_tmp/part.parquet``).
+    ``data.path()`` still gives the folder, for a reader of what it holds.
+    """
+    listed = getattr(location, "listed", ())
+    if not listed or getattr(location, "files", ()):
+        return None
+    shown = ", ".join(listed[:5]) + (", …" if len(listed) > 5 else "")
+    return (
+        f"The folder {Path(location.path).name!r} holds the {len(listed)} file(s) its record lists ({shown}), "
+        f"and none is a parquet table: data.load and data.sql read parquet. data.path() gives the folder, "
+        f"for a reader of what it holds."
+    )
 
 
 @dataclass(frozen=True)
@@ -900,18 +928,11 @@ def _held(store, record: dict) -> Location:
             file = on_disk(held, parts)
             if parts[-1].lower().endswith(".parquet") or _is_parquet(file):
                 read.append(file)
-        if not read and (record.get("ref") or {}).get("kind") == "dataframe":
-            # Nothing listed is a table. Said, rather than read as a folder
-            # with no list, which would take whatever the folder holds. A
-            # model's folder holds no table, and is read as the folder
-            listed = sorted(files_read(record) or {})
-            shown = ", ".join(listed[:5]) + (", …" if len(listed) > 5 else "")
-            raise StoreError(
-                f"{record.get('id')!r}: its record lists {len(listed)} file(s), and none is a table a read "
-                f"takes ({shown or 'none'}). There is nothing to read: its owner's snapshot holds no table "
-                f"under that path."
-            )
-        return FileLocation(held, tuple(read))
+        # With what was listed: a folder none of whose files is a table (a
+        # folder of CSVs, a model's files) is still the folder for
+        # data.path(), and a parquet read of it is refused (nothing_to_read)
+        # rather than handed the folder, which would take whatever it holds
+        return FileLocation(held, tuple(read), listed=tuple(sorted(files_read(record) or {})))
     from chartbook.store import on_disk
 
     own = on_disk(held, [name])  # as the disk names it, in either of Unicode's forms

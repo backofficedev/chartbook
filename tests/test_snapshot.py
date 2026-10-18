@@ -1384,6 +1384,17 @@ class TestARecordThatWouldReachOutsideItsObject:
         ):
             assert "acme/evil:x" in snapshot.read(self._written(tmp_path, record)).assets.values().__iter__().__next__()["id"]
 
+    def test_a_name_one_system_reads_otherwise_is_that_systems_concern(self, tmp_path):
+        """Found by a reviewer: judged by the reader's own rule, a colon in a listed file's name
+        (`part-2024-01-01T00:00`) made the whole snapshot unreadable on Windows, where before only
+        that asset's read failed there. The snapshot's rule is the same on every system."""
+        files = [{"path": "part-2024-01-01T00:00", "size_bytes": 8}, {"path": "a\\b.parquet", "size_bytes": 1}]
+        record = self._record({"kind": "file", "path": "_data/parts"}, files=files)
+        assert snapshot.improper_path(record) is None
+        assert snapshot.read(self._written(tmp_path, record)).pipeline == "acme/evil"
+        climbing = self._record({"kind": "file", "path": "_data/parts"}, files=[{"path": "a\\..\\b.parquet", "size_bytes": 1}])
+        assert "not a plain path" in snapshot.improper_path(climbing)
+
     def test_improper_path_says_why(self):
         assert snapshot.improper_path(self._record({"kind": "file", "path": "_data/*/../x/*.parquet"})) == (
             "has the path '_data/*/../x/*.parquet', which is not plain after its wildcard"

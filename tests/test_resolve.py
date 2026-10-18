@@ -807,11 +807,43 @@ class TestAHeldObjectIsReadInsideItself:
         location = resolve_module._held(store, self._record(stored, {"kind": "file", "path": "../_data/*/part-*.parquet"}))
         assert Path(location.path) == Path(stored.path) / "*" / "part-*.parquet"
 
-    def test_a_directory_whose_listed_files_are_no_tables_is_said(self, tmp_path):
+    def test_a_directory_whose_listed_files_are_no_tables_is_the_folder_and_not_a_parquet_read(self, tmp_path):
+        """Found by a reviewer, twice: a folder of CSVs is still what data.path() gives, so a
+        reader of CSVs has it; and a parquet read of it is refused rather than handed the folder,
+        which would take whatever it holds (a half-written _tmp/part.parquet the rule passed over)."""
+        from chartbook.backends import ParquetBackend
+
+        store, stored = self._object(tmp_path, {"part-1.csv": "a,b\n1,2\n", "schema.json": "{}"})
+        files = [{"path": "part-1.csv", "size_bytes": 8}, {"path": "schema.json", "size_bytes": 2}]
+        record = self._record(stored, {"kind": "file", "path": "_data/parts"}, files=files, size_bytes=10)
+        location = resolve_module._held(store, record)
+        assert Path(location.path) == Path(stored.path)
+        assert location.files == ()
+        assert location.listed == ("part-1.csv", "schema.json")
+        said = resolve_module.nothing_to_read(location)
+        assert "holds the 2 file(s) its record lists (part-1.csv, schema.json), and none is a parquet table" in said
+        assert "data.path() gives the folder" in said
+        with pytest.raises(ValueError, match="none is a parquet table"):
+            ParquetBackend.ref(location)
+        with pytest.raises(ValueError, match="none is a parquet table"):
+            ParquetBackend.scan(location)
+        # A folder with a table among them reads it alone, and nothing is said
+        store2, stored2 = self._object(tmp_path / "two", {"a.parquet": "x", "README.txt": "hello"})
+        listed = [{"path": "README.txt", "size_bytes": 5}, {"path": "a.parquet", "size_bytes": 1}]
+        read = resolve_module._held(store2, self._record(stored2, {"kind": "file", "path": "_data/p"}, files=listed, size_bytes=6))
+        assert [f.name for f in read.files] == ["a.parquet"] and read.listed == ("README.txt", "a.parquet")
+        assert resolve_module.nothing_to_read(read) is None
+
+    def test_chartbook_path_says_a_record_the_store_did_not_write(self, tmp_path, monkeypatch):
+        """Found by a reviewer: `chartbook path` caught every error of a read but the store's."""
+        from chartbook import assets as assets_module
         from chartbook.store import StoreError
 
-        store, stored = self._object(tmp_path, {"README.txt": "hello", "schema.json": "{}"})
-        files = [{"path": "README.txt", "size_bytes": 5}, {"path": "schema.json", "size_bytes": 2}]
-        record = self._record(stored, {"kind": "file", "path": "_data/parts"}, files=files, size_bytes=7)
-        with pytest.raises(StoreError, match=r"lists 2 file\(s\), and none is a table a read takes \(README.txt, schema.json\)"):
-            resolve_module._held(store, record)
+        def refused(*args, **kwargs):
+            raise StoreError("'acme/evil:x': its record's path, '_data/*/../../x/*.parquet', is not plain after its wildcard.")
+
+        monkeypatch.setattr(assets_module, "path", refused)
+        result = CliRunner().invoke(main, ["path", "acme/evil:x", "--project-dir", str(tmp_path)])
+        assert result.exit_code == 1
+        assert "Error: " in result.output and "not plain after its wildcard" in result.output
+        assert "Traceback" not in result.output

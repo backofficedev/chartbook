@@ -58,6 +58,7 @@ from chartbook.resolve import (
     locate_in_catalog,
     require_file,
     resolve,
+    nothing_to_read,
 )
 from chartbook.resolve import resolve_catalog_path as _resolve_catalog_path
 from chartbook.utils import is_glob_pattern
@@ -486,6 +487,9 @@ def load(
     # A directory pinned from another pipeline: the files its record lists, and
     # nothing else its folder holds (a Finder .DS_Store, a sync service's copy)
     listed = [str(file) for file in location.files]
+    said = nothing_to_read(location)
+    if said:
+        raise ValueError(said)
     source = listed or file_path
 
     if format == "pandas":

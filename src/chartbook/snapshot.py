@@ -97,7 +97,7 @@ from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, declared_files
-from chartbook.store import Store, StoreError, default_store, plain_parts
+from chartbook.store import Store, StoreError, default_store
 from chartbook.utils import is_glob_pattern
 
 #: The version of a snapshot record's envelope.
@@ -468,15 +468,29 @@ def improper_path(record: dict) -> Optional[str]:
     declared = location.get("path")
     if isinstance(declared, str) and is_glob_pattern(declared):
         tail = Path(declared).relative_to(hashing.glob_root(declared))
-        if plain_parts(tail.as_posix()) is None:
+        if not _plain_everywhere(tail.as_posix()):
             return f"has the path {declared!r}, which is not plain after its wildcard"
     listed = record.get("files")
     if isinstance(listed, list):
         for entry in listed:
             name = entry.get("path") if isinstance(entry, dict) else None
-            if isinstance(name, str) and plain_parts(name) is None:
+            if isinstance(name, str) and not _plain_everywhere(name):
                 return f"lists the file {name!r}, which is not a plain path in its object"
     return None
+
+
+def _plain_everywhere(relative: str) -> bool:
+    """Whether a path inside an object stays inside it on every system.
+
+    Parts joined by ``/`` or ``\\``, none empty, ``.`` or ``..``, and no
+    NUL. What one system reads otherwise (a colon or a backslash in a name,
+    on Windows) is that system's reader's concern, for that asset alone
+    (:func:`chartbook.store.plain_parts`), not a reason to refuse the whole
+    snapshot everywhere.
+    """
+    if not isinstance(relative, str) or not relative or "\0" in relative:
+        return False
+    return all(part not in ("", ".", "..") for part in re.split(r"[\\/]", relative))
 
 
 def not_whole(store: Store, record: dict) -> Optional[str]:
