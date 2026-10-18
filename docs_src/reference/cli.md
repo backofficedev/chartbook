@@ -209,6 +209,8 @@ warning: chartbook.toml: [charts.repo_rates] units: recommended by the default p
 chartbook.toml: OK (1 pipeline(s), 1 dataframes, 1 charts, 0 notebooks)
 ```
 
+A missing build script is named `[scripts] build`. `[project] build`, the old place, is still read and counts as well, here and for a policy's `project = ["build"]`.
+
 `policy.mode` is not consulted. It decides what a *build* does about missing metadata; `check` always reports it.
 
 **License dates** are ISO dates (`license_expiration = "2026-12-31"`, or a bare TOML date). An empty value, `"N/A"`, `"None"` and `"Never"` mean the license does not expire. Anything else that is not a date is itself reported, because a gate that cannot read a date cannot vouch for it.
@@ -221,7 +223,7 @@ chartbook.toml: OK (1 pipeline(s), 1 dataframes, 1 charts, 0 notebooks)
 - run: chartbook check --skip-outputs
 ```
 
-**Dependencies.** For each `path` in `[dependencies]`, `check` looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever `check` runs. A `git` dependency is looked at where `chartbook pin` has fetched it, at the commit `chartbook.lock` names. `check` never uses the network: if the dependency has not been fetched on this machine, it says so in a `warning:` line and does not fail. A `path` dependency that is there but has no pin in `chartbook.lock` draws a `warning:` line too, since nothing of it can be read until `chartbook pin` or `chartbook run` (the build) pins it; a fresh clone is in that state on purpose, and {ref}`--frozen <chartbook-pin>` is the gate that fails on it. A `trained_on` that names a pipeline `[dependencies]` does not declare stops the manifest loading, so `check` fails on it.
+**Dependencies.** For each `path` in `[dependencies]`, `check` looks for a pipeline there and reads its `chartbook.toml`, nothing more. So a pipeline that depends on `../fed_yield_curve` needs that directory checked out wherever `check` runs. A `git` dependency is looked at where `chartbook pin` has fetched it, at the commit `chartbook.lock` names. `check` never uses the network: if the dependency has not been fetched on this machine, it says so in a `warning:` line and does not fail. A dependency named by its ID, or a `path` dependency that is there, with no pin in `chartbook.lock` yet draws a `warning:` line too: `chartbook pin` pins its newest snapshot, as the first read of it does, and so does `chartbook run` (the build). A fresh clone is in that state on purpose, and {ref}`--frozen <chartbook-pin>` is the gate that fails on it. A `trained_on` that names a pipeline `[dependencies]` does not declare stops the manifest loading, so `check` fails on it.
 
 **IDs that changed.** A pipeline's ID can change, when it gets a git remote or a `[project] id` ({ref}`Pipeline Identity <pipeline-identity>`), and its snapshots are then made under the new one. `check` warns, naming what to write, when a catalog's `[pipelines]` key is not what the pipeline in that folder calls itself now (the catalog shows only the snapshots made under the key), and when a dependency named by its ID, with no `commit`, is a pipeline whose folders on this machine all call themselves something else now (the dependency stays at the last snapshot made under the old ID). Its folders are the catalog's own under that ID and those a store on this disk notes its newest snapshots were made in, each only if it is a checkout of the repository those snapshots record; a store at a URL is not read, since `check` uses no network, and then nothing is said. It also warns when a pipeline's `[project] repo_url` and its git remote name two repositories, since its ID is then `repo_url`'s, and says what it would be without it.
 
@@ -233,7 +235,7 @@ chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a data
 
 `check` reads metadata and looks at whether files exist. It never opens a data file, so it says nothing about row counts, nulls or schemas.
 
-**Warnings, not problems.** Six things are said with `warning:` and do not fail the command: a recommended field that is missing when no policy is given, a `git` dependency that has not been fetched here, a `path` dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
+**Warnings, not problems.** Six things are said with `warning:` and do not fail the command: a recommended field that is missing when no policy is given, a `git` dependency that has not been fetched here, a dependency that has no pin yet, a `chartbook.lock` this version cannot read (no dependency is then said to be unpinned on its account), a model label whose version is not on this machine (it may be in the store of the machine that made it), and a model that is out of date, trained on inputs that have since moved (`chartbook run` retrains it).
 
 ## chartbook path
 

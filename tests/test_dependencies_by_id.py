@@ -138,8 +138,13 @@ class TestTheRestOfChartBookKnowsIt:
 
         work, first, second = elsewhere
         forecast = _forecast(work / "forecast", {"acme/rates": {}})
-        with pytest.warns(UserWarning, match="not pinned"):
+        with pytest.warns(UserWarning, match="not pinned") as caught:
             assert check_dependencies(load_manifest(forecast), forecast) == []
+        (said,) = [str(warning.message) for warning in caught]
+        # Found by a new user's walkthrough: it said nothing of it could be read until it was
+        # pinned, while the first read of it pins it
+        assert '[dependencies."acme/rates"] not pinned yet.' in said and "can be read" not in said
+        assert "`chartbook pin` pins the newest snapshot of acme/rates in the store, as the first read of it does" in said
         lock.pin(forecast)
         with warnings.catch_warnings():
             warnings.simplefilter("error")

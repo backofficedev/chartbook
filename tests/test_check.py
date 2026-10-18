@@ -1,5 +1,6 @@
 """Tests for ``chartbook check`` and the checks behind it."""
 
+import warnings
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -259,6 +260,41 @@ class TestCheckRequiredFields:
             for pid in ("pipeline_a", "pipeline_b")
         }
         assert {(p.table, p.field) for p in problems} == {("project", "repo_url")}
+
+    def test_the_default_policy_recommends_the_build_script_in_scripts(self, pipeline_project):
+        """Found by a new user's walkthrough: with no build script, check named `[project] build`,
+        the old place, where getting-started and the reference write `[scripts] build`."""
+        manifest = load_manifest(pipeline_project)
+        assert not manifest["project"].get("build")
+        with pytest.warns(UserWarning) as caught:
+            check_required_fields(manifest, pipeline_project, warn_only=True)
+        said = [str(warning.message) for warning in caught]
+        assert "chartbook.toml: [scripts] build: recommended by the default policy, but missing or empty" in said
+        assert not any("[project] build" in line for line in said)
+
+    @pytest.mark.parametrize("place", ["scripts", "project"])
+    def test_either_place_gives_the_build_script(self, pipeline_project, place):
+        _edit_toml(pipeline_project, lambda config: config.setdefault(place, {}).update(build="doit"))
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            check_required_fields(load_manifest(pipeline_project), pipeline_project, warn_only=True)
+        assert not any("build:" in str(warning.message) for warning in caught)
+
+    def test_a_catalogs_policy_naming_build_is_met_by_either_place(self, catalog_project):
+        """`project = ["build"]` in a catalog's [policy] goes on working, and says where to write it."""
+
+        def require_build(config):
+            config["policy"] = {"required": {"project": ["build"], "dataframes": [], "charts": []}}
+
+        _edit_toml(catalog_project, require_build)
+        member_a = catalog_project / "pipelines" / "pipeline_a"
+        member_b = catalog_project / "pipelines" / "pipeline_b"
+        _edit_toml(member_a, lambda config: config.setdefault("scripts", {}).update(build="doit"))
+        (problem,) = check_required_fields(load_manifest(catalog_project), catalog_project)
+        assert problem.file == member_b.resolve() / "chartbook.toml"
+        assert problem.format().endswith("[scripts] build: required by the active policy, but missing or empty")
+        _edit_toml(member_b, lambda config: config["project"].update(build="doit"))
+        assert check_required_fields(load_manifest(catalog_project), catalog_project) == []
 
 
 def load_policy_dict():
