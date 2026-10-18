@@ -686,7 +686,7 @@ class TestWhatTheReleaseReviewFound:
         project.mkdir()
         (project / "chartbook.toml").write_text(f'[project]\nid = "acme/p"\ncopyright = {value}\n')
         with pytest.raises(ValueError, match=rf"copyright = .* is (an integer|a float|a date), and copyright is a string\. Write copyright = {re.escape(shown)}\."):
-            load_manifest(project / "chartbook.toml")
+            load_manifest(project)
 
     def test_a_note_needs_a_path(self, tmp_path):
         """`[notes.x]` with no path was a raw KeyError('path'), which `check` printed as `Error: 'path'`."""
