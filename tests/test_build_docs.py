@@ -987,3 +987,52 @@ class TestBuiltNothing:
         from chartbook import conf_validation
 
         assert not conf_validation.built_nothing(self._manifest(), [])
+
+
+class TestAWriteUpIsTextOnThePage:
+    """What the author wrote is what the built page shows.
+
+    The writer keeps Jinja syntax in a write-up as characters
+    (tests/test_writer_sphinx.py); Sphinx, with MyST's `substitution`
+    extension on, then evaluated every `{{ … }}` on the page through a Jinja
+    environment that reaches Python. The extension is off, and this is the
+    check on the built HTML.
+    """
+
+    MARKERS = "WRITEUP-TEST-A: {{ 6+7 }}\n\nWRITEUP-TEST-B: {{ env.srcdir }}\n"
+
+    def _add_markers(self, pipeline_project):
+        import tomli
+
+        manifest = tomli.loads((pipeline_project / "chartbook.toml").read_text())
+        docs_path = next(iter(manifest["dataframes"].values()))["docs_path"]
+        with open(pipeline_project / docs_path, "a", encoding="utf-8") as f:
+            f.write("\n\n" + self.MARKERS)
+        with open(pipeline_project / "README.md", "a", encoding="utf-8") as f:
+            f.write("\n\nREADME-TEST: {{ 6+7 }}\n")
+
+    @staticmethod
+    def _built_html(output_dir):
+        return "\n".join(page.read_text(encoding="utf-8") for page in output_dir.rglob("*.html"))
+
+    def _build(self, pipeline_project, monkeypatch):
+        self._add_markers(pipeline_project)
+        monkeypatch.chdir(pipeline_project)
+        generate_docs(output_dir=pipeline_project / "docs_test", project_dir=Path("."), keep_build_dirs=False)
+        return self._built_html(pipeline_project / "docs_test")
+
+    def test_jinja_in_a_write_up_and_a_readme_is_shown_as_written(self, pipeline_project, monkeypatch):
+        html = self._build(pipeline_project, monkeypatch)
+        assert "WRITEUP-TEST-A: {{ 6+7 }}" in html
+        assert "WRITEUP-TEST-B: {{ env.srcdir }}" in html
+        assert "README-TEST: {{ 6+7 }}" in html
+        assert "WRITEUP-TEST-A: 13" not in html
+        assert "README-TEST: 13" not in html
+        assert "WRITEUP-TEST-B: /" not in html
+
+    def test_and_in_a_build_of_files_from_a_store(self, pipeline_project, monkeypatch):
+        monkeypatch.setenv("CHARTBOOK_UNTRUSTED_SOURCE", "1")
+        html = self._build(pipeline_project, monkeypatch)
+        assert "WRITEUP-TEST-A: {{ 6+7 }}" in html
+        assert "WRITEUP-TEST-A: 13" not in html
+        assert "WRITEUP-TEST-B: {{ env.srcdir }}" in html

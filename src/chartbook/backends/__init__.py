@@ -394,6 +394,11 @@ class ParquetBackend:
         """The file as a DuckDB table expression."""
         from chartbook.utils import is_glob_pattern
 
+        from chartbook.resolve import nothing_to_read
+
+        said = nothing_to_read(location)
+        if said:
+            raise ValueError(said)
         text = str(location.path)
         if location.files:
             # A directory pinned from another pipeline: the files its record lists
@@ -407,6 +412,11 @@ class ParquetBackend:
     def scan(location: "FileLocation"):
         import polars as pl
 
+        from chartbook.resolve import nothing_to_read
+
+        said = nothing_to_read(location)
+        if said:
+            raise ValueError(said)
         return pl.scan_parquet([str(file) for file in location.files] or location.path, hive_partitioning=True)
 
 

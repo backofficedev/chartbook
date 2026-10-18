@@ -698,12 +698,13 @@ def path_command(ref, kind, project_dir):
         chartbook path fed_yield_curve:treasury_rates
     """
     from chartbook.assets import path as resolve_path
+    from chartbook.store import StoreError
 
     try:
         asset_path = resolve_path(
             ref, kind=kind, project_dir=project_dir or Path.cwd()
         )
-    except (LookupError, FileNotFoundError, ValueError, TypeError) as e:
+    except (LookupError, FileNotFoundError, ValueError, TypeError, StoreError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         raise SystemExit(1)
     # Nothing but the path on stdout: this output gets captured

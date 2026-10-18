@@ -125,12 +125,40 @@ class FileLocation(Location):
             scan passes over (``.``, ``_``). What a reader reads, and
             nothing else the folder may hold (a Finder ``.DS_Store``, a
             sync service's copy). Empty otherwise.
+        listed: The files the record lists, by their path in the object,
+            whether or not they are read. Empty when the record lists none
+            (a file, a glob, a directory pinned before records listed files).
+            A directory whose listed files are all passed over (a folder of
+            CSVs) has *listed* and no *files*: ``data.path()`` gives the
+            folder, and a read of it as parquet is refused
+            (:func:`nothing_to_read`).
     """
 
     kind: ClassVar[str] = "file"
 
     path: Path
     files: tuple = dataclasses.field(default=(), compare=False)
+    listed: tuple = dataclasses.field(default=(), compare=False)
+
+
+def nothing_to_read(location: "Location") -> Optional[str]:
+    """Why a parquet read of *location* has nothing to open, or None.
+
+    A directory pinned from another pipeline is read as the tables its
+    record lists (:class:`FileLocation`); when it lists files and none is
+    a table a read takes, the folder is not handed to the engine, which
+    would read whatever it holds (a half-written ``_tmp/part.parquet``).
+    ``data.path()`` still gives the folder, for a reader of what it holds.
+    """
+    listed = getattr(location, "listed", ())
+    if not listed or getattr(location, "files", ()):
+        return None
+    shown = ", ".join(listed[:5]) + (", …" if len(listed) > 5 else "")
+    return (
+        f"The folder {Path(location.path).name!r} holds the {len(listed)} file(s) its record lists ({shown}), "
+        f"and none is a parquet table: data.load and data.sql read parquet. data.path() gives the folder, "
+        f"for a reader of what it holds."
+    )
 
 
 @dataclass(frozen=True)
@@ -845,12 +873,14 @@ def _held(store, record: dict) -> Location:
     from chartbook.snapshot import not_whole
     from chartbook.utils import is_glob_pattern
 
-    held = store.get(record["content_hash"])
     # The names and sizes the record gives, against the files': a store in a
-    # synced folder can have a file before the whole of it. Nothing is read
+    # synced folder can have a file before the whole of it, and a bucket a
+    # key before all of an object's. Nothing is read, and this comes before
+    # the object is fetched, which for a bucket would copy and check it
     unsynced = not_whole(store, record)
     if unsynced:
         raise AssetNotPinnedError(record.get("id", record["content_hash"]), "not_synced", f"{record.get('id')!r}: {unsynced}.")
+    held = store.get(record["content_hash"])
     if record["location"].get("kind") in ("table", "query"):
         # Written out as parquet when the snapshot was made
         from chartbook.snapshot import materialized_name
@@ -858,9 +888,21 @@ def _held(store, record: dict) -> Location:
         return FileLocation(held / materialized_name(record))
     declared_path = record["location"]["path"]
     if is_glob_pattern(declared_path):
-        # The files are laid out from the glob's fixed prefix
+        # The files are laid out from the glob's fixed prefix. What follows
+        # the prefix must be plain: a record may come from anyone who can
+        # write to a store, and a `..` after the wildcard would reach outside
+        # the object (chartbook.snapshot.improper_path refuses such a record
+        # when a snapshot is read; a lockfile is checked here)
+        from chartbook.store import StoreError, plain_parts
+
         tail = Path(declared_path).relative_to(hashing.glob_root(declared_path))
-        return FileLocation(held / tail)
+        parts = plain_parts(tail.as_posix())
+        if parts is None:
+            raise StoreError(
+                f"{record.get('id')!r}: its record's path, {declared_path!r}, is not plain after its "
+                f"wildcard. The record is not one a store wrote, and is not read."
+            )
+        return FileLocation(held.joinpath(*parts))
     name = Path(declared_path).name
     if isinstance(record.get("files"), list):
         # A directory, read as the files its record lists and nothing else in
@@ -888,7 +930,11 @@ def _held(store, record: dict) -> Location:
             file = on_disk(held, parts)
             if parts[-1].lower().endswith(".parquet") or _is_parquet(file):
                 read.append(file)
-        return FileLocation(held, tuple(read))
+        # With what was listed: a folder none of whose files is a table (a
+        # folder of CSVs, a model's files) is still the folder for
+        # data.path(), and a parquet read of it is refused (nothing_to_read)
+        # rather than handed the folder, which would take whatever it holds
+        return FileLocation(held, tuple(read), listed=tuple(sorted(files_read(record) or {})))
     from chartbook.store import on_disk
 
     own = on_disk(held, [name])  # as the disk names it, in either of Unicode's forms
