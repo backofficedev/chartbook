@@ -307,7 +307,10 @@ With the recommended options:
 | Nothing | Error | Error |
 
 Outside any pipeline (no `chartbook.toml`), a read takes the newest snapshot silently; only a read
-of a working folder warns.
+of a working folder warns. *(2026-10-18: in a batch run it is refused, since nothing records it.
+And the two-argument form, `data.load(pipeline=…, dataframe=…)`, finds the pipeline a call is in as
+a reference does, from the calling file first; a review found it asking the working directory
+alone, so a script run from elsewhere read a snapshot its pipeline had not pinned.)*
 
 ## The order of work, if approved
 

@@ -278,16 +278,69 @@ def quote_literal(text: str) -> str:
     return "'" + text.replace("'", "''") + "'"
 
 
+def _ends_in(sql: str) -> tuple:
+    """What the end of some SQL is inside of, and where that began.
+
+    The text is read once, as an engine reads it: ``'…'`` is a string,
+    ``"…"`` a quoted identifier, ``--`` a comment to the end of its line,
+    ``/* … */`` a comment to its close. A ``;`` or a ``--`` inside any of
+    them is part of it.
+
+    :returns: ``"code"``, ``"string"``, ``"identifier"``, ``"line_comment"``
+        or ``"block_comment"``; and, for a line comment, the index of its
+        ``--`` (None otherwise).
+    """
+    state, began = "code", None
+    i = 0
+    while i < len(sql):
+        c = sql[i]
+        if state == "code":
+            if c == "'":
+                state = "string"
+            elif c == '"':
+                state = "identifier"
+            elif sql.startswith("--", i):
+                state, began = "line_comment", i
+                i += 1
+            elif sql.startswith("/*", i):
+                state = "block_comment"
+                i += 1
+        elif state == "string":
+            if c == "'":
+                state = "code"  # a doubled '' closes and reopens, which comes to the same
+        elif state == "identifier":
+            if c == '"':
+                state = "code"
+        elif state == "line_comment":
+            if c == "\n":
+                state, began = "code", None
+        elif state == "block_comment" and sql.startswith("*/", i):
+            state = "code"
+            i += 1
+        i += 1
+    return state, began
+
+
 def subselect(sql: str) -> str:
     """A query as a table expression: ``(…)`` on its own lines.
 
-    A trailing semicolon is dropped and the parenthesis closes on a new
-    line, so that a query that ends with ``;`` or with a ``--`` comment
-    still stands where a table would.
+    A ``--`` comment that ends the text and a semicolon that ends it are
+    dropped, each as many times as one is left at the end, and the
+    parenthesis closes on a new line, so that a query that ends with
+    ``;``, with a comment, or with both (``select … from t; -- note``)
+    still stands where a table would. A ``;`` or a ``--`` inside a string
+    or a quoted identifier is part of it, and stays; so does anything the
+    engine would refuse, such as a string left open.
     """
     text = sql.strip()
-    while text.endswith(";"):
-        text = text[:-1].rstrip()
+    while True:
+        state, began = _ends_in(text)
+        if state == "line_comment":
+            text = text[:began].rstrip()
+        elif state == "code" and text.endswith(";"):
+            text = text[:-1].rstrip()
+        else:
+            break
     return f"(\n{text}\n)"
 
 

@@ -333,6 +333,28 @@ def parse_asset_ref(
     if ":" in text:
         pipeline_text, text = text.rsplit(":", 1)
 
+    if not text:
+        # Only a pipeline, a part or a revision: nothing for them to be of
+        only = [
+            what
+            for what, given in (
+                ("a pipeline", pipeline_text is not None),
+                ("a part", part is not None),
+                ("a revision", rev is not None),
+            )
+            if given
+        ]
+        example = (
+            f"{pipeline_text + ':' if pipeline_text else ''}treasury_rates"
+            f"{'#' + part if part else ''}{'@' + rev if rev else ''}"
+        )
+        said = " and ".join(only) if len(only) < 3 else f"{', '.join(only[:-1])} and {only[-1]}"
+        raise ValueError(
+            f"Reference {original!r} names no asset: it is only {said}. "
+            f"A reference is '[pipeline:][kind/]name[#part][@rev]', and the name "
+            f"is never left out: {example!r}, say."
+        )
+
     explicit_kind, name = _split_asset(text, original, pipeline_text is not None)
     if not ID_COMPONENT_PATTERN.match(name):
         raise ValueError(

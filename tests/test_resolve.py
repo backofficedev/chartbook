@@ -577,9 +577,11 @@ class TestSharedResolver:
     def test_get_data_path_delegates(self, spy, catalog_project):
         result = data.get_data_path("pipeline_a", "dataframe_0", catalog_project)
         assert result.name == "dataframe_0.parquet"
-        assert spy == [
-            ("dataframe_0", {"pipeline": "pipeline_a", "catalog_path": catalog_project})
-        ]
+        ((ref, kwargs),) = spy
+        assert ref == "dataframe_0"
+        assert kwargs["pipeline"] == "pipeline_a" and kwargs["catalog_path"] == catalog_project
+        # From the calling file first, as path() does: a script in a pipeline reads by its rules wherever it is run from
+        assert [str(d) for d in kwargs["start_dirs"]] == [str(Path(__file__).parent), str(Path.cwd())]
 
     def test_load_calls_the_resolver_not_the_path_functions(
         self, spy, catalog_project, monkeypatch
