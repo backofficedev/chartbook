@@ -1373,7 +1373,7 @@ class SphinxWriter:
         paths = []
         if self.docs_src_dir is not None:
             paths += [Path(self.docs_src_dir), Path(self.docs_src_dir) / "_templates"]
-        paths += [package / "templates", theme_dir, theme_dir / "_templates"]
+        paths += [theme_dir, theme_dir / "_templates"]
         return _sandboxed(paths, own=None if untrusted_source() else base_dir)
 
     # --- one entry point for the build ---------------------------------------

@@ -117,3 +117,39 @@ def test_a_decimal_column_is_drawn_as_a_float():
     )
     result = chartbook.plotting.area(df, x="date", y=["rate", "spread"])
     assert list(result.figure.data[0].y) == [3.5, 3.6, 3.85]
+
+
+@pytest.mark.parametrize("chart_id", [".", ".."])
+def test_a_chart_id_that_is_a_dot_or_two_is_refused(chart_id, tmp_path):
+    """Found by a reviewer: `..` was accepted and saved as `...html` and `.._wide.pdf`."""
+    from chartbook.plotting._validation import validate_chart_id
+
+    with pytest.raises(DataValidationError, match="is not a name"):
+        validate_chart_id(chart_id)
+    with pytest.raises(DataValidationError, match="is not a name"):
+        chartbook.plotting.line(pd.DataFrame(ROWS), x="date", y="rate").save(chart_id, output_dir=tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("chart_id", ["-flag", "-", ".hidden", ".gdp"])
+def test_a_chart_id_starting_with_a_dash_or_a_dot_is_refused(chart_id):
+    from chartbook.plotting._validation import validate_chart_id
+
+    with pytest.raises(DataValidationError, match=r"may not start with '-' or '\.'") as caught:
+        validate_chart_id(chart_id)
+    assert repr(chart_id) in str(caught.value) and "<chart_id>.html" in str(caught.value)
+
+
+@pytest.mark.parametrize("chart_id", ["gdp_growth", "curve-today", "q1.2024", "Chart 1", "2024", "_draft", "ünïcode", "a..b"])
+def test_every_name_that_was_valid_still_is(chart_id):
+    from chartbook.plotting._validation import validate_chart_id
+
+    validate_chart_id(chart_id)
+
+
+def test_a_chart_id_with_a_separator_or_a_colon_is_still_refused():
+    from chartbook.plotting._validation import validate_chart_id
+
+    for chart_id in ("a/b", "a\\b", "a:b", "a*b", ""):
+        with pytest.raises(DataValidationError):
+            validate_chart_id(chart_id)

@@ -15,7 +15,7 @@ import os
 import re
 from contextlib import redirect_stdout
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
 
@@ -323,7 +323,8 @@ def create_txt_report(
 
     # Header
     output_lines.append("# Data Glimpses Report")
-    output_lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    # In UTC, and said so, as every time on the site is
+    output_lines.append(f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
     output_lines.append(f"Total dataframes: {len(dataframes)}")
     output_lines.append("")
 

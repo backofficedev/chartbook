@@ -16,9 +16,6 @@ from chartbook.manifest import (
 )
 from chartbook.utils import copy_according_to_plan
 
-BASE_DIR = Path(".").resolve()
-PUBLISH_DIR = BASE_DIR / Path("./_output/to_be_published")
-
 
 def convert_paths_to_strings(obj):
     """Recursively convert all pathlib.Path objects to strings in a nested data structure.
@@ -61,14 +58,14 @@ def strip_internal_keys(obj, _top_level=True):
     return obj
 
 
-def create_dodo_file_with_mod_date(date, dodo_path, publish_dir=PUBLISH_DIR):
+def create_dodo_file_with_mod_date(date, dodo_path, publish_dir):
     """Create a Python file named 'dodo.py' with specified content and set its modification date.
 
     :param date: The desired modification date for the file.
     :type date: datetime.datetime
     :param dodo_path: The path to the original dodo file to reference in the content.
     :type dodo_path: str
-    :param publish_dir: The directory where the 'dodo.py' file will be created. Default is defined by `PUBLISH_DIR`.
+    :param publish_dir: The directory where the 'dodo.py' file will be created.
     :type publish_dir: str
 
     .. note::
@@ -79,7 +76,7 @@ def create_dodo_file_with_mod_date(date, dodo_path, publish_dir=PUBLISH_DIR):
 
     ```python
     mod_date = datetime.datetime(2023, 11, 20, 14, 0)  # Example date
-    create_dodo_file_with_mod_date(mod_date, "path/to/original/dodo.py")
+    create_dodo_file_with_mod_date(mod_date, "path/to/original/dodo.py", "_output/to_be_published")
     ```
     """
 
@@ -104,7 +101,7 @@ def create_dodo_file_with_mod_date(date, dodo_path, publish_dir=PUBLISH_DIR):
     # print(f"File '{filename}' created in '{publish_dir}' with modification date set to {date}.")
 
 
-def get_pipeline_publishing_plan(manifest, publish_dir=PUBLISH_DIR):
+def get_pipeline_publishing_plan(manifest, publish_dir):
     """Generate a publishing plan mapping source files to destination paths.
 
     :param manifest: The manifest dictionary containing pipeline configuration.
@@ -197,14 +194,15 @@ def copy_publishable_pipeline_files(manifest, base_dir, publish_dir, verbose=Fal
         print(f"Copied to {publish_dir}/dodo.py")
 
 
-def revise_published_chartbook_toml(publish_dir: Path, base_dir: Path = BASE_DIR):
+def revise_published_chartbook_toml(publish_dir: Path, base_dir: Path):
     """Revise the chartbook.toml file in the publish directory.
 
     Only keep notebooks with publishable == True.
 
     :param publish_dir: The directory where the revised chartbook.toml file will be saved.
     :type publish_dir: Path
-    :param base_dir: The base directory where the original chartbook.toml file is located. Defaults to BASE_DIR.
+    :param base_dir: The base directory where the original chartbook.toml file is located:
+        the project's, never the working directory's.
     :type base_dir: Path
     """
     manifest = load_manifest(base_dir=base_dir)
@@ -237,7 +235,7 @@ def publish_pipeline(publish_dir: Path, base_dir: Path, verbose=False):
     """
     manifest = load_manifest(base_dir=base_dir)
     copy_publishable_pipeline_files(manifest, base_dir, publish_dir, verbose=verbose)
-    revise_published_chartbook_toml(publish_dir)
+    revise_published_chartbook_toml(publish_dir, base_dir=base_dir)
 
 
 if __name__ == "__main__":

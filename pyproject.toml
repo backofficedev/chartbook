@@ -130,7 +130,8 @@ chartbook = ["src/chartbook", "*/chartbook/src/chartbook"]
 tests = ["tests", "*/chartbook/tests"]
 
 [build-system]
-requires = ["hatchling"]
+# license-files as a list (PEP 639, above) is read from hatchling 1.27 on
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 # The wheel alone collapses src/: `packages` there ships src/chartbook as

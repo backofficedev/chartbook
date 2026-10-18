@@ -238,3 +238,13 @@ class TestTheBuild:
         result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
         assert result.exit_code == 1
         assert "pip install chartbook[mkdocs]" in result.output
+
+
+class TestTheTemplateSearchPath:
+    def test_every_folder_the_writer_loads_templates_from_exists(self, pipeline_project, monkeypatch):
+        """As for the Sphinx writer: no folder on the path that nothing ships."""
+        index = _built(pipeline_project, monkeypatch)
+        writer = MkDocsWriter(index, theme="pipeline", docs_src_dir=pipeline_project / "_docs_src")
+        loader = writer._environment(pipeline_project).loader
+        (_, templates) = loader.loaders
+        assert templates.searchpath and all(Path(folder).is_dir() for folder in templates.searchpath), templates.searchpath

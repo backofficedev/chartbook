@@ -736,6 +736,45 @@ class TestWhatANewUserFound:
         assert "$ two" in lines and "<f32>" in lines[3] and lines[4].startswith("$ after") and "<f32> 2.5" in lines[4]
         assert "<f64>" not in "\n".join(lines)
 
+    def test_a_folder_of_parts_is_glimpsed_as_the_reader_reads_it(self, tmp_path):
+        """Found by a reviewer: a dataframe whose path is a bare folder of parquet parts (no
+        glob, no `.parquet` on the folder's name) showed "Unsupported file type:". The folder
+        is read as a reader reads it: its parquet parts, whatever they are named, and none of
+        the files a scan passes over."""
+        from chartbook.utils import directory_tables, get_dataframe_glimpse
+
+        folder = tmp_path / "parts"
+        folder.mkdir()
+        pl.DataFrame({"x": [1.0, 2.0]}).write_parquet(folder / "a.parquet")
+        pl.DataFrame({"x": [3.0]}).write_parquet(folder / "000000_0")  # Hive's name, parquet inside
+        (folder / "_SUCCESS").write_bytes(b"")
+        (folder / "README.txt").write_text("not a table\n")
+        (folder / ".DS_Store").write_bytes(b"\0")
+        assert [f.name for f in directory_tables(folder)] == ["000000_0", "a.parquet"]
+        glimpse = get_dataframe_glimpse(folder)
+        assert glimpse.startswith("Rows: 3\nColumns: 1\n"), glimpse
+        assert "$ x <f64> 3.0, 1.0, 2.0" in glimpse or "$ x <f64> 1.0, 2.0, 3.0" in glimpse
+        assert "Unsupported" not in glimpse and "Error" not in glimpse
+
+    def test_a_folder_named_parquet_is_read_by_the_same_rule(self, tmp_path):
+        from chartbook.utils import get_dataframe_glimpse
+
+        folder = tmp_path / "rates.parquet"
+        folder.mkdir()
+        pl.DataFrame({"x": [1.0]}).write_parquet(folder / "part-0.parquet")
+        (folder / "_metadata").write_bytes(b"\0")  # a scan passes it over; a read of it would fail
+        assert get_dataframe_glimpse(folder).startswith("Rows: 1\n")
+
+    def test_an_empty_folder_is_said_in_a_sentence(self, tmp_path):
+        from chartbook.utils import get_dataframe_glimpse
+
+        folder = tmp_path / "parts"
+        folder.mkdir()
+        (folder / "_SUCCESS").write_bytes(b"")
+        glimpse = get_dataframe_glimpse(folder)
+        assert glimpse == "No parquet file in parts/: a folder is shown by its parquet parts, and this one has none yet."
+        assert str(tmp_path) not in glimpse  # a machine's path belongs on no page
+
     def test_the_dataframe_path_is_the_pipelines_own(self, first_pipeline, monkeypatch):
         _built(first_pipeline, monkeypatch)
         page = (first_pipeline / "_docs" / "cb" / "dataframes" / "first_pipeline" / "rates.md").read_text()
@@ -887,6 +926,38 @@ class TestTheDataframePage:
         _same_pages(writer, index, directory / "_docs", kinds=("Dataframe",))
         assert "Data updated" not in writer.dataframe_page("acme/p:empty")
 
+    def test_a_dataframe_that_is_a_bare_folder_of_parts_shows_its_rows(self, tmp_path, monkeypatch):
+        """Found by a reviewer: the page of a dataframe whose path is a plain folder of
+        parquet parts said "Unsupported file type:" where a glob or a folder named
+        `x.parquet` showed the rows. A folder is glimpsed by its parts; an empty one is
+        said in a sentence, with no traceback."""
+        directory = tmp_path.resolve() / "p"
+        (directory / "_data" / "parts").mkdir(parents=True)
+        (directory / "_data" / "empty").mkdir()
+        (directory / "README.md").write_text("# P\n")
+        (directory / "chartbook.toml").write_text(
+            tomli_w.dumps(
+                {
+                    "project": {"id": "acme/p"},
+                    "dataframes": {
+                        "parts": {"path": "./_data/parts", "docs": "A folder of parts."},
+                        "empty": {"path": "./_data/empty", "docs": "Nothing yet."},
+                    },
+                }
+            )
+        )
+        pl.DataFrame({"x": [1.0]}).write_parquet(directory / "_data" / "parts" / "a.parquet")
+        pl.DataFrame({"x": [2.0]}).write_parquet(directory / "_data" / "parts" / "b.parquet")
+        (directory / "_data" / "parts" / "_SUCCESS").write_bytes(b"")
+        _built(directory, monkeypatch)
+        parts = (directory / "_docs" / "cb" / "dataframes" / "acme--p" / "parts.md").read_text()
+        assert "Rows: 2\nColumns: 1\n$ x <f64> 1.0, 2.0" in parts, parts
+        assert "Unsupported file type" not in parts
+        empty = (directory / "_docs" / "cb" / "dataframes" / "acme--p" / "empty.md").read_text()
+        assert "No parquet file in empty/: a folder is shown by its parquet parts, and this one has none yet." in empty
+        assert "Traceback" not in empty and "Error" not in empty
+        assert str(directory / "_data") not in empty
+
     def test_the_published_index_keeps_no_local_site_url(self, pipeline_project, monkeypatch):
         from chartbook import index as index_module
 
@@ -945,3 +1016,15 @@ class TestWhatTheReviewFound:
         full = _built(pipeline_project, monkeypatch)
         with pytest.raises(ValueError, match="needs the full index"):
             SphinxWriter(index_module.published(full))
+
+
+class TestTheTemplateSearchPath:
+    def test_every_folder_the_writer_loads_templates_from_exists(self, pipeline_project, monkeypatch):
+        """Found by a reviewer: a `templates/` folder that is in neither the repository nor the
+        wheel was on the search path, where Jinja passed it over in silence. Every folder on
+        the path is one the package ships or the build made."""
+        index = _built(pipeline_project, monkeypatch)
+        writer = SphinxWriter(index, theme="pipeline", docs_src_dir=pipeline_project / "_docs_src")
+        loader = writer._environment(pipeline_project).loader
+        (_, templates) = loader.loaders  # the project's overrides, then the folders in order
+        assert templates.searchpath and all(Path(folder).is_dir() for folder in templates.searchpath), templates.searchpath

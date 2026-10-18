@@ -60,7 +60,7 @@ class MkDocsWriter(SphinxWriter):
         paths = []
         if self.docs_src_dir is not None:
             paths += [Path(self.docs_src_dir), Path(self.docs_src_dir) / "_templates"]
-        paths += [own, own / "_templates", package / "templates", sphinx_theme / "_templates"]
+        paths += [own, own / "_templates", sphinx_theme / "_templates"]
         environment = _sandboxed(paths, own=None if untrusted_source() else base_dir)
         # Python-Markdown reads a pipe in code as text, in a table cell too
         environment.filters["literal"] = functools.partial(_literal, escape_pipes=False)

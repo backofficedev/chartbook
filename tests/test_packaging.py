@@ -51,6 +51,27 @@ def test_everything_is_a_base_dependency():
     assert {"polars", "plotly", "matplotlib", "sphinx", "cruft", "click"} <= names
 
 
+def test_the_build_backend_is_new_enough_for_the_license_files_list():
+    """Found by a reviewer: `license-files = [...]` (PEP 639) is read from hatchling 1.27 on,
+    and the build requirement named no version."""
+    from packaging.requirements import Requirement
+    from packaging.version import Version
+
+    with open(PYPROJECT, "rb") as f:
+        build_system = tomli.load(f)["build-system"]
+    assert isinstance(_project()["license-files"], list)
+    (hatchling,) = [Requirement(r) for r in build_system["requires"] if Requirement(r).name == "hatchling"]
+    assert not hatchling.specifier.contains(Version("1.26.3"))
+    assert hatchling.specifier.contains(Version("1.27.0"))
+
+
+def test_no_stale_setuptools_manifest():
+    """Found by a reviewer: a MANIFEST.in from the setuptools days named folders that do not
+    exist; hatchling never read it. What the distribution holds is said in pyproject.toml and
+    hatch_build.py, and nowhere else."""
+    assert not (PYPROJECT.parent / "MANIFEST.in").exists()
+
+
 def _build_config():
     with open(PYPROJECT, "rb") as f:
         return tomli.load(f)["tool"]["hatch"]["build"]
