@@ -1,6 +1,8 @@
 """How data.load reads another pipeline when nothing is pinned yet, interactively and in a batch run
 (docs_src/design/reading-other-pipelines.md, decisions 2c, 3b, 4b and 5b)."""
 
+import os
+import runpy
 import sys
 import warnings
 from pathlib import Path
@@ -401,13 +403,14 @@ class TestWhatTheReviewFound:
         from chartbook.cli import main
 
         work = tmp_path.resolve()
-        _rates(work / "rates", 4.0)  # in the catalog, with no snapshot: a batch run does not read its folder
+        _rates(work / "rates", 4.0)  # in the catalog, with no snapshot; the command runs in the catalog's folder, no pipeline
         catalog = _catalog(work, {"acme/rates": {"path": "../rates"}})
         monkeypatch.chdir(work)
         monkeypatch.setenv("CHARTBOOK_BATCH", "1")
         result = CliRunner().invoke(main, ["data", "get-path", "--pipeline", "acme/rates", "--dataframe", "treasury", "--catalog", str(catalog)])
         assert result.exit_code == 1 and result.exception is None or isinstance(result.exception, SystemExit)
-        assert "does not read another pipeline's working folder" in result.output
+        assert "this is no pipeline" in result.output and "a batch run" in result.output
+        assert "reads only what a lockfile pins" in result.output
 
     def test_a_folder_with_no_manifest_or_one_that_cannot_be_written(self, together, monkeypatch, tmp_path):
         import os
@@ -968,3 +971,179 @@ class TestWhatTheEighthReviewFound:
         report = lock.pin(work / "rates")
         (event,) = [e for e in report.events if e.dependency == "orig"]
         assert event.status == "no_snapshot" and "this pipeline's own folder" in event.detail
+
+
+class TestWhatTheReleaseReviewFound:
+    """The two-argument form and get_data_path read as a reference does: by the rules of the pipeline the calling file is in."""
+
+    @staticmethod
+    def _script(folder: Path, body: str) -> Path:
+        (folder / "src").mkdir(exist_ok=True)
+        script = folder / "src" / "pull.py"
+        script.write_text("from chartbook import data\n" + body)
+        return script
+
+    def test_a_script_in_a_pipeline_pins_by_either_form_wherever_it_is_run_from(self, together, monkeypatch, capsys):
+        work, forecast, taken = together
+        script = self._script(
+            forecast,
+            "from pathlib import Path\n"
+            "by_catalog_form = data.load(pipeline='acme/rates', dataframe='treasury').collect()['r'].to_list()\n"
+            "pinned_by_it = (Path(__file__).resolve().parents[1] / 'chartbook.lock').is_file()\n"
+            "path = data.get_data_path('acme/rates', 'treasury')\n"
+            "by_reference = data.load('acme/rates:treasury').collect()['r'].to_list()\n",
+        )
+        (work / "scratch").mkdir()
+        monkeypatch.chdir(work / "scratch")  # in no pipeline: the script's own folder says which one it is of
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = runpy.run_path(str(script))
+        assert result["pinned_by_it"], "the catalog form itself pinned, before the reference form ran"
+        assert result["by_catalog_form"] == result["by_reference"] == [4.0]
+        said = capsys.readouterr().err
+        assert said.count("acme/rates: pinned to its newest snapshot") == 1  # the first read pinned; the others read the pin
+        (entry,) = lock.read_lock(forecast / lock.LOCK_FILE).dependencies
+        assert entry["location"]["commit"] == taken.commit
+        store = Path(os.environ["CHARTBOOK_STORE"]).resolve()
+        assert Path(result["path"]).resolve().is_relative_to(store)  # the pinned copy, not the folder's file
+
+    def test_a_pipeline_not_declared_warns_the_same_by_either_form(self, elsewhere, monkeypatch):
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {})
+        script = self._script(
+            forecast,
+            "a = data.load(pipeline='acme/rates', dataframe='treasury').collect()['r'].to_list()\n"
+            "b = data.load('acme/rates:treasury').collect()['r'].to_list()\n",
+        )
+        (work / "scratch").mkdir()
+        monkeypatch.chdir(work / "scratch")
+        with pytest.warns(UnrecordedReadWarning) as said:
+            result = runpy.run_path(str(script))
+        assert result["a"] == result["b"] == [4.2]
+        messages = [str(w.message) for w in said if issubclass(w.category, UnrecordedReadWarning)]
+        assert len(messages) == 2 and len(set(messages)) == 1
+        assert f"newest snapshot, {second.commit[:7]}, and recording nothing" in messages[0]
+        assert not (forecast / lock.LOCK_FILE).exists()
+
+    def test_a_batch_run_refuses_every_form_alike(self, together, monkeypatch):
+        work, forecast, taken = together
+        (work / "scratch").mkdir()
+        monkeypatch.chdir(work / "scratch")
+        monkeypatch.setenv("CHARTBOOK_BATCH", "1")
+        for body in (
+            "data.load(pipeline='acme/rates', dataframe='treasury')",
+            "data.get_data_path('acme/rates', 'treasury')",
+            "data.load('acme/rates:treasury')",
+        ):
+            with pytest.raises(AssetNotPinnedError, match="Run `chartbook pin`") as raised:
+                runpy.run_path(str(self._script(forecast, body)))
+            assert raised.value.reason == "no_lockfile", body
+        assert not (forecast / lock.LOCK_FILE).exists()
+
+    def test_outside_any_pipeline_a_batch_run_reads_nothing(self, elsewhere, monkeypatch):
+        work, first, second = elsewhere
+        (work / "scratch").mkdir()
+        monkeypatch.chdir(work / "scratch")
+        monkeypatch.setenv("CHARTBOOK_BATCH", "1")
+        for read in (
+            lambda: data.load("acme/rates:treasury"),
+            lambda: data.load(pipeline="acme/rates", dataframe="treasury"),
+            lambda: data.get_data_path("acme/rates", "treasury"),
+        ):
+            with pytest.raises(AssetNotPinnedError, match="this is no pipeline") as raised:
+                read()
+            assert raised.value.reason == "no_pipeline"
+            assert "reads only what a lockfile pins" in str(raised.value)
+        monkeypatch.delenv("CHARTBOOK_BATCH")
+        assert _value("acme/rates:treasury") == [4.2]  # interactively, the same read is the quiet one
+
+    def test_the_command_is_in_the_working_directorys_pipeline_not_the_packages(self, together, monkeypatch, tmp_path):
+        """`chartbook data get-path` calls from cli.py, so the calling file is the package's own: a manifest above
+        the installed package (a monorepo's root, a venv inside a pipeline) must never be the pipeline the command is in."""
+        from click.testing import CliRunner
+
+        from chartbook import cli as cli_module
+        from chartbook.cli import main
+
+        work, forecast, taken = together
+        monorepo = tmp_path.resolve() / "monorepo"
+        (monorepo / ".venv" / "lib" / "chartbook").mkdir(parents=True)
+        (monorepo / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"id": "acme/other"}, "dataframes": {"x": {"path": "./_data/x.parquet", "docs": "d"}}})
+        )
+        monkeypatch.setattr(cli_module, "__file__", str(monorepo / ".venv" / "lib" / "chartbook" / "cli.py"))
+        monkeypatch.chdir(forecast)
+        monkeypatch.setenv("CHARTBOOK_BATCH", "1")
+        command = ["data", "get-path", "--pipeline", "acme/rates", "--dataframe", "treasury"]
+        result = CliRunner().invoke(main, command)
+        assert result.exit_code == 1, result.output
+        assert "is not pinned" in result.output and f"Run `chartbook pin` in {forecast}" in result.output
+        assert "acme/other" not in result.output
+        monkeypatch.delenv("CHARTBOOK_BATCH")
+        result = CliRunner().invoke(main, command)
+        assert result.exit_code == 0, result.output
+        assert (forecast / lock.LOCK_FILE).is_file()  # pinned on the first read, as a script of forecast's would be
+        store = Path(os.environ["CHARTBOOK_STORE"]).resolve()
+        assert any(Path(line).resolve().is_relative_to(store) for line in result.output.splitlines() if line.strip())
+
+
+class TestANameInAnotherCase:
+    """An ID is case-sensitive: a reference in another case is told the ID, and never matched to it."""
+
+    def test_outside_a_pipeline_the_store_suggests_it(self, elsewhere, monkeypatch):
+        work, first, second = elsewhere
+        (work / "scratch").mkdir()
+        monkeypatch.chdir(work / "scratch")
+        with pytest.raises(AssetNotPinnedError, match="has no snapshot of Acme/Rates \\(did you mean 'acme/rates'\\?"):
+            data.load("Acme/Rates:treasury")
+
+    def test_a_dependency_declared_by_its_id_in_another_case_is_suggested(self, elsewhere, monkeypatch):
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {"acme/rates": {}})
+        monkeypatch.chdir(forecast)
+        with pytest.raises(DependencyNotDeclaredError) as raised:
+            data.load("Acme/Rates:treasury")
+        message = str(raised.value)
+        assert "Did you mean 'acme/rates'?" in message
+        assert "An ID is case-sensitive" in message
+        assert "It is declared: read it as 'acme/rates:treasury'." in message
+        assert '"Acme/Rates" = ' not in message  # not told to declare it a second time
+
+    def test_a_key_in_another_case_is_suggested(self, together, monkeypatch):
+        work, forecast, taken = together
+        _forecast(forecast, {"rates": {"path": "../rates"}})
+        monkeypatch.chdir(forecast)
+        with pytest.raises(DependencyNotDeclaredError) as raised:
+            data.load("RATES:treasury")
+        message = str(raised.value)
+        assert "Did you mean 'rates'?" in message and "read it as 'rates:treasury'" in message
+        assert '"RATES" = { path = "../RATES" }' not in message
+
+    def test_a_dependency_under_another_key_in_another_case_names_the_key(self, together, monkeypatch):
+        work, forecast, taken = together
+        _forecast(forecast, {"rates": {"path": "../rates"}})  # acme/rates, by the folder's own chartbook.toml
+        monkeypatch.chdir(forecast)
+        with pytest.raises(DependencyNotDeclaredError) as raised:
+            data.load("Acme/Rates:treasury")
+        message = str(raised.value)
+        assert "Did you mean 'acme/rates'?" in message
+        assert "It is declared as 'rates': read it as 'rates:treasury' or 'acme/rates:treasury'." in message
+        assert "= { path =" not in message  # not told to declare it a second time
+
+    def test_a_pipeline_the_store_has_in_another_case_is_suggested(self, elsewhere, monkeypatch):
+        work, first, second = elsewhere
+        forecast = _forecast(work / "forecast", {})
+        monkeypatch.chdir(forecast)
+        with pytest.raises(DependencyNotDeclaredError) as raised:
+            data.load("Acme/Rates:treasury")
+        message = str(raised.value)
+        assert "Did you mean 'acme/rates'?" in message
+        assert '"acme/rates" = { path = "../rates" }' in message  # the line to add names the ID as the store has it
+
+    def test_a_part_or_a_revision_alone_names_no_asset(self, together, monkeypatch):
+        work, forecast, taken = together
+        monkeypatch.chdir(forecast)
+        for reference, only in (("#series", "a part"), ("@rev", "a revision")):
+            with pytest.raises(ValueError, match=f"names no asset: it is only {only}") as raised:
+                data.load(reference)
+            assert "'[pipeline:][kind/]name[#part][@rev]'" in str(raised.value)

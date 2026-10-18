@@ -283,18 +283,60 @@ class TestRef:
         )
 
     def test_a_query_that_ends_with_a_semicolon_or_a_comment_still_loads(self, pipeline):
-        """Found by a reviewer: spliced as `(sql)`, a trailing `;` or `--` broke load()."""
+        """Found by a reviewer: spliced as `(sql)`, a trailing `;` or `--` broke load(); then both at once did."""
         with_more = {**RATES}
         with_more["dataframes"] = {
             **RATES["dataframes"],
             "semi": {"source": "local", "query": "select d from curve; ", "docs": "d"},
             "noted": {"source": "local", "query": "select d from curve -- the dates", "docs": "d"},
+            "both": {"source": "local", "query": "select d from curve; -- the dates", "docs": "d"},
+            "quoted": {"source": "local", "query": "select d, 'a;b -- kept' as s from curve; -- a note; and more", "docs": "d"},
+            # Found by a second reviewer: DuckDB's other quotes
+            "dollars": {"source": "local", "query": "select d, $$ -- x; $$ as s from curve", "docs": "d"},
+            "dollars_semi": {"source": "local", "query": "select d, $$it's$$ as s from curve;", "docs": "d"},
+            "tagged": {"source": "local", "query": "select d, $q$ a; -- b $q$ as s from curve; -- note", "docs": "d"},
+            "escaped": {"source": "local", "query": "select d, e'don\\'t' as s from curve;", "docs": "d"},
         }
         _manifest(pipeline, with_more)
-        assert data.load("semi", project_dir=pipeline).collect().height == 2
-        assert data.load("noted", project_dir=pipeline).collect().height == 2
+        for name in ("semi", "noted", "both", "quoted", "dollars", "dollars_semi", "tagged", "escaped"):
+            assert data.load(name, project_dir=pipeline).collect().height == 2, name
+            assert data.sql(f"select count(*) n from {{{name}}}", project_dir=pipeline).collect()["n"][0] == 2, name
         assert data.ref("semi", project_dir=pipeline) == "(\nselect d from curve\n)"
-        assert data.sql("select count(*) n from {noted}", project_dir=pipeline).collect()["n"][0] == 2
+        assert data.ref("both", project_dir=pipeline) == "(\nselect d from curve\n)"
+        first = {name: data.load(name, project_dir=pipeline).collect()["s"][0] for name in ("quoted", "dollars", "dollars_semi", "tagged", "escaped")}
+        assert first == {"quoted": "a;b -- kept", "dollars": " -- x; ", "dollars_semi": "it's", "tagged": " a; -- b ", "escaped": "don't"}
+
+    @pytest.mark.parametrize(
+        ("query", "inside"),
+        [
+            ("select 1;", "select 1"),
+            ("select 1 -- a comment", "select 1"),
+            ("select 1; -- a comment", "select 1"),
+            ("select 1 -- a comment\n;", "select 1"),
+            ("select 1; -- one\n-- two", "select 1"),
+            ("select 'a;b' from t;", "select 'a;b' from t"),
+            ("select '--x' from t;", "select '--x' from t"),
+            ('select "a;b" from t; -- c', 'select "a;b" from t'),
+            ("select 1 /* ; */;", "select 1 /* ; */"),
+            ("select 'open; -- x", "select 'open; -- x"),  # a string left open: the comment stays, and the engine says so
+            ("select 'open; -- x;", "select 'open; -- x"),  # the semicolon goes whatever the scanner makes of the rest
+            # DuckDB's other quotes, found by a second reviewer
+            ("select $$ -- x $$ as s", "select $$ -- x $$ as s"),
+            ("select $$it's$$ as s;", "select $$it's$$ as s"),
+            ("select $q$ a; -- b $q$ as s; -- note", "select $q$ a; -- b $q$ as s"),
+            ("select e'don\\'t' as s;", "select e'don\\'t' as s"),
+            ("select E'a\\\\' -- c", "select E'a\\\\'"),  # an escaped backslash, then a comment
+            ("select e'a\\' -- c'", "select e'a\\' -- c'"),  # an escaped quote: the comment is inside the string
+            ("select 1 where e='x' -- c", "select 1 where e='x'"),  # an e before a quote is a letter when a word ends in it
+            # Databricks: a backslash escapes a quote, and backticks quote an identifier
+            ("select 'don\\'t' as s;", "select 'don\\'t' as s"),
+            ("select 'don\\'t' as s -- note", "select 'don\\'t' as s -- note"),  # left in place: the engine reads it as the comment it is
+            ("select `a;b` from t; -- c", "select `a;b` from t"),
+            ("select `a -- b` from t;", "select `a -- b` from t"),
+        ],
+    )
+    def test_a_sub_select_drops_what_ends_a_query_and_keeps_what_is_quoted(self, query, inside):
+        assert backends.subselect(query) == f"(\n{inside}\n)"
 
     def test_identifiers_are_quoted_part_by_part(self):
         assert backends.quote_identifier("a.b.c") == '"a"."b"."c"'

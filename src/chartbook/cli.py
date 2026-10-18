@@ -1861,7 +1861,8 @@ def data_get_path(pipeline, dataframe, catalog):
     from chartbook.errors import CatalogNotConfiguredError
 
     try:
-        path = get_data_path(pipeline, dataframe, catalog_path=catalog)
+        # The command is in the working directory's pipeline: the calling file is this one
+        path = get_data_path(pipeline, dataframe, catalog_path=catalog, project_dir=Path.cwd())
         click.echo(str(path))
     except CatalogNotConfiguredError as e:
         click.echo(f"Error: {e}", err=True)

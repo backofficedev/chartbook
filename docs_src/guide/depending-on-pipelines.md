@@ -134,7 +134,10 @@ one-off exploration: `data.load("acme/rates:treasury")` and
 `data.load(pipeline="acme/rates", dataframe="treasury")` read its newest snapshot, and say nothing.
 Only a read of a working folder, when there is no snapshot, warns, since that warning is about
 which data you got. A notebook in a catalog's folder reads this way too: a catalog has no
-dependencies.
+dependencies. Which pipeline a call is in is found from the file that makes it, then from the
+working directory, by either form, so a script in a pipeline's folder reads by that pipeline's
+rules wherever it is run from. In a build (`CHARTBOOK_BATCH=1`) outside any pipeline, a read is
+an error, since nothing would record it.
 
 The `rate_forecast` example does exactly this, with a model trained on the `yield_curve`
 example's data. {ref}`[dependencies] <dependencies>` and {ref}`chartbook snapshot

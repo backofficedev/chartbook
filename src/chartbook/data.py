@@ -219,6 +219,8 @@ def get_data_path(
     pipeline: str,
     dataframe: str,
     catalog_path: Optional[Union[str, Path]] = None,
+    *,
+    project_dir: Optional[Union[str, Path]] = None,
 ) -> Path:
     """Get the resolved path to a dataframe's parquet file, through a catalog.
 
@@ -229,10 +231,14 @@ def get_data_path(
     its own dataframes, and ``data.path("pipeline:name")`` for the pinned
     copy of a declared dependency's. This remains the way to find a
     dataframe through a catalog, from a notebook that belongs to no
-    pipeline, say. It gives the file in the pipeline's newest snapshot in
-    the store (in a pipeline that declares it, its pin); with no snapshot,
-    the file in the folder the catalog lists, with a
-    :class:`~chartbook.resolve.WorkingVersionWarning`.
+    pipeline, say. It gives the file by the rules of :func:`load`: in a
+    pipeline that declares the other one, its pin; otherwise the file in
+    the pipeline's newest snapshot in the store; with no snapshot, the file
+    in the folder the catalog lists, with a
+    :class:`~chartbook.resolve.WorkingVersionWarning`. Which pipeline the
+    call is in is found as for :func:`path`: from the calling file first,
+    then the working directory, so a script in a pipeline's folder gets
+    that pipeline's pin wherever it is run from.
 
     :param pipeline: The pipeline reference — a bare name
         (``"crsp_treasury"``, if unambiguous), a scoped ID
@@ -244,12 +250,21 @@ def get_data_path(
         directory.  If ``None``, the global default from
         ``~/.chartbook/settings.toml`` is used.
     :type catalog_path: Optional[Union[str, Path]]
+    :param project_dir: Where to look for the pipeline the call is made
+        from, as for :func:`path`.
+    :type project_dir: Optional[Union[str, Path]]
     :returns: The resolved path to the parquet file (may contain glob characters).
     :rtype: Path
-    :raises CatalogNotConfiguredError: If no catalog is configured.
-    :raises KeyError: If the pipeline or dataframe is not found.
+    :raises CatalogNotConfiguredError: If no catalog is configured, and the
+        store has no snapshot of the pipeline.
+    :raises AssetNotPinnedError: If the dataframe has no copy to read: no
+        pin in a batch run, a batch run outside any pipeline, and otherwise
+        no snapshot and no folder here.
+    :raises KeyError: If the pipeline or dataframe is in neither the store
+        nor the catalog.
     """
-    location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path)
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
+    location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path, start_dirs=start_dirs)
     return require_file(location, f"Dataframe {dataframe!r}")
 
 
@@ -360,7 +375,7 @@ def load(
     :class:`~chartbook.resolve.WorkingVersionWarning`. Under
     ``chartbook run``'s ``build`` (``CHARTBOOK_BATCH=1``) only a pin is
     read. Outside any pipeline, the newest snapshot is read and nothing is
-    said.
+    said; in a batch run there, nothing is read, since nothing records it.
 
     **Through a catalog**, with a pipeline and a dataframe. This reads by
     the same rules: its pin, in a pipeline that declares it; otherwise its
@@ -392,8 +407,11 @@ def load(
         name (``"crsp_treasury"``, if unambiguous), a scoped ID
         (``"ftsfr/crsp_treasury"``), or a repository URL.
     :type pipeline: Optional[str]
-    :param project_dir: Where to look for the current pipeline when loading
-        by reference, as for :func:`path`.
+    :param project_dir: Where to look for the pipeline the call is made
+        from, as for :func:`path`. By either form, that pipeline is found
+        from the calling file first, then the working directory, so a
+        script in a pipeline's folder reads by that pipeline's rules
+        wherever it is run from.
     :type project_dir: Optional[Union[str, Path]]
     :returns: The loaded dataframe in the requested format.
     :rtype: pandas.DataFrame or polars.DataFrame or polars.LazyFrame
@@ -402,8 +420,8 @@ def load(
         ``[dependencies]`` does not declare, in a batch run, or when it has
         neither a snapshot nor a folder here.
     :raises AssetNotPinnedError: If another pipeline's dataframe has no
-        copy to read: no pin in a batch run, and otherwise no snapshot and
-        no folder here.
+        copy to read: no pin in a batch run, a batch run outside any
+        pipeline, and otherwise no snapshot and no folder here.
     :raises CatalogNotConfiguredError: If a catalog is needed and none is
         configured, and the store has no snapshot of the pipeline.
     :raises KeyError: If the pipeline or dataframe is in neither the store
@@ -426,6 +444,10 @@ def load(
     ...               format="pandas",
     ...               catalog_path="/path/to/catalog")  # doctest: +SKIP
     """
+    # The pipeline this call is made from, by either form: it decides how
+    # another pipeline's dataframe is read, so a script finds its own
+    # pipeline from its file, wherever it is run from
+    start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
     if dataframe is not None or pipeline is not None:
         # Through a catalog: a pipeline, and one of its dataframes
         if pipeline is None:
@@ -441,7 +463,7 @@ def load(
                 "To load through a catalog, data.load() needs both a pipeline "
                 "and a dataframe: data.load(pipeline=..., dataframe=...)."
             )
-        location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path)
+        location = resolve(dataframe, pipeline=pipeline, catalog_path=catalog_path, start_dirs=start_dirs)
     else:
         if ref is None:
             raise TypeError(
@@ -454,7 +476,6 @@ def load(
                 "A reference resolves against the pipeline you are in, with no "
                 "catalog."
             )
-        start_dirs = caller_start_dirs(project_dir, sys._getframe(1))
         try:
             asset = _assets.parse(ref, kind="dataframe")
         except KindMismatchError as e:

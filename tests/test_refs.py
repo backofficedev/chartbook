@@ -190,6 +190,22 @@ class TestRejected:
         with pytest.raises(ValueError, match="Invalid asset name"):
             parse_asset_ref(text)
 
+    @pytest.mark.parametrize(
+        ("text", "only", "example"),
+        [
+            ("#series", "a part", "treasury_rates#series"),
+            ("@v3", "a revision", "treasury_rates@v3"),
+            ("acme/rates:", "a pipeline", "acme/rates:treasury_rates"),
+            ("acme/rates:#dgs10@v3", "a pipeline, a part and a revision", "acme/rates:treasury_rates#dgs10@v3"),
+        ],
+    )
+    def test_a_reference_with_no_name_is_told_what_a_reference_is(self, text, only, example):
+        with pytest.raises(ValueError) as excinfo:
+            parse_asset_ref(text)
+        message = str(excinfo.value)
+        assert f"names no asset: it is only {only}." in message
+        assert "'[pipeline:][kind/]name[#part][@rev]'" in message and repr(example) in message
+
     @pytest.mark.parametrize("text", ["gdp@", "gdp@two words"])
     def test_invalid_revision(self, text):
         with pytest.raises(ValueError, match="invalid revision"):

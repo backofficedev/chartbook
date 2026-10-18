@@ -697,6 +697,36 @@ def _catalog_hint(pipeline: str, manifest_dir: Path) -> Optional[tuple[str, str]
         return None
 
 
+def _known_ids(manifest_dir: Path, dependencies: dict) -> dict:
+    """The pipeline IDs known here besides the keys of ``[dependencies]``, to make an error more useful.
+
+    Each with the key of the declared dependency it is the ID of
+    (``rates = { id = "acme/rates" }``, a folder's own ID), or None for one
+    the lockfile pins or the store has a snapshot of. A suggestion is never
+    worth failing for, so whatever cannot be read is left out.
+    """
+    from chartbook.store import default_store
+
+    known: dict = {}
+    try:
+        known.update(dict.fromkeys((taken.pipeline for taken in _snapshots_in(default_store())), None))
+    except Exception:  # noqa: BLE001 - a hint is never worth failing for
+        pass
+    try:
+        locked = _read_lock(manifest_dir)
+        for entry in locked.dependencies if locked else []:
+            for named in (entry.get("id"), (entry.get("location") or {}).get("pipeline")):
+                if isinstance(named, str):
+                    known.setdefault(named, None)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        known.update((own, key) for key, own in _dependency_ids(manifest_dir, dependencies).items() if own)
+    except Exception:  # noqa: BLE001
+        pass
+    return known
+
+
 def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
     """Resolve a reference to another pipeline's asset, to its pinned copy.
 
@@ -726,6 +756,7 @@ def _resolve_pinned(asset: AssetRef, manifest_dir: Path) -> Location:
             manifest_path,
             sorted(dependencies),
             found_at=_catalog_hint(asset.pipeline_id, manifest_dir),
+            known=_known_ids(manifest_dir, dependencies),
         ) from None
 
     if dependency.kind == "path" and dependency.path is not None and _same_directory(dependency.path, manifest_dir):
@@ -1306,8 +1337,11 @@ def resolve(
     :param catalog_path: The catalog to use when *pipeline* is given;
         defaults to the globally configured one.
     :param start_dirs: Directories to walk up from when looking for the
-        enclosing manifest of a local reference, in order of preference.
-        Defaults to the current working directory.
+        ``chartbook.toml`` of the pipeline the caller is in, in order of
+        preference: what a local reference resolves against, and what
+        decides how another pipeline's asset is read (its pin, in a
+        pipeline that declares it), by reference and through a catalog
+        alike. Defaults to the current working directory.
     :returns: The asset's location.
     :raises ManifestNotFoundError: If a local reference has no enclosing
         ``chartbook.toml``.
@@ -1561,7 +1595,9 @@ def _newest_snapshot_of(asset: AssetRef):
         if len(ending) > 1:
             return None, f"the store has snapshots of {', '.join(ending)}; name one by its ID", None, True
         if not ending:
-            return None, f"the store at {store} has no snapshot of {pipeline_id}", None, False
+            other = in_another_case(ids, pipeline_id)
+            hint = f" (did you mean {other!r}? A scope derived from a remote is in lowercase)" if other else ""
+            return None, f"the store at {store} has no snapshot of {pipeline_id}{hint}", None, False
         pipeline_id = ending[0]
     newest, why, _ = lock._newest_in_store(pipeline_id, None, store, found=found)
     if newest is None:
@@ -1696,8 +1732,21 @@ def _read_outside_a_pipeline(asset: AssetRef, working) -> Location:
     With no ``chartbook.toml`` there is no lineage to record, so nothing is
     said. With no snapshot to read, its working version is read, with the
     working-version warning: that one is about what was read, not about
-    lineage.
+    lineage. A batch run refuses the read, as it refuses every read that no
+    lockfile records: a build is of a pipeline, and a script of one reads by
+    that pipeline's rules wherever it is run from, since the pipeline is
+    found from the calling file before the working directory.
     """
+    if batch():
+        raise AssetNotPinnedError(
+            str(asset),
+            "no_pipeline",
+            f"{asset} cannot be read: this is no pipeline (no {MANIFEST_NAME} encloses the calling file "
+            f"or the working directory, or the one that does is a catalog's), so nothing would record "
+            f"what was read, and a batch run (`chartbook run`, or {BATCH_ENV_VAR}=1) reads only what a "
+            f"lockfile pins. Run it from the pipeline whose [dependencies] declare "
+            f"{asset.pipeline_id} (in Python, project_dir says which one).",
+        )
     location, why, _, settled = _newest_snapshot_of(asset)
     if location is not None:
         return location
