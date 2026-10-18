@@ -168,16 +168,89 @@ def _read_manifest_file(base_dir: Path) -> dict:
     :param base_dir: Directory containing chartbook.toml.
     :returns: The raw parsed dict.
     :raises FileNotFoundError: If no chartbook.toml exists.
+    :raises ValueError: If the file is not valid TOML; the message names
+        the file, since a catalog reads several in one go.
     :raises V1FormatError: If the file uses the v1 layout.
     """
     chartbook_toml_path = Path(base_dir) / "chartbook.toml"
     if not chartbook_toml_path.is_file():
         raise FileNotFoundError(f"No chartbook.toml found in directory: {base_dir}")
-    with open(chartbook_toml_path, "rb") as f:
-        raw_manifest = tomli.load(f)
+    raw_manifest = _parse_toml_file(chartbook_toml_path)
     if detect_v1_format(raw_manifest):
         raise V1FormatError(chartbook_toml_path)
     return raw_manifest
+
+
+def _parse_toml_file(path: Path) -> dict:
+    """What a TOML file holds; a syntax error is a ValueError that names the file."""
+    try:
+        with open(path, "rb") as f:
+            return tomli.load(f)
+    except tomli.TOMLDecodeError as error:
+        raise ValueError(f"{path} is not valid TOML: {error}.") from None
+
+
+#: The word TOML has for what a value is, by its Python type.
+_TOML_WORDS = (
+    (bool, "a boolean"),
+    (str, "a string"),
+    (int, "an integer"),
+    (float, "a float"),
+    (list, "an array"),
+    (dict, "a table"),
+)
+
+
+def _toml_word(value) -> str:
+    """What a parsed value is, in TOML's words: ``5`` is an integer, ``[5]`` an array, ``{}`` a table."""
+    for kind, word in _TOML_WORDS:
+        if isinstance(value, kind):
+            return word
+    return "a date" if hasattr(value, "year") else type(value).__name__
+
+
+def _require_string(value, where: str, key: str, example: str) -> None:
+    """Refuse a field that is not a string, saying what it is and what to write.
+
+    :param where: The table, for the message: ``chartbook.toml: [dataframes.x]``.
+    :param example: What a right value looks like, e.g. ``./docs_src/x.md``.
+    :raises ValueError: If *value* is not a string.
+    """
+    if not isinstance(value, str):
+        # A number or a date where the field is one (copyright = 2025) is
+        # shown back in quotes, "2025": that is what was meant. Anything else
+        # gets the example; "5" is no path
+        number_like = isinstance(value, (int, float)) and not isinstance(value, bool) or hasattr(value, "year")
+        shown = json.dumps(str(value)) if number_like and re.fullmatch(r"[\d.-]+", example) else json.dumps(example)
+        raise ValueError(
+            f"{where + ': ' if where else ''}{key} = {value!r} is {_toml_word(value)}, and {key} is a string. "
+            f"Write {key} = {shown}."
+        )
+
+
+def _require_list_of_strings(value, where: str, key: str, example: str) -> None:
+    """Refuse a field that is not a list of strings, saying what it is and what to write.
+
+    A bare string is refused too, not read as a list of one: a list field
+    is written in brackets, and a string in a field that is iterated would
+    otherwise become its letters.
+
+    :param where: The table, for the message: ``chartbook.toml: [dataframes.x]``.
+    :param example: A right value, e.g. ``["Rates", "Treasury"]``.
+    :raises ValueError: If *value* is not a list, or an item is not a string.
+    """
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return
+    if isinstance(value, str):
+        what, shown = "a string", f"[{json.dumps(value)}]"  # the string given, as a list of one
+    elif isinstance(value, list):
+        what, shown = "an array with an item that is not a string", example
+    else:
+        what, shown = _toml_word(value), example
+    raise ValueError(
+        f"{where + ': ' if where else ''}{key} = {value!r} is {what}, and {key} is a list of strings. "
+        f"Write {key} = {shown}."
+    )
 
 
 def validate_manifest_file(path: Path = BASE_DIR) -> bool:
@@ -283,32 +356,30 @@ def catalog_entry_dir(base_dir: Union[str, Path], path: Path, where: str = "") -
     return found
 
 
-def validate_os_compatibility(value: Union[str, list]) -> Union[str, list]:
-    """Validate that os_compatibility is a string or a list of strings.
+def validate_os_compatibility(value, where: str = "[project]") -> list:
+    """Validate that ``[project] os_compatibility`` is a list of strings.
+
+    A bare string is refused, not read as a list of one: a page joins the
+    list, and would otherwise show the string's letters.
 
     :param value: The os_compatibility value to validate.
-    :returns: The validated value (unchanged).
-    :raises TypeError: If the value is neither a string nor a list of strings.
+    :param where: The table, for the message.
+    :returns: The validated list (unchanged).
+    :raises ValueError: If the value is not a list of strings.
     """
-    if isinstance(value, str):
-        return value
-    elif isinstance(value, list):
-        if not all(isinstance(item, str) for item in value):
-            raise TypeError(
-                f"os_compatibility list must contain only strings, got: {value}"
-            )
-        return value
-    else:
-        raise TypeError(
-            f"os_compatibility must be a string or list of strings, got: {type(value).__name__}"
-        )
+    _require_list_of_strings(value, where, "os_compatibility", '["Linux", "macOS", "Windows"]')
+    return value
 
 
-def normalize_tags(tags: list) -> list:
+def normalize_tags(tags: list, where: str = "") -> list:
     """Normalize a list of tags to Title Case.
 
     :param tags: List of tag strings to normalize
+    :param where: The table the tags are in, for the message when they are
+        not a list.
     :returns: List of tags in Title Case
+    :raises ValueError: If *tags* is not a list of strings: a bare string
+        is not read as one tag, since its letters would become the tags.
 
     Examples
     --------
@@ -318,9 +389,8 @@ def normalize_tags(tags: list) -> list:
     # Output: ['Short Term Funding', 'Repo', 'Monetary Policy']
     ```
     """
-    if not tags:
-        return tags
-    return [tag.title() if isinstance(tag, str) else tag for tag in tags]
+    _require_list_of_strings(tags, where, "tags", '["Rates", "Treasury"]')
+    return [tag.title() for tag in tags]
 
 
 def validate_doc_fields(
@@ -1057,6 +1127,24 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
     project_raw = raw_manifest.get("project", {})
     _warn_unknown_project_keys(project_raw, source)
 
+    # Each field as its default's type: a path or a name is a string, a
+    # list of people is a list. What is not is refused here, by name, and
+    # not where a page would read it
+    for key, default in PROJECT_DEFAULTS.items():
+        if key not in project_raw or key == "type":  # type is checked by resolve_project_type
+            continue
+        value = project_raw[key]
+        if isinstance(default, bool):
+            if not isinstance(value, bool):
+                raise ValueError(
+                    f"{source}: [project]: {key} = {value!r} is {_toml_word(value)}, and {key} is "
+                    f"true or false. Write {key} = true."
+                )
+        elif isinstance(default, list):
+            _require_list_of_strings(value, f"{source}: [project]", key, _PROJECT_EXAMPLES[key])
+        elif isinstance(default, str):
+            _require_string(value, f"{source}: [project]", key, _PROJECT_EXAMPLES.get(key, "..."))
+
     project = dict(PROJECT_DEFAULTS)
     project.update({k: v for k, v in project_raw.items() if k in PROJECT_DEFAULTS})
     project["type"] = project_type
@@ -1084,12 +1172,28 @@ def _resolve_project(raw_manifest: dict, base_dir: Path, project_type: str) -> d
         webpage_path = Path(base_dir) / "docs" / "index.html"
         project["site_url"] = f"file://{webpage_path.as_posix()}"
 
-    if "os_compatibility" in project_raw:
-        project["os_compatibility"] = validate_os_compatibility(
-            project_raw["os_compatibility"]
-        )
-
     return project
+
+
+#: What a right value of each ``[project]`` field looks like, for a message
+#: that refuses a wrong one.
+_PROJECT_EXAMPLES = {
+    "id": "acme/rates",
+    "name": "Treasury Rates",
+    "description": "Daily Treasury yields",
+    "maintainer": "Alice Smith",
+    "contributors": '["Alice Smith", "Bob Jones"]',
+    "repo_url": "https://github.com/acme/rates",
+    "site_url": "https://acme.github.io/rates",
+    "readme": "./README.md",
+    "copyright": "2026",
+    "logo": "./docs_src/logo.png",
+    "favicon": "./docs_src/favicon.ico",
+    "os_compatibility": '["Linux", "macOS", "Windows"]',
+    "build": "doit",
+    "site_dir": "./docs_src/site/",
+    "writer": "sphinx",
+}
 
 
 def _resolve_site_dir(project: dict, base_dir: Path) -> None:
@@ -1162,6 +1266,100 @@ def _refuse_paths_outside(raw_manifest: dict, base_dir: Path) -> None:
             )
 
 
+#: Each entity table and what one of its entries is.
+_ENTITY_KINDS = (
+    ("dataframes", "dataframe"),
+    ("charts", "chart"),
+    ("notebooks", "notebook"),
+    ("notes", "note"),
+    ("models", "model"),
+)
+
+#: The fields of an entity table's entry that are lists of strings.
+_ENTITY_LIST_KEYS = {
+    "dataframes": ("tags", "sources", "providers", "provider_links"),
+    "charts": ("tags",),
+    "notebooks": ("tags",),
+    "notes": ("tags",),
+    "models": ("tags",),
+}
+
+#: A right value of each list field, for the message that refuses a wrong one.
+_LIST_EXAMPLES = {
+    "tags": '["Rates", "Treasury"]',
+    "sources": '["FRED", "CRSP"]',
+    "providers": '["Federal Reserve Board"]',
+    "provider_links": '["https://fred.stlouisfed.org"]',
+}
+
+#: Where an entry's ``path`` usually is, by table, for the same messages.
+_PATH_EXAMPLES = {
+    "dataframes": "./_data/{key}.parquet",
+    "charts": "./_output/{key}.html",
+    "notebooks": "./_output/{key}.ipynb",
+    "notes": "./docs_src/{key}.md",
+}
+
+#: And where the other ``*_path`` fields point.
+_OTHER_PATH_EXAMPLES = {
+    "excel_path": "./_output/{key}.xlsx",
+    "metrics_path": "./_output/{key}_metrics.json",
+}
+
+
+def _check_entity_fields(manifest: dict, source: str) -> None:
+    """Refuse an entity table's field that is not of its type, before anything reads it.
+
+    Each ``[charts.<id>]``, ``[dataframes.<id>]``, ``[notebooks.<id>]``,
+    ``[notes.<id>]`` and ``[models.<id>]`` is a table. In it ``path``,
+    every ``*_path`` and ``docs`` are strings, and ``tags`` (for a
+    dataframe, ``sources``, ``providers`` and ``provider_links`` too) is a
+    list of strings: a bare string is refused, not read as a list of one,
+    since what reads the list would otherwise read the string's letters. A
+    note has a ``path``, which is where its page comes from. A model's
+    paths are :func:`validate_models`'s to check.
+
+    :param manifest: The manifest, with its entity tables as parsed.
+    :param source: The file, for the message.
+    :raises ValueError: Naming the file, the table and the key, and
+        saying what to write.
+    """
+    for table, kind in _ENTITY_KINDS:
+        entries = manifest.get(table)
+        if entries is None:
+            continue
+        if not isinstance(entries, dict):
+            raise ValueError(
+                f"{source}: [{table}] must be a table of tables, one per {kind}, e.g. [{table}.<name>] "
+                f"with a path = \"...\" under it; it is {_toml_word(entries)}."
+            )
+        for key, entry in entries.items():
+            where = f"{source}: [{table}.{key}]"
+            if not isinstance(entry, dict):
+                raise ValueError(
+                    f"{where} must be a table of the {kind}'s fields, e.g. [{table}.{key}] with a "
+                    f"path = \"...\" under it; it is {_toml_word(entry)}."
+                )
+            if table != "models":
+                for field, value in entry.items():
+                    if field == "path":
+                        _require_string(value, where, field, _PATH_EXAMPLES[table].format(key=key))
+                    elif field == "docs_path":
+                        _require_string(value, where, field, f"./docs_src/{table}/{key}.md")
+                    elif field.endswith("_path"):
+                        _require_string(value, where, field, _OTHER_PATH_EXAMPLES.get(field, "./_output/{key}").format(key=key))
+            if "docs" in entry:
+                _require_string(entry["docs"], where, "docs", "The write-up, as Markdown.")
+            for field in _ENTITY_LIST_KEYS[table]:
+                if field in entry:
+                    _require_list_of_strings(entry[field], where, field, _LIST_EXAMPLES[field])
+            if table == "notes" and not (isinstance(entry.get("path"), str) and entry["path"].strip()):
+                raise ValueError(
+                    f"{where} has no 'path'. Say where the note's markdown file is: "
+                    f'path = "./docs_src/{key}.md".'
+                )
+
+
 def _load_pipeline_manifest(raw_manifest):
     """Process a raw pipeline manifest into the internal manifest shape.
 
@@ -1191,6 +1389,9 @@ def _load_pipeline_manifest(raw_manifest):
     manifest.setdefault("dataframes", {})
     manifest.setdefault("notebooks", {})
     manifest.setdefault("models", {})
+
+    # Every field as its type, before anything below reads one
+    _check_entity_fields(manifest, str(Path(base_dir) / "chartbook.toml"))
 
     # A key becomes part of an address, so the index can name the asset.
     # Models are checked in validate_models; the other kinds here, so that
@@ -1345,12 +1546,15 @@ def _resolve_policy(raw_manifest: dict, source: str) -> dict:
             f"{source}: policy.required must be a table, `[policy.required]`, of "
             f"field lists by kind; it is {required_raw!r}."
         )
-    for key in required_raw:
+    for key, fields in required_raw.items():
         if key not in DEFAULT_REQUIRED_FIELDS:
             raise ValueError(
                 f"{source}: unknown policy.required key {key!r}. "
                 f"Allowed keys: {sorted(DEFAULT_REQUIRED_FIELDS)}."
             )
+        # A list of field names, and nothing else: a string would be read
+        # as its letters, a table as its keys
+        _require_list_of_strings(fields, f"{source}: [policy.required]", key, '["name", "description"]')
     required = {
         object_type: list(required_raw.get(object_type, default_fields))
         for object_type, default_fields in DEFAULT_REQUIRED_FIELDS.items()
@@ -1476,8 +1680,10 @@ def _discover_member_pipelines(
                     f"  - remove {pattern!r} from pipelines.members"
                 )
 
-            with open(member_toml, "rb") as f:
-                member_raw = tomli.load(f)
+            try:
+                member_raw = _parse_toml_file(member_toml)
+            except ValueError as error:
+                raise ValueError(f"{source}: catalog member {error}") from None
 
             if detect_v1_format(member_raw):
                 raise ValueError(
@@ -1681,7 +1887,11 @@ def _load_catalog_manifest(raw_manifest):
     for pipeline_id, entry in pipelines_raw.items():
         if pipeline_id in RESERVED_PIPELINES_KEYS:
             continue
-        validate_pipeline_id(pipeline_id)
+        try:
+            validate_pipeline_id(pipeline_id)
+        except ValueError as error:
+            # Keeps "reserved, not yet supported" distinct from "invalid"
+            raise type(error)(f"{source}: [pipelines] {pipeline_id!r}: {error}") from None
         if isinstance(entry, str):
             entry = {"path": entry}
         entries[pipeline_id] = _check_pipelines_entry(pipeline_id, entry, source)

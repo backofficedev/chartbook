@@ -645,3 +645,37 @@ class TestCheckCommand:
     def test_negative_window_is_a_usage_error(self, pipeline_project):
         result = _invoke("--project-dir", pipeline_project, "--within", "-1")
         assert result.exit_code == 2
+
+    def test_a_field_of_the_wrong_type_is_a_clean_error_that_names_it(self, pipeline_project):
+        """Found by a reviewer: `docs_path = 5` passed the load and `check` died on `.strip()`;
+        `[notes.x]` with no path was printed as `Error: 'path'`."""
+        _edit_toml(pipeline_project, lambda c: c["dataframes"]["dataframe_0"].update(docs_path=5))
+        result = _invoke("--project-dir", pipeline_project)
+        assert result.exit_code == 1
+        assert "Error: " in result.output
+        assert "[dataframes.dataframe_0]: docs_path = 5 is an integer, and docs_path is a string." in result.output
+        assert "Traceback" not in result.output and "AttributeError" not in result.output
+        assert result.exception is None or isinstance(result.exception, SystemExit)
+
+        _edit_toml(pipeline_project, lambda c: c["dataframes"]["dataframe_0"].update(docs_path="docs_src/dataframes/dataframe_0.md"))
+        _edit_toml(pipeline_project, lambda c: c.update(notes={"methods": {"name": "Methods"}}))
+        result = _invoke("--project-dir", pipeline_project)
+        assert result.exit_code == 1
+        assert "[notes.methods] has no 'path'. Say where the note's markdown file is" in result.output
+        assert "Error: 'path'" not in result.output
+
+    def test_a_policy_file_that_is_not_toml_is_named(self, pipeline_project, tmp_path):
+        policy = tmp_path / "policy.toml"
+        policy.write_text("[policy\n")
+        result = _invoke("--project-dir", pipeline_project, "--policy", policy)
+        assert result.exit_code == 1
+        assert f"Error: {policy} is not valid TOML: " in result.output and "Traceback" not in result.output
+
+    def test_a_catalog_member_that_is_not_toml_is_named(self, catalog_project):
+        """Found by a reviewer: the error was `Illegal character '\\n' (at line 2, column 15)` and no file."""
+        member = catalog_project / "pipelines" / "pipeline_a" / "chartbook.toml"
+        member.write_text("[project]\nname = \"unterminated\n")
+        result = _invoke("--project-dir", catalog_project)
+        assert result.exit_code == 1
+        assert f"Error: {member} is not valid TOML: " in result.output
+        assert "Traceback" not in result.output

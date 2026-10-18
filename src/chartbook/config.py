@@ -235,8 +235,16 @@ def _normalized(settings: dict, origin: Path) -> dict:
             raise ValueError(f"{origin}: [cache] needs a 'path', e.g. path = \"/a/bigger/disk/chartbook-cache\".")
         cache["path"] = str(_absolute_if_folder(path.strip(), origin))
     catalog = result.get("catalog")
-    if catalog is not None and "path" in catalog and not isinstance(catalog["path"], str):
-        raise ValueError(f"{origin}: [catalog] path must be a string.")
+    if catalog is not None and "path" in catalog:
+        path = catalog["path"]
+        if not isinstance(path, str):
+            raise ValueError(
+                f"{origin}: [catalog] path must be a string, e.g. path = \"~/catalogs/rates/chartbook.toml\"."
+            )
+        if path.strip():
+            # As the store, the git cache and the cache are: relative to the
+            # settings file, not to wherever the command happens to be run
+            catalog["path"] = str(_absolute_if_folder(path.strip(), origin))
     resolve = result.get("resolve")
     if resolve is not None and "default_host" in resolve:
         host = resolve["default_host"]
@@ -430,9 +438,11 @@ def without_credentials(text: str) -> str:
 #: Where a URL, or a path to another host, begins: ``scheme://``, ``//``, or Windows' two backslashes.
 _ADDRESS = r"^\s*(?:(?:[A-Za-z][A-Za-z0-9+.-]*:)?//|\\\\)"
 
-#: The same in a message, up to the last ``@`` of its line. Two backslashes
-#: (four, quoted) only where a path begins: those after ``C:`` begin none
-_ADDRESS_IN_TEXT = r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//|(?<![^\s'\"(=])\\\\(?:\\\\)?)[^\n]*@"
+#: The same in a message, up to the first ``@`` with no space or quote before
+#: it, so that a message quoting an address and then an ``'@'`` keeps its
+#: words. Two backslashes (four, quoted) only where a path begins: those after
+#: ``C:`` begin none
+_ADDRESS_IN_TEXT = r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//|(?<![^\s'\"(=])\\\\(?:\\\\)?)[^\s'\"<>]*?@"
 
 
 def store_kind(url: str) -> str:

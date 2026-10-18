@@ -30,7 +30,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 
 ## chartbook init
 
-Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template) that came with your ChartBook. It asks 19 questions, each with a default that Enter takes: the project's name and its folder name (made from the name), a description, your name and email, the Python version, how to install the dependencies, and which examples and data sources to include. {doc}`../getting-started` says which answers matter. A folder name that is not lowercase letters, digits and `_`, starting with a letter, stops it with nothing created, and its last line says what to do at the second question next time: press Enter, or type such a name (the name made from the project's name may not be one, as for `2024 Rates`).
+Scaffold a new pipeline from the [cookiecutter template](https://github.com/backofficedev/chartbook/tree/main/template) that came with your ChartBook. It asks 19 questions, each with a default that Enter takes: the project's name and its folder name (made from the name), a description, your name and email, the Python version, how to install the dependencies, and which examples and data sources to include. {doc}`../getting-started` says which answers matter. A folder name that is not lowercase letters, digits and `_`, starting with a lowercase letter, stops it with nothing created, and its last line says what to do at the second question next time: press Enter, or type such a name (the name made from the project's name may not be one, as for `2024 Rates`).
 
 **The template comes with the package**, as `chartbook/template` in the wheel (the files git tracks in the repository's `template/`; in a source checkout, those same files of `template/` beside `src/`), so a project is always made with the template of the ChartBook that makes it, and making it needs no network. It is rendered with cookiecutter, and the project's `.cruft.json` is written as [cruft](https://cruft.github.io/cruft/) writes it: the template's repository on GitHub, its `template` folder, and the commit the template is at (recorded in the package when it is built; asked of git in a source checkout). So `cruft update` and `cruft check` in the project follow the template on GitHub from there. The command says when that commit is in no tag and on no branch of a remote that is the template's repository, in the checkout it runs from, so may not be on GitHub, where `cruft update` looks for it. When the commit is not known (the package recorded none, or the checkout's `template/` has changes git has not committed to tracked files), there is no `.cruft.json`, and the command says why and prints the command that makes one once the commit is known, with the answers you gave: `cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit> --no-input --extra-context '{…}'`. A source checkout that git cannot read, or a copy of one with no `.git`, is not rendered from, since which files git tracks cannot be told; the command says what to do. Everything rendered can be written by its owner, even from a template installed read-only. A folder of the project's name that is there already stops it, with nothing changed. The project's environment files ask for `chartbook>=` the template's version, which is your ChartBook's; `cruft update` moves it to the template's version then.
 
@@ -346,7 +346,7 @@ Switch a pipeline off or on without deleting its registration. Explicit entries 
 
 ```console
 chartbook catalog disable ftsfr/sovereign_bonds [--catalog PATH]
-chartbook catalog enable ftsfr/sovereign_bonds
+chartbook catalog enable ftsfr/sovereign_bonds [--catalog PATH]
 ```
 
 ### catalog build
@@ -548,7 +548,7 @@ A key already in `[dependencies]`, or a `commit` that is not the start of one, w
 ## chartbook pin
 
 ```console
-chartbook pin [--project-dir PATH]
+chartbook pin [--project-dir PATH] [--frozen]
 ```
 
 Freeze what this pipeline depends on. Each pipeline in {ref}`[dependencies] <dependencies>` is pinned to a snapshot of it, and the content hash of each of its assets is written to `chartbook.lock`, beside `chartbook.toml`.
@@ -702,7 +702,6 @@ Wrote chartbook.lock.
 
 Keeping it would leave the lockfile naming one commit beside data built from another, which nobody else could get back. `chartbook run` then builds the new commit and pins what it builds.
 
-(chartbook-run)=
 (chartbook-lineage)=
 ## chartbook lineage
 
@@ -735,10 +734,11 @@ A snapshot met twice is walked once and marked "shown above". A `git` dependency
 | `--rehash` | Also hash every asset of every snapshot again, which reads all of their bytes |
 | `--json` | Print the graph as JSON: each pipeline's `label`, `kind` (`working`, `snapshot`, `git`, `no_snapshot`, `nothing`, `missing`, `mismatch`, `unreadable`), `pipeline`, `commit`, `made_at`, `gaps` and `children` |
 
+(chartbook-run)=
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--force] [--snapshot] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--project-dir PATH]
 ```
 
 Run a script in this pipeline. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
@@ -820,7 +820,7 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 
 **What it is not.** It is not a task runner. A script is one string. Scripts do not depend on each other, and there are no retries, no schedule and no history. What is out of date inside a pipeline is for the pipeline's own tool to decide (doit, Make, Snakemake); `chartbook run` runs that tool every time.
 
-A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`.
+A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`: a script of one line as it is, and one of several lines as a batch file that stops at the first line that fails, with that line's exit code; there a line that runs another batch file (`conda activate`, which is `conda.bat`) must begin with `call`, or nothing after it runs.
 
 **`--frozen`.** Pin nothing and write nothing before the build but the store's note that this machine reads these pins (as `chartbook pin --frozen` does): not the lockfile, no object, and no `git` dependency is fetched or built. The build runs only if `chartbook pin --frozen` would pass; otherwise nothing runs and the problems are listed. `--frozen` and `--snapshot` are one or the other.
 
@@ -880,17 +880,17 @@ url = "/a/bigger/disk/chartbook-store"
 chartbook store info
 ```
 
-Say which store this machine uses, what set it, and where the cache is. Run it on each machine that is to share a store, to see that they name the same folder.
+Say which store this machine uses, what kind it is, what set it, and where the cache is. Run it on each machine that is to share a store, to see that they name the same folder.
 
 ```console
 $ chartbook store info
 Store: /Users/x/Google Drive/chartbook-store
-  set by [store] url in /Users/x/.chartbook/settings.toml, your settings
+  a folder, set by [store] url in /Users/x/.chartbook/settings.toml, your settings
 Cache: /Users/x/.chartbook/cache
   where what is read from a remote store is kept on this machine
 ```
 
-What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it.
+What set it is one of: `CHARTBOOK_STORE`; `[store] url` in your settings file; `[store] url` in the organization's settings file; or the default, `~/.chartbook/store`. A folder that does not exist yet is said (`nothing is there yet`): the first snapshot or pin makes it. The kind is a folder, an S3 bucket, or a `scheme://` store a plugin provides, and the command makes sure this machine can use one of that kind: a bucket on a machine without boto3 is an error here, naming `pip install chartbook[s3]`, and exits `1`, rather than at the first pin or read; so is a scheme nothing installed provides.
 
 ### store verify
 

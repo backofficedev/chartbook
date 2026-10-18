@@ -132,7 +132,7 @@ def normalize_ref_to_id(ref: str) -> str:
 
     - ``name`` or ``scope/name`` — returned as-is
     - ``https://github.com/scope/name`` (or any URL) — reduced to the last
-      two path segments, with a trailing ``.git`` stripped
+      two path segments, with a trailing ``.git`` (in any case) stripped
     - ``git@github.com:scope/name.git`` — same reduction
 
     :param ref: The pipeline reference.
@@ -161,8 +161,7 @@ def normalize_ref_to_id(ref: str) -> str:
             candidate = scheme_match.group(1)
             is_url = True
 
-    if candidate.endswith(".git"):
-        candidate = candidate[: -len(".git")]
+    candidate = _without_git_suffix(candidate)
 
     parts = [p for p in candidate.split("/") if p]
     if not parts:
@@ -321,7 +320,9 @@ def remote_to_web_url(remote: Optional[str]) -> str:
     - ``https://user:token@github.com/acme/rates.git`` → ``https://github.com/acme/rates``
 
     Credentials embedded in the remote are always dropped. A remote that is
-    a path on disk has no web address and gives an empty string.
+    a path on disk has no web address and gives an empty string; a Windows
+    path with a drive letter, ``C:\\repos\\rates`` or ``C:/repos/rates``, is
+    one, as git reads it, and not a host ``C``.
 
     :param remote: The remote URL, as ``git config remote.origin.url`` prints it.
     :returns: A web URL, or ``""`` if the remote does not name a host.
@@ -329,6 +330,8 @@ def remote_to_web_url(remote: Optional[str]) -> str:
     if not remote:
         return ""
     remote = remote.strip()
+    if _DRIVE_PATH.match(remote):
+        return ""
 
     scp_like = re.match(r"^(?:[^@/\s]+@)?([^:/\s]+):(?!/)(.+)$", remote)
     url_like = re.match(
@@ -350,9 +353,18 @@ def remote_to_web_url(remote: Optional[str]) -> str:
         return ""
 
     path = path.strip("/")
-    if path.endswith(".git"):
-        path = path[: -len(".git")]
+    path = _without_git_suffix(path)
     return f"{scheme}://{host}/{path}" if path else ""
+
+
+#: A Windows path with a drive letter, ``C:\\...`` or ``C:/...``. Git reads a
+#: one-letter "host" before the colon as a drive, so it names no host here.
+_DRIVE_PATH = re.compile(r"^[A-Za-z]:[\\/]")
+
+
+def _without_git_suffix(path: str) -> str:
+    """A repository path with no ``.git`` at its end, however that is spelled: ``Repo.GIT`` is ``Repo``."""
+    return path[: -len(".git")] if path.lower().endswith(".git") else path
 
 
 #: Hosts whose repository paths ignore case: ``Acme/Rates`` is ``acme/rates``
@@ -375,9 +387,7 @@ def repository_key(address: Optional[str]) -> str:
     if not found:
         return ""
     host = re.sub(r":(80|443)$", "", found.group(1).lower())
-    path = (found.group(2) or "").rstrip("/")
-    if path.lower().endswith(".git"):
-        path = path[: -len(".git")]
+    path = _without_git_suffix((found.group(2) or "").rstrip("/"))
     if host in _CASE_BLIND_HOSTS:
         path = path.lower()
     return f"https://{host}{path}"

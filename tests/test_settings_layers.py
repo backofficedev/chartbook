@@ -176,3 +176,20 @@ class TestWhatTheReviewFound:
         _write(user, {"store": {"url": "~nosuchuser_chartbook/store"}})
         with pytest.raises(ValueError, match=r"\.chartbook/settings\.toml: .*names a user this machine does not know"):
             config.get_store_path()
+
+    def test_a_relative_catalog_path_is_relative_to_its_settings_file(self, files, tmp_path, monkeypatch):
+        """Found by a reviewer: `[catalog] path` alone was read against the current folder,
+        where `[store] url`, `[git] path` and `[cache] path` are read against their file."""
+        user, system = files
+        _write(system, {"catalog": {"path": "catalogs/org/chartbook.toml"}})
+        monkeypatch.chdir(tmp_path / "home")
+        assert config.get_default_catalog_path() == system.parent / "catalogs" / "org" / "chartbook.toml"
+        _write(user, {"catalog": {"path": "mine/chartbook.toml"}})
+        assert config.get_default_catalog_path() == user.parent / "mine" / "chartbook.toml"
+        _write(user, {"catalog": {"path": str(tmp_path / "abs" / "chartbook.toml")}})
+        assert config.get_default_catalog_path() == tmp_path / "abs" / "chartbook.toml"
+        _write(user, {"catalog": {"path": ""}})
+        assert config.get_default_catalog_path() is None  # nothing set: the global catalog, if there is one
+        _write(user, {"catalog": {"path": 5}})
+        with pytest.raises(ValueError, match=r"\[catalog\] path must be a string, e.g. path = "):
+            config.get_default_catalog_path()

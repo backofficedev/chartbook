@@ -181,6 +181,43 @@ def test_no_help_shows_docstring_markup(words, command):
         assert field not in (command.help or ""), f"`chartbook {' '.join(words)} --help` shows {field}"
 
 
+def _console_lines(section: str) -> list:
+    """The lines inside the ```console blocks of a section, with any `# comment` taken off."""
+    lines, in_fence = [], False
+    for line in section.splitlines():
+        if line.startswith("```"):
+            in_fence = line.startswith("```console")
+        elif in_fence:
+            lines.append(line.split("#")[0].rstrip())
+    return lines
+
+
+@pytest.mark.parametrize("words,command", COMMANDS, ids=IDS)
+def test_a_usage_line_shows_every_option(words, command, page):
+    """A console line `chartbook <command> … [--option]` is the command's usage line, and shows every option.
+
+    Found by a reviewer: `pin` and `run` had grown `--frozen`, their usage lines had
+    not, and the test above could not see it, since it matches words anywhere in the
+    section. A line that says `[OPTIONS]` defers to the table below it.
+    """
+    section = _own_subsection(page, words)
+    usage = [
+        line
+        for line in _console_lines(section)
+        if re.match(rf"^chartbook {' '.join(map(re.escape, words))}( |$)", line) and "[" in line and "[OPTIONS]" not in line
+    ]
+    for line in usage:
+        for parameter in command.params:
+            if not isinstance(parameter, click.Option) or parameter.hidden:
+                continue
+            spellings = [*parameter.opts, *parameter.secondary_opts]
+            if set(spellings) <= IMPLIED:
+                continue
+            assert any(_whole(line, opt) for opt in spellings), (
+                f"the usage line {line!r} of `chartbook {' '.join(words)}` leaves out {'/'.join(spellings)}"
+            )
+
+
 def test_the_size_threshold_says_what_it_governs(page):
     """Found by a reviewer: `docs --help` still said "memory-efficient loading" after
     the glimpse stopped depending on the size; the page and the help now say the same."""

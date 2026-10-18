@@ -250,3 +250,40 @@ class TestDerivedNameFromARelativePath:
         assert derive_pipeline_id({}, Path(".")) == "term_premium"
         assert load_manifest(Path("."))["project"]["id"] == "term_premium"
         assert load_manifest(".")["project"]["id"] == "term_premium"
+
+
+class TestADriveLetterIsNotAHost:
+    """Found by a reviewer: a Windows remote `C:\\repos\\rates` read as the scp form
+    with the host `C`, so `repo_url` became `https://c/\\repos\\rates` and a page
+    linked it. Git reads a one-letter "host" before the colon as a drive."""
+
+    @pytest.mark.parametrize("remote", [r"C:\Users\me\repo", r"D:\repo.git", "c:/x", "C:/repos/rates", "Z:\\"])
+    def test_a_path_with_a_drive_letter_names_no_host(self, remote):
+        from chartbook.identity import id_from_address, remote_to_web_url, repository_key
+
+        assert remote_to_web_url(remote) == ""
+        assert repository_key(remote) == ""
+        assert id_from_address(remote) is None
+
+    def test_a_manifest_with_such_a_remote_has_no_repository_link(self, tmp_path, monkeypatch):
+        from chartbook import manifest as manifests
+
+        monkeypatch.setattr(manifests, "get_git_remote_url", lambda base_dir: r"C:\Users\me\repo")
+        project = tmp_path / "rates"
+        project.mkdir()
+        (project / "chartbook.toml").write_text("")
+        loaded = load_manifest(project)
+        assert loaded["project"]["repo_url"] == ""
+        assert loaded["project"]["id"] == "rates"
+
+    @pytest.mark.parametrize("spelling", ["Repo.git", "Repo.GIT", "Repo.Git"])
+    def test_a_git_suffix_in_any_case_is_not_part_of_the_name(self, spelling):
+        """`.git` was stripped case-sensitively for the web address and case-insensitively for the key,
+        so `Repo.GIT` gave the ID `org/repo.git` and one repository had two IDs by spelling."""
+        from chartbook.identity import id_from_address, remote_to_web_url, repository_key
+
+        assert remote_to_web_url(f"https://github.com/Org/{spelling}") == "https://github.com/Org/Repo"
+        assert remote_to_web_url(f"git@github.com:Org/{spelling}") == "https://github.com/Org/Repo"
+        assert repository_key(f"https://github.com/Org/{spelling}") == "https://github.com/org/repo"
+        assert id_from_address(f"git@github.com:Org/{spelling}") == "org/repo"
+        assert normalize_ref_to_id(f"https://github.com/Org/{spelling}") == "Org/Repo"
