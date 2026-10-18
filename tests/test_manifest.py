@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 from unittest.mock import patch
 
+import re
 import pytest
 import tomli_w
 
@@ -677,6 +678,15 @@ class TestWhatTheReleaseReviewFound:
         folder = self._pipeline(tmp_path, charts=5)
         with pytest.raises(ValueError, match=re.escape("[charts] must be a table of tables, one per chart, e.g. [charts.<name>] with a path = \"...\" under it; it is an integer.")):
             load_manifest(folder)
+
+    @pytest.mark.parametrize("value, shown", [("2025", '"2025"'), ("2025-01-01", '"2025-01-01"'), ("3.5", '"3.5"')])
+    def test_a_year_or_a_date_in_copyright_is_shown_back_in_quotes(self, tmp_path, value, shown):
+        """Found by a reviewer of the fix: `copyright = 2025` was told to write "2026", the example."""
+        project = tmp_path / "p"
+        project.mkdir()
+        (project / "chartbook.toml").write_text(f'[project]\nid = "acme/p"\ncopyright = {value}\n')
+        with pytest.raises(ValueError, match=rf"copyright = .* is (an integer|a float|a date), and copyright is a string\. Write copyright = {re.escape(shown)}\."):
+            load_manifest(project / "chartbook.toml")
 
     def test_a_note_needs_a_path(self, tmp_path):
         """`[notes.x]` with no path was a raw KeyError('path'), which `check` printed as `Error: 'path'`."""

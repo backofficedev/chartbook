@@ -96,6 +96,8 @@ doit
 """
 ```
 
+On Windows the lines go in a batch file, and a line that runs another batch file, as `conda activate` does (`conda.bat`), must begin with `call`, or the lines after it do not run: `call conda activate myenv`.
+
 It is shown on the pipeline's documentation page, and {ref}`chartbook run <chartbook-run>` executes it. `build` in `[project]` means the same and is still read; {ref}`[scripts] <scripts>` is where it and any other named command go.
 
 (pipeline-identity)=
@@ -605,7 +607,7 @@ python src/pull_wrds.py
 | A name is letters, digits, `.`, `_` and `-`, since you type it after `chartbook run` | `build`, `fetch.wrds` |
 | A script is one string, and may not be empty | `build = "doit"` |
 | A script of several lines is **one** script: what one line sets up, the next can use | `fetch`, above |
-| It is run in the pipeline's own directory, and stops at the first command that fails, with that command's exit code. By `bash` (or `sh`), and on Windows by `cmd`, where several lines go in a batch file that stops the same way | |
+| It is run in the pipeline's own directory, and stops at the first command that fails, with that command's exit code. By `bash` (or `sh`), and on Windows by `cmd`, where several lines go in a batch file that stops the same way; there a line that runs another batch file (`conda activate`, which is `conda.bat`) must begin with `call`, or nothing after it runs | |
 
 **`build` is the one name with a meaning.** It is the script that makes this pipeline's data current. It is what `chartbook run` runs when you name no script, and what it runs, once, in a `git` dependency that is not built yet. It is shown on the pipeline's page, and written to `index.json` with the others.
 

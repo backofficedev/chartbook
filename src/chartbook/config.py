@@ -438,9 +438,11 @@ def without_credentials(text: str) -> str:
 #: Where a URL, or a path to another host, begins: ``scheme://``, ``//``, or Windows' two backslashes.
 _ADDRESS = r"^\s*(?:(?:[A-Za-z][A-Za-z0-9+.-]*:)?//|\\\\)"
 
-#: The same in a message, up to the last ``@`` of its line. Two backslashes
-#: (four, quoted) only where a path begins: those after ``C:`` begin none
-_ADDRESS_IN_TEXT = r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//|(?<![^\s'\"(=])\\\\(?:\\\\)?)[^\n]*@"
+#: The same in a message, up to the first ``@`` with no space or quote before
+#: it, so that a message quoting an address and then an ``'@'`` keeps its
+#: words. Two backslashes (four, quoted) only where a path begins: those after
+#: ``C:`` begin none
+_ADDRESS_IN_TEXT = r"((?:[A-Za-z][A-Za-z0-9+.-]*:)?//|(?<![^\s'\"(=])\\\\(?:\\\\)?)[^\s'\"<>]*?@"
 
 
 def store_kind(url: str) -> str:

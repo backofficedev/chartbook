@@ -820,7 +820,7 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 
 **What it is not.** It is not a task runner. A script is one string. Scripts do not depend on each other, and there are no retries, no schedule and no history. What is out of date inside a pipeline is for the pipeline's own tool to decide (doit, Make, Snakemake); `chartbook run` runs that tool every time.
 
-A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`: a script of one line as it is, and one of several lines as a batch file that stops at the first line that fails, with that line's exit code.
+A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`: a script of one line as it is, and one of several lines as a batch file that stops at the first line that fails, with that line's exit code; there a line that runs another batch file (`conda activate`, which is `conda.bat`) must begin with `call`, or nothing after it runs.
 
 **`--frozen`.** Pin nothing and write nothing before the build but the store's note that this machine reads these pins (as `chartbook pin --frozen` does): not the lockfile, no object, and no `git` dependency is fetched or built. The build runs only if `chartbook pin --frozen` would pass; otherwise nothing runs and the problems are listed. `--frozen` and `--snapshot` are one or the other.
 

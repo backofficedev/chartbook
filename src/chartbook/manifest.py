@@ -217,9 +217,14 @@ def _require_string(value, where: str, key: str, example: str) -> None:
     :raises ValueError: If *value* is not a string.
     """
     if not isinstance(value, str):
+        # A number or a date where the field is one (copyright = 2025) is
+        # shown back in quotes, "2025": that is what was meant. Anything else
+        # gets the example; "5" is no path
+        number_like = isinstance(value, (int, float)) and not isinstance(value, bool) or hasattr(value, "year")
+        shown = json.dumps(str(value)) if number_like and re.fullmatch(r"[\d.-]+", example) else json.dumps(example)
         raise ValueError(
             f"{where + ': ' if where else ''}{key} = {value!r} is {_toml_word(value)}, and {key} is a string. "
-            f'Write {key} = "{example}".'
+            f"Write {key} = {shown}."
         )
 
 
