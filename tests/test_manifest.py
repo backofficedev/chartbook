@@ -633,7 +633,7 @@ class TestCatalogMembers:
 
 
 class TestWhatTheReleaseReviewFound:
-    """Found by the review before 0.3.0: a field of the wrong type was read as
+    """Found by the review before the release: a field of the wrong type was read as
     something else (a string as its letters), or fell over later with a
     traceback. Nothing is guessed: the error names the file, the table and
     the key, and says what to write."""

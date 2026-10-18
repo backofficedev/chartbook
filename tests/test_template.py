@@ -1092,42 +1092,6 @@ class TestTheQuestions:
         assert quick_start.index("source .venv/bin/activate") < quick_start.index("chartbook build -f")
         assert "uv run chartbook build -f" in readme
 
-    @pytest.mark.parametrize("manager", ["pip", "uv", "conda", "pixi"])
-    def test_the_readme_says_to_install_chartbook_from_github_until_the_next_release(
-        self, template_dir, temp_dir, manager
-    ):
-        """`chartbook init` renders the template from GitHub's main branch, which 0.2.0 cannot build."""
-        project = Path(generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": manager}))
-        readme = (project / "README.md").read_text()
-        # GitHub's main says 0.2.0 too, so pip must be told to replace the 0.2.0 the requirements installed
-        install = {
-            "pip": "pip install --force-reinstall",
-            "conda": "pip install --force-reinstall",
-            "uv": "uv add",
-            "pixi": "pixi add --pypi",
-        }[manager]
-        assert f'{install} "chartbook @ git+https://github.com/backofficedev/chartbook"' in readme
-        assert readme.index("git+https://github.com/backofficedev/chartbook") < readme.index("chartbook build -f")
-
-    @pytest.mark.parametrize(
-        "manager, install, installed",
-        [
-            ("pip", 'pip install --force-reinstall "chartbook @ git+', "pip install -r requirements.txt"),
-            ("conda", 'pip install --force-reinstall "chartbook @ git+', "conda activate"),
-            ("uv", 'uv add "chartbook @ git+', "uv sync"),
-            ("pixi", 'pixi add --pypi "chartbook @ git+', "Next steps:"),
-        ],
-    )
-    def test_next_steps_replace_chartbook_with_the_one_from_github(
-        self, template_dir, temp_dir, capfd, manager, install, installed
-    ):
-        """GitHub's main says 0.2.0 too: a plain `pip install` after the requirements' 0.2.0 does nothing."""
-        generate_project(template_dir, temp_dir, {**WITH_CHARTBOOK, "environment_manager": manager})
-        said = capfd.readouterr().out
-        steps = said[said.index("Next steps:"):]
-        assert install in steps
-        assert steps.index(installed) < steps.index(install) < steps.index("chartbook build -f")
-
     def test_without_chartbook_the_next_step_is_doit(self, template_dir, temp_dir, capfd):
         generate_project(template_dir, temp_dir, MINIMAL_CONTEXT)
         steps = capfd.readouterr().out.split("Next steps:")[1]
@@ -1138,9 +1102,6 @@ class TestTheQuestions:
     def test_the_floor_is_the_templates_version(self, temp_dir, manager, capfd):
         """`render` used to put ChartBook's version over the template's: cruft, which does not carry a
         private variable forward, then took the template's at `cruft update`, and the two disagreed.
-
-        And the step that installs ChartBook from GitHub is only for a
-        template of version 0.2.0, which the 0.2.0 on PyPI does not have.
         """
         from chartbook import scaffold
 
@@ -1154,8 +1115,6 @@ class TestTheQuestions:
         }[manager]
         for name, floor in floors:
             assert floor in (project / name).read_text(), name
-        assert "git+https://github.com/backofficedev/chartbook" not in (project / "README.md").read_text()
-        assert "git+https://github.com/backofficedev/chartbook" not in capfd.readouterr().out
 
     def test_the_template_is_of_the_version_of_the_chartbook_it_comes_with(self, template_dir):
         """So the floor is the rendering ChartBook's, and `cruft update` moves it to the template's: a

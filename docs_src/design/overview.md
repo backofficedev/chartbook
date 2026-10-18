@@ -6,7 +6,7 @@ never seen this project and has to continue building it. It says what ChartBook 
 it uses, what is built, what to build next and in what order, and where every decision is
 written down.
 
-Last revised 2026-10-12, after version 0.2.0, the index, declared models, and all five parts
+Last revised 2026-10-12 (Versions, 2026-10-18), after the 0.2.0 prepared that day and never published, the index, declared models, and all five parts
 of step 3: declared dependencies, the store, pinning, references to another pipeline's
 assets, and `git` dependencies. **Step 3 is built. The next step is 4**, running and build
 records.
@@ -90,10 +90,10 @@ Decided by the maintainer, 2026-10-12.
 
 - **The asset graph is one change, not a release per step.** The steps under "What to build
   next" do not each get a minor version. Do not bump the version in a pull request.
-- **0.2.0 is the working state** while that change is under way. What lands goes under
-  "Unreleased" in the changelog.
-- **When all of it is finished it is wrapped up, probably as 0.3.0.** When, and whether that is
-  the number, is the maintainer's call.
+- **0.2.0 is the release.** The asset graph, the store, the versioned catalog and the review
+  before the release ship together as 0.2.0, the first release since 0.1.1 (decided 2026-10-18;
+  the 0.2.0 prepared on 2026-10-12 was never published). Until it is published, what lands goes
+  under "Unreleased" in the changelog.
 - **1.0 is a long way off**, on purpose: there is room for many more changes before any promise
   of stability. Nothing here should be planned as "the last thing before 1.0".
 
@@ -116,7 +116,7 @@ and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.
 
 ## What is built
 
-As of 0.2.0, plus the index, declared models, declared dependencies, the store, pinning,
+As of 0.1.1 and the 0.2.0 prepared on 2026-10-12 (never published), plus the index, declared models, declared dependencies, the store, pinning,
 named scripts, `chartbook run` and snapshots, which came after it.
 
 | Capability | Where | Notes |
@@ -1627,8 +1627,9 @@ with the ChartBook of the same commit.
 4. **A project straight from the template fails `chartbook check` on one thing**: it has no
    `repo_url`, because it has no git remote yet. `chartbook init --github` gives it one.
    This was so before the move; the new test is what showed it.
-5. **The template asks for `chartbook>=0.1.0`.** A project made from it needs the release
-   that has `chartbook docs`. The number is the release's to set, and is not set here.
+5. **The template asks for `chartbook>=0.2.0`**, the version of the ChartBook it comes with (a
+   test keeps `_chartbook_version` equal to it): a project made from it needs the release that has
+   `chartbook docs`, and 0.2.0 is it.
 
 #### 4g. `--frozen`, and a store a team shares — as built
 
@@ -2141,9 +2142,9 @@ maintainer.
 | 2026-10-11 | The asset graph and the index. ChartBook publishes and never orchestrates | {doc}`asset-graph`, {doc}`index-schema` |
 | 2026-10-11 | Dataframes may live in databases; ChartBook substitutes names and never rewrites SQL | {doc}`data-access` |
 | 2026-10-12 | A registry is the first of exactly *three* ID components, so a dotted scope stays a scope | {doc}`references`, rule 7 |
-| 2026-10-12 | `repo_url` defaults to the git remote. "Code updated" comes from the last git commit and is shown only on the pipeline's page | Changelog 0.2.0 |
-| 2026-10-12 | Catalog builds are incremental by default, with no running server | Changelog 0.2.0 |
-| 2026-10-12 | Scratch files go in `<pipeline>/_data/_scratch/` | Changelog 0.2.0 |
+| 2026-10-12 | `repo_url` defaults to the git remote. "Code updated" comes from the last git commit and is shown only on the pipeline's page | Changelog, "Earlier in this release" |
+| 2026-10-12 | Catalog builds are incremental by default, with no running server | Changelog, "Earlier in this release" |
+| 2026-10-12 | Scratch files go in `<pipeline>/_data/_scratch/` | Changelog, "Earlier in this release" |
 | 2026-10-12 | The stability policy is one line: experimental, anything can change, breaking changes are in the changelog | {doc}`../reference/stability` |
 | 2026-10-12 | Asset names are **per kind**, not one namespace. Data is the spine | {doc}`references` |
 | 2026-10-12 | The kind goes in the address (`chart/gdp`), dataframe is the default, the four separators stay, and one parser produces a structured object | {doc}`references` |

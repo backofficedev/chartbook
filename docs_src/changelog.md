@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Read this first: upgrading from 0.2.0
+### Read this first: upgrading from 0.1.1
 
-The entries below are newest first, each written as its piece landed. Where a later entry changed what an earlier one says, the later one holds.
+This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and never published; what it held is at the end of this release's entries, under "Earlier in this release", and its breaking changes are in the list below. The entries are newest first, each written as its piece landed. Where a later entry changed what an earlier one says, the later one holds.
 
 **Breaking changes** (each is marked where an entry below describes it):
 
@@ -20,13 +20,14 @@ The entries below are newest first, each written as its piece landed. Where a la
 - `chartbook.markdown_generator` is removed; the site is written by `chartbook.writers.sphinx` (or `chartbook.writers.mkdocs`).
 - A `[pipelines]` entry with a key other than `path` and `disabled` is an error.
 - A dataframe, chart, notebook or note key must match `[A-Za-z0-9._-]+`, since it becomes part of an address; a key such as `"10y spread"` stops the manifest from loading.
-- `chartbook build` and `chartbook run` execute `[project] build`, which 0.2.0 only showed. In that build, a read of another pipeline that is not in `[dependencies]`, or that has no snapshot, is an error, where 0.2.0 read it through the catalog: declare it (`chartbook add`), and have its owner run `chartbook snapshot`.
-- `chartbook check` with no policy anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, and no `--policy`) now reports missing recommended fields as `warning:` lines and exits 0, where 0.2.0's `check` failed on them. CI that relied on that failure gives the pipeline a `[policy]`, or passes `--policy` with a file that has one.
-- `data.load(pipeline=…, dataframe=…)` and `data.get_data_path` now read the store first: the pipeline's pin where the caller's `[dependencies]` declare it, else its newest snapshot, and its own folder only when it has no snapshot, with a `WorkingVersionWarning` (an error in a build run by `chartbook build` or `chartbook run`), where 0.2.0 read the pipeline's file through the catalog.
+- `chartbook build` and `chartbook run` execute the build script (`[scripts] build`, or `[project] build`), which was only shown before. In that build, a read of another pipeline that is not in `[dependencies]`, or that has no snapshot, is an error, where before it was read through the catalog: declare it (`chartbook add`), and have its owner run `chartbook snapshot`.
+- `data.load(pipeline=…, dataframe=…)` and `data.get_data_path` now read the store first: the pipeline's pin where the caller's `[dependencies]` declare it, else its newest snapshot, and its own folder only when it has no snapshot, with a `WorkingVersionWarning` (an error in a build run by `chartbook build` or `chartbook run`), where 0.1.1 read the pipeline's file through the catalog.
 - ChartBook needs polars 1.20 or later (was 1.9), and now duckdb 1.4 or later and cookiecutter 2.2 or later.
+- From the 0.2.0 that was prepared and not published: the `[all]`, `[data]`, `[plotting]` and `[sphinx]` install extras are gone (`pip install chartbook` installs everything; drop the bracket from a requirement that has one). `chartbook create-data-glimpses` reads `chartbook.toml`, not `dodo.py`. A pipeline ID with a registry prefix (`charthub.example/acme/rates`) and `chartbook push` are reserved and refused. The package's default logos moved from `chartbook/assets/` to `chartbook/branding/`. Gone with them, unused: `parse_dodo_tasks()`, `create_xml_report()`, `plotting.configure(default_backend=…)` and the `PlottingHookSpec` hook specifications.
 
 **What later entries changed in earlier ones:**
 
+- `chartbook check`, new in this release, with no policy anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, and no `--policy`) now reports missing recommended fields as `warning:` lines and exits 0, where the entry below that introduces it has it fail on them. CI that relied on that failure gives the pipeline a `[policy]`, or passes `--policy` with a file that has one.
 - `pin --from-folder` and `update --from-folder` are removed. A pipeline reads another's snapshots, never its folder, except with a `WorkingVersionWarning` when it has none.
 - `store gc` keeps an unneeded snapshot for 7 days, not 30.
 - The store is set by `[store] url` (`[store] path` is still read, with a warning), and can be an S3 bucket or a synced folder that machines share.
@@ -67,7 +68,7 @@ With it, `--frozen` and a read through the lockfile now write this machine's not
 
 A new-user test of the getting-started page found that what it promised did not happen. `chartbook docs` in a project `chartbook init` had just made stopped on the notebook it declares, which nothing had built yet, and its hint offered `--no-strict`, which a lone pipeline refuses. Now a lone pipeline that has built none of the data, charts, notebooks and models it declares, as a new project or a fresh clone has not, is rendered all the same, with a warning that lists them and says that `chartbook build` builds them. Each keeps its record in `index.json`, without a hash, and its provenance panel says "not built"; a notebook's page, a chart's frame and full-screen link, and a dataframe's glimpse say "Not built yet" and how to build it, and the dataframe's page then has no dates and no download link. A version's site, built from the store, shows any output its snapshot did not build that way, built in part or not, saying that it was not built in that version, with no advice; before, such a version's site was not built, and the catalog's link to it gave the error's advice to run `chartbook build`. A pipeline built in part (a clone of one that commits some of its outputs is one), missing a write-up, a note or its README, or with an output that is there and cannot be read (named, and "could not be read" in a provenance panel), still stops the render; so does one that has built nothing, when `--strict` is given on the command line, and `chartbook build`, which has just run the build, makes no exception. The template keeps declaring its notebook, since that is how a manifest names what its build makes. A lone pipeline's error about missing files no longer suggests `--no-strict`; when an output is missing, it says that `chartbook build` makes it, or, after a build, that the build did not, and that a task the build tool does not run by default is not built. With them, three smaller things: with `enable_data_download`, a dataframe that is a folder of parts, a glob, a table or a query has no download link, which went nowhere; a date that cannot be read is left out of a dataframe's table, which said "None"; and a glob that matches only folders counts as missing, as the index already counted it. `chartbook check` in such a project says each output is "not built yet", not "file not found", and ends with what builds them (`chartbook build`, when there is a build script for it to run) and that the same check with `--skip-outputs` checks the rest; it still exits nonzero. A pipeline that has built some of its outputs and lacks others, and a catalog, are told a file is not found, as before.
 
-The template changed with it. LaTeX reports are off by default, since they need TeX, and a project that has them builds without TeX, saying that the reports were not compiled. Its `dodo.py` no longer renders the site, which `chartbook build` renders after it, and `doit` alone runs every task defined above the `default_tasks` block at its end but the tests, which are `doit run_pytest`: the first build of a new project ran pytest and LaTeX and rendered the site twice, and now runs the notebook and renders once. The 19 questions say what they ask, and the second, the one a user answered with a project name when it was asked as `project_slug`, says it is the folder name, made from the name, and that Enter keeps it; a name that cannot be a folder name says what to type. When the template cannot be rendered, `chartbook init` says last what to do about a refused folder name, after the template's own message, with no traceback; a folder that is there already is said as that, and nothing is changed. The next steps it prints name `chartbook docs`, `chartbook build -f`, `chartbook browse` and `chartbook check`. Its environment files ask for the version of the ChartBook that rendered it or later (`chartbook>=0.2.0` from a ChartBook that says 0.2.0), and for a Polars that ChartBook can use (`>=1.20`). Until the next release, the ChartBook with this template is the one on GitHub, which calls itself 0.2.0 like the release on PyPI that has none of it, so a project it makes needs it in its environment too, and pip keeps an installed 0.2.0 unless told to replace it: the getting-started page, and for a project rendered by 0.2.0 its README and the next steps `chartbook init` prints, say `pip install --force-reinstall "chartbook @ git+https://github.com/backofficedev/chartbook"` (`uv add` in a uv project, `pixi add --pypi` in a pixi one). The getting-started page now says what is asked and what each step does.
+The template changed with it. LaTeX reports are off by default, since they need TeX, and a project that has them builds without TeX, saying that the reports were not compiled. Its `dodo.py` no longer renders the site, which `chartbook build` renders after it, and `doit` alone runs every task defined above the `default_tasks` block at its end but the tests, which are `doit run_pytest`: the first build of a new project ran pytest and LaTeX and rendered the site twice, and now runs the notebook and renders once. The 19 questions say what they ask, and the second, the one a user answered with a project name when it was asked as `project_slug`, says it is the folder name, made from the name, and that Enter keeps it; a name that cannot be a folder name says what to type. When the template cannot be rendered, `chartbook init` says last what to do about a refused folder name, after the template's own message, with no traceback; a folder that is there already is said as that, and nothing is changed. The next steps it prints name `chartbook docs`, `chartbook build -f`, `chartbook browse` and `chartbook check`. Its environment files ask for the version of the ChartBook that rendered it or later (`chartbook>=0.2.0` from a ChartBook that says 0.2.0), and for a Polars that ChartBook can use (`>=1.20`). The getting-started page now says what is asked and what each step does.
 
 **`chartbook init` renders the template that came with the installed ChartBook**, asked for by the maintainer: before, it rendered whatever was on GitHub's main branch, which could be ahead of or behind the ChartBook rendering it. A build hook, `hatch_build.py`, puts the files git tracks in `template/` into the wheel as `chartbook/template` and into the sdist as `template/` (a wheel built from the sdist takes the sdist's), so nothing git ignores there is shipped; a source checkout, an editable install among them, renders the same tracked files of its `template/` (`chartbook.scaffold.find_template`). There are no release tags to pin to, so the commit is recorded instead: built from a checkout, the hook writes the commit to a temporary folder, never into the source tree, and puts it in as `src/chartbook/built_from.txt` in the sdist, where a wheel built from the sdist finds it, and as `chartbook/built_from.txt` in the wheel, over any stray copy in the tree; built from an sdist, the sdist's own file ships. It records no commit for a `template/` with changes git has not committed to tracked files (an untracked file there is never shipped, and does not count). A folder with a `.git` that git cannot read, or a copy with neither a `.git` nor an sdist's `PKG-INFO`, warns and ships `template/` as it is on disk with an empty `built_from.txt`, so a stray one in the tree never passes for the commit. With `CHARTBOOK_BUILD_REQUIRE_GIT=1`, which `doit hatch_build` sets for a release (the contributing page says so), those stop the build, and so do a `template/` with changes git has not committed and an sdist that records no commit: a release always records its commit. An sdist is told by its `PKG-INFO` before git is asked, so one unpacked into a repository of its own ships its own commit, not that repository's. A source checkout is asked with git for its `HEAD`, and has none when its `template/` has such changes (`chartbook.scaffold.template_source`); one git cannot read, or a copy of a checkout with neither a `.git` nor an sdist's `PKG-INFO`, is not rendered from, since which of its files git tracks cannot be told, and the command says what to do. The version is not touched. The template is rendered with cookiecutter, with no network, since cruft would clone it with git and a wheel's folder is not a repository, and `.cruft.json` is written as cruft writes it (with no `skip`), naming the template on GitHub, its `template` folder and that commit, so `cruft update` and `cruft check` follow the template from there; init says when that commit is in no tag, and on no branch of a remote that is the template's repository, of the checkout it runs from, so may not be on GitHub. With no commit known there is no `.cruft.json`, since cruft takes a file naming none for up to date and never updates it, and init says why none is known and prints the `cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit> --no-input --extra-context '…'` that makes one once the commit is known, with the answers given at its questions, so that none is typed differently. Everything rendered can be written by its owner, though the installed template be read-only. With it, an older fault of the build: `packages = ["src/chartbook"]` and a `sources` remapping set for every target made the sdist strip `src/`, so a wheel built from the sdist (by `pip install --no-binary`, a conda-forge recipe, a distribution's package) had no ChartBook code in it. Only the wheel collapses `src/` now, by its own `packages`; the sdist keeps `src/chartbook/`, so a wheel built from it is the wheel built from the checkout. The environment files ask for the template's private variable `_chartbook_version`, whose default a test keeps equal to ChartBook's version, so that `cruft update` (which does not carry a private variable forward) moves the floor to the template's version. `cookiecutter>=2.2` is a dependency of its own now, since `chartbook init` uses it directly. Every check before rendering, the template's messages, the next steps, `--git` and `--github` are as they were; the stand-in for finding which folder cruft had made is gone, since rendering says which.
 
@@ -662,11 +663,11 @@ The recommendation that goes with this: give columns code-friendly, SQL-compatib
 - A `[policy]` table in a *pipeline's* `chartbook.toml` crashed `chartbook docs` (then called `chartbook build`) and `chartbook check` with `KeyError`. It is now read the way a catalog's is, and says what that pipeline holds itself to when it is built or checked alone; inside a catalog, the catalog's policy still decides. A `strict` policy's message no longer says "Catalog policy" when the policy is a pipeline's.
 - Two example dataframes declared `date_col = "date"` when their date columns are `DATE` and `Date`. The page generator swallowed the mismatch, and their pages showed `None` for "Data available up to". The manifests now name the columns, and building the index warns when a `date_col` names no column. That warning then found a second problem: the FRED example's live download left its date index unnamed, so the column existed only in the test suite's stand-in data. The pull script now names it.
 
-## [0.2.0] - 2026-10-12
+### Earlier in this release: prepared as 0.2.0 on 2026-10-12, and not published
 
 Tools around the manifest: a CI gate, paths you can ask for, freshness on every page, incremental builds, and a scaffolder that can put a new project on GitHub. The breaking changes are marked as such. ChartBook is still {doc}`experimental <reference/stability>`.
 
-### Added — `chartbook check`, the CI gate
+#### Added — `chartbook check`, the CI gate
 
 `chartbook check` exits nonzero when a project is broken or non-compliant, and zero when it is healthy. It reports fields the policy requires that are missing or empty, declared paths (`path`, `docs_path`, `readme`, `logo`, `favicon`) that point at no file, and dataframes whose `license_expiration` has passed or falls within `--within` days (default 30). Every finding is one line naming the `chartbook.toml`, the table and the field.
 
@@ -678,7 +679,7 @@ Run in a catalog, it checks every member pipeline against the catalog's `[policy
 
 The example projects now set `repo_url` (required by the default policy), and `examples/dodo.py` runs `chartbook check` on the example catalog.
 
-### Added — `chartbook path`, `chartbook.assets` and `data.path()`
+#### Added — `chartbook path`, `chartbook.assets` and `data.path()`
 
 A build definition or a script can now ask the manifest where an asset belongs instead of repeating the path. There is one general function and one for the common case:
 
@@ -700,7 +701,7 @@ The folder of default logos inside the package moved from `chartbook/assets/` to
 
 `data.scratch()` completes the set: it returns `_data/_scratch/` inside the current pipeline, created on first use, for throwaway files that are not assets. The directory ignores itself in git, and nothing documents, publishes or depends on what is in it.
 
-### Changed — **breaking: data glimpses come from the manifest, not `dodo.py`**
+#### Changed — **breaking: data glimpses come from the manifest, not `dodo.py`**
 
 `chartbook create-data-glimpses` no longer imports `dodo.py` and calls its task functions to find data files. It reads `chartbook.toml` and summarizes the dataframes declared there, so a project built with Snakemake, Make or plain scripts gets the same report as one built with doit — previously the command failed with `No dodo.py file found`.
 
@@ -714,7 +715,7 @@ What this changes for existing users:
 
 `create_data_glimpses.parse_dodo_tasks()` and its helpers are removed.
 
-### Changed — registry-prefixed IDs and `chartbook push` are reserved
+#### Changed — registry-prefixed IDs and `chartbook push` are reserved
 
 Two pieces of future syntax are claimed now, while claiming them costs nothing.
 
@@ -722,13 +723,13 @@ A pipeline ID qualified with a registry — `charthub.example/acme/rates`, `loca
 
 `chartbook publish` keeps its one meaning, staging a pipeline's files into a directory, and its help now says so. Sending a pipeline to a registry will be a separate verb, `chartbook push`; the command exists (hidden from `--help`) only to say it is reserved and to point at `publish`.
 
-### Added — `chartbook init --git` and `--github`
+#### Added — `chartbook init --git` and `--github`
 
 `chartbook init` can now leave you with a repository rather than just a directory. `--git` runs `git init` in the new project and makes an initial commit, on a branch named `main` unless your git configuration says otherwise. `--github` does that, then creates a GitHub repository for it with `gh repo create`, adds it as `origin`, and pushes — private by default, `--public` to override. Both are off by default.
 
 `--github` uses your existing `gh` login and never prompts for one. Everything it depends on is checked before the template is rendered — `git` and `gh` on `PATH`, a git identity for the commit, `gh` logged in — so a missing piece stops the command with the fix named and nothing created. The new project's directory is identified after `cruft` returns (it is named by an answer at the prompt), not guessed. After `--github` the `origin` remote exists, so the pipeline's ID is scoped (`owner/project`) from its first build; the command prints it.
 
-### Added — data freshness on every asset page
+#### Added — data freshness on every asset page
 
 Dataframe and chart pages now say how fresh they are, directly under the title, in plain relative wording: a dataframe page says "Data updated 2 days ago", and a chart page says "Chart updated 2 days ago · Data updated 2 days ago", so a chart rendered before its data was last refreshed is visible at a glance. Hovering shows the exact time. A chart's date in listings is now when the chart itself was written.
 
@@ -740,21 +741,21 @@ Because the site is static, the page carries the timestamp and a small bundled s
 
 Fixed along the way: a chart backed by a partitioned (glob-path) dataframe had its data time stamped with the moment of the build.
 
-### Added — documentation for writing a plotting backend
+#### Added — documentation for writing a plotting backend
 
 A new guide, *Writing a Plotting Backend*, documents the interface a third-party plotting backend implements: the `PlottingBackend` protocol and its `BaseBackend` starting point, what each `create_*` method is handed (`ChartConfig`, `OverlayConfig` and `DualAxisConfig`, field by field), the `chartbook_plotting` entry-point group, and a complete Vega-Lite backend in one dependency-free file that ChartBook's own tests run through a real entry point.
 
 Three things about the machinery itself were fixed or removed along the way. An entry point (or `register_backend()`) may now name a backend **class** as well as an instance; naming a class used to register something unusable. A third-party entry point that is not a backend is skipped with a warning instead of breaking the built-in ones. And two pieces of dead code are gone: the pluggy hook specifications in `PlottingHookSpec`, which nothing ever called, and `configure(default_backend=...)`, which nothing ever read. A registered backend is still reachable through `get_backend()` and not yet selectable from `plotting.line()` and friends, which always use the built-in `plotly` and `matplotlib` backends.
 
-### Removed — **breaking: the `[all]`, `[data]`, `[plotting]` and `[sphinx]` extras**
+#### Removed — **breaking: the `[all]`, `[data]`, `[plotting]` and `[sphinx]` extras**
 
 The four install extras that became no-op aliases in 0.1.0 are gone, after the one release of notice they were given. `pip install chartbook` has installed everything since 0.1.0 and still does; drop the bracket from any requirement that has one (`chartbook[all]>=0.0.14` → `chartbook>=0.0.14`). pip and uv both still install the package for such a requirement rather than failing — uv warns that the extra does not exist — so nothing breaks at install time, but the bracket no longer names anything. The `[dev]` extra for contributors is unchanged.
 
-### Added — a note on stability
+#### Added — a note on stability
 
 {doc}`reference/stability` says plainly that ChartBook is experimental and anything can change between releases. Breaking changes are listed in this changelog with what to do about each. A real stability promise will come with 1.0.
 
-### Added — incremental builds and a watch mode
+#### Added — incremental builds and a watch mode
 
 `chartbook build --incremental` keeps the intermediate Sphinx project in `_docs/` and makes the next build redo only what changed. **`chartbook catalog build` now does this by default** — its working files live beside the catalog in `~/.chartbook/`, not in anyone's repository — and takes `--clean` to discard them and rebuild everything. A pipeline none of whose files changed — its manifest, `src/`, `docs_src/`, README, and every data file, chart and notebook it declares, compared by modification time and size — is not regenerated. A page whose content comes out the same is left untouched, so Sphinx, whose cache is now kept, does not read it again. If no page changed, Sphinx is not run at all. Each build prints one line saying what it redid.
 
@@ -766,7 +767,7 @@ A plain `chartbook build` is unchanged: a clean build that leaves nothing behind
 
 Fixed along the way, because it defeated Sphinx's cache: the generated `conf.py` now sets `fontawesome_included` explicitly. The themes switched it on mid-build, which Sphinx read as a changed configuration and answered by re-reading every page on every run.
 
-### Changed — `repo_url` and "code updated" come from git
+#### Changed — `repo_url` and "code updated" come from git
 
 Two things that should never have needed filling in by hand now come from the repository.
 
@@ -774,7 +775,7 @@ Two things that should never have needed filling in by hand now come from the re
 
 The "Code updated" time on a pipeline's front page (and "Date of Last Code Update") is the time of the last commit that touched `src/`, `docs_src/` or `chartbook.toml`, when those are committed and unmodified. It was the newest file modification time, which on a fresh clone is the moment of the checkout — so every site built in CI claimed its code had changed just now. With uncommitted changes, or outside a git repository, the modification time is still used. Only a docs build asks git; loading a manifest (`data.load()`, `chartbook ls`) does not.
 
-### Fixed
+#### Fixed
 
 - `chartbook build --no-strict` on a single pipeline with a missing file crashed with `UnboundLocalError`. It now reports the missing files and exits cleanly; skipping only makes sense in a catalog, which has other pipelines left to build.
 - Sphinx is now run as `python -m sphinx` with the interpreter that is running ChartBook. It used to run whichever `sphinx-build` came first on `PATH`, which could be a different Sphinx from a different environment.
@@ -785,7 +786,7 @@ The "Code updated" time on a pipeline's front page (and "Date of Last Code Updat
 - A pipeline loaded from the relative path `.` derived the name `pipeline` instead of its directory's name, because `Path(".")` has no name. The directory is now resolved first.
 - `chartbook build --project-dir PATH` failed with `TemplateNotFound` unless it was run from inside the project, and `--temp-docs-src-dir` failed with any name other than the default. The pipeline's front page included a template by a path that spelled out `_docs_src/`, which only resolved when a directory of that name sat inside the project. It now asks for the template by name, as the guide already told people writing their own templates to do.
 
-### Removed
+#### Removed
 
 - `create_data_glimpses.create_xml_report()`, which nothing called.
 
