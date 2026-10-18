@@ -1962,8 +1962,61 @@ class TestARecordWrittenOnWindows:
         assert files_read({**record, "location": {"kind": "file", "path": "\\"}}) is None
 
 
+    def test_the_reader_opens_the_file_not_the_folder(self, tmp_path):
+        """Found by a reviewer of the fix: the record named the file by its last part, and the reader
+        still by the whole `_output\\m.json`, so it found no such file and fell back to the folder."""
+        from chartbook import resolve as resolve_module
+
+        store = FolderStore(tmp_path / "store")
+        (tmp_path / "treasury.parquet").write_bytes(b"x" * 7)
+        stored = store.put(tmp_path / "treasury.parquet")
+        record = {
+            "id": "acme/rates:treasury", "ref": {"kind": "dataframe", "name": "treasury"},
+            "location": {"kind": "file", "path": "./_data\\treasury.parquet"}, "size_bytes": 7, "content_hash": stored.content_hash,
+        }
+        location = resolve_module._held(store, record)
+        assert Path(location.path) == Path(stored.path) / "treasury.parquet"
+        assert Path(location.path).is_file()
+
+    def test_a_file_named_with_a_backslash_is_stored_and_read_by_what_follows_it(self, tmp_path):
+        """The mirror case, POSIX only: a file whose own name holds a backslash is stored under the
+        part after it, so the record, the reader and the store name it alike everywhere."""
+        from chartbook import resolve as resolve_module
+        from chartbook.snapshot import files_read, not_whole
+
+        if os.name == "nt":
+            pytest.skip("a backslash is a separator on Windows")
+        store = FolderStore(tmp_path / "store")
+        odd = tmp_path / "a\\b.parquet"
+        odd.write_bytes(b"y" * 3)
+        stored = store.put(odd)
+        assert [Path(f).name for f in (stored.files or ())] in ([], ["b.parquet"]) and (Path(stored.path) / "b.parquet").is_file()
+        record = {
+            "id": "acme/rates:odd", "ref": {"kind": "dataframe", "name": "odd"},
+            "location": {"kind": "file", "path": str(odd)}, "size_bytes": 3, "content_hash": stored.content_hash,
+        }
+        assert files_read(record) == {"b.parquet": 3}
+        assert not_whole(store, record) is None
+        assert Path(resolve_module._held(store, record).path) == Path(stored.path) / "b.parquet"
+
+
 class TestANoteOrARecordHalfSynced:
     """A file a sync service delivered before its bytes: gc stops, and says what to do."""
+
+    def test_a_note_of_another_shape_is_said_as_such_not_as_a_sync(self, drive):
+        """Found by a reviewer of the fix: well-formed JSON of the wrong shape got the sync remedy,
+        which misleads on the cause; the remedy (remove it, the next pin writes it) is the same."""
+        work, machine, rates = drive
+        snapshot.make(rates)
+        forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        store = default_store()
+        (note,) = (store.root / "roots").glob("*.json")
+        note.write_text('{"lockfile": "/x"}')
+        with pytest.raises(StoreError, match="not a note this version of ChartBook reads") as raised:
+            lock.plan_gc(store)
+        assert "sync that has not finished" not in str(raised.value)
+        assert f"remove roots/{note.name}" in str(raised.value)
 
     def test_an_empty_note_says_to_wait_for_the_sync(self, drive):
         work, machine, rates = drive

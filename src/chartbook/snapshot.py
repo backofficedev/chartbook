@@ -97,7 +97,7 @@ from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, declared_files
-from chartbook.store import Store, StoreError, default_store
+from chartbook.store import Store, StoreError, declared_name, default_store
 from chartbook.utils import is_glob_pattern
 
 #: The version of a snapshot record's envelope.
@@ -450,17 +450,6 @@ def files_read(record: dict) -> Optional[dict]:
         return None
     name = declared_name(declared)
     return {name: size} if name else None
-
-
-def declared_name(declared: str) -> Optional[str]:
-    """The name of the file a declared path names: its last part, with ``/`` and ``\\`` both separating parts.
-
-    A record may have been written on Windows, where the manifest's path is
-    ``_output\\m.json``; the object holds ``m.json`` on every system, and so
-    does :func:`safe_relative` read the path. None for a path of no name.
-    """
-    parts = [part for part in re.split(r"[\\/]+", declared.strip()) if part not in ("", ".")]
-    return parts[-1] if parts else None
 
 
 def improper_path(record: dict) -> Optional[str]:

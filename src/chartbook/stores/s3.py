@@ -779,7 +779,7 @@ class S3Store(Store):
             except (ValueError, KeyError, TypeError) as error:
                 detail = "the file is empty" if body == b"" else str(error)
                 raise StoreError(
-                    f"Cannot read {self}/{entry['Key']}: {detail}.{_unreadable_note_remedy(name)}"
+                    f"Cannot read {self}/{entry['Key']}: {detail}.{_unreadable_note_remedy(name, error)}"
                 ) from None
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 

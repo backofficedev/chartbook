@@ -556,14 +556,22 @@ def _read_note(note: Path) -> Optional[Root]:
         return None
 
 
-def _unreadable_note_remedy(name: str) -> str:
+def _unreadable_note_remedy(name: str, error: Optional[Exception] = None) -> str:
     """What to do about a file under ``roots/`` that cannot be read.
 
-    A sync that has not finished is the likeliest cause, for a note under
-    its proper name as for a sync service's copy of one: a file can be there
-    before its bytes. Nothing is removed from the store until it is read or
-    gone, since it may be the only record of a machine's pins.
+    A sync that has not finished is the likeliest cause when the file cannot
+    be opened or is not JSON (a file can be there before its bytes), for a
+    note under its proper name as for a sync service's copy of one. A note
+    that is JSON of another shape is not one this version reads, and is said
+    so. Nothing is removed from the store until it is read or gone, since it
+    may be the only record of a machine's pins.
     """
+    if is_root_name(name) and error is not None and not isinstance(error, (OSError, json.JSONDecodeError)):
+        return (
+            f" It is not a note this version of ChartBook reads: remove roots/{name}; the next `chartbook pin`, "
+            f"`chartbook update`, `--frozen` or read through its lockfile writes it again. Nothing is removed "
+            f"from the store until it is read or gone"
+        )
     if is_root_name(name):
         return (
             f" A sync that has not finished is the likeliest cause (a file there before its bytes): run this "
@@ -586,6 +594,22 @@ def unreadable_detail(path: Path, error: Exception) -> str:
     except OSError:
         pass
     return str(error)
+
+
+def declared_name(declared: str) -> Optional[str]:
+    """The name a declared file has inside its object: the last part of its path, ``/`` and ``\\`` both separating parts.
+
+    One rule for the three that must agree: :meth:`Store.put`, which names
+    the file in the object; a record's list of what a reader opens
+    (``chartbook.snapshot.files_read``); and the reader
+    (``chartbook.resolve._held``). A manifest written on Windows says
+    ``_output\\m.json``, and the object holds ``m.json`` on every system;
+    a file whose own name holds a backslash, which only POSIX allows, is
+    stored under what follows it, so that it reads the same everywhere.
+    None for a path of no name.
+    """
+    parts = [part for part in re.split(r"[\\/]+", str(declared).strip()) if part not in ("", ".")]
+    return parts[-1] if parts else None
 
 
 def plain_parts(relative: str) -> Optional[list[str]]:
@@ -1056,13 +1080,16 @@ class FolderStore(Store):
             root = os.path.abspath(found.root)
             for file in found.files:
                 relative = os.path.relpath(os.path.abspath(file), root)
+                if found.single:
+                    # Under the one name every system reads it by (declared_name)
+                    relative = declared_name(relative) or relative
                 destination = staging / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 # The real file, so the store never holds a link to a link
                 used.add(_link(os.path.realpath(file), str(destination), links))
 
             if found.single:
-                content = hashing.hash_file(staging / found.files[0].name)
+                content = hashing.hash_file(staging / (declared_name(found.files[0].name) or found.files[0].name))
             else:
                 content = hashing.hash_directory(staging)
             final = self.object_path(content.content_hash)
@@ -1311,7 +1338,7 @@ class FolderStore(Store):
                     found.append(read_root(json.load(f), note.name))
             except (OSError, ValueError, KeyError, TypeError) as error:
                 raise StoreError(
-                    f"Cannot read {self._shown(note)}: {unreadable_detail(note, error)}.{_unreadable_note_remedy(note.name)}"
+                    f"Cannot read {self._shown(note)}: {unreadable_detail(note, error)}.{_unreadable_note_remedy(note.name, error)}"
                 ) from None
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
 
