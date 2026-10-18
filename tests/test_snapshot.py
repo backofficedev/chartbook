@@ -1329,3 +1329,74 @@ class TestNamesAndAggressiveGc:
         assert plan.aggressive and [t for t, _ in plan.snapshots_delete] == [release]
         removed, _ = lock.run_gc(plan, default_store())
         assert removed == 1 and not release.path.exists()
+
+
+class TestARecordThatWouldReachOutsideItsObject:
+    """A record may come from anyone who can write to a store: what a reader lays onto the object must be plain."""
+
+    @staticmethod
+    def _document(record):
+        return {
+            "schema": snapshot.SCHEMA,
+            "root": "acme/evil",
+            "code": {"commit": "c" * 40},
+            "made_at": "2026-10-18T10:00:00.000000Z",
+            "records": [record],
+        }
+
+    @staticmethod
+    def _record(location, **more):
+        return {
+            "kind": "Dataframe",
+            "version": "chartbook/v1",
+            "id": "acme/evil:x",
+            "ref": {"scope": "acme", "pipeline": "evil", "kind": "dataframe", "name": "x"},
+            "pipeline": "acme/evil",
+            "location": location,
+            "content_hash": "sha256:" + "a" * 64,
+            **more,
+        }
+
+    def _written(self, tmp_path, record):
+        path = tmp_path / "20261018T100000.000000Z.json"
+        path.write_text(json.dumps(self._document(record)))
+        return path
+
+    def test_a_glob_that_climbs_after_its_wildcard_is_refused(self, tmp_path):
+        record = self._record({"kind": "file", "path": "_data/*/../../../../outside/*.parquet"})
+        with pytest.raises(SnapshotError, match=r"acme/evil:x.*not plain after its wildcard"):
+            snapshot.read(self._written(tmp_path, record))
+
+    def test_a_listed_file_that_is_not_plain_is_refused(self, tmp_path):
+        record = self._record(
+            {"kind": "file", "path": "_data/parts"}, files=[{"path": "../../outside/x.parquet", "size_bytes": 8}]
+        )
+        with pytest.raises(SnapshotError, match="not a plain path in its object"):
+            snapshot.read(self._written(tmp_path, record))
+
+    def test_a_plain_glob_a_climbing_prefix_and_plain_files_are_read(self, tmp_path):
+        # A glob's fixed prefix may climb (the manifest's path is the real location); only its tail is laid onto the object
+        for record in (
+            self._record({"kind": "file", "path": "_data/*/part-*.parquet"}),
+            self._record({"kind": "file", "path": "../shared/*.parquet"}),
+            self._record({"kind": "file", "path": "_data/parts"}, files=[{"path": "year=2024/a.parquet", "size_bytes": 8}]),
+            self._record({"kind": "table", "source": "db", "identifier": "t"}),
+        ):
+            assert "acme/evil:x" in snapshot.read(self._written(tmp_path, record)).assets.values().__iter__().__next__()["id"]
+
+    def test_a_name_one_system_reads_otherwise_is_that_systems_concern(self, tmp_path):
+        """Found by a reviewer: judged by the reader's own rule, a colon in a listed file's name
+        (`part-2024-01-01T00:00`) made the whole snapshot unreadable on Windows, where before only
+        that asset's read failed there. The snapshot's rule is the same on every system."""
+        files = [{"path": "part-2024-01-01T00:00", "size_bytes": 8}, {"path": "a\\b.parquet", "size_bytes": 1}]
+        record = self._record({"kind": "file", "path": "_data/parts"}, files=files)
+        assert snapshot.improper_path(record) is None
+        assert snapshot.read(self._written(tmp_path, record)).pipeline == "acme/evil"
+        climbing = self._record({"kind": "file", "path": "_data/parts"}, files=[{"path": "a\\..\\b.parquet", "size_bytes": 1}])
+        assert "not a plain path" in snapshot.improper_path(climbing)
+
+    def test_improper_path_says_why(self):
+        assert snapshot.improper_path(self._record({"kind": "file", "path": "_data/*/../x/*.parquet"})) == (
+            "has the path '_data/*/../x/*.parquet', which is not plain after its wildcard"
+        )
+        assert snapshot.improper_path(self._record({"kind": "file", "path": "_data/x.parquet"})) is None
