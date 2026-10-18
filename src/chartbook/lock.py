@@ -80,7 +80,7 @@ from chartbook.manifest import (
 from chartbook.refs import AssetRef
 from chartbook.resolve import MANIFEST_NAME, _same_directory, declared_files, locate_pipeline
 from chartbook.snapshot import asset_record as _asset_record
-from chartbook.store import ReadOnlyStoreError, Store, StoreError, default_store
+from chartbook.store import ObjectNotFoundError, ReadOnlyStoreError, Store, StoreError, default_store
 
 #: The lockfile's name, beside ``chartbook.toml``.
 LOCK_FILE = "chartbook.lock"
@@ -155,6 +155,39 @@ class Lock:
             and _FULL_COMMIT.match(entry["location"]["commit"])
             and isinstance(entry.get("snapshot"), str)
         }
+
+    def labelled(self) -> set[tuple[str, str, str, str]]:
+        """The model versions it pins by label, each ``(commit, made_at, name, content_hash)``: what a note of it records for ``store gc``.
+
+        A label (``rates:model/m@champion``) resolves to a version that an
+        older snapshot of the pipeline may hold, not the one the dependency
+        is pinned to by its moment, so ``gc`` keeps a snapshot holding each
+        (:func:`chartbook.snapshot.plan_removals`). The moment is the
+        dependency's, so that the version is looked for among that
+        pipeline's snapshots; empty for a pin that names no snapshot.
+        """
+        from chartbook.store import _FULL_COMMIT
+
+        moments = {
+            entry["id"]: (entry["location"]["commit"], entry["snapshot"])
+            for entry in self.dependencies
+            if isinstance(entry.get("id"), str)
+            and isinstance(entry.get("location"), dict)
+            and isinstance(entry["location"].get("commit"), str)
+            and _FULL_COMMIT.match(entry["location"]["commit"])
+            and isinstance(entry.get("snapshot"), str)
+        }
+        found = set()
+        for record in self.assets.values():
+            if not record.get("content_hash") or not (record.get("ref") or {}).get("rev"):
+                continue
+            try:
+                name = snapshot.local_name(record)
+            except (KeyError, TypeError, ValueError):
+                continue
+            commit, made_at = moments.get(record.get("pipeline"), ("", ""))
+            found.add((commit, made_at, name, record["content_hash"]))
+        return found
 
     def assets_of(self, dependency: str) -> dict[str, dict]:
         """The records of one dependency's assets, by asset ID."""
@@ -1164,7 +1197,7 @@ def _sync_now(
     noted_as = _noted_as()
     try:
         if hashes:
-            store.add_root(lock_path, hashes, after.snapshots(), machine=noted_as)
+            store.add_root(lock_path, hashes, after.snapshots(), machine=noted_as, labelled=after.labelled())
         else:
             store.remove_root(lock_path, machine=noted_as)
     except (OSError, StoreError) as error:
@@ -1285,7 +1318,7 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
     """
     from chartbook.config import without_credentials
 
-    hashes, snapshots = locked.hashes(), locked.snapshots()
+    hashes, snapshots, labelled = locked.hashes(), locked.snapshots(), locked.labelled()
     if not hashes:
         return False, ""
     noted_as = _noted_as()
@@ -1296,9 +1329,11 @@ def note_this_machine(lock_path: Path, locked: Lock, store: Store) -> tuple[bool
             and set(before.hashes) == hashes
             and before.snapshots is not None
             and set(before.snapshots) == snapshots
+            and before.labelled is not None
+            and set(before.labelled) == labelled
         ):
             return False, ""
-        store.add_root(lock_path, hashes, snapshots, machine=noted_as)
+        store.add_root(lock_path, hashes, snapshots, machine=noted_as, labelled=labelled)
     except Exception as error:  # noqa: BLE001 - a note is best effort, whatever the store raised
         return False, without_credentials(str(error))
     return True, ""
@@ -2575,9 +2610,12 @@ def plan_gc(
 ) -> GcPlan:
     """Work out what a store can let go of. Nothing is removed.
 
-    First the snapshots: one is kept if a lockfile pins it, if it is the
-    newest of its pipeline, if a label points at a model version in it, or
-    if it was made in the last *keep_days* days; and with *keep_lineage*, if
+    First the snapshots: one is kept if a lockfile pins it, if a lockfile
+    pins a model version by its label and it is the newest holding that
+    version (a label resolves to a version an older snapshot may hold, which
+    the pinned moment alone would not keep), if it is the newest of its
+    pipeline, if a label points at a model version in it, or if it was made
+    in the last *keep_days* days; and with *keep_lineage*, if
     a snapshot kept for any of these was made from it (or from a label
     pointing into it), as far up as that goes
     (:func:`chartbook.snapshot.plan_removals`). Then the objects: one is
@@ -2627,6 +2665,8 @@ def plan_gc(
     hashes_noted: set[str] = set()
     from chartbook.store import this_machine
 
+    labelled: dict[tuple[str, str, str, str], str] = {}
+
     def read_too(lockfile: Path) -> Optional[Lock]:
         """Add what a lockfile here pins now to what is kept; the lockfile, or None if there is none."""
         found = read_lock(lockfile)
@@ -2637,18 +2677,24 @@ def plan_gc(
             commit = entry.get("location", {}).get("commit")
             if commit and entry.get("snapshot"):
                 pinned_snapshots.add((commit, entry["snapshot"]))
+        # A label resolves to a version an older snapshot may hold: a
+        # snapshot holding each is kept, as the pinned moment's is
+        for version in found.labelled():
+            labelled.setdefault(version, "a lockfile pins a labelled version in it")
         return found
 
     noted: dict[tuple[str, str], str] = {}
 
     def keep_noted(root, why: str, fallback: set, hashes: Optional[set] = None) -> None:
-        """Keep what a note recorded: its objects, and the snapshots it pins (or, for a note that names none, by its objects)."""
+        """Keep what a note recorded: its objects, the snapshots it pins (or, for a note that names none, by its objects), and a snapshot holding each version it pins by label."""
         keep.update(root.hashes)
         if root.snapshots is not None:
             for pair in root.snapshots:
                 noted.setdefault(pair, why)
         else:
             fallback.update(root.hashes if hashes is None else hashes)
+        for version in root.labelled or ():
+            labelled.setdefault(version, why.replace("pins it", "pins a labelled version in it"))
 
     # A note only ever adds to what is kept: what it recorded at its
     # lockfile's last pin is kept, and reading the lockfile as it is now
@@ -2722,6 +2768,7 @@ def plan_gc(
         snapshots = snapshot.plan_removals(
             store, pinned_snapshots, hashes_of_missing, keep_days=keep_days, keep_lineage=keep_lineage,
             aggressive=aggressive, hashes_elsewhere=hashes_elsewhere, hashes_noted=hashes_noted, noted=noted,
+            labelled=labelled,
         )
     except snapshot.SnapshotError as error:
         raise LockError(str(error)) from None
@@ -2734,7 +2781,12 @@ def plan_gc(
     for content_hash in store.hashes():
         if content_hash in keep:
             plan.kept += 1
-        elif store.age_of(content_hash) < recent_seconds:
+            continue
+        try:
+            age = store.age_of(content_hash)
+        except ObjectNotFoundError:
+            continue  # gone since it was listed: another gc, or a put replacing it
+        if age < recent_seconds:
             plan.recent.append(content_hash)
         else:
             plan.delete.append((content_hash, store.size_of(content_hash)))
@@ -2748,6 +2800,34 @@ def _users_own_store(store: Store) -> bool:
     return isinstance(store, FolderStore) and store.is_users_own()
 
 
+class GcError(LockError):
+    """Raised by :func:`run_gc` when something the plan said to remove could not be: it removed the rest.
+
+    In a store users share, an object or a record another user put there
+    may be in a folder of theirs this user cannot write. Everything else in
+    the plan is removed first, and the objects a record that stayed names
+    stay with it.
+
+    Attributes:
+        removed_snapshots: How many snapshots were removed.
+        removed: How many objects were removed.
+        size_bytes: The size of the objects removed, as the plan had them.
+        failures: Each thing that could not be removed, as ``(what, why)``:
+            what it is, and the store's words on why and what to do.
+    """
+
+    def __init__(self, removed_snapshots: int, removed: int, size_bytes: int, failures: list[tuple[str, str]]):
+        self.removed_snapshots = removed_snapshots
+        self.removed = removed
+        self.size_bytes = size_bytes
+        self.failures = failures
+        said = "\n".join(f"  {what}: {why}" for what, why in failures)
+        super().__init__(
+            f"{len(failures)} thing(s) could not be removed; {removed_snapshots} snapshot(s) and {removed} "
+            f"object(s) were:\n{said}"
+        )
+
+
 def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
     """Carry out a plan from :func:`plan_gc`: remove what it says to remove.
 
@@ -2756,6 +2836,12 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
     and only what both say may go is removed.
 
     :returns: How many snapshots and how many objects were removed.
+    :raises GcError: If something could not be removed (another user's, in
+        a store users share), once everything else has been; it says what
+        was removed and what was not, and what to do about each.
+    :raises StoreError: If the store cannot be read to make the plan again;
+        nothing is then removed.
+    :raises LockError: If a lockfile cannot be read, likewise.
     """
     store = store if store is not None else default_store()
     now = plan_gc(
@@ -2768,21 +2854,44 @@ def run_gc(plan: GcPlan, store: Optional[Store] = None) -> tuple[int, int]:
     )
     from chartbook import versions
 
+    failures: list[tuple[str, str]] = []
     still_removable = {taken.path for taken, _ in now.snapshots_delete}
     removed_snapshots = 0
+    kept_back: set[str] = set()  # what a record that could not be removed still names
     for taken, _ in plan.snapshots_delete:
-        if taken.path in still_removable and snapshot.remove(store, taken):
+        if taken.path not in still_removable:
+            continue
+        try:
+            gone = snapshot.remove(store, taken)
+        except (StoreError, OSError) as error:
+            failures.append((f"the snapshot of {taken.pipeline} at {taken.commit[:7]}, made {taken.made_at}", str(error)))
+            kept_back |= taken.hashes()
+            continue
+        if gone:
             removed_snapshots += 1
             versions.forget(taken)  # its site, kept for catalogs on this machine
     still_unnamed = {content_hash for content_hash, _ in now.delete}
-    removed = sum(
-        store.delete(content_hash)
-        for content_hash, _ in plan.delete
-        if content_hash in still_unnamed
-    )
+    removed = 0
+    size_bytes = 0
+    for content_hash, size in plan.delete:
+        if content_hash not in still_unnamed or content_hash in kept_back:
+            continue
+        try:
+            gone = store.delete(content_hash)
+        except (StoreError, OSError) as error:
+            failures.append((f"the object {content_hash}", str(error)))
+            continue
+        if gone:
+            removed += 1
+            size_bytes += size
     # Only what both plans forget: a drive plugged back in before the yes brings its lockfile back
-    for lockfile in set(plan.forget) & set(now.forget):
-        store.remove_root(lockfile)
-    for lockfile in set(plan.forget_old) & set(now.forget_old):
-        store.remove_root(lockfile, machine="")
+    for lockfile, machine in [(lockfile, None) for lockfile in set(plan.forget) & set(now.forget)] + [
+        (lockfile, "") for lockfile in set(plan.forget_old) & set(now.forget_old)
+    ]:
+        try:
+            store.remove_root(lockfile, machine=machine)
+        except (StoreError, OSError) as error:
+            failures.append((f"the note of the lockfile {lockfile}", str(error)))
+    if failures:
+        raise GcError(removed_snapshots, removed, size_bytes, failures)
     return removed_snapshots, removed

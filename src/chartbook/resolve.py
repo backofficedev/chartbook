@@ -934,7 +934,9 @@ def _held(store, record: dict) -> Location:
                 f"wildcard. The record is not one a store wrote, and is not read."
             )
         return FileLocation(held.joinpath(*parts))
-    name = Path(declared_path).name
+    from chartbook.store import declared_name
+
+    name = declared_name(declared_path) or Path(declared_path).name  # as put named it, on every system
     if isinstance(record.get("files"), list):
         # A directory, read as the files its record lists and nothing else in
         # the folder; and, as an engine's scan of a folder does, none under a

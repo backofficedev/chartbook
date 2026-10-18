@@ -224,6 +224,14 @@ class Root:
             (:func:`this_node`), for a person to read; nothing goes by it.
             Empty where it had none to give, or for a note from before
             notes recorded it.
+        labelled: The model versions the lockfile pinned by label when it
+            was last pinned or updated, each ``(commit, made_at, name,
+            content_hash)``: the snapshot moment of the dependency the label
+            was pinned from, the model's reference within its pipeline, and
+            the version's hash. A label resolves to a version an older
+            snapshot may hold, which the moment alone does not keep, so
+            ``store gc`` keeps a snapshot holding each. None for a note
+            from before notes recorded them.
     """
 
     lockfile: Path
@@ -233,6 +241,7 @@ class Root:
     note: str = field(default="", compare=False)
     snapshots: Optional[tuple[tuple[str, str], ...]] = field(default=None, compare=False)
     node: str = field(default="", compare=False)
+    labelled: Optional[tuple[tuple[str, str, str, str], ...]] = field(default=None, compare=False)
 
     @property
     def copy(self) -> bool:
@@ -364,10 +373,21 @@ def _is_frozen(directory: Path) -> bool:
 
 
 def _remove_tree(directory: Path) -> None:
-    """Remove a directory and what is in it, read-only files included."""
+    """Remove a directory and what is in it, read-only files included.
 
-    def retry_writable(function, path, _error):
-        _make_removable(path)
+    :raises OSError: What the system said of the first file or folder that
+        could not be removed, once given the permissions removing it needs:
+        another user's folder in a store users share, whose permissions
+        are not this user's to give.
+    """
+
+    def retry_writable(function, path, error):
+        try:
+            _make_removable(path)
+        except OSError:
+            # Not this user's to make removable: what the removal itself
+            # said is the plainer error (``onerror`` hands the exc_info tuple)
+            raise (error[1] if isinstance(error, tuple) else error) from None
         function(path)
 
     if sys.version_info >= (3, 12):
@@ -448,9 +468,18 @@ def this_node() -> str:
 
 
 def root_document(
-    lockfile: Union[str, Path], hashes: Iterable[str], snapshots: Iterable[tuple[str, str]], machine: str
+    lockfile: Union[str, Path],
+    hashes: Iterable[str],
+    snapshots: Iterable[tuple[str, str]],
+    machine: str,
+    labelled: Iterable[tuple[str, str, str, str]] = (),
 ) -> dict:
-    """A note of a lockfile on this machine, named *machine*, as a store keeps it."""
+    """A note of a lockfile on this machine, named *machine*, as a store keeps it.
+
+    :param labelled: The model versions the lockfile pins by label, each
+        ``(commit, made_at, name, content_hash)`` (:attr:`Root.labelled`);
+        the moment may be empty for a pin that names no snapshot.
+    """
     return {
         "lockfile": os.path.abspath(lockfile),
         "machine": machine,
@@ -462,7 +491,25 @@ def root_document(
             for commit, made_at in sorted(set(snapshots))
             if isinstance(commit, str) and _FULL_COMMIT.match(commit) and isinstance(made_at, str)
         ],
+        "labelled": [
+            {"commit": commit, "made_at": made_at, "name": name, "content_hash": content_hash}
+            for commit, made_at, name, content_hash in sorted(set(labelled))
+            if _is_labelled_entry(commit, made_at, name, content_hash)
+        ],
     }
+
+
+def _is_labelled_entry(commit: object, made_at: object, name: object, content_hash: object) -> bool:
+    """Whether four values are a labelled version as a note records one: a moment (or none), a name, a content hash."""
+    if not all(isinstance(value, str) for value in (commit, made_at, name, content_hash)):
+        return False
+    if (commit or made_at) and not _FULL_COMMIT.match(commit):
+        return False
+    try:
+        _split_hash(content_hash)
+    except ValueError:
+        return False
+    return bool(name)
 
 
 def read_root(stored: dict, note: str = "") -> Root:
@@ -484,7 +531,17 @@ def read_root(stored: dict, note: str = "") -> Root:
             if isinstance(entry, dict) and isinstance(entry.get("commit"), str)
             and _FULL_COMMIT.match(entry["commit"]) and isinstance(entry.get("made_at"), str)
         }))
-    root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host, note, snapshots, node)
+    labelled = None
+    if isinstance(stored.get("labelled"), list):
+        # An entry that is not a labelled version as a note records one (a
+        # lockfile edited by hand) is passed over, as a snapshot pair is
+        labelled = tuple(sorted({
+            (entry["commit"], entry["made_at"], entry["name"], entry["content_hash"])
+            for entry in stored["labelled"]
+            if isinstance(entry, dict)
+            and _is_labelled_entry(entry.get("commit"), entry.get("made_at"), entry.get("name"), entry.get("content_hash"))
+        }))
+    root = Root(Path(stored["lockfile"]), tuple(stored["hashes"]), machine, host, note, snapshots, node, labelled)
     for content_hash in root.hashes:
         _split_hash(content_hash)
     return root
@@ -499,15 +556,60 @@ def _read_note(note: Path) -> Optional[Root]:
         return None
 
 
-def _unreadable_note_remedy(name: str) -> str:
-    """What to do about a file under ``roots/`` that cannot be read."""
+def _unreadable_note_remedy(name: str, error: Optional[Exception] = None) -> str:
+    """What to do about a file under ``roots/`` that cannot be read.
+
+    A sync that has not finished is the likeliest cause when the file cannot
+    be opened or is not JSON (a file can be there before its bytes), for a
+    note under its proper name as for a sync service's copy of one. A note
+    that is JSON of another shape is not one this version reads, and is said
+    so. Nothing is removed from the store until it is read or gone, since it
+    may be the only record of a machine's pins.
+    """
+    if is_root_name(name) and error is not None and not isinstance(error, (OSError, json.JSONDecodeError)):
+        return (
+            f" It is not a note this version of ChartBook reads: remove roots/{name}; the next `chartbook pin`, "
+            f"`chartbook update`, `--frozen` or read through its lockfile writes it again. Nothing is removed "
+            f"from the store until it is read or gone"
+        )
     if is_root_name(name):
-        return ""
+        return (
+            f" A sync that has not finished is the likeliest cause (a file there before its bytes): run this "
+            f"again once it has finished. If it stays unreadable, remove roots/{name}; the next `chartbook pin`, "
+            f"`chartbook update`, `--frozen` or read through its lockfile writes it again. Nothing is removed "
+            f"from the store until it is read or gone"
+        )
     return (
         f" It is not named as a note is: a sync service's copy of one, perhaps, half synced. Wait for the "
         f"sync, or remove roots/{name} if it is a copy nobody needs; nothing is removed from the store "
         f"until it is read or gone"
     )
+
+
+def unreadable_detail(path: Path, error: Exception) -> str:
+    """What is wrong with a JSON file that could not be read, for a message: ``the file is empty`` for one of no bytes, else the error."""
+    try:
+        if isinstance(error, ValueError) and path.stat().st_size == 0:
+            return "the file is empty"
+    except OSError:
+        pass
+    return str(error)
+
+
+def declared_name(declared: str) -> Optional[str]:
+    """The name a declared file has inside its object: the last part of its path, ``/`` and ``\\`` both separating parts.
+
+    One rule for the three that must agree: :meth:`Store.put`, which names
+    the file in the object; a record's list of what a reader opens
+    (``chartbook.snapshot.files_read``); and the reader
+    (``chartbook.resolve._held``). A manifest written on Windows says
+    ``_output\\m.json``, and the object holds ``m.json`` on every system;
+    a file whose own name holds a backslash, which only POSIX allows, is
+    stored under what follows it, so that it reads the same everywhere.
+    None for a path of no name.
+    """
+    parts = [part for part in re.split(r"[\\/]+", str(declared).strip()) if part not in ("", ".")]
+    return parts[-1] if parts else None
 
 
 def plain_parts(relative: str) -> Optional[list[str]]:
@@ -729,8 +831,9 @@ class Store(abc.ABC):
         hashes: Iterable[str],
         snapshots: Iterable[tuple[str, str]] = (),
         machine: Optional[str] = None,
+        labelled: Iterable[tuple[str, str, str, str]] = (),
     ) -> None:
-        """Note that a lockfile names these objects, and pins these snapshots, so that they are kept: under this machine's name, or *machine* (``""`` names the path alone)."""
+        """Note that a lockfile names these objects, pins these snapshots, and pins these model versions by label (:attr:`Root.labelled`), so that they are kept: under this machine's name, or *machine* (``""`` names the path alone)."""
 
     @abc.abstractmethod
     def remove_root(self, lockfile: Union[str, Path], machine: Optional[str] = None) -> bool:
@@ -841,10 +944,21 @@ class FolderStore(Store):
         return final
 
     def remove_snapshot(self, path: Path) -> bool:
+        """Remove one record; True if it was there.
+
+        :raises StoreError: If it could not be removed, naming it and what
+            to do (see :meth:`delete`).
+        """
         path = Path(path)
         if not path.is_file():
             return False
-        path.unlink()
+        try:
+            path.unlink()
+        except OSError as error:
+            raise StoreError(
+                f"Cannot remove the snapshot record {self._shown(path)}: {error.strerror or error}. "
+                f"{self._not_this_users_remedy()}"
+            ) from None
         folder = path.parent
         if not any(is_record_name(other.name) for other in folder.glob("*.json")):
             # The last record of this pipeline at this commit: its note of
@@ -966,13 +1080,16 @@ class FolderStore(Store):
             root = os.path.abspath(found.root)
             for file in found.files:
                 relative = os.path.relpath(os.path.abspath(file), root)
+                if found.single:
+                    # Under the one name every system reads it by (declared_name)
+                    relative = declared_name(relative) or relative
                 destination = staging / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 # The real file, so the store never holds a link to a link
                 used.add(_link(os.path.realpath(file), str(destination), links))
 
             if found.single:
-                content = hashing.hash_file(staging / found.files[0].name)
+                content = hashing.hash_file(staging / (declared_name(found.files[0].name) or found.files[0].name))
             else:
                 content = hashing.hash_directory(staging)
             final = self.object_path(content.content_hash)
@@ -1030,7 +1147,7 @@ class FolderStore(Store):
             self._layout_checked = True
             return
         except (OSError, ValueError, AttributeError) as error:
-            raise StoreError(f"Cannot read {marker}: {error}") from None
+            raise StoreError(f"Cannot read {self._shown(marker)}: {unreadable_detail(marker, error)}") from None
         if schema != SCHEMA:
             raise StoreError(
                 f"The store at {self} has the layout {schema!r}, and this "
@@ -1100,6 +1217,7 @@ class FolderStore(Store):
         hashes: Iterable[str],
         snapshots: Iterable[tuple[str, str]] = (),
         machine: Optional[str] = None,
+        labelled: Iterable[tuple[str, str, str, str]] = (),
     ) -> None:
         """Note that a lockfile on this machine names these objects, and pins these snapshots, so that they are kept.
 
@@ -1122,6 +1240,8 @@ class FolderStore(Store):
             default; ``""`` for the path alone, as notes were named before
             they named machines (a CI runner with no name of its own),
             which no note under a name then takes the place of.
+        :param labelled: The model versions it pins by label, each
+            ``(commit, made_at, name, content_hash)`` (:attr:`Root.labelled`).
         :raises ValueError: If one of *hashes* is not a content hash.
         """
         hashes = sorted(set(hashes))
@@ -1134,7 +1254,7 @@ class FolderStore(Store):
         temporary = note.with_name(f"{note.name}.{uuid.uuid4().hex}.tmp")
         try:
             with open(temporary, "w", encoding="utf-8") as f:
-                json.dump(root_document(lockfile, hashes, snapshots, machine), f, indent=1)
+                json.dump(root_document(lockfile, hashes, snapshots, machine, labelled), f, indent=1)
                 f.write("\n")
             os.replace(temporary, note)
         except BaseException:
@@ -1217,8 +1337,17 @@ class FolderStore(Store):
                 with open(note, encoding="utf-8") as f:
                     found.append(read_root(json.load(f), note.name))
             except (OSError, ValueError, KeyError, TypeError) as error:
-                raise StoreError(f"Cannot read {note}: {error}.{_unreadable_note_remedy(note.name)}") from None
+                raise StoreError(
+                    f"Cannot read {self._shown(note)}: {unreadable_detail(note, error)}.{_unreadable_note_remedy(note.name, error)}"
+                ) from None
         return sorted(found, key=lambda root: (str(root.lockfile), root.machine, root.note))
+
+    def _shown(self, path: Path) -> str:
+        """A file of the store, as a message names it: under the store as :meth:`__str__` shows it, which carries no password."""
+        try:
+            return f"{self}/{path.relative_to(self.root).as_posix()}"
+        except ValueError:
+            return str(path)
 
     def incomplete(
         self, content_hash: str, size_bytes: Optional[int], files: Optional[dict] = None, every: bool = False
@@ -1263,12 +1392,20 @@ class FolderStore(Store):
         return total
 
     def age_of(self, content_hash: str, now: Optional[float] = None) -> float:
-        """How many seconds ago an object was put in the store."""
+        """How many seconds ago an object was put in the store.
+
+        :raises ObjectNotFoundError: If the store has no such object: one
+            removed since it was listed, by another ``gc`` or a ``put``
+            replacing it.
+        """
         # A sync service may give a file the time it had on the machine it
         # came from; when it came to this one is its status change (its
         # creation, on Windows), so an object that arrived just now, whose
         # record may not have, is not taken for an old one
-        held = self.object_path(content_hash).stat()
+        try:
+            held = self.object_path(content_hash).stat()
+        except FileNotFoundError:
+            raise ObjectNotFoundError(f"The store at {self} has no object {content_hash}.") from None
         stored_at = max(held.st_mtime, held.st_ctime)
         return (time.time() if now is None else now) - stored_at
 
@@ -1279,16 +1416,34 @@ class FolderStore(Store):
         hard-linked or symlinked to is untouched.
 
         :returns: True if there was one to remove.
+        :raises StoreError: If it could not be removed, naming it and what
+            to do: in a store users share, another user's object is in a
+            folder of theirs this user may not write.
         """
         path = self.object_path(content_hash)
         if not path.is_dir():
             return False
-        _remove_tree(path)
+        try:
+            _remove_tree(path)
+        except OSError as error:
+            raise StoreError(
+                f"Cannot remove the object {content_hash} at {self._shown(path)}: {error.strerror or error}. "
+                f"{self._not_this_users_remedy()}"
+            ) from None
         try:
             path.parent.rmdir()  # the two-character folder, if now empty
         except OSError:
             pass
         return True
+
+    @staticmethod
+    def _not_this_users_remedy() -> str:
+        """What to do about a file of the store this user may not remove."""
+        return (
+            "It is another user's, most likely, in a store users share: its owner removes it (`chartbook store gc` "
+            "there, or by hand), or gives you write permission on it and on the folder holding it, and you run "
+            "`chartbook store gc` again."
+        )
 
     def hashes(self) -> Iterator[str]:
         """The hash of every object in the store, in order."""

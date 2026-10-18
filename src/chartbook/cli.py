@@ -2729,18 +2729,19 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     its lockfile here, and every object one of them names is kept. And a
     snapshot: what `chartbook snapshot` kept of a pipeline at a commit.
 
-    A snapshot is kept if a lockfile pins it, if it is the newest of its
-    pipeline from its repository or the newest a branch or tag can pin
-    from, if it says which repository the kept snapshots are of, if a label points
-    at a model version in it (in that pipeline's chartbook.toml, or as its
-    newest snapshot recorded), or if it was made in the last 7 days
-    (--keep-days). Otherwise it may be removed, and what only it named
-    goes with it. A store keeps what work needs now, and lets old lineage
-    go: with --keep-lineage, every snapshot a kept snapshot was made from
-    is kept too, as far up as it goes, for `chartbook lineage` to check.
-    With --aggressive, names keep nothing: a snapshot a git tag or branch
-    names, or one holding a labelled model version, goes once nothing else
-    keeps it.
+    A snapshot is kept if a lockfile pins it, if a lockfile pins a model
+    version by its label and this is the newest snapshot holding that
+    version, if it is the newest of its pipeline from its repository or the
+    newest a branch or tag can pin from, if it says which repository the
+    kept snapshots are of, if a label points at a model version in it (in
+    that pipeline's chartbook.toml, or as its newest snapshot recorded), or
+    if it was made in the last 7 days (--keep-days). Otherwise it may be
+    removed, and what only it named goes with it. A store keeps what work
+    needs now, and lets old lineage go: with --keep-lineage, every snapshot
+    a kept snapshot was made from is kept too, as far up as it goes, for
+    `chartbook lineage` to check. With --aggressive, names keep nothing: a
+    snapshot a git tag or branch names, or one holding a labelled model
+    version that no lockfile pins, goes once nothing else keeps it.
 
     A lockfile that cannot be found, because its project was deleted or its
     drive is not plugged in, still keeps what it last pinned. Pass
@@ -2758,7 +2759,10 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
 
     What would be removed is listed, and nothing is removed until you say
     yes. An object stored in the last hour is never removed: a pin puts
-    files in the store before it writes the lockfile that names them.
+    files in the store before it writes the lockfile that names them. In a
+    store users share, what another user put there may be theirs alone to
+    remove: gc removes what it can, says what it removed, lists each thing
+    it could not remove with what to do, and exits 1.
 
     \b
     Examples:
@@ -2781,6 +2785,25 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
         click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
         click.echo("Nothing was removed.", err=True)
         raise SystemExit(1)
+
+    def carry_out() -> tuple[int, int]:
+        """Remove what the plan says to, and say what could not be removed, if anything could not."""
+        try:
+            return lock.run_gc(plan, the_store)
+        except lock.GcError as e:
+            # Everything else went: say so, then each thing that stayed and what to do
+            if e.removed_snapshots or e.removed:
+                click.echo(f"Removed {e.removed_snapshots} snapshot(s) and {e.removed} object(s), {_format_bytes(e.size_bytes)}.")
+            click.echo(click.style("Error: ", fg="red", bold=True) + f"{len(e.failures)} thing(s) could not be removed:", err=True)
+            for _, why in e.failures:
+                click.echo(f"  {_printable(_said(why))}", err=True)  # the store's words name the thing and say what to do
+            if any(what.startswith("the snapshot") for what, _ in e.failures):
+                click.echo("What a record that stayed names stays with it.", err=True)
+            raise SystemExit(1)
+        except (StoreError, lock.LockError, ValueError) as e:
+            click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+            click.echo("Nothing was removed.", err=True)
+            raise SystemExit(1)
 
     # A kept snapshot keeps objects too, which no lockfile may name
     named_by = f"{len(plan.lockfiles) + len(plan.elsewhere)} lockfile(s)" + (" or a kept snapshot" if plan.snapshots_kept else "")
@@ -2846,7 +2869,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     if not plan.delete and not plan.snapshots_delete:
         click.echo("Nothing to remove.")
         if not dry_run:
-            lock.run_gc(plan, the_store)  # forgets the missing, if asked to
+            carry_out()  # forgets the missing, if asked to
         return
 
     if plan.snapshots_delete:
@@ -2871,7 +2894,7 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     if not yes and not click.confirm("Remove them?", default=False):
         click.echo("Nothing was removed.")
         return
-    removed_snapshots, removed = lock.run_gc(plan, the_store)
+    removed_snapshots, removed = carry_out()
     click.echo(
         f"Removed {removed_snapshots} snapshot(s) and {removed} object(s), "
         f"{_format_bytes(plan.size_bytes)}."

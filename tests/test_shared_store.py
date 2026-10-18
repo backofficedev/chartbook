@@ -7,12 +7,14 @@ yet, and a copy of a file changed in two places under a name of its own.
 And one person's two machines can have a lockfile at the same path.
 """
 
+import errno
 import json
 import os
 import re
 import shutil
 import socket
 import stat
+import sys
 import uuid
 import warnings
 from pathlib import Path
@@ -22,9 +24,10 @@ import tomli_w
 from click.testing import CliRunner
 
 from chartbook import config, data, lock, snapshot
+from chartbook import store as store_module
 from chartbook.cli import main
 from chartbook.errors import AssetNotPinnedError
-from chartbook.store import FolderStore, default_store, is_record_name, unsynced_part
+from chartbook.store import FolderStore, ObjectNotFoundError, StoreError, default_store, is_record_name, unsynced_part
 from tests.test_dependencies_by_id import _commit, _forecast, _rates
 from tests.test_model_versions import _git
 
@@ -1858,3 +1861,227 @@ class TestNoPasswordOfAStoreAtAPath:
         told = [problem.message for problem in problems] + [str(warning.message) for warning in said]
         assert any("the store cannot be read" in text for text in told), told
         assert not any("s3cr3tpw" in text for text in told), told
+
+
+class TestWhatGcCannotRemove:
+    """In a store users share, another user's object sits in a folder of theirs this user may not
+    write. Found by a reviewer: gc stopped with a raw PermissionError traceback, after it had
+    removed the snapshots and the objects before that one in the plan, and said nothing of what it
+    had removed. It now removes what it can, says what it removed, lists what it could not with
+    what to do, and exits 1; what a record that stayed names stays with it."""
+
+    def _two_to_remove(self, drive, monkeypatch):
+        """Two old snapshots nothing pins, and a newest; the two and their objects are to go."""
+        from tests.test_lock import _age
+
+        work, machine, rates = drive
+        first = snapshot.make(rates, made_at=LONG_AGO).snapshot
+        second = _snapshot_again(rates, 4.2, made_at="2020-02-01T00:00:00.000000Z")
+        _snapshot_again(rates, 4.3)
+        store = default_store()
+        _age(store, monkeypatch)
+        return store, first, second
+
+    @staticmethod
+    def _treasury(store, taken) -> Path:
+        return store.object_path(taken.assets["treasury"]["content_hash"])
+
+    def test_the_rest_goes_and_what_stayed_is_said(self, drive, monkeypatch):
+        store, first, second = self._two_to_remove(drive, monkeypatch)
+        held = self._treasury(store, first)
+        remove_tree = store_module._remove_tree
+
+        def another_users(directory):
+            if directory == held:
+                raise PermissionError(errno.EPERM, "Operation not permitted", str(directory / "treasury.parquet"))
+            remove_tree(directory)
+
+        monkeypatch.setattr(store_module, "_remove_tree", another_users)
+        result = CliRunner().invoke(main, ["store", "gc", "--yes", "--keep-days", "0"])
+        assert result.exit_code == 1, result.output
+        assert "Traceback" not in result.output and isinstance(result.exception, SystemExit)
+        assert "Removed 2 snapshot(s) and " in result.output
+        assert "Error: 1 thing(s) could not be removed:" in result.output
+        assert f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/objects/sha256/" in result.output
+        assert "Operation not permitted. It is another user's, most likely" in result.output
+        assert "its owner removes it" in result.output and "write permission on it and on the folder holding it" in result.output
+        assert held.is_dir() and not self._treasury(store, second).exists()
+        assert not first.path.exists() and not second.path.exists()
+        # Nothing else is in the way next time: the object stays to be removed then
+        plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
+        assert [h for h, _ in plan.delete] == [first.assets["treasury"]["content_hash"]]
+
+    @pytest.mark.skipif(sys.platform != "darwin" or not hasattr(os, "chflags"), reason="chflags uchg is macOS's")
+    def test_a_folder_made_unremovable(self, drive, monkeypatch):
+        """The real thing: a folder this user cannot write, nor make writable."""
+        store, first, second = self._two_to_remove(drive, monkeypatch)
+        held = self._treasury(store, first)
+        os.chflags(held, stat.UF_IMMUTABLE)
+        try:
+            plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
+            with pytest.raises(lock.GcError) as raised:
+                lock.run_gc(plan, store)
+            ((what, why),) = raised.value.failures
+            assert what == f"the object {first.assets['treasury']['content_hash']}"
+            assert why.startswith(f"Cannot remove the object {first.assets['treasury']['content_hash']} at {store}/objects/sha256/")
+            assert "Operation not permitted" in why and "its owner removes it" in why
+            assert raised.value.removed_snapshots == 2 and raised.value.removed >= 1
+            assert held.is_dir() and not self._treasury(store, second).exists()
+        finally:
+            os.chflags(held, 0)
+
+    def test_a_record_that_stays_keeps_what_it_names(self, drive, monkeypatch):
+        store, first, second = self._two_to_remove(drive, monkeypatch)
+        remove_snapshot = FolderStore.remove_snapshot
+
+        def another_users(self, path):
+            if Path(path) == first.path:
+                raise PermissionError(errno.EACCES, "Permission denied", str(path))
+            return remove_snapshot(self, path)
+
+        monkeypatch.setattr(FolderStore, "remove_snapshot", another_users)
+        plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
+        with pytest.raises(lock.GcError) as raised:
+            lock.run_gc(plan, store)
+        assert raised.value.removed_snapshots == 1
+        assert [what for what, _ in raised.value.failures] == [f"the snapshot of acme/rates at {first.commit[:7]}, made {first.made_at}"]
+        assert store.has(first.assets["treasury"]["content_hash"])  # named by the record that stayed
+        assert not store.has(second.assets["treasury"]["content_hash"])
+        result = CliRunner().invoke(main, ["store", "gc", "--yes", "--keep-days", "0"])
+        assert result.exit_code == 1 and "What a record that stayed names stays with it." in result.output
+
+    def test_a_records_own_permission_error_is_the_stores_words(self, drive, monkeypatch):
+        """`remove_snapshot` and `delete` say what to do, in the store's words, not the system's alone."""
+        work, machine, rates = drive
+        store = default_store()
+        taken = snapshot.make(rates).snapshot
+        unlink = Path.unlink
+
+        def refused(self, *args, **kwargs):
+            if self == taken.path:
+                raise PermissionError(errno.EACCES, "Permission denied", str(self))
+            return unlink(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "unlink", refused)
+        with pytest.raises(StoreError, match=rf"Cannot remove the snapshot record {re.escape(str(store))}/snapshots/.*: Permission denied\. It is another user's"):
+            store.remove_snapshot(taken.path)
+
+
+class TestAnObjectGoneWhilePlanning:
+    def test_is_passed_over(self, drive, monkeypatch):
+        """Two gc at once, or a put replacing an object, between the listing and the look at its age."""
+        work, machine, rates = drive
+        snapshot.make(rates)
+        store = default_store()
+        phantom = "sha256:" + "f" * 64
+        with pytest.raises(ObjectNotFoundError, match="has no object"):
+            store.age_of(phantom)
+        listed = list(store.hashes())
+        monkeypatch.setattr(store, "hashes", lambda: iter([*listed, phantom]))
+        plan = lock.plan_gc(store, recent_seconds=0, keep_days=0)
+        assert phantom not in {h for h, _ in plan.delete} and phantom not in plan.recent
+
+
+class TestARecordWrittenOnWindows:
+    def test_names_the_file_by_its_last_part(self, tmp_path):
+        """Found by a reviewer: `_output\\m.json` named one file `_output\\m.json` here, and the object was
+        refused for ever as not fully synced. A backslash separates parts, as `safe_relative` reads it."""
+        from chartbook.snapshot import files_read, not_whole
+
+        store = FolderStore(tmp_path / "store")
+        (tmp_path / "m.json").write_bytes(b"x" * 5)
+        stored = store.put(tmp_path / "m.json")
+        record = {
+            "id": "acme/maker:model/m", "ref": {"kind": "model", "name": "m"},
+            "location": {"kind": "file", "path": "_output\\m.json"}, "size_bytes": 5, "content_hash": stored.content_hash,
+        }
+        assert files_read(record) == {"m.json": 5}
+        assert store.incomplete(stored.content_hash, 5, files_read(record)) is None
+        assert not_whole(store, record) is None
+        assert files_read({**record, "location": {"kind": "file", "path": ".\\_output\\sub\\m.json"}}) == {"m.json": 5}
+        assert files_read({**record, "location": {"kind": "file", "path": "./_output/m.json"}}) == {"m.json": 5}
+        assert files_read({**record, "location": {"kind": "file", "path": "\\"}}) is None
+
+
+    def test_the_reader_opens_the_file_not_the_folder(self, tmp_path):
+        """Found by a reviewer of the fix: the record named the file by its last part, and the reader
+        still by the whole `_output\\m.json`, so it found no such file and fell back to the folder."""
+        from chartbook import resolve as resolve_module
+
+        store = FolderStore(tmp_path / "store")
+        (tmp_path / "treasury.parquet").write_bytes(b"x" * 7)
+        stored = store.put(tmp_path / "treasury.parquet")
+        record = {
+            "id": "acme/rates:treasury", "ref": {"kind": "dataframe", "name": "treasury"},
+            "location": {"kind": "file", "path": "./_data\\treasury.parquet"}, "size_bytes": 7, "content_hash": stored.content_hash,
+        }
+        location = resolve_module._held(store, record)
+        assert Path(location.path) == Path(stored.path) / "treasury.parquet"
+        assert Path(location.path).is_file()
+
+    def test_a_file_named_with_a_backslash_is_stored_and_read_by_what_follows_it(self, tmp_path):
+        """The mirror case, POSIX only: a file whose own name holds a backslash is stored under the
+        part after it, so the record, the reader and the store name it alike everywhere."""
+        from chartbook import resolve as resolve_module
+        from chartbook.snapshot import files_read, not_whole
+
+        if os.name == "nt":
+            pytest.skip("a backslash is a separator on Windows")
+        store = FolderStore(tmp_path / "store")
+        odd = tmp_path / "a\\b.parquet"
+        odd.write_bytes(b"y" * 3)
+        stored = store.put(odd)
+        assert [Path(f).name for f in (stored.files or ())] in ([], ["b.parquet"]) and (Path(stored.path) / "b.parquet").is_file()
+        record = {
+            "id": "acme/rates:odd", "ref": {"kind": "dataframe", "name": "odd"},
+            "location": {"kind": "file", "path": str(odd)}, "size_bytes": 3, "content_hash": stored.content_hash,
+        }
+        assert files_read(record) == {"b.parquet": 3}
+        assert not_whole(store, record) is None
+        assert Path(resolve_module._held(store, record).path) == Path(stored.path) / "b.parquet"
+
+
+class TestANoteOrARecordHalfSynced:
+    """A file a sync service delivered before its bytes: gc stops, and says what to do."""
+
+    def test_a_note_of_another_shape_is_said_as_such_not_as_a_sync(self, drive):
+        """Found by a reviewer of the fix: well-formed JSON of the wrong shape got the sync remedy,
+        which misleads on the cause; the remedy (remove it, the next pin writes it) is the same."""
+        work, machine, rates = drive
+        snapshot.make(rates)
+        forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        store = default_store()
+        (note,) = (store.root / "roots").glob("*.json")
+        note.write_text('{"lockfile": "/x"}')
+        with pytest.raises(StoreError, match="not a note this version of ChartBook reads") as raised:
+            lock.plan_gc(store)
+        assert "sync that has not finished" not in str(raised.value)
+        assert f"remove roots/{note.name}" in str(raised.value)
+
+    def test_an_empty_note_says_to_wait_for_the_sync(self, drive):
+        work, machine, rates = drive
+        snapshot.make(rates)
+        forecast = _forecast(work / "a" / "forecast", {"acme/rates": {}})
+        lock.pin(forecast)
+        store = default_store()
+        (note,) = (store.root / "roots").glob("*.json")
+        note.write_text("")
+        with pytest.raises(StoreError, match=r"the file is empty\. A sync that has not finished is the likeliest cause") as raised:
+            lock.plan_gc(store)
+        assert f"remove roots/{note.name}" in str(raised.value) and "Nothing is removed from the store until it is read or gone" in str(raised.value)
+        result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
+        assert result.exit_code == 1 and "run this again once it has finished" in result.output and "Nothing was removed." in result.output
+        note.write_text('{"lock')  # half of it
+        with pytest.raises(StoreError, match=r"Cannot read .*: Unterminated string.*\. A sync that has not finished is the likeliest cause"):
+            lock.plan_gc(store)
+
+    def test_an_empty_snapshot_record_too(self, drive):
+        work, machine, rates = drive
+        taken = snapshot.make(rates).snapshot
+        taken.path.write_text("")
+        with pytest.raises(lock.LockError, match=r"Cannot read the snapshot .*: the file is empty\. A sync that has not finished is the likeliest cause"):
+            lock.plan_gc(default_store())
+        result = CliRunner().invoke(main, ["store", "gc", "--dry-run"])
+        assert result.exit_code == 1 and "remove the file; it is the record of one snapshot" in result.output
+        assert "Nothing was removed." in result.output
