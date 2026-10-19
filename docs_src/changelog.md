@@ -28,6 +28,7 @@ This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and ne
 
 **What later entries changed in earlier ones:**
 
+- The `[dev]` extra for contributors, which the entries below call unchanged, is gone: a contributor runs `uv sync` in a clone, which installs the `dev` dependency group (the {doc}`contributing` page). Nothing a user installs is affected.
 - `chartbook docs` is a group now: where an earlier entry says `chartbook docs`, read `chartbook docs generate`. `chartbook browse` is `chartbook docs open`, and `chartbook catalog build` and `catalog browse` are `chartbook catalog generate` and `catalog open`.
 - `chartbook check`, new in this release, with no policy anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, and no `--policy`) now reports missing recommended fields as `warning:` lines and exits 0, where the entry below that introduces it has it fail on them. CI that relied on that failure gives the pipeline a `[policy]`, or passes `--policy` with a file that has one.
 - `pin --from-folder` and `update --from-folder` are removed. A pipeline reads another's snapshots, never its folder, except with a `WorkingVersionWarning` when it has none.

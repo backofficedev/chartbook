@@ -114,13 +114,13 @@ Use consistent verb prefixes to indicate function behavior:
 ### Running Tests Locally
 
 ```bash
-uv run doit test          # the suite on the default Python (hatch test -v, with a JUnit report in _build/)
+uv run doit test          # the suite on the default Python (hatch test -v; JUnit report in _build/test-results/junit.xml)
 uv run doit test_all      # the matrix: Python 3.10 to 3.13, and Sphinx 7 and 8 on 3.13
 uv run pytest -q          # the suite in the uv environment itself, as CI runs it
 uv run hatch test --cover # with coverage
 ```
 
-The matrix is hatch's: `[tool.hatch.envs.hatch-test]` in `pyproject.toml` defines the six environments, which hatch builds under `.hatch/`, resolving their dependencies itself. uv owns `.venv` and `uv.lock`, and the `dev` group carries hatch, so `uv run doit` reaches both. The matrix needs the Python versions on the machine (hatch fetches them, or install them with `uv python install 3.10 3.11 3.12`). A test keeps the `dev` group a superset of what the matrix environments get, so `uv run pytest` and `hatch test` see the same packages.
+The matrix is hatch's: `[tool.hatch.envs.hatch-test]` in `pyproject.toml` defines the six environments, which hatch builds in its own environment folder (its data directory, or wherever `[dirs.env] virtual` in hatch's config says; `.hatch/` is git-ignored for that), resolving their dependencies itself. uv owns `.venv` and `uv.lock`, and the `dev` group carries hatch, so `uv run doit` reaches both. The matrix needs the Python versions; hatch downloads any it does not find on the path. A test keeps the `dev` group a superset of what the matrix environments get, so `uv run pytest` and `hatch test` see the same packages.
 
 ## Documentation
 

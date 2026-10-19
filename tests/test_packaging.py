@@ -15,13 +15,14 @@ def _project():
         return tomli.load(f)["project"]
 
 
-def test_the_extras_are_the_contributor_one_a_store_a_warehouse_and_a_site_tool():
-    """The no-op [all], [data], [plotting] and [sphinx] aliases are retired.
+def test_the_extras_are_a_store_a_warehouse_and_a_site_tool():
+    """The no-op [all], [data], [plotting] and [sphinx] aliases are retired, and the
+    contributor toolchain is the `dev` dependency group, not an extra.
 
-    What remains is contributor tooling, a kind of store that needs a cloud
-    library the base install does not bring, a warehouse's driver, and a
-    second site tool; each extra holds those libraries and nothing of the
-    package itself, and Sphinx stays a base dependency.
+    What remains is a kind of store that needs a cloud library the base
+    install does not bring, a warehouse's driver, and a second site tool;
+    each extra holds those libraries and nothing of the package itself, and
+    Sphinx stays a base dependency.
     """
     extras = _project()["optional-dependencies"]
     assert set(extras) == {"s3", "databricks", "mkdocs"}  # the contributor toolchain is the `dev` dependency group
@@ -409,7 +410,8 @@ def test_the_dev_group_gives_the_suite_what_the_matrix_gives_it():
         document = tomli.load(f)
 
     def names(requirements):
-        return {re.split(r"[\[<>=!~; ]", requirement, 1)[0].lower() for requirement in requirements}
+        # The distribution name alone, as PEP 503 compares it
+        return {re.split(r"[\[<>=!~; ]", requirement, maxsplit=1)[0].lower().replace("_", "-") for requirement in requirements}
 
     matrix = names(document["tool"]["hatch"]["envs"]["hatch-test"]["extra-dependencies"])
     dev = names(document["dependency-groups"]["dev"])
