@@ -883,7 +883,7 @@ class TestCommands:
         second = _version(forecast)
         _manifest(forecast, {"champion": second})
         monkeypatch.chdir(forecast)
-        result = self._run("docs", "./docs", "-f", "--keep-build-dirs")
+        result = self._run("docs", "generate", "./docs", "-f", "--keep-build-dirs")
         assert result.exit_code == 0, result.output
         text = (forecast / "_docs" / "cb" / "models" / "acme--forecast" / "m.md").read_text()
         assert "## Versions" in text
