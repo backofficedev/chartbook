@@ -10,28 +10,23 @@ Thank you for your interest in contributing to chartbook!
    cd chartbook
    ```
 
-2. **Install Hatch**
+2. **Install uv**, once per machine: [docs.astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+3. **Sync the environment**
    ```bash
-   pip install hatch
+   uv sync
    ```
 
-3. **Enter Development Environment**
+   That makes `.venv` from `uv.lock`: the package in editable mode and the `dev` dependency group (doit, hatch, pytest, jupytext, nbconvert, and what the integration tests need). `.python-version` names the Python; uv fetches it if the machine has none.
+
+4. **Run everything**
    ```bash
-   hatch shell
+   uv run doit
    ```
 
-4. **Install in Editable Mode with All Dependencies**
-   ```bash
-   pip install -e ".[dev]"
-   ```
+   `uv run` puts the environment's tools first on the path for that command and its subprocesses, so the nested doit of the examples, `sphinx-build` and `hatch` are the project's own. Nothing to activate. Plain `doit` runs the notebooks, the package docs, the three example pipelines and their catalog, the wheel and sdist, and then the test matrix; `uv run doit build_package` stops before the tests, and `uv run doit list` shows every task.
 
-   **Important:** The quotes around `".[dev]"` are required when installing with extras locally.
-
-   Available installation options:
-   ```bash
-   pip install -e .              # The package (everything included)
-   pip install -e ".[dev]"       # Package + contributor toolchain (pytest, doit, jupytext, nbconvert)
-   ```
+   The example catalog is built only from folders you have trusted: once, `uv run chartbook trust --members` in `examples/catalog`.
 
 ## Making Changes
 
@@ -47,12 +42,13 @@ Thank you for your interest in contributing to chartbook!
 
 3. **Run Tests**
    ```bash
-   hatch test
+   uv run doit test        # the suite on the default Python
+   uv run pytest tests/test_x.py -q   # one file
    ```
 
 4. **Format Code**
    ```bash
-   hatch fmt
+   uv run hatch fmt
    ```
 
 ## Changing Something Users Rely On
@@ -118,17 +114,13 @@ Use consistent verb prefixes to indicate function behavior:
 ### Running Tests Locally
 
 ```bash
-# Run tests on current Python version
-hatch test
-
-# Run tests with coverage
-hatch test --cover
-
-# Run tests across all supported Python versions (3.10-3.13)
-hatch test --all
+uv run doit test          # the suite on the default Python (hatch test -v; JUnit report in _build/test-results/junit.xml)
+uv run doit test_all      # the matrix: Python 3.10 to 3.13, and Sphinx 7 and 8 on 3.13
+uv run pytest -q          # the suite in the uv environment itself, as CI runs it
+uv run hatch test --cover # with coverage
 ```
 
-The `--all` flag requires having the Python versions installed locally (e.g., via [pyenv](https://github.com/pyenv/pyenv)).
+The matrix is hatch's: `[tool.hatch.envs.hatch-test]` in `pyproject.toml` defines the six environments, which hatch builds in its own environment folder (its data directory, or wherever `[dirs.env] virtual` in hatch's config says; `.hatch/` is git-ignored for that), resolving their dependencies itself. uv owns `.venv` and `uv.lock`, and the `dev` group carries hatch, so `uv run doit` reaches both. The matrix needs the Python versions; hatch downloads any it does not find on the path. A test keeps the `dev` group a superset of what the matrix environments get, so `uv run pytest` and `hatch test` see the same packages.
 
 ## Documentation
 
@@ -139,8 +131,7 @@ The `--all` flag requires having the Python versions installed locally (e.g., vi
 ### Building Documentation
 
 ```bash
-# Build the documentation (outputs to ./docs for GitHub Pages)
-hatch run docs:build
+uv run doit sphinx        # the notebooks, then the site into ./docs (for GitHub Pages)
 ```
 
 ## Building a release
@@ -148,12 +139,19 @@ hatch run docs:build
 The project template goes into the wheel and the sdist by `hatch_build.py`: the files git tracks in `template/`, and the commit they are at, which `chartbook init` writes into a new project's `.cruft.json`. Build a release from a clean checkout, with git at hand:
 
 ```bash
-hatch build        # or: doit hatch_build
+uv build                  # or: uv run doit build_package, which builds the examples first
 ```
 
 A build that cannot record the commit stops and says what to do: a folder whose `.git` git cannot read (git not installed, or a folder git does not trust), a copy with neither a `.git` nor an sdist's `PKG-INFO` (a source zip), a `template/` with changes git has not committed, or an sdist that records no commit. An editable install skips the hook, and `pip install chartbook` from PyPI runs no build, so only a build of the package itself meets this.
 
 A release also bumps the template's `_chartbook_version` in `template/cookiecutter.json` with the version in `src/chartbook/__about__.py` (a test keeps them equal).
+
+Publishing is by hand, never a doit task: after the tag, from the clean checkout at that commit,
+
+```bash
+uv build
+uv publish                # PyPI; the token from UV_PUBLISH_TOKEN, or --token
+```
 
 ## Questions?
 

@@ -91,13 +91,33 @@ mkdocs = [
     "mkdocs-material>=9.5",
     "mkdocs-jupyter>=0.25",
 ]
-# Contributor tooling only (tests + build automation)
+
+# The contributor toolchain is the `dev` dependency group below, which `uv sync`
+# installs; it is not an extra, since it is nothing a user installs.
+[dependency-groups]
 dev = [
-    "pytest",
-    "colorama",
+    # Build automation: `uv run doit` runs everything in dodo.py
     "doit>=0.36.0",
+    "colorama",
+    # Hatch runs the test matrix (`hatch test --all`, [tool.hatch.envs.hatch-test])
+    # and is the build backend's own tool; `uv build` and `uv publish` do the release
+    "hatch>=1.14",
+    # The suite under `uv run pytest`: what [tool.hatch.envs.hatch-test] gives
+    # each matrix environment, so the two agree (a test keeps them so)
+    "pytest",
+    "ipython",
+    "jsonschema>=4.18",
     "jupytext>=1.16.0",
     "nbconvert>=7.0.0",
+    "numpy",
+    "openpyxl",
+    "requests",
+    "seaborn",
+    "boto3>=1.28",
+    "moto[s3]>=5",
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocs-jupyter>=0.25",
 ]
 
 [project.scripts]
@@ -199,15 +219,6 @@ matrix.sphinx.extra-dependencies = [
     { value = "sphinx~=7.4", if = ["sphinx7"] },
     { value = "sphinx~=8.2", if = ["sphinx8"] },
 ]
-
-[tool.hatch.envs.default]
-# Default environment includes dev dependencies
-features = ["dev"]
-
-[tool.hatch.envs.docs]
-
-[tool.hatch.envs.docs.scripts]
-build = "sphinx-build -b html docs_src docs && touch docs/.nojekyll"
 
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::Warning"]

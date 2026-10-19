@@ -1,14 +1,20 @@
-"""PyDoit build automation for ChartBook documentation.
+"""PyDoit build automation for ChartBook: the docs, the examples, the package, the tests.
 
 Run with:
-    doit              # Run all tasks
-    doit list         # List available tasks
-    doit run_notebooks    # Run specific task
+    uv run doit               # everything: notebooks, docs, examples, package, the test matrix
+    uv run doit build_package # the same without the tests
+    uv run doit test          # the suite on the default Python, once
+    uv run doit list          # every task
+
+`uv run` syncs the environment from uv.lock and puts its tools first on the
+path, so the nested doit, sphinx-build and hatch below are the project's own.
+Publishing is not a task here: `uv publish`, by hand, after the tag.
 """
 
 import os
 import shutil
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -41,6 +47,10 @@ DOIT_CONFIG = {
     "reporter": GreenReporter,
     "backend": "sqlite3",
     "dep_file": "./.doit-db.sqlite",
+    # `build` pulls in the notebooks, the docs, the examples and the package;
+    # `test_all` is the matrix, which includes the default Python, so `test`
+    # is not run as well (it is for `uv run doit test`, the quick check)
+    "default_tasks": ["build", "test_all"],
 }
 
 init(autoreset=True)
@@ -160,30 +170,32 @@ def task_build_examples():
     """Build all examples documentation."""
     examples_dodo = PROJECT_ROOT / "examples" / "dodo.py"
     return {
-        "actions": [f"doit -f {examples_dodo}"],
+        # This interpreter's doit, never another on the path
+        "actions": [f"{sys.executable} -m doit -f {examples_dodo}"],
         "task_dep": ["sphinx"],
         "verbosity": 2,
     }
 
 
-def task_hatch_build():
-    """Build the package with hatch for publishing.
+def task_build_package():
+    """Build the wheel and the sdist into dist/, for publishing.
 
-    The build records the commit the template is at (`hatch_build.py`), and
-    stops where it cannot: build from a clean checkout, with git at hand.
+    `uv build` calls the hatchling backend, whose hook records the commit the
+    template is at (`hatch_build.py`) and stops where it cannot: build from a
+    clean checkout, with git at hand. Publishing is `uv publish`, by hand.
     """
     return {
-        "actions": ["hatch build"],
+        "actions": ["uv build"],
         "task_dep": ["build_examples"],
         "verbosity": 2,
     }
 
 
 def task_build():
-    """Meta-task: Full documentation build pipeline."""
+    """Meta-task: notebooks, docs, examples and the package."""
     return {
         "actions": None,
-        "task_dep": ["hatch_build"],
+        "task_dep": ["build_package"],
     }
 
 
@@ -250,7 +262,7 @@ def task_test():
     test_files = list((PROJECT_ROOT / "tests").rglob("*.py"))
     junit_path = TEST_RESULTS_DIR / "junit.xml"
     return {
-        "actions": [_run_tests("hatch test -v", junit_path)],
+        "actions": [_run_tests(f"{sys.executable} -m hatch test -v", junit_path)],
         "file_dep": src_files + test_files + [PROJECT_ROOT / "pyproject.toml"],
         "targets": [junit_path],
         "clean": True,
@@ -264,7 +276,7 @@ def task_test_all():
     test_files = list((PROJECT_ROOT / "tests").rglob("*.py"))
     junit_path = TEST_RESULTS_DIR / "junit-all.xml"
     return {
-        "actions": [_run_tests("hatch test --all -v", junit_path)],
+        "actions": [_run_tests(f"{sys.executable} -m hatch test --all -v", junit_path)],
         "file_dep": src_files + test_files + [PROJECT_ROOT / "pyproject.toml"],
         "targets": [junit_path],
         "clean": True,

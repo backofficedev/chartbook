@@ -2,7 +2,8 @@
 
 Both are skipped when boto3 or moto is not installed, which is the case
 for `pip install chartbook` without the `s3` extra; the test environments
-install them (pyproject.toml, `[tool.hatch.envs.hatch-test]`).
+install them (pyproject.toml: the `dev` dependency group, and
+`[tool.hatch.envs.hatch-test]`).
 """
 
 import contextlib

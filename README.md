@@ -34,11 +34,14 @@ pip install chartbook
 
 One install, everything included: data loading, plotting utilities, and the CLI for building documentation.
 
-**Development:**
+**Development** needs [uv](https://docs.astral.sh/uv/) and nothing else:
 
 ```bash
-pip install -e ".[dev]"
+uv sync          # the project, editable, and its dev toolchain, from uv.lock
+uv run doit      # notebooks, docs, examples, the package, then the test matrix
 ```
+
+`uv run doit build_package` is the same without the tests; `uv run doit test` is the suite on one Python. The [contributing page](https://backofficedev.github.io/chartbook/contributing.html) has the rest.
 
 ## Quick Start
 

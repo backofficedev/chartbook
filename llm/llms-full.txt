@@ -27,11 +27,10 @@ The old `[data]`/`[plotting]`/`[sphinx]`/`[all]` extras are deprecated no-op ali
 
 ### Development Installation
 ```bash
-pip install hatch
 git clone <repo-url>
 cd chartbook
-hatch shell
-pip install -e ".[dev]"
+uv sync          # needs uv; makes .venv from uv.lock with the dev toolchain
+uv run doit      # everything: docs, examples, package, test matrix
 ```
 
 ---

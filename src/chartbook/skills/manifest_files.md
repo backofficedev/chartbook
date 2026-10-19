@@ -11,8 +11,8 @@ pip install chartbook
 # Isolated CLI install via pipx
 pipx install chartbook
 
-# Development
-pip install -e ".[dev]"
+# Development (in a clone of the ChartBook repository, with uv)
+uv sync
 ```
 
 ## Format Overview
