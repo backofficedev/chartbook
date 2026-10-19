@@ -345,7 +345,7 @@ def _say_not_built_yet(manifest: dict, missing_files: list, project_dir: Path) -
     if manifest["project"].get("build"):
         lines.append("`chartbook build` runs its build script and renders the site again.")
     else:
-        lines.append("Build them, then run `chartbook docs` again.")
+        lines.append("Build them, then run `chartbook docs generate` again.")
     lines.append("With --strict, this is an error.")
     click.echo("\n".join(lines), err=True)
 
@@ -497,7 +497,7 @@ def generate_docs(
             click.echo(
                 click.style("Error: ", fg="red", bold=True)
                 + "--incremental and --watch build with Sphinx; a site with [project] writer = "
-                "\"mkdocs\" is built whole. Run `chartbook docs` without them.",
+                "\"mkdocs\" is built whole. Run `chartbook docs generate` without them.",
                 err=True,
             )
             raise SystemExit(1)

@@ -41,7 +41,7 @@ def _built(project: Path, monkeypatch) -> dict:
     theme), and a test that let them in would be testing the wrong tree.
     """
     monkeypatch.chdir(project)
-    result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+    result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
     assert result.exit_code == 0, result.output
     return json.loads((project / "_docs" / "index.json").read_text())
 
@@ -162,7 +162,7 @@ class TestTheBuild:
         manifest["project"]["enable_data_download"] = True
         (project / "chartbook.toml").write_text(tomli_w.dumps(manifest))
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         site = project / "docs"
         assert (site / "index.html").is_file() and (site / "cb" / "charts.html").is_file()
@@ -181,7 +181,7 @@ class TestTheBuild:
         _, forecast = trained
         _set_writer(forecast, "mkdocs")
         monkeypatch.chdir(forecast)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert "contains a link" not in result.output, result.output
         assert (forecast / "docs" / "cb" / "models" / "acme--forecast" / "m.html").is_file()
@@ -192,7 +192,7 @@ class TestTheBuild:
         catalog = catalog_project.resolve()
         _set_writer(catalog, "mkdocs")
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         site = catalog / "docs"
         for page in ("index.html", "cb/charts.html", "cb/dataframes.html", "cb/pipelines.html", "cb/diagnostics.html", "contributing.html", "cb/pipelines/pipeline_a_README.html"):
@@ -211,7 +211,7 @@ class TestTheBuild:
         (site_dir / "index_toc.md").write_text("```{toctree}\nmore\nguide\n```\n")
         _set_writer(project, "mkdocs")
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         assert "warning: guide.md uses Sphinx syntax" in result.output
         front = (project / "_docs" / "pages" / "index.md").read_text()
@@ -224,7 +224,7 @@ class TestTheBuild:
         project = pipeline_project.resolve()
         _set_writer(project, "mkdocs")
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--incremental"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
         assert result.exit_code == 1
         assert "build with Sphinx; a site with [project] writer = \"mkdocs\" is built whole" in result.output
 
@@ -235,7 +235,7 @@ class TestTheBuild:
         _set_writer(project, "mkdocs")
         monkeypatch.setattr(mkdocs_writer, "is_installed", lambda: False)
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 1
         assert "pip install chartbook[mkdocs]" in result.output
 

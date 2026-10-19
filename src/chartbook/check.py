@@ -67,7 +67,7 @@ def not_built_hint(manifest: dict) -> str:
     """What to run when :func:`check_paths` found a lone pipeline that has built nothing yet.
 
     `chartbook build` is named only when there is a build script for it to
-    run, as `chartbook docs` names it.
+    run, as `chartbook docs generate` names it.
     """
     build = (
         "`chartbook build` builds it"
@@ -242,7 +242,7 @@ def check_paths(
     missing_files = validate_source_files(manifest, base_dir)
     # A lone pipeline that has built nothing yet (a project just made, a
     # fresh clone) lacks every output, which is not a mistake in its
-    # manifest; told as `chartbook docs` tells it
+    # manifest; told as `chartbook docs generate` tells it
     unbuilt = (
         not skip_outputs
         and manifest["project"].get("type") == "pipeline"

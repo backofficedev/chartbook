@@ -180,7 +180,7 @@ def render(taken, store=None, timeout: float = BUILD_TIMEOUT) -> Rendered:
             else:
                 try:
                     result = subprocess.run(
-                        [sys.executable, "-m", "chartbook.cli", "docs", str(staging / "site"), "-f"],
+                        [sys.executable, "-m", "chartbook.cli", "docs", "generate", str(staging / "site"), "-f"],
                         cwd=laid.folder,
                         capture_output=True,
                         text=True,

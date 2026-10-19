@@ -26,5 +26,5 @@
 <text x='410.0' y='78.0' text-anchor='middle' fill='#9ca3af' font-size='12.5' font-style='italic'>write</text>
 <line x1='594' y1='86.0' x2='646' y2='86.0' stroke='#93c5fd' stroke-width='1.5' marker-end='url(#a)'/>
 <text x='620.0' y='78.0' text-anchor='middle' fill='#9ca3af' font-size='12.5' font-style='italic'>build</text>
-<text x='410.0' y='170' text-anchor='middle' fill='#9ca3af' font-size='13'>one command, <tspan font-family='SFMono-Regular, Menlo, Consolas, monospace' fill='#60a5fa'>chartbook docs</tspan>, does all three; when anything disagrees with the repository, the repository is right</text>
+<text x='410.0' y='170' text-anchor='middle' fill='#9ca3af' font-size='12'>one command, <tspan font-family='SFMono-Regular, Menlo, Consolas, monospace' fill='#60a5fa'>chartbook docs generate</tspan>, does all three; when anything disagrees with the repository, the repository is right</text>
 </svg>

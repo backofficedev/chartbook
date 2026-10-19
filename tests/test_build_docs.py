@@ -708,7 +708,7 @@ class TestNotBuiltYet:
     """A pipeline that has built nothing it declares still has a site.
 
     A project just made by `chartbook init` is one, and so is any fresh
-    clone of a pipeline whose data is git-ignored. `chartbook docs` used to
+    clone of a pipeline whose data is git-ignored. `chartbook docs generate` used to
     stop there, and its hint offered --no-strict, which a lone pipeline
     refuses.
     """
@@ -824,7 +824,7 @@ class TestNotBuiltYet:
         del config["scripts"]
         toml_path.write_bytes(tomli_w.dumps(config).encode())
         generate_docs(output_dir=unbuilt / "docs", project_dir=unbuilt)
-        assert "Build them, then run `chartbook docs` again." in capsys.readouterr().err
+        assert "Build them, then run `chartbook docs generate` again." in capsys.readouterr().err
 
     def test_after_its_build_script_has_run_it_is_an_error(self, unbuilt, capsys):
         """`chartbook build` says this: the build has just run, and made none of it."""

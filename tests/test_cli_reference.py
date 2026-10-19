@@ -10,8 +10,8 @@ The page's shape, as the test reads it: a `## chartbook <name>` heading
 opens the section of a top-level command or group, and runs to the next
 `## ` heading outside a fenced block (a group may also have one such
 heading per subcommand). A subcommand is named in its group's section as
-`chartbook <group> <sub>` or under a `### … <sub>` heading; where it has a
-`###` heading, its options are looked for under that heading alone.
+`chartbook <group> <sub>` or under a `### <group> <sub>` heading; where it
+has a `###` heading, its options are looked for under that heading alone.
 Options are matched by a spelling the CLI accepts, long or short, as a
 whole word. A section that says it takes the arguments of another command,
 as `build` does of `docs`, is read with that command's section.
@@ -103,10 +103,15 @@ def _section(page: str, top: str, seen=()) -> str:
 
 
 def _own_subsection(page: str, words: tuple) -> str:
-    """The ``###`` subsection of a subcommand, if the page gives it one; else its group's section."""
+    """The ``###`` subsection of a subcommand, if the page gives it one; else its group's section.
+
+    The heading names the group as well as the subcommand: two groups may
+    have a subcommand of one name, as `docs generate` and `catalog generate`
+    do, and the first `### … generate` on the page was the wrong one.
+    """
     if len(words) > 1:
         for heading, text in _sections(page).items():
-            if heading.startswith("### ") and _whole(heading, words[-1]) and (len(words) == 2 or _whole(heading, words[-2])):
+            if heading.startswith("### ") and _whole(heading, words[-1]) and _whole(heading, words[-2]):
                 return text
     return _section(page, words[0])
 
@@ -221,7 +226,7 @@ def test_a_usage_line_shows_every_option(words, command, page):
 def test_the_size_threshold_says_what_it_governs(page):
     """Found by a reviewer: `docs --help` still said "memory-efficient loading" after
     the glimpse stopped depending on the size; the page and the help now say the same."""
-    (option,) = [p for p in main.commands["docs"].params if "--size-threshold" in getattr(p, "opts", [])]
+    (option,) = [p for p in main.commands["docs"].commands["generate"].params if "--size-threshold" in getattr(p, "opts", [])]
     assert "date range" in option.help and "memory-efficient" not in option.help
     (row,) = [line for line in page.splitlines() if line.startswith("| `--size-threshold FLOAT`")]
     assert "date range" in row

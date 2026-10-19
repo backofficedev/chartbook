@@ -571,11 +571,11 @@ def _pages(output_dir: Path) -> str:
 
 
 class TestDocsOfAnUntrustedPipeline:
-    """`chartbook docs` renders a folder the user has not trusted as it renders files from a store."""
+    """`chartbook docs generate` renders a folder the user has not trusted as it renders files from a store."""
 
     def test_it_renders_with_a_warning_and_runs_no_query(self, leaky_project, monkeypatch):
         monkeypatch.chdir(leaky_project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert "Warning: " in result.output
         assert f"{leaky_project} is not a pipeline you trust, so it is read as files from a store are" in result.output
@@ -591,7 +591,7 @@ class TestDocsOfAnUntrustedPipeline:
     def test_a_trusted_pipeline_runs_its_query_with_no_warning(self, leaky_project, monkeypatch):
         config.record_trust(leaky_project, "render")
         monkeypatch.chdir(leaky_project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert "not a pipeline you trust" not in result.output
         assert "HUNTER2_LEAKED_SECRET" in _pages(leaky_project / "docs")
@@ -603,7 +603,7 @@ class TestDocsOfAnUntrustedPipeline:
         logo.write_bytes(b"\x89PNG\r\n\x1a\nTRUST-TEST-LOGO-BYTES")
         _edit_manifest(pipeline_project, lambda m: m["project"].__setitem__("logo", "../elsewhere.png"))
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 1, result.output
         assert "is not a pipeline you trust" in result.output
         assert "[project] logo = '../elsewhere.png' is not a plain path inside the pipeline's folder" in result.output
@@ -614,7 +614,7 @@ class TestDocsOfAnUntrustedPipeline:
         config.record_trust(pipeline_project, "render")
         # The untrusted mode is the process's; a second command is a second process
         monkeypatch.delenv(config.UNTRUSTED_ENV_VAR, raising=False)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         copied = [p for p in (pipeline_project / "docs").rglob("*") if p.is_file() and b"TRUST-TEST-LOGO-BYTES" in p.read_bytes()]
         assert copied, "the logo the manifest names was not copied into the site"
@@ -788,7 +788,7 @@ class TestDocsOfACatalog:
         config.record_trust(root, "render")
         config.record_trust(a, "render")
         monkeypatch.chdir(root)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 1, result.output
         lines = result.output.splitlines()
         assert lines[0] == "Error: a catalog's site is built only from folders you trust, and these are not trusted:"
@@ -799,7 +799,7 @@ class TestDocsOfACatalog:
 
         result = CliRunner().invoke(main, ["trust", "--members", "--render"])
         assert result.exit_code == 0, result.output
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert (root / "docs" / "index.html").is_file()
 
@@ -807,7 +807,7 @@ class TestDocsOfACatalog:
         root = _sibling_catalog(work, "pipeline_a")
         config.record_trust(work / "pipeline_a", "run")
         monkeypatch.chdir(root)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 1, result.output
         assert f"  {root.resolve()} (the catalog's own folder)" in result.output
         assert "pipeline_a" not in result.output.split("these are not trusted:")[1].split("`chartbook trust")[0]
@@ -819,7 +819,7 @@ class TestDocsOfACatalog:
         config.record_trust(root, "render")
         config.record_trust(work / "pipeline_a", "render")
         monkeypatch.chdir(root)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 1, result.output
         assert "these are not trusted" not in result.output
         assert "No chartbook.toml" in result.output and "pipeline_c" in result.output
@@ -828,7 +828,7 @@ class TestDocsOfACatalog:
         root = create_catalog_project(work / "cat", pipeline_ids=["pipeline_a"])
         monkeypatch.setattr("chartbook.cli._default_catalog_path", lambda: root / "chartbook.toml")
         monkeypatch.chdir(work)
-        result = CliRunner().invoke(main, ["catalog", "build", "-f"])
+        result = CliRunner().invoke(main, ["catalog", "generate", "-f"])
         assert result.exit_code == 1, result.output
         assert "Error: a catalog's site is built only from folders you trust, and these are not trusted:" in result.output
         assert f"`chartbook trust --members` in {root} trusts" in result.output
@@ -842,11 +842,11 @@ class TestDocsOfACatalog:
         monkeypatch.setattr("chartbook.cli._default_catalog_path", lambda: root / "chartbook.toml")
         monkeypatch.chdir(root)
         assert CliRunner().invoke(main, ["trust", "--members", "--render"]).exit_code == 0
-        result = CliRunner().invoke(main, ["catalog", "build", "-f"])
+        result = CliRunner().invoke(main, ["catalog", "generate", "-f"])
         assert result.exit_code == 0, result.output
         assert looks_like_build_tree(root / "_docs")
         config.forget_trust(path=work / "pipeline_a")
-        result = CliRunner().invoke(main, ["catalog", "build", "-f", "--clean"])
+        result = CliRunner().invoke(main, ["catalog", "generate", "-f", "--clean"])
         assert result.exit_code == 1, result.output
         assert "these are not trusted" in result.output
         assert looks_like_build_tree(root / "_docs")
@@ -854,11 +854,11 @@ class TestDocsOfACatalog:
 
 class TestCatalogBuildOfAPipeline:
     def test_a_settings_file_pointing_at_an_untrusted_pipeline_renders_it_as_a_store_build(self, leaky_project, monkeypatch):
-        """Found by a reviewer: `catalog build` dropped what the gate said, so a pipeline the settings
+        """Found by a reviewer: `catalog generate` dropped what the gate said, so a pipeline the settings
         file named as the catalog was rendered trusted, its query run and its secret on the page."""
         monkeypatch.setattr("chartbook.cli._default_catalog_path", lambda: leaky_project / "chartbook.toml")
         monkeypatch.chdir(leaky_project)
-        result = CliRunner().invoke(main, ["catalog", "build", "-f"])
+        result = CliRunner().invoke(main, ["catalog", "generate", "-f"])
         assert result.exit_code == 0, result.output
         assert "not a pipeline you trust" in result.output
         assert "HUNTER2_LEAKED_SECRET" not in _pages(leaky_project / "docs")
@@ -925,7 +925,7 @@ class TestCheck:
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["check"])
         last = result.output.strip().splitlines()[-1]
-        assert last.startswith("This pipeline is not trusted: `chartbook build` and `chartbook run` refuse to run the build script, and `chartbook docs` renders the site as one from a store is")
+        assert last.startswith("This pipeline is not trusted: `chartbook build` and `chartbook run` refuse to run the build script, and `chartbook docs generate` renders the site as one from a store is")
         assert "`chartbook trust` here trusts it; `chartbook trust --list` shows what is trusted." in last
 
     def test_render_only_is_said_as_that(self, pipeline_project, monkeypatch):
@@ -934,7 +934,7 @@ class TestCheck:
         result = CliRunner().invoke(main, ["check"])
         last = result.output.strip().splitlines()[-1]
         assert last.startswith("This pipeline is trusted to render, not to run: `chartbook build` and `chartbook run` refuse")
-        assert "`chartbook docs`" not in last
+        assert "`chartbook docs generate`" not in last
 
     def test_a_trusted_folder_draws_no_line(self, pipeline_project, monkeypatch):
         config.record_trust(pipeline_project, "run")

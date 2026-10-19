@@ -579,7 +579,7 @@ class TestCheckCommand:
         assert "Nothing is built yet: `chartbook build` builds it" in result.output
 
     def test_a_catalog_is_told_a_file_is_not_found(self, catalog_project, lenient_policy):
-        """`chartbook docs` tells "not built yet" for a lone pipeline only; so does check."""
+        """`chartbook docs generate` tells "not built yet" for a lone pipeline only; so does check."""
         import shutil
 
         # pipeline_a has built nothing, pipeline_b everything: "nothing is built" would be wrong

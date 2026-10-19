@@ -582,7 +582,7 @@ class TestInTheIndex:
         reader, _ = with_data
         self._add_model(reader, ["upstream:dataframe_0"])
         monkeypatch.chdir(reader)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         built = json.loads((reader / "docs" / "index.json").read_text())
         pinned_at = lock.read_lock(reader).assets["upstream:dataframe_0"]["content_hash"]

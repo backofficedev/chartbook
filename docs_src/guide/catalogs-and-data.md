@@ -21,7 +21,7 @@ path = "../old_thing"
 disabled = true          # kept, but skipped during builds
 ```
 
-`chartbook docs` inside the catalog directory renders the combined site: chart and dataframe listings across all member pipelines, per-pipeline pages, and a diagnostics page showing metadata completeness.
+`chartbook docs generate` inside the catalog directory renders the combined site: chart and dataframe listings across all member pipelines, per-pipeline pages, and a diagnostics page showing metadata completeness.
 
 A catalog's site is built from its own folder and from every member folder on this machine, and each of them must be one you trust: `chartbook trust --members` in the catalog's folder records them all, and until then the build stops and lists the folders that are not ({ref}`chartbook trust <chartbook-trust>`). A member the catalog shows from the store has no folder here and needs no trust. `chartbook run` in a catalog runs each member's build script, and asks the same of each.
 
@@ -32,8 +32,8 @@ For personal use there's a ready-made location, `~/.chartbook/chartbook.toml`, w
 ```console
 chartbook catalog init            # create it
 chartbook catalog add ../my-repo  # register a pipeline
-chartbook catalog build           # build its site into ~/.chartbook/docs/ (only what changed since last time)
-chartbook catalog browse          # open that site
+chartbook catalog generate        # render its site into ~/.chartbook/docs/ (only what changed since last time)
+chartbook catalog open            # open that site
 ```
 
 `catalog add` keys each pipeline by its ID ({ref}`the rule <pipeline-identity>`): at the top of a repository with a remote (its `repo_url`, or else its git `origin` remote), the repository's name (`ftsfr/crsp_treasury` from `github.com/ftsfr/crsp_treasury`, whatever the folder is called); in a subfolder, the remote's scope and the subfolder's name; with no remote, the folder's name. It stores the path relative to the catalog, between the two folders as they really are, with any link in their paths followed (so a home folder reached through a link works), and skips duplicates. It accepts globs (`chartbook catalog add ../repos/*`) and a `--catalog` option to target a catalog other than the default. `chartbook catalog disable <id>` / `enable <id>` toggle entries without deleting them.

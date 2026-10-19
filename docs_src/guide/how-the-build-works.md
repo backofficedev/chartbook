@@ -1,6 +1,6 @@
 # How the Build Works
 
-`chartbook docs` turns a repository into a site in three steps. Each is a transformation of the
+`chartbook docs generate` turns a repository into a site in three steps. Each is a transformation of the
 one before, and each leaves something you can look at.
 
 ```{image} ../_static/diagrams/chain-light.svg
@@ -224,7 +224,7 @@ By default `_docs/` and `_docs_src/` are deleted afterwards, whether the build s
 `--keep-build-dirs` keeps them, which is what you want when a build fails:
 
 ```console
-chartbook docs --keep-build-dirs
+chartbook docs generate --keep-build-dirs
 cat _docs/cb/charts/acme--yield_curve.repo_rates.md   # the Markdown Sphinx saw
 cat _docs/index.json                                    # the full index, with resolved paths
 cat _docs/conf.py
@@ -233,7 +233,7 @@ cat _docs/conf.py
 ## Incremental builds and watch mode
 
 Everything above is a **clean build**: both directories start empty, every page is written, Sphinx
-renders all of them. That is the default, and the right thing in CI. `chartbook docs
+renders all of them. That is the default, and the right thing in CI. `chartbook docs generate
 --incremental` keeps `_docs/` and makes the next build do less, in three places.
 
 **Unchanged pipelines are not rewritten.** Before writing anything, the build takes a
@@ -265,14 +265,14 @@ and does not redraw the navigation of pages that did not change.
 and has the usual blind spot: a file replaced by different content of the same size and timestamp
 is not noticed. A clean build is never wrong; when in doubt, run one.
 
-`chartbook docs --watch` is the incremental build in a loop: build, check the project's files once
+`chartbook docs generate --watch` is the incremental build in a loop: build, check the project's files once
 a second (`--watch-interval`), rebuild when any differs. A build that fails, typically because a
 file was caught half-saved, is reported and the loop carries on. There is no server and no live
-reload: open the site with `chartbook browse` and refresh after a rebuild.
+reload: open the site with `chartbook docs open` and refresh after a rebuild.
 
 ## The build directory
 
-After `chartbook docs --keep-build-dirs`:
+After `chartbook docs generate --keep-build-dirs`:
 
 ```
 _docs/
@@ -320,5 +320,5 @@ _docs/
 
 - {doc}`vocabulary`: the words this page uses, defined once
 - {doc}`documenting-a-pipeline`: the manifest that all of this starts from
-- {doc}`../reference/cli`: every option of `chartbook docs`
+- {doc}`../reference/cli`: every option of `chartbook docs generate`
 - {doc}`../design/writer`: the design of the writer, and what every page shows

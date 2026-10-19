@@ -572,7 +572,7 @@ class TestIndexAndSite:
         }
         _manifest(pipeline, dated)
         monkeypatch.chdir(pipeline)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         page = (pipeline / "_docs" / "cb" / "dataframes" / "acme--rates" / "slopes.md").read_text()
         assert "| Data available up to (min)     | 2024-01-01" in page
@@ -590,7 +590,7 @@ class TestIndexAndSite:
 
     def test_the_page_describes_the_table(self, pipeline, monkeypatch):
         monkeypatch.chdir(pipeline)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         page = (pipeline / "_docs" / "cb" / "dataframes" / "acme--rates" / "slopes.md").read_text()
         assert "A query in source 'local' (duckdb): 2 rows, 2 columns." in page

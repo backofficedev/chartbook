@@ -46,15 +46,15 @@ docs_path = data.get_docs_path(pipeline="markets", dataframe="market_data")
 
 ```bash
 chartbook init               # Scaffold a new pipeline project
-chartbook docs              # Render the HTML documentation (was `chartbook build`)
+chartbook docs generate      # Render the HTML documentation (was `chartbook docs`)
 chartbook build -f          # Run the project's build script, then render the documentation
 chartbook run               # Run [scripts] build alone (pins dependencies first); `chartbook run <name>` runs another script
 chartbook trust             # Say a pipeline's folder is yours to build; until then `docs` renders it as a store build and `build`/`run` refuse (--render, --members, --repository, --list, --forget)
-chartbook docs -f           # Force overwrite existing docs
-chartbook browse             # Open the generated site
+chartbook docs generate -f   # Force overwrite existing docs
+chartbook docs open          # Open the generated site (was `chartbook browse`)
 chartbook publish            # Stage publishable files to a directory
 chartbook catalog add <dir>  # Register a pipeline in the catalog
-chartbook catalog build      # Build the catalog site
+chartbook catalog generate   # Render the catalog site (was `catalog build`)
 chartbook ls                 # List pipelines, dataframes, charts
 chartbook data get-path --pipeline <id> --dataframe <id>  # Parquet path
 chartbook create-data-glimpses     # Create data summary report

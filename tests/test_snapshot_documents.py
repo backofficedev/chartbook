@@ -179,7 +179,7 @@ class TestLayingAVersionOut:
         shutil.rmtree(pipeline)  # the repository is gone; the store is all there is
         laid = snapshot.materialize(taken, tmp_path / "v1")
         monkeypatch.chdir(laid.folder)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         site = laid.folder / "docs"
         page = (site / "cb" / "dataframes" / "acme--rates" / "treasury.html").read_text()
@@ -500,7 +500,7 @@ class TestTheLaidOutVersion:
         recorded = datetime.strptime(marker["code_changed_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
         assert find_latest_code_change(laid.folder) == datetime.fromtimestamp(recorded.timestamp())
         monkeypatch.chdir(laid.folder)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
 
     def test_a_named_site_dir_with_nothing_kept_is_made(self, pipeline, tmp_path, monkeypatch):
@@ -510,4 +510,4 @@ class TestTheLaidOutVersion:
         laid = snapshot.materialize(snapshot.make(pipeline).snapshot, tmp_path / "v1")
         assert (laid.folder / "pages").is_dir()
         monkeypatch.chdir(laid.folder)
-        assert CliRunner().invoke(main, ["docs", "./docs", "-f"]).exit_code == 0
+        assert CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"]).exit_code == 0
