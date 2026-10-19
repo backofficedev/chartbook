@@ -17,6 +17,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
 | `chartbook snapshot` | Declare this pipeline's build ready for the pipelines that depend on it |
+| `chartbook restore` | Put this pipeline's own assets back on disk from its snapshots: a costly output, after a clean or a clone |
 | `chartbook add PIPELINE` | Declare a dependency by its ID, read from the store, and pin it |
 | `chartbook pin` | Freeze what this pipeline depends on, in `chartbook.lock` |
 | `chartbook update` | Move pins forward to each dependency's newest snapshot |
@@ -164,6 +165,7 @@ Successfully generated documentation in /work/rate_forecast/docs
 - **If the script fails, the site is not rendered**, and the command exits with the script's exit code.
 - **After the script has run, a declared file that is missing is an error**, even when none of them is there, which `chartbook docs generate` would show as not built yet: the build has just run and did not make it.
 - **With no `build` script** in {ref}`[scripts] <scripts>`, there is nothing to run. It says so and renders the site.
+- **`--remake`** is {ref}`chartbook run <chartbook-run>`'s: without it, the build stops when an asset marked `keep = true` is not on disk while the store has a version of it, and says `chartbook build --remake` as the way on.
 - **In a catalog**, the script is run in each of the catalog's pipelines, and then the catalog's site is rendered.
 - **In a folder you have not trusted to run**, the script is not run: a build script is code, and the command stops, naming the folder and the command that trusts it, {ref}`chartbook trust <chartbook-trust>`. With no `build` script, the site is rendered as `chartbook docs generate` renders an untrusted folder.
 
@@ -576,6 +578,26 @@ Things to know:
 - **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). {ref}`chartbook store gc <chartbook-store-gc>` clears old ones: those nothing pins, that are not the newest of their pipeline, that no label points into, and that are over 7 days old.
 - **It is found by commit, or by the pipeline's ID.** A pipeline that depends on this folder, or on the same repository by URL, finds it by the commit; one that names this pipeline by its ID (`"ftsfr/fed_yield_curve" = {}`) finds it by the ID. It is in the store, so another machine that shares the store ({ref}`a store a team shares <chartbook-store>`) finds it the same ways once the store has synced, and by the ID with no folder of this pipeline there at all.
 
+(chartbook-restore)=
+## chartbook restore
+
+```console
+chartbook restore [NAMES...] [--project-dir PATH]
+```
+
+Put this pipeline's own assets back on disk, from its snapshots in the store. The mirror of {ref}`chartbook snapshot <chartbook-snapshot>`, which copies the folder into the store; the guide is {doc}`../guide/keeping-costly-outputs`.
+
+With no `NAMES`, every asset `chartbook.toml` marks `keep = true` that is not on disk: a costly output, after a clean or in a fresh clone. With names, those assets, kept or not, as `chartbook path` names them: `embeddings`, `model/forecaster`, `chart/curve`. Any asset a snapshot holds can be put back.
+
+```console
+$ chartbook restore
+embeddings: put back at ./_data/embeddings.parquet from the snapshot at 4f2a91c, made 2026-09-30 14:02 UTC (1.2 GB)
+```
+
+Each comes from the newest snapshot of this pipeline that holds it built, with its bytes in the store and whole, and is written at the path the manifest declares now. Nothing on disk is written over: an asset that is there is left, and said. What cannot be put back is said with why (no snapshot of the pipeline holds it; the store does not have its bytes; it is a table or a query in a source, which has no file; the manifest does not declare it), and the command exits 1. With no names and nothing missing, it says there is nothing to restore.
+
+Whether the build tool then skips the step that makes the asset is its own rule: doit skips a task whose target exists only if it has no `file_dep` or has seen them before. The guide gives the recipe.
+
 (chartbook-pin)=
 ## chartbook add
 
@@ -793,7 +815,7 @@ A snapshot met twice is walked once and marked "shown above". A `git` dependency
 ## chartbook run
 
 ```console
-chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--project-dir PATH]
+chartbook run [SCRIPT] [--force] [--snapshot] [--frozen] [--remake] [--project-dir PATH]
 ```
 
 Run a script in this pipeline. `SCRIPT` is a name from {ref}`[scripts] <scripts>`. With none given it is `build`, the script that makes a pipeline's data current.
@@ -880,6 +902,17 @@ Nothing builds it a second time by itself. Two things do, both on purpose:
 A script is run by `bash`, or by `sh` where there is no `bash`, and stops at the first command in it that fails. On Windows it is run by `cmd`: a script of one line as it is, and one of several lines as a batch file that stops at the first line that fails, with that line's exit code; there a line that runs another batch file (`conda activate`, which is `conda.bat`) must begin with `call`, or nothing after it runs.
 
 **`--frozen`.** Pin nothing and write nothing before the build but the store's note that this machine reads these pins (as `chartbook pin --frozen` does): not the lockfile, no object, and no `git` dependency is fetched or built. The build runs only if `chartbook pin --frozen` would pass; otherwise nothing runs and the problems are listed. `--frozen` and `--snapshot` are one or the other.
+
+**`--remake`.** An asset `chartbook.toml` marks `keep = true` cost something to make ({doc}`../guide/keeping-costly-outputs`). When one is not on disk while the store has a version of it, `build` stops before anything runs, in a catalog before any member's build, and says the two ways on:
+
+```text
+Error: acme/docs: embeddings is kept, and is not on disk (./_data/embeddings.parquet). The store has its version from 4f2a91c, made 2026-09-30 14:02 UTC.
+  chartbook restore           puts it back
+  chartbook run --remake      runs the build without it, which makes it again
+Nothing was built.
+```
+
+{ref}`chartbook restore <chartbook-restore>` puts the bytes back, and `--remake` runs the build without them, which makes the asset again; it covers every kept asset at once, so to remake one and keep another, restore the other first. A first build, with no version in the store, is not stopped, and a kept asset that is on disk stops nothing.
 
 ```console
 $ chartbook run --frozen
@@ -999,6 +1032,7 @@ The store is shared by all your projects. Two things keep what is in it. Every `
 | It is the newest a branch or tag can pin from (not with `--aggressive`) | The last one on its `release` branch, or at its `v1.0` tag |
 | A label points at a model version in it (not with `--aggressive`) | `champion = "7f3a9c2e41b0"` in that pipeline's `chartbook.toml`, read from its folder or as its newest snapshot recorded |
 | It says which repository the kept snapshots are of: the newest that names an address and first commit together, where the kept ones would otherwise look like two repositories or one of them is from a clone with a path remote; or those that name its repository, where a kept one names none | The main checkout's last snapshot, which tells a shallow clone's and an agent's clone's snapshots are one repository |
+| It is the newest holding a version of an asset marked `keep = true` (with `--aggressive` too) | Every version `acme/docs` ever built of `embeddings`, the output of a paid API run ({doc}`../guide/keeping-costly-outputs`). The command says what the marks keep: `Kept for \`keep = true\`: 3 version(s) of acme/docs:embeddings, 4.2 GB, in 3 snapshot(s)` |
 | It was made in the last 7 days | `--keep-days` changes the number |
 | With `--keep-lineage`: a snapshot kept for any of these was made from it, or from a label pointing at a version in it, and so on up | The `fred` snapshot that a pinned `rates` snapshot was made from: `chartbook lineage` walks to it |
 
@@ -1027,7 +1061,7 @@ Remove them? [y/N]:
 | `--forget-missing` | Stop keeping the pins of a lockfile on this machine that cannot be found. Another machine's lockfiles are never forgotten from here |
 | `--keep-days DAYS` | Keep an unpinned snapshot that is not the newest of its pipeline for this long. Default 7 |
 | `--keep-lineage` | Also keep every snapshot a kept snapshot was made from, as far up as it goes, so that `chartbook lineage` finds them all. By default a store keeps what work needs now and lets old lineage go |
-| `--aggressive` | Let names keep nothing: no snapshot is kept for a git tag or branch, or for a model label. What a lockfile pins (by its moment, or a version by its label), the newest of each pipeline, what keeps a repository's snapshots one, and the last `--keep-days` days are still kept; `--keep-days 0` leaves only the first three |
+| `--aggressive` | Let names keep nothing: no snapshot is kept for a git tag or branch, or for a model label. What a lockfile pins (by its moment, or a version by its label), the newest of each pipeline, every version of an asset marked `keep = true`, what keeps a repository's snapshots one, and the last `--keep-days` days are still kept; `--keep-days 0` leaves only the first four |
 
 What it is careful about:
 

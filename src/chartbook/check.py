@@ -63,6 +63,17 @@ _FILE_TYPE_FIELDS = {
 NOT_BUILT_YET = "not built yet"
 
 
+def _kept(manifest: dict, missing) -> bool:
+    """Whether the manifest marks a missing output ``keep = true``."""
+    section = _FILE_TYPE_FIELDS[missing.file_type][0]
+    try:
+        entries = get_pipeline_manifest(manifest, missing.pipeline_id).get(section) or {}
+    except (KeyError, ValueError):
+        return False
+    entry = entries.get(missing.item_id)
+    return isinstance(entry, dict) and entry.get("keep") is True
+
+
 def not_built_hint(manifest: dict) -> str:
     """What to run when :func:`check_paths` found a lone pipeline that has built nothing yet.
 
@@ -268,6 +279,9 @@ def check_paths(
             message = f"no files match {missing.file_path}"
         else:
             message = f"file not found: {missing.file_path}"
+        if field == "path" and missing.file_type in _FILE_TYPE_FIELDS and _kept(manifest, missing):
+            # A costly output: the store may have it (docs_src/design/keep.md)
+            message += "; it is marked keep = true, and `chartbook restore` puts it back from the store"
         problems.append(Problem(toml_file, table, field, message))
 
     # A series' write-up. The build does not render these yet, so nothing

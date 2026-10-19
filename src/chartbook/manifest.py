@@ -1317,7 +1317,8 @@ def _check_entity_fields(manifest: dict, source: str) -> None:
     every ``*_path`` and ``docs`` are strings, and ``tags`` (for a
     dataframe, ``sources``, ``providers`` and ``provider_links`` too) is a
     list of strings: a bare string is refused, not read as a list of one,
-    since what reads the list would otherwise read the string's letters. A
+    since what reads the list would otherwise read the string's letters.
+    ``keep`` is ``true`` or left out (``docs_src/design/keep.md``). A
     note has a ``path``, which is where its page comes from. A model's
     paths are :func:`validate_models`'s to check.
 
@@ -1352,6 +1353,14 @@ def _check_entity_fields(manifest: dict, source: str) -> None:
                         _require_string(value, where, field, _OTHER_PATH_EXAMPLES.get(field, "./_output/{key}").format(key=key))
             if "docs" in entry:
                 _require_string(entry["docs"], where, "docs", "The write-up, as Markdown.")
+            if "keep" in entry and entry["keep"] is not True:
+                # Every version of the asset is kept in the store, or the key
+                # is left out: `false` says nothing `keep` can say
+                raise ValueError(
+                    f"{where}: keep = {entry['keep']!r} is {_toml_word(entry['keep'])}, and keep is true, or "
+                    f"left out. Write keep = true to keep every version of the {kind} in the store, "
+                    f"or take the key out."
+                )
             for field in _ENTITY_LIST_KEYS[table]:
                 if field in entry:
                     _require_list_of_strings(entry[field], where, field, _LIST_EXAMPLES[field])

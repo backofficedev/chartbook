@@ -96,6 +96,7 @@ rates = data.load("fed_yield_curve:treasury_rates")   # a dependency's dataframe
 - {doc}`guide/vocabulary`: the words, defined once
 - {doc}`guide/documenting-a-pipeline`: the manifest and the pages it makes
 - {doc}`guide/depending-on-pipelines`: snapshots, pins, the lockfile
+- {doc}`guide/keeping-costly-outputs`: `keep = true`, `chartbook restore`, and the stop before a build remakes it
 - {doc}`guide/catalogs-and-data`: one site over many pipelines; `data.load()`
 - {doc}`guide/plotting`: one call, five chart files
 - {doc}`guide/how-the-build-works`: the index, the writer, Sphinx
@@ -122,6 +123,7 @@ getting-started
 guide/vocabulary
 guide/documenting-a-pipeline
 guide/depending-on-pipelines
+guide/keeping-costly-outputs
 guide/catalogs-and-data
 guide/reading-a-warehouse
 guide/plotting
@@ -159,5 +161,6 @@ design/data-access
 design/stores-and-backends
 design/versioned-catalog
 design/trust
+design/keep
 design/reading-other-pipelines
 ```

@@ -95,8 +95,8 @@ from chartbook.identity import (
 )
 from chartbook.index import RECORD_VERSION, SCHEMAS_DIR, record_kind
 from chartbook.manifest import VERSION_PATTERN, _read_manifest_file, resolve_project_type
-from chartbook.refs import AssetRef
-from chartbook.resolve import MANIFEST_NAME, declared_files
+from chartbook.refs import KIND_TABLES, AssetRef
+from chartbook.resolve import MANIFEST_NAME, RESOLVABLE_KINDS, declared_files
 from chartbook.store import Store, StoreError, declared_name, default_store
 from chartbook.utils import is_glob_pattern
 
@@ -325,7 +325,7 @@ class SnapshotReport:
 
 
 def asset_record(
-    ref: AssetRef, pipeline: str, declared_path: str, content, single: bool
+    ref: AssetRef, pipeline: str, declared_path: str, content, single: bool, keep: bool = False
 ) -> dict:
     """An asset as a snapshot and a lockfile record it; with its hash if stored.
 
@@ -339,6 +339,9 @@ def asset_record(
     :param single: Whether the asset's ``path`` named one file. A directory
         has its files listed, as the index lists a directory model's:
         ``files`` is what tells a directory from a file.
+    :param keep: Whether the manifest marks the asset ``keep = true``: every
+        version of it is kept in the store (``docs_src/design/keep.md``).
+        Written only when it does.
     """
     record = {
         "kind": record_kind(ref.kind),
@@ -348,6 +351,8 @@ def asset_record(
         "pipeline": pipeline,
         "location": {"kind": "file", "path": declared_path},
     }
+    if keep:
+        record["keep"] = True
     if content is not None:
         record["content_hash"] = content.content_hash
         record["size_bytes"] = content.size_bytes
@@ -363,13 +368,16 @@ def asset_record(
     return record
 
 
-def source_record(ref: AssetRef, pipeline: str, entry: dict, source: Optional[dict], content) -> dict:
+def source_record(
+    ref: AssetRef, pipeline: str, entry: dict, source: Optional[dict], content, keep: bool = False
+) -> dict:
     """A dataframe that is a table or a query in a source, as a snapshot records it.
 
     Its ``location`` is the source's, as the index writes it: the kind, the
     source's name and backend, the manifest's public url, and the table's
     name or the query's text. With *content*, the hash of the parquet file
-    the table was written out to, which is what a pin copies.
+    the table was written out to, which is what a pin copies. *keep* is as
+    :func:`asset_record` has it.
     """
     location: dict = {
         "kind": "table" if entry.get("table") else "query",
@@ -390,6 +398,8 @@ def source_record(ref: AssetRef, pipeline: str, entry: dict, source: Optional[di
         "pipeline": pipeline,
         "location": location,
     }
+    if keep:
+        record["keep"] = True
     if content is not None:
         record["content_hash"] = content.content_hash
         record["size_bytes"] = content.size_bytes
@@ -556,25 +566,26 @@ def materialize_in_source(
         except ValueError:
             continue  # a key that is not an address has no reference
         ref = local.in_pipeline(pipeline)
+        keep = entry.get("keep") is True
         source = sources.get(entry.get("source"))
         what = f"table {entry['table']}" if entry.get("table") else "query"
         where = f"{what} in source {entry.get('source')!r}"
         if source is None:
-            found.append((local, source_record(ref, pipeline, entry, None, None), f"{where}: no such source"))
+            found.append((local, source_record(ref, pipeline, entry, None, None, keep=keep), f"{where}: no such source"))
             continue
         if source.get("backend") != "duckdb":
             # A warehouse's table is read where it is, by whoever reads it
-            found.append((local, source_record(ref, pipeline, entry, source, None),
+            found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep),
                           f"{where}: a {source.get('backend')} source is read where it is, and a snapshot "
                           f"does not pin it yet"))
             continue
         url = source["_resolved_url"]
         if url == MEMORY_URL:
-            found.append((local, source_record(ref, pipeline, entry, source, None),
+            found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep),
                           f"{where}: only a table in a DuckDB file is written out as parquet"))
             continue
         if not Path(duckdb_path(url, directory)).is_file():
-            found.append((local, source_record(ref, pipeline, entry, source, None),
+            found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep),
                           f"{where}: the DuckDB file is not there"))
             continue
         with tempfile.TemporaryDirectory() as scratch:
@@ -605,7 +616,7 @@ def materialize_in_source(
                 # The engine's own error, whatever it is; and Polars panics,
                 # which are not Exceptions, for a type it cannot import
                 # (an INTERVAL column). One such table must not stop the snapshot
-                found.append((local, source_record(ref, pipeline, entry, source, None),
+                found.append((local, source_record(ref, pipeline, entry, source, None, keep=keep),
                               f"{where}: could not be read: {error}"))
                 continue
             finally:
@@ -615,7 +626,7 @@ def materialize_in_source(
                     pass
             # A copy, never a link: the file is about to be deleted with its folder
             stored = store.put(out, links=("reflink", "copy"))
-        found.append((local, source_record(ref, pipeline, entry, source, stored), None))
+        found.append((local, source_record(ref, pipeline, entry, source, stored, keep=keep), None))
     return found
 
 
@@ -1139,6 +1150,30 @@ def labels_of(raw: dict) -> dict[str, dict[str, str]]:
     return pointed
 
 
+def keeps_of(raw: dict) -> set[str]:
+    """The assets a manifest marks ``keep = true``, by their reference within the pipeline.
+
+    Every version of such an asset is kept in the store
+    (``docs_src/design/keep.md``): ``store gc`` keeps, for each distinct
+    version of its bytes, the newest snapshot holding it. Only ``true``
+    counts; the manifest loader refuses any other value.
+
+    :returns: ``{"embeddings", "model/forecaster"}``.
+    """
+    marked: set[str] = set()
+    for kind in RESOLVABLE_KINDS:
+        entries = raw.get(KIND_TABLES[kind])
+        if not isinstance(entries, dict):
+            continue
+        for name, entry in entries.items():
+            if isinstance(entry, dict) and entry.get("keep") is True:
+                try:
+                    marked.add(str(AssetRef(kind=kind, name=name)))
+                except ValueError:
+                    continue  # a key that is not an address has no reference
+    return marked
+
+
 #: What a label may be called: what a reference carries after ``@``, and
 #: not something that reads as the start of a version's hash.
 LABEL_PATTERN = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -1288,6 +1323,34 @@ def _labels_in(store: Store, group: list[Snapshot], newest: Optional[Snapshot]) 
     return pointed
 
 
+def _keeps_in(store: Store, group: list[Snapshot], newest: Optional[Snapshot]) -> set[str]:
+    """The assets of one pipeline marked ``keep = true``: in its manifest now, and as its newest snapshot recorded.
+
+    Read as :func:`_labels_in` reads labels: from each folder the snapshots
+    were made from, and from the newest snapshot's records, so that a mark
+    given on another machine counts here, and a mark the owner has taken
+    out releases its versions once a snapshot follows.
+
+    :returns: The assets' references within the pipeline.
+    """
+    marked: set[str] = set()
+    if newest is not None:
+        marked.update(local_name(record) for record in newest.assets.values() if record.get("keep") is True)
+    seen: set[Path] = set()
+    for taken in group:
+        for top in origins(store, taken):
+            directory = top / taken.subdirectory if taken.subdirectory else top
+            if directory in seen:
+                continue
+            seen.add(directory)
+            try:
+                raw = _read_manifest_file(directory)
+            except (OSError, ValueError):
+                continue
+            marked.update(keeps_of(raw))
+    return marked
+
+
 def _pinnable(store: Store, group: list[Snapshot], now: Optional[datetime] = None) -> set[Path]:
     """The snapshots of one pipeline that a branch or a tag can pin from.
 
@@ -1358,6 +1421,25 @@ def _ahead(taken: Snapshot, now: datetime) -> float:
         return float("inf")
 
 
+@dataclass(frozen=True)
+class KeptVersion:
+    """One version of an asset marked ``keep = true``, and the snapshot that keeps it.
+
+    Attributes:
+        pipeline: The pipeline's ID.
+        name: The asset's reference within it (``embeddings``, ``model/x``).
+        content_hash: The version: the hash of its bytes.
+        size_bytes: Its size, as the record has it; 0 if the record does not say.
+        snapshot: The newest snapshot of the pipeline holding it, which is kept.
+    """
+
+    pipeline: str
+    name: str
+    content_hash: str
+    size_bytes: int
+    snapshot: Snapshot
+
+
 @dataclass
 class SnapshotPlan:
     """Which snapshots a store keeps and which it may let go of.
@@ -1365,10 +1447,13 @@ class SnapshotPlan:
     Attributes:
         keep: Each snapshot that is kept, with why.
         remove: Each snapshot that may be removed, with why it may.
+        kept_versions: Each version of an asset marked ``keep = true``
+            (:class:`KeptVersion`), for the bill: what the marks keep.
     """
 
     keep: list[tuple[Snapshot, str]] = field(default_factory=list)
     remove: list[tuple[Snapshot, str]] = field(default_factory=list)
+    kept_versions: list[KeptVersion] = field(default_factory=list)
 
     def kept_hashes(self) -> set[str]:
         """The objects the kept snapshots name."""
@@ -1411,6 +1496,12 @@ def plan_removals(
     4. a label points at a model version it holds: in the pipeline's
        manifest, read from the folder the snapshots were made from, or as
        recorded in the newest snapshot of the pipeline (:func:`labels_of`);
+    4b. it is the newest snapshot holding a version of an asset the manifest
+       marks ``keep = true`` (:func:`keeps_of`, read as labels are: from the
+       folder, or from the newest snapshot's records): every version of such
+       an asset is kept, with *aggressive* or without, since the mark is a
+       cost and not a name (``docs_src/design/keep.md``); each is in
+       :attr:`SnapshotPlan.kept_versions`;
     5. it was made in the last *keep_days* days, or is dated after now by
        less than that, as a snapshot made on a machine whose clock is ahead
        is; one dated further ahead is removed if nothing pins it;
@@ -1470,16 +1561,17 @@ def plan_removals(
             present = [taken for taken in part if not made_in_the_future(taken, now)]
             newest = present[-1] if present else None
             labels = {} if aggressive else _labels_in(store, part, newest)
-            of_whole.append([part, newest, labels, set() if aggressive else _pinnable(store, part, now)])
+            of_whole.append([part, newest, labels, set() if aggressive else _pinnable(store, part, now), _keeps_in(store, part, newest)])
         if len(named) > 1 and unnamed:
-            for _, _, labels, _ in of_whole[:-1]:
+            for _, _, labels, _, marks in of_whole[:-1]:
                 for name, starts in labels.items():
                     of_whole[-1][2].setdefault(name, set()).update(starts)
+                of_whole[-1][4].update(marks)
         planned.extend(of_whole)
     # A note that names no snapshots (from before notes recorded them) keeps,
     # of the snapshots holding each object it names, the newest: an object
     # that never changes would otherwise keep every snapshot there is
-    every = sorted((taken for group, _, _, _ in planned for taken in group), key=lambda t: (t.made_at, _count(t.path)))
+    every = sorted((taken for group, _, _, _, _ in planned for taken in group), key=lambda t: (t.made_at, _count(t.path)))
 
     def newest_holding(hashes: set) -> set:
         holder: dict = {}
@@ -1493,7 +1585,25 @@ def plan_removals(
     by_noted = newest_holding(set(hashes_noted))
     noted = noted or {}
     by_label = _holding_labelled(every, labelled or {})
-    for group, newest, labels, pinnable in planned:
+    # An asset marked `keep = true` keeps every version of its bytes: for
+    # each, the newest snapshot of the pipeline holding it, as a label keeps
+    # the version it points at. Whatever else keeps that snapshot, the
+    # version is on the bill
+    by_keep: dict[int, str] = {}
+    for group, _, _, _, marks in planned:
+        if not marks:
+            continue
+        holders: dict[tuple[str, str], Snapshot] = {}
+        for taken in sorted(group, key=lambda t: (t.made_at, _count(t.path))):
+            for name in marks:
+                content_hash = (taken.assets.get(name) or {}).get("content_hash")
+                if content_hash:
+                    holders[(name, content_hash)] = taken
+        for (name, content_hash), taken in sorted(holders.items(), key=lambda item: (item[0][0], item[1].made_at, item[0][1])):
+            by_keep.setdefault(id(taken), f"it holds a version of {name}, which is kept (`keep = true` in its chartbook.toml)")
+            size = (taken.assets.get(name) or {}).get("size_bytes")
+            plan.kept_versions.append(KeptVersion(taken.pipeline, name, content_hash, size if isinstance(size, int) else 0, taken))
+    for group, newest, labels, pinnable, _ in planned:
         for taken in group:
             if (taken.commit, taken.made_at) in pinned:
                 why = "a lockfile pins it"
@@ -1509,6 +1619,8 @@ def plan_removals(
                 why = "a lockfile's note, from its last pin, names what it holds"
             elif taken is newest:
                 why = "it is the newest of its pipeline"
+            elif id(taken) in by_keep:
+                why = by_keep[id(taken)]
             elif taken.path in pinnable:
                 why = "it is the newest a branch or tag can pin from"
             elif any(
@@ -2039,15 +2151,16 @@ def make(
     assets: dict[str, dict] = {}
     not_built: list[tuple[str, str]] = []
     check_within(directory, pipeline)
+    marked = keeps_of(raw)
     for local, declared_path, absolute in declared_files(directory):
         ref = local.in_pipeline(pipeline)
         found = hashing.find_files(absolute)
         if found is None or not found.files:
-            assets[str(local)] = asset_record(ref, pipeline, declared_path, None, True)
+            assets[str(local)] = asset_record(ref, pipeline, declared_path, None, True, keep=str(local) in marked)
             not_built.append((str(ref), declared_path))
             continue
         stored = store.put(absolute, links=LINKS)
-        record = asset_record(ref, pipeline, declared_path, stored, found.single)
+        record = asset_record(ref, pipeline, declared_path, stored, found.single, keep=str(local) in marked)
         if local.kind == "model":
             scores = _scores(directory, (raw.get("models") or {}).get(local.name))
             if scores is not None:
@@ -2495,7 +2608,6 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     """
     import shutil
 
-    from chartbook.hashing import glob_root
     from chartbook.identity import VERSION_FILE
 
     store = store if store is not None else default_store()
@@ -2562,38 +2674,10 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
 
     for name in sorted(taken.assets):
         record = taken.assets[name]
-        location = record.get("location") or {}
-        if not record.get("content_hash"):
-            report.left_out.append((record["id"], "not built when the snapshot was made"))
+        why = _place_asset(record, store, folder)
+        if why is not None:
+            report.left_out.append((record["id"], why))
             continue
-        if location.get("kind") != "file":
-            report.left_out.append(
-                (record["id"], "a table or a query: in the store as parquet, and the manifest names its database")
-            )
-            continue
-        declared = location.get("path", "")
-        plain = safe_relative(declared)
-        if plain is None or plain.split("/")[0] == VERSION_FILE:
-            report.left_out.append((record["id"], f"its path {declared} is not a plain path inside the pipeline's folder"))
-            continue
-        held = Path(store.get(record["content_hash"]))
-        if is_glob_pattern(plain):
-            _copy_tree(held, folder / glob_root(plain))
-        elif record.get("files"):
-            _copy_tree(held, folder / plain)
-        else:
-            # The same bytes may be held under several names: the declared one, else the first
-            files = sorted(p for p in held.iterdir() if p.is_file() and not p.is_symlink())
-            source = held / Path(plain).name
-            if source.is_symlink() or not source.is_file():
-                source = files[0] if files else None
-            if source is None:
-                report.left_out.append((record["id"], "its object holds no file"))
-                continue
-            target = folder / plain
-            if os.path.lexists(target) or not _copy_regular_file(source, target):
-                report.left_out.append((record["id"], "its file could not be written where its path says"))
-                continue
         report.assets.append(record["id"])
 
     _write_back(taken, folder, report)
@@ -2608,6 +2692,150 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
             f"Laying out the snapshot of {taken.pipeline} at {taken.commit[:7]} made a .git in {folder}, which "
             f"this filesystem took one of its names for; it was removed, and the folder is not to be used."
         )
+    return report
+
+
+def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = None) -> Optional[str]:
+    """Copy one asset's bytes from the store to its path under *folder*; why it was not, if it was not.
+
+    The path is the record's, or *at*, the path the manifest declares now,
+    for :func:`restore`; either is judged as a record's is
+    (:func:`safe_relative`), and nothing on disk is written over: a file
+    that is there stays, and a folder's files that are there stay.
+    """
+    from chartbook.hashing import glob_root
+    from chartbook.identity import VERSION_FILE
+
+    location = record.get("location") or {}
+    if not record.get("content_hash"):
+        return "not built when the snapshot was made"
+    if location.get("kind") != "file":
+        return "a table or a query: in the store as parquet, and the manifest names its database"
+    declared = location.get("path", "") if at is None else at
+    plain = safe_relative(declared)
+    if plain is None or plain.split("/")[0] == VERSION_FILE:
+        return f"its path {declared} is not a plain path inside the pipeline's folder"
+    held = Path(store.get(record["content_hash"]))
+    if is_glob_pattern(plain):
+        _copy_tree(held, folder / glob_root(plain))
+    elif record.get("files"):
+        _copy_tree(held, folder / plain)
+    else:
+        # The same bytes may be held under several names: the declared one, else the first
+        files = sorted(p for p in held.iterdir() if p.is_file() and not p.is_symlink())
+        source = held / Path(plain).name
+        if source.is_symlink() or not source.is_file():
+            source = files[0] if files else None
+        if source is None:
+            return "its object holds no file"
+        target = folder / plain
+        if os.path.lexists(target) or not _copy_regular_file(source, target):
+            return "its file could not be written where its path says"
+    return None
+
+
+@dataclass
+class Restored:
+    """What :func:`restore` did.
+
+    Attributes:
+        put_back: Each asset put back: its reference within the pipeline,
+            the path it was written at as the manifest declares it, the
+            snapshot it came from, and its size in bytes.
+        left: Each asset asked for and not put back, with why: it is on
+            disk already, no snapshot of the pipeline holds it, the store
+            does not have its bytes, it is a table or a query, or the
+            manifest does not declare it.
+    """
+
+    put_back: list[tuple[str, str, Snapshot, int]] = field(default_factory=list)
+    left: list[tuple[str, str]] = field(default_factory=list)
+
+
+def restore(
+    project_dir: Union[str, Path] = ".", names: Optional[list] = None, store: Optional[Store] = None
+) -> Restored:
+    """Put a pipeline's own assets back on disk from its snapshots: `chartbook restore`.
+
+    With no *names*, every asset the manifest marks ``keep = true``
+    (:func:`keeps_of`) that is not on disk. With *names*, those assets,
+    marked or not: any asset a snapshot holds can be put back. Each comes
+    from the newest snapshot of this pipeline that holds it built, with its
+    bytes in the store and whole (:func:`history`, :func:`not_whole`), and
+    is written at the path the manifest declares now. Nothing on disk is
+    written over: an asset that is there is left, and said. The mirror of
+    :func:`make`, which copies the folder into the store
+    (``docs_src/design/keep.md``).
+
+    :param names: References within the pipeline, as `chartbook path` takes
+        them: ``embeddings``, ``model/forecaster``.
+    :raises SnapshotError: If the folder holds no pipeline, or is not in git
+        (its snapshots are found through its repository's commits).
+    :raises ValueError: If a name is not a reference.
+    """
+    from chartbook.resolve import declared_in_source, parse_declared_ref
+
+    directory = Path(project_dir).resolve()
+    pipeline = pipeline_in(directory)
+    store = store if store is not None else default_store()
+    raw = _read_manifest_file(directory)
+    declared = {str(local): (path, absolute) for local, path, absolute in declared_files(directory)}
+    in_source = {str(local) for local, _ in declared_in_source(directory)}
+    report = Restored()
+    if names is None:
+        wanted = sorted(keeps_of(raw))
+    else:
+        wanted = []
+        for name in names:
+            ref = parse_declared_ref(name)
+            if not ref.is_local:
+                raise ValueError(
+                    f"{name} names another pipeline's asset. `chartbook restore` puts this pipeline's own "
+                    f"assets back; another pipeline's are read where they are pinned."
+                )
+            wanted.append(str(ref))
+    snapshots = None  # read once, when an asset needs one
+    for name in wanted:
+        if name in in_source:
+            report.left.append((name, "a table or a query in a source: it has no file to put back"))
+            continue
+        if name not in declared:
+            report.left.append((name, f"not declared with a path in {MANIFEST_NAME}"))
+            continue
+        path, absolute = declared[name]
+        found = hashing.find_files(absolute)
+        if found is not None and found.files:
+            if names is None:
+                continue  # a kept asset that is on disk needs nothing
+            report.left.append((name, f"on disk at {path}; nothing is written over"))
+            continue
+        if snapshots is None:
+            snapshots = history(directory, store)
+        holder, why = None, "no snapshot of this pipeline holds it"
+        for taken in reversed(snapshots):
+            record = taken.assets.get(name) or {}
+            content_hash = record.get("content_hash")
+            if not content_hash:
+                continue
+            if not store.has(content_hash):
+                why = f"the newest snapshot holding it, at {taken.commit[:7]}, names bytes the store does not have"
+                break
+            unsynced = not_whole(store, record)
+            if unsynced:
+                why = f"the newest snapshot holding it, at {taken.commit[:7]}, names an object that {unsynced}"
+                break
+            holder = taken
+            break
+        if holder is None:
+            report.left.append((name, why))
+            continue
+        record = holder.assets[name]
+        placed = _place_asset(record, store, directory, at=path)
+        if placed is not None:
+            report.left.append((name, placed))
+            continue
+        size = record.get("size_bytes")
+        report.put_back.append((name, path, holder, size if isinstance(size, int) else 0))
     return report
 
 
