@@ -24,7 +24,7 @@ def test_the_extras_are_the_contributor_one_a_store_a_warehouse_and_a_site_tool(
     package itself, and Sphinx stays a base dependency.
     """
     extras = _project()["optional-dependencies"]
-    assert set(extras) == {"dev", "s3", "databricks", "mkdocs"}
+    assert set(extras) == {"s3", "databricks", "mkdocs"}  # the contributor toolchain is the `dev` dependency group
     assert [r.split(">")[0] for r in extras["s3"]] == ["boto3"]
     assert [r.split(">")[0] for r in extras["databricks"]] == ["databricks-sql-connector[pyarrow]"]
     assert [r.split(">")[0] for r in extras["mkdocs"]] == ["mkdocs", "mkdocs-material", "mkdocs-jupyter"]
@@ -379,15 +379,42 @@ def test_a_copy_that_is_neither_a_checkout_nor_an_sdist_stops_the_build(hook, tm
         _run(hook, root, "wheel")
 
 
-def test_the_release_build_task_is_a_plain_hatch_build():
-    """`doit hatch_build` is `hatch build`: the hook itself stops a build that cannot record its commit, so
-    there is no setting to remember (the maintainer asked why there was one; there is not)."""
+def _dodo():
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("chartbook_dodo", PYPROJECT.parent / "dodo.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.task_hatch_build()["actions"] == ["hatch build"]
+    return module
+
+
+def test_the_release_build_task_is_a_plain_build():
+    """`doit build_package` is `uv build`, which calls the hatchling backend: the hook itself stops a build
+    that cannot record its commit, so there is no setting to remember (the maintainer asked why there was
+    one; there is not)."""
+    assert _dodo().task_build_package()["actions"] == ["uv build"]
+
+
+def test_plain_doit_runs_each_suite_once():
+    """The matrix includes the default Python, so `test` is not a default task beside `test_all`."""
+    assert _dodo().DOIT_CONFIG["default_tasks"] == ["build", "test_all"]
+
+
+def test_the_dev_group_gives_the_suite_what_the_matrix_gives_it():
+    """`uv run pytest` and `hatch test` must see the same packages: the `dev` group covers every
+    extra dependency of the hatch-test environment (names, not pins)."""
+    import re
+
+    with open(PYPROJECT, "rb") as f:
+        document = tomli.load(f)
+
+    def names(requirements):
+        return {re.split(r"[\[<>=!~; ]", requirement, 1)[0].lower() for requirement in requirements}
+
+    matrix = names(document["tool"]["hatch"]["envs"]["hatch-test"]["extra-dependencies"])
+    dev = names(document["dependency-groups"]["dev"])
+    assert matrix <= dev, f"missing from the dev group: {sorted(matrix - dev)}"
+    assert {"doit", "hatch", "pytest"} <= dev
 
 
 def test_the_hook_and_init_name_the_file_alike(hook):
