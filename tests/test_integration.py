@@ -559,7 +559,7 @@ class TestExampleProjects:
         try:
             # Now render the catalog's site
             result = subprocess.run(
-                ["chartbook", "docs", "-f"],
+                ["chartbook", "docs", "generate", "-f"],
                 cwd=catalog_path,
                 capture_output=True,
                 text=True,
