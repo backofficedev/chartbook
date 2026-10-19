@@ -96,6 +96,11 @@
       "type": "integer",
       "minimum": 0
     },
+    "keep": {
+      "type": "boolean",
+      "const": true,
+      "description": "The manifest marks this asset `keep = true`: every version of its bytes is kept in the store (`store gc` keeps, for each, the newest snapshot holding it), and `chartbook restore` puts it back on disk. Present only when it does."
+    },
     "tags": {
       "type": "array",
       "items": {

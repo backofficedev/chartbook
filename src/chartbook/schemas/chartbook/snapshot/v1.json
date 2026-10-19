@@ -163,6 +163,11 @@
           "pipeline": {
             "type": "string"
           },
+          "keep": {
+            "type": "boolean",
+            "const": true,
+            "description": "The manifest marks the asset `keep = true`: every version of its bytes is kept in the store, each in the newest snapshot holding it, by `store gc`. Present only when it does."
+          },
           "content_hash": {
             "type": "string",
             "pattern": "^[a-z0-9]+:[0-9a-f]+$"

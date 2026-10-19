@@ -272,7 +272,12 @@ def docs_open(output_dir, project_dir):
 
 @main.command()
 @_site_options
-def build(**site):
+@click.option(
+    "--remake",
+    is_flag=True,
+    help="Build even though an asset marked keep = true is not on disk while the store has a version of it (see `chartbook run --remake`)",
+)
+def build(remake, **site):
     """Make everything current: run the build script, then render the site.
 
     The same as `chartbook run` followed by `chartbook docs generate`, and
@@ -286,6 +291,10 @@ def build(**site):
     Inside a build script, say `chartbook docs generate`. `chartbook build`
     there would run the script that called it; it renders the site and
     says so.
+
+    As `chartbook run`, it stops before the build when an asset marked
+    `keep = true` is not on disk while the store has a version of it:
+    `chartbook restore` puts it back, and --remake builds without it.
 
     \b
     Examples:
@@ -311,7 +320,7 @@ def build(**site):
             err=True,
         )
     elif _has_script(project_dir, BUILD_SCRIPT):
-        _run_script(project_dir, BUILD_SCRIPT)
+        _run_script(project_dir, BUILD_SCRIPT, remake=remake, remake_command="chartbook build --remake")
         # So what the script did not make is an error, not "not built yet"
         after_build = True
     else:
@@ -2682,7 +2691,12 @@ def lineage_command(project_dir, check, rehash, as_json):
     is_flag=True,
     help="Pin nothing and write nothing before the build but the store's note for gc; refuse unless every pin is in the store",
 )
-def run_command(script, project_dir, force, make_snapshot, frozen):
+@click.option(
+    "--remake",
+    is_flag=True,
+    help="Build even though an asset marked keep = true is not on disk while the store has a version of it, so that the build makes it again (`chartbook restore` puts it back instead)",
+)
+def run_command(script, project_dir, force, make_snapshot, frozen, remake):
     """Run a script in this pipeline: `build`, unless another is named.
 
     SCRIPT is a name from [scripts] in chartbook.toml.
@@ -2726,6 +2740,11 @@ def run_command(script, project_dir, force, make_snapshot, frozen):
     The build runs only if the lockfile is complete and every pin is in
     the store (`chartbook pin --frozen` says the same without building).
     For CI, and for a store you may only read.
+
+    An asset chartbook.toml marks `keep = true` cost something to make. If
+    one is not on disk while the store has a version of it, `build` stops
+    before anything runs and says so: `chartbook restore` puts it back,
+    and --remake runs the build without it, which makes it again.
     """
     _run_script(
         resolve_project_dir(project_dir),
@@ -2733,6 +2752,7 @@ def run_command(script, project_dir, force, make_snapshot, frozen):
         force=force,
         snapshot=make_snapshot,
         frozen=frozen,
+        remake=remake,
     )
 
 
@@ -2786,7 +2806,9 @@ def _echo_snapshot(report):
         )
 
 
-def _run_script(project_dir, script, force=False, snapshot=False, frozen=False):
+def _run_script(
+    project_dir, script, force=False, snapshot=False, frozen=False, remake=False, remake_command="chartbook run --remake"
+):
     """Run a named script as `chartbook run` does; exit with its code if it fails."""
     from chartbook import lock
     from chartbook import run as runner
@@ -2811,6 +2833,8 @@ def _run_script(project_dir, script, force=False, snapshot=False, frozen=False):
             on_snapshot=lambda step, made: _echo_snapshot(made),
             frozen=frozen,
             on_verify=_echo_frozen_report,
+            remake=remake,
+            remake_command=remake_command,
         )
     except (runner.RunError, lock.LockError, StoreError, ValueError, OSError) as e:
         click.echo(click.style("Error: ", fg="red", bold=True) + _explain_os_error(e), err=True)
@@ -2824,6 +2848,63 @@ def _run_script(project_dir, script, force=False, snapshot=False, frozen=False):
         )
         raise SystemExit(report.exit_code or 1)
     click.echo(f"Ran {script} in {len(report.ran)} pipeline(s).")
+
+
+@main.command("restore")
+@click.argument("names", nargs=-1)
+@click.option("--project-dir", type=click.Path(), help="Path to the pipeline (default: the current directory)")
+def restore_command(names, project_dir):
+    """Put this pipeline's own assets back on disk, from its snapshots in the store.
+
+    With no NAMES, every asset chartbook.toml marks `keep = true` that is
+    not on disk: a costly output, after a clean or in a fresh clone. Name
+    assets to put those back, kept or not, as `chartbook path` names them:
+    `embeddings`, `model/forecaster`, `chart/curve`.
+
+    Each comes from the newest snapshot of this pipeline that holds it,
+    with its bytes in the store, and is written at the path the manifest
+    declares now; the command says which commit and date it came from.
+    Nothing on disk is written over: an asset that is there is left, and
+    said. This is the mirror of `chartbook snapshot`, which copies the
+    folder into the store. Whether your build tool then skips the step
+    that makes the asset is its own rule; the guide on keeping costly
+    outputs has the recipe for doit.
+
+    Exits 1 if an asset named could not be put back. With no NAMES, a kept
+    asset that is missing and that no snapshot holds yet (a first build) is
+    said, and the command exits 0, so that CI may run it before every
+    build. The snapshots are found through the commits the clone has: a
+    shallow clone (CI's `fetch-depth: 1`) sees none of them.
+
+    \b
+    Examples:
+        chartbook restore
+        chartbook restore embeddings
+        chartbook restore model/forecaster chart/curve
+    """
+    from chartbook import snapshot as snapshots
+    from chartbook.store import StoreError, default_store
+
+    directory = resolve_project_dir(project_dir)
+    try:
+        report = snapshots.restore(directory, list(names) or None, default_store())
+    except (snapshots.SnapshotError, StoreError, ValueError, OSError) as e:
+        click.echo(click.style("Error: ", fg="red", bold=True) + _said(e), err=True)
+        raise SystemExit(1)
+    for name, path, taken, size in report.put_back:
+        click.echo(
+            f"{name}: put back at {path} from the snapshot at {taken.commit[:7]}, made {_when(taken.made_at)} "
+            f"({_format_bytes(size)})"
+        )
+    for name, why in report.left:
+        click.echo(f"{name}: not put back: {_printable(why)}", err=True)
+    if not names and not report.put_back and not report.left:
+        click.echo("Nothing to restore: nothing marked `keep = true` is missing from disk.")
+    # Asked for by name and not put back: an error. Found missing on its own
+    # and not put back (a first build, with no snapshot yet): said, and
+    # nothing more, so that a CI step may run this before every build
+    if names and report.left:
+        raise SystemExit(1)
 
 
 @main.group()
@@ -2991,7 +3072,10 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
     version, if it is the newest of its pipeline from its repository or the
     newest a branch or tag can pin from, if it says which repository the
     kept snapshots are of, if a label points at a model version in it (in
-    that pipeline's chartbook.toml, or as its newest snapshot recorded), or
+    that pipeline's chartbook.toml, or as its newest snapshot recorded), if
+    it is the newest holding a version of an asset marked `keep = true`
+    (every version of such an asset is kept, --aggressive or not, and the
+    command says what the marks keep), or
     if it was made in the last 7 days (--keep-days). Otherwise it may be
     removed, and what only it named goes with it. A store keeps what work
     needs now, and lets old lineage go: with --keep-lineage, every snapshot
@@ -3109,6 +3193,19 @@ def store_gc(dry_run, yes, forget_missing, keep_days, keep_lineage, aggressive):
             f"Kept: {len(plan.snapshots_kept)} snapshot(s), naming {plan.snapshots} "
             f"object(s): {said}"
         )
+    if plan.kept_versions:
+        # What the marks keep, asset by asset: the bill for `keep = true`
+        by_asset: dict = {}
+        for kept in plan.kept_versions:
+            entry = by_asset.setdefault((kept.pipeline, kept.name), {"versions": {}, "snapshots": set()})
+            entry["versions"].setdefault(kept.content_hash, kept.size_bytes)
+            entry["snapshots"].add(kept.snapshot.path)
+        for (pipeline, name), entry in sorted(by_asset.items()):
+            click.echo(
+                f"Kept for `keep = true`: {len(entry['versions'])} version(s) of "
+                f"{_printable(pipeline)}:{_printable(name)}, {_format_bytes(sum(entry['versions'].values()))}, "
+                f"in {len(entry['snapshots'])} snapshot(s)"
+            )
     if plan.recent:
         click.echo(
             f"Kept: {len(plan.recent)} object(s) nothing names, stored in the last hour"

@@ -137,6 +137,52 @@ def running(directory: Union[str, Path], script: str) -> bool:
     return False
 
 
+def kept_missing(directory: Union[str, Path], store: Optional[Store] = None) -> list:
+    """The assets a pipeline marks ``keep = true`` that are not on disk while a snapshot in the store holds them.
+
+    For each: its reference within the pipeline, its path as declared, and
+    the newest snapshot of the pipeline holding its bytes, in the store and
+    whole (:func:`chartbook.snapshot.newest_holder`). This is the one
+    moment a build would make a costly asset again that could be put back
+    instead (``docs_src/design/keep.md``): an asset no snapshot holds has
+    to be made, and nothing is said of it. A pipeline that is not in git
+    has no snapshots, and a shallow clone sees only the commits it has.
+
+    :raises ValueError: If the manifest cannot be read.
+    """
+    from chartbook import hashing
+    from chartbook.resolve import declared_files
+
+    directory = Path(directory).resolve()
+    marked = snapshots.keeps_of(_read_manifest(directory))
+    if not marked:
+        return []
+    declared = {str(local): (path, absolute) for local, path, absolute in declared_files(directory)}
+    missing = []
+    for name in sorted(marked):
+        if name not in declared:
+            continue  # a table or a query: nothing on disk to miss
+        found = hashing.find_files(declared[name][1])
+        if found is None or not found.files:
+            missing.append(name)
+    if not missing:
+        return []
+    store = store if store is not None else default_store()
+    try:
+        history = snapshots.history(directory, store)
+    except snapshots.SnapshotError:
+        return []
+    held = []
+    for name in missing:
+        # The one `chartbook restore` would use, by the same rule: a version
+        # whose bytes are not in the store is nothing to put back, so the
+        # build is not stopped for it
+        holder, _ = snapshots.newest_holder(history, store, name)
+        if holder is not None:
+            held.append((name, declared[name][0], holder))
+    return held
+
+
 class RunError(Exception):
     """Raised when the pipelines to run cannot be put in an order, or found."""
 
@@ -608,6 +654,8 @@ def run(
     frozen: bool = False,
     on_verify: Optional[Callable] = None,
     on_snapshot: Optional[Callable] = None,
+    remake: bool = False,
+    remake_command: str = "chartbook run --remake",
 ) -> RunReport:
     """Run a script in a pipeline, or in every pipeline of a catalog.
 
@@ -648,9 +696,17 @@ def run(
         its pins have to be there. For CI, and for a store one may only read.
     :param on_verify: Called with a pipeline's step and its
         :class:`chartbook.lock.FrozenReport`, under *frozen*.
+    :param remake: Run ``build`` even though an asset the manifest marks
+        ``keep = true`` is not on disk while the store has a version of it.
+        Without it, that stops the command before anything is built, since
+        the build would make the costly asset again
+        (:func:`kept_missing`, ``docs_src/design/keep.md``).
+    :param remake_command: The command line that says *remake*, for the
+        message: ``chartbook build --remake`` from ``chartbook build``.
     :returns: What was run, and what failed if anything did.
-    :raises RunError: If the pipelines cannot be put in an order, or the
-        one asked for has no such script.
+    :raises RunError: If the pipelines cannot be put in an order, the one
+        asked for has no such script, or a kept asset is missing while the
+        store has it and *remake* is not set.
     """
     here = Path(project_dir).resolve()
     building = script == BUILD_SCRIPT
@@ -699,6 +755,27 @@ def run(
                 except snapshots.SnapshotError as error:
                     raise RunError(f"{error} Nothing was built.") from None
                 commits_before[step.directory] = code.commit
+
+    if building and not remake:
+        # A costly output that is not on disk while the store has a version
+        # of it: found out now, before any pipeline's build remakes it
+        said = []
+        for step in steps:
+            if step.source != "asked" or step.directory is None or script not in step.scripts:
+                continue
+            for name, declared, taken in kept_missing(step.directory, store):
+                said.append(
+                    f"{step.id}: {name} is kept, and is not on disk ({declared}). The store has its version "
+                    f"from {taken.commit[:7]}, made {taken.made_at[:10]} {taken.made_at[11:16]} UTC."
+                )
+        if said:
+            them = "them" if len(said) > 1 else "it"
+            raise RunError(
+                "\n".join(said)
+                + f"\n  chartbook restore{' ' * max(1, 28 - len('chartbook restore'))}puts {them} back"
+                + f"\n  {remake_command}{' ' * max(1, 28 - len(remake_command))}runs the build without {them}, which makes {them} again"
+                + "\nNothing was built."
+            )
 
     report = RunReport(script=script)
     for step in steps:

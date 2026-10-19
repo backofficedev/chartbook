@@ -2162,8 +2162,9 @@ def _sync_from_snapshots(
     for name in sorted(newest.assets):
         # `trained_on` is the owner's record, keyed in the owner's names,
         # and would read as asset IDs here that are not; it stays with the
-        # snapshot
-        record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k != "trained_on"}
+        # snapshot. So does `keep`, the owner's intent about the owner's
+        # store: a lockfile records what was got
+        record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("trained_on", "keep")}
         asset_id = record["id"]
         before = had.get(asset_id)
         old = (before or {}).get("content_hash")
@@ -2200,7 +2201,7 @@ def _sync_from_snapshots(
     for name, label, start, why in unresolved:
         ref = dataclasses.replace(AssetRef.from_dict(snapshot.renamed(newest.assets[name], key)["ref"]), rev=label)
         asset_id = str(ref)
-        record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("content_hash", "size_bytes", "files")}
+        record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("content_hash", "size_bytes", "files", "keep")}
         missing = f"the label names version {start}, and {why}"
         records[asset_id] = {**record, "id": asset_id, "ref": ref.to_dict(), "label": label, "missing": missing}
         report.events.append(
@@ -2571,6 +2572,9 @@ class GcPlan:
             as well, which takes its place, and, with *forget_missing*, one
             that cannot be found.
         forget: Lockfiles that could not be found and are to be forgotten.
+        kept_versions: Each version of an asset marked ``keep = true`` that
+            a kept snapshot holds (:class:`chartbook.snapshot.KeptVersion`):
+            what the marks keep, for the bill.
         forget_missing, recent_seconds, keep_days, keep_lineage, aggressive: What the plan was made
             with, so that it can be made again the same way when it is
             carried out.
@@ -2581,6 +2585,7 @@ class GcPlan:
     snapshots: int = 0
     snapshots_kept: list = field(default_factory=list)
     snapshots_delete: list = field(default_factory=list)
+    kept_versions: list = field(default_factory=list)
     recent: list[str] = field(default_factory=list)
     delete: list[tuple[str, int]] = field(default_factory=list)
     forget: list[Path] = field(default_factory=list)
@@ -2774,6 +2779,7 @@ def plan_gc(
         raise LockError(str(error)) from None
     plan.snapshots_kept = snapshots.keep
     plan.snapshots_delete = snapshots.remove
+    plan.kept_versions = snapshots.kept_versions
     named_by_snapshots = snapshots.kept_hashes()
     plan.snapshots = len(named_by_snapshots)
     keep |= named_by_snapshots

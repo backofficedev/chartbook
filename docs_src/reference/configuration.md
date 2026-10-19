@@ -236,6 +236,8 @@ docs_path = "./docs_src/charts/revenue_trend.md"
 
 Exactly one of `docs_path` (a markdown file) or `docs` (inline markdown, usually a multi-line string) is required per chart.
 
+`keep = true` says every version of the chart is kept in the store; it is the one value the key takes, and it is left out otherwise. The same key goes on any dataframe, notebook, note or model: {doc}`../guide/keeping-costly-outputs`.
+
 ## `[dataframes]` — Dataframe Definitions
 
 A dataframe is in one place: a parquet file (`path`), or a table or a query in one of the pipeline's {ref}`[sources] <sources>` (`source` with `table` or `query`). `path` points at the parquet artifact — a single file or a glob pattern for hive-partitioned data:
@@ -269,6 +271,8 @@ path = "./_data/revenue_data/**/*.parquet"
 ```
 
 Glob paths only support `format="polars"` (LazyFrame) in `data.load`. As with charts, exactly one of `docs_path` / `docs` is required.
+
+`keep = true` marks a dataframe that cost something to make, the output of a paid API run over a corpus, say: every version of it is kept in the store, `chartbook restore` puts it back on disk, and a build that would make it again stops first ({doc}`../guide/keeping-costly-outputs`). It is the one value the key takes.
 
 `date_col` must be the column's name exactly as it is in the data, capitals included. The build warns when the data has no such column.
 
@@ -368,7 +372,7 @@ path = data.path("treasury_rates")                              # or the file, f
 
 ## `[notebooks]` — Jupyter Notebooks
 
-`name` is inferred from the notebook's first `# Heading`; set it explicitly to override. `publishable = true` includes the notebook in `chartbook publish` output.
+`name` is inferred from the notebook's first `# Heading`; set it explicitly to override. `publishable = true` includes the notebook in `chartbook publish` output. `keep = true` keeps every version of the executed notebook in the store, as for a dataframe ({doc}`../guide/keeping-costly-outputs`).
 
 ```toml
 [notebooks.exploratory_analysis]
@@ -384,7 +388,7 @@ publishable = true
 path = "./docs_src/methodology.md"
 ```
 
-`path` is required: the markdown file the note's page is made from. A note without one does not load, and the error says what to write.
+`path` is required: the markdown file the note's page is made from. A note without one does not load, and the error says what to write. `keep = true` keeps every version of it in the store, as for a dataframe.
 
 ## `[models]` — Trained Models
 
@@ -407,6 +411,7 @@ tags = ["Forecast", "Treasury"]
 | `trained_on` | no | The dataframes it was trained on. One of this pipeline's is its key in `[dataframes]`; another pipeline's is `pipeline:name` or `scope/pipeline:name` |
 | `metrics_path` | no | A JSON file of scores, written by your training code (below) |
 | `docs_path` or `docs` | no | The model's write-up: what it is for, how it was built, where not to use it. Strongly recommended: `chartbook check` reports a model without one unless your policy says otherwise |
+| `keep` | no | `true` keeps every version of the model in the store, for one that cost GPU hours to train: `store gc` keeps the newest snapshot holding each, `chartbook restore` puts the newest back on disk, and a build that would train it again stops first ({doc}`../guide/keeping-costly-outputs`). The one value the key takes |
 | `name`, `description`, `tags` | no | As for dataframes and charts. You may add fields of your own |
 
 The key (`rate_forecaster`) is the model's address, `model/rate_forecaster`, so it may only contain letters, digits, `.`, `_` and `-`.
