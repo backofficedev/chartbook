@@ -32,8 +32,8 @@ For personal use there's a ready-made location, `~/.chartbook/chartbook.toml`, w
 ```console
 chartbook catalog init            # create it
 chartbook catalog add ../my-repo  # register a pipeline
-chartbook catalog generate           # build its site into ~/.chartbook/docs/ (only what changed since last time)
-chartbook catalog open          # open that site
+chartbook catalog generate        # render its site into ~/.chartbook/docs/ (only what changed since last time)
+chartbook catalog open            # open that site
 ```
 
 `catalog add` keys each pipeline by its ID ({ref}`the rule <pipeline-identity>`): at the top of a repository with a remote (its `repo_url`, or else its git `origin` remote), the repository's name (`ftsfr/crsp_treasury` from `github.com/ftsfr/crsp_treasury`, whatever the folder is called); in a subfolder, the remote's scope and the subfolder's name; with no remote, the folder's name. It stores the path relative to the catalog, between the two folders as they really are, with any link in their paths followed (so a home folder reached through a link works), and skips duplicates. It accepts globs (`chartbook catalog add ../repos/*`) and a `--catalog` option to target a catalog other than the default. `chartbook catalog disable <id>` / `enable <id>` toggle entries without deleting them.

@@ -112,7 +112,7 @@ chartbook docs generate -f --incremental   # rebuild only what changed
 chartbook docs generate -f --watch         # ...and keep doing so as you edit
 ```
 
-**Incremental builds.** A plain `docs` starts from nothing every time, which is what you want in CI. `--incremental` keeps the intermediate Sphinx project (`_docs/`) and uses it the next time:
+**Incremental builds.** A plain `docs generate` starts from nothing every time, which is what you want in CI. `--incremental` keeps the intermediate Sphinx project (`_docs/`) and uses it the next time:
 
 - a pipeline none of whose files changed is not regenerated at all — its `chartbook.toml`, `src/`, `docs_src/`, README, and every data file, chart and notebook it declares are compared by modification time and size;
 - a page whose content comes out the same is left untouched, so Sphinx does not read it again;
@@ -408,7 +408,7 @@ Render the catalog's site into `~/.chartbook/docs/` (or the configured catalog's
 chartbook catalog generate [-f] [--strict/--no-strict] [--clean] [--watch [--watch-interval SECONDS]]
 ```
 
-A catalog build is **incremental by default**. Its working files are kept beside the catalog, in `_docs/`, and the next build reads them and redoes only the pipelines whose files have changed since — in a large catalog, usually a handful or none. Nothing runs between builds: there is no server or background process, only that directory. See [Incremental builds](#chartbook-build).
+A catalog build is **incremental by default**. Its working files are kept beside the catalog, in `_docs/`, and the next build reads them and redoes only the pipelines whose files have changed since — in a large catalog, usually a handful or none. Nothing runs between builds: there is no server or background process, only that directory. See [Incremental builds](#chartbook-docs).
 
 `--clean` throws the kept files away and rebuilds everything, which is also what happens automatically after ChartBook, Sphinx or a theme is upgraded. `--watch` rebuilds whenever a member pipeline's files change, until Ctrl-C.
 

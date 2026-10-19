@@ -42,14 +42,14 @@ pip install -e ".[dev]"
 
 | Command | Description |
 |---------|-------------|
-| `init` | Scaffold a new pipeline project from the cookiecutter template that comes with the installed ChartBook (`chartbook/template` in the wheel, `template/` beside `src/` in a checkout), rendered with cookiecutter and no network; `.cruft.json` is written as cruft writes it, naming `https://github.com/backofficedev/chartbook`, `directory` `template` and the commit the template is at (recorded at build time, or git `HEAD` of a checkout whose tracked `template/` files are unchanged; init says when it is in no tag and on no branch of a remote that is the template's repository), with no `skip`; when the commit is unknown there is no `.cruft.json` and init says why and prints `cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit> --no-input --extra-context '<the answers as JSON>'`; a source checkout git cannot read, or a copy without `.git` or an sdist's `PKG-INFO`, is not rendered from; only files git tracks in `template/` are shipped or rendered; the project is writable by its owner; the environment files ask for `chartbook>=` the template's `_chartbook_version`, kept equal to ChartBook's version by a test (so `cruft update` moves the floor to the template's); 19 questions, Enter takes each default (the second is the folder name, made from the project name); the defaults give one example notebook and no LaTeX; it prints the next steps (`chartbook docs generate`, install, `chartbook build -f`, `browse`, `check`); the project's `doit` runs every task but the tests (`doit run_pytest`) and does not render the site; `--git` adds `git init` and a first commit, `--github` also creates a GitHub repo with `gh` and pushes (`--public`/`--private`, default private) |
-| `docs` | Render the HTML documentation website |
+| `init` | Scaffold a new pipeline project from the cookiecutter template that comes with the installed ChartBook (`chartbook/template` in the wheel, `template/` beside `src/` in a checkout), rendered with cookiecutter and no network; `.cruft.json` is written as cruft writes it, naming `https://github.com/backofficedev/chartbook`, `directory` `template` and the commit the template is at (recorded at build time, or git `HEAD` of a checkout whose tracked `template/` files are unchanged; init says when it is in no tag and on no branch of a remote that is the template's repository), with no `skip`; when the commit is unknown there is no `.cruft.json` and init says why and prints `cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit> --no-input --extra-context '<the answers as JSON>'`; a source checkout git cannot read, or a copy without `.git` or an sdist's `PKG-INFO`, is not rendered from; only files git tracks in `template/` are shipped or rendered; the project is writable by its owner; the environment files ask for `chartbook>=` the template's `_chartbook_version`, kept equal to ChartBook's version by a test (so `cruft update` moves the floor to the template's); 19 questions, Enter takes each default (the second is the folder name, made from the project name); the defaults give one example notebook and no LaTeX; it prints the next steps (`chartbook docs generate`, install, `chartbook build -f`, `docs open`, `check`); the project's `doit` runs every task but the tests (`doit run_pytest`) and does not render the site; `--git` adds `git init` and a first commit, `--github` also creates a GitHub repo with `gh` and pushes (`--public`/`--private`, default private) |
+| `docs generate` | Render the HTML documentation website |
+| `docs open` | Open the generated site in the default browser |
 | `build` | Make everything current: run the `build` script, then render the website |
-| `browse` | Open the generated site in the default browser |
 | `check` | CI gate: exit nonzero on missing required metadata, broken paths, or expiring licenses |
 | `path` | Print the path the enclosing chartbook.toml declares for an asset |
 | `publish` | Stage a pipeline's publishable files into a directory |
-| `catalog init/add/disable/enable/build/browse` | Manage a catalog and build/browse its site |
+| `catalog init/add/disable/enable/generate/open` | Manage a catalog, and generate and open its site |
 | `ls` | List catalog objects (pipelines, dataframes, charts) |
 | `data` | Data operations (get paths, docs) |
 | `create-data-glimpses` | Create a data glimpse report for the dataframes declared in chartbook.toml |
@@ -68,7 +68,7 @@ pip install -e ".[dev]"
 
 ### chartbook docs generate
 
-Render the HTML documentation site in the specified output directory. It does not build the project's data (`chartbook run` does; `chartbook docs generate` does both). `chartbook docs generate` used to be the name of this command. In a pipeline folder the user has not trusted (`chartbook trust`), the site is rendered as a version from a store is: no query run (the glimpse says why), no template or file from outside the folder (a manifest naming one stops the render), Jinja's sandbox, and a `Warning:` line that names `chartbook trust`; a catalog builds only when its own folder and every member folder on this machine are trusted, else it lists them and says `chartbook trust --members`.
+Render the HTML documentation site in the specified output directory. It does not build the project's data (`chartbook run` does; `chartbook build` does both). `chartbook docs` was this command's name, and `chartbook build` before that. In a pipeline folder the user has not trusted (`chartbook trust`), the site is rendered as a version from a store is: no query run (the glimpse says why), no template or file from outside the folder (a manifest naming one stops the render), Jinja's sandbox, and a `Warning:` line that names `chartbook trust`; a catalog builds only when its own folder and every member folder on this machine are trusted, else it lists them and says `chartbook trust --members`.
 
 ```bash
 chartbook docs generate [OPTIONS] [OUTPUT_DIR]
@@ -986,17 +986,17 @@ docs = "Detailed sales transaction records from the CRM system."
 ### Documentation Generation Workflow
 
 ```bash
-doit                    # Generate data using task automation
+doit                        # Generate data using task automation
 chartbook docs generate -f  # Render the documentation site
-chartbook publish      # Publish to production
+chartbook publish           # Publish to production
 ```
 
 ### Development Workflow
 
 ```bash
 chartbook create-data-glimpses -o ./docs/  # Create data summary
-chartbook docs generate --keep-build-dirs       # Render with debug files
-python -m http.server -d ./docs             # Test locally
+chartbook docs generate --keep-build-dirs  # Render with debug files
+python -m http.server -d ./docs            # Test locally
 ```
 
 ---

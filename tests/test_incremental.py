@@ -911,7 +911,7 @@ class TestCommands:
         assert second.exit_code == 0, second.output
         assert "Incremental build: regenerated 0 of 2 pipeline(s)" in second.output
         assert "nothing to render" in second.output
-        assert "Catalog built successfully" in second.output
+        assert "Catalog site generated" in second.output
 
         # --clean starts over, and leaves a fresh record for next time
         cleaned = runner.invoke(main, ["catalog", "generate", "-f", "--clean"])

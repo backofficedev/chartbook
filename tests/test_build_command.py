@@ -258,6 +258,27 @@ class TestTheOldNamesSayTheNewOnes:
         assert result.exit_code == 2
         assert "`chartbook catalog browse` is `chartbook catalog open` now. Try: chartbook catalog open" in result.output
 
+    def test_a_misspelt_subcommand_is_clicks_error_not_a_confident_wrong_line(self):
+        """Found by a reviewer: `docs genrate -f` was told to try `docs generate genrate -f`, which would render into ./genrate."""
+        result = CliRunner().invoke(main, ["docs", "genrate", "-f"])
+        assert result.exit_code == 2
+        assert "No such command 'genrate'" in result.output and "Try:" not in result.output
+
+    def test_the_hint_names_the_program_as_a_person_types_it(self):
+        """Found by a reviewer: under `python -m chartbook.cli` the hint said `chartbook -m chartbook.cli docs`."""
+        result = CliRunner().invoke(main, ["docs", "./site", "-f"], prog_name="python -m chartbook.cli")
+        assert "`chartbook docs` is `chartbook docs generate` now. Try: chartbook docs generate ./site -f" in result.output
+
+    def test_shell_completion_is_not_told_off(self):
+        """Found by a reviewer: completing `chartbook catalog build --` raised the usage error."""
+        from click.shell_completion import CompletionItem, ShellComplete
+
+        completer = ShellComplete(main, {}, "chartbook", "_CHARTBOOK_COMPLETE")
+        for words, incomplete in ((["catalog", "build"], "--"), (["docs", "./site"], "-")):
+            items = completer.get_completions(words, incomplete)  # must not raise
+            assert all(isinstance(item, CompletionItem) for item in items)
+        assert "generate" in {item.value for item in completer.get_completions(["docs"], "gen")}
+
     def test_docs_alone_lists_generate_and_open(self):
         result = CliRunner().invoke(main, ["docs"])
         assert "generate" in result.output and "open" in result.output

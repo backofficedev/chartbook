@@ -43,19 +43,32 @@ class _Group(click.Group):
     arguments_go_to: str = ""
 
     def parse_args(self, ctx, args):
+        if ctx.resilient_parsing:
+            return super().parse_args(ctx, args)  # shell completion asking: nothing to say
         first = args[0] if args else None
         if first is not None and first not in self.commands and first != "--help":
-            words = ctx.command_path.split()
-            words[0] = "chartbook"  # as a person types it, whatever the program was invoked as
-            path = " ".join(words)
+            # The words as a person types them, whatever the program was invoked
+            # as (`chartbook`, `main` under a test, `python -m chartbook.cli`)
+            root = ctx.find_root().info_name or ""
+            tail = ctx.command_path[len(root):] if ctx.command_path.startswith(root) else ""
+            path = ("chartbook" + tail).strip()
             if first in self.renamed:
                 old, new, rest = f"{path} {first}", f"{path} {self.renamed[first]}", args[1:]
-            elif self.arguments_go_to:
+            elif self.arguments_go_to and _reads_as_an_argument(first):
+                # An option or a path, as the command took them; a word that is
+                # neither may be a misspelt subcommand, which click says
                 old, new, rest = path, f"{path} {self.arguments_go_to}", args
             else:
                 return super().parse_args(ctx, args)
             raise click.UsageError(f"`{old}` is `{new}` now. Try: {' '.join([new, *rest])}", ctx)
         return super().parse_args(ctx, args)
+
+
+def _reads_as_an_argument(word: str) -> bool:
+    """Whether a first word is an option or a path, rather than a possible subcommand."""
+    import os
+
+    return word.startswith(("-", ".")) or "/" in word or os.sep in word or os.path.exists(word)
 
 
 class _Main(_Group):
@@ -1999,7 +2012,7 @@ def catalog_generate(force_write, strict, clean, watch, watch_interval):
     _docs_dir = config_dir / "_docs"
     temp_docs_src_dir = config_dir / "_docs_src"
 
-    click.echo(f"Building catalog from: {catalog_path}")
+    click.echo(f"Generating the catalog's site from: {catalog_path}")
     click.echo(f"Output directory: {output_dir}")
 
     # As `chartbook docs generate` in the catalog's folder: every folder it
@@ -2050,7 +2063,7 @@ def catalog_generate(force_write, strict, clean, watch, watch_interval):
         return
 
     click.echo("")
-    click.echo(f"Catalog built successfully: {output_dir / 'index.html'}")
+    click.echo(f"Catalog site generated: {output_dir / 'index.html'}")
     click.echo("Run 'chartbook catalog open' to open it in your browser.")
 
 

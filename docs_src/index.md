@@ -75,8 +75,8 @@ shows.**
 pip install chartbook
 chartbook init            # scaffold a pipeline project
 cd <your-project>
-chartbook docs generate            # write the site, and index.json beside it
-chartbook docs open          # open it
+chartbook docs generate   # write the site, and index.json beside it
+chartbook docs open       # open it
 ```
 
 ```python
