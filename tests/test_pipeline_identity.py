@@ -377,6 +377,24 @@ class TestTwoCheckoutsOfOneRepository:
         again = CliRunner().invoke(cli, ["catalog", "add", str(feature), "--catalog", str(catalog)])
         assert "another checkout of the same repository" in again.output and "No new pipelines" in again.output
 
+    def test_catalog_add_lists_the_main_worktree_whatever_order_the_folders_come_in(self, two_checkouts):
+        """Found by CI: a glob's matches come in the filesystem's order, and on one filesystem the
+        worktree came first and became the entry, so the test above failed there and not elsewhere.
+        The main worktree is the entry, whatever the order; the other is another checkout of it."""
+        import tomli
+        from click.testing import CliRunner
+
+        from chartbook.cli import main as cli
+
+        root, main, feature = two_checkouts
+        catalog = _catalog(root / "catalog", "[pipelines]\n")
+        result = CliRunner().invoke(cli, ["catalog", "add", str(feature), str(main), "--catalog", str(catalog), "-y"])
+        assert result.exit_code == 0, result.output
+        pipelines = tomli.loads((catalog / "chartbook.toml").read_text())["pipelines"]
+        assert list(pipelines) == ["testorg/first_pipeline"]
+        assert (catalog / pipelines["testorg/first_pipeline"]["path"]).resolve() == main.resolve()
+        assert f"(another checkout of the same repository, {main.resolve()}): first-feature/" in result.output
+
 
 class TestAForkIsNotTheSamePipeline:
     """Found by a review: a fork shares its original's first commit, and `update` took its snapshots

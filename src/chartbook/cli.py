@@ -1651,6 +1651,20 @@ def catalog_add(paths, catalog_path, yes):
             if entry_path.is_dir():
                 candidate_dirs.append(entry_path)
 
+    # In one order, whatever order the filesystem gave the glob: a
+    # repository's main worktree before one made with `git worktree add`,
+    # so that of two checkouts of one pipeline the main one is the entry and
+    # the other is said to be another checkout of it; then by path. Found by
+    # CI, where the worktree came first on one filesystem and not another
+    from chartbook.identity import checkout_of
+
+    def where(folder):
+        if folder not in checkouts:
+            checkouts[folder] = checkout_of(folder)
+        return checkouts[folder]
+
+    candidate_dirs.sort(key=lambda d: (not (where(d) is None or where(d).main), str(d)))
+
     if not candidate_dirs:
         tried = ", ".join(paths)
         click.echo(
