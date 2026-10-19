@@ -1945,8 +1945,10 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
     click.echo(f"Output directory: {output_dir}")
 
     # As `chartbook docs` in the catalog's folder: every folder it reads must
-    # be trusted. Before --clean, so that a refused build leaves the kept tree
-    _require_trust_to_render(project_dir)
+    # be trusted. Before --clean, so that a refused build leaves the kept tree.
+    # A settings file may point the catalog at a pipeline's folder: that
+    # renders as `chartbook docs` there would, trusted or not
+    untrusted = _require_trust_to_render(project_dir)
 
     if clean:
         from chartbook.incremental import looks_like_build_tree
@@ -1972,18 +1974,19 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
             err=True,
         )
         raise SystemExit(1)
-    _run_docs_build(
-        project_dir,
-        incremental=incremental,
-        watch=watch,
-        watch_interval=watch_interval,
-        output_dir=output_dir,
-        project_dir=project_dir,
-        _docs_dir=_docs_dir,
-        temp_docs_src_dir=temp_docs_src_dir,
-        should_remove_existing=force_write,
-        strict=strict,
-    )
+    with _untrusted_mode(untrusted):
+        _run_docs_build(
+            project_dir,
+            incremental=incremental,
+            watch=watch,
+            watch_interval=watch_interval,
+            output_dir=output_dir,
+            project_dir=project_dir,
+            _docs_dir=_docs_dir,
+            temp_docs_src_dir=temp_docs_src_dir,
+            should_remove_existing=force_write,
+            strict=strict,
+        )
     if watch:
         return
 
@@ -3293,11 +3296,13 @@ def _trust_to_render_if_untrusted(folder, pipeline_id) -> bool:
 
     :returns: Whether a record was written.
     """
-    from chartbook.config import trust_of
+    from chartbook.config import recorded_trust
     from chartbook.identity import get_git_remote_url, repository_key
 
     try:
-        if trust_of(folder) is not None:
+        # The record alone: CHARTBOOK_TRUST=all or CI would say "run" today
+        # and leave the folder untrusted when they are gone
+        if recorded_trust(folder) is not None:
             return False
     except ValueError as error:
         click.echo(f"Note: {_said(error)} The folder's trust was left as it is.", err=True)

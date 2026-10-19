@@ -790,15 +790,16 @@ def _shown_entry(entry: object) -> str:
 
 
 def _since_text(value: object) -> Optional[str]:
-    """A ``since`` as it is written, ``2026-10-18T22:14:05Z``: a string as it is, a TOML date-time (one written unquoted) made one; None when absent."""
+    """A ``since`` as it is written, ``2026-10-18T22:14:05Z``: a string as it is, a TOML date-time (one written unquoted) made one, in UTC when it has a zone and as written when it has none; None when absent."""
     from datetime import date, datetime, timezone
 
     if value is None:
         return None
     if isinstance(value, datetime):
-        if value.tzinfo is not None:
-            value = value.astimezone(timezone.utc)
-        return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+        if value.tzinfo is None:
+            # Written without a zone: said as written, with none claimed
+            return value.isoformat(timespec="seconds")
+        return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     if isinstance(value, date):
         return value.isoformat()
     return value if isinstance(value, str) else str(value)
@@ -846,9 +847,23 @@ def trust_of(folder) -> Optional[str]:
     here = Path(folder).resolve()
     if os.environ.get("CI", "").strip() and _covers(_ci_checkout(), here):
         return "run"
+    return recorded_trust(here)
 
+
+def recorded_trust(folder) -> Optional[str]:
+    """How far the trust record alone trusts *folder*: ``"run"``, ``"render"`` or None.
+
+    What :func:`trust_of` gives once the environment has had its say: the
+    highest level among the record's entries that cover the folder. For
+    the commands that write the record (``chartbook catalog add``), which
+    must not take ``CHARTBOOK_TRUST=all`` or ``CI`` for a record that
+    outlives them.
+
+    :raises ValueError: If the trust record cannot be read.
+    """
     from chartbook.identity import get_git_remote_url, repository_key
 
+    here = Path(folder).resolve()
     remote: Optional[str] = None  # asked of git once, and only if a repository is trusted
     levels: list = []
     for entry in read_trust():

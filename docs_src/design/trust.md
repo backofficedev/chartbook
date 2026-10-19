@@ -117,7 +117,7 @@ repository only for clones you made, and trust such a folder by its path.
   `CHARTBOOK_TRUST`; `record_trust`, `record_repository_trust`, `forget_trust`, `read_trust`.
   `untrusted_source()` is unchanged: the environment variable, for a build of files from a store.
 - `chartbook docs` (`cli._render_site`): a pipeline folder with no trust renders as a store build
-  renders (the process sets `CHARTBOOK_UNTRUSTED_SOURCE=1` for itself before anything is read), with
+  renders (`CHARTBOOK_UNTRUSTED_SOURCE=1` is set for the render, before anything is read, and put back after), with
   a warning that says why and how to trust it. A catalog: the catalog's own folder and every member
   folder on this machine must be trusted at `render`; one that is not is an error that lists them
   and says `chartbook trust --members`. The member folders are read from the catalog's manifest

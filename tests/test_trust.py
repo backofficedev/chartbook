@@ -178,6 +178,15 @@ class TestTrustOf:
         assert config.trust_of(work) is None
 
 
+class TestSinceText:
+    def test_a_date_time_without_a_zone_is_said_as_written(self):
+        from datetime import datetime, timedelta, timezone
+
+        assert config._since_text(datetime(2026, 10, 18, 22, 14, 5)) == "2026-10-18T22:14:05"
+        assert config._since_text(datetime(2026, 10, 18, 17, 14, 5, tzinfo=timezone(timedelta(hours=-5)))) == "2026-10-18T22:14:05Z"
+        assert config._since_text("2026-10-18T22:14:05Z") == "2026-10-18T22:14:05Z"
+
+
 class TestTheRecord:
     """``~/.chartbook/trust.toml``: written whole or not at all, read as settings are."""
 
@@ -843,8 +852,34 @@ class TestDocsOfACatalog:
         assert looks_like_build_tree(root / "_docs")
 
 
+class TestCatalogBuildOfAPipeline:
+    def test_a_settings_file_pointing_at_an_untrusted_pipeline_renders_it_as_a_store_build(self, leaky_project, monkeypatch):
+        """Found by a reviewer: `catalog build` dropped what the gate said, so a pipeline the settings
+        file named as the catalog was rendered trusted, its query run and its secret on the page."""
+        monkeypatch.setattr("chartbook.cli._default_catalog_path", lambda: leaky_project / "chartbook.toml")
+        monkeypatch.chdir(leaky_project)
+        result = CliRunner().invoke(main, ["catalog", "build", "-f"])
+        assert result.exit_code == 0, result.output
+        assert "not a pipeline you trust" in result.output
+        assert "HUNTER2_LEAKED_SECRET" not in _pages(leaky_project / "docs")
+        assert os.environ.get(config.UNTRUSTED_ENV_VAR) is None
+
+
 class TestCatalogInitAndAdd:
     """A catalog you make is yours to run; a folder you add to it is asked to be rendered there."""
+
+    def test_add_records_render_even_where_the_environment_trusts_everything(self, work, monkeypatch):
+        """Found by a reviewer: under CHARTBOOK_TRUST=all, `catalog add` recorded nothing, and the folder
+        was untrusted once the variable was gone. The record alone decides whether to record."""
+        monkeypatch.chdir(work)
+        assert CliRunner().invoke(main, ["catalog", "init", "--title", "Mine"]).exit_code == 0
+        project = _pipeline(work / "added")
+        monkeypatch.setenv(config.TRUST_ENV_VAR, "all")
+        result = CliRunner().invoke(main, ["catalog", "add", str(project)], input="y\n")
+        assert result.exit_code == 0, result.output
+        monkeypatch.delenv(config.TRUST_ENV_VAR)
+        assert config.recorded_trust(project) == "render"
+        assert config.trust_of(project) == "render"
 
     def test_init_records_the_catalogs_folder_to_run(self, work, monkeypatch):
         monkeypatch.chdir(work)
