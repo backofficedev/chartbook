@@ -71,7 +71,7 @@ def chain(p):
     for (x1, x2), label in zip(zip(xs[:-1], xs[1:]), ("resolve", "write", "build")):
         s += arrow(x1 + bw + 4, y + bh / 2, x2 - 4, y + bh / 2, p, [label])
     s += (f"<text x='{w / 2}' y='{h - 20}' text-anchor='middle' fill='{p['muted']}' font-size='13'>one command, "
-          f"<tspan {MONO} fill='{p['accent']}'>chartbook docs</tspan>, does all three; when anything disagrees with the repository, the repository is right</text>\n")
+          f"<tspan {MONO} fill='{p['accent']}'>chartbook docs generate</tspan>, does all three; when anything disagrees with the repository, the repository is right</text>\n")
     return s + "</svg>\n"
 
 
@@ -83,7 +83,7 @@ def documents(p):
         ("manifest", "chartbook.toml", ["asks:", "which assets, where,", "what it depends on"], ("people",), "in git"),
         ("lockfile", "chartbook.lock", ["records what was got:", "which snapshot each", "dependency is pinned to"], ("chartbook pin, update", "(run, for a first pin)"), "in git, no timestamp"),
         ("snapshot", "store/snapshots/…", ["records what was made:", "every asset built at one", "commit, with its hash"], ("chartbook snapshot", "or run --snapshot"), "in the store, not in git"),
-        ("index", "index.json", ["records what a site shows:", "every record of every", "pipeline, pins reported"], ("chartbook docs, build",), "beside the site"),
+        ("index", "index.json", ["records what a site shows:", "every record of every", "pipeline, pins reported"], ("chartbook docs generate, build",), "beside the site"),
     ]
     for x, (t, m, sub, by, where) in zip(xs, items):
         s += box(x, y, bw, bh, p, t, sub=sub, mono=m)

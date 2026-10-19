@@ -424,7 +424,7 @@ class TestStaleness:
         assert version.trained_on == taken.assets["model/m"]["trained_on"]
         assert record["versions"][0]["trained_on"] == version.trained_on
         monkeypatch.chdir(forecast)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         page = (forecast / "_docs" / "cb" / "models" / "acme--forecast" / "m.md").read_text()
         assert "**Out of date.** This file is version `" in page

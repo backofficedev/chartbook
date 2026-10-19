@@ -92,7 +92,7 @@ def task_generate_catalog():
     fred_charts_dir = BASE_DIR / "fred_charts"
     rate_forecast_dir = BASE_DIR / "rate_forecast"
     return {
-        "actions": [f"cd {catalog_dir} && chartbook docs -f"],
+        "actions": [f"cd {catalog_dir} && chartbook docs generate -f"],
         "file_dep": [
             str(catalog_dir / "chartbook.toml"),
             str(yield_curve_dir / "docs" / "index.html"),

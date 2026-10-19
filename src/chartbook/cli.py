@@ -28,7 +28,49 @@ def _check_sphinx_installed():
         raise SystemExit(1)
 
 
-@click.group()
+class _Group(click.Group):
+    """A group that tells a user who types a command's old name what it is called now.
+
+    ``renamed`` maps a first word that used to be a command of the group
+    to the words that stand in its place; ``arguments_go_to`` names the
+    subcommand that takes what the group itself took while it was a
+    command, so that ``chartbook docs ./site -f`` is told to say
+    ``chartbook docs generate ./site -f``. Either is one usage error with
+    the line to type; nothing is run under the old name.
+    """
+
+    renamed: dict = {}
+    arguments_go_to: str = ""
+
+    def parse_args(self, ctx, args):
+        first = args[0] if args else None
+        if first is not None and first not in self.commands and first != "--help":
+            words = ctx.command_path.split()
+            words[0] = "chartbook"  # as a person types it, whatever the program was invoked as
+            path = " ".join(words)
+            if first in self.renamed:
+                old, new, rest = f"{path} {first}", f"{path} {self.renamed[first]}", args[1:]
+            elif self.arguments_go_to:
+                old, new, rest = path, f"{path} {self.arguments_go_to}", args
+            else:
+                return super().parse_args(ctx, args)
+            raise click.UsageError(f"`{old}` is `{new}` now. Try: {' '.join([new, *rest])}", ctx)
+        return super().parse_args(ctx, args)
+
+
+class _Main(_Group):
+    renamed = {"browse": "docs open"}
+
+
+class _Docs(_Group):
+    arguments_go_to = "generate"
+
+
+class _Catalog(_Group):
+    renamed = {"build": "generate", "browse": "open"}
+
+
+@click.group(cls=_Main)
 @click.version_option(version=__version__)
 def main():
     """chartbook CLI tool for generating documentation websites."""
@@ -54,8 +96,8 @@ def _default_catalog_path():
 def _site_options(command):
     """Give a command the arguments of rendering the site.
 
-    `docs` renders it, and `build` renders it after running the build
-    script, so both take the same ones.
+    `docs generate` renders it, and `build` renders it after running the
+    build script, so both take the same ones.
     """
     options = [
         click.argument("output_dir", type=click.Path(), default="./docs", required=False),
@@ -134,9 +176,21 @@ def _site_options(command):
     return command
 
 
-@main.command()
+@main.group(cls=_Docs)
+def docs():
+    """The documentation site: `generate` renders it, `open` opens it.
+
+    `chartbook docs generate` renders the site from what the project has
+    built and writes index.json beside it. `chartbook docs open` opens the
+    rendered site in your browser. Neither builds the project's data:
+    `chartbook run` does that, and `chartbook build` runs the build script
+    and then generates the site.
+    """
+
+
+@docs.command("generate")
 @_site_options
-def docs(**site):
+def docs_generate(**site):
     """Render the documentation site, in OUTPUT_DIR (./docs by default).
 
     This renders the site and writes index.json beside it. It does not
@@ -150,15 +204,57 @@ def docs(**site):
     intermediate build directory (--docs-build-dir) is kept, pipelines whose
     files have not changed are not regenerated, and only pages that differ
     are rendered again. --watch does that in a loop: render, then again each
-    time a file changes. Open the site with `chartbook browse` and refresh.
+    time a file changes. Open the site with `chartbook docs open` and
+    refresh.
 
     \b
     Examples:
-        chartbook docs -f
-        chartbook docs -f --incremental
-        chartbook docs -f --watch
+        chartbook docs generate -f
+        chartbook docs generate -f --incremental
+        chartbook docs generate -f --watch
     """
     _render_site(**site)
+
+
+@docs.command("open")
+@click.argument("output_dir", type=click.Path(), default="./docs", required=False)
+@click.option("--project-dir", type=click.Path(), help="Path to project directory")
+def docs_open(output_dir, project_dir):
+    """Open the generated site in your default browser.
+
+    Looks for index.html in OUTPUT_DIR (./docs by default) and opens it
+    with the system's default web browser, on macOS, Windows and Linux.
+
+    \b
+    Examples:
+        chartbook docs open
+        chartbook docs open ./my-docs
+        chartbook docs open --project-dir /path/to/project
+    """
+    # Validate paths for shell/platform mismatches
+    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
+
+    shell_env = detect_shell_environment()
+    path_args = [p for p in [output_dir, project_dir] if p is not None]
+    if path_args:
+        validate_cli_paths(path_args, shell_env, auto_confirm=True)
+
+    project_dir = resolve_project_dir(project_dir)
+    index_path = (project_dir / Path(output_dir) / "index.html").resolve()
+
+    if not index_path.is_file():
+        click.echo("Error: Documentation not found.", err=True)
+        click.echo(f"  Expected: {index_path}", err=True)
+        click.echo("", err=True)
+        click.echo("Run 'chartbook docs generate' first.", err=True)
+        raise SystemExit(1)
+
+    import webbrowser
+
+    url = index_path.as_uri()
+    click.echo(f"Opening {index_path}")
+    if not webbrowser.open(url):
+        click.echo(f"Could not open browser. Open this URL manually: {url}")
 
 
 @main.command()
@@ -166,15 +262,17 @@ def docs(**site):
 def build(**site):
     """Make everything current: run the build script, then render the site.
 
-    The same as `chartbook run` followed by `chartbook docs`, and it takes
-    the arguments of `chartbook docs`. In a catalog, the build script is run
-    in each of the catalog's pipelines before the catalog's site is rendered.
+    The same as `chartbook run` followed by `chartbook docs generate`, and
+    it takes the arguments of `chartbook docs generate`. In a catalog, the
+    build script is run in each of the catalog's pipelines before the
+    catalog's site is rendered.
 
     With no `build` script in [scripts], there is nothing to run, and only
     the site is rendered.
 
-    Inside a build script, say `chartbook docs`. `chartbook build` there
-    would run the script that called it; it renders the site and says so.
+    Inside a build script, say `chartbook docs generate`. `chartbook build`
+    there would run the script that called it; it renders the site and
+    says so.
 
     \b
     Examples:
@@ -196,7 +294,7 @@ def build(**site):
             click.style("Warning: ", fg="yellow", bold=True)
             + "`chartbook build` was called from this pipeline's own build script. "
             "It runs that script and then renders the site, so here it only "
-            "renders the site. In a build script, say `chartbook docs`.",
+            "renders the site. In a build script, say `chartbook docs generate`.",
             err=True,
         )
     elif _has_script(project_dir, BUILD_SCRIPT):
@@ -471,46 +569,6 @@ def _run_docs_build(manifest_dir, incremental, watch, watch_interval, **build_kw
     incremental_builds.watch(
         build_once, snapshot, interval=watch_interval or 1.0, echo=click.echo
     )
-
-
-@main.command()
-@click.argument("output_dir", type=click.Path(), default="./docs", required=False)
-@click.option("--project-dir", type=click.Path(), help="Path to project directory")
-def browse(output_dir, project_dir):
-    """Open the project documentation in your default browser.
-
-    Looks for index.html in the OUTPUT_DIR (default: ./docs) and opens it
-    using the system's default web browser. Works on macOS, Windows, and Linux.
-
-    Examples:
-        chartbook browse
-        chartbook browse ./my-docs
-        chartbook browse --project-dir /path/to/project
-    """
-    # Validate paths for shell/platform mismatches
-    from chartbook.path_validation import detect_shell_environment, validate_cli_paths
-
-    shell_env = detect_shell_environment()
-    path_args = [p for p in [output_dir, project_dir] if p is not None]
-    if path_args:
-        validate_cli_paths(path_args, shell_env, auto_confirm=True)
-
-    project_dir = resolve_project_dir(project_dir)
-    index_path = (project_dir / Path(output_dir) / "index.html").resolve()
-
-    if not index_path.is_file():
-        click.echo("Error: Documentation not found.", err=True)
-        click.echo(f"  Expected: {index_path}", err=True)
-        click.echo("", err=True)
-        click.echo("Run 'chartbook docs' first.", err=True)
-        raise SystemExit(1)
-
-    import webbrowser
-
-    url = index_path.as_uri()
-    click.echo(f"Opening {index_path}")
-    if not webbrowser.open(url):
-        click.echo(f"Could not open browser. Open this URL manually: {url}")
 
 
 @main.command()
@@ -802,7 +860,7 @@ def _say_trust_level(manifest, project_dir):
     refused = "`chartbook build` and `chartbook run` refuse to run the build script"
     if lowest is None:
         refused += (
-            ", and `chartbook docs` renders the site as one from a store is (no query run, no file from "
+            ", and `chartbook docs generate` renders the site as one from a store is (no query run, no file from "
             "outside the folder)"
         )
     click.echo(f"{standing}: {refused}. {command}; `chartbook trust --list` shows what is trusted.")
@@ -1467,7 +1525,7 @@ def _resolve_catalog_toml_path(catalog_path):
         return _prompt_catalog_init()
 
 
-@main.group()
+@main.group(cls=_Catalog)
 def catalog():
     """Manage the chartbook catalog."""
     pass
@@ -1499,8 +1557,8 @@ def catalog_init(title):
     click.echo("")
     click.echo("Next steps:")
     click.echo("  chartbook catalog add /path/to/pipeline   # add a pipeline")
-    click.echo("  chartbook catalog build                   # build HTML docs")
-    click.echo("  chartbook catalog browse                  # open in browser")
+    click.echo("  chartbook catalog generate                # render its site")
+    click.echo("  chartbook catalog open                    # open it in the browser")
 
 
 @catalog.command("add")
@@ -1880,7 +1938,7 @@ def catalog_enable(pipeline_id, catalog_path):
     _set_pipeline_disabled(pipeline_id, catalog_path, disabled=False)
 
 
-@catalog.command("build")
+@catalog.command("generate")
 @click.option(
     "-f",
     "--force-write",
@@ -1912,11 +1970,11 @@ def catalog_enable(pipeline_id, catalog_path):
     metavar="SECONDS",
     help="How often --watch checks for changes (default: 1)",
 )
-def catalog_build(force_write, strict, clean, watch, watch_interval):
-    """Build HTML documentation for the global catalog.
+def catalog_generate(force_write, strict, clean, watch, watch_interval):
+    """Render the global catalog's site, into docs/ beside its chartbook.toml.
 
-    Uses the catalog path from ``~/.chartbook/settings.toml`` if configured,
-    otherwise falls back to ``~/.chartbook/chartbook.toml``.
+    The catalog is the one ~/.chartbook/settings.toml names, or else
+    ~/.chartbook/chartbook.toml. `chartbook catalog open` opens the site.
 
     The build is incremental. Its working files are kept next to the catalog
     (in ``_docs/``), and the next build redoes only the pipelines whose files
@@ -1944,10 +2002,11 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
     click.echo(f"Building catalog from: {catalog_path}")
     click.echo(f"Output directory: {output_dir}")
 
-    # As `chartbook docs` in the catalog's folder: every folder it reads must
-    # be trusted. Before --clean, so that a refused build leaves the kept tree.
-    # A settings file may point the catalog at a pipeline's folder: that
-    # renders as `chartbook docs` there would, trusted or not
+    # As `chartbook docs generate` in the catalog's folder: every folder it
+    # reads must be trusted. Before --clean, so that a refused build leaves
+    # the kept tree. A settings file may point the catalog at a pipeline's
+    # folder: that renders as `chartbook docs generate` there would, trusted
+    # or not
     untrusted = _require_trust_to_render(project_dir)
 
     if clean:
@@ -1992,12 +2051,12 @@ def catalog_build(force_write, strict, clean, watch, watch_interval):
 
     click.echo("")
     click.echo(f"Catalog built successfully: {output_dir / 'index.html'}")
-    click.echo("Run 'chartbook catalog browse' to open in your browser.")
+    click.echo("Run 'chartbook catalog open' to open it in your browser.")
 
 
-@catalog.command("browse")
-def catalog_browse():
-    """Open the global catalog documentation in your default browser."""
+@catalog.command("open")
+def catalog_open():
+    """Open the global catalog's site in your default browser."""
 
     catalog_path = _default_catalog_path()
     if catalog_path is None:
@@ -2010,7 +2069,7 @@ def catalog_browse():
     if not index_path.is_file():
         click.echo("Error: Catalog docs not found.", err=True)
         click.echo("", err=True)
-        click.echo("Run 'chartbook catalog build' first.", err=True)
+        click.echo("Run 'chartbook catalog generate' first.", err=True)
         raise SystemExit(1)
 
     import webbrowser
@@ -3342,8 +3401,8 @@ def trust(path, render_only, repository, members, list_, forget):
     """Trust a pipeline's folder, so that a build of it runs as your own.
 
     A build of a folder you have not trusted runs as a build of files from
-    a store does: `chartbook docs` renders its site with no query run and
-    no template or file from outside the folder, and `chartbook build` and
+    a store does: `chartbook docs generate` renders its site with no query
+    run and no template or file from outside the folder, and `chartbook build` and
     `chartbook run` refuse to run its build script, which is code. A
     project `chartbook init` made is trusted as it is made. One you cloned
     is trusted when you say so, here.

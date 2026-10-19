@@ -906,7 +906,7 @@ class TestARenderedProjectBuilds:
 
     def test_chartbook_docs_renders_it_before_anything_is_built(self, project):
         """The first thing the getting-started page has a new user run."""
-        result = _chartbook(project, "docs")
+        result = _chartbook(project, "docs", "generate")
         assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
         assert "scaffold_test has built nothing it declares yet" in result.stderr
         assert f"  - notebook: _output/{NOTEBOOK}.ipynb" in result.stderr
@@ -1052,7 +1052,7 @@ class TestTheQuestions:
         assert not (project / "reports").exists()
         assert (project / "chartbook.toml").is_file()
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs"])
+        result = CliRunner().invoke(main, ["docs", "generate"])
         assert result.exit_code == 0, result.output
         assert (project / "docs" / "index.html").is_file()
 
@@ -1079,10 +1079,10 @@ class TestTheQuestions:
         generate_project(template_dir, temp_dir, WITH_CHARTBOOK)
         said = capfd.readouterr().out
         steps = said[said.index("Next steps:"):]
-        for command in ("chartbook docs", "chartbook build -f", "chartbook browse", "chartbook check"):
+        for command in ("chartbook docs generate", "chartbook build -f", "chartbook docs open", "chartbook check"):
             assert f"  {command}" in steps
         # The site comes first, before anything is installed
-        assert steps.index("chartbook docs") < steps.index("pip install -r requirements.txt")
+        assert steps.index("chartbook docs generate") < steps.index("pip install -r requirements.txt")
 
     def test_with_uv_the_readme_activates_the_environment_before_chartbook_build(self, template_dir, temp_dir):
         """After `uv sync` alone, a chartbook installed elsewhere ran a `doit` that is not on PATH."""

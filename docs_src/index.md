@@ -75,8 +75,8 @@ shows.**
 pip install chartbook
 chartbook init            # scaffold a pipeline project
 cd <your-project>
-chartbook docs            # write the site, and index.json beside it
-chartbook browse          # open it
+chartbook docs generate            # write the site, and index.json beside it
+chartbook docs open          # open it
 ```
 
 ```python
@@ -91,7 +91,7 @@ rates = data.load("fed_yield_curve:treasury_rates")   # a dependency's dataframe
 ::::{grid} 1 1 2 2
 :gutter: 3
 
-:::{grid-item-card} Learn
+:::{grid-item-card} User guide
 - {doc}`getting-started`: install, scaffold, first build
 - {doc}`guide/vocabulary`: the words, defined once
 - {doc}`guide/documenting-a-pipeline`: the manifest and the pages it makes
@@ -116,7 +116,7 @@ root, and `chartbook install skill` installs a ChartBook skill for Claude Code.
 
 ```{toctree}
 :hidden:
-:caption: Learn
+:caption: User guide
 
 getting-started
 guide/vocabulary

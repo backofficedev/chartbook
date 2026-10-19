@@ -21,7 +21,7 @@ transformation of the one before:
 | Word | What it is | Who makes it |
 |---|---|---|
 | **repository** | A pipeline's folder in git: its manifest, its code, its write-ups and the data it builds. For a catalog, several of these. The **source**: when anything disagrees with the repository, the repository is right | People |
-| **index** | One JSON file, `index.json`, describing everything a site contains: every pipeline and asset by ID, where each is, its content hash, what it was made from and at which hashes, what pins what. The record of what was true when the build ran | `chartbook docs` (and `chartbook build`, which runs the build first). Never `chartbook run` |
+| **index** | One JSON file, `index.json`, describing everything a site contains: every pipeline and asset by ID, where each is, its content hash, what it was made from and at which hashes, what pins what. The record of what was true when the build ran | `chartbook docs generate` (and `chartbook build`, which runs the build first). Never `chartbook run` |
 | **pages** | The files a site tool reads: Markdown for Sphinx or MkDocs. Text, never data | A **writer**: one per site tool, reading the index and the write-ups it points at |
 | **site** | HTML | The site tool, by its name: Sphinx by default, or MkDocs when `[project] writer = "mkdocs"` |
 
@@ -43,7 +43,7 @@ disguise.
 | **manifest** | `chartbook.toml` | What a pipeline *asks*: which assets it declares, where they are, what it depends on, what its scripts are | People | In the repository, committed |
 | **lockfile** | `chartbook.lock` | What was *got*: for each dependency, which snapshot was pinned and the content hash of each of its assets | `chartbook pin`, `chartbook update` (and `chartbook run`, for a first pin) | In the repository, committed. No timestamp on purpose: a `git diff` of it means "a pin moved" |
 | **snapshot** | `<store>/snapshots/<commit>/…/<time>.json` | What was *made*: every asset one pipeline built at one commit, with its hash, declared ready by its owner; with it, the pipeline's own index at that commit and the files a writer needs | `chartbook snapshot`, `chartbook run --snapshot` | In the store, with the bytes. Not in git, since one commit can have several |
-| **index** | `index.json` beside the site | What a site *shows*: every record of every pipeline the site contains, as built now, with each dependency's pins reported | `chartbook docs`, `chartbook build` | Beside the site, so it travels with it |
+| **index** | `index.json` beside the site | What a site *shows*: every record of every pipeline the site contains, as built now, with each dependency's pins reported | `chartbook docs generate`, `chartbook build` | Beside the site, so it travels with it |
 
 Three rules follow, and they settle arguments:
 

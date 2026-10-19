@@ -49,7 +49,7 @@ def catalog(tmp_path):
 
 def _build(root: Path, monkeypatch, *arguments):
     monkeypatch.chdir(root)
-    result = CliRunner().invoke(main, ["docs", "./docs", "-f", *arguments])
+    result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", *arguments])
     assert result.exit_code == 0, result.output
     return result
 
@@ -243,7 +243,7 @@ class TestWhoseFilesTheseAre:
         (site / "_templates").mkdir()
         (site / "_templates" / "layout.html").write_text("{{ PWNED }}")
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
         assert result.exit_code == 0, result.output
         assert "PWNED" not in (project / "_docs" / "conf.py").read_text()
         assert not (project / "_docs" / "_templates" / "layout.html").exists() or "PWNED" not in (project / "_docs" / "_templates" / "layout.html").read_text()
@@ -764,7 +764,7 @@ def _elsewhere_with(tmp_path, asset_name: str = "", **project) -> "snapshot.Snap
 def test_a_version_that_did_not_build_an_asset_has_a_site_that_says_so(tmp_path):
     """A snapshot holds what its build made; what it did not make was not built in that version.
 
-    `chartbook docs` there used to stop on it as built in part, and the
+    `chartbook docs generate` there used to stop on it as built in part, and the
     catalog's link to the version said the error's last line, advice to run
     `chartbook build` or to edit chartbook.toml, which are no use for a
     past version.

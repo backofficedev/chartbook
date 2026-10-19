@@ -175,7 +175,7 @@ print("Project configuration complete!")
 print("\nNext steps:")
 print("  cd {{ cookiecutter.project_slug }}")
 if include_chartbook:
-    print("  chartbook docs       # its site already, with nothing built yet")
+    print("  chartbook docs generate   # its site already, with nothing built yet")
 
 
 if environment_manager == "pip":
@@ -194,8 +194,8 @@ elif environment_manager == "pixi":
     print("  pixi shell")
 
 if include_chartbook:
-    print("  chartbook build -f   # runs doit, then renders the site again")
-    print("  chartbook browse     # opens the site")
-    print("  chartbook check      # what chartbook.toml still needs")
+    print("  chartbook build -f        # runs doit, then renders the site again")
+    print("  chartbook docs open       # opens the site")
+    print("  chartbook check           # what chartbook.toml still needs")
 else:
     print("  doit")

@@ -13,7 +13,7 @@ This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and ne
 
 **Breaking changes** (each is marked where an entry below describes it):
 
-- `chartbook build` is now `chartbook docs`, and `chartbook build` builds everything.
+- `chartbook build` is now `chartbook docs generate`, `chartbook browse` is `chartbook docs open`, and `chartbook build` builds everything: it runs the build script, then generates the site. `chartbook catalog build` and `catalog browse` are `chartbook catalog generate` and `catalog open`.
 - A pipeline's ID comes from its repository (`repo_url`, else the `origin` remote), not its folder's name, and a scope worked out from it is lowercased. A clone in a folder named otherwise than its repository now takes the repository's ID, so its ID changes (one in a subfolder, with no remote, or with `[project] id` keeps it). A pipeline whose ID changes gets new catalog keys and page addresses; a dependency or catalog entry naming the old ID stays on the old ID's snapshots, and `pin` and `update` say what to write instead.
 - A write-up is plain text: Jinja syntax in a docs file (`{{ … }}`, `{% include %}`) is shown as written, not evaluated.
 - Only the templates the build guide lists as overridable are read from a pipeline's or a catalog's root. `conf.py` is always rendered from the package's own template, so a `conf.py.j2` in a project is ignored.
@@ -28,6 +28,7 @@ This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and ne
 
 **What later entries changed in earlier ones:**
 
+- `chartbook docs` is a group now: where an earlier entry says `chartbook docs`, read `chartbook docs generate`. `chartbook browse` is `chartbook docs open`, and `chartbook catalog build` and `catalog browse` are `chartbook catalog generate` and `catalog open`.
 - `chartbook check`, new in this release, with no policy anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, and no `--policy`) now reports missing recommended fields as `warning:` lines and exits 0, where the entry below that introduces it has it fail on them. CI that relied on that failure gives the pipeline a `[policy]`, or passes `--policy` with a file that has one.
 - `pin --from-folder` and `update --from-folder` are removed. A pipeline reads another's snapshots, never its folder, except with a `WorkingVersionWarning` when it has none.
 - `store gc` keeps an unneeded snapshot for 7 days, not 30.
@@ -36,6 +37,12 @@ This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and ne
 - `chartbook init` renders the template that comes with the installed ChartBook, with cookiecutter, and writes `.cruft.json` only when the template's commit is known. The template's `dodo.py` no longer builds the site.
 - Built since the entries that call them "not built yet": sharing snapshots between machines, `--frozen`, versions and labels of a model, a dependency named by its ID alone and cloned from its repository, and tables and queries pinned as parquet (a Databricks source is still not pinned).
 - The Markdown generator is gone, and the site is written from the index.
+
+### Changed — **breaking: `docs` is a noun, so it is a group: `chartbook docs generate` and `chartbook docs open`**
+
+`chartbook docs` named the thing and not the action, and with `chartbook run` and `chartbook build` beside it the commands that make a site took a table to explain. They now read as dbt's do. `chartbook docs generate` renders the site, with every option `chartbook docs` took; `chartbook docs open` opens it in the browser, which `chartbook browse` did; and `chartbook build` is what it was, `chartbook run` and then `chartbook docs generate`. For the global catalog, `chartbook catalog build` and `chartbook catalog browse` are `chartbook catalog generate` and `chartbook catalog open`, so that "build" means "render" nowhere any more. `chartbook docs` on its own lists the two, and an old spelling (`chartbook docs -f`, `chartbook browse`, `chartbook catalog build`) is told the new one, with your arguments on the line to type, and runs nothing. Decided with the maintainer on 2026-10-18, before the release, while a rename costs nobody anything.
+
+**Breaking:** a script or a `dodo.py` task that says `chartbook docs -f` must say `chartbook docs generate -f`, and `chartbook browse` is `chartbook docs open`. The template, the skill files and the guides say the new names.
 
 ### Added — **breaking: a build of a folder runs as its owner's only once you trust the pipeline**
 

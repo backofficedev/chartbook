@@ -11,7 +11,7 @@ How to set up and run the yield curve analysis pipeline.
 
 1. Pull the data: `doit pull_data`
 2. Run analysis: `doit run_notebooks`
-3. Build the site: `chartbook docs`
+3. Build the site: `chartbook docs generate`
 
 ## Viewing the Output
 

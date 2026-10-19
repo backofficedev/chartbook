@@ -17,7 +17,7 @@ How to set up, manage, browse, and load data from ChartBook catalogs.
 ├── cache/               # What was read from a remote store, and each version's built site ([cache] path, CHARTBOOK_CACHE)
 ├── git/                 # Clones of git dependencies ([git] path, CHARTBOOK_GIT_CACHE)
 ├── artifacts/           # Auxiliary files (e.g. cached data)
-├── docs/                # Rendered catalog HTML (from `catalog build`)
+├── docs/                # Rendered catalog HTML (from `catalog generate`)
 ├── _docs/               # Temp Sphinx build dir (auto-cleaned)
 └── _docs_src/           # Temp source dir (auto-cleaned)
 ```
@@ -151,16 +151,16 @@ Without a `[policy]` section, a default warn-only list of recommended fields is 
 ### Build Catalog Documentation
 
 ```bash
-chartbook catalog build              # Build HTML docs to ~/.chartbook/docs/ (incremental: only changed pipelines)
-chartbook catalog build --clean      # Discard what earlier builds kept and rebuild everything
-chartbook catalog build -f           # Force overwrite existing docs
-chartbook catalog build --strict     # Error on missing files instead of skipping
+chartbook catalog generate           # Render the site to ~/.chartbook/docs/ (incremental: only changed pipelines)
+chartbook catalog generate --clean   # Discard what earlier builds kept and rebuild everything
+chartbook catalog generate -f        # Force overwrite existing docs
+chartbook catalog generate --strict  # Error on missing files instead of skipping
 ```
 
 ### Browse Catalog Documentation
 
 ```bash
-chartbook catalog browse   # Opens ~/.chartbook/docs/index.html in default browser
+chartbook catalog open   # Opens ~/.chartbook/docs/index.html in default browser
 ```
 
 ## Browsing the Catalog (CLI)
@@ -307,12 +307,12 @@ Creates a new pipeline project from the cookiecutter template that came with the
 ## CLI Build & Publish Reference
 
 ```bash
-chartbook docs [OUTPUT_DIR]     # Generate HTML documentation
-chartbook docs -f               # Force overwrite existing output
-chartbook docs --strict         # Error on missing files
-chartbook docs --keep-build-dirs  # Keep temp build directories
-chartbook publish                # Publish to directory
-chartbook create-data-glimpses   # Create data summary report
+chartbook docs generate [OUTPUT_DIR]       # Render the documentation site
+chartbook docs generate -f                 # Force overwrite existing output
+chartbook docs generate --strict           # Error on missing files
+chartbook docs generate --keep-build-dirs  # Keep temp build directories
+chartbook publish                          # Publish to directory
+chartbook create-data-glimpses             # Create data summary report
 ```
 
 ### Build Options

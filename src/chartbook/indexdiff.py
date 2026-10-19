@@ -1,6 +1,6 @@
 """A diff of two indexes: what changed between two builds, for a reviewer.
 
-``chartbook docs`` writes ``index.json`` beside the site: every pipeline,
+``chartbook docs generate`` writes ``index.json`` beside the site: every pipeline,
 dataframe, chart, notebook, note and model, with a content hash for each.
 Two of those files, from two builds, say what a change did without anyone
 opening the site: which data moved, which assets were added or taken away,

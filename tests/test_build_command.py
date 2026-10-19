@@ -1,7 +1,7 @@
-"""Tests for the two commands that make a site: ``chartbook docs`` renders
+"""Tests for the two commands that make a site: ``chartbook docs generate`` renders
 it, and ``chartbook build`` runs the build script first.
 
-``chartbook build`` used to mean what ``chartbook docs`` means now.
+``chartbook build`` used to mean what ``chartbook docs generate`` means now.
 """
 
 import os
@@ -34,7 +34,7 @@ def test_docs_command(pipeline_project, monkeypatch):
 
     # Run the command
     runner = CliRunner()
-    result = runner.invoke(main, ["docs", "./docs", "--force-write"])
+    result = runner.invoke(main, ["docs", "generate", "./docs", "--force-write"])
 
     # Debug output
     print("Command output:", result.output)
@@ -63,7 +63,7 @@ def test_docs_from_another_directory(pipeline_project, tmp_path, monkeypatch):
 
     result = CliRunner().invoke(
         main,
-        ["docs", str(output_dir), "--project-dir", str(pipeline_project), "-f"],
+        ["docs", "generate", str(output_dir), "--project-dir", str(pipeline_project), "-f"],
     )
 
     assert result.exit_code == 0, f"Command failed with output: {result.output}"
@@ -82,6 +82,7 @@ def test_docs_with_a_renamed_intermediate_directory(pipeline_project, monkeypatc
         main,
         [
             "docs",
+            "generate",
             "./docs",
             "-f",
             "--temp-docs-src-dir",
@@ -101,14 +102,14 @@ class TestDocs:
         """It renders the site. Building the data is `chartbook run`."""
         _add_script(pipeline_project, "echo ran >> ran.log")
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert (pipeline_project / "docs" / "index.html").exists()
         assert not (pipeline_project / "ran.log").exists()
 
 
 class TestDocsBeforeAnythingIsBuilt:
-    """`chartbook docs` warns about a pipeline that has built nothing, unless --strict was asked for."""
+    """`chartbook docs generate` warns about a pipeline that has built nothing, unless --strict was asked for."""
 
     @pytest.fixture
     def unbuilt(self, pipeline_project, monkeypatch):
@@ -118,14 +119,14 @@ class TestDocsBeforeAnythingIsBuilt:
         return pipeline_project
 
     def test_by_default_it_warns_and_renders(self, unbuilt):
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert "Warning: test_pipeline has built nothing it declares yet" in result.output
         assert (unbuilt / "docs" / "index.html").is_file()
 
     def test_strict_on_the_command_line_makes_it_an_error(self, unbuilt):
-        """`doit && chartbook docs --strict` in CI: a build that made nothing must fail."""
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--strict"])
+        """`doit && chartbook docs generate --strict` in CI: a build that made nothing must fail."""
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--strict"])
         assert result.exit_code == 1
         assert "Missing source files" in result.output
         assert "--no-strict" not in result.output
@@ -133,19 +134,19 @@ class TestDocsBeforeAnythingIsBuilt:
 
     def test_the_help_says_what_strict_typed_does(self):
         """The warning says "With --strict, this is an error"; the help said only "(default)"."""
-        said = " ".join(CliRunner().invoke(main, ["docs", "--help"]).output.split())
+        said = " ".join(CliRunner().invoke(main, ["docs", "generate", "--help"]).output.split())
         assert "a lone pipeline that has built nothing yet, which is rendered with a warning" in said
         assert "typed explicitly, --strict fails on that too" in said
 
     def test_no_strict_renders_it_too(self, unbuilt):
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--no-strict"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--no-strict"])
         assert result.exit_code == 0, result.output
         assert (unbuilt / "docs" / "index.html").is_file()
 
 
 @posix
 class TestBuild:
-    """`chartbook build` is `chartbook run`, then `chartbook docs`."""
+    """`chartbook build` is `chartbook run`, then `chartbook docs generate`."""
 
     def test_it_runs_the_script_and_then_renders_the_site(self, pipeline_project, monkeypatch):
         # The script checks that the site is not there yet: it runs first
@@ -206,7 +207,7 @@ class TestBuild:
         assert "No chartbook.toml in" in result.output
 
     def test_a_build_that_makes_nothing_is_an_error(self, pipeline_project, monkeypatch):
-        """`chartbook docs` shows a pipeline that has built nothing as not built yet.
+        """`chartbook docs generate` shows a pipeline that has built nothing as not built yet.
 
         `chartbook build` has just run the build, so there that is a build
         that did not make what the manifest says it does.
@@ -216,7 +217,7 @@ class TestBuild:
         (pipeline_project / "_output" / "charts" / "chart_0_0.html").unlink()
         monkeypatch.chdir(pipeline_project)
 
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
         assert result.exit_code == 0, result.output
         assert "has built nothing it declares yet" in result.output
 
@@ -225,6 +226,49 @@ class TestBuild:
         assert (pipeline_project / "ran.log").exists()
         assert "The build script has just run and did not make" in result.output
         assert "--no-strict" not in result.output
+
+
+class TestTheOldNamesSayTheNewOnes:
+    """`chartbook docs` was the command that renders, and `chartbook browse` the one that opens;
+    `catalog build` and `catalog browse` were the catalog's. Each old spelling is told the new
+    one, with the arguments on the line to type, and nothing runs under the old name."""
+
+    def test_docs_with_its_old_arguments(self, pipeline_project, monkeypatch):
+        monkeypatch.chdir(pipeline_project)
+        result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+        assert result.exit_code == 2
+        assert "`chartbook docs` is `chartbook docs generate` now. Try: chartbook docs generate ./docs -f" in result.output
+        assert not (pipeline_project / "docs").exists()
+
+    def test_docs_with_an_old_option_first(self):
+        result = CliRunner().invoke(main, ["docs", "-f", "--watch"])
+        assert result.exit_code == 2
+        assert "Try: chartbook docs generate -f --watch" in result.output
+
+    def test_browse(self):
+        result = CliRunner().invoke(main, ["browse", "./site"])
+        assert result.exit_code == 2
+        assert "`chartbook browse` is `chartbook docs open` now. Try: chartbook docs open ./site" in result.output
+
+    def test_catalog_build_and_browse(self):
+        result = CliRunner().invoke(main, ["catalog", "build", "-f"])
+        assert result.exit_code == 2
+        assert "`chartbook catalog build` is `chartbook catalog generate` now. Try: chartbook catalog generate -f" in result.output
+        result = CliRunner().invoke(main, ["catalog", "browse"])
+        assert result.exit_code == 2
+        assert "`chartbook catalog browse` is `chartbook catalog open` now. Try: chartbook catalog open" in result.output
+
+    def test_docs_alone_lists_generate_and_open(self):
+        result = CliRunner().invoke(main, ["docs"])
+        assert "generate" in result.output and "open" in result.output
+
+    def test_a_command_that_never_was_is_still_unknown(self):
+        result = CliRunner().invoke(main, ["frobnicate"])
+        assert result.exit_code == 2
+        assert "No such command" in result.output and "Try:" not in result.output
+        result = CliRunner().invoke(main, ["catalog", "frobnicate"])
+        assert result.exit_code == 2
+        assert "No such command" in result.output and "Try:" not in result.output
 
 
 @posix
@@ -245,7 +289,7 @@ class TestCalledFromItsOwnScript:
         assert (pipeline_project / "ran.log").read_text().split() == ["ran"]  # once
         nested = (pipeline_project / "nested.log").read_text()
         assert "Warning: `chartbook build` was called from this pipeline's own build script." in nested
-        assert "In a build script, say `chartbook docs`." in nested
+        assert "In a build script, say `chartbook docs generate`." in nested
         assert "Successfully generated documentation" in nested
 
     def test_run_inside_its_own_script_is_refused(self, pipeline_project, monkeypatch):
@@ -258,7 +302,7 @@ class TestCalledFromItsOwnScript:
         assert "was called from" in nested and "run itself without end" in nested
 
     def test_docs_inside_a_build_script_is_the_ordinary_thing(self, pipeline_project, monkeypatch):
-        _add_script(pipeline_project, f"{CHARTBOOK} docs ./docs -f > nested.log 2>&1")
+        _add_script(pipeline_project, f"{CHARTBOOK} docs generate ./docs -f > nested.log 2>&1")
         monkeypatch.chdir(pipeline_project)
         result = CliRunner().invoke(main, ["run"])
         assert result.exit_code == 0, result.output
@@ -336,10 +380,10 @@ class TestCalledFromItsOwnScript:
 
 
 def test_docs_with_no_manifest_is_a_clean_error(tmp_path, monkeypatch):
-    """Found by a reviewer: `chartbook docs` in a folder with no chartbook.toml raised a
+    """Found by a reviewer: `chartbook docs generate` in a folder with no chartbook.toml raised a
     ValueError traceback, where `chartbook build` says `Error: No chartbook.toml in …`."""
     monkeypatch.chdir(tmp_path)
-    result = CliRunner().invoke(main, ["docs", "./docs", "-f"])
+    result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"])
     assert result.exit_code == 1
     assert f"Error: No chartbook.toml in {Path.cwd()}." in result.output
     assert "Traceback" not in result.output and "ValueError" not in result.output
@@ -348,7 +392,7 @@ def test_docs_with_no_manifest_is_a_clean_error(tmp_path, monkeypatch):
 
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()
-    result = CliRunner().invoke(main, ["docs", str(tmp_path / "site"), "--project-dir", str(elsewhere), "-f"])
+    result = CliRunner().invoke(main, ["docs", "generate", str(tmp_path / "site"), "--project-dir", str(elsewhere), "-f"])
     assert result.exit_code == 1
     assert f"Error: No chartbook.toml in {elsewhere.resolve()}." in result.output
 

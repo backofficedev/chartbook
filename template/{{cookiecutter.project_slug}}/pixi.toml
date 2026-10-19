@@ -78,5 +78,5 @@ test = "pytest --doctest-modules"
 format = "ruff format . && ruff check --fix ."
 lint = "ruff check ."
 {% if cookiecutter.include_chartbook %}
-build-docs = "chartbook docs -f"
+build-docs = "chartbook docs generate -f"
 {% endif %}

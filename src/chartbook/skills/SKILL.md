@@ -26,12 +26,12 @@ ChartBook is a developer platform for data science teams to discover, document, 
 chartbook init              # Scaffold new project from the cookiecutter template
 chartbook init --git        # ...and git init + initial commit
 chartbook init --github     # ...and create a private GitHub repo with gh, then push (--public to override)
-chartbook docs              # Render the HTML documentation website (was `chartbook build`)
-chartbook build -f          # Make everything current: run [scripts] build, THEN render the site. In a dodo.py task, use `chartbook docs -f`, never `chartbook build`
-chartbook docs -f          # Force overwrite existing docs
-chartbook docs -f --incremental  # Keep _docs/ and redo only what changed since last time
-chartbook docs -f --watch  # Incremental build, then rebuild on every file change (Ctrl-C to stop)
-chartbook browse            # Open project docs in default browser
+chartbook docs generate     # Render the HTML documentation website (was `chartbook docs`; `chartbook build` before that)
+chartbook build -f          # Make everything current: run [scripts] build, THEN render the site. In a dodo.py task, use `chartbook docs generate -f`, never `chartbook build`
+chartbook docs generate -f  # Force overwrite existing docs
+chartbook docs generate -f --incremental  # Keep _docs/ and redo only what changed since last time
+chartbook docs generate -f --watch  # Incremental build, then rebuild on every file change (Ctrl-C to stop)
+chartbook docs open         # Open project docs in default browser (was `chartbook browse`)
 # every build also writes docs/index.json: one record per pipeline, dataframe, column,
 # chart, notebook and note, each with an ID (scope/pipeline:kind/name) and a content hash,
 # and docs/llms.txt: one line per pipeline, dataframe, chart and model with its ID and a
@@ -70,8 +70,8 @@ chartbook catalog add <path>     # Add pipeline(s) to catalog (each folder is re
 chartbook catalog add <glob> -y  # Add multiple pipelines without prompt
 chartbook catalog disable <id>   # Disable a pipeline (skip during builds)
 chartbook catalog enable <id>    # Re-enable a disabled pipeline
-chartbook catalog build     # Build HTML docs for the global catalog
-chartbook catalog browse    # Open global catalog docs in browser
+chartbook catalog generate       # Render the global catalog's site (was `catalog build`)
+chartbook catalog open           # Open the global catalog's site in the browser (was `catalog browse`)
 chartbook ls                # List all pipelines, dataframes, charts
 chartbook ls pipelines      # List pipelines only
 chartbook ls dataframes     # List dataframes only
@@ -96,7 +96,7 @@ For detailed catalog management commands, browsing, and data access workflows, s
 ├── cache/               # What was read from a remote store, and each version's built site ([cache] path, CHARTBOOK_CACHE)
 ├── git/                 # Clones of git dependencies ([git] path, CHARTBOOK_GIT_CACHE)
 ├── artifacts/           # Auxiliary files (e.g. cached data)
-├── docs/                # Rendered catalog HTML (from `catalog build`)
+├── docs/                # Rendered catalog HTML (from `catalog generate`)
 ├── _docs/               # Temp Sphinx build dir (auto-cleaned)
 └── _docs_src/           # Temp source dir (auto-cleaned)
 ```

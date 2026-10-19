@@ -57,7 +57,7 @@ Finally, run the project tasks:
 {% if cookiecutter.include_chartbook %}{% if cookiecutter.environment_manager == "pixi" %}pixi run chartbook build -f{% else %}chartbook build -f{% endif %}{% else %}{% if cookiecutter.environment_manager == "pixi" %}pixi run doit{% else %}doit{% endif %}{% endif %}
 ```
 {% if cookiecutter.include_chartbook %}`chartbook build` runs `doit` (every task in `dodo.py` but the tests), then renders
-the documentation site into `docs/`. Open it with `chartbook browse`.
+the documentation site into `docs/`. Open it with `chartbook docs open`.
 {% endif %}And that's it!
 {% if cookiecutter.include_r_scripts %}
 
@@ -85,7 +85,7 @@ A plain `doit` does not run them.
 {% if cookiecutter.include_chartbook %}
 You can render the documentation site, without running anything, with:
 ```
-chartbook docs -f
+chartbook docs generate -f
 ```
 `chartbook build -f` runs `doit` and then renders the site, and `chartbook check`
 says what `chartbook.toml` is missing.

@@ -5,14 +5,14 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | Command | Purpose |
 |---------|---------|
 | `chartbook init` | Scaffold a new pipeline project |
-| `chartbook docs` | Render the documentation site |
+| `chartbook docs generate` | Render the documentation site |
+| `chartbook docs open` | Open the rendered site in a browser |
 | `chartbook build` | Make everything current: run the build script, then render the site |
-| `chartbook browse` | Open the generated site in a browser |
 | `chartbook check` | Fail CI on missing metadata, broken paths, or expiring licenses |
 | `chartbook trust` | Say a pipeline's folder is yours to build, so that a build of it runs as your own |
 | `chartbook path` | Print the path the manifest declares for an asset |
 | `chartbook publish` | Stage a pipeline's publishable files into a directory |
-| `chartbook catalog init/add/disable/enable/build/browse` | Manage a catalog and its site |
+| `chartbook catalog init/add/disable/enable/generate/open` | Manage a catalog and its site |
 | `chartbook ls [pipelines\|dataframes\|charts]` | List cataloged objects |
 | `chartbook data get-path/get-docs/get-docs-path` | Look up a dataframe's file or write-up |
 | `chartbook create-data-glimpses` | Summarize every dataframe the manifest declares |
@@ -35,7 +35,7 @@ Scaffold a new pipeline from the [cookiecutter template](https://github.com/back
 
 **The template comes with the package**, as `chartbook/template` in the wheel (the files git tracks in the repository's `template/`; in a source checkout, those same files of `template/` beside `src/`), so a project is always made with the template of the ChartBook that makes it, and making it needs no network. It is rendered with cookiecutter, and the project's `.cruft.json` is written as [cruft](https://cruft.github.io/cruft/) writes it: the template's repository on GitHub, its `template` folder, and the commit the template is at (recorded in the package when it is built; asked of git in a source checkout). So `cruft update` and `cruft check` in the project follow the template on GitHub from there. The command says when that commit is in no tag and on no branch of a remote that is the template's repository, in the checkout it runs from, so may not be on GitHub, where `cruft update` looks for it. When the commit is not known (the package recorded none, or the checkout's `template/` has changes git has not committed to tracked files), there is no `.cruft.json`, and the command says why and prints the command that makes one once the commit is known, with the answers you gave: `cruft link https://github.com/backofficedev/chartbook --directory template --checkout <commit> --no-input --extra-context '{…}'`. A source checkout that git cannot read, or a copy of one with no `.git`, is not rendered from, since which files git tracks cannot be told; the command says what to do. Everything rendered can be written by its owner, even from a template installed read-only. A folder of the project's name that is there already stops it, with nothing changed. The project's environment files ask for `chartbook>=` the template's version, which is your ChartBook's; `cruft update` moves it to the template's version then.
 
-The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook build` builds it and renders its site, and before that `chartbook docs` renders its site with the example notebook shown as not built. `doit` there runs every task in `dodo.py` but the tests, which are `doit run_pytest`. When the project is made, the command prints the next steps: `chartbook docs`, the commands that install its dependencies, then `chartbook build -f`, `chartbook browse` and `chartbook check`. The new project is recorded as trusted to run, since you made it, and the command says so among the next steps (`Trusted: this folder`); a folder you cloned is not, until {ref}`chartbook trust <chartbook-trust>` says it is. When the record cannot be written (no home folder), the command says so and goes on.
+The template is the `template/` folder of ChartBook's own repository, so the commands it uses and the commands themselves change together, and a test builds a freshly made project on every change. The new project names its build in `chartbook.toml` (`[scripts] build = "doit"`), so `chartbook build` builds it and renders its site, and before that `chartbook docs generate` renders its site with the example notebook shown as not built. `doit` there runs every task in `dodo.py` but the tests, which are `doit run_pytest`. When the project is made, the command prints the next steps: `chartbook docs generate`, the commands that install its dependencies, then `chartbook build -f`, `chartbook docs open` and `chartbook check`. The new project is recorded as trusted to run, since you made it, and the command says so among the next steps (`Trusted: this folder`); a folder you cloned is not, until {ref}`chartbook trust <chartbook-trust>` says it is. When the record cannot be written (no home folder), the command says so and goes on.
 
 ```console
 chartbook init [--git] [--github [--public | --private]]
@@ -58,8 +58,12 @@ If a later step fails — a commit hook rejects the commit, or the repository na
 (chartbook-docs)=
 ## chartbook docs
 
+The documentation site, as a group of two commands: `chartbook docs generate` renders it, and `chartbook docs open` opens it. Neither builds the project's data: {ref}`chartbook run <chartbook-run>` does that, and {ref}`chartbook build <chartbook-build>` runs the build script and then generates the site. `chartbook docs` on its own lists the two.
+
+### docs generate
+
 ```console
-chartbook docs [OPTIONS] [OUTPUT_DIR]
+chartbook docs generate [OPTIONS] [OUTPUT_DIR]
 ```
 
 Render the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the current working directory itself). Works for both pipelines and catalogs — the project type comes from the manifest. Internals: {doc}`../guide/how-the-build-works`.
@@ -79,7 +83,7 @@ With --strict, this is an error.
 
 Each of them keeps its record in `index.json`, without a hash, and its provenance panel says "not built". A notebook's page is its title and "Not built yet", with how to build it; a chart's embedded frame and its full-screen link say the same, and so does a dataframe's glimpse, which then has no dates and no download link. A model's page says it only in its provenance panel.
 
-It takes every declared output to be missing. A pipeline that has some of them and not others has been built, so a missing one is an error; a clone of a pipeline that commits some of its outputs to git is such a pipeline. A missing write-up, note or README, which nothing builds, is an error too. And so is a pipeline that has built nothing, when `--strict` is given: after a build that should have made everything, as in CI, run `chartbook docs --strict`, or `chartbook build`, which runs the build first and makes no exception. An output that is there and cannot be read is not "not built": the render stops and names it.
+It takes every declared output to be missing. A pipeline that has some of them and not others has been built, so a missing one is an error; a clone of a pipeline that commits some of its outputs to git is such a pipeline. A missing write-up, note or README, which nothing builds, is an error too. And so is a pipeline that has built nothing, when `--strict` is given: after a build that should have made everything, as in CI, run `chartbook docs generate --strict`, or `chartbook build`, which runs the build first and makes no exception. An output that is there and cannot be read is not "not built": the render stops and names it.
 
 A version's site, which a catalog builds from the store (see `chartbook snapshot`), holds what that version's build made. Any output it did not make is shown the same way, built in part or not, and says "Not built in this version", with no advice.
 
@@ -101,11 +105,11 @@ Beside the HTML it writes `index.json`: one record for every pipeline, dataframe
 | `--publish-dir PATH` | `./_output/to_be_published/` | Publish staging directory |
 
 ```console
-chartbook docs             # the first time
-chartbook docs -f          # again, over what is there
-chartbook docs ./site -f   # custom output directory
-chartbook docs -f --incremental   # rebuild only what changed
-chartbook docs -f --watch         # ...and keep doing so as you edit
+chartbook docs generate             # the first time
+chartbook docs generate -f          # again, over what is there
+chartbook docs generate ./site -f   # custom output directory
+chartbook docs generate -f --incremental   # rebuild only what changed
+chartbook docs generate -f --watch         # ...and keep doing so as you edit
 ```
 
 **Incremental builds.** A plain `docs` starts from nothing every time, which is what you want in CI. `--incremental` keeps the intermediate Sphinx project (`_docs/`) and uses it the next time:
@@ -117,15 +121,23 @@ chartbook docs -f --watch         # ...and keep doing so as you edit
 Each build says what it did:
 
 ```console
-$ chartbook docs -f --incremental
+$ chartbook docs generate -f --incremental
 Incremental build: regenerated 1 of 40 pipeline(s); 10 source file(s) changed, 0 removed; Sphinx re-read 10 page(s).
 ```
 
 When a page is added or removed, every page is rendered again — from Sphinx's cache, without re-reading anything — so that navigation stays right and no stale page is left behind. Upgrading ChartBook, Sphinx or a theme, or changing a build option, starts over from nothing. The kept `_docs/` directory ignores itself in git.
 
-Two things an incremental build does not promise, both fixed by one plain `chartbook docs`: the "Last updated" date on the front page moves only when that page is rendered again, and a page whose *title* changed keeps its old title in other pages' sidebars until they are next rendered.
+Two things an incremental build does not promise, both fixed by one plain `chartbook docs generate`: the "Last updated" date on the front page moves only when that page is rendered again, and a page whose *title* changed keeps its old title in other pages' sidebars until they are next rendered.
 
-**Watch mode.** `--watch` is an incremental build in a loop. It polls the project's files (once a second by default), rebuilds on any change, reports a failed build and carries on. There is no server and nothing to install: open the site with `chartbook browse` and refresh the page.
+**Watch mode.** `--watch` is an incremental build in a loop. It polls the project's files (once a second by default), rebuilds on any change, reports a failed build and carries on. There is no server and nothing to install: open the site with `chartbook docs open` and refresh the page.
+
+### docs open
+
+```console
+chartbook docs open [OUTPUT_DIR] [--project-dir PATH]
+```
+
+Open the rendered site, `OUTPUT_DIR/index.html` (default `./docs/index.html`), in your default browser. There is no server: the file is opened as it is, and after a rebuild you refresh the page. If there is no site yet, it says to run `chartbook docs generate` first.
 
 (chartbook-build)=
 ## chartbook build
@@ -134,7 +146,7 @@ Two things an incremental build does not promise, both fixed by one plain `chart
 chartbook build [OPTIONS] [OUTPUT_DIR]
 ```
 
-Make everything current: run the project's `build` script, then render the site. It is `chartbook run` followed by `chartbook docs`, and it takes the arguments of {ref}`chartbook docs <chartbook-docs>`.
+Make everything current: run the project's `build` script, then render the site. It is `chartbook run` followed by `chartbook docs generate`, and it takes the arguments of {ref}`chartbook docs generate <chartbook-docs>`.
 
 ```console
 $ chartbook build -f
@@ -146,27 +158,19 @@ Successfully generated documentation in /work/rate_forecast/docs
 | Command | Builds the data | Renders the site |
 |---|---|---|
 | `chartbook run` | Yes | No |
-| `chartbook docs` | No | Yes |
+| `chartbook docs generate` | No | Yes |
 | `chartbook build` | Yes | Yes |
 
 - **If the script fails, the site is not rendered**, and the command exits with the script's exit code.
-- **After the script has run, a declared file that is missing is an error**, even when none of them is there, which `chartbook docs` would show as not built yet: the build has just run and did not make it.
+- **After the script has run, a declared file that is missing is an error**, even when none of them is there, which `chartbook docs generate` would show as not built yet: the build has just run and did not make it.
 - **With no `build` script** in {ref}`[scripts] <scripts>`, there is nothing to run. It says so and renders the site.
 - **In a catalog**, the script is run in each of the catalog's pipelines, and then the catalog's site is rendered.
-- **In a folder you have not trusted to run**, the script is not run: a build script is code, and the command stops, naming the folder and the command that trusts it, {ref}`chartbook trust <chartbook-trust>`. With no `build` script, the site is rendered as `chartbook docs` renders an untrusted folder.
+- **In a folder you have not trusted to run**, the script is not run: a build script is code, and the command stops, naming the folder and the command that trusts it, {ref}`chartbook trust <chartbook-trust>`. With no `build` script, the site is rendered as `chartbook docs generate` renders an untrusted folder.
 
 ```{warning}
-**`chartbook build` used to mean what `chartbook docs` means now.** A build script that says `chartbook build -f`, as the `dodo.py` of a project made by an older `chartbook init` does, must say `chartbook docs -f`, or, better, not render the site at all: `chartbook build` renders it after the script, and the template's `dodo.py` no longer has a task that does.
+**`chartbook build` used to mean what `chartbook docs generate` means now.** A build script that says `chartbook build -f`, as the `dodo.py` of a project made by an older `chartbook init` does, must say `chartbook docs generate -f`, or, better, not render the site at all: `chartbook build` renders it after the script, and the template's `dodo.py` no longer has a task that does.
 
 Until it does: called from inside the build script that `chartbook build` or `chartbook run` is running, `chartbook build` renders the site and prints a warning, so that it does not run the script that called it without end. Called from a build tool you started yourself (plain `doit`), it runs the build script, which is that same tool, a second time.
-```
-
-## chartbook browse
-
-Open the generated site (default `./docs/index.html`) in your default browser.
-
-```console
-chartbook browse [OUTPUT_DIR] [--project-dir PATH]
 ```
 
 ## chartbook check
@@ -248,7 +252,7 @@ chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a data
 chartbook trust [PATH] [--render] [--repository] [--members] [--list] [--forget]
 ```
 
-Say that a pipeline's folder is yours to build. A build of a folder you have not trusted runs as a build of files from a store does: `chartbook docs` renders its site with no query run (the dataframe's glimpse says why) and no template or file from outside the folder, every template in Jinja's sandbox, with a warning that says how to trust it; `chartbook build` and `chartbook run` refuse to run its build script, which is code, naming the folder and this command. A project `chartbook init` made is trusted as it is made. One you cloned is trusted when you say so, here. `chartbook check` is not gated, and its last line says the level when it is not `run`.
+Say that a pipeline's folder is yours to build. A build of a folder you have not trusted runs as a build of files from a store does: `chartbook docs generate` renders its site with no query run (the dataframe's glimpse says why) and no template or file from outside the folder, every template in Jinja's sandbox, with a warning that says how to trust it; `chartbook build` and `chartbook run` refuse to run its build script, which is code, naming the folder and this command. A project `chartbook init` made is trusted as it is made. One you cloned is trusted when you say so, here. `chartbook check` is not gated, and its last line says the level when it is not `run`.
 
 | Option | Effect |
 |---|---|
@@ -276,7 +280,7 @@ Pipelines (each covers the folders inside it):
 
 **Without a record.** Under `CI` (the environment variable, set to anything) the checkout is trusted to run: the top of the git repository the working directory is in, or the working directory itself when it is in none; a runner builds its own checkout. `CHARTBOOK_TRUST=all` trusts every folder to run, for a container that is nothing but your own code (the test suite runs so); it is the one value the variable takes, and another is said once and ignored. A build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE=1`) is never trusted, whatever the record says. A `git` dependency is built in ChartBook's own copy of its commit: naming it in `[dependencies]` is the trust for that, and the pipeline that names it must itself be trusted to run.
 
-`chartbook docs`, `chartbook build`, `chartbook run`, `chartbook catalog build`, `chartbook create-data-glimpses` and `chartbook publish` take the gate; `chartbook check` does not, and says the level. In a catalog, `--members` records nothing while a member's folder has no `chartbook.toml` where the catalog says it is, and names it: a folder trusted before anything is there would trust whatever is put there later.
+`chartbook docs generate`, `chartbook build`, `chartbook run`, `chartbook catalog generate`, `chartbook create-data-glimpses` and `chartbook publish` take the gate; `chartbook check` does not, and says the level. In a catalog, `--members` records nothing while a member's folder has no `chartbook.toml` where the catalog says it is, and names it: a folder trusted before anything is there would trust whatever is put there later.
 
 No prompt: a command that needs trust refuses and prints this command, so a script behaves as a person does. The reasoning is {doc}`../design/trust`.
 
@@ -396,26 +400,26 @@ chartbook catalog disable ftsfr/sovereign_bonds [--catalog PATH]
 chartbook catalog enable ftsfr/sovereign_bonds [--catalog PATH]
 ```
 
-### catalog build
+### catalog generate
 
-Build the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike `chartbook docs`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
+Render the catalog's site into `~/.chartbook/docs/` (or the configured catalog's location). Unlike `chartbook docs generate`, the default here is `--no-strict`: one member pipeline with missing files is skipped with a warning instead of sinking the whole site.
 
 ```console
-chartbook catalog build [-f] [--strict/--no-strict] [--clean] [--watch [--watch-interval SECONDS]]
+chartbook catalog generate [-f] [--strict/--no-strict] [--clean] [--watch [--watch-interval SECONDS]]
 ```
 
 A catalog build is **incremental by default**. Its working files are kept beside the catalog, in `_docs/`, and the next build reads them and redoes only the pipelines whose files have changed since — in a large catalog, usually a handful or none. Nothing runs between builds: there is no server or background process, only that directory. See [Incremental builds](#chartbook-build).
 
 `--clean` throws the kept files away and rebuilds everything, which is also what happens automatically after ChartBook, Sphinx or a theme is upgraded. `--watch` rebuilds whenever a member pipeline's files change, until Ctrl-C.
 
-As `chartbook docs` in the catalog's folder, it builds only when the catalog's own folder and every member folder on this machine are trusted ({ref}`chartbook trust --members <chartbook-trust>`); otherwise it lists the folders that are not, and builds nothing.
+As `chartbook docs generate` in the catalog's folder, it builds only when the catalog's own folder and every member folder on this machine are trusted ({ref}`chartbook trust --members <chartbook-trust>`); otherwise it lists the folders that are not, and builds nothing.
 
-### catalog browse
+### catalog open
 
-Open the built catalog site.
+Open the rendered catalog site in your default browser.
 
 ```console
-chartbook catalog browse
+chartbook catalog open
 ```
 
 ## chartbook ls
@@ -523,7 +527,7 @@ An asset that is declared and not built is listed, and the rest is in the snapsh
 
 **A git tag is a version's name.** A snapshot records the git tags on its commit when it is made (`tags`). A commit is often tagged after it is built: run `chartbook snapshot` again after tagging, and since the tags are new it records them, with the same bytes; and `chartbook lineage` and a catalog's Versions page show them. Name a version with `git tag`, and unname it with `git tag -d`: `store gc` keeps the newest snapshot a tag can pin from while the tag is there, and lets it go once it is not, or always with `--aggressive`. A name keeps that snapshot only, not what it was made from (`store gc --keep-lineage` does that).
 
-**The snapshot holds the description of its data.** With the bytes, a snapshot keeps the pipeline's own index at that commit, without any path of your machine, and the files a site needs that are not assets: `chartbook.toml`, `chartbook.lock`, the README, every write-up (`docs_path`), the pipeline's own site pages and its logo and favicon. Only files git tracks are taken, so a `.env` or an ignored draft never reaches the store; only plain paths inside the pipeline's folder, and no file that is a link or under one. Each document named and not kept is listed (`document not kept: …`). So the data dictionary of each version is kept as it stood when the data was made, and a version's site can be built from the store alone, with the repository gone: `chartbook.snapshot.materialize(taken, folder)` lays the version out as a folder, under the pipeline's own ID whatever the folder is called, with each model's recorded scores written back to its `metrics_path`, and `chartbook docs` builds there. A dataframe that is a table or a query is in the store as parquet while its manifest names a database, so in a laid-out version its page says it is not built. A manifest a docs build would refuse still gets its snapshot; the index is then left out and the command says why:
+**The snapshot holds the description of its data.** With the bytes, a snapshot keeps the pipeline's own index at that commit, without any path of your machine, and the files a site needs that are not assets: `chartbook.toml`, `chartbook.lock`, the README, every write-up (`docs_path`), the pipeline's own site pages and its logo and favicon. Only files git tracks are taken, so a `.env` or an ignored draft never reaches the store; only plain paths inside the pipeline's folder, and no file that is a link or under one. Each document named and not kept is listed (`document not kept: …`). So the data dictionary of each version is kept as it stood when the data was made, and a version's site can be built from the store alone, with the repository gone: `chartbook.snapshot.materialize(taken, folder)` lays the version out as a folder, under the pipeline's own ID whatever the folder is called, with each model's recorded scores written back to its `metrics_path`, and `chartbook docs generate` builds there. A dataframe that is a table or a query is in the store as parquet while its manifest names a database, so in a laid-out version its page says it is not built. A manifest a docs build would refuse still gets its snapshot; the index is then left out and the command says why:
 
 ```console
 $ chartbook snapshot

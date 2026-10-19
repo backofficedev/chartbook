@@ -2468,7 +2468,7 @@ def materialize(taken: Snapshot, into: Union[str, Path], store: Optional[Store] 
     """Lay a snapshot out as a folder: its documents and its assets at their paths, from the store alone.
 
     The folder is then the pipeline at that version, as far as a site is
-    concerned: ``chartbook docs`` builds the version's site there with the
+    concerned: ``chartbook docs generate`` builds the version's site there with the
     repository gone. Its code is not in it; the commit names that. Beside
     the documents and the assets:
 

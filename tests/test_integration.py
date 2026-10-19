@@ -567,7 +567,7 @@ class TestExampleProjects:
                 env=self._get_env_with_pythonpath(),
             )
 
-            assert result.returncode == 0, f"chartbook docs failed: {result.stderr}"
+            assert result.returncode == 0, f"chartbook docs generate failed: {result.stderr}"
 
             # Verify outputs exist
             assert (catalog_path / "docs" / "index.html").exists()

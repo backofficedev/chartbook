@@ -17,7 +17,7 @@ from tests.test_model_versions import trained  # noqa: F401 - a fixture: two pip
 def _built(project: Path, monkeypatch) -> dict:
     """Build the site with the generator, keep the build directory, and read its full index."""
     monkeypatch.chdir(project)
-    result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs"])
+    result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs"])
     assert result.exit_code == 0, result.output
     return json.loads((project / "_docs" / "index.json").read_text())
 
@@ -53,7 +53,7 @@ class TestTheBuildWritesTheSite:
         project = pipeline_project_with_notes.resolve()
         monkeypatch.chdir(project)
         for _ in range(2):
-            result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--incremental"])
+            result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
             assert result.exit_code == 0, result.output
             assert (project / "_docs" / "cb" / "note1.md").is_file()
             assert (project / "docs" / "cb" / "note1.html").is_file()
@@ -198,7 +198,7 @@ class TestTheCatalogsOwnPages:
         for html in (catalog / "pipelines" / "pipeline_b" / "_output" / "charts").glob("*.html"):
             html.unlink()
         monkeypatch.chdir(catalog)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--keep-build-dirs", "--no-strict"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--keep-build-dirs", "--no-strict"])
         assert result.exit_code == 0, result.output
         index = json.loads((catalog / "_docs" / "index.json").read_text())
         (record,) = [r for r in index["records"] if r["kind"] == "Catalog"]

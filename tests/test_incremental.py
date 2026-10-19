@@ -838,12 +838,12 @@ class TestCommands:
     def test_build_incremental_reports_what_it_redid(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
         runner = CliRunner()
-        first = runner.invoke(main, ["docs", "--incremental", "-f"])
+        first = runner.invoke(main, ["docs", "generate", "--incremental", "-f"])
         assert first.exit_code == 0, first.output
         assert "Full build (no previous incremental build): regenerated 1 of 1" in first.output
         assert (pipeline_project / "_docs" / STATE_FILE).is_file()
 
-        second = runner.invoke(main, ["docs", "--incremental", "-f"])
+        second = runner.invoke(main, ["docs", "generate", "--incremental", "-f"])
         assert second.exit_code == 0, second.output
         assert "Incremental build: regenerated 0 of 1 pipeline(s)" in second.output
         assert "0 source file(s) changed, 0 removed" in second.output
@@ -851,7 +851,7 @@ class TestCommands:
 
     def test_plain_build_is_still_a_clean_build(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "-f"])
         assert result.exit_code == 0, result.output
         assert "Incremental build" not in result.output
         assert not (pipeline_project / "_docs").exists()
@@ -869,7 +869,7 @@ class TestCommands:
                 raise KeyboardInterrupt
 
         monkeypatch.setattr(incremental.time, "sleep", fake_sleep)
-        result = CliRunner().invoke(main, ["docs", "--watch", "--watch-interval", "0.2", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "--watch", "--watch-interval", "0.2", "-f"])
 
         assert result.exit_code == 0, result.output
         assert "Full build (no previous incremental build)" in result.output
@@ -881,13 +881,13 @@ class TestCommands:
 
     def test_watch_interval_needs_watch(self, pipeline_project, monkeypatch):
         monkeypatch.chdir(pipeline_project)
-        result = CliRunner().invoke(main, ["docs", "--watch-interval", "2", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "--watch-interval", "2", "-f"])
         assert result.exit_code == 2
         assert "--watch-interval only applies with --watch" in result.output
 
     def test_build_error_is_reported_cleanly(self, invalid_project_v1_format, monkeypatch):
         monkeypatch.chdir(invalid_project_v1_format)
-        result = CliRunner().invoke(main, ["docs", "--incremental", "-f"])
+        result = CliRunner().invoke(main, ["docs", "generate", "--incremental", "-f"])
         assert result.exit_code == 1
         assert "Error: " in result.output
         assert "v1 format" in result.output
@@ -902,23 +902,23 @@ class TestCommands:
         runner = CliRunner()
 
         # A catalog build is incremental without being asked
-        first = runner.invoke(main, ["catalog", "build", "-f"])
+        first = runner.invoke(main, ["catalog", "generate", "-f"])
         assert first.exit_code == 0, first.output
         assert "regenerated 2 of 2 pipeline(s)" in first.output
         assert (catalog_project / "_docs" / STATE_FILE).is_file()
 
-        second = runner.invoke(main, ["catalog", "build", "-f"])
+        second = runner.invoke(main, ["catalog", "generate", "-f"])
         assert second.exit_code == 0, second.output
         assert "Incremental build: regenerated 0 of 2 pipeline(s)" in second.output
         assert "nothing to render" in second.output
         assert "Catalog built successfully" in second.output
 
         # --clean starts over, and leaves a fresh record for next time
-        cleaned = runner.invoke(main, ["catalog", "build", "-f", "--clean"])
+        cleaned = runner.invoke(main, ["catalog", "generate", "-f", "--clean"])
         assert cleaned.exit_code == 0, cleaned.output
         assert "Full build (no previous incremental build)" in cleaned.output
         assert "regenerated 2 of 2 pipeline(s)" in cleaned.output
-        after_clean = runner.invoke(main, ["catalog", "build"])
+        after_clean = runner.invoke(main, ["catalog", "generate"])
         assert "Incremental build: regenerated 0 of 2 pipeline(s)" in after_clean.output
 
     def test_catalog_build_clean_leaves_unrelated_directories_alone(
@@ -934,7 +934,7 @@ class TestCommands:
         precious.mkdir()
         (precious / "notes.txt").write_text("not a build tree")
 
-        result = CliRunner().invoke(main, ["catalog", "build", "--clean"])
+        result = CliRunner().invoke(main, ["catalog", "generate", "--clean"])
 
         assert result.exit_code == 1
         assert "not a ChartBook build directory" in result.output

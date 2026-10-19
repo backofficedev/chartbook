@@ -149,7 +149,7 @@ class TestAPipelinesFile:
     def _site(self, tmp_path, monkeypatch, *arguments) -> Path:
         project = create_pipeline_project(tmp_path / "rates", pipeline_id="rates", pipeline_name="Rates")
         monkeypatch.chdir(project)
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", *arguments])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", *arguments])
         assert result.exit_code == 0, result.output
         return project / "docs"
 
@@ -165,7 +165,7 @@ class TestAPipelinesFile:
     def test_an_incremental_build_keeps_it_and_leaves_it_alone(self, tmp_path, monkeypatch):
         site = self._site(tmp_path, monkeypatch, "--incremental")
         written = (site / "llms.txt").stat().st_mtime_ns
-        result = CliRunner().invoke(main, ["docs", "./docs", "-f", "--incremental"])
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f", "--incremental"])
         assert result.exit_code == 0, result.output
         assert (site / "llms.txt").stat().st_mtime_ns == written
 
