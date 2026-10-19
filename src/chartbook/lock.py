@@ -2201,7 +2201,7 @@ def _sync_from_snapshots(
     for name, label, start, why in unresolved:
         ref = dataclasses.replace(AssetRef.from_dict(snapshot.renamed(newest.assets[name], key)["ref"]), rev=label)
         asset_id = str(ref)
-        record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("content_hash", "size_bytes", "files")}
+        record = {k: v for k, v in snapshot.renamed(newest.assets[name], key).items() if k not in ("content_hash", "size_bytes", "files", "keep")}
         missing = f"the label names version {start}, and {why}"
         records[asset_id] = {**record, "id": asset_id, "ref": ref.to_dict(), "label": label, "missing": missing}
         report.events.append(

@@ -1280,7 +1280,7 @@ def label_records(
             content_hash, taken = named[0]
             # What the version was trained on is the owner's record, keyed in
             # the owner's names; a dependant's lockfile does not carry it
-            record = {k: v for k, v in renamed(taken.assets[name], key).items() if k != "trained_on"}
+            record = {k: v for k, v in renamed(taken.assets[name], key).items() if k not in ("trained_on", "keep")}
             ref = AssetRef.from_dict(record["ref"])
             ref = dataclasses.replace(ref, rev=label)
             records[str(ref)] = {**record, "id": str(ref), "ref": ref.to_dict(), "label": label}
@@ -1594,7 +1594,9 @@ def plan_removals(
         if not marks:
             continue
         holders: dict[tuple[str, str], Snapshot] = {}
-        for taken in sorted(group, key=lambda t: (t.made_at, _count(t.path))):
+        # Not one dated after now: a record written to win would otherwise be
+        # the holder for ever, and the genuine holder let go
+        for taken in sorted((t for t in group if not made_in_the_future(t, now)), key=lambda t: (t.made_at, _count(t.path))):
             for name in marks:
                 content_hash = (taken.assets.get(name) or {}).get("content_hash")
                 if content_hash:
@@ -2715,6 +2717,14 @@ def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = N
     plain = safe_relative(declared)
     if plain is None or plain.split("/")[0] == VERSION_FILE:
         return f"its path {declared} is not a plain path inside the pipeline's folder"
+    then = safe_relative(location.get("path", "")) if at is not None else plain
+    if then != plain and (record.get("files") or is_glob_pattern(plain) or is_glob_pattern(then or "")):
+        # A folder or a glob laid out under a new name may not be what the
+        # new path means (a folder written where a file is now expected)
+        return (
+            f"its path is {declared} now and was {location.get('path')} when the snapshot was made, and the "
+            f"snapshot holds a folder: put it back by hand"
+        )
     held = Path(store.get(record["content_hash"]))
     if is_glob_pattern(plain):
         _copy_tree(held, folder / glob_root(plain))
@@ -2732,6 +2742,38 @@ def _place_asset(record: dict, store: Store, folder: Path, at: Optional[str] = N
         if os.path.lexists(target) or not _copy_regular_file(source, target):
             return "its file could not be written where its path says"
     return None
+
+
+def newest_holder(snapshots: list, store: Store, name: str) -> tuple[Optional[Snapshot], str]:
+    """The newest snapshot holding an asset built, with its bytes in the store and whole; or why there is none.
+
+    Walked newest first and stopped at the first that holds the asset: an
+    older version is never handed over in place of a newer one whose bytes
+    are missing, which would be stale data with nothing said. Shared by
+    :func:`restore` and the stop before a build
+    (:func:`chartbook.run.kept_missing`), so that the two agree. A record
+    from a store others can write to may name an object that is not one;
+    that is said, not raised.
+
+    :param snapshots: The pipeline's snapshots, oldest first (:func:`history`).
+    :returns: The snapshot and ``""``, or None and the reason.
+    """
+    for taken in reversed(snapshots):
+        record = taken.assets.get(name) or {}
+        content_hash = record.get("content_hash")
+        if not content_hash:
+            continue
+        where = f"the newest snapshot holding it, at {taken.commit[:7]},"
+        try:
+            if not store.has(content_hash):
+                return None, f"{where} names bytes the store does not have"
+            unsynced = not_whole(store, record)
+        except (ValueError, TypeError) as error:  # not a hash: a record written to mislead
+            return None, f"{where} names an object that is not one: {error}"
+        if unsynced:
+            return None, f"{where} names an object that {unsynced}"
+        return taken, ""
+    return None, "no snapshot of this pipeline holds it"
 
 
 @dataclass
@@ -2758,14 +2800,16 @@ def restore(
     """Put a pipeline's own assets back on disk from its snapshots: `chartbook restore`.
 
     With no *names*, every asset the manifest marks ``keep = true``
-    (:func:`keeps_of`) that is not on disk. With *names*, those assets,
-    marked or not: any asset a snapshot holds can be put back. Each comes
-    from the newest snapshot of this pipeline that holds it built, with its
-    bytes in the store and whole (:func:`history`, :func:`not_whole`), and
-    is written at the path the manifest declares now. Nothing on disk is
-    written over: an asset that is there is left, and said. The mirror of
-    :func:`make`, which copies the folder into the store
-    (``docs_src/design/keep.md``).
+    (:func:`keeps_of`) that is not on disk; a kept table or query, which
+    has no file, is passed over. With *names*, those assets, marked or
+    not: any asset a snapshot holds can be put back. Each comes from the
+    newest snapshot of this pipeline that holds it built, with its bytes
+    in the store and whole (:func:`newest_holder`), and is written at the
+    path the manifest declares now. Nothing on disk is written over: an
+    asset that is there is left, and said. The mirror of :func:`make`,
+    which copies the folder into the store (``docs_src/design/keep.md``).
+    The snapshots are found through the commits the clone has
+    (:func:`history`): a shallow clone sees only its own.
 
     :param names: References within the pipeline, as `chartbook path` takes
         them: ``embeddings``, ``model/forecaster``.
@@ -2797,8 +2841,9 @@ def restore(
     snapshots = None  # read once, when an asset needs one
     for name in wanted:
         if name in in_source:
-            report.left.append((name, "a table or a query in a source: it has no file to put back"))
-            continue
+            if names is not None:
+                report.left.append((name, "a table or a query in a source: it has no file to put back"))
+            continue  # nothing of it is on disk to be missing
         if name not in declared:
             report.left.append((name, f"not declared with a path in {MANIFEST_NAME}"))
             continue
@@ -2811,21 +2856,7 @@ def restore(
             continue
         if snapshots is None:
             snapshots = history(directory, store)
-        holder, why = None, "no snapshot of this pipeline holds it"
-        for taken in reversed(snapshots):
-            record = taken.assets.get(name) or {}
-            content_hash = record.get("content_hash")
-            if not content_hash:
-                continue
-            if not store.has(content_hash):
-                why = f"the newest snapshot holding it, at {taken.commit[:7]}, names bytes the store does not have"
-                break
-            unsynced = not_whole(store, record)
-            if unsynced:
-                why = f"the newest snapshot holding it, at {taken.commit[:7]}, names an object that {unsynced}"
-                break
-            holder = taken
-            break
+        holder, why = newest_holder(snapshots, store, name)
         if holder is None:
             report.left.append((name, why))
             continue
@@ -2835,7 +2866,7 @@ def restore(
             report.left.append((name, placed))
             continue
         size = record.get("size_bytes")
-        report.put_back.append((name, path, holder, size if isinstance(size, int) else 0))
+        report.put_back.append((name, path, holder, size if type(size) is int else 0))
     return report
 
 

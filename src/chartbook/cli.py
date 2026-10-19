@@ -2870,7 +2870,11 @@ def restore_command(names, project_dir):
     that makes the asset is its own rule; the guide on keeping costly
     outputs has the recipe for doit.
 
-    Exits 1 if something asked for could not be put back.
+    Exits 1 if an asset named could not be put back. With no NAMES, a kept
+    asset that is missing and that no snapshot holds yet (a first build) is
+    said, and the command exits 0, so that CI may run it before every
+    build. The snapshots are found through the commits the clone has: a
+    shallow clone (CI's `fetch-depth: 1`) sees none of them.
 
     \b
     Examples:
@@ -2894,10 +2898,12 @@ def restore_command(names, project_dir):
         )
     for name, why in report.left:
         click.echo(f"{name}: not put back: {_printable(why)}", err=True)
-    if not report.put_back and not report.left:
-        said = "nothing marked `keep = true` is missing from disk" if not names else "nothing to put back"
-        click.echo(f"Nothing to restore: {said}.")
-    if report.left:
+    if not names and not report.put_back and not report.left:
+        click.echo("Nothing to restore: nothing marked `keep = true` is missing from disk.")
+    # Asked for by name and not put back: an error. Found missing on its own
+    # and not put back (a first build, with no snapshot yet): said, and
+    # nothing more, so that a CI step may run this before every build
+    if names and report.left:
         raise SystemExit(1)
 
 

@@ -575,7 +575,7 @@ With `--force` as well, it is the weekly refresh in one line: `chartbook run --f
 Things to know:
 
 - **`chartbook snapshot` does not run the build.** `chartbook run --snapshot` does.
-- **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). {ref}`chartbook store gc <chartbook-store-gc>` clears old ones: those nothing pins, that are not the newest of their pipeline, that no label points into, and that are over 7 days old.
+- **It costs disk where the disk has no copy-on-write clones.** A snapshot is its own copy of the files (a Mac, and Linux with btrfs or XFS, clone them for free). {ref}`chartbook store gc <chartbook-store-gc>` clears old ones: those nothing pins, that are not the newest of their pipeline, that no label points into, that hold no version of an asset marked `keep = true`, and that are over 7 days old.
 - **It is found by commit, or by the pipeline's ID.** A pipeline that depends on this folder, or on the same repository by URL, finds it by the commit; one that names this pipeline by its ID (`"ftsfr/fed_yield_curve" = {}`) finds it by the ID. It is in the store, so another machine that shares the store ({ref}`a store a team shares <chartbook-store>`) finds it the same ways once the store has synced, and by the ID with no folder of this pipeline there at all.
 
 (chartbook-restore)=
@@ -594,7 +594,9 @@ $ chartbook restore
 embeddings: put back at ./_data/embeddings.parquet from the snapshot at 4f2a91c, made 2026-09-30 14:02 UTC (1.2 GB)
 ```
 
-Each comes from the newest snapshot of this pipeline that holds it built, with its bytes in the store and whole, and is written at the path the manifest declares now. Nothing on disk is written over: an asset that is there is left, and said. What cannot be put back is said with why (no snapshot of the pipeline holds it; the store does not have its bytes; it is a table or a query in a source, which has no file; the manifest does not declare it), and the command exits 1. With no names and nothing missing, it says there is nothing to restore.
+Each comes from the newest snapshot of this pipeline that holds it built, with its bytes in the store and whole, and is written at the path the manifest declares now; a newer version whose bytes are gone is refused, never quietly replaced by an older one. Nothing on disk is written over: an asset that is there is left, and said. A folder asset whose path has changed since the snapshot is not laid out at the new path, and said. What cannot be put back is said with why (no snapshot of the pipeline holds it; the store does not have its bytes; it is a table or a query in a source, which has no file; the manifest does not declare it). An asset named and not put back exits 1; with no names, a kept asset that is missing and that no snapshot holds yet is said and the command exits 0, so that CI may run it before every build, and a kept table or query is passed over. With no names and nothing missing, it says there is nothing to restore.
+
+The snapshots are found through the commits the clone has: a shallow clone (`fetch-depth: 1` in a CI checkout) finds none of them. Fetch the whole history where `restore` is to run.
 
 Whether the build tool then skips the step that makes the asset is its own rule: doit skips a task whose target exists only if it has no `file_dep` or has seen them before. The guide gives the recipe.
 
@@ -912,7 +914,7 @@ Error: acme/docs: embeddings is kept, and is not on disk (./_data/embeddings.par
 Nothing was built.
 ```
 
-{ref}`chartbook restore <chartbook-restore>` puts the bytes back, and `--remake` runs the build without them, which makes the asset again; it covers every kept asset at once, so to remake one and keep another, restore the other first. A first build, with no version in the store, is not stopped, and a kept asset that is on disk stops nothing.
+{ref}`chartbook restore <chartbook-restore>` puts the bytes back, and `--remake` runs the build without them, which makes the asset again; it covers every kept asset at once, so to remake one and keep another, restore the other first. A first build, with no version in the store, is not stopped, and a kept asset that is on disk stops nothing: to remake one on purpose, delete the file, then `--remake`. The stop covers the pipelines the command was given, and a catalog's members; a `git` dependency built in ChartBook's own copy is not stopped. A version whose bytes are not in the store is nothing to put back, so it stops nothing either.
 
 ```console
 $ chartbook run --frozen

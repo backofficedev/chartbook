@@ -54,8 +54,8 @@ because it travels with the snapshot, so that on a store a team shares a colleag
 
 `chartbook snapshot` writes the mark into the asset's record (`keep: true`). `store gc` then keeps,
 **for each distinct version of a marked asset, the newest snapshot that holds it.** That is the rule
-a model label already has ("a label points at a version in it"), and it is the same code: a marked
-asset is a model whose every version is labelled. The snapshot stays whole, so each kept version
+a model label already has ("a label points at a version in it"), with one holder per version: a
+marked asset is a model whose every version is labelled. The snapshot stays whole, so each kept version
 keeps its commit, its date, its data dictionary and its page in the catalog, and `chartbook restore`
 has a record to read.
 
@@ -117,14 +117,20 @@ Only ChartBook knows the three facts at once, and the stop fires in exactly the 
 moment: the asset is marked, it is missing, and a copy is at hand. On a true first run nothing
 stops, since the store has no version, so the flag is only ever typed for an asset that was made
 before. `--remake` is one flag, for every kept asset at once: to remake one and not another, restore
-the other first. The stop is strict, with a plain message, and asks no question, as every stop here
+the other first. To remake on purpose, delete the file first: with the file on disk nothing
+stops, and a target-only build task does not run either. The stop is strict, with a plain message, and asks no question, as every stop here
 does. *Decided 2026-10-18, over three others: doing nothing (one forgotten restore is one bill);
 restoring by itself before the build (after a change to the code the old bytes would come back, the
 build would skip the step, and the output would be stale with nothing said); and a doit helper that
 asks the store (ChartBook logic in dodo.py, for one build tool).*
 
-In a catalog, `chartbook run` looks at each member it is about to build. `--frozen` is unaffected:
-the stop is about the folder, not the store.
+In a catalog, `chartbook run` looks at each member it is about to build, before any member's build
+runs. `--frozen` is unaffected: the stop is about the folder, not the store. The stop and
+`restore` agree on which snapshot holds an asset: the newest holding it built, with its bytes in
+the store and whole (`snapshot.newest_holder`); a newer version whose bytes are gone is refused,
+never quietly replaced by an older one, and then there is nothing to stop for either. A
+snapshot dated after now is no holder, as it is not "the newest" elsewhere in gc. Snapshots are
+found through the commits the clone has, so a shallow clone sees none.
 
 `chartbook check` says the same of a kept asset that is missing, on its "file not found" line, so
 that a CI job, or a person who runs doit directly, hears of it.
@@ -146,6 +152,13 @@ so that a page or a program can say every version of it is kept.
 - Restoring by itself before a build. See the stop above.
 - A "kept" line in the provenance panel of the asset's page: proposed, not built, until the writers'
   panel has a row for it.
+- The stop for a `git` dependency's build, which runs in ChartBook's own copy of the commit, where
+  nothing is on disk and `chartbook restore` cannot be run; restoring into that copy before its
+  build is the natural extension.
+- Finding a pipeline's snapshots by its ID and repository rather than through the clone's commits,
+  so that a shallow clone in CI finds them.
+- Restoring a folder asset at a path that changed since the snapshot; today that is refused,
+  since a folder written where a file is now expected would be taken as built.
 
 ## The order of work
 

@@ -141,11 +141,12 @@ def kept_missing(directory: Union[str, Path], store: Optional[Store] = None) -> 
     """The assets a pipeline marks ``keep = true`` that are not on disk while a snapshot in the store holds them.
 
     For each: its reference within the pipeline, its path as declared, and
-    the newest snapshot of the pipeline holding its bytes, in the store.
-    This is the one moment a build would make a costly asset again that
-    could be put back instead (``docs_src/design/keep.md``): an asset no
-    snapshot holds has to be made, and nothing is said of it. A pipeline
-    that is not in git has no snapshots.
+    the newest snapshot of the pipeline holding its bytes, in the store and
+    whole (:func:`chartbook.snapshot.newest_holder`). This is the one
+    moment a build would make a costly asset again that could be put back
+    instead (``docs_src/design/keep.md``): an asset no snapshot holds has
+    to be made, and nothing is said of it. A pipeline that is not in git
+    has no snapshots, and a shallow clone sees only the commits it has.
 
     :raises ValueError: If the manifest cannot be read.
     """
@@ -173,11 +174,12 @@ def kept_missing(directory: Union[str, Path], store: Optional[Store] = None) -> 
         return []
     held = []
     for name in missing:
-        for taken in reversed(history):
-            content_hash = (taken.assets.get(name) or {}).get("content_hash")
-            if content_hash and store.has(content_hash):
-                held.append((name, declared[name][0], taken))
-                break
+        # The one `chartbook restore` would use, by the same rule: a version
+        # whose bytes are not in the store is nothing to put back, so the
+        # build is not stopped for it
+        holder, _ = snapshots.newest_holder(history, store, name)
+        if holder is not None:
+            held.append((name, declared[name][0], holder))
     return held
 
 

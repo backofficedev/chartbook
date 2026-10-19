@@ -279,7 +279,7 @@ class TestRestore:
         _manifest(costly, table)
         _commit(work)
         assert snapshot.restore(costly, ["t"]).left == [("t", "a table or a query in a source: it has no file to put back")]
-        assert snapshot.restore(costly).left == [("t", "a table or a query in a source: it has no file to put back")]
+        assert snapshot.restore(costly) == snapshot.Restored()  # with no names, nothing of it is on disk to be missing
 
     def test_the_command(self, costly, monkeypatch):
         taken = snapshot.make(costly).snapshot
@@ -385,3 +385,133 @@ class TestCheck:
         (costly / "_data" / "summary.parquet").unlink()
         (problem,) = check_paths(load_manifest(costly), costly)
         assert "restore" not in problem.message
+
+
+class TestAfterReview:
+    """What the adversarial review of the feature found, each fixed."""
+
+    def test_a_snapshot_dated_ahead_holds_no_version(self, costly):
+        """A record written to win, dated 2099, was the holder of a version, and the genuine holder let go."""
+        import dataclasses
+
+        first = snapshot.make(costly, made_at=OLDEST).snapshot
+        _write(costly, "embeddings", b"emb-2")
+        snapshot.make(costly, made_at=OLDER)
+        snapshot._write(dataclasses.replace(first, made_at="2099-01-01T00:00:00.000000Z"), default_store())
+        plan = _plan()
+        kept = {t.made_at: why for t, why in plan.keep}
+        assert kept[OLDEST].startswith("it holds a version of embeddings")
+        assert kept[OLDER] == "it is the newest of its pipeline"
+        assert {t.made_at for t, _ in plan.remove} == {"2099-01-01T00:00:00.000000Z"}
+        assert {k.snapshot.made_at for k in plan.kept_versions} == {OLDEST, OLDER}
+
+    def test_a_label_pin_does_not_carry_the_mark(self, work):
+        owner = _manifest(work / "owner", {"project": {"id": "acme/owner"}, "models": {"m": {"path": "./_models/m.json", "docs": "d", "keep": True}}})
+        (owner / "_models").mkdir()
+        (owner / "_models" / "m.json").write_bytes(b"w1")
+        _commit(work)
+        version = snapshot.make(owner).snapshot.assets["model/m"]["content_hash"].split(":", 1)[1][:12]
+        _manifest(owner, {"project": {"id": "acme/owner"}, "models": {"m": {"path": "./_models/m.json", "docs": "d", "keep": True, "aliases": {"champion": version}}}})
+        _commit(work)
+        snapshot.make(owner)
+        user = _manifest(work / "user", {"project": {"id": "acme/user"}, "dependencies": {"acme/owner": {"path": "../owner"}}})
+        _commit(work)
+        lock.pin(user)
+        pinned = lock.read_lock(user / "chartbook.lock")
+        assert "acme/owner:model/m@champion" in pinned.assets
+        assert all("keep" not in record for record in pinned.assets.values())
+
+    def test_a_newer_version_whose_bytes_are_gone_is_refused_and_stops_nothing(self, costly):
+        snapshot.make(costly, made_at=OLDER)
+        _write(costly, "embeddings", b"emb-2")
+        newer = snapshot.make(costly).snapshot
+        default_store().delete(newer.assets["embeddings"]["content_hash"])
+        (costly / "_data" / "embeddings.parquet").unlink()
+        report = snapshot.restore(costly)
+        assert report.put_back == []
+        assert report.left == [("embeddings", f"the newest snapshot holding it, at {newer.commit[:7]}, names bytes the store does not have")]
+        assert run.kept_missing(costly) == []
+        assert run.run(costly, echo=lambda line: None).failed is None  # the build runs: nothing could be put back
+
+    def test_a_folder_is_not_laid_out_at_a_path_that_changed(self, costly, work):
+        import shutil
+
+        _manifest(costly, {**COSTLY, "models": {"m": {"path": "./_models/m", "docs": "d", "keep": True}}})
+        (costly / "_models" / "m").mkdir(parents=True)
+        (costly / "_models" / "m" / "w.bin").write_bytes(b"w")
+        _commit(work)
+        snapshot.make(costly)
+        _manifest(costly, {**COSTLY, "models": {"m": {"path": "./_models/m.pt", "docs": "d", "keep": True}}})
+        _commit(work)
+        shutil.rmtree(costly / "_models" / "m")
+        report = snapshot.restore(costly)
+        assert report.left == [(
+            "model/m",
+            "its path is ./_models/m.pt now and was ./_models/m when the snapshot was made, and the snapshot holds a folder: put it back by hand",
+        )]
+        assert not (costly / "_models" / "m.pt").exists()
+
+    def test_a_file_follows_its_new_name(self, costly, work):
+        snapshot.make(costly)
+        renamed = {**COSTLY, "dataframes": {**COSTLY["dataframes"], "embeddings": {"path": "./_data/vectors.parquet", "docs": "d", "keep": True}}}
+        _manifest(costly, renamed)
+        _commit(work)
+        report = snapshot.restore(costly)
+        assert [(name, path) for name, path, *_ in report.put_back] == [("embeddings", "./_data/vectors.parquet")]
+        assert (costly / "_data" / "vectors.parquet").read_bytes() == b"emb-1"
+
+    def test_a_record_that_names_no_hash_is_said_not_raised(self, costly):
+        import json
+
+        taken = snapshot.make(costly).snapshot
+        document = json.loads(taken.path.read_text())
+        for record in document["records"]:
+            if record["id"] == "acme/docs:embeddings":
+                record["content_hash"] = "../../../etc/passwd"
+        taken.path.write_text(json.dumps(document))
+        (costly / "_data" / "embeddings.parquet").unlink()
+        ((name, why),) = snapshot.restore(costly).left
+        assert name == "embeddings" and why.startswith(f"the newest snapshot holding it, at {taken.commit[:7]}, names an object that is not one")
+        assert run.kept_missing(costly) == []
+
+    def test_restore_with_no_names_exits_zero_on_a_first_build_and_passes_a_table_by(self, costly, work, monkeypatch):
+        table = {
+            **COSTLY,
+            "sources": {"db": {"backend": "duckdb", "url": "./_data/x.duckdb"}},
+            "dataframes": {**COSTLY["dataframes"], "t": {"source": "db", "table": "t", "docs": "d", "keep": True}},
+        }
+        _manifest(costly, table)
+        _commit(work)
+        (costly / "_data" / "embeddings.parquet").unlink()  # kept, missing, never snapshotted: a first build
+        monkeypatch.chdir(costly)
+        result = CliRunner().invoke(main, ["restore"])
+        assert result.exit_code == 0, result.output
+        assert "embeddings: not put back: no snapshot of this pipeline holds it" in result.output
+        assert "t:" not in result.output
+        result = CliRunner().invoke(main, ["restore", "t"])
+        assert result.exit_code == 1
+        assert "t: not put back: a table or a query in a source: it has no file to put back" in result.output
+
+    def test_build_with_remake_runs_the_build_script(self, costly, monkeypatch):
+        snapshot.make(costly)
+        (costly / "_data" / "embeddings.parquet").unlink()
+        monkeypatch.chdir(costly)
+        result = CliRunner().invoke(main, ["build", "./site", "-f", "--remake"])
+        assert "is kept, and is not on disk" not in result.output
+        assert (costly / "build.log").read_text().split() == ["built"]  # the script ran; the render then finds the file still missing
+
+    def test_a_pin_keeps_the_newest_and_the_mark_keeps_the_older_version(self, costly, work):
+        first = snapshot.make(costly, made_at=OLDER).snapshot
+        _write(costly, "embeddings", b"emb-2")
+        second = snapshot.make(costly, made_at=OLD).snapshot
+        user = _manifest(work / "user", {"project": {"id": "acme/user"}, "dependencies": {"acme/docs": {"path": "../docs"}}})
+        _commit(work)
+        lock.pin(user)
+        plan = lock.plan_gc(default_store(), recent_seconds=0, keep_days=0)
+        reasons = {t.made_at: why for t, why in plan.snapshots_kept}
+        assert reasons[OLD] == "a lockfile pins it"
+        assert reasons[OLDER].startswith("it holds a version of embeddings")
+        assert {(k.name, k.content_hash) for k in plan.kept_versions} == {
+            ("embeddings", first.assets["embeddings"]["content_hash"]),
+            ("embeddings", second.assets["embeddings"]["content_hash"]),
+        }

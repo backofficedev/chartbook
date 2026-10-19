@@ -71,9 +71,12 @@ Nothing was built.
 ```
 
 The first time an asset is ever made, nothing stops: the store has no version yet. `--remake` is
-for the time you mean it, after a change to the code that makes the asset. It covers every kept
-asset at once; to remake one and keep another, restore the other first. `chartbook check` says
-the same of a kept asset that is missing.
+for the time you mean it. To make an asset again on purpose, after a change to the code that
+makes it, delete the file, then run with `--remake`: with the file on disk nothing stops, and a
+build tool set up as below does not run the step either. The flag covers every kept asset at
+once; to remake one and keep another, restore the other first. The stop covers the pipelines the
+command was given, and a catalog's members; a `git` dependency built in ChartBook's own copy is
+not stopped. `chartbook check` says the same of a kept asset that is missing.
 
 ## Make your build tool skip it
 
@@ -97,4 +100,8 @@ It then runs only when the file is missing, which is exactly when you asked for 
 ## In CI
 
 A runner starts from nothing. Run `chartbook restore` before the build, then `chartbook run
---frozen`. A store the runner may only read is enough, since restore only reads it.
+--frozen`. A store the runner may only read is enough, since restore only reads it. With no
+names, `restore` exits 0 even when a kept asset has no snapshot yet (the first build), so the
+step can run before every build. One thing the runner needs: the repository's history. Snapshots
+are found through the commits the clone has, so a shallow clone, `fetch-depth: 1` in
+`actions/checkout`, finds none of them; fetch the whole history (`fetch-depth: 0`).
