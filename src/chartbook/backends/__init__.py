@@ -372,8 +372,9 @@ def refuse_in_an_untrusted_build() -> None:
 
     if untrusted_source():
         raise BackendError(
-            "A table or a query is not read in a build of files from a store; the snapshot "
-            "holds its rows as parquet."
+            "A table or a query is not read in a build of files from a store, nor of a folder you have "
+            "not trusted: a version's snapshot holds its rows as parquet, and `chartbook trust` in a "
+            "folder trusts the pipeline there."
         )
 
 

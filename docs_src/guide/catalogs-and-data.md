@@ -23,6 +23,8 @@ disabled = true          # kept, but skipped during builds
 
 `chartbook docs` inside the catalog directory renders the combined site: chart and dataframe listings across all member pipelines, per-pipeline pages, and a diagnostics page showing metadata completeness.
 
+A catalog's site is built from its own folder and from every member folder on this machine, and each of them must be one you trust: `chartbook trust --members` in the catalog's folder records them all, and until then the build stops and lists the folders that are not ({ref}`chartbook trust <chartbook-trust>`). A member the catalog shows from the store has no folder here and needs no trust. `chartbook run` in a catalog runs each member's build script, and asks the same of each.
+
 ## The global catalog
 
 For personal use there's a ready-made location, `~/.chartbook/chartbook.toml`, with its own commands:

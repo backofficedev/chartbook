@@ -110,6 +110,7 @@ Decided by the maintainer, 2026-10-12.
 | 7 | {doc}`data-access` | Dataframes that live in a database | Built for DuckDB, 2026-10-13: `[sources]`, `table`, `query`, `data.sql()` |
 | 8 | {doc}`stores-and-backends` | The store as a setting of the machine; stores and backends as plugins | Settings layers, the store interface and the S3 store built 2026-10-16 |
 | 9 | {doc}`versioned-catalog` | Index and snapshot settled; a catalog of every version of every pipeline | Step 1, the self-sufficient snapshot, built 2026-10-16 |
+| 10 | {doc}`trust` | What a build of a folder on this machine may do before you have trusted the pipeline, and how you say so | Built 2026-10-18: `chartbook trust`, `~/.chartbook/trust.toml`, the gates in `docs`, `build`, `run` and `catalog build` |
 
 For how the existing build works, read {doc}`../guide/how-the-build-works`. For every command
 and field, {doc}`../reference/cli` and {doc}`../reference/configuration`.

@@ -443,6 +443,50 @@ def plan(
     return order
 
 
+def _require_trust_to_run(steps: list, script: str, here: Path) -> None:
+    """Refuse unless every pipeline whose script would run is one the user trusts to run.
+
+    A script is code, and a folder is trusted to run it only when the
+    user has said so (``chartbook trust``; ``docs_src/design/trust.md``).
+    That is the pipeline asked for, or each pipeline of the catalog asked
+    for that has the script. A ``git`` dependency is built in ChartBook's
+    own copy of its commit: naming it in ``[dependencies]`` is the trust
+    for that, and it is not asked about here.
+
+    :raises RunError: Naming each folder that is not trusted to run, with
+        its ID and the command that trusts it.
+    """
+    from chartbook.config import trust_of
+
+    refused = []
+    for step in steps:
+        if step.source != "asked" or step.directory is None or script not in step.scripts:
+            continue
+        level = trust_of(step.directory)
+        if level != "run":
+            refused.append((step, level))
+    if not refused:
+        return
+
+    def standing(level: Optional[str]) -> str:
+        return "trusted to render, not to run" if level == "render" else "not trusted"
+
+    if len(refused) == 1 and refused[0][0].directory == here:
+        step, level = refused[0]
+        raise RunError(
+            f"{step.id} is {standing(level)}, so its {script!r} script was not run. A build script is "
+            f"code, and it runs here once you say the pipeline is yours to run: `chartbook trust` in "
+            f"{step.directory} trusts it."
+        )
+    listed = "\n".join(f"  {step.id}: {step.directory} ({standing(level)})" for step, level in refused)
+    raise RunError(
+        f"These pipelines are not trusted to run, so nothing was run:\n{listed}\n"
+        f"A build script is code, and it runs here once you say the pipeline is yours to run: "
+        f"`chartbook trust --members` in {here} trusts the catalog's folder and each member folder "
+        f"on this machine; `chartbook trust` in one folder trusts that one."
+    )
+
+
 def execute(script: str, directory: Path, name: Optional[str] = None, foreign: bool = False) -> int:
     """Run one script in a directory, and return its exit code.
 
@@ -635,6 +679,7 @@ def run(
             )
     if not any(script in step.scripts for step in steps if step.source == "asked"):
         raise RunError(f"No pipeline here has a script named {script!r}.")
+    _require_trust_to_run(steps, script, here)
     if snapshot:
         if not building:
             raise RunError(

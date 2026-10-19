@@ -16,6 +16,7 @@ keeps their own choices for everything else::
     ├── chartbook.toml       # the global catalog (optional)
     ├── settings.toml        # the user's settings
     ├── sources.toml         # the machine's urls and credentials for [sources]
+    ├── trust.toml           # the pipelines and repositories this user trusts a build of
     ├── machine-id           # what names this machine in a store's notes of lockfiles
     ├── store/               # the store, unless settings say otherwise
     ├── cache/               # what was read from a remote store
@@ -668,6 +669,381 @@ def _an_identity(text: str) -> bool:
     """Whether what the operating system gave is a machine's identity: hex digits (and dashes), not all zeros."""
     digits = text.replace("-", "")
     return len(digits) >= 32 and bool(re.fullmatch(r"[0-9A-Fa-f]+", digits)) and set(digits) != {"0"}
+
+
+#: The file under ``~/.chartbook`` that records which pipelines this user trusts a build of.
+TRUST_FILE = "trust.toml"
+#: ``all`` trusts every folder at ``run``: for the test suite, or a container
+#: that is nothing but your own code. No other value is read.
+TRUST_ENV_VAR = "CHARTBOOK_TRUST"
+#: The levels of trust, lowest first. ``render``: queries run for glimpses and
+#: the index, and the files the manifest names are read wherever they are.
+#: ``run``: the build script runs too.
+TRUST_LEVELS = ("render", "run")
+
+_TRUST_HEADER = """\
+# Pipelines you have trusted (chartbook trust): their queries and build scripts run here, and the
+# files their manifests name are read wherever they are. A [[pipeline]] entry covers its folder and
+# the folders inside it; a [[repository]] entry covers any clone whose origin remote is it. The
+# levels are "render" (queries run, files read) and "run" (the build script runs too). The id and
+# repository of a [[pipeline]] entry are notes for you: an entry is matched by its path.
+
+"""
+
+
+def get_trust_path() -> Path:
+    """The trust record, ``~/.chartbook/trust.toml``: this user's."""
+    return get_global_config_dir() / TRUST_FILE
+
+
+def read_trust() -> list:
+    """The entries of the trust record (``docs_src/design/trust.md``), each a dict.
+
+    A ``[[pipeline]]`` entry has ``kind`` ``"pipeline"``, its ``path``
+    resolved, ``level``, and ``id``, ``repository`` and ``since`` as
+    written (None when absent). A ``[[repository]]`` entry has ``kind``
+    ``"repository"``, its ``url`` as :func:`chartbook.identity.repository_key`
+    reduces it, ``level`` and ``since``.
+
+    The file is read as a settings file is: one that cannot be read stops
+    the command, naming the file; an entry of another shape is passed over
+    with a warning naming the file and the entry.
+
+    :returns: The entries, in the file's order; ``[]`` with no file.
+    :raises ValueError: If the file cannot be read or parsed; the message
+        names the file.
+    """
+    from chartbook.identity import repository_key
+
+    path = get_trust_path()
+    raw = _read_toml(path, "the trust record")
+    entries: list = []
+    for kind, key in (("pipeline", "path"), ("repository", "url")):
+        if kind not in raw:
+            continue
+        listed = raw[kind]
+        if not isinstance(listed, list):
+            warnings.warn(
+                f"{path}: [[{kind}]] is not an array of tables, and is passed over. Each entry is written "
+                f'as [[{kind}]] on a line of its own, then {key} = "…" and level = "run" or "render".',
+                stacklevel=2,
+            )
+            continue
+        for position, entry in enumerate(listed, 1):
+            value = entry.get(key) if isinstance(entry, dict) else None
+            level = entry.get("level") if isinstance(entry, dict) else None
+            if not (isinstance(value, str) and value.strip()) or level not in TRUST_LEVELS:
+                warnings.warn(
+                    f"{path}: [[{kind}]] entry {position} ({_shown_entry(entry)}) is passed over: an entry has "
+                    f'{key} = "…" and level = "run" or "render".',
+                    stacklevel=2,
+                )
+                continue
+            if kind == "pipeline":
+                try:
+                    expanded = Path(value.strip()).expanduser()
+                except (RuntimeError, OSError):
+                    warnings.warn(
+                        f"{path}: [[pipeline]] entry {position} ({_shown_entry(entry)}) names a folder this "
+                        f"machine cannot resolve, and is passed over.",
+                        stacklevel=2,
+                    )
+                    continue
+                if not expanded.is_absolute():
+                    # Resolved against the working directory, it would name a
+                    # different folder from each folder a command is run in
+                    warnings.warn(
+                        f"{path}: [[pipeline]] entry {position} ({_shown_entry(entry)}) has a relative path, "
+                        f"which would name another folder from each folder a command is run in, and is passed "
+                        f"over: write the folder's full path.",
+                        stacklevel=2,
+                    )
+                    continue
+                resolved = str(expanded.resolve())
+                entries.append(
+                    {
+                        "kind": "pipeline",
+                        "path": resolved,
+                        "level": level,
+                        "id": entry["id"] if isinstance(entry.get("id"), str) else None,
+                        "repository": entry["repository"] if isinstance(entry.get("repository"), str) else None,
+                        "since": _since_text(entry.get("since")),
+                    }
+                )
+            else:
+                url = repository_key(value)
+                if not url:
+                    warnings.warn(
+                        f"{path}: [[repository]] entry {position} ({_shown_entry(entry)}) names no repository "
+                        f"(a url is https://host/owner/name or git@host:owner/name), and is passed over.",
+                        stacklevel=2,
+                    )
+                    continue
+                entries.append({"kind": "repository", "url": url, "level": level, "since": _since_text(entry.get("since"))})
+    return entries
+
+
+def _shown_entry(entry: object) -> str:
+    """An entry as a message may quote it: one line, cut short."""
+    text = " ".join(repr(entry).split())
+    return text if len(text) <= 80 else text[:77] + "..."
+
+
+def _since_text(value: object) -> Optional[str]:
+    """A ``since`` as it is written, ``2026-10-18T22:14:05Z``: a string as it is, a TOML date-time (one written unquoted) made one, in UTC when it has a zone and as written when it has none; None when absent."""
+    from datetime import date, datetime, timezone
+
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            # Written without a zone: said as written, with none claimed
+            return value.isoformat(timespec="seconds")
+        return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(value, date):
+        return value.isoformat()
+    return value if isinstance(value, str) else str(value)
+
+
+#: The values of ``CHARTBOOK_TRUST`` already warned about, so that a build says it once.
+_trust_values_warned: set = set()
+
+
+def trust_of(folder) -> Optional[str]:
+    """How far a build of *folder* is trusted: ``"run"``, ``"render"`` or None.
+
+    The highest level among the entries of the trust record that cover the
+    folder: a ``[[pipeline]]`` entry whose path is the folder or a parent
+    of it, and a ``[[repository]]`` entry whose url is the repository the
+    folder's ``origin`` remote names (:func:`chartbook.identity.repository_key`;
+    a folder with no remote matches none). Before the record:
+
+    - a build of files from a store (``CHARTBOOK_UNTRUSTED_SOURCE=1``,
+      :func:`untrusted_source`) is never trusted, whatever the record says;
+    - ``CHARTBOOK_TRUST=all`` trusts every folder at ``run``; the variable
+      takes no other value, and another is warned about once and ignored,
+      so what follows applies under it as under no value at all;
+    - under ``CI`` (the environment variable, set to anything), the
+      checkout is trusted at ``run``: a folder in the git repository the
+      working directory is in, or in the working directory itself when it
+      is in none.
+
+    What each level allows is in ``docs_src/design/trust.md``.
+
+    :raises ValueError: If the trust record cannot be read.
+    """
+    if untrusted_source():
+        return None
+    mode = os.environ.get(TRUST_ENV_VAR, "").strip()
+    if mode == "all":
+        return "run"
+    if mode and mode not in _trust_values_warned:
+        _trust_values_warned.add(mode)
+        warnings.warn(
+            f"{TRUST_ENV_VAR}={mode!r} is not a value it takes: 'all' trusts every folder to run, and "
+            f"nothing else is read. It is ignored.",
+            stacklevel=2,
+        )
+    here = Path(folder).resolve()
+    if os.environ.get("CI", "").strip() and _covers(_ci_checkout(), here):
+        return "run"
+    return recorded_trust(here)
+
+
+def recorded_trust(folder) -> Optional[str]:
+    """How far the trust record alone trusts *folder*: ``"run"``, ``"render"`` or None.
+
+    What :func:`trust_of` gives once the environment has had its say: the
+    highest level among the record's entries that cover the folder. For
+    the commands that write the record (``chartbook catalog add``), which
+    must not take ``CHARTBOOK_TRUST=all`` or ``CI`` for a record that
+    outlives them.
+
+    :raises ValueError: If the trust record cannot be read.
+    """
+    from chartbook.identity import get_git_remote_url, repository_key
+
+    here = Path(folder).resolve()
+    remote: Optional[str] = None  # asked of git once, and only if a repository is trusted
+    levels: list = []
+    for entry in read_trust():
+        if entry["kind"] == "pipeline":
+            if _covers(Path(entry["path"]), here):
+                levels.append(entry["level"])
+        else:
+            if remote is None:
+                remote = repository_key(get_git_remote_url(here))
+            if remote and entry["url"] == remote:
+                levels.append(entry["level"])
+    if not levels:
+        return None
+    return max(levels, key=TRUST_LEVELS.index)
+
+
+def _covers(root: Path, folder: Path) -> bool:
+    """Whether a trusted folder covers *folder*: it is that folder, or a folder inside it."""
+    return folder == root or root in folder.parents
+
+
+def _ci_checkout() -> Path:
+    """What CI trusts: the top of the git repository the working directory is in, or the working directory itself."""
+    from chartbook.identity import _ask_git
+
+    cwd = Path.cwd()
+    top = _ask_git(str(cwd), "rev-parse", "--show-toplevel")
+    return Path(top).resolve() if top else cwd.resolve()
+
+
+def record_trust(path, level: str, id: Optional[str] = None, repository: Optional[str] = None) -> Path:
+    """Record in the trust file that a build of *path*, and of the folders inside it, is trusted at *level*.
+
+    An entry for the same folder is replaced. The file is written whole or
+    not at all, as ``machine-id`` is. *id* and *repository* are notes for
+    the reader of the file; nothing goes by them.
+
+    :returns: The file written.
+    :raises ValueError: If *level* is not a level, or the file cannot be read.
+    :raises OSError: If the file cannot be written.
+    """
+    if level not in TRUST_LEVELS:
+        raise ValueError(f"{level!r} is not a level of trust; the levels are {' and '.join(TRUST_LEVELS)}.")
+    resolved = str(Path(path).resolve())
+    raw = _raw_for_write(get_trust_path())
+    kept = [entry for entry in _raw_entries(raw, "pipeline") if not _records_folder(entry, resolved)]
+    entry: dict = {"path": resolved, "level": level}
+    if id:
+        entry["id"] = id
+    if repository:
+        entry["repository"] = repository
+    entry["since"] = _now_text()
+    raw["pipeline"] = [*kept, entry]
+    return _write_trust(raw)
+
+
+def record_repository_trust(url: str, level: str) -> Path:
+    """Record that a build of any clone whose ``origin`` remote is *url* is trusted at *level*.
+
+    The url is kept as :func:`chartbook.identity.repository_key` reduces it,
+    so that every way of writing one repository is one entry. An entry for
+    the same repository is replaced.
+
+    :returns: The file written.
+    :raises ValueError: If *url* names no repository, *level* is not a
+        level, or the file cannot be read.
+    :raises OSError: If the file cannot be written.
+    """
+    from chartbook.identity import repository_key
+
+    if level not in TRUST_LEVELS:
+        raise ValueError(f"{level!r} is not a level of trust; the levels are {' and '.join(TRUST_LEVELS)}.")
+    key = repository_key(url)
+    if not key:
+        raise ValueError(
+            f"{url!r} names no repository: a repository is https://host/owner/name or git@host:owner/name."
+        )
+    raw = _raw_for_write(get_trust_path())
+    kept = [entry for entry in _raw_entries(raw, "repository") if not _records_repository(entry, key)]
+    raw["repository"] = [*kept, {"url": key, "level": level, "since": _now_text()}]
+    return _write_trust(raw)
+
+
+def forget_trust(path=None, url: Optional[str] = None) -> int:
+    """Take a folder's entries, or a repository's, out of the trust record.
+
+    :param path: The folder, as recorded: its own entries go, not those of
+        a parent folder that covers it.
+    :param url: The repository, in any spelling.
+    :returns: How many entries were removed.
+    :raises ValueError: If the file cannot be read.
+    :raises OSError: If it cannot be written.
+    """
+    from chartbook.identity import repository_key
+
+    trust_path = get_trust_path()
+    if not trust_path.is_file():
+        return 0
+    raw = _raw_for_write(trust_path)
+    removed = 0
+    if path is not None:
+        resolved = str(Path(path).resolve())
+        before = _raw_entries(raw, "pipeline")
+        raw["pipeline"] = [entry for entry in before if not _records_folder(entry, resolved)]
+        removed += len(before) - len(raw["pipeline"])
+    if url is not None:
+        key = repository_key(url)
+        before = _raw_entries(raw, "repository")
+        raw["repository"] = [entry for entry in before if not (key and _records_repository(entry, key))]
+        removed += len(before) - len(raw["repository"])
+    if removed:
+        _write_trust(raw)
+    return removed
+
+
+def _raw_for_write(path: Path) -> dict:
+    """The trust record as read, for a write that keeps everything it does not change.
+
+    :raises ValueError: If the file cannot be read, or its ``pipeline`` or
+        ``repository`` key is not an array of tables: a write would drop
+        it, and nothing in the file is dropped without being asked.
+    """
+    raw = _read_toml(path, "the trust record")
+    for kind in ("pipeline", "repository"):
+        if kind in raw and not isinstance(raw[kind], list):
+            raise ValueError(
+                f"{path}: [{kind}] is a table, not an array of tables, and writing the file would drop it. "
+                f'Each entry is written as [[{kind}]] on a line of its own, then {"path" if kind == "pipeline" else "url"} = "…" '
+                f'and level = "run" or "render"; fix it or remove it, and run this again.'
+            )
+    return raw
+
+
+def _raw_entries(raw: dict, kind: str) -> list:
+    """The ``[[kind]]`` entries of the file as read, whatever their shape, so that a write keeps them."""
+    listed = raw.get(kind)
+    return list(listed) if isinstance(listed, list) else []
+
+
+def _records_folder(entry: object, resolved: str) -> bool:
+    """Whether a raw ``[[pipeline]]`` entry is of the folder *resolved* names; a relative path is of none."""
+    if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+        return False
+    try:
+        written = Path(entry["path"].strip()).expanduser()
+        return written.is_absolute() and str(written.resolve()) == resolved
+    except (RuntimeError, OSError):
+        return False
+
+
+def _records_repository(entry: object, key: str) -> bool:
+    """Whether a raw ``[[repository]]`` entry is of the repository *key* names."""
+    from chartbook.identity import repository_key
+
+    return isinstance(entry, dict) and isinstance(entry.get("url"), str) and repository_key(entry["url"]) == key
+
+
+def _now_text() -> str:
+    """The time now, as a ``since`` is written: ``2026-10-18T22:14:05Z``."""
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _write_trust(raw: dict) -> Path:
+    """Write the trust record whole or not at all: a temporary file, then put in its place."""
+    import uuid
+
+    path = get_trust_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f"{TRUST_FILE}.{uuid.uuid4().hex}.tmp")
+    try:
+        with open(temporary, "wb") as f:
+            f.write(_TRUST_HEADER.encode("utf-8"))
+            tomli_w.dump({key: value for key, value in raw.items() if value not in ([], None)}, f)
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+    return path
 
 
 def get_default_host() -> str:

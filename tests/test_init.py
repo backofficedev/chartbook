@@ -162,7 +162,10 @@ class TestPlainInit:
     def test_only_renders(self, tools):
         result = _init()
         assert result.exit_code == 0, result.output
-        assert tools.commands() == [["render"]]
+        # Recording the new project as trusted asks git about its remote
+        # (`git -C … config`), for the record's note of its ID; that is a
+        # question, not git being run on the project
+        assert [c for c in tools.commands() if c[:2] != ["git", "-C"]] == [["render"]]
         assert "cruft update" not in result.output
 
     def test_the_template_is_in_this_repository(self):
@@ -216,7 +219,8 @@ class TestPlainInit:
 
     def test_git_and_github_are_off_by_default(self, tools):
         _init()
-        assert tools.commands("git") == []
+        # ...but for the question about the remote that the trust record's note of the ID asks
+        assert [c for c in tools.commands("git") if c[:2] != ["git", "-C"]] == []
         assert tools.commands("gh") == []
 
     @pytest.mark.parametrize("flags", [(), ("--git",)])
