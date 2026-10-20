@@ -99,7 +99,7 @@ def copy_llms_file(origin_path, destination_path):
 
     def _copy():
         text = Path(origin_path).read_text(encoding="utf-8")
-        text = re.sub(r"\]\(docs_src/([^)#\s]+)\.(?:md|ipynb)\)", r"](\1.html)", text)
+        text = re.sub(r"\]\(docs_src/([^)#\s]+)\.(?:md|ipynb)(#[^)\s]*)?\)", r"](\1.html\2)", text)
         dest = Path(destination_path)
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(text, encoding="utf-8")

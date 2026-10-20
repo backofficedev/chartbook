@@ -114,7 +114,12 @@ def _say_if_the_skill_is_stale():
     here stops a command (``chartbook.claude_skill``).
     """
     try:
-        if not _stderr_is_a_terminal():
+        import os
+
+        from chartbook.run import RUN_DIR_ENV_VAR
+
+        # Not inside a script `chartbook run` is running: its own run said it
+        if not _stderr_is_a_terminal() or os.environ.get(RUN_DIR_ENV_VAR):
             return
         from chartbook import claude_skill
 
@@ -813,6 +818,16 @@ def check(project_dir, within_days, policy_path, skip_outputs):
     named_dir = _as_named(project_dir)
     project_dir = resolve_project_dir(project_dir)
     manifest_path = project_dir / "chartbook.toml"
+    # An installed Claude Code skill written for an older ChartBook teaches
+    # the wrong commands: said first, before anything can stop the check,
+    # and it fails nothing
+    try:
+        from chartbook import claude_skill
+
+        for copy in claude_skill.stale(project_dir):
+            click.echo(f"warning: {claude_skill.notice(copy)}", err=True)
+    except Exception:  # noqa: BLE001 - a note about the skill never stops a check
+        pass
     try:
         # Manifest warnings (e.g. unknown [project] keys) belong in the
         # report, not in Python's warning format
@@ -851,12 +866,6 @@ def check(project_dir, within_days, policy_path, skip_outputs):
 
     for warning in [*caught, *unchecked]:
         click.echo(f"warning: {warning.message}", err=True)
-    # An installed Claude Code skill written for another ChartBook teaches
-    # the wrong commands; said here, and fails nothing
-    from chartbook import claude_skill
-
-    for copy in claude_skill.stale(project_dir):
-        click.echo(f"warning: {claude_skill.notice(copy)}", err=True)
 
     for problem in problems:
         click.echo(problem.format(relative_to=Path.cwd()))
@@ -3815,14 +3824,14 @@ def install_claude_skill(force, project):
     current directory instead.
 
     The skill's SKILL.md names the ChartBook version it was written for. A
-    copy for another version is replaced, and the command says which version
-    it replaced. A copy for this version whose files differ, changed by
-    hand, is replaced when you say so, or with --force. When the files
-    already match, nothing is written. Files of older layouts are removed,
-    so the copy mirrors the bundled skill.
+    copy for an older version is replaced, and the command says which
+    version it replaced. A copy for a newer version, or for this version
+    with files changed by hand, is replaced when you say so, or with
+    --force. When the files already match, nothing is copied. Files of
+    older layouts are removed, so the copy mirrors the bundled skill.
 
     Any other command, run at a terminal, says in one line when your copy or
-    the project's is for another ChartBook, and `chartbook check` warns.
+    the project's is for an older ChartBook, and `chartbook check` warns.
 
     \b
     Examples:
@@ -3846,7 +3855,9 @@ def install_claude_skill(force, project):
 
     old_stamp = target_dir / claude_skill.OLD_STAMP
     existed = target_dir.is_dir() and (any(_visible_files()) or old_stamp.is_file())
-    before = claude_skill.version_of(target_dir) if existed else None
+    before = claude_skill._shown_version(target_dir) if existed else None
+    standing = claude_skill.relation(target_dir) if existed else None
+    shown = claude_skill.shown(target_dir)
 
     # Nothing to do: the installed files are the bundled ones. Hidden files
     # (.DS_Store, ...) do not count; an old stamp beside them goes
@@ -3856,17 +3867,20 @@ def install_claude_skill(force, project):
             (target_dir / p.name).read_bytes() == p.read_bytes() for p in skill_files
         ):
             old_stamp.unlink(missing_ok=True)
-            click.echo(f"Skill already up to date in {target_dir} (ChartBook {__version__})")
+            click.echo(f"Skill already up to date in {shown} (ChartBook {__version__})")
             return
 
-    # A copy for another version is an upgrade, and replaced; one for this
-    # version (or naming none) that differs was changed by hand, and asked about
-    if existed and not force and before in (__version__, None):
-        if before == __version__:
-            click.echo(f"The skill in {target_dir} is this version's, with files changed since it was installed.")
+    # A copy for an older version is an upgrade, and replaced; one for a
+    # newer version, for this version but changed by hand, or naming none,
+    # is asked about
+    if existed and not force and (standing != "older" or before is None):
+        if standing == "newer":
+            click.echo(f"The skill in {shown} is for ChartBook {before}, newer than this one, {__version__}.")
+        elif standing == "current":
+            click.echo(f"The skill in {shown} is this version's, with files changed since it was installed.")
         else:
-            click.echo(f"Skill files already exist in {target_dir}, naming no ChartBook version.")
-        if not click.confirm("Overwrite them?"):
+            click.echo(f"Skill files already exist in {shown}, naming no ChartBook version.")
+        if not click.confirm(f"Replace them with ChartBook {__version__}'s?"):
             raise SystemExit(0)
 
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -3883,10 +3897,10 @@ def install_claude_skill(force, project):
         shutil.copyfile(src_file, target_dir / src_file.name)
         click.echo(f"  {src_file.name}")
 
-    if existed and before and before != __version__:
-        click.echo(f"\nUpdated the skill in {target_dir} from ChartBook {before} to {__version__}")
+    if existed and before and standing != "current":
+        click.echo(f"\nUpdated the skill in {shown} from ChartBook {before} to {__version__}")
     else:
-        click.echo(f"\nInstalled {len(skill_files)} skill file(s) to {target_dir} (ChartBook {__version__})")
+        click.echo(f"\nInstalled {len(skill_files)} skill file(s) to {shown} (ChartBook {__version__})")
 
 if __name__ == "__main__":
     main()

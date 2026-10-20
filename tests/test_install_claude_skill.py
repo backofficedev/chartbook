@@ -6,6 +6,7 @@ for another version and says which; ``chartbook check`` warns of a stale
 copy; any other command says so in one line when a person is at a terminal.
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -158,6 +159,16 @@ class TestUpgrading:
         assert "naming no ChartBook version" in result.output
         assert "chartbook build renders the site" in (target / "SKILL.md").read_text()
 
+    def test_a_copy_for_a_newer_chartbook_is_not_stale_and_is_asked_about(self, tmp_path, claude_config_dir):
+        """Found by a reviewer: each pipeline has its own environment, and two on two versions would
+        take turns replacing the one user-level copy, each told the other's was stale."""
+        target = _old_copy(_skill_dir(claude_config_dir), "99.0.0", stamp=False, front_matter=True)
+        (target / "my_notes.md").write_text("mine\n")
+        assert claude_skill.stale(tmp_path) == []
+        result = CliRunner().invoke(main, ["install", "claude-skill"], input="n\n")
+        assert f"is for ChartBook 99.0.0, newer than this one, {__version__}" in result.output
+        assert (target / "my_notes.md").exists() and claude_skill.front_matter_version(target) == "99.0.0"
+
     def test_up_to_date_files_beside_an_old_stamp_lose_the_stamp(self, claude_config_dir):
         runner = CliRunner()
         runner.invoke(main, ["install", "claude-skill"])
@@ -181,6 +192,10 @@ class TestTheVersion:
             ("---\nname: chartbook\nmetadata:\n  chartbook-version: 1.2.3  # pinned\n---\n", "1.2.3"),
             ("---\nname: chartbook\n---\nchartbook-version: 9.9.9\n", None),  # in the body, not the front matter
             ("# no front matter\n", None),
+            ('\ufeff---\nname: chartbook\nmetadata:\n  chartbook-version: "1.2.3"\n---\n', "1.2.3"),  # a byte-order mark
+            ('---\r\nname: chartbook\r\nmetadata:\r\n  chartbook-version: "1.2.3"\r\n---\r\n', "1.2.3"),  # Windows line endings
+            ("---\nname: chartbook\nmetadata:\n  chartbook-version:\n  other: x\n---\n", None),  # an empty value takes nothing below it
+            ('---\nchartbook-version: "9.9.9"\nname: chartbook\n---\n', None),  # only under metadata
         ],
     )
     def test_the_version_is_read_from_the_front_matter(self, tmp_path, head, version):
@@ -189,6 +204,22 @@ class TestTheVersion:
 
     def test_an_old_stamp_is_read_where_the_front_matter_names_none(self, tmp_path):
         assert claude_skill.version_of(_old_copy(tmp_path)) == "0.1.1"
+
+    def test_a_stamp_naming_this_version_is_an_earlier_build_and_stale(self, tmp_path, claude_config_dir):
+        """Found by a reviewer: main has said 0.2.0 since 2026-10-12, so the old install stamped copies of
+        an older skill "0.2.0". The bundled skill names its version in its front matter; a copy that names
+        it only in a stamp is never the current one."""
+        target = _old_copy(_skill_dir(claude_config_dir), __version__)
+        (found,) = claude_skill.stale(tmp_path)
+        assert found.version == f"{__version__} (an earlier build)"
+        result = CliRunner().invoke(main, ["install", "claude-skill"])  # an upgrade: no question
+        assert f"from ChartBook {__version__} (an earlier build) to {__version__}" in result.output
+        assert claude_skill.front_matter_version(target) == __version__
+
+    @pytest.mark.parametrize("named, standing", [("0.1.1", "older"), ("99.0.0", "newer"), ("not-a-version", "older")])
+    def test_how_a_copy_stands_to_this_chartbook(self, tmp_path, named, standing):
+        _old_copy(tmp_path, named, stamp=False, front_matter=True)
+        assert claude_skill.relation(tmp_path) == standing
 
     def test_a_folder_with_no_skill_names_no_version(self, tmp_path):
         assert claude_skill.version_of(tmp_path / "nothing") is None
@@ -217,6 +248,38 @@ class TestFindingAStaleCopy:
         CliRunner().invoke(main, ["install", "claude-skill"])
         CliRunner().invoke(main, ["install", "claude-skill", "--project"])
         assert claude_skill.stale(tmp_path) == []
+
+    def test_the_walk_up_stops_at_the_repositorys_top(self, tmp_path, claude_config_dir):
+        _old_copy(tmp_path / ".claude" / "skills" / "chartbook")  # above the repository: not this project's
+        repo = tmp_path / "repo"
+        (repo / ".git").mkdir(parents=True)
+        (repo / "sub").mkdir()
+        assert claude_skill.project_dir(repo / "sub") is None
+
+    def test_the_walk_up_never_takes_the_home_folders_claude(self, tmp_path, monkeypatch):
+        """Found by a reviewer: with CLAUDE_CONFIG_DIR elsewhere, ~/.claude was "this project's", with
+        `--project` to be run in `~/.`."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "elsewhere"))
+        _old_copy(tmp_path / ".claude" / "skills" / "chartbook")
+        (tmp_path / "work" / "deep").mkdir(parents=True)
+        assert claude_skill.project_dir(tmp_path / "work" / "deep") is None
+        assert claude_skill.shown(tmp_path) == "~"
+
+    @pytest.mark.skipif(not hasattr(os, "geteuid") or os.geteuid() == 0, reason="POSIX permissions, not as root")
+    def test_a_folder_that_cannot_be_read_is_passed_by(self, tmp_path, pipeline_project, monkeypatch):
+        """Found by a reviewer: `chartbook check` below a `.claude` this user may not open was a traceback."""
+        locked = tmp_path / "locked"
+        (locked / ".claude").mkdir(parents=True)
+        os.chmod(locked / ".claude", 0)
+        try:
+            (locked / "pipe").mkdir()
+            assert claude_skill.project_dir(locked / "pipe") is None
+            monkeypatch.setattr(claude_skill, "project_dir", lambda start=None: (_ for _ in ()).throw(PermissionError("denied")))
+            result = CliRunner().invoke(main, ["check", "--project-dir", str(pipeline_project)])
+            assert result.exception is None or isinstance(result.exception, SystemExit), result.output
+        finally:
+            os.chmod(locked / ".claude", 0o755)
 
     def test_what_the_notice_says(self, tmp_path, claude_config_dir):
         user = claude_skill.Copy("user", _skill_dir(claude_config_dir), "0.1.1")
@@ -252,12 +315,29 @@ class TestSayingIt:
         result = CliRunner().invoke(main, ["install", "claude-skill"])
         assert "Note:" not in result.output and "Updated the skill" in result.output
 
-    def test_check_warns_whether_or_not_a_terminal(self, stale_user_copy, pipeline_project, monkeypatch):
-        monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)
+    @pytest.mark.parametrize("terminal", [True, False])
+    def test_check_warns_whether_or_not_a_terminal(self, stale_user_copy, pipeline_project, monkeypatch, terminal):
+        monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: terminal)
         result = CliRunner().invoke(main, ["check", "--project-dir", str(pipeline_project)])
         lines = [line for line in result.output.splitlines() if "Claude Code skill" in line]
         assert len(lines) == 1 and lines[0].startswith("warning: your Claude Code skill")
         assert result.exit_code == 0, result.output  # it fails nothing
+
+    def test_check_warns_before_a_manifest_that_stops_it(self, stale_user_copy, tmp_path):
+        (tmp_path / "chartbook.toml").write_text("this = [not toml\n")
+        result = CliRunner().invoke(main, ["check", "--project-dir", str(tmp_path)])
+        assert result.exit_code != 0 and "warning: your Claude Code skill" in result.output
+
+    @pytest.mark.parametrize("words", [["--version"], ["--help"], []])
+    def test_the_program_alone_says_nothing_of_it(self, stale_user_copy, monkeypatch, words):
+        monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)
+        assert "Claude Code skill" not in CliRunner().invoke(main, words).output
+
+    def test_a_command_inside_a_script_chartbook_runs_says_nothing_of_it(self, stale_user_copy, monkeypatch, tmp_path):
+        """The run that started the script said it already."""
+        monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)
+        monkeypatch.setenv("CHARTBOOK_RUN_DIR", str(tmp_path))
+        assert "Claude Code skill" not in CliRunner().invoke(main, ["docs", "--help"]).output
 
     def test_a_note_never_stops_a_command(self, stale_user_copy, monkeypatch):
         monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)

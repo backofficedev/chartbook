@@ -64,7 +64,7 @@ uv run doit      # everything: docs, examples, package, test matrix
 | `store gc` | Remove old snapshots and what nothing names; lists and asks first |
 | `index diff BEFORE AFTER` | What changed between two builds, from their `index.json` (files or site folders), compared as published: added, removed, and each changed record in a reviewer's words (data changed with hashes and row counts, pins moved, new versions, labels moved, out of date, declared differently); `--json`, `--exit-code` |
 | `config` | Configure the default catalog path for data loading |
-| `install claude-skill` | Install the bundled Claude Code skill (user-level by default; `--project` for the repo). Its `SKILL.md` names the ChartBook version it is for; a copy for another version is replaced and said |
+| `install claude-skill` | Install the bundled Claude Code skill (user-level by default; `--project` for the repo). Its `SKILL.md` names the ChartBook version it is for; a copy for an older version is replaced and said |
 
 ### chartbook docs generate
 
@@ -230,7 +230,7 @@ Says a pipeline's folder (PATH, or this one) is the user's to build, at `run` (t
 
 ### chartbook install claude-skill
 
-Install the Claude Code skill that comes with this ChartBook: user-level by default (`~/.claude/skills/chartbook/`, or `$CLAUDE_CONFIG_DIR`), or with `--project` into `./.claude/skills/chartbook/` to commit with a repository. The skill's `SKILL.md` names the ChartBook version it was written for in its front matter (`metadata: chartbook-version`). A copy for another version is replaced, and the command says which version it replaced; one for this version changed by hand is replaced when you say so, or with `-f`. Any other command run at a terminal says in one line when your copy or the project's is for another ChartBook, and `chartbook check` warns. `chartbook install skill` was the command's name before.
+Install the Claude Code skill that comes with this ChartBook: user-level by default (`~/.claude/skills/chartbook/`, or `$CLAUDE_CONFIG_DIR`), or with `--project` into `./.claude/skills/chartbook/` to commit with a repository. The skill's `SKILL.md` names the ChartBook version it was written for in its front matter (`metadata: chartbook-version`). A copy for an older version is replaced, and the command says which version it replaced; one for a newer version, or for this version changed by hand, is replaced when you say so, or with `-f`. Any other command run at a terminal says in one line when your copy or the project's is for an older ChartBook, and `chartbook check` warns. The command was called `install skill` before.
 
 ### chartbook config
 

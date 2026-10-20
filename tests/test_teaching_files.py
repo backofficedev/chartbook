@@ -60,17 +60,27 @@ def test_the_root_llms_file_is_the_one_in_llm():
     )
 
 
-def test_the_sites_llms_file_links_its_pages(tmp_path):
-    """Found while checking the llms files: the site's copy linked `docs_src/...md`, which is not in the site."""
+def _dodo():
     spec = importlib.util.spec_from_file_location("chartbook_dodo", ROOT / "dodo.py")
     dodo = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(dodo)
-    out = tmp_path / "llms.txt"
-    dodo.copy_llms_file(ROOT / "llm" / "llms.txt", out)()
+    return dodo
+
+
+@pytest.mark.parametrize("name", ["llms.txt", "llms-full.txt"])
+def test_the_sites_llms_files_link_its_pages(tmp_path, name):
+    """Found while checking the llms files: the site's copy linked `docs_src/...md`, which is not in the site."""
+    out = tmp_path / name
+    _dodo().copy_llms_file(ROOT / "llm" / name, out)()
     text = out.read_text(encoding="utf-8")
     assert "](docs_src/" not in text  # a link; a manifest example may still name a docs_src path
-    links = re.findall(r"\]\(([^)]+\.html)\)", text)
-    assert links
-    for link in links:
+    for link in re.findall(r"\]\(([^)#:]+\.html)(?:#[^)]*)?\)", text):
         source = ROOT / "docs_src" / link.removesuffix(".html")
         assert source.with_suffix(".md").is_file() or source.with_suffix(".ipynb").is_file(), link
+
+
+def test_a_link_to_a_section_keeps_its_anchor(tmp_path):
+    source = tmp_path / "in.txt"
+    source.write_text("[a](docs_src/guide/plotting.md#backends) [b](docs_src/guide/gallery.ipynb) [c](https://x.org/a.md)\n")
+    _dodo().copy_llms_file(source, tmp_path / "out.txt")()
+    assert (tmp_path / "out.txt").read_text() == "[a](guide/plotting.html#backends) [b](guide/gallery.html) [c](https://x.org/a.md)\n"

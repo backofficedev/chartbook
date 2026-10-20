@@ -70,7 +70,7 @@ chartbook store verify      # Re-hash everything in the store (~/.chartbook/stor
 chartbook store gc          # Remove old snapshots (unpinned, not the newest of their repository, unlabelled, >7 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets git tags, branches and model labels keep nothing. A git tag names a version (snapshots record their commit's tags). Every version of a `keep = true` asset is kept, --aggressive too, and gc prints the bill per asset
 chartbook config            # Configure default catalog path (interactive)
 chartbook install claude-skill            # Install THIS skill user-level (~/.claude/skills/chartbook, or $CLAUDE_CONFIG_DIR); the front matter above names the ChartBook it is for
-chartbook install claude-skill --project  # ...into ./.claude/skills/chartbook, to commit with a repo. A copy for another ChartBook is replaced and said; any command at a terminal, and `chartbook check`, say when a copy is stale
+chartbook install claude-skill --project  # ...into ./.claude/skills/chartbook, to commit with a repo. A copy for an older ChartBook is replaced and said; any command at a terminal, and `chartbook check`, say when a copy is stale
 chartbook catalog init      # Create global catalog at ~/.chartbook/chartbook.toml (its folder is recorded as trusted to run)
 chartbook catalog add <path>     # Add pipeline(s) to catalog (each folder is recorded as trusted to render; `chartbook trust` there to run its build script)
 chartbook catalog add <glob> -y  # Add multiple pipelines without prompt
