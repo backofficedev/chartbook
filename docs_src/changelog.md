@@ -13,6 +13,7 @@ This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and ne
 
 **Breaking changes** (each is marked where an entry below describes it):
 
+- `chartbook install skill` is `chartbook install claude-skill`, and the skill's version is in its `SKILL.md`, not a `.chartbook-skill-version` file beside it.
 - What `chartbook build` did in 0.1.1, render the site, is `chartbook docs generate` now, and `chartbook build` makes everything current: it runs the build script, then generates the site. `chartbook browse` is `chartbook docs open`; `chartbook catalog build` and `catalog browse` are `chartbook catalog generate` and `catalog open`.
 - A pipeline's ID comes from its repository (`repo_url`, else the `origin` remote), not its folder's name, and a scope worked out from it is lowercased. A clone in a folder named otherwise than its repository now takes the repository's ID, so its ID changes (one in a subfolder, with no remote, or with `[project] id` keeps it). A pipeline whose ID changes gets new catalog keys and page addresses; a dependency or catalog entry naming the old ID stays on the old ID's snapshots, and `pin` and `update` say what to write instead.
 - A write-up is plain text: Jinja syntax in a docs file (`{{ … }}`, `{% include %}`) is shown as written, not evaluated.
@@ -28,6 +29,7 @@ This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and ne
 
 **What later entries changed in earlier ones:**
 
+- `chartbook install skill` is `chartbook install claude-skill`: where an earlier entry says `install skill`, read `install claude-skill`.
 - The `[dev]` extra for contributors, which the entries below call unchanged, is gone: a contributor runs `uv sync` in a clone, which installs the `dev` dependency group (the {doc}`contributing` page). Nothing a user installs is affected.
 - `chartbook docs` is a group now: where an earlier entry says `chartbook docs`, read `chartbook docs generate`. `chartbook browse` is `chartbook docs open`, and `chartbook catalog build` and `catalog browse` are `chartbook catalog generate` and `catalog open`.
 - `chartbook check`, new in this release, with no policy anywhere (no `[policy]` in the pipeline, none in the catalog it is checked in, and no `--policy`) now reports missing recommended fields as `warning:` lines and exits 0, where the entry below that introduces it has it fail on them. CI that relied on that failure gives the pipeline a `[policy]`, or passes `--policy` with a file that has one.
@@ -38,6 +40,14 @@ This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and ne
 - `chartbook init` renders the template that comes with the installed ChartBook, with cookiecutter, and writes `.cruft.json` only when the template's commit is known. The template's `dodo.py` no longer builds the site.
 - Built since the entries that call them "not built yet": sharing snapshots between machines, `--frozen`, versions and labels of a model, a dependency named by its ID alone and cloned from its repository, and tables and queries pinned as parquet (a Databricks source is still not pinned).
 - The Markdown generator is gone, and the site is written from the index.
+
+### Changed — **breaking: `chartbook install claude-skill`; the skill names its ChartBook version, and a stale copy is said**
+
+`chartbook install skill` is `chartbook install claude-skill`, since the skill is Claude Code's, and the old spelling says the new name and installs nothing. The skill's `SKILL.md` names the ChartBook version it was written for, in its front matter (`metadata: chartbook-version: "0.2.0"`), which a test keeps equal to the package's; the `.chartbook-skill-version` file installs wrote beside it is read as a copy's version and removed. Asked for by the maintainer on 2026-10-19, so that a skill installed long ago does not go on teaching an old ChartBook.
+
+A copy for an older version is replaced without a question, and the command says which version it replaced; one for a newer version, or for this version changed by hand, is asked about. Every other command, run at a terminal, says in one line when your copy or the project's is for an older ChartBook, with the command that installs this one's; a script, CI or a test never sees the line, and a copy for a newer ChartBook is not mentioned. `chartbook check` warns the same. The skill and the `llm/` files now cover `keep = true`, `chartbook restore` and every command; a test fails when a command is named in neither; the root `llms.txt` is a copy of `llm/llms.txt`, and the copy in the built site links its pages, where it linked the source files.
+
+**Breaking:** a script that says `chartbook install skill` says `chartbook install claude-skill`.
 
 ### Added — `keep = true`: every version of a costly output stays in the store; `chartbook restore`; a stop before a build remakes it
 

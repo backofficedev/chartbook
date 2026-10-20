@@ -144,7 +144,7 @@ uv build                  # or: uv run doit build_package, which builds the exam
 
 A build that cannot record the commit stops and says what to do: a folder whose `.git` git cannot read (git not installed, or a folder git does not trust), a copy with neither a `.git` nor an sdist's `PKG-INFO` (a source zip), a `template/` with changes git has not committed, or an sdist that records no commit. An editable install skips the hook, and `pip install chartbook` from PyPI runs no build, so only a build of the package itself meets this.
 
-A release also bumps the template's `_chartbook_version` in `template/cookiecutter.json` with the version in `src/chartbook/__about__.py` (a test keeps them equal).
+A release also bumps the template's `_chartbook_version` in `template/cookiecutter.json` and the skill's `chartbook-version` in `src/chartbook/skills/SKILL.md` (and its two copies) with the version in `src/chartbook/__about__.py` (tests keep them equal).
 
 Publishing is by hand, never a doit task: after the tag, from the clean checkout at that commit,
 

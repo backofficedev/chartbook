@@ -41,6 +41,10 @@ def _keep_out_of_the_real_store(tmp_path_factory, monkeypatch):
     # subprocess, with the real home, must not make one there. A test of
     # two machines clears it
     monkeypatch.setenv("CHARTBOOK_MACHINE_ID", "a-test-machine")
+    # The user-level Claude Code skill, which commands compare with the
+    # package: this machine's own copy, perhaps an old one, must not reach a
+    # test's output (`chartbook check` warns of it)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(scratch / "claude"))
     # No git housekeeping in the background: `git commit` may start `gc
     # --auto` or maintenance detached, which goes on writing under
     # .git/objects after the command returns, and a test that then removes

@@ -462,6 +462,7 @@ path = "_output/my_notebook.ipynb"
 | `last_cleared_by` | Approver name |
 | `publications` | List of previous uses |
 | `path` | Path to the HTML chart file |
+| `keep` | `true` keeps every version of it in the store; `chartbook restore` puts it back (the only value; leave it out otherwise) |
 | `excel_path` | Path to Excel file |
 | `docs_path` | Path to documentation file (mutually exclusive with `docs`) |
 | `docs` | Inline markdown documentation (mutually exclusive with `docs_path`) |
@@ -486,6 +487,7 @@ path = "_output/my_notebook.ipynb"
 | `tags` | List of topic tags |
 | `date_col` | Date column name |
 | `path` | Path to Parquet file or glob pattern (e.g., `_data/**/*.parquet` for hive-partitioned data) |
+| `keep` | `true` for an output that cost money or compute to make: every version stays in the store, `chartbook restore` puts it back on disk, and `chartbook run` stops before remaking it. Also on notebooks, notes and models (a trained model's weights) |
 | `excel_path` | Path to Excel file |
 | `docs_path` | Path to documentation file (mutually exclusive with `docs`) |
 | `docs` | Inline markdown documentation (mutually exclusive with `docs_path`) |

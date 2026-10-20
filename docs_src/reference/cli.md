@@ -26,7 +26,7 @@ Every command supports `--help`. Everything the CLI needs ships with `pip instal
 | `chartbook store verify` | Check that nothing in the store has changed since it was stored |
 | `chartbook store gc` | Remove old snapshots, and from the store what nothing names |
 | `chartbook config` | Set the default catalog for data loading |
-| `chartbook install skill` | Install the bundled Claude Code skill (user-level by default) |
+| `chartbook install claude-skill` | Install the bundled Claude Code skill (user-level by default) |
 
 `chartbook --version` prints the installed version; `chartbook <command> --help` prints a command's options.
 
@@ -1088,14 +1088,23 @@ Interactively set the default catalog path (stored as `catalog.path` in `~/.char
 chartbook config
 ```
 
-## chartbook install skill
+## chartbook install claude-skill
 
-Install the bundled Claude Code skill, giving Claude context about the CLI, manifest format, and data API. By default it installs **user-level** — `~/.claude/skills/chartbook/`, or `$CLAUDE_CONFIG_DIR/skills/chartbook/` when that variable is set — so the skill is available in every Claude Code session on your machine. Re-run it after upgrading chartbook; when nothing changed it reports "already up to date" and exits.
+Install the bundled Claude Code skill, giving Claude context about the CLI, the manifest format and the data API. By default it installs **user-level**, into `~/.claude/skills/chartbook/`, or `$CLAUDE_CONFIG_DIR/skills/chartbook/` when that variable is set, so the skill is available in every Claude Code session on your machine. With `--project` it installs into `./.claude/skills/chartbook/` in the current directory, to commit with a repository; a project `chartbook init` makes has one already.
 
 ```console
-chartbook install skill              # user-level (default)
-chartbook install skill --project    # ./.claude/skills/chartbook/ — commit it to share with a team
-chartbook install skill -f           # overwrite locally modified files without prompting
+chartbook install claude-skill              # user-level (default)
+chartbook install claude-skill --project    # ./.claude/skills/chartbook/: commit it to share with a team
+chartbook install claude-skill -f           # overwrite files changed by hand without prompting
 ```
 
-Files from older skill layouts are removed on install so the copy exactly mirrors the bundled skill, and the installing chartbook version is recorded in a `.chartbook-skill-version` stamp alongside the files.
+**Which ChartBook a copy is for.** The skill's `SKILL.md` names the version it was written for, in its front matter:
+
+```yaml
+metadata:
+  chartbook-version: "0.2.0"
+```
+
+A copy for an older version is replaced, and the command says which: `Updated the skill in ~/.claude/skills/chartbook from ChartBook 0.1.1 to 0.2.0`. A copy installed before 0.2.0 says its version only in a `.chartbook-skill-version` file beside it, which is read and then removed; such a copy is older than any skill that names its version, whatever the file says. A copy for a newer version (another environment's ChartBook), or for this version with files changed by hand, is replaced only when you say so, or with `-f`. When the files already match, nothing is copied. Files of older layouts are removed, so the copy mirrors the bundled skill.
+
+**Finding a stale copy.** Every other command, run by a person at a terminal, says in one line on stderr when your copy, or the project's, is for an older ChartBook, and names the command that installs this version's. The project's copy is `.claude/skills/chartbook/` in the working directory or the nearest folder above it, up to the top of its git repository and never the home folder. A script, CI, a command inside a script `chartbook run` is running, or anything reading the output never sees the line, and a copy for a newer ChartBook is not mentioned, so that two environments on two versions do not take turns replacing it. `chartbook check` says the same as a `warning:` line, which fails nothing. The command was called `install skill` before 0.2.0, and that spelling says the new name.
