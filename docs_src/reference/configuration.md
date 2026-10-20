@@ -53,6 +53,7 @@ Every field is optional. Types and defaults:
 | `favicon` | path | bundled default |
 | `os_compatibility` | array of strings | `[]` |
 | `build` | string (multi-line allowed). The same as `build` in {ref}`[scripts] <scripts>` | `""` |
+| `requires_chartbook` | a requirement, as pip reads one: `">=0.2.0"`, `">=0.3,<0.5"`. Every command stops when the ChartBook running does not meet it, and says how to upgrade. A bare version (`"0.3.0"`) is refused with the requirement to write. `chartbook init` writes it. A ChartBook older than 0.2.0 does not know it and warns of an unknown key | `""` (any) |
 | `site_dir` | path | `"./docs_src/site/"` when that directory exists |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool the pages are written for. MkDocs needs `pip install chartbook[mkdocs]`; the build says so when it is missing | `"sphinx"` |

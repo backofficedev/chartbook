@@ -646,6 +646,49 @@ def check_dependencies(manifest: dict, base_dir: Path) -> list[Problem]:
     return problems
 
 
+def check_build_tool(manifest: dict, base_dir: Path) -> list[Problem]:
+    """A build tool's task that says ``chartbook build``, as one written before 0.2.0 did to render the site.
+
+    With a build command declared (``[scripts] build``), ``chartbook build``
+    runs that command first, which is the same build tool: the build would
+    run inside itself, and ``chartbook build`` refuses. That is a problem,
+    on the ``build`` field. Without one, ``chartbook build`` there only
+    renders the site, as it did; a warning says that ``chartbook docs
+    generate`` is the command that renders (:func:`chartbook.run.build_tool_runs_chartbook_build`).
+    """
+    from chartbook.run import build_tool_runs_chartbook_build
+
+    problems = []
+    for pipeline_id in get_pipeline_ids(manifest):
+        pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
+        directory = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
+        clash = build_tool_runs_chartbook_build(directory)
+        if clash is None:
+            continue
+        name, number, line = clash
+        said = f"{name}, line {number}, runs `chartbook build` ({line})"
+        if str((pipeline_manifest.get("project") or {}).get("build") or "").strip():
+            problems.append(
+                Problem(
+                    directory / "chartbook.toml",
+                    "scripts",
+                    "build",
+                    f"{said}, which runs this build command first, so the build would run inside itself. "
+                    f"Since 0.2.0 the command that renders the site is `chartbook docs generate -f`: say that "
+                    f"in {name}",
+                )
+            )
+        else:
+            warnings.warn(
+                f"{directory / name}, line {number}: `chartbook build` renders the site here only because no "
+                f"build command is declared; the command that renders is `chartbook docs generate -f`, and "
+                f"with a build command `chartbook build` would run it first",
+                UserWarning,
+                stacklevel=2,
+            )
+    return problems
+
+
 def check_ids(manifest: dict, base_dir: Path) -> list[Problem]:
     """Warn where a pipeline is named by an ID its folder no longer gives itself, or will be named by another repository's.
 
@@ -1099,6 +1142,7 @@ def run_checks(
         *check_paths(manifest, base_dir, skip_outputs=skip_outputs),
         *check_dependencies(manifest, base_dir),
         *check_ids(manifest, base_dir),
+        *check_build_tool(manifest, base_dir),
         *check_model_metrics(manifest, base_dir),
         *check_model_lineage(manifest, base_dir),
         *check_model_labels(manifest, base_dir),

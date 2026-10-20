@@ -14,7 +14,7 @@ This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and ne
 **Breaking changes** (each is marked where an entry below describes it):
 
 - `chartbook install skill` is `chartbook install claude-skill`, and the skill's version is in its `SKILL.md`, not a `.chartbook-skill-version` file beside it.
-- What `chartbook build` did in 0.1.1, render the site, is `chartbook docs generate` now, and `chartbook build` makes everything current: it runs the build script, then generates the site. `chartbook browse` is `chartbook docs open`; `chartbook catalog build` and `catalog browse` are `chartbook catalog generate` and `catalog open`.
+- What `chartbook build` did in 0.1.1, render the site, is `chartbook docs generate` now, and `chartbook build` makes everything current: it runs the build script, then generates the site. A `dodo.py` task that says `chartbook build -f` must say `chartbook docs generate -f`: where the pipeline also has a build command, `chartbook build` stops and says so, and `chartbook check` reports it. `chartbook browse` is `chartbook docs open`; `chartbook catalog build` and `catalog browse` are `chartbook catalog generate` and `catalog open`.
 - A pipeline's ID comes from its repository (`repo_url`, else the `origin` remote), not its folder's name, and a scope worked out from it is lowercased. A clone in a folder named otherwise than its repository now takes the repository's ID, so its ID changes (one in a subfolder, with no remote, or with `[project] id` keeps it). A pipeline whose ID changes gets new catalog keys and page addresses; a dependency or catalog entry naming the old ID stays on the old ID's snapshots, and `pin` and `update` say what to write instead.
 - A write-up is plain text: Jinja syntax in a docs file (`{{ … }}`, `{% include %}`) is shown as written, not evaluated.
 - Only the templates the build guide lists as overridable are read from a pipeline's or a catalog's root. `conf.py` is always rendered from the package's own template, so a `conf.py.j2` in a project is ignored.
@@ -40,6 +40,14 @@ This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and ne
 - `chartbook init` renders the template that comes with the installed ChartBook, with cookiecutter, and writes `.cruft.json` only when the template's commit is known. The template's `dodo.py` no longer builds the site.
 - Built since the entries that call them "not built yet": sharing snapshots between machines, `--frozen`, versions and labels of a model, a dependency named by its ID alone and cloned from its repository, and tables and queries pinned as parquet (a Databricks source is still not pinned).
 - The Markdown generator is gone, and the site is written from the index.
+
+### Added — `requires_chartbook`: a project says which ChartBook it needs; `chartbook build` says when a task still says `chartbook build`
+
+Two things for moving pipelines from one ChartBook to the next, asked for by the maintainer on 2026-10-19 after a survey of 68 pipelines found 65 whose `dodo.py` renders the site with `chartbook build -f`.
+
+`[project] requires_chartbook = ">=0.2.0"` names the ChartBook a project needs, as a requirement pip would read. Every command reads it first, and an older ChartBook stops with one message and the command that upgrades it, before anything newer in the manifest can confuse it; in a catalog, each member's is read. A bare version is refused with the requirement to write. `chartbook init` writes it with the installed ChartBook's version, and the examples carry it. It is unlike `chartbook_format_version`, which format v2 removed: that was a number every file had to carry, compared by its minor version alone; this is optional, written by the project's owner, and compared as pip compares. A ChartBook before 0.2.0 does not know the key and warns that it is unknown, so it holds from 0.2.0 on.
+
+A build tool's task that says `chartbook build`, written when that rendered the site, would now make the build run inside itself: `chartbook build` runs the build command, `doit`, whose task runs `chartbook build`. Where the pipeline has a build command and its `dodo.py`, `Makefile` or `justfile` has such a line, `chartbook build` stops before running anything, names the line, and says to write `chartbook docs generate -f`; `chartbook check` reports it on `[scripts] build`, and warns of such a line in a pipeline with no build command, where `chartbook build` still only renders.
 
 ### Changed — **breaking: `chartbook install claude-skill`; the skill names its ChartBook version, and a stale copy is said**
 

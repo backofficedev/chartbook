@@ -69,6 +69,8 @@ PROJECT_DEFAULTS = {
     "site_dir": "",
     "enable_data_download": False,
     "writer": "sphinx",
+    # Which ChartBook the project needs, as a requirement: ">=0.2.0"
+    "requires_chartbook": "",
 }
 
 #: The site tools a manifest may name in ``[project] writer``; each is a module of :mod:`chartbook.writers`.
@@ -104,6 +106,55 @@ def detect_v1_format(raw_manifest: dict) -> bool:
     return any(section in raw_manifest for section in V1_MARKER_SECTIONS)
 
 
+def require_chartbook(raw_manifest: dict, source: str = "chartbook.toml") -> None:
+    """Stop when the ChartBook running is not one the project asks for in ``[project] requires_chartbook``.
+
+    The value is a requirement as pip reads one (``">=0.2.0"``,
+    ``">=0.3,<0.5"``), compared with this package's version. Every command
+    reads a project's type before anything else (:func:`resolve_project_type`
+    calls this first), so an older ChartBook stops here, with the command
+    that upgrades it, before something newer in the manifest confuses it. A
+    ChartBook from before 0.2.0 does not know the key, and warns that it is
+    unknown; the check holds from 0.2.0 on.
+
+    :raises ValueError: If the value is not a requirement, or this ChartBook
+        does not meet it.
+    """
+    project = raw_manifest.get("project")
+    value = project.get("requires_chartbook", "") if isinstance(project, dict) else ""
+    if value == "":
+        return
+    from packaging.specifiers import InvalidSpecifier, SpecifierSet
+    from packaging.version import InvalidVersion, Version
+
+    from chartbook.__about__ import __version__
+
+    where = f"{source}: [project]"
+    if not isinstance(value, str):
+        raise ValueError(
+            f"{where}: requires_chartbook = {value!r} is {_toml_word(value)}, and requires_chartbook is a "
+            f'requirement, as a string. Write requires_chartbook = ">={__version__}".'
+        )
+    try:
+        wanted = SpecifierSet(value)
+    except InvalidSpecifier:
+        try:
+            Version(value)
+            said = (
+                f"is a version, and requires_chartbook is a requirement. Write "
+                f'requires_chartbook = ">={value.strip()}" for {value.strip()} or later.'
+            )
+        except InvalidVersion:
+            said = f'is not a version requirement. Write requires_chartbook = ">={__version__}".'
+        raise ValueError(f"{where}: requires_chartbook = {value!r} {said}") from None
+    if not wanted.contains(Version(__version__), prereleases=True):
+        raise ValueError(
+            f"{source} requires ChartBook {value} ([project] requires_chartbook), and this is ChartBook "
+            f'{__version__}. Upgrade it: `pip install -U "chartbook{value}"`, or `uv add "chartbook{value}"` '
+            f"in a uv project."
+        )
+
+
 def resolve_project_type(raw_manifest: dict, source: str = "chartbook.toml") -> str:
     """Resolve a manifest's project type, inferring from structure when unset.
 
@@ -116,11 +167,13 @@ def resolve_project_type(raw_manifest: dict, source: str = "chartbook.toml") -> 
     :param source: Label used in error messages.
     :returns: ``"pipeline"`` or ``"catalog"``.
     :raises ValueError: On an invalid ``type`` value, a contradiction, or
-        an ambiguous file.
+        an ambiguous file; or a ``requires_chartbook`` this ChartBook does
+        not meet, which is asked first (:func:`require_chartbook`).
     """
     project = raw_manifest.get("project", {})
     if not isinstance(project, dict):
         raise ValueError(f"{source}: [project] must be a table, not {type(project).__name__}.")
+    require_chartbook(raw_manifest, source)
     explicit = project.get("type")
     has_registry = "pipelines" in raw_manifest
     entity_sections = [
@@ -1191,6 +1244,7 @@ _PROJECT_EXAMPLES = {
     "favicon": "./docs_src/favicon.ico",
     "os_compatibility": '["Linux", "macOS", "Windows"]',
     "build": "doit",
+    "requires_chartbook": ">=0.2.0",
     "site_dir": "./docs_src/site/",
     "writer": "sphinx",
 }

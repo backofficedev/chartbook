@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -135,6 +136,38 @@ def running(directory: Union[str, Path], script: str) -> bool:
         except OSError:
             continue
     return False
+
+
+#: The files a build tool reads its tasks from, at a pipeline's top.
+BUILD_TOOL_FILES = ("dodo.py", "Makefile", "makefile", "GNUmakefile", "justfile", "Justfile")
+
+_CHARTBOOK_BUILD = re.compile(r"(?<![\w-])chartbook\s+build(?![\w-])")
+
+
+def build_tool_runs_chartbook_build(directory: Union[str, Path]) -> Optional[tuple[str, int, str]]:
+    """A line of a pipeline's build tool's own file that runs ``chartbook build``: the file, the line number, the line.
+
+    Before 0.2.0, ``chartbook build`` rendered the site, and a ``dodo.py``
+    task said ``chartbook build -f`` to do it. Now ``chartbook build`` runs
+    the pipeline's build command first, which is that same build tool: a
+    plain ``doit`` would then run doit inside itself. ``chartbook docs
+    generate`` is the command that renders. A line that is a comment is not
+    taken (one starting with ``#``).
+
+    :returns: The first such line, or None.
+    """
+    directory = Path(directory)
+    for name in BUILD_TOOL_FILES:
+        try:
+            text = (directory / name).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            if line.lstrip().startswith("#"):
+                continue
+            if _CHARTBOOK_BUILD.search(line):
+                return name, number, line.strip()
+    return None
 
 
 def kept_missing(directory: Union[str, Path], store: Optional[Store] = None) -> list:

@@ -357,6 +357,22 @@ def build(remake, **site):
             err=True,
         )
     elif _has_script(project_dir, BUILD_SCRIPT):
+        # A build tool's task that says `chartbook build`, written when that
+        # rendered the site: the build would run inside itself (a plain
+        # `doit` reaches here from that task)
+        clash = None if _is_catalog_folder(project_dir) else runner.build_tool_runs_chartbook_build(project_dir)
+        if clash is not None:
+            name, number, line = clash
+            click.echo(
+                click.style("Error: ", fg="red", bold=True)
+                + f"{name}, line {number}, runs `chartbook build`:\n    {line}\n"
+                f"`chartbook build` runs this pipeline's build command first, so the build would run inside "
+                f"itself. Before 0.2.0 `chartbook build` rendered the site; now `chartbook docs generate -f` "
+                f"does. Say that in {name}, or take the task out: `chartbook build` renders the site after "
+                f"the build command.",
+                err=True,
+            )
+            raise SystemExit(1)
         _run_script(project_dir, BUILD_SCRIPT, remake=remake, remake_command="chartbook build --remake")
         # So what the script did not make is an error, not "not built yet"
         after_build = True

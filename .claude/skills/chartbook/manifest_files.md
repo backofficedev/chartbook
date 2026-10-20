@@ -56,6 +56,7 @@ All keys are optional:
 | `favicon` | string (path) | bundled default asset |
 | `os_compatibility` | array of strings | `[]` |
 | `build` | string (multi-line allowed); the same as `[scripts] build` | `""` |
+| `requires_chartbook` | a requirement as pip reads one (`">=0.2.0"`); every command stops, saying how to upgrade, when the running ChartBook does not meet it; a bare version is refused | `""` (any) |
 | `site_dir` | string (path) | `"./docs_src/site/"` when that directory exists, else disabled |
 | `enable_data_download` | bool | `false` |
 | `writer` | `"sphinx"` or `"mkdocs"`: the site tool (MkDocs needs `pip install chartbook[mkdocs]`) | `"sphinx"` |
