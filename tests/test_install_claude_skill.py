@@ -305,6 +305,22 @@ class TestSayingIt:
         notes = [line for line in result.output.splitlines() if line.startswith("Note: your Claude Code skill")]
         assert len(notes) == 1 and "is for ChartBook 0.1.1" in notes[0]
 
+    @pytest.mark.parametrize("present", ["nothing", "an empty folder", "a stray old stamp"])
+    def test_no_skill_installed_says_nothing_anywhere(self, claude_config_dir, pipeline_project, monkeypatch, present):
+        """Asked by the maintainer: a user who never installed the skill hears nothing of it."""
+        target = _skill_dir(claude_config_dir)
+        if present != "nothing":
+            target.mkdir(parents=True)
+        if present == "a stray old stamp":
+            (target / claude_skill.OLD_STAMP).write_text("0.1.1\n")
+        monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)
+        monkeypatch.chdir(pipeline_project)
+        assert claude_skill.stale(pipeline_project) == []
+        for words in (["docs", "--help"], ["check"]):
+            result = CliRunner().invoke(main, words)
+            assert "Claude Code skill" not in result.output, words
+        assert CliRunner().invoke(main, ["check"]).exit_code == 0
+
     def test_a_script_never_sees_it(self, stale_user_copy):
         """CliRunner's stderr, like a pipe's or CI's, is not a terminal."""
         result = CliRunner().invoke(main, ["docs", "--help"])
