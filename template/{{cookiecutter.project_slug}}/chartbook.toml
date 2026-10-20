@@ -4,6 +4,8 @@ description = "{{ cookiecutter.project_description }}"
 maintainer = "{{ cookiecutter.author_name }}"
 contributors = ["{{ cookiecutter.author_name }}"]
 os_compatibility = ["Windows", "Linux", "macOS"]
+# The ChartBook this project needs: an older one stops, and says how to upgrade
+requires_chartbook = ">={{ cookiecutter._chartbook_version }}"
 
 # Named commands. `chartbook run` runs `build`; `chartbook build` runs it
 # and then renders the site.

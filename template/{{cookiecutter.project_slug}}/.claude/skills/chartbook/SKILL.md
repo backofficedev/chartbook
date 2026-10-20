@@ -310,6 +310,7 @@ name = "My Pipeline"
 description = "Description"
 maintainer = "Your Name"
 # id = "myorg/my_pipeline"       # Optional: scoped ID (default derived from git remote + dirname)
+requires_chartbook = ">=0.2.0"   # Optional: an older ChartBook stops and says how to upgrade (`chartbook init` writes it)
 # site_dir = "./docs_src/site/"  # Optional: default when the directory exists
 # writer = "mkdocs"              # Optional: build the site with MkDocs instead of Sphinx (pip install chartbook[mkdocs])
 ```
