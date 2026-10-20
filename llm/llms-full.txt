@@ -222,6 +222,8 @@ chartbook create-data-glimpses [OPTIONS]
 
 ### chartbook trust
 
+At a terminal, the first `chartbook build`, `run` or `docs generate` of a folder that is not trusted asks once: `y` (it's mine: recorded at `run`, never asked again), `r` (render its site without its code; not for `run`), `n` or Enter (stop). A catalog asks once for all its untrusted folders. A script, a pipe, CI and a build ChartBook runs are never asked, and are refused (or rendered without the code) as before; `chartbook trust` says it beforehand.
+
 ```bash
 chartbook trust [PATH] [--render] [--repository] [--members] [--list] [--forget]
 ```

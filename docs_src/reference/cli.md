@@ -71,7 +71,7 @@ Render the HTML site into `OUTPUT_DIR` (default `./docs`; it cannot be the curre
 
 It renders the site from what is already built. It does not build the project's data: {ref}`chartbook run <chartbook-run>` does that, and {ref}`chartbook build <chartbook-build>` does both.
 
-**In a folder you have not trusted**, the site is rendered as a version from a store is: no query is run (the dataframe's glimpse says why), no template or file from outside the folder is read (a manifest that names one stops the render, naming the entry), and every template runs in Jinja's sandbox. The command says so in a `Warning:` line, and the site is still built. {ref}`chartbook trust <chartbook-trust>` in the folder says the pipeline is yours to build (`--render` to render only); a project `chartbook init` made is trusted already. In a catalog, the catalog's own folder and every member folder on this machine must be trusted, or nothing is built and the error lists them: `chartbook trust --members`.
+**In a folder you have not trusted**, you are asked first when you are at a terminal ({ref}`chartbook trust <chartbook-trust>`, "Asked at a terminal"); elsewhere, and after the answer `r`, the site is rendered as a version from a store is: no query is run (the dataframe's glimpse says why), no template or file from outside the folder is read (a manifest that names one stops the render, naming the entry), and every template runs in Jinja's sandbox. The command says so in a `Warning:` line, and the site is still built. {ref}`chartbook trust <chartbook-trust>` in the folder says the pipeline is yours to build (`--render` to render only); a project `chartbook init` made is trusted already. In a catalog, the catalog's own folder and every member folder on this machine must be trusted, or nothing is built and the error lists them: `chartbook trust --members`.
 
 **Before anything is built.** A lone pipeline that has built none of the data, charts, notebooks and models it declares, as a project just made by `chartbook init` or a fresh clone has not, is rendered all the same, with a warning that lists them:
 
@@ -168,7 +168,7 @@ Successfully generated documentation in /work/rate_forecast/docs
 - **A build tool's task that says `chartbook build`**, as a `dodo.py` written for 0.1.1 does to render the site, is run by the build command that `chartbook build` runs first: the site would be rendered twice, and a plain `doit` would run inside itself. When the build command runs doit, make or just and that tool's task file (`dodo.py`, a `Makefile`, a `justfile`) runs `chartbook build` on this pipeline, `chartbook build` stops before building anything, names each such line (a catalog's members' too), and says to write `chartbook docs generate -f` there. A comment, a docstring and `chartbook build --project-dir` of another pipeline do not count; `"chartbook", "build"` as a list does. `chartbook check` reports the same on the `build` field, and warns of such a line where no build command is declared.
 - **`--remake`** is {ref}`chartbook run <chartbook-run>`'s: without it, the build stops when an asset marked `keep = true` is not on disk while the store has a version of it, and says `chartbook build --remake` as the way on.
 - **In a catalog**, the script is run in each of the catalog's pipelines, and then the catalog's site is rendered.
-- **In a folder you have not trusted to run**, the script is not run: a build script is code, and the command stops, naming the folder and the command that trusts it, {ref}`chartbook trust <chartbook-trust>`. With no `build` script, the site is rendered as `chartbook docs generate` renders an untrusted folder.
+- **In a folder you have not trusted to run**, you are asked first when you are at a terminal: `y` trusts it and builds, `r` renders the site without running the script, Enter stops ({ref}`chartbook trust <chartbook-trust>`). Where no one is asked, the script is not run: a build script is code, and the command stops, naming the folder and the command that trusts it, {ref}`chartbook trust <chartbook-trust>`. With no `build` script, the site is rendered as `chartbook docs generate` renders an untrusted folder.
 
 ```{warning}
 **`chartbook build` used to mean what `chartbook docs generate` means now.** A build script that says `chartbook build -f`, as the `dodo.py` of a project made by an older `chartbook init` does, must say `chartbook docs generate -f`, or, better, not render the site at all: `chartbook build` renders it after the script, and the template's `dodo.py` no longer has a task that does.
@@ -258,7 +258,22 @@ chartbook.toml: [models.rate_forecaster] trained_on: 'crsp:ratingz' names a data
 chartbook trust [PATH] [--render] [--repository] [--members] [--list] [--forget]
 ```
 
-Say that a pipeline's folder is yours to build. A build of a folder you have not trusted runs as a build of files from a store does: `chartbook docs generate` renders its site with no query run (the dataframe's glimpse says why) and no template or file from outside the folder, every template in Jinja's sandbox, with a warning that says how to trust it; `chartbook build` and `chartbook run` refuse to run its build script, which is code, naming the folder and this command. A project `chartbook init` made is trusted as it is made. One you cloned is trusted when you say so, here. `chartbook check` is not gated, and its last line says the level when it is not `run`.
+Say that a pipeline's folder is yours to build. Usually you need not: the first build of a folder asks you, at a terminal (below). A build of a folder you have not trusted, where no one is asked (a script, CI), runs as a build of files from a store does: `chartbook docs generate` renders its site with no query run (the dataframe's glimpse says why) and no template or file from outside the folder, every template in Jinja's sandbox, with a warning that says how to trust it; `chartbook build` and `chartbook run` refuse to run its build script, which is code, naming the folder and this command. A project `chartbook init` made is trusted as it is made. One you cloned is trusted when you say so, here. `chartbook check` is not gated, and its last line says the level when it is not `run`.
+
+**Asked at a terminal.** The first `chartbook build`, `chartbook run` or `chartbook docs generate` of a folder you have not trusted asks, when you are at a terminal:
+
+```text
+ChartBook has not run the code in this folder before:
+  ~/GitRepositories/rates  (acme/rates, github.com/acme/rates)
+Its build command runs on this machine:
+    doit
+  y  it's mine: trust this folder, and don't ask again
+  r  render its site only, without running its code
+  n  stop
+Trust this folder? [y/r/N]:
+```
+
+`y` records the folder at `run`, as `chartbook trust` there would, and nothing asks again. `r` renders the site as a build of files from a store is rendered, and records nothing; it is offered by `chartbook build` and `docs generate`, which have a site to render, not by `run`. Enter, `n`, end of input and Ctrl-C stop, and nothing is run. A folder trusted to render only is asked about running. A catalog asks once, listing the catalog's own folder and each member folder that is not trusted yet, `[y/N]`; `y` records them all. One command asks once. No one is asked when stdin or stderr is not a terminal, under `CI`, or in a build `chartbook run` or `chartbook build` is running (`CHARTBOOK_BATCH`, `CHARTBOOK_RUN_DIR`): there the build refuses and `docs generate` renders without the folder's code, as described here, and `chartbook trust` is the way to say it beforehand. `chartbook trust` also does what a question cannot: a parent folder for everything inside it, a repository for every clone of it, a level of `render` only.
 
 | Option | Effect |
 |---|---|
@@ -850,7 +865,7 @@ What `chartbook run` does for `build`, in order:
 
 In a fresh clone, `chartbook run` is the only command you need: there is no `chartbook pin` to remember first.
 
-**Only in a folder you trust to run.** A build script is code. In a pipeline you have not trusted to run, `chartbook run` stops before anything runs, naming the folder and {ref}`chartbook trust <chartbook-trust>`; in a catalog, it lists every member that is not trusted, and nothing runs (`chartbook trust --members`). A pipeline trusted to render only is refused the same way. A project `chartbook init` made is trusted as it is made, and under `CI` the checkout is.
+**Only in a folder you trust to run.** A build script is code. In a pipeline you have not trusted to run, you are asked first when you are at a terminal (`y` trusts it, Enter stops; {ref}`chartbook trust <chartbook-trust>`). Where no one is asked, `chartbook run` stops before anything runs, naming the folder and {ref}`chartbook trust <chartbook-trust>`; in a catalog, it lists every member that is not trusted, and nothing runs (`chartbook trust --members`). A pipeline trusted to render only is refused the same way. A project `chartbook init` made is trusted as it is made, and under `CI` the checkout is.
 
 **It never builds in a folder this pipeline depends on, and never reads one.** A `path` dependency is a folder somebody works in. They may be half-way through a change. This pipeline reads the snapshot it pinned, not what is in that folder, so building there would disturb its owner and change nothing this pipeline reads. That folder is its owner's to build, and to declare ready with `chartbook snapshot`. If its owner has made no snapshot yet, `chartbook run` stops and says so.
 

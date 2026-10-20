@@ -65,7 +65,7 @@ chartbook update [dep...]    # Move pins forward to each dependency's newest sna
 chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on
 chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store
 chartbook run --remake       # Build even though a `keep = true` asset is missing while the store has it; without it, run and build stop and say `chartbook restore`
-chartbook trust              # Say this folder's pipeline is yours to build; until then a build of it runs as a build of files from a store (--render, --members, --repository, --list, --forget)
+chartbook trust              # Say this folder's pipeline is yours to build (at a terminal the first build asks: y trusts, r renders without its code, Enter stops); until then a build of it runs as a build of files from a store (--render, --members, --repository, --list, --forget)
 chartbook store info         # Which store this machine uses, what set it, and the cache folder
 chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
 chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 7; --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets tags, branches and labels keep nothing; every version of a `keep = true` asset stays)

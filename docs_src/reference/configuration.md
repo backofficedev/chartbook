@@ -706,7 +706,7 @@ path = "/a/bigger/disk/chartbook-git"
 
 Nothing in it is precious. Delete it and the next `chartbook pin` or `chartbook update` that needs a repository fetches it again.
 
-**Trust.** A build of a folder on this machine runs as your own only once you have said the pipeline is yours to build: {ref}`chartbook trust <chartbook-trust>` in its folder. Until then `chartbook docs generate` renders it as it renders a version from a store (no query run, no template or file from outside the folder, every template in Jinja's sandbox), and `chartbook build` and `chartbook run` refuse to run its build script. The record is `~/.chartbook/trust.toml`, this user's, beside `settings.toml`:
+**Trust.** A build of a folder on this machine runs as your own only once you have said the pipeline is yours to build: the first build of it asks you at a terminal, or {ref}`chartbook trust <chartbook-trust>` in its folder says it beforehand. Until then `chartbook docs generate` renders it as it renders a version from a store (no query run, no template or file from outside the folder, every template in Jinja's sandbox), and `chartbook build` and `chartbook run` refuse to run its build script. The record is `~/.chartbook/trust.toml`, this user's, beside `settings.toml`:
 
 ```toml
 [[pipeline]]

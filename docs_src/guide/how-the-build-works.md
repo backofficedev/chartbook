@@ -33,8 +33,9 @@ One thing comes before the three steps: whose folder this is. A build reads the 
 names, runs a dataframe's `query` for its first rows, and (`chartbook build`) runs the build
 script, so a folder you did not make is built as a version from a store is until you say it is
 yours to build: no query run, nothing read from outside the folder, no script run, and a warning
-that says so. `chartbook trust` in the folder says it; a project `chartbook init` made is trusted
-already. See {ref}`chartbook trust <chartbook-trust>`.
+that says so. The first build of it asks you, at a terminal, whether it is yours; `chartbook trust`
+in the folder says it beforehand, and a project `chartbook init` made is trusted already. See
+{ref}`chartbook trust <chartbook-trust>`.
 
 ## 1. Resolve: the index
 
