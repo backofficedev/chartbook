@@ -267,13 +267,13 @@ ChartBook has not run the code in this folder before:
   ~/GitRepositories/rates  (acme/rates, github.com/acme/rates)
 Its build command runs on this machine:
     doit
-  y  it's mine: trust this folder, and don't ask again
+  y  it's mine: trust this folder and the folders inside it, and don't ask again
   r  render its site only, without running its code
   n  stop
 Trust this folder? [y/r/N]:
 ```
 
-`y` records the folder at `run`, as `chartbook trust` there would, and nothing asks again. `r` renders the site as a build of files from a store is rendered, and records nothing; it is offered by `chartbook build` and `docs generate`, which have a site to render, not by `run`. Enter, `n`, end of input and Ctrl-C stop, and nothing is run. A folder trusted to render only is asked about running. A catalog asks once, listing the catalog's own folder and each member folder that is not trusted yet, `[y/N]`; `y` records them all. One command asks once. No one is asked when stdin or stderr is not a terminal, under `CI`, or in a build `chartbook run` or `chartbook build` is running (`CHARTBOOK_BATCH`, `CHARTBOOK_RUN_DIR`): there the build refuses and `docs generate` renders without the folder's code, as described here, and `chartbook trust` is the way to say it beforehand. `chartbook trust` also does what a question cannot: a parent folder for everything inside it, a repository for every clone of it, a level of `render` only.
+`y` (or `yes`) records the folder at `run`, as `chartbook trust` there would, so the folders inside it too, and nothing asks again; since a later `chartbook build` then runs its build command without asking, `docs generate`'s question shows that command as well. `r` renders the site and runs no build command: a folder not trusted at all renders as a build of files from a store is rendered (a `Warning:` line says so), and one trusted to render renders as it always does. It records nothing, and is offered by `chartbook build` and `docs generate`, which have a site to render, not by `run`. Enter, `n`, end of input and Ctrl-C stop at once, and nothing is run; any other answer is asked again. A folder trusted to render only is asked about running. A catalog asks once, `[y/N]`, listing the catalog's own folder and each member folder this command needs and does not have (for `chartbook build`, a member trusted to render only too), each with its build command; `y` records them all. One command asks once. What the question shows of a folder (its path, ID, repository and build command) is shown plainly: blank lines and runs of space folded, a control or format character written as `<U+202E>`, at most ten lines. No one is asked when stdin or stderr is not a terminal, under `CI`, or in a build `chartbook run` or `chartbook build` is running (`CHARTBOOK_BATCH`, `CHARTBOOK_RUN_DIR`): there the build refuses and `docs generate` renders without the folder's code, as described here, and `chartbook trust` is the way to say it beforehand. `chartbook trust` also does what a question cannot: a parent folder for everything inside it, a repository for every clone of it, a level of `render` only.
 
 | Option | Effect |
 |---|---|
