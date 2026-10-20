@@ -9,23 +9,6 @@ A developer platform for data science teams.
 
 Discover, document, and share data science work across your organization. ChartBook provides a centralized catalog for data pipelines, charts, and documentation—making it easy to find, understand, and reuse analytics work.
 
-## Terminology
-
-ChartBook supports two project types:
-
-- **Pipeline** — A single analytics pipeline with its own charts, dataframes, and documentation
-- **Catalog** — A collection of multiple pipelines aggregated into a unified documentation site
-
-See [Documenting a Pipeline](https://backofficedev.github.io/chartbook/guide/documenting-a-pipeline.html) and [Catalogs and Data Access](https://backofficedev.github.io/chartbook/guide/catalogs-and-data.html) for how the two fit together, and [Vocabulary](https://backofficedev.github.io/chartbook/guide/vocabulary.html) for the words ChartBook uses: a manifest asks, a lockfile records what was got, a snapshot records what was made, and an index records what a site shows.
-
-## Features
-
-- **Pipeline Catalog** — Organize and discover data pipelines across your team
-- **Documentation Generation** — Build searchable documentation websites from your analytics work
-- **Data Governance** — Track data sources, licenses, and access permissions
-- **Programmatic Data Access** — Load pipeline outputs directly into pandas or polars
-- **Multi-Pipeline Catalogs** — Aggregate multiple pipelines into a single documentation site
-
 ## Installation
 
 ```bash
@@ -33,15 +16,6 @@ pip install chartbook
 ```
 
 One install, everything included: data loading, plotting utilities, and the CLI for building documentation.
-
-**Development** needs [uv](https://docs.astral.sh/uv/) and nothing else:
-
-```bash
-uv sync          # the project, editable, and its dev toolchain, from uv.lock
-uv run doit      # notebooks, docs, examples, the package, then the test matrix
-```
-
-`uv run doit build_package` is the same without the tests; `uv run doit test` is the suite on one Python. The [contributing page](https://backofficedev.github.io/chartbook/contributing.html) has the rest.
 
 ## Quick Start
 
@@ -110,6 +84,23 @@ chartbook data get-path --pipeline fred_charts --dataframe fred
 
 See the [documentation](https://backofficedev.github.io/chartbook) for configuration options and detailed guides.
 
+## Terminology
+
+ChartBook supports two project types:
+
+- **Pipeline** — A single analytics pipeline with its own charts, dataframes, and documentation
+- **Catalog** — A collection of multiple pipelines aggregated into a unified documentation site
+
+See [Documenting a Pipeline](https://backofficedev.github.io/chartbook/guide/documenting-a-pipeline.html) and [Catalogs and Data Access](https://backofficedev.github.io/chartbook/guide/catalogs-and-data.html) for how the two fit together, and [Vocabulary](https://backofficedev.github.io/chartbook/guide/vocabulary.html) for the words ChartBook uses: a manifest asks, a lockfile records what was got, a snapshot records what was made, and an index records what a site shows.
+
+## Features
+
+- **Pipeline Catalog** — Organize and discover data pipelines across your team
+- **Documentation Generation** — Build searchable documentation websites from your analytics work
+- **Data Governance** — Track data sources, licenses, and access permissions
+- **Programmatic Data Access** — Load pipeline outputs directly into pandas or polars
+- **Multi-Pipeline Catalogs** — Aggregate multiple pipelines into a single documentation site
+
 ## Documentation
 
 Full documentation is available at [backofficedev.github.io/chartbook](https://backofficedev.github.io/chartbook).
@@ -121,6 +112,15 @@ Full documentation is available at [backofficedev.github.io/chartbook](https://b
 ## Contributing
 
 Contributions are welcome. See [CONTRIBUTING](https://backofficedev.github.io/chartbook/contributing.html) for guidelines.
+
+To work on ChartBook itself you need [uv](https://docs.astral.sh/uv/) and nothing else. From a clone:
+
+```bash
+uv sync          # the project, editable, and its dev toolchain, from uv.lock
+uv run doit      # notebooks, docs, examples, the package, then the test matrix
+```
+
+`uv run doit build_package` is the same without the tests, and `uv run doit test` is the suite on one Python.
 
 ## License
 
