@@ -143,10 +143,54 @@ repository only for clones you made, and trust such a folder by its path.
   entry names no pipeline, as before), and `chartbook trust --members` records nothing while there
   is one, naming it: a folder trusted before anything is there would trust whatever is put there.
 
+## Asked at a terminal
+
+*Changed 2026-10-19, at the maintainer's word*: refusing a build until `chartbook trust` was typed
+was annoying, and the first build of a folder now asks, once, when a person is there to answer.
+
+```text
+ChartBook has not run the code in this folder before:
+  ~/GitRepositories/rates  (acme/rates, github.com/acme/rates)
+Its build command runs on this machine:
+    doit
+  y  it's mine: trust this folder and the folders inside it, and don't ask again
+  r  render its site only, without running its code
+  n  stop
+Trust this folder? [y/r/N]:
+```
+
+- **Who is asked.** A person: stdin and stderr are terminals (a closed one is none), `CI` is not
+  set, and this is not a build ChartBook is running (`CHARTBOOK_BATCH` on, `CHARTBOOK_RUN_DIR`), nor a
+  build of files from a store (`CHARTBOOK_UNTRUSTED_SOURCE`). Everyone else behaves as this
+  page says above: a script's behaviour does not depend on the prompt, and CI never hangs on one.
+- **When.** At the first gate a folder meets: `chartbook build` and `chartbook run` before the build
+  script (`cli._ask_before_running`), `chartbook docs generate`, `catalog generate`, `publish` and
+  `create-data-glimpses` at the render's gate (`cli._require_trust_to_render`). One command asks once
+  (`cli._trust_answers`); `chartbook build`'s render does not ask again.
+- **The answers.** `y` records the folder at `run`, as `chartbook trust` there would; one level, so
+  a person need not learn two. Because a yes then lets a later `chartbook build` run without asking,
+  a question asked while only rendering shows the build command too, and says the trust covers the
+  folders inside. `r` renders without running the build command: a folder not trusted at all as a
+  build of files from a store, one trusted to render as before. It is offered where there is a site
+  to render (not by `run`), and is called "render its site only", not "safe mode": notebooks and pages
+  still render, and what is held back is code, queries and outside files. Enter, `n`, end of input and
+  Ctrl-C stop at once; any other answer is asked again. Enter means stop because the default answer
+  should do nothing surprising. The answer is read in short waits, so that Ctrl-C stops even when
+  the system hands the interrupt to another of the process's threads (polars runs its own).
+- **What is shown** of a folder is someone else's text: folded (blank lines, runs of space), with
+  any control or format character written as `<U+…>`, ten lines at most, so a manifest cannot pad the
+  build command off the screen or reorder it with a right-to-left mark.
+- **A catalog** asks once, `[y/N]`, listing the catalog's own folder and each member folder the
+  command needs (for `chartbook build`, a member trusted to render only too), each with its build
+  command; the question says whether their scripts run now. `y` records them all, the catalog's own
+  folder with no ID, as `chartbook trust --members` records it.
+- **Not asked about:** a `git` dependency (naming it is the trust, above), a folder trusted already,
+  and a build of files from a store.
+
 ## Not doing, and later
 
-- No prompt. A command refuses and prints the command that trusts; nothing asks a question, so a
-  script's behaviour is the same as a person's.
+- A prompt that chooses the level (`render` or `run`) or a parent folder: `chartbook trust --render`,
+  `chartbook trust <parent>` and `--repository` say those.
 - No trust by `[project] id`, since a manifest can say any ID.
 - Telling a clone you made from a folder that arrived with a `.git/config` naming a repository you
   trust: `origin` is taken at its word. The record says to trust a repository only for clones you

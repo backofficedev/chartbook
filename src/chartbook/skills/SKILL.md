@@ -41,7 +41,7 @@ chartbook docs open         # Open project docs in default browser (was `chartbo
 # around a built site or catalog, read its llms.txt first
 chartbook check             # CI gate: missing metadata, broken paths, dependencies that cannot be found, expiring licenses
 chartbook check --skip-outputs  # same, without requiring built data/charts/notebooks (for CI)
-chartbook trust             # Say this folder's pipeline is yours to build. Until then `docs` renders it as a store build (no query run, nothing read from outside the folder, a warning) and `build`/`run` REFUSE to run its script. A project `chartbook init` made is trusted already; CI trusts its checkout; CHARTBOOK_TRUST=all trusts every folder
+chartbook trust             # Say this folder's pipeline is yours to build (at a terminal, the first build/run/docs generate asks instead: y trusts, r renders without its code, Enter stops). Until then `docs` renders it as a store build (no query run, nothing read from outside the folder, a warning) and `build`/`run` REFUSE to run its script. A project `chartbook init` made is trusted already; CI trusts its checkout; CHARTBOOK_TRUST=all trusts every folder
 chartbook trust --render    # ...to render only: queries run and files it names are read, no build script
 chartbook trust --members   # In a catalog: the catalog's folder and each member folder here (a catalog builds only when all are trusted). --repository: this folder's origin repository, every clone of it. --list shows the record (~/.chartbook/trust.toml); --forget removes
 chartbook path <name>       # Print the path chartbook.toml declares for a dataframe
