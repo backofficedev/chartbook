@@ -106,26 +106,31 @@ def detect_v1_format(raw_manifest: dict) -> bool:
     return any(section in raw_manifest for section in V1_MARKER_SECTIONS)
 
 
+class RequiresChartbookError(ValueError):
+    """A manifest's ``requires_chartbook`` that the ChartBook running does not meet."""
+
+
 def require_chartbook(raw_manifest: dict, source: str = "chartbook.toml") -> None:
     """Stop when the ChartBook running is not one the project asks for in ``[project] requires_chartbook``.
 
-    The value is a requirement as pip reads one (``">=0.2.0"``,
-    ``">=0.3,<0.5"``), compared with this package's version. Every command
-    reads a project's type before anything else (:func:`resolve_project_type`
-    calls this first), so an older ChartBook stops here, with the command
-    that upgrades it, before something newer in the manifest confuses it. A
+    The value is a version specifier, as a pip requirement has it after
+    the package's name (``">=0.2.0"``, ``">=0.3,<0.5"``), compared with this
+    package's version. Every command that acts on a manifest reads the
+    project's type first (:func:`resolve_project_type` calls this first), so
+    an older ChartBook stops here, with the command that installs one that
+    meets it, before something newer in the manifest confuses it. A
     ChartBook from before 0.2.0 does not know the key, and warns that it is
     unknown; the check holds from 0.2.0 on.
 
-    :raises ValueError: If the value is not a requirement, or this ChartBook
-        does not meet it.
+    :raises RequiresChartbookError: If this ChartBook does not meet it.
+    :raises ValueError: If the value is not a specifier.
     """
     project = raw_manifest.get("project")
     value = project.get("requires_chartbook", "") if isinstance(project, dict) else ""
     if value == "":
         return
-    from packaging.specifiers import InvalidSpecifier, SpecifierSet
-    from packaging.version import InvalidVersion, Version
+    from packaging.specifiers import SpecifierSet
+    from packaging.version import Version
 
     from chartbook.__about__ import __version__
 
@@ -133,25 +138,38 @@ def require_chartbook(raw_manifest: dict, source: str = "chartbook.toml") -> Non
     if not isinstance(value, str):
         raise ValueError(
             f"{where}: requires_chartbook = {value!r} is {_toml_word(value)}, and requires_chartbook is a "
-            f'requirement, as a string. Write requires_chartbook = ">={__version__}".'
+            f'version specifier, as a string. Write requires_chartbook = ">={__version__}".'
         )
+    shown = value if len(value) <= 80 else value[:77] + "..."
     try:
         wanted = SpecifierSet(value)
-    except InvalidSpecifier:
-        try:
-            Version(value)
-            said = (
-                f"is a version, and requires_chartbook is a requirement. Write "
-                f'requires_chartbook = ">={value.strip()}" for {value.strip()} or later.'
-            )
-        except InvalidVersion:
-            said = f'is not a version requirement. Write requires_chartbook = ">={__version__}".'
-        raise ValueError(f"{where}: requires_chartbook = {value!r} {said}") from None
-    if not wanted.contains(Version(__version__), prereleases=True):
-        raise ValueError(
+        # Asked now: a number too long to read is found when it is compared
+        met = wanted.contains(Version(__version__), prereleases=True) if len(wanted) > 0 else None
+    except Exception:  # noqa: BLE001 - packaging's InvalidSpecifier, or a number too long to read
+        met = None
+    if met is None:
+        bare = value.strip()
+        hint = None
+        if bare.lower().startswith("chartbook"):
+            bare = bare[len("chartbook"):].strip()  # the whole pip requirement, name and all
+            try:
+                if len(SpecifierSet(bare)) > 0:
+                    hint = f'Write requires_chartbook = "{bare}": the specifier alone, without the package\'s name.'
+            except Exception:  # noqa: BLE001
+                pass
+        if hint is None:
+            try:
+                version = str(Version(bare))
+                hint = f'Write requires_chartbook = ">={version}" for {version} or later.'
+            except Exception:  # noqa: BLE001
+                hint = f'Write requires_chartbook = ">={__version__}", or take the key out.'
+        what = "names no version" if value.strip() in ("", ",") else "is not a version specifier"
+        raise ValueError(f"{where}: requires_chartbook = {shown!r} {what}. {hint}") from None
+    if not met:
+        raise RequiresChartbookError(
             f"{source} requires ChartBook {value} ([project] requires_chartbook), and this is ChartBook "
-            f'{__version__}. Upgrade it: `pip install -U "chartbook{value}"`, or `uv add "chartbook{value}"` '
-            f"in a uv project."
+            f'{__version__}. Install one that meets it: `pip install -U "chartbook{value}"`, or '
+            f'`uv add "chartbook{value}"` in a uv project.'
         )
 
 
@@ -1761,7 +1779,16 @@ def _discover_member_pipelines(
                     f"\"{pattern if not is_glob else member_dir}\" to pipelines.exclude"
                 )
 
-            member_type = resolve_project_type(member_raw, source=str(member_toml))
+            try:
+                member_type = resolve_project_type(member_raw, source=str(member_toml))
+            except RequiresChartbookError as error:
+                member = derive_pipeline_id(
+                    member_raw.get("project") if isinstance(member_raw.get("project"), dict) else {}, member_dir
+                )
+                raise RequiresChartbookError(
+                    f"{source}: catalog member {error}\nTo build the catalog without it until then: "
+                    f"`chartbook catalog disable {member}`, or add {member!r} to pipelines.disabled."
+                ) from None
             if member_type != "pipeline":
                 if is_glob:
                     continue  # catalogs matched by a glob are just skipped
@@ -2030,8 +2057,14 @@ def _load_catalog_manifest(raw_manifest):
         pipeline_base_dir = catalog_entry_dir(
             base_dir, resolve_platform_path(path_to_pipeline), where=f"{source}: [pipelines.\"{pipeline_id}\"]"
         )
-        assert validate_manifest_file(pipeline_base_dir)
-        sub_manifest = load_manifest(base_dir=pipeline_base_dir)
+        try:
+            assert validate_manifest_file(pipeline_base_dir)
+            sub_manifest = load_manifest(base_dir=pipeline_base_dir)
+        except RequiresChartbookError as error:
+            raise RequiresChartbookError(
+                f"{source}: [pipelines.\"{pipeline_id}\"]: {error}\nTo build the catalog without it until "
+                f"then: `chartbook catalog disable {pipeline_id}`."
+            ) from None
         if sub_manifest["project"]["type"] != "pipeline":
             raise ValueError(
                 f"{source}: [pipelines.\"{pipeline_id}\"] points at "

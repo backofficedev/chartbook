@@ -67,6 +67,7 @@ from chartbook.gitcache import (
 from chartbook.identity import derive_pipeline_id, strip_url_credentials
 from chartbook.manifest import (
     BUILD_SCRIPT,
+    RequiresChartbookError,
     _read_manifest_file,
     get_pipeline_dirs,
     load_manifest,
@@ -138,35 +139,104 @@ def running(directory: Union[str, Path], script: str) -> bool:
     return False
 
 
-#: The files a build tool reads its tasks from, at a pipeline's top.
-BUILD_TOOL_FILES = ("dodo.py", "Makefile", "makefile", "GNUmakefile", "justfile", "Justfile")
+#: The file each build tool reads its tasks from, at a pipeline's top, by the word that runs the tool.
+BUILD_TOOL_FILES = {
+    "doit": ("dodo.py",),
+    "make": ("GNUmakefile", "makefile", "Makefile"),
+    "just": ("justfile", "Justfile", ".justfile"),
+}
 
-_CHARTBOOK_BUILD = re.compile(r"(?<![\w-])chartbook\s+build(?![\w-])")
+# `chartbook build`, or `python -m chartbook.cli build`
+_CHARTBOOK_BUILD = re.compile(r"(?<![\w-])chartbook(?:\.cli)?\s+build(?![\w-])")
 
 
-def build_tool_runs_chartbook_build(directory: Union[str, Path]) -> Optional[tuple[str, int, str]]:
-    """A line of a pipeline's build tool's own file that runs ``chartbook build``: the file, the line number, the line.
+def _tool_files(directory: Path, command: Optional[str]) -> list[str]:
+    """The task files of the build tools *command* runs, as named in *directory*; every tool's when *command* is None."""
+    words = set(re.findall(r"[A-Za-z0-9_.-]+", command)) if command is not None else set(BUILD_TOOL_FILES)
+    wanted = [name for tool, names in BUILD_TOOL_FILES.items() if tool in words for name in names]
+    try:
+        present = set(os.listdir(directory))  # the name as it is on disk, on a disk that ignores case too
+    except OSError:
+        return []
+    return [name for name in wanted if name in present]
+
+
+def _runs_build(value: str) -> bool:
+    """Whether a command line runs `chartbook build` on this pipeline: not on another, by --project-dir."""
+    return bool(_CHARTBOOK_BUILD.search(value)) and "--project-dir" not in value
+
+
+def _in_python(text: str) -> Optional[tuple[int, str]]:
+    """The first line of Python source whose code runs `chartbook build`: in a string, or as `"chartbook", "build"`.
+
+    Read with Python's own tokenizer, so a comment is no code, and a
+    triple-quoted string (a docstring, a block of text) is not taken for a
+    command.
+    """
+    import io
+    import tokenize
+
+    strings: list[tuple[int, str]] = []  # the string tokens of the current run of `"a", "b", ...`
+    try:
+        tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
+    except (tokenize.TokenError, SyntaxError, IndentationError):
+        return None
+    for token in tokens:
+        if token.type == tokenize.STRING:
+            raw = token.string
+            body = raw.lstrip("rRbBuUfF")
+            if body.startswith(('"""', "'''")):
+                strings = []
+                continue
+            value = body[1:-1] if len(body) >= 2 else body
+            if _runs_build(value):
+                return token.start[0], value
+            strings.append((token.start[0], value))
+            if len(strings) >= 2 and strings[-2][1] == "chartbook" and strings[-1][1] == "build":
+                return strings[-2][0], "chartbook build"
+        elif token.type == tokenize.OP and token.string == ",":
+            continue
+        elif token.type in (tokenize.NL, tokenize.NEWLINE, tokenize.COMMENT, tokenize.INDENT, tokenize.DEDENT):
+            continue
+        else:
+            strings = []
+    return None
+
+
+def _in_recipes(text: str) -> Optional[tuple[int, str]]:
+    """The first line of a Makefile or a justfile that runs `chartbook build`, a comment cut off first."""
+    for number, line in enumerate(text.splitlines(), 1):
+        code = re.split(r"(?:^|\s)#", line, maxsplit=1)[0]
+        if _runs_build(code):
+            return number, code.strip()
+    return None
+
+
+def build_tool_runs_chartbook_build(
+    directory: Union[str, Path], command: Optional[str] = None
+) -> Optional[tuple[str, int, str]]:
+    """A line of a pipeline's build tool's own file that runs ``chartbook build``: the file, the line number, what it runs.
 
     Before 0.2.0, ``chartbook build`` rendered the site, and a ``dodo.py``
     task said ``chartbook build -f`` to do it. Now ``chartbook build`` runs
-    the pipeline's build command first, which is that same build tool: a
-    plain ``doit`` would then run doit inside itself. ``chartbook docs
-    generate`` is the command that renders. A line that is a comment is not
-    taken (one starting with ``#``).
+    the pipeline's build command first, which is that same build tool. Only
+    the task file of the tool *command* runs is read: ``dodo.py`` for doit,
+    a ``Makefile`` for make, a ``justfile`` for just (each, with *command*
+    None). What is not run is not taken: a comment, a docstring, a
+    ``chartbook build --project-dir`` of another pipeline.
 
+    :param command: The pipeline's build command, as ``[scripts] build`` says it.
     :returns: The first such line, or None.
     """
     directory = Path(directory)
-    for name in BUILD_TOOL_FILES:
+    for name in _tool_files(directory, command):
         try:
             text = (directory / name).read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        for number, line in enumerate(text.splitlines(), 1):
-            if line.lstrip().startswith("#"):
-                continue
-            if _CHARTBOOK_BUILD.search(line):
-                return name, number, line.strip()
+        found = _in_python(text) if name.endswith(".py") else _in_recipes(text)
+        if found is not None:
+            return name, found[0], found[1]
     return None
 
 
@@ -408,6 +478,11 @@ def plan(
         try:
             raw = _read_manifest(directory)
             is_pipeline = resolve_project_type(raw, str(manifest_path)) == "pipeline"
+        except RequiresChartbookError as error:
+            if source == "git":
+                # Its path is ChartBook's own copy, which says nothing to the user
+                raise RequiresChartbookError(f"the git dependency {name!r}: {error}") from None
+            raise
         except FileNotFoundError:
             done.add(directory)
             order.append(Step(name, None, source, missing=f"no pipeline at {directory}"))

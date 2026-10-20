@@ -656,33 +656,41 @@ def check_build_tool(manifest: dict, base_dir: Path) -> list[Problem]:
     renders the site, as it did; a warning says that ``chartbook docs
     generate`` is the command that renders (:func:`chartbook.run.build_tool_runs_chartbook_build`).
     """
+    from chartbook.manifest import _read_manifest_file
     from chartbook.run import build_tool_runs_chartbook_build
 
     problems = []
     for pipeline_id in get_pipeline_ids(manifest):
         pipeline_manifest = get_pipeline_manifest(manifest, pipeline_id)
         directory = Path(pipeline_manifest.get("pipeline_base_dir", base_dir))
-        clash = build_tool_runs_chartbook_build(directory)
+        command = str((pipeline_manifest.get("project") or {}).get("build") or "").strip()
+        # With a build command, the task file of the tool it runs; with none, any tool's
+        clash = build_tool_runs_chartbook_build(directory, command or None)
         if clash is None:
             continue
         name, number, line = clash
-        said = f"{name}, line {number}, runs `chartbook build` ({line})"
-        if str((pipeline_manifest.get("project") or {}).get("build") or "").strip():
+        if command:
+            try:
+                raw = _read_manifest_file(directory)
+                table = "scripts" if (raw.get("scripts") or {}).get("build") else "project"
+            except (OSError, ValueError):
+                table = "scripts"
             problems.append(
                 Problem(
                     directory / "chartbook.toml",
-                    "scripts",
+                    table,
                     "build",
-                    f"{said}, which runs this build command first, so the build would run inside itself. "
-                    f"Since 0.2.0 the command that renders the site is `chartbook docs generate -f`: say that "
-                    f"in {name}",
+                    f"{name}, line {number}, runs `chartbook build` ({line}), and the build command runs "
+                    f"{name}: under `chartbook build` the site would be rendered twice, and under a plain "
+                    f"build-tool run the build would run inside itself. Since 0.2.0 the command that renders "
+                    f"the site is `chartbook docs generate -f`: say that in {name}",
                 )
             )
         else:
             warnings.warn(
-                f"{directory / name}, line {number}: `chartbook build` renders the site here only because no "
-                f"build command is declared; the command that renders is `chartbook docs generate -f`, and "
-                f"with a build command `chartbook build` would run it first",
+                f"{display_path(directory / name, Path.cwd())}, line {number}: `chartbook build` renders the "
+                f"site here only because no build command is declared; the command that renders is "
+                f"`chartbook docs generate -f`, and with a build command `chartbook build` would run it first",
                 UserWarning,
                 stacklevel=2,
             )

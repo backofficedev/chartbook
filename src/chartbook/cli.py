@@ -357,28 +357,55 @@ def build(remake, **site):
             err=True,
         )
     elif _has_script(project_dir, BUILD_SCRIPT):
-        # A build tool's task that says `chartbook build`, written when that
-        # rendered the site: the build would run inside itself (a plain
-        # `doit` reaches here from that task)
-        clash = None if _is_catalog_folder(project_dir) else runner.build_tool_runs_chartbook_build(project_dir)
-        if clash is not None:
-            name, number, line = clash
-            click.echo(
-                click.style("Error: ", fg="red", bold=True)
-                + f"{name}, line {number}, runs `chartbook build`:\n    {line}\n"
-                f"`chartbook build` runs this pipeline's build command first, so the build would run inside "
-                f"itself. Before 0.2.0 `chartbook build` rendered the site; now `chartbook docs generate -f` "
-                f"does. Say that in {name}, or take the task out: `chartbook build` renders the site after "
-                f"the build command.",
-                err=True,
-            )
-            raise SystemExit(1)
+        _stop_where_a_build_tool_says_chartbook_build(project_dir)
         _run_script(project_dir, BUILD_SCRIPT, remake=remake, remake_command="chartbook build --remake")
         # So what the script did not make is an error, not "not built yet"
         after_build = True
     else:
         click.echo("No `build` script here, so only the site is rendered.")
     _render_site(**site, after_build=after_build)
+
+
+def _stop_where_a_build_tool_says_chartbook_build(project_dir):
+    """Stop before any build runs when a pipeline's build tool has a task that says `chartbook build`.
+
+    Written when `chartbook build` rendered the site (before 0.2.0). Now it
+    runs the build command first, which runs that task: under `chartbook
+    build` the site is rendered twice, and under a plain `doit` the build
+    runs inside itself. Each pipeline `chartbook build` would build is
+    looked at, a catalog's members too, and all are named at once
+    (:func:`chartbook.run.build_tool_runs_chartbook_build`).
+    """
+    from chartbook import run as runner
+    from chartbook.manifest import BUILD_SCRIPT
+
+    try:
+        steps = runner.plan(project_dir, git=False)
+    except (runner.RunError, ValueError, OSError):
+        return  # the run says what is wrong
+    found = []
+    for step in steps:
+        command = step.scripts.get(BUILD_SCRIPT) if step.directory is not None and step.source == "asked" else None
+        clash = runner.build_tool_runs_chartbook_build(step.directory, command) if command else None
+        if clash is not None:
+            name, number, line = clash
+            where = name if step.directory == project_dir else str(step.directory / name)
+            found.append(f"  {where}, line {number}: {line}")
+    if not found:
+        return
+    click.echo(
+        click.style("Error: ", fg="red", bold=True)
+        + ("These lines run" if len(found) > 1 else "This line runs")
+        + " `chartbook build`:\n"
+        + "\n".join(found)
+        + "\n`chartbook build` runs the build command first, and the build command runs that line: under "
+        "`chartbook build` the site would be rendered twice, and under a plain build-tool run (`doit`) the "
+        "build would run inside itself. Before 0.2.0 `chartbook build` rendered the site; now `chartbook docs "
+        "generate -f` does. Say that there, or take the task out: `chartbook build` renders the site after "
+        "the build command. Nothing was built.",
+        err=True,
+    )
+    raise SystemExit(1)
 
 
 def _render_site(
@@ -1435,7 +1462,10 @@ def _load_raw_catalog(catalog_toml_path):
             f"{catalog_toml_path} uses the old v1 format. "
             f"Run: python scripts/migrate_toml_v2.py {catalog_toml_path.parent}"
         )
-    config_type = resolve_project_type(data, source=str(catalog_toml_path))
+    try:
+        config_type = resolve_project_type(data, source=str(catalog_toml_path))
+    except ValueError as error:  # a requirement this ChartBook does not meet, or a type it cannot tell
+        raise click.ClickException(str(error)) from None
     if config_type != "catalog":
         raise click.UsageError(
             f"{catalog_toml_path} is not a catalog (type={config_type!r})"
@@ -2585,6 +2615,11 @@ def add_command(pipeline, key, commit, project_dir):
     project_dir = resolve_project_dir(project_dir)
     manifest_file = project_dir / "chartbook.toml"
     try:
+        # Before anything is written: a manifest for a newer ChartBook is not edited by this one
+        from chartbook.manifest import _read_manifest_file, require_chartbook
+
+        if manifest_file.is_file():
+            require_chartbook(_read_manifest_file(project_dir), str(manifest_file))
         validate_pipeline_id(pipeline)
         from chartbook.snapshot import SnapshotError, pipeline_in
 
