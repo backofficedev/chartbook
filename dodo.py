@@ -87,6 +87,26 @@ def copy_file(origin_path, destination_path, mkdir=True):
     return _copy_file
 
 
+def copy_llms_file(origin_path, destination_path):
+    """Create a Python action that copies an llms file into the site, with its links made the site's.
+
+    The files under llm/ link the docs by their source paths from the
+    repository's root (`docs_src/guide/plotting.md`), which is right for the
+    copy at the root and for an agent reading the repository; in the built
+    site each is a page, `guide/plotting.html`.
+    """
+    import re
+
+    def _copy():
+        text = Path(origin_path).read_text(encoding="utf-8")
+        text = re.sub(r"\]\(docs_src/([^)#\s]+)\.(?:md|ipynb)\)", r"](\1.html)", text)
+        dest = Path(destination_path)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(text, encoding="utf-8")
+
+    return _copy
+
+
 def mv(from_path, to_path):
     """Move a file to a folder"""
     from_path = Path(from_path)
@@ -155,10 +175,11 @@ def task_sphinx():
     return {
         "actions": [
             f"sphinx-build -b html {DOCS_SRC} {DOCS_OUTPUT}",
-            copy_file(PROJECT_ROOT / "llm" / "llms.txt", DOCS_OUTPUT / "llms.txt"),
-            copy_file(PROJECT_ROOT / "llm" / "llms-full.txt", DOCS_OUTPUT / "llms-full.txt"),
+            copy_llms_file(PROJECT_ROOT / "llm" / "llms.txt", DOCS_OUTPUT / "llms.txt"),
+            copy_llms_file(PROJECT_ROOT / "llm" / "llms-full.txt", DOCS_OUTPUT / "llms-full.txt"),
         ],
-        "file_dep": notebook_scripts + src_files + docs_src_files,
+        "file_dep": notebook_scripts + src_files + docs_src_files
+        + [PROJECT_ROOT / "llm" / "llms.txt", PROJECT_ROOT / "llm" / "llms-full.txt"],
         "targets": sphinx_targets,
         "task_dep": ["run_notebooks"],
         "clean": True,

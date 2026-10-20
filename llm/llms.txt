@@ -8,12 +8,13 @@ ChartBook organizes analytics work into **pipelines** (self-contained projects) 
 
 - [Getting Started](docs_src/getting-started.md): `pip install chartbook` — one install, everything included
 - [Vocabulary](docs_src/guide/vocabulary.md): the words, defined once. A manifest asks, a lockfile records what was got, a snapshot records what was made, an index records what a site shows; repository → index → pages → site; a writer per site tool
-- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs generate`, `chartbook build`, `chartbook run`, `chartbook snapshot`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook docs open`, `chartbook check`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook config`
+- [CLI Reference](docs_src/reference/cli.md): `chartbook init`, `chartbook docs generate`, `chartbook build`, `chartbook run`, `chartbook snapshot`, `chartbook restore`, `chartbook lineage`, `chartbook pin`, `chartbook update`, `chartbook docs open`, `chartbook check`, `chartbook trust`, `chartbook path`, `chartbook publish`, `chartbook catalog`, `chartbook ls`, `chartbook data`, `chartbook store`, `chartbook config`, `chartbook install claude-skill`
 
 ## Guides
 
 - [Documenting a Pipeline](docs_src/guide/documenting-a-pipeline.md): Describe charts, dataframes, notebooks, notes and models in `chartbook.toml`
 - [Depending on Another Pipeline](docs_src/guide/depending-on-pipelines.md): snapshots, pins and the lockfile; `chartbook run --snapshot` (them), `chartbook pin` / `update` (you); never read another pipeline's folder; `--frozen` in CI; model versions and labels
+- [Keeping Costly Outputs](docs_src/guide/keeping-costly-outputs.md): `keep = true` on an output that cost money or compute (a paid API run's output, a trained model): every version stays in the store, `chartbook restore` puts it back, `chartbook run` stops before remaking it (`--remake`); the doit recipe
 - [Catalogs and Data Access](docs_src/guide/catalogs-and-data.md): Aggregate pipelines; load any cataloged dataset with `data.load()`; every snapshot of every pipeline is its own site under `versions/`, listed on the catalog's Versions page; a `[pipelines]` entry with no path shows a pipeline from the store alone
 - [Reading From a Databricks Warehouse](docs_src/guide/reading-a-warehouse.md) (experimental): `[sources.x] backend = "databricks"` after `pip install chartbook[databricks]`; `DATABRICKS_HOST` + `DATABRICKS_TOKEN`; a token goes only to the host the machine names; lazy reads; a Databricks Free Edition walk-through
 - [Plotting](docs_src/guide/plotting.md): One call produces interactive HTML plus static PNG/PDF
@@ -55,6 +56,7 @@ chartbook publish            # Stage publishable files to a directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook run --snapshot     # Build, then declare the build ready for others (a snapshot); checks everything is committed first
 chartbook snapshot           # The second half alone: this pipeline's built assets into the store, labelled with the commit; refuses unless its pins account for every dependency
+chartbook restore [name...]  # The mirror of snapshot: this pipeline's assets back on disk from its snapshots; with no names, every `keep = true` asset that is missing; never over a file
 chartbook lineage            # Every snapshot upstream, walked through the pins and checked by hash; --check exits 1 on a gap, --rehash re-hashes the bytes, --json; `chartbook snapshot --deep` refuses on an upstream gap
 chartbook add acme/rates     # Declare a dependency by its ID ("acme/rates" = {}) and pin its newest snapshot from the store, no folder or clone; --as NAME, --commit C
 chartbook pin                # Freeze what [dependencies] have: each one's newest snapshot, into chartbook.lock
@@ -62,16 +64,34 @@ chartbook pin --frozen       # Write nothing but the store's note for gc; exit 1
 chartbook update [dep...]    # Move pins forward to each dependency's newest snapshot
 chartbook run [script]       # Run a [scripts] entry here (default: build, after pinning what has no pin); never builds in a folder it depends on
 chartbook run --frozen       # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store
+chartbook run --remake       # Build even though a `keep = true` asset is missing while the store has it; without it, run and build stop and say `chartbook restore`
+chartbook trust              # Say this folder's pipeline is yours to build; until then a build of it runs as a build of files from a store (--render, --members, --repository, --list, --forget)
 chartbook store info         # Which store this machine uses, what set it, and the cache folder
 chartbook store verify       # Re-hash everything in the store; exit 1 if an object changed
-chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 7; --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets tags, branches and labels keep nothing)
+chartbook store gc           # Remove old snapshots and what nothing names (asks first; --keep-days, default 7; --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets tags, branches and labels keep nothing; every version of a `keep = true` asset stays)
 chartbook config             # Configure default catalog path
+chartbook install claude-skill  # The Claude Code skill, user-level (--project: ./.claude/skills/chartbook); its SKILL.md names the ChartBook it is for
+chartbook catalog init       # Create the global catalog, ~/.chartbook/chartbook.toml
 chartbook catalog add <dir>  # Register a pipeline in the catalog
+chartbook catalog disable <id>  # Leave a pipeline out of the catalog's builds; `chartbook catalog enable <id>` brings it back
 chartbook catalog generate   # Render the catalog site (was `catalog build`)
+chartbook catalog open       # Open the catalog site in the browser
 chartbook ls                 # List all pipelines, dataframes, charts
 chartbook ls dataframes      # List dataframes only
 chartbook data get-path --pipeline <id> --dataframe <id>   # Get parquet path
 chartbook data get-docs --pipeline <id> --dataframe <id>   # Print docs content
+```
+
+## Python API
+
+```python
+from chartbook import data
+
+lf = data.load(pipeline="acme/markets", dataframe="market_data")       # through the catalog: its newest snapshot; Polars LazyFrame
+df = data.load(pipeline="markets", dataframe="market_data", format="pandas")  # a bare name when only one matches
+rates = data.load("fed_yield_curve:treasury_rates")                    # inside a pipeline: a dependency's pinned copy, by reference
+path = data.path("my_dataframe")                                        # inside a pipeline: where its own chartbook.toml puts it
+docs = data.get_docs(pipeline="markets", dataframe="market_data")       # the write-up, as text
 ```
 
 ## Minimal Configuration Example

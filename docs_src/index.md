@@ -113,7 +113,7 @@ rates = data.load("fed_yield_curve:treasury_rates")   # a dependency's dataframe
 ::::
 
 Working with an AI assistant? The built site ships [llms.txt](https://llmstxt.org/) files at its
-root, and `chartbook install skill` installs a ChartBook skill for Claude Code.
+root, and `chartbook install claude-skill` installs a ChartBook skill for Claude Code, which says when it is for another ChartBook.
 
 ```{toctree}
 :hidden:

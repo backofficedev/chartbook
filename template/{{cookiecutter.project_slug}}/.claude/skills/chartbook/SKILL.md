@@ -1,6 +1,8 @@
 ---
 name: chartbook
 description: Help users work with ChartBook - a data science documentation platform for organizing pipelines, charts, and dataframes
+metadata:
+  chartbook-version: "0.2.0"
 ---
 
 # ChartBook Assistant
@@ -51,6 +53,7 @@ chartbook publish           # Publish to directory
 chartbook create-data-glimpses  # Create data summary report
 chartbook run --snapshot    # In a pipeline OTHERS depend on: build, then declare the build ready (a snapshot). Refuses BEFORE building if anything in its folder is uncommitted
 chartbook snapshot          # The second half alone: copies its built assets to the store, labelled with the commit. Takes your word that they were built by that commit. Refuses unless its pins account for every dependency (run `chartbook pin` first)
+chartbook restore           # The mirror of snapshot: puts this pipeline's assets back on disk from its snapshots. With no names, every asset marked `keep = true` that is missing; `chartbook restore embeddings model/forecaster` puts those back, kept or not. Never writes over a file. Exits 0 on a first build with nothing to restore
 chartbook lineage           # Every snapshot upstream of this pipeline, walked through the pins and checked by hash; --check for CI, --rehash to re-hash the bytes. `chartbook snapshot --deep` refuses on an upstream gap
 chartbook add acme/rates    # Declare a dependency by its ID ("acme/rates" = {} under [dependencies]) and pin its newest snapshot from the store: no folder of it, no clone; --as NAME, --commit C
 chartbook pin               # Freeze what [dependencies] have: each one's newest snapshot (never its folder); hashes and commit into chartbook.lock (commit it); clones git dependencies
@@ -61,10 +64,13 @@ chartbook run               # Pin what has no pin, then run this pipeline's [scr
 chartbook run --frozen      # Pin nothing, fetch nothing, write nothing but the store's note for gc; build only if every pin is in the store (CI). Not with --snapshot
 chartbook run <script>      # ...or another named script, e.g. `chartbook run test` (pins nothing)
 chartbook run --force       # Also rebuild git dependencies (each is built once, in a clean copy); refreshes data they pull from outside
+chartbook run --remake      # Build even though a `keep = true` asset is missing while the store has a version of it. Without it, `run` and `build` STOP before the build script and say `chartbook restore` or `--remake`. To remake one on purpose: delete the file, then --remake
 chartbook store info        # Which store this machine uses and what set it (CHARTBOOK_STORE, your settings, the organization's, or the default); check it on each machine that shares a store (a synced folder, a shared disk)
 chartbook store verify      # Re-hash everything in the store (~/.chartbook/store, `[store] url` in settings, or CHARTBOOK_STORE; a folder or s3://bucket/prefix with chartbook[s3]); exit 1 if an object changed
-chartbook store gc          # Remove old snapshots (unpinned, not the newest of their repository, unlabelled, >7 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets git tags, branches and model labels keep nothing. A git tag names a version (snapshots record their commit's tags)
+chartbook store gc          # Remove old snapshots (unpinned, not the newest of their repository, unlabelled, >7 days; --keep-days) and what nothing names; lists and asks first (--dry-run, --yes); --keep-lineage keeps every snapshot upstream of a kept one; --aggressive lets git tags, branches and model labels keep nothing. A git tag names a version (snapshots record their commit's tags). Every version of a `keep = true` asset is kept, --aggressive too, and gc prints the bill per asset
 chartbook config            # Configure default catalog path (interactive)
+chartbook install claude-skill            # Install THIS skill user-level (~/.claude/skills/chartbook, or $CLAUDE_CONFIG_DIR); the front matter above names the ChartBook it is for
+chartbook install claude-skill --project  # ...into ./.claude/skills/chartbook, to commit with a repo. A copy for another ChartBook is replaced and said; any command at a terminal, and `chartbook check`, say when a copy is stale
 chartbook catalog init      # Create global catalog at ~/.chartbook/chartbook.toml (its folder is recorded as trusted to run)
 chartbook catalog add <path>     # Add pipeline(s) to catalog (each folder is recorded as trusted to render; `chartbook trust` there to run its build script)
 chartbook catalog add <glob> -y  # Add multiple pipelines without prompt
@@ -221,6 +227,14 @@ data.connect("local")      # the raw connection to [sources.local]: read-only du
 #   [dataframes.slopes]        source = "local"     query = "select ... from t"   # or table = "t"
 # A model's trained_on = ["fed_yield_curve:treasury_rates"] must name a declared
 # dependency; `chartbook check` verifies the dataframe exists there.
+
+# An output that cost money or compute to make (a paid API run over a corpus, a trained
+# PyTorch or language model, a vendor pull under a quota, a scrape that cannot be redone):
+#   [dataframes.embeddings]   path = "./_data/embeddings.parquet"   keep = true
+# keep = true (the only value) on any dataframe, chart, notebook, note or model: every
+# version stays in the store; `chartbook restore` puts it back after a clean or a clone;
+# `chartbook run` stops before remaking it (`--remake` to go on). For doit, give the costly
+# task `targets` and `uptodate: [True]` and NO file_dep: it then runs only when its file is missing.
 
 # A throwaway directory for intermediates (<pipeline>/_data/_scratch/):
 # not an asset, git-ignored, safe to delete

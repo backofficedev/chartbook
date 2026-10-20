@@ -83,13 +83,45 @@ class _Catalog(_Group):
     renamed = {"build": "generate", "browse": "open"}
 
 
+class _Install(_Group):
+    renamed = {"skill": "claude-skill"}
+
+
 @click.group(cls=_Main)
 @click.version_option(version=__version__)
-def main():
+@click.pass_context
+def main(ctx):
     """chartbook CLI tool for generating documentation websites."""
     # A warning from the settings or a manifest is one line for a person,
     # not Python's file, line and source line
     warnings.showwarning = _show_warning
+    # `install` is what mends it, and `check` says it as a warning of its own
+    if not ctx.resilient_parsing and ctx.invoked_subcommand not in (None, "install", "check"):
+        _say_if_the_skill_is_stale()
+
+
+def _stderr_is_a_terminal() -> bool:
+    import sys
+
+    return sys.stderr.isatty()
+
+
+def _say_if_the_skill_is_stale():
+    """One line on stderr for each installed copy of the Claude Code skill written for another ChartBook.
+
+    Only for a person at a terminal: a script, CI or a test reading the
+    output never sees it. Reading two small files costs nothing, and nothing
+    here stops a command (``chartbook.claude_skill``).
+    """
+    try:
+        if not _stderr_is_a_terminal():
+            return
+        from chartbook import claude_skill
+
+        for copy in claude_skill.stale():
+            click.echo(click.style("Note: ", fg="yellow", bold=True) + claude_skill.notice(copy), err=True)
+    except Exception:  # noqa: BLE001 - a note about the skill never stops a command
+        pass
 
 
 def _show_warning(message, category, filename, lineno, file=None, line=None):
@@ -819,6 +851,12 @@ def check(project_dir, within_days, policy_path, skip_outputs):
 
     for warning in [*caught, *unchecked]:
         click.echo(f"warning: {warning.message}", err=True)
+    # An installed Claude Code skill written for another ChartBook teaches
+    # the wrong commands; said here, and fails nothing
+    from chartbook import claude_skill
+
+    for copy in claude_skill.stale(project_dir):
+        click.echo(f"warning: {claude_skill.notice(copy)}", err=True)
 
     for problem in problems:
         click.echo(problem.format(relative_to=Path.cwd()))
@@ -3746,21 +3784,18 @@ def config():
     click.echo('  df = data.load(pipeline="my_pipeline", dataframe="my_df")')
 
 
-@main.group()
+@main.group(cls=_Install)
 def install():
     """Install bundled resources: user-level by default, or into the current directory with --project."""
 
 
-VERSION_STAMP_NAME = ".chartbook-skill-version"
-
-
-@install.command("skill")
+@install.command("claude-skill")
 @click.option(
     "-f",
     "--force",
     is_flag=True,
     default=False,
-    help="Overwrite existing skill files without prompting",
+    help="Overwrite skill files changed by hand without prompting",
 )
 @click.option(
     "--project",
@@ -3770,65 +3805,68 @@ VERSION_STAMP_NAME = ".chartbook-skill-version"
     "to share the skill with everyone working in the repo) instead of the "
     "user-level skills directory",
 )
-def install_skill(force, project):
-    """Install the bundled Claude Code skill.
+def install_claude_skill(force, project):
+    """Install the Claude Code skill that comes with this ChartBook.
 
-    By default the skill is installed user-level — into
-    ``~/.claude/skills/chartbook/``, or ``$CLAUDE_CONFIG_DIR/skills/chartbook/``
-    when that variable is set — so it is available in every Claude Code
-    session. With ``--project`` it is installed into
-    ``./.claude/skills/chartbook/`` in the current directory instead.
+    By default the skill is installed user-level, into
+    ~/.claude/skills/chartbook/, or $CLAUDE_CONFIG_DIR/skills/chartbook/ when
+    that variable is set, so it is available in every Claude Code session.
+    With --project it is installed into ./.claude/skills/chartbook/ in the
+    current directory instead.
 
-    The command is idempotent: if the installed files already match the
-    bundled skill, nothing is rewritten. Files from older skill layouts are
-    removed so the installed copy exactly mirrors the bundled one, and the
-    installing chartbook version is recorded alongside the skill files.
+    The skill's SKILL.md names the ChartBook version it was written for. A
+    copy for another version is replaced, and the command says which version
+    it replaced. A copy for this version whose files differ, changed by
+    hand, is replaced when you say so, or with --force. When the files
+    already match, nothing is written. Files of older layouts are removed,
+    so the copy mirrors the bundled skill.
+
+    Any other command, run at a terminal, says in one line when your copy or
+    the project's is for another ChartBook, and `chartbook check` warns.
+
+    \b
+    Examples:
+        chartbook install claude-skill
+        chartbook install claude-skill --project
     """
-    import importlib.resources
-    import os
     import shutil
 
-    package_path = importlib.resources.files("chartbook")
-    skills_src = Path(str(package_path)) / "skills"
+    from chartbook import claude_skill
 
-    skill_files = sorted(
-        p for p in (skills_src.iterdir() if skills_src.is_dir() else []) if p.is_file()
-    )
+    skill_files = claude_skill.bundled_files()
     if not skill_files:
         click.echo("Error: No bundled skill files found in package.", err=True)
         raise SystemExit(1)
 
-    if project:
-        base_dir = Path.cwd() / ".claude"
-    else:
-        config_dir = os.environ.get("CLAUDE_CONFIG_DIR")
-        base_dir = (
-            Path(config_dir).expanduser() if config_dir else Path.home() / ".claude"
-        )
-    target_dir = base_dir / "skills" / "chartbook"
+    target_dir = Path.cwd() / ".claude" / "skills" / claude_skill.SKILL_NAME if project else claude_skill.user_dir()
     expected_names = {p.name for p in skill_files}
 
     def _visible_files():
-        return [
-            p
-            for p in target_dir.iterdir()
-            if p.is_file() and not p.name.startswith(".")
-        ]
+        return [p for p in target_dir.iterdir() if p.is_file() and not p.name.startswith(".")]
 
-    # Idempotent no-op: the installed files already match the bundled skill.
-    # Hidden files (the version stamp, .DS_Store, ...) don't affect the check.
+    old_stamp = target_dir / claude_skill.OLD_STAMP
+    existed = target_dir.is_dir() and (any(_visible_files()) or old_stamp.is_file())
+    before = claude_skill.version_of(target_dir) if existed else None
+
+    # Nothing to do: the installed files are the bundled ones. Hidden files
+    # (.DS_Store, ...) do not count; an old stamp beside them goes
     if target_dir.is_dir():
         current = _visible_files()
         if {p.name for p in current} == expected_names and all(
             (target_dir / p.name).read_bytes() == p.read_bytes() for p in skill_files
         ):
-            (target_dir / VERSION_STAMP_NAME).write_text(f"{__version__}\n")
-            click.echo(f"Skill already up to date in {target_dir}")
+            old_stamp.unlink(missing_ok=True)
+            click.echo(f"Skill already up to date in {target_dir} (ChartBook {__version__})")
             return
 
-    if target_dir.is_dir() and any(_visible_files()) and not force:
-        click.echo(f"Skill files already exist in {target_dir}")
-        if not click.confirm("Overwrite existing files?"):
+    # A copy for another version is an upgrade, and replaced; one for this
+    # version (or naming none) that differs was changed by hand, and asked about
+    if existed and not force and before in (__version__, None):
+        if before == __version__:
+            click.echo(f"The skill in {target_dir} is this version's, with files changed since it was installed.")
+        else:
+            click.echo(f"Skill files already exist in {target_dir}, naming no ChartBook version.")
+        if not click.confirm("Overwrite them?"):
             raise SystemExit(0)
 
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -3839,16 +3877,16 @@ def install_skill(force, project):
         if existing.name not in expected_names:
             existing.unlink()
             click.echo(f"  removed stale {existing.name}")
+    old_stamp.unlink(missing_ok=True)
 
-    copied = 0
     for src_file in skill_files:
         shutil.copyfile(src_file, target_dir / src_file.name)
         click.echo(f"  {src_file.name}")
-        copied += 1
 
-    (target_dir / VERSION_STAMP_NAME).write_text(f"{__version__}\n")
-    click.echo(f"\nInstalled {copied} skill file(s) to {target_dir}")
-
+    if existed and before and before != __version__:
+        click.echo(f"\nUpdated the skill in {target_dir} from ChartBook {before} to {__version__}")
+    else:
+        click.echo(f"\nInstalled {len(skill_files)} skill file(s) to {target_dir} (ChartBook {__version__})")
 
 if __name__ == "__main__":
     main()
