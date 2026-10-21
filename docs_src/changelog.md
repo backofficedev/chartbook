@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-20
+
 ### Read this first: upgrading from 0.1.1
 
 This is the first release since 0.1.1. A 0.2.0 was prepared on 2026-10-12 and never published; what it held is at the end of this release's entries, under "Earlier in this release", and its breaking changes are in the list below. The entries are newest first, each written as its piece landed. Where a later entry changed what an earlier one says, the later one holds.
